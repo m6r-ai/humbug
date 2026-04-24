@@ -341,5 +341,8 @@ def get_french_strings() -> LanguageStrings:
         # Tool use
         approve_tool_call="Approuver les appels d'outils",
         i_am_unsure_about_tool_call="Je ne suis pas sûr à propos",
-        reject_tool_call="Rejeter les appels d'outils"
+        reject_tool_call="Rejeter les appels d'outils",
+
+        # Conversation eject
+        eject_to_root="Éjecter vers la racine"
     )

@@ -24,6 +24,10 @@ class AIConversationHistory:
         """Get the parent transcript reference."""
         return self._parent
 
+    def set_parent(self, path: str | None) -> None:
+        """Set the parent transcript reference."""
+        self._parent = path
+
     def clear(self) -> None:
         """Clear the conversation history."""
         self._messages.clear()

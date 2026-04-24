@@ -1,14 +1,13 @@
 """Files view widget for mindspace."""
 
+import json
 import logging
 import os
 import shutil
 from typing import cast
 
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QDir
-from PySide6.QtWidgets import (
-    QFileSystemModel, QWidget, QVBoxLayout, QMenu
-)
+from PySide6.QtWidgets import QFileSystemModel, QWidget, QVBoxLayout, QMenu
 
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.files.mindspace_files_model import MindspaceFilesModel
@@ -78,7 +77,6 @@ class MindspaceFilesView(QWidget):
         self._fs_model.setReadOnly(True)
         self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.Hidden | QDir.Filter.NoDotDot)
 
-        # Create filter model
         self._filter_model = MindspaceFilesModel()
         self._filter_model.setSourceModel(self._fs_model)
 
@@ -142,26 +140,17 @@ class MindspaceFilesView(QWidget):
         return self._header.is_expanded()
 
     def _on_drop_target_changed(self) -> None:
-        """
-        Handle changes to the drop target in the tree view.
-        """
-        # Force a repaint of the entire viewport to ensure proper visual updates
-        # This ensures both the old drop target and new drop target are repainted
+        """Handle changes to the drop target in the tree view."""
         self._tree_view.viewport().update()
 
     def _create_move_confirmation_message(self, item_name: str, source_path: str, dest_path: str) -> str:
         """Create the confirmation message for file/folder move operations."""
         strings = self._language_manager.strings()
-
-        # Get display paths (relative to mindspace if possible)
         display_source = self._get_display_path(source_path)
         display_dest = self._get_display_path(dest_path)
-
-        # Determine if it's a file or folder
         is_folder = os.path.isdir(source_path)
         confirmation_text = (strings.move_folder_confirmation.format(item_name)
                             if is_folder else strings.move_file_confirmation.format(item_name))
-
         return f"{confirmation_text}\n\n{strings.move_from_label} {display_source}\n\n{strings.move_to_label} {display_dest}"
 
     def _get_display_path(self, path: str) -> str:
@@ -184,11 +173,9 @@ class MindspaceFilesView(QWidget):
             target_path: Path of the drop target directory
         """
         try:
-            # Determine the destination path
             item_name = os.path.basename(source_path)
             destination_path = os.path.join(target_path, item_name)
 
-            # Check if destination already exists
             if os.path.exists(destination_path):
                 strings = self._language_manager.strings()
                 MessageBox.show_message(
@@ -199,7 +186,6 @@ class MindspaceFilesView(QWidget):
                 )
                 return
 
-            # Show confirmation dialog using MessageBox instead of custom dialog
             strings = self._language_manager.strings()
             is_folder = os.path.isdir(source_path)
             title = strings.move_folder_title if is_folder else strings.move_file_title
@@ -216,7 +202,6 @@ class MindspaceFilesView(QWidget):
             if result != MessageBoxButton.YES:
                 return
 
-            # Perform the move operation
             self._perform_move_operation(source_path, destination_path)
 
         except Exception as e:
@@ -241,17 +226,29 @@ class MindspaceFilesView(QWidget):
             OSError: If the move operation fails
         """
         try:
-            # Emit signal first so tabs can be updated
-            self.file_moved.emit(source_path, destination_path)
-
-            # Perform the actual move
             shutil.move(source_path, destination_path)
-
-            self._logger.info("Successfully moved '%s' to '%s'", source_path, destination_path)
-
         except OSError as e:
             self._logger.error("Failed to move '%s' to '%s': %s", source_path, destination_path, str(e))
             raise
+
+        self.file_moved.emit(source_path, destination_path)
+        self._update_parent_references_after_move(source_path, destination_path)
+        self._logger.info("Successfully moved '%s' to '%s'", source_path, destination_path)
+
+        if source_path.lower().endswith(".conv"):
+            dest_dir = os.path.dirname(destination_path)
+            for child_path in self._collect_conv_descendants(destination_path):
+                child_name = os.path.basename(child_path)
+                child_dest = os.path.join(dest_dir, child_name)
+                if child_path == child_dest or os.path.exists(child_dest):
+                    continue
+                try:
+                    shutil.move(child_path, child_dest)
+                    self.file_moved.emit(child_path, child_dest)
+                    self._update_parent_references_after_move(child_path, child_dest)
+                    self._logger.info("Moved child conv '%s' to '%s'", child_path, child_dest)
+                except OSError as e:
+                    self._logger.error("Failed to move child conv '%s': %s", child_path, str(e))
 
     def _on_delegate_edit_finished(self, index: QModelIndex, new_name: str) -> None:
         """
@@ -262,12 +259,10 @@ class MindspaceFilesView(QWidget):
             new_name: The new name entered by the user
         """
         try:
-            # Check if this is a pending new item creation
             if self._pending_new_item:
                 self._complete_new_item_creation(new_name)
                 return
 
-            # This is a rename operation
             self._complete_rename_operation(index, new_name)
 
         except Exception as e:
@@ -281,10 +276,7 @@ class MindspaceFilesView(QWidget):
             )
 
     def _on_delegate_edit_cancelled(self) -> None:
-        """
-        Handle when inline editing is cancelled.
-        """
-        # If this was a pending new item, clean it up
+        """Handle when inline editing is cancelled."""
         if self._pending_new_item:
             self._cleanup_pending_new_item()
 
@@ -301,16 +293,13 @@ class MindspaceFilesView(QWidget):
         parent_path, is_folder, temp_path = self._pending_new_item
         self._pending_new_item = None
 
-        # Create the full path for the final item
         new_path = os.path.join(parent_path, new_name)
 
         try:
-            # Rename the temporary item to the final name
             os.rename(temp_path, new_path)
             self._logger.info("Successfully renamed temporary %s from '%s' to '%s'",
                             "folder" if is_folder else "file", temp_path, new_path)
 
-            # If it's a file, signal that it should be opened for editing
             if not is_folder:
                 self.file_edited.emit(new_path, False)
 
@@ -318,7 +307,6 @@ class MindspaceFilesView(QWidget):
             self._logger.error("Failed to rename temporary %s from '%s' to '%s': %s",
                              "folder" if is_folder else "file", temp_path, new_path, str(e))
 
-            # Clean up the temporary item on failure
             try:
                 if is_folder:
                     os.rmdir(temp_path)
@@ -327,7 +315,7 @@ class MindspaceFilesView(QWidget):
                     os.remove(temp_path)
 
             except OSError:
-                pass  # Best effort cleanup
+                pass
 
             strings = self._language_manager.strings()
             MessageBox.show_message(
@@ -338,16 +326,13 @@ class MindspaceFilesView(QWidget):
             )
 
     def _cleanup_pending_new_item(self) -> None:
-        """
-        Clean up a pending new item that was cancelled.
-        """
+        """Clean up a pending new item that was cancelled."""
         if not self._pending_new_item:
             return
 
         _parent_path, is_folder, temp_path = self._pending_new_item
         self._pending_new_item = None
 
-        # Remove the temporary file/folder
         try:
             if is_folder:
                 os.rmdir(temp_path)
@@ -369,20 +354,17 @@ class MindspaceFilesView(QWidget):
             index: Model index being renamed
             new_name: New name for the item
         """
-        # Get the current file path
         current_path = self._tree_view.get_path_from_index(index)
         if not current_path:
             raise ValueError(self._language_manager.strings().error_invalid_path)
 
-        # Calculate the new path
         directory = os.path.dirname(current_path)
         new_path = os.path.join(directory, new_name)
 
         try:
-            # Perform the rename
             os.rename(current_path, new_path)
             self.file_renamed.emit(current_path, new_path)
-
+            self._update_parent_references_after_move(current_path, new_path)
             self._logger.info("Successfully renamed '%s' to '%s'", current_path, new_path)
 
         except OSError as e:
@@ -397,22 +379,16 @@ class MindspaceFilesView(QWidget):
         Args:
             source_path: Path to the file to duplicate
         """
-        # Get the parent directory
         parent_path = os.path.dirname(source_path)
-
-        # Generate the default duplicate name
         duplicate_name = self._get_duplicate_file_name(source_path)
         duplicate_path = os.path.join(parent_path, duplicate_name)
 
         try:
-            # Copy the source file to the duplicate location
             shutil.copy2(source_path, duplicate_path)
             self._logger.info("Created duplicate file: '%s'", duplicate_path)
 
-            # Set up pending creation state with the duplicate path
             self._pending_new_item = (parent_path, False, duplicate_path)
 
-            # Ensure the duplicate file is visible and start editing
             self._ensure_item_visible_and_edit(duplicate_path, select_extension=False)
 
         except (OSError, shutil.Error) as e:
@@ -437,18 +413,13 @@ class MindspaceFilesView(QWidget):
         """
         parent_path = os.path.dirname(source_path)
         original_filename = os.path.basename(source_path)
-
-        # Split filename and extension
         name, ext = os.path.splitext(original_filename)
 
-        # Check if the name already ends with " - copy" or " - copy (n)"
         copy_suffix = " - copy"
         if name.endswith(copy_suffix):
-            # Remove the existing " - copy" suffix to get the base name
             base_name = name[:-len(copy_suffix)]
 
         elif " - copy (" in name and name.endswith(")"):
-            # Handle case like "filename - copy (2)" - extract base name
             copy_index = name.rfind(" - copy (")
             if copy_index != -1:
                 base_name = name[:copy_index]
@@ -457,10 +428,8 @@ class MindspaceFilesView(QWidget):
                 base_name = name
 
         else:
-            # No existing copy suffix
             base_name = name
 
-        # Generate unique copy name
         counter = 1
         while True:
             if counter == 1:
@@ -482,27 +451,18 @@ class MindspaceFilesView(QWidget):
         Args:
             file_path: Absolute path to the file to reveal and select
         """
-        # Validate that we have a mindspace loaded
         if not self._mindspace_path:
             return
 
-        # Normalize the file path
         normalized_path = os.path.normpath(file_path)
-
-        # Ensure the file path is within the mindspace
         if not normalized_path.startswith(self._mindspace_path):
             return
 
-        # Check if the file exists
         if not os.path.exists(normalized_path):
             return
 
-        # Expand to the file and select it
         target_index = self._expand_to_path(normalized_path)
-        if target_index is None:
-            return
-
-        if not target_index.isValid():
+        if target_index is None or not target_index.isValid():
             return
 
         self._tree_view.clearSelection()
@@ -510,53 +470,30 @@ class MindspaceFilesView(QWidget):
         self._tree_view.scrollTo(target_index, self._tree_view.ScrollHint.EnsureVisible)
 
     def _expand_to_path(self, file_path: str) -> QModelIndex | None:
-        """
-        Expand tree nodes to reveal the given file path.
-
-        Args:
-            file_path: Absolute path to expand to
-
-        Returns:
-            QModelIndex of the target file if found, None otherwise
-        """
-        # Build list of paths from mindspace root to target file
+        """Expand tree nodes to reveal the given file path."""
         paths_to_expand = []
         current_path = file_path
-
         while current_path and current_path != self._mindspace_path:
             paths_to_expand.append(current_path)
             parent_path = os.path.dirname(current_path)
-            # Prevent infinite loop if we can't go up further
             if parent_path == current_path:
                 break
-
             current_path = parent_path
 
-        # Reverse the list so we expand from root to leaf
         paths_to_expand.reverse()
 
-        # Start from the mindspace root
-        current_index = QModelIndex()
-
-        # Expand each directory in the path
         for path in paths_to_expand:
-            # Get the source index for this path
             source_index = self._fs_model.index(path)
             if not source_index.isValid():
                 return None
-
-            # Map to filter model
             filter_index = self._filter_model.mapFromSource(source_index)
             if not filter_index.isValid():
                 return None
-
-            # If this is a directory, expand it
             if os.path.isdir(path):
                 self._tree_view.expand(filter_index)
-
             current_index = filter_index
 
-        return current_index
+        return current_index if paths_to_expand else None
 
     def _ensure_item_visible_and_edit(self, item_path: str, select_extension: bool = True) -> None:
         """
@@ -566,7 +503,6 @@ class MindspaceFilesView(QWidget):
             item_path: Path to the item to make visible and edit
             select_extension: Whether to select the file extension in addition to the name
         """
-        # Make the item visible and start editing
         self._tree_view.ensure_path_visible_for_editing(item_path, lambda: self._start_edit_for_path(item_path, select_extension))
 
     def _start_edit_for_path(self, item_path: str, select_extension: bool = True) -> None:
@@ -577,7 +513,6 @@ class MindspaceFilesView(QWidget):
             item_path: Path to the item to start editing
             select_extension: Whether to select the file extension in addition to the name
         """
-        # Find the item in the model
         source_index = self._fs_model.index(item_path)
         if not source_index.isValid():
             self._logger.warning("Source index not valid for path: '%s'", item_path)
@@ -588,7 +523,6 @@ class MindspaceFilesView(QWidget):
             self._logger.warning("Filter index not valid for path: '%s'", item_path)
             return
 
-        # Get the delegate and start editing
         delegate = self._tree_view.itemDelegate(filter_index)
         if not isinstance(delegate, MindspaceTreeDelegate):
             self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
@@ -606,7 +540,6 @@ class MindspaceFilesView(QWidget):
         menu = QMenu(self)
         strings = self._language_manager.strings()
 
-        # Root directory actions
         new_folder_action = menu.addAction(strings.new_folder)
         new_folder_action.triggered.connect(
             lambda: self._start_new_folder_creation(cast(str, self._mindspace_path))
@@ -619,52 +552,32 @@ class MindspaceFilesView(QWidget):
         return menu
 
     def _is_current_directory_item(self, index: QModelIndex) -> bool:
-        """
-        Check if the given index represents the current directory (".") item.
-
-        Args:
-            index: Model index to check
-
-        Returns:
-            True if this is the current directory item
-        """
+        """Check if the given index represents the current directory (".") item."""
         if not index.isValid():
             return False
-
         source_index = self._filter_model.mapToSource(index)
         if not source_index.isValid():
             return False
-
-        file_name = self._fs_model.fileName(source_index)
-        return file_name == "."
+        return self._fs_model.fileName(source_index) == "."
 
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for file tree items."""
-        # Get the index at the clicked position
         index = self._tree_view.indexAt(position)
-
-        # Create context menu
         menu = QMenu(self)
         strings = self._language_manager.strings()
 
-        # Determine the path and whether it's a file or directory
         if not index.isValid():
-            # Clicked on empty space - show root context menu
             menu = self._create_root_context_menu()
 
         elif self._is_current_directory_item(index):
-            # Clicked on the current directory (".") item - show root context menu
             menu = self._create_root_context_menu()
 
         else:
-            # Map to source model to get actual file path
             source_index = self._filter_model.mapToSource(index)
             path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
             is_dir = os.path.isdir(path)
 
-            # Create actions based on item type
             if is_dir:
-                # Directory context menu
                 preview_view_action = menu.addAction(strings.preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
                 new_folder_action = menu.addAction(strings.new_folder)
@@ -677,7 +590,6 @@ class MindspaceFilesView(QWidget):
                 delete_action.triggered.connect(lambda: self._handle_delete_folder(path))
 
             else:
-                # File context menu
                 edit_action = menu.addAction(strings.edit)
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
                 preview_view_action = menu.addAction(strings.preview)
@@ -702,7 +614,6 @@ class MindspaceFilesView(QWidget):
         Args:
             parent_path: Path to the parent directory where folder will be created
         """
-        # Create a temporary folder with default name
         default_name = self._get_default_folder_name(parent_path)
         temp_folder_path = os.path.join(parent_path, default_name)
 
@@ -710,10 +621,8 @@ class MindspaceFilesView(QWidget):
             os.makedirs(temp_folder_path)
             self._logger.info("Created temporary folder: '%s'", temp_folder_path)
 
-            # Set up pending creation state with the temporary path
             self._pending_new_item = (parent_path, True, temp_folder_path)
 
-            # Ensure the new folder is visible and start editing
             self._ensure_item_visible_and_edit(temp_folder_path, select_extension=True)
 
         except OSError as e:
@@ -733,20 +642,17 @@ class MindspaceFilesView(QWidget):
         Args:
             parent_path: Path to the parent directory where file will be created
         """
-        # Create a temporary file with default name
         default_name = self._get_default_file_name(parent_path)
         temp_file_path = os.path.join(parent_path, default_name)
 
         try:
             with open(temp_file_path, 'w', encoding='utf-8') as f:
-                f.write("")  # Create empty file
+                f.write("")
 
             self._logger.info("Created temporary file: '%s'", temp_file_path)
 
-            # Set up pending creation state with the temporary path
             self._pending_new_item = (parent_path, False, temp_file_path)
 
-            # Ensure the new file is visible and start editing
             self._ensure_item_visible_and_edit(temp_file_path, select_extension=True)
 
         except OSError as e:
@@ -760,15 +666,7 @@ class MindspaceFilesView(QWidget):
             )
 
     def _get_default_folder_name(self, parent_path: str) -> str:
-        """
-        Get a default name for a new folder.
-
-        Args:
-            parent_path: Parent directory path
-
-        Returns:
-            Default folder name that doesn't conflict with existing items
-        """
+        """Get a default name for a new folder that doesn't conflict with existing items."""
         base_name = "New Folder"
         counter = 1
 
@@ -780,15 +678,7 @@ class MindspaceFilesView(QWidget):
             counter += 1
 
     def _get_default_file_name(self, parent_path: str) -> str:
-        """
-        Get a default name for a new file.
-
-        Args:
-            parent_path: Parent directory path
-
-        Returns:
-            Default file name that doesn't conflict with existing items
-        """
+        """Get a default name for a new file that doesn't conflict with existing items."""
         base_name = "New File.txt"
         counter = 1
 
@@ -806,6 +696,122 @@ class MindspaceFilesView(QWidget):
 
             counter += 1
 
+    def _get_conversations_dir(self) -> str | None:
+        """Return the absolute conversations directory path, or None if unavailable."""
+        if not self._mindspace_manager.has_mindspace():
+            return None
+        try:
+            path = self._mindspace_manager.get_absolute_path("conversations")
+            return path if os.path.isdir(path) else None
+        except Exception:
+            return None
+
+    def _update_parent_references_after_move(self, old_abs: str, new_abs: str) -> None:
+        """Update .conv children whose 'parent' field referenced old_abs to use new_abs."""
+        conv_dir = self._get_conversations_dir()
+        if not conv_dir:
+            return
+        old_rel = self._mindspace_manager.get_mindspace_relative_path(old_abs)
+        new_rel = self._mindspace_manager.get_mindspace_relative_path(new_abs)
+        if old_rel is None or new_rel is None:
+            return
+        old_rel_norm = old_rel.replace(os.sep, "/")
+        new_rel_norm = new_rel.replace(os.sep, "/")
+        is_dir_move = os.path.isdir(new_abs)
+        old_prefix = old_rel_norm.rstrip("/") + "/"
+        for root_dir, _, files in os.walk(conv_dir):
+            for fname in files:
+                if not fname.lower().endswith(".conv"):
+                    continue
+                fpath = os.path.join(root_dir, fname)
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    parent = data.get("metadata", {}).get("parent")
+                    if not isinstance(parent, str) or not parent:
+                        continue
+                    parent_norm = parent.replace(os.sep, "/")
+                    if parent_norm == old_rel_norm:
+                        data["metadata"]["parent"] = new_rel_norm
+                    elif is_dir_move and parent_norm.startswith(old_prefix):
+                        data["metadata"]["parent"] = new_rel_norm.rstrip("/") + "/" + parent_norm[len(old_prefix):]
+                    else:
+                        continue
+                    with open(fpath, "w", encoding="utf-8") as f:
+                        json.dump(data, f, indent=2)
+                except (OSError, json.JSONDecodeError, AttributeError):
+                    pass
+
+    def _collect_conv_descendants(self, conv_abs: str) -> list[str]:
+        """Return all .conv files that are direct or transitive children of conv_abs."""
+        conv_dir = self._get_conversations_dir()
+        if not conv_dir:
+            return []
+
+        rel_to_abs: dict[str, str] = {}
+        parent_map: dict[str, str | None] = {}
+        for root_dir, _, files in os.walk(conv_dir):
+            for fname in files:
+                if not fname.lower().endswith(".conv"):
+                    continue
+                fpath = os.path.join(root_dir, fname)
+                rel = self._mindspace_manager.get_mindspace_relative_path(fpath)
+                if rel is None:
+                    continue
+                rel_norm = rel.replace(os.sep, "/")
+                rel_to_abs[rel_norm] = fpath
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    p = data.get("metadata", {}).get("parent")
+                    parent_map[rel_norm] = p.replace(os.sep, "/") if isinstance(p, str) and p else None
+                except (OSError, json.JSONDecodeError, KeyError, AttributeError):
+                    parent_map[rel_norm] = None
+
+        root_rel = self._mindspace_manager.get_mindspace_relative_path(conv_abs)
+        if root_rel is None:
+            return []
+        root_rel_norm = root_rel.replace(os.sep, "/")
+
+        result: list[str] = []
+        queue = [root_rel_norm]
+        visited: set[str] = {root_rel_norm}
+        while queue:
+            current = queue.pop(0)
+            for rel, par in parent_map.items():
+                if par == current and rel not in visited:
+                    visited.add(rel)
+                    queue.append(rel)
+                    abs_path = rel_to_abs.get(rel)
+                    if abs_path:
+                        result.append(abs_path)
+        return result
+
+    def _clear_parent_references_for_deleted_file(self, deleted_abs: str) -> None:
+        """Null-out the 'parent' field in .conv files that referenced deleted_abs."""
+        conv_dir = self._get_conversations_dir()
+        if not conv_dir:
+            return
+        deleted_rel = self._mindspace_manager.get_mindspace_relative_path(deleted_abs)
+        if deleted_rel is None:
+            return
+        deleted_rel_norm = deleted_rel.replace(os.sep, "/")
+        for root_dir, _, files in os.walk(conv_dir):
+            for fname in files:
+                if not fname.lower().endswith(".conv"):
+                    continue
+                fpath = os.path.join(root_dir, fname)
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    parent = data.get("metadata", {}).get("parent")
+                    if parent and parent.replace(os.sep, "/") == deleted_rel_norm:
+                        data["metadata"]["parent"] = None
+                        with open(fpath, "w", encoding="utf-8") as f:
+                            json.dump(data, f, indent=2)
+                except (OSError, json.JSONDecodeError, KeyError):
+                    pass
+
     def _start_rename(self, index: QModelIndex) -> None:
         """
         Start inline editing to rename an item.
@@ -816,11 +822,6 @@ class MindspaceFilesView(QWidget):
         if not index.isValid():
             return
 
-        # Don't allow renaming the current directory item
-        if self._is_current_directory_item(index):
-            return
-
-        # Get the delegate and start Qt-based editing (excludes extension from selection)
         delegate = self._tree_view.itemDelegate(index)
         if not isinstance(delegate, MindspaceTreeDelegate):
             self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
@@ -846,7 +847,6 @@ class MindspaceFilesView(QWidget):
         Args:
             path: Path to the file to delete
         """
-        # Show confirmation dialog using MessageBox
         strings = self._language_manager.strings()
         result = MessageBox.show_message(
             self,
@@ -859,10 +859,20 @@ class MindspaceFilesView(QWidget):
 
         if result == MessageBoxButton.YES:
             try:
-                # First emit signal so tabs can be closed
-                self.file_deleted.emit(path)
+                if path.lower().endswith(".conv"):
+                    descendants = self._collect_conv_descendants(path)
+                    for child_path in descendants:
+                        try:
+                            self.file_deleted.emit(child_path)
+                            os.remove(child_path)
+                            self._mindspace_manager.add_interaction(
+                                MindspaceLogLevel.INFO,
+                                f"Deleted child conversation '{child_path}'"
+                            )
+                        except FileNotFoundError:
+                            pass
 
-                # Then delete the file
+                self.file_deleted.emit(path)
                 os.remove(path)
                 self._mindspace_manager.add_interaction(
                     MindspaceLogLevel.INFO,
@@ -870,7 +880,6 @@ class MindspaceFilesView(QWidget):
                 )
 
             except FileNotFoundError:
-                # This can happen if the file gets auto-deleted before we get to it - ignore!
                 pass
 
             except OSError as e:
@@ -891,7 +900,6 @@ class MindspaceFilesView(QWidget):
         """
         strings = self._language_manager.strings()
 
-        # Check if folder is empty
         try:
             if os.listdir(path):
                 MessageBox.show_message(
@@ -914,7 +922,6 @@ class MindspaceFilesView(QWidget):
             )
             return
 
-        # Show confirmation dialog
         result = MessageBox.show_message(
             self,
             MessageBoxType.WARNING,
@@ -926,7 +933,6 @@ class MindspaceFilesView(QWidget):
 
         if result == MessageBoxButton.YES:
             try:
-                # Delete the empty folder
                 os.rmdir(path)
                 self._mindspace_manager.add_interaction(
                     MindspaceLogLevel.INFO,
@@ -945,25 +951,20 @@ class MindspaceFilesView(QWidget):
 
     def _on_delete_requested(self) -> None:
         """Handle delete request from the tree view."""
-        # Get the currently selected index
         index = self._tree_view.currentIndex()
         if not index.isValid():
             return
 
-        # Don't allow renaming the current directory item
         if self._is_current_directory_item(index):
             return
 
-        # Map to source model to get actual file path
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
 
-        # Check if it's a directory or file and call appropriate handler
         if os.path.isdir(path):
             self._handle_delete_folder(path)
-
         else:
             self._handle_delete_file(path)
 
@@ -972,47 +973,37 @@ class MindspaceFilesView(QWidget):
         self._mindspace_path = path
 
         if not path:
-            # Clear the model when no mindspace is active
             self._filter_model.set_mindspace_root("")
-            # Configure tree view for empty path
             self._tree_view.configure_for_path("")
             return
 
         parent_path = os.path.dirname(path)
         self._fs_model.setRootPath(parent_path)
         self._filter_model.set_mindspace_root(path)
-
-        # Configure tree view with the mindspace path
         self._tree_view.configure_for_path(path)
 
-        # Set the root index to the mindspace directory itself
         mindspace_source_index = self._fs_model.index(path)
         root_index = self._filter_model.mapFromSource(mindspace_source_index)
         self._tree_view.setRootIndex(root_index)
 
-        # Hide size, type, and date columns
-        self._tree_view.header().hideSection(1)  # Size
-        self._tree_view.header().hideSection(2)  # Type
-        self._tree_view.header().hideSection(3)  # Date
+        self._tree_view.header().hideSection(1)
+        self._tree_view.header().hideSection(2)
+        self._tree_view.header().hideSection(3)
 
     def _on_tree_clicked(self, index: QModelIndex) -> None:
         """Handle click events."""
-        # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
-
         self.file_clicked.emit(MindspaceViewType.FILES, path, True)
 
     def _on_tree_double_clicked(self, index: QModelIndex) -> None:
         """Handle double click events."""
-        # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
-
         self.file_clicked.emit(MindspaceViewType.FILES, path, False)
 
     def _on_language_changed(self) -> None:
@@ -1025,7 +1016,6 @@ class MindspaceFilesView(QWidget):
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
 
-        # Apply style to header
         self._header.apply_style()
 
         self._icon_provider.update_icons()
@@ -1033,11 +1023,9 @@ class MindspaceFilesView(QWidget):
         file_icon_size = round(16 * zoom_factor)
         self._tree_view.setIconSize(QSize(file_icon_size, file_icon_size))
 
-        # Update font size for tree
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
         self._tree_view.setFont(font)
 
-        # Adjust tree indentation
         self._tree_view.setIndentation(file_icon_size)

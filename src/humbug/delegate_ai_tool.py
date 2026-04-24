@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 from typing import Dict, Any, cast
 
 from ai import AIConversation, AIConversationEvent, AIConversationSettings, AIManager, AIMessageSource, AIReasoningCapability
@@ -442,10 +443,13 @@ class DelegateAITool(AITool):
             if parent_tab:
                 self._column_manager.protect_tab(parent_tab.tab_id())
 
+            parent_folder = os.path.dirname(parent_tab.path()) if parent_tab else None
+
             try:
                 conversation_tab = self._column_manager.new_conversation(
                     child=True,
-                    ai_conversation=child_ai_conversation
+                    ai_conversation=child_ai_conversation,
+                    folder=parent_folder
                 )
 
             except ColumnManagerError as e:
@@ -455,6 +459,12 @@ class DelegateAITool(AITool):
 
             if parent_tab:
                 self._column_manager.unprotect_tab(parent_tab.tab_id())
+
+            # Record parent-child relationship in the child's conversation history
+            if parent_tab:
+                parent_relative = self._mindspace_manager.get_mindspace_relative_path(parent_tab.path())
+                if parent_relative:
+                    child_ai_conversation.get_conversation_history().set_parent(parent_relative)
 
             # Move the child conversation tab to the next column to the right of the parent
             if parent_tab:
