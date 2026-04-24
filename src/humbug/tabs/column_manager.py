@@ -16,6 +16,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage
+from humbug.message_box import MessageBox, MessageBoxType
 from humbug.style_manager import StyleManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.column_splitter import ColumnSplitter
@@ -676,7 +677,19 @@ class ColumnManager(QWidget):
 
         assert source_type in mapping
         view_type = mapping[source_type]
-        return self.open_file_by_mindspace_view_type(view_type, path, ephemeral)
+        try:
+            return self.open_file_by_mindspace_view_type(view_type, path, ephemeral)
+
+        except ColumnManagerError as e:
+            self._logger.error("Failed to open dropped file '%s': %s", path, str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_opening_file_title,
+                strings.could_not_open.format(path, str(e))
+            )
+            return None
 
     def _on_welcome_widget_path_dropped(self, source_type: str, path: str) -> None:
         """Handle mindspace tree drops when only welcome widget is visible."""
@@ -850,18 +863,14 @@ class ColumnManager(QWidget):
         # Set the target column as active
         self._active_column = target_column
 
-        try:
-            tab = self._open_file_by_source_type(source_type, path, False)
-            if tab is None:
-                return
+        tab = self._open_file_by_source_type(source_type, path, False)
+        if tab is None:
+            return
 
-            # Move the tab to the target position if not already there
-            current_index = target_column.indexOf(tab)
-            if current_index != target_index:
-                target_column.tabBar().moveTab(current_index, target_index)
-
-        except (ConversationError, PreviewError, OSError) as e:
-            self._logger.exception("Failed to open dropped file '%s': %s", path, str(e))
+        # Move the tab to the target position if not already there
+        current_index = target_column.indexOf(tab)
+        if current_index != target_index:
+            target_column.tabBar().moveTab(current_index, target_index)
 
     def _update_tab_bar_for_label_change(self, tab: TabBase) -> None:
         """
@@ -946,6 +955,10 @@ class ColumnManager(QWidget):
         """
         if column in self._column_mru_order:
             del self._column_mru_order[column]
+
+        if self._active_column == column and len(self._tab_columns) > 1:
+            new_active_index = column_number - 1 if column_number > 0 else 1
+            self._active_column = self._tab_columns[new_active_index]
 
         del self._tab_columns[column_number]
         column.deleteLater()
@@ -1192,10 +1205,6 @@ class ColumnManager(QWidget):
         if column.count() == 0:
             if len(self._tab_columns) > 1:
                 column_number = self._tab_columns.index(column)
-                if self._active_column == column:
-                    new_active_column = 1 if column_number == 0 else column_number - 1
-                    self._active_column = self._tab_columns[new_active_column]
-
                 self._remove_column_and_resize(column_number, column)
                 self._update_tabs()
 

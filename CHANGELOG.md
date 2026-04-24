@@ -20,6 +20,8 @@ Bug fixes:
   option.
 - Enabled keyboard shortcuts for "copy" operations in diff tabs.
 - Resolved a problem where find positions could be lost when hiding and unhiding the find bar in a tab.
+- If you attempt to drag a file that cannot be opened then an exception would trigger and the exception canary would activate.
+  Now this action will trigger a popup message box.
 
 ## v44 (2026-04-19)
 
