@@ -663,6 +663,129 @@ menai_raise_eval_errorf(const char *fmt, ...)
     return NULL;
 }
 
+/*
+ * parse_complex_string — parse a null-terminated ASCII string as a complex
+ * number, matching Python's complex() constructor semantics.
+ *
+ * Grammar (after stripping leading/trailing whitespace):
+ *
+ *   complex  := float
+ *             | imag_part
+ *             | float imag_part
+ *
+ *   imag_part := sign? coefficient? ('j' | 'J')
+ *   coefficient := float_magnitude
+ *
+ * where float is parsed by strtod (handles inf, nan, signs, scientific
+ * notation), and a bare 'j'/'+j'/'-j' with no coefficient means 1j/-1j.
+ *
+ * Stores the parsed real and imaginary parts in *out_real and *out_imag.
+ * Returns 1 on success, 0 on parse failure.
+ */
+static int
+parse_complex_string(const char *s, double *out_real, double *out_imag)
+{
+    /* Skip leading whitespace. */
+    while (*s == ' ' || *s == '\t') {
+        s++;
+    }
+
+    /* Find end, skip trailing whitespace. */
+    size_t len = strlen(s);
+    while (len > 0 && (s[len - 1] == ' ' || s[len - 1] == '\t')) {
+        len--;
+    }
+
+    if (len == 0) {
+        return 0;
+    }
+
+    /* Work on a null-terminated copy of the trimmed string. */
+    char buf[64];
+    if (len >= sizeof(buf)) {
+        return 0;
+    }
+
+    memcpy(buf, s, len);
+    buf[len] = '\0';
+
+    char *p = buf;
+    char *end;
+    double real = 0.0;
+    double imag = 0.0;
+
+    /*
+     * Try to parse a leading float.  strtod consumes an optional sign,
+     * digits, decimal point, exponent, and the special strings inf/nan.
+     * If it consumes nothing (end == p), there is no real part.
+     */
+    double first = strtod(p, &end);
+    if (end == p) {
+        /* No leading float — must be a bare sign + 'j'. */
+        first = 0.0;
+    } else {
+        p = end;
+    }
+
+    /* Check for end of string (pure real: "1.5", "inf", etc.) */
+    if (*p == '\0') {
+        *out_real = first;
+        *out_imag = 0.0;
+        return 1;
+    }
+
+    /* Check for imaginary suffix 'j'/'J' immediately (pure imaginary). */
+    if (*p == 'j' || *p == 'J') {
+        if (*(p + 1) != '\0') {
+            return 0;
+        }
+
+        *out_real = 0.0;
+        *out_imag = (end == buf) ? 1.0 : first;
+        return 1;
+    }
+
+    /*
+     * We have a real part (first) followed by an imaginary part.
+     * The imaginary part starts with '+' or '-'.
+     */
+    if (*p != '+' && *p != '-') {
+        return 0;
+    }
+
+    real = first;
+
+    /*
+     * Peek ahead: if the next character after the sign is 'j'/'J', this
+     * is a bare +j or -j (coefficient 1).
+     */
+    if ((p[1] == 'j' || p[1] == 'J') && p[2] == '\0') {
+        imag = (*p == '-') ? -1.0 : 1.0;
+        *out_real = real;
+        *out_imag = imag;
+        return 1;
+    }
+
+    /* Parse the imaginary coefficient. */
+    double imag_coeff = strtod(p, &end);
+    if (end == p) {
+        return 0;
+    }
+
+    p = end;
+    if (*p != 'j' && *p != 'J') {
+        return 0;
+    }
+
+    if (*(p + 1) != '\0') {
+        return 0;
+    }
+
+    *out_real = real;
+    *out_imag = imag_coeff;
+    return 1;
+}
+
 static PyTypeObject *_py_code_object_type = NULL;
 
 /*
@@ -676,7 +799,7 @@ typedef struct {
     MenaiValue **constants_items;    /* borrowed from code_obj->constants */
     ssize_t nconst;                  /* borrowed from code_obj->nconst */
     const char **names_items;        /* borrowed from code_obj->names */
-    Py_hash_t *name_hashes;          /* borrowed from code_obj->name_hashes */
+    hash_t *name_hashes;             /* borrowed from code_obj->name_hashes */
     ssize_t nnames;                  /* borrowed from code_obj->nnames */
     MenaiCodeObject **children;      /* borrowed from code_obj->children */
     ssize_t nchildren;               /* borrowed from code_obj->nchildren */
@@ -1000,7 +1123,7 @@ globals_build(GlobalsTable *gt, const GlobalsTable *globals_gt)
     ssize_t mask = gt->slot_count - 1;
     for (ssize_t i = 0; i < gt->count; i++) {
         const char *name = gt->entries[i].name;
-        Py_hash_t h = menai_name_str_hash(name);
+        hash_t h = menai_name_str_hash(name);
         uhash_t perturb = (uhash_t)h;
         ssize_t slot = (ssize_t)(perturb & (uhash_t)mask);
         for (;;) {
@@ -1020,7 +1143,7 @@ globals_build(GlobalsTable *gt, const GlobalsTable *globals_gt)
 }
 
 static MenaiValue *
-globals_lookup_h(const GlobalsTable *gt, const char *name, Py_hash_t h)
+globals_lookup_h(const GlobalsTable *gt, const char *name, hash_t h)
 {
     if (gt->slot_count == 0) {
         return NULL;
@@ -1198,7 +1321,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_LOAD_NAME: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             const char *name_str = frame->names_items[src0];
-            Py_hash_t name_hash = frame->name_hashes[src0];
+            hash_t name_hash = frame->name_hashes[src0];
             MenaiValue *val = globals_lookup_h(globals, name_str, name_hash);
             if (val == NULL) {
                 /* Build a rich error listing up to 10 available names. */
@@ -4527,93 +4650,73 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            /* Scan codepoints directly to classify the string. */
             ssize_t slen = menai_string_length(a);
             const uint32_t *sdata = menai_string_data(a);
-            int has_j = 0, has_dot = 0, has_e = 0;
-            for (ssize_t _i = 0; _i < slen; _i++) {
-                uint32_t _cp = sdata[_i];
-                if (_cp == 'j' || _cp == 'J') {
-                    has_j = 1;
-                } else if (_cp == '.') {
-                    has_dot = 1;
-                } else if (_cp == 'e' || _cp == 'E') {
-                    has_e = 1;
-                }
-            }
 
-            if (!has_dot && !has_e && !has_j) {
-                /* Try integer parse directly on the codepoint array. */
-                MenaiBigInt stn_tmp;
-                menai_bigint_init(&stn_tmp);
-                if (menai_bigint_from_codepoints(sdata, slen, 10, &stn_tmp) == 0) {
-                    MenaiValue *r = menai_integer_from_bigint(stn_tmp);
-                    if (r == NULL) {
-                        goto error;
-                    }
-
-                    menai_reg_set_own(regs, base + dest, r);
-                    break;
-                }
-
-                PyErr_Clear();
-            }
-
-            if (has_j) {
-                /*
-                 * Complex literal parse — still uses Python's complex()
-                 * constructor as a C-native complex literal parser would be
-                 * non-trivial to implement correctly.
-                 */
-                PyObject *sa_j = menai_string_to_pyunicode(a);
-                if (sa_j == NULL) {
-                    goto error;
-                }
-
-                PyObject *cplx = PyObject_CallOneArg((PyObject *)&PyComplex_Type, sa_j);
-                Py_DECREF(sa_j);
-                if (cplx != NULL) {
-                    MenaiValue *r = make_complex(PyComplex_RealAsDouble(cplx),
-                                               PyComplex_ImagAsDouble(cplx));
-                    Py_DECREF(cplx);
-                    if (r == NULL) {
-                        goto error;
-                    }
-
-                    menai_reg_set_own(regs, base + dest, r);
-                    break;
-                }
-
-                PyErr_Clear();
-            }
-
-            /* Float parse via strtod on a temporary UTF-8 buffer.
-                * Valid float literals are ASCII-only so this is safe. */
-            char *stn_fbuf = (char *)PyMem_Malloc((size_t)(slen + 1));
-            if (!stn_fbuf) {
-                PyErr_NoMemory(); goto error;
-            }
-
-            int stn_ascii_ok = 1;
-            for (ssize_t _i = 0; _i < slen; _i++) {
-                if (sdata[_i] > 0x7F) {
-                    stn_ascii_ok = 0; break;
-                }
-
-                stn_fbuf[_i] = (char)sdata[_i];
-            }
-
-            stn_fbuf[slen] = '\0';
-            if (!stn_ascii_ok) {
-                PyMem_Free(stn_fbuf);
+            /*
+             * Copy codepoints to a stack-allocated ASCII buffer.
+             * Any non-ASCII codepoint means the string cannot be a number.
+             * The buffer limit of 64 is generous for any valid numeric literal.
+             */
+            char stn_buf[64];
+            if (slen >= (ssize_t)(sizeof(stn_buf))) {
                 menai_reg_set_borrow(regs, base + dest, Menai_NONE);
                 break;
             }
 
+            int stn_ascii_ok = 1;
+            int stn_has_j = 0;
+            for (ssize_t _i = 0; _i < slen; _i++) {
+                if (sdata[_i] > 0x7F) {
+                    stn_ascii_ok = 0;
+                    break;
+                }
+
+                stn_buf[_i] = (char)sdata[_i];
+                if (sdata[_i] == 'j' || sdata[_i] == 'J') {
+                    stn_has_j = 1;
+                }
+            }
+
+            stn_buf[slen] = '\0';
+
+            if (!stn_ascii_ok) {
+                menai_reg_set_borrow(regs, base + dest, Menai_NONE);
+                break;
+            }
+
+            /* Try integer first: fast path for the common case. */
+            MenaiBigInt stn_tmp;
+            menai_bigint_init(&stn_tmp);
+            if (menai_bigint_from_codepoints(sdata, slen, 10, &stn_tmp) == 0) {
+                MenaiValue *r = menai_integer_from_bigint(stn_tmp);
+                if (r == NULL) {
+                    goto error;
+                }
+
+                menai_reg_set_own(regs, base + dest, r);
+                break;
+            }
+
+            PyErr_Clear();
+            /* Try complex if the string contains 'j' or 'J'. */
+            if (stn_has_j) {
+                double stn_re, stn_im;
+                if (parse_complex_string(stn_buf, &stn_re, &stn_im)) {
+                    MenaiValue *r = make_complex(stn_re, stn_im);
+                    if (r == NULL) {
+                        goto error;
+                    }
+
+                    menai_reg_set_own(regs, base + dest, r);
+                    break;
+                }
+            }
+
+            /* Try float. */
             char *stn_end = NULL;
-            double stn_dv = strtod(stn_fbuf, &stn_end);
-            int stn_ok = (stn_end != stn_fbuf && *stn_end == '\0');
-            PyMem_Free(stn_fbuf);
+            double stn_dv = strtod(stn_buf, &stn_end);
+            int stn_ok = (stn_end != stn_buf && *stn_end == '\0');
             if (stn_ok) {
                 MenaiValue *_r = make_float(stn_dv);
                 if (_r == NULL) {
