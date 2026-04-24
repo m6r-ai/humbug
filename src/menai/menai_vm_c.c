@@ -388,6 +388,9 @@ _menai_mul_overflow(long a, long b, long *r) {
 MenaiValue *Menai_NONE = NULL;
 MenaiValue *Menai_TRUE = NULL;
 MenaiValue *Menai_FALSE = NULL;
+MenaiValue *Menai_EMPTY_LIST = NULL;
+MenaiValue *Menai_EMPTY_DICT = NULL;
+MenaiValue *Menai_EMPTY_SET = NULL;
 
 /*
  * Module-level state fetched at init
@@ -648,47 +651,6 @@ menai_raise_eval_errorf(const char *fmt, ...)
 }
 
 static PyTypeObject *_py_code_object_type = NULL;
-
-int
-menai_vm_shim_init(void)
-{
-    if (!menai_vm_bridge_init()) {
-        return -1;
-    }
-
-    PyObject *bytecode_mod = PyImport_ImportModule("menai.menai_bytecode");
-    if (!bytecode_mod) {
-        return -1;
-    }
-
-    PyObject *co_type = PyObject_GetAttrString(bytecode_mod, "CodeObject");
-    Py_DECREF(bytecode_mod);
-    if (!co_type) {
-        return -1;
-    }
-
-    _py_code_object_type = (PyTypeObject *)co_type;
-
-    Menai_NONE = menai_none_singleton();
-    Menai_TRUE = menai_boolean_true();
-    Menai_FALSE = menai_boolean_false();
-
-    PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
-    if (err_mod == NULL) {
-        return -1;
-    }
-
-    MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
-    MenaiCancelledException_type = PyObject_GetAttrString(err_mod, "MenaiCancelledException");
-    Py_DECREF(err_mod);
-    if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL) {
-        Py_XDECREF(MenaiEvalError_type);
-        Py_XDECREF(MenaiCancelledException_type);
-        return -1;
-    }
-
-    return 0;
-}
 
 /*
  * Frame struct
@@ -1202,15 +1164,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_LOAD_EMPTY_LIST:
-            menai_reg_set_borrow(regs, base + dest, menai_list_new_empty());
+            menai_reg_set_borrow(regs, base + dest, Menai_EMPTY_LIST);
             break;
 
         case OP_LOAD_EMPTY_DICT:
-            menai_reg_set_borrow(regs, base + dest, menai_dict_new_empty());
+            menai_reg_set_borrow(regs, base + dest, Menai_EMPTY_DICT);
             break;
 
         case OP_LOAD_EMPTY_SET:
-            menai_reg_set_borrow(regs, base + dest, menai_set_new_empty());
+            menai_reg_set_borrow(regs, base + dest, Menai_EMPTY_SET);
             break;
 
         case OP_LOAD_CONST: {
@@ -6811,6 +6773,50 @@ static struct PyModuleDef menai_vm_c_module = {
     -1,
     menai_vm_c_methods
 };
+
+static int
+menai_vm_shim_init(void)
+{
+    if (!menai_vm_bridge_init()) {
+        return -1;
+    }
+
+    PyObject *bytecode_mod = PyImport_ImportModule("menai.menai_bytecode");
+    if (!bytecode_mod) {
+        return -1;
+    }
+
+    PyObject *co_type = PyObject_GetAttrString(bytecode_mod, "CodeObject");
+    Py_DECREF(bytecode_mod);
+    if (!co_type) {
+        return -1;
+    }
+
+    _py_code_object_type = (PyTypeObject *)co_type;
+
+    Menai_NONE = menai_none_singleton();
+    Menai_TRUE = menai_boolean_true();
+    Menai_FALSE = menai_boolean_false();
+    Menai_EMPTY_LIST = menai_list_new_empty();
+    Menai_EMPTY_DICT = menai_dict_new_empty();
+    Menai_EMPTY_SET = menai_set_new_empty();
+
+    PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
+    if (err_mod == NULL) {
+        return -1;
+    }
+
+    MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
+    MenaiCancelledException_type = PyObject_GetAttrString(err_mod, "MenaiCancelledException");
+    Py_DECREF(err_mod);
+    if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL) {
+        Py_XDECREF(MenaiEvalError_type);
+        Py_XDECREF(MenaiCancelledException_type);
+        return -1;
+    }
+
+    return 0;
+}
 
 PyMODINIT_FUNC
 PyInit_menai_vm_c(void)
