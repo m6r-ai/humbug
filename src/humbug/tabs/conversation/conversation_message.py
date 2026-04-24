@@ -566,6 +566,9 @@ class ConversationMessage(QFrame):
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        font = self.font()
+        base_font_size = style_manager.base_font_size()
+        font.setPointSizeF(base_font_size * zoom_factor)
 
         self._approval_widget = QWidget()
         self._approval_widget.setObjectName("_approval_widget")
@@ -601,7 +604,7 @@ class ConversationMessage(QFrame):
         button_layout.addStretch()
 
         min_button_height = 40
-        min_button_width = int(180 * zoom_factor)
+        min_button_width = int(220 * zoom_factor)
 
         self._approval_approve_button = QPushButton(strings.approve_tool_call)
         self._approval_approve_button.setObjectName("_approval_approve_button")
@@ -610,6 +613,7 @@ class ConversationMessage(QFrame):
         self._approval_approve_button.setMinimumHeight(min_button_height)
         self._approval_approve_button.setProperty("recommended", not destructive)
         self._approval_approve_button.setContentsMargins(8, 8, 8, 8)
+        self._approval_approve_button.setFont(font)
 
         self._approval_i_am_unsure_button = QPushButton(strings.i_am_unsure_about_tool_call)
         self._approval_i_am_unsure_button.setObjectName("_approval_i_am_unsure_button")
@@ -617,6 +621,7 @@ class ConversationMessage(QFrame):
         self._approval_i_am_unsure_button.setMinimumWidth(min_button_width)
         self._approval_i_am_unsure_button.setMinimumHeight(min_button_height)
         self._approval_i_am_unsure_button.setContentsMargins(8, 8, 8, 8)
+        self._approval_i_am_unsure_button.setFont(font)
 
         self._approval_reject_button = QPushButton(strings.reject_tool_call)
         self._approval_reject_button.setObjectName("_approval_reject_button")
@@ -624,6 +629,7 @@ class ConversationMessage(QFrame):
         self._approval_reject_button.setMinimumWidth(min_button_width)
         self._approval_reject_button.setMinimumHeight(min_button_height)
         self._approval_reject_button.setContentsMargins(8, 8, 8, 8)
+        self._approval_reject_button.setFont(font)
 
         button_layout.addWidget(self._approval_approve_button)
         button_layout.addWidget(self._approval_i_am_unsure_button)
@@ -858,6 +864,8 @@ class ConversationMessage(QFrame):
         # so code block syntax highlighting and other input behaviours work correctly.
         zoom_factor = self._style_manager.zoom_factor()
         spacing = int(self._style_manager.message_bubble_spacing() * zoom_factor)
+        font = self.font()
+        font.setPointSizeF(self._style_manager.base_font_size() * zoom_factor)
         self._edit_area = QWidget(self)
         self._edit_area.setObjectName("_edit_area")
         edit_layout = QVBoxLayout(self._edit_area)
@@ -884,12 +892,14 @@ class ConversationMessage(QFrame):
         cancel_btn = QPushButton(self._edit_area)
         cancel_btn.setObjectName("_edit_cancel_button")
         cancel_btn.clicked.connect(self._cancel_edit)
+        cancel_btn.setFont(font)
         self._edit_cancel_button = cancel_btn
         btn_layout.addWidget(cancel_btn)
 
         confirm_btn = QPushButton(self._edit_area)
         confirm_btn.setObjectName("_edit_confirm_button")
         confirm_btn.clicked.connect(self._confirm_edit)
+        confirm_btn.setFont(font)
         self._edit_confirm_button = confirm_btn
         btn_layout.addWidget(confirm_btn)
 
