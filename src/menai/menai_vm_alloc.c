@@ -8,12 +8,12 @@
  *
  * Sizes outside [32, 4096] fall through to malloc/free.
  */
-
 #include <stdlib.h>
 #include <stddef.h>
 #include <assert.h>
 
 #include "menai_vm_value.h"
+
 #include "menai_vm_alloc.h"
 
 #define MENAI_POOL_MIN_SIZE  32

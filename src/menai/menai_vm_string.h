@@ -13,10 +13,6 @@
 #ifndef MENAI_VM_STRING_H
 #define MENAI_VM_STRING_H
 
-#include <stdint.h>
-
-#include "menai_vm_value.h"
-
 /*
  * MenaiString
  *
@@ -27,7 +23,7 @@
 typedef struct {
     MenaiValue_HEAD
     ssize_t length;             /* codepoint count */
-    Py_hash_t hash;             /* cached hash; -1 = not yet computed */
+    hash_t hash;                /* cached hash; -1 = not yet computed */
     uint32_t data[];            /* UTF-32 codepoints, flexible array */
 } MenaiString;
 
@@ -56,7 +52,7 @@ MenaiValue *menai_string_from_pyunicode(PyObject *pystr);
 PyObject *menai_string_to_pyunicode(MenaiValue *s);
 int menai_string_compare(MenaiValue *a, MenaiValue *b);
 int menai_string_equal(MenaiValue *a, MenaiValue *b);
-Py_hash_t menai_string_hash(MenaiValue *s);
+hash_t menai_string_hash(MenaiValue *s);
 MenaiValue *menai_string_concat(MenaiValue *a, MenaiValue *b);
 MenaiValue *menai_string_ref(MenaiValue *s, ssize_t i);
 MenaiValue *menai_string_slice(MenaiValue *s, ssize_t start, ssize_t end);

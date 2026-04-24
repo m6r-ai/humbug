@@ -13,11 +13,8 @@
  * The pool is not thread-safe.  The VM holds the GIL throughout execution so
  * no locking is required.
  */
-
 #ifndef MENAI_VM_ALLOC_H
 #define MENAI_VM_ALLOC_H
-
-#include <stddef.h>
 
 /*
  * menai_alloc — allocate size bytes from the pool.

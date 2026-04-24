@@ -14,23 +14,19 @@
  *   - No duplicate elements: all elements[i] are distinct by menai_value_equal.
  *   - Insertion order is preserved by the array indices.
  */
-
 #ifndef MENAI_VM_SET_H
 #define MENAI_VM_SET_H
-
-#include "menai_vm_value.h"
-#include "menai_vm_hashtable.h"
 
 typedef struct {
     MenaiValue_HEAD
     MenaiValue **elements;   /* C array of owned MenaiValue *s */
-    Py_hash_t *hashes;       /* C array of menai_value_hash(elements[i]) */
+    hash_t *hashes;          /* C array of menai_value_hash(elements[i]) */
     MenaiHashTable ht;       /* pure-C hash table for O(1) membership */
     ssize_t length;
 } MenaiSet;
 
 MenaiValue *menai_set_new_empty(void);
-MenaiValue *menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, ssize_t n);
+MenaiValue *menai_set_from_arrays_steal(MenaiValue **elements, hash_t *hashes, ssize_t n);
 MenaiValue *menai_set_new_empty(void);
 
 #endif /* MENAI_VM_SET_H */

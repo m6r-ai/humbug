@@ -11,10 +11,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include "menai_vm_alloc.h"
-#include "menai_vm_list.h"
+#include "menai_vm_value.h"
 #include "menai_vm_memory.h"
 #include "menai_vm_hashtable.h"
+
+#include "menai_vm_list.h"
 
 static void
 MenaiList_dealloc(MenaiValue *self)

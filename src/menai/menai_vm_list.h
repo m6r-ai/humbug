@@ -9,11 +9,8 @@
  * menai_list_from_array_steal) are the primary allocation paths used by the VM.
  * menai_list_new_empty() creates the empty-list singleton.
  */
-
 #ifndef MENAI_VM_LIST_H
 #define MENAI_VM_LIST_H
-
-#include "menai_vm_value.h"
 
 typedef struct {
     MenaiValue_HEAD

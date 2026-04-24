@@ -8,11 +8,6 @@
 #ifndef MENAI_VM_FUNCTION_H
 #define MENAI_VM_FUNCTION_H
 
-#include <stdint.h>
-
-#include "menai_vm_value.h"
-#include "menai_vm_code.h"
-
 /*
  * MenaiFunction — a Menai closure.
  *

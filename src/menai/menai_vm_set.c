@@ -10,18 +10,22 @@
  * menai_set_new_empty() creates the empty-set singleton.
  */
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
 
 #include "menai_vm_alloc.h"
-#include "menai_vm_set.h"
-#include "menai_vm_memory.h"
+#include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"
+#include "menai_vm_memory.h"
+
+#include "menai_vm_set.h"
 
 /*
  * _set_free_arrays — release n owned references in elements, then free
  * both arrays.  NULL pointers are safely ignored.
  */
 static void
-_set_free_arrays(MenaiValue **elements, Py_hash_t *hashes, ssize_t n)
+_set_free_arrays(MenaiValue **elements, hash_t *hashes, ssize_t n)
 {
     if (elements) {
         for (ssize_t i = 0; i < n; i++) {
@@ -44,7 +48,7 @@ MenaiSet_dealloc(MenaiValue *self)
 }
 
 MenaiValue *
-menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, ssize_t n)
+menai_set_from_arrays_steal(MenaiValue **elements, hash_t *hashes, ssize_t n)
 {
     MenaiSet *obj = (MenaiSet *)menai_alloc(sizeof(MenaiSet));
     if (!obj) {

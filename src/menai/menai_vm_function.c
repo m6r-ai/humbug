@@ -8,9 +8,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include "menai_vm_alloc.h"
-#include "menai_vm_memory.h"
+#include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"
+#include "menai_vm_memory.h"
+#include "menai_vm_code.h"
 
 #include "menai_vm_function.h"
 

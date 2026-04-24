@@ -4,7 +4,6 @@
  * MenaiComplex stores a C double pair (real, imag).  There are no
  * singletons; each value is allocated on demand.
  */
-
 #ifndef MENAI_VM_COMPLEX_H
 #define MENAI_VM_COMPLEX_H
 

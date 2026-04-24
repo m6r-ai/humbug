@@ -11,11 +11,13 @@
  * menai_dict_new_empty() creates the empty-dict singleton.
  */
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
 
 #include "menai_vm_alloc.h"
-#include "menai_vm_memory.h"
-#include "menai_vm_hashtable.h"
 #include "menai_vm_value.h"
+#include "menai_vm_hashtable.h"
+#include "menai_vm_memory.h"
 
 #include "menai_vm_dict.h"
 
@@ -24,7 +26,7 @@
  * free all three arrays.  NULL pointers are safely ignored.
  */
 static void
-_dict_free_arrays(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, ssize_t n)
+_dict_free_arrays(MenaiValue **keys, MenaiValue **values, hash_t *hashes, ssize_t n)
 {
     if (keys) {
         for (ssize_t i = 0; i < n; i++) {
@@ -55,7 +57,7 @@ MenaiDict_dealloc(MenaiValue *self)
 }
 
 MenaiValue *
-menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, ssize_t n)
+menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, hash_t *hashes, ssize_t n)
 {
     MenaiDict *obj = (MenaiDict *)menai_alloc(sizeof(MenaiDict));
     if (!obj) {

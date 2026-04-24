@@ -1,12 +1,8 @@
 /*
  * menai_vm_integer.h — MenaiInteger type definition and API.
  */
-
 #ifndef MENAI_VM_INTEGER_H
 #define MENAI_VM_INTEGER_H
-
-#include "menai_vm_value.h"
-#include "menai_vm_bigint.h"
 
 /*
  * Three-tier integer representation:

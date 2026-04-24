@@ -6,7 +6,6 @@
  *
  * Only menai_bigint_from_pylong and menai_bigint_to_pylong may call the Python C API.
  */
-
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 

@@ -13,12 +13,17 @@
  */
 #include <stdlib.h>
 
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include "menai_vm_alloc.h"
-#include "menai_vm_struct.h"
+#include "menai_vm_value.h"
+#include "menai_vm_hashtable.h"
 #include "menai_vm_memory.h"
 #include "menai_vm_symbol.h"
 #include "menai_vm_string.h"
-#include "menai_vm_hashtable.h"
+
+#include "menai_vm_struct.h"
 
 static void
 MenaiStructType_dealloc(MenaiValue *self)

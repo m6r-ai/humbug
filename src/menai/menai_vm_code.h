@@ -18,8 +18,6 @@
 #ifndef MENAI_VM_CODE_H
 #define MENAI_VM_CODE_H
 
-#include <stdint.h>
-
 typedef struct MenaiCodeObject_s {
     size_t ob_refcnt;
 

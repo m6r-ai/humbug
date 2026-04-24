@@ -5,11 +5,6 @@
 #ifndef MENAI_VM_HASHTABLE_H
 #define MENAI_VM_HASHTABLE_H
 
-#include <stdint.h>
-#include <string.h>
-
-#include "menai_vm_value.h"
-
 typedef ssize_t hash_t;
 typedef size_t uhash_t;
 
@@ -69,7 +64,6 @@ menai_name_str_hash(const char *s)
 
 hash_t menai_value_hash(MenaiValue *val);
 int menai_value_equal(MenaiValue *a, MenaiValue *b);
-PyObject *menai_value_describe(MenaiValue *val);
 
 /* ---------------------------------------------------------------------------
  * MenaiHashTable — open-addressing hash table

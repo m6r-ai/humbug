@@ -1,11 +1,8 @@
 /*
  * menai_vm_dealloc.h — direct deallocation dispatch for MenaiValue.
  */
-
 #ifndef MENAI_VM_DEALLOC_H
 #define MENAI_VM_DEALLOC_H
-
-#include "menai_vm_value.h"
 
 /*
  * menai_dealloc — free a MenaiValue whose reference count has reached zero.

@@ -9,13 +9,8 @@
  *   menai_reg_*           — register file operations
  *   menai_regs_alloc/_free — register array lifetime
  */
-
 #ifndef MENAI_VM_MEMORY_H
 #define MENAI_VM_MEMORY_H
-
-#include <stddef.h>
-
-#include "menai_vm_value.h"
 
 /*
  * menai_reg_set_own — store an owned reference into a register slot.

@@ -20,13 +20,13 @@ typedef struct {
     MenaiValue_HEAD
     MenaiValue **keys;       /* C array of owned MenaiValue *s */
     MenaiValue **values;     /* C array of owned MenaiValue *s */
-    Py_hash_t *hashes;       /* C array of menai_value_hash(keys[i]) */
+    hash_t *hashes;          /* C array of menai_value_hash(keys[i]) */
     MenaiHashTable ht;       /* pure-C hash table for O(1) key lookup */
     ssize_t length;
 } MenaiDict;
 
 MenaiValue *menai_dict_new_empty(void);
-MenaiValue *menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, ssize_t n);
+MenaiValue *menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, hash_t *hashes, ssize_t n);
 MenaiValue *menai_dict_new_empty(void);
 
 #endif /* MENAI_VM_DICT_H */

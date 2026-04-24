@@ -30,15 +30,8 @@
  *   All heap allocation uses malloc / free.
  *   Strings returned by menai_bigint_to_string must be freed with free().
  */
-
 #ifndef MENAI_VM_BIGINT_H
 #define MENAI_VM_BIGINT_H
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
 
 /* Sign-magnitude arbitrary-precision integer. */
 typedef struct {

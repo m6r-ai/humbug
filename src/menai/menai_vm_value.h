@@ -4,15 +4,10 @@
  * Defines the MenaiValue pointer type, the MenaiValue_HEAD macro, and the
  * MenaiType typedef.
  */
-
 #ifndef MENAI_VM_OBJECT_H
 #define MENAI_VM_OBJECT_H
 
 #include <assert.h>
-#include <stdint.h>
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 
 typedef struct MenaiValue_s MenaiValue;
 

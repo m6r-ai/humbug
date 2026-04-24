@@ -9,11 +9,8 @@
  *   unicode_simple_downcase(cp)     — single-codepoint lowercase mapping
  *   unicode_upcase_expansion(cp)    — multi-codepoint uppercase expansion
  */
-
 #ifndef MENAI_VM_STRING_TABLES_H
 #define MENAI_VM_STRING_TABLES_H
-
-#include <stdint.h>
 
 /* ---------------------------------------------------------------------------
  * unicode_is_whitespace

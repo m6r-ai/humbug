@@ -4,8 +4,9 @@
  * The non-inline functions declared in menai_vm_memory.h are implemented here.
  * All inline functions are defined directly in the header.
  */
-
 #include <stdlib.h>
+
+#include "menai_vm_value.h"
 
 #include "menai_vm_memory.h"
 

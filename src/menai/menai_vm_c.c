@@ -17,10 +17,14 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "menai_vm_memory.h"
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
 
+#include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"
-#include "menai_vm_bridge.h"
+#include "menai_vm_code.h"
+#include "menai_vm_memory.h"
+#include "menai_vm_bigint.h"
 #include "menai_vm_alloc.h"
 #include "menai_vm_none.h"
 #include "menai_vm_boolean.h"
@@ -34,7 +38,7 @@
 #include "menai_vm_dict.h"
 #include "menai_vm_list.h"
 #include "menai_vm_set.h"
-#include "menai_vm_code.h"
+#include "menai_vm_bridge.h"
 
 /*
  * Portable complex arithmetic — avoids <complex.h>, which is unsupported on MSVC.
@@ -1037,6 +1041,67 @@ globals_lookup_h(const GlobalsTable *gt, const char *name, Py_hash_t h)
         perturb >>= 5;
         slot = (ssize_t)((5 * (uhash_t)slot + 1 + perturb) & (uhash_t)mask);
     }
+}
+
+PyObject *
+menai_value_describe_complex(MenaiValue *val)
+{
+    MenaiComplex *c = (MenaiComplex *)val;
+    double r = c->real;
+    double im = c->imag;
+
+    /*
+     * Replicate the Python-layer describe logic: use integer notation when
+     * the component is an exact integer, otherwise use str(float).
+     */
+    PyObject *real_py = PyFloat_FromDouble(r);
+    PyObject *imag_py = PyFloat_FromDouble(im);
+    if (!real_py || !imag_py) {
+        Py_XDECREF(real_py);
+        Py_XDECREF(imag_py);
+        return NULL;
+    }
+
+    PyObject *real_str;
+    PyObject *imag_str;
+
+    /* Format real component */
+    if (r == (double)(long)r && r >= (double)LONG_MIN && r <= (double)LONG_MAX) {
+        real_str = PyUnicode_FromFormat("%ld", (long)r);
+    } else {
+        real_str = PyObject_Str(real_py);
+    }
+
+    /* Format imaginary component */
+    if (im == (double)(long)im && im >= (double)LONG_MIN && im <= (double)LONG_MAX) {
+        imag_str = PyUnicode_FromFormat("%ld", (long)im);
+    } else {
+        imag_str = PyObject_Str(imag_py);
+    }
+
+    Py_DECREF(real_py);
+    Py_DECREF(imag_py);
+
+    if (!real_str || !imag_str) {
+        Py_XDECREF(real_str);
+        Py_XDECREF(imag_str);
+        return NULL;
+    }
+
+    PyObject *result;
+    if (r == 0.0 && im == 0.0) {
+        result = PyUnicode_FromString("0+0j");
+    } else if (r == 0.0) {
+        result = PyUnicode_FromFormat("%Uj", imag_str);
+    } else if (im >= 0.0) {
+        result = PyUnicode_FromFormat("%U+%Uj", real_str, imag_str);
+    } else {
+        result = PyUnicode_FromFormat("%U%Uj", real_str, imag_str);
+    }
+
+    Py_DECREF(real_str);
+    Py_DECREF(imag_str);
+    return result;
 }
 
 /*
@@ -4001,7 +4066,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            PyObject *py_str = menai_value_describe(a);
+            PyObject *py_str = menai_value_describe_complex(a);
             if (py_str == NULL) {
                 goto error;
             }

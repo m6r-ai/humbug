@@ -11,8 +11,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include "menai_vm_alloc.h"
+#include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"
+#include "menai_vm_code.h"
+#include "menai_vm_bigint.h"
 #include "menai_vm_boolean.h"
 #include "menai_vm_complex.h"
 #include "menai_vm_float.h"

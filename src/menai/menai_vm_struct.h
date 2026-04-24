@@ -13,10 +13,6 @@
 #ifndef MENAI_VM_STRUCT_H
 #define MENAI_VM_STRUCT_H
 
-#include "menai_vm_value.h"
-#include "menai_vm_hashtable.h"
-#include "menai_vm_string.h"
-
 /*
  * One entry in the MenaiStructType field-index table.
  * name is an owned MenaiString *; index is the 0-based field position.

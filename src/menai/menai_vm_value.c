@@ -1,6 +1,8 @@
 /*
  * menai_vm_value.c
  */
+#include <stdlib.h>
+#include <stdint.h>
 #include "menai_vm_value.h"
 
 /*
