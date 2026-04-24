@@ -7,7 +7,14 @@
 #ifndef MENAI_VM_OBJECT_H
 #define MENAI_VM_OBJECT_H
 
+#include <stddef.h>
+#include <stdint.h>
 #include <assert.h>
+
+#ifdef _MSC_VER
+typedef ptrdiff_t ssize_t;
+#define SSIZE_MAX PTRDIFF_MAX
+#endif
 
 typedef struct MenaiValue_s MenaiValue;
 

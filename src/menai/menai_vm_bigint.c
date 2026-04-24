@@ -16,6 +16,8 @@
 #include <math.h>
 #include <limits.h>
 
+#include "menai_vm_value.h"
+
 #include "menai_vm_bigint.h"
 
 /* Internal forward declarations. */
@@ -441,7 +443,7 @@ menai_bigint_from_long(long v, MenaiBigInt *a)
 
     digits[0] = (uint32_t)(mag & 0xFFFFFFFFUL);
     if (len == 2) {
-        digits[1] = (uint32_t)(mag >> 32);
+        digits[1] = (uint32_t)((uint64_t)mag >> 32);
     }
 
     a->digits = digits;
@@ -473,9 +475,13 @@ menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a)
 
     /* Large value: use _PyLong_AsByteArray. */
     int sign = 0;
+#if PY_VERSION_HEX >= 0x030C00A1
     if (PyLong_GetSign(obj, &sign) < 0) {
         return -1;
     }
+#else
+    sign = _PyLong_Sign(obj);
+#endif
 
     int is_neg = (sign < 0);
 
@@ -826,7 +832,7 @@ menai_bigint_to_long(const MenaiBigInt *a, long *out)
 
     unsigned long mag = a->digits[0];
     if (sizeof(long) == 8 && a->length == 2) {
-        mag |= ((unsigned long)a->digits[1] << 32);
+        mag |= ((uint64_t)a->digits[1] << 32);
     }
 
     if (a->sign == -1) {
@@ -1485,7 +1491,7 @@ _to_twos_complement(const MenaiBigInt *a, ssize_t *len_out)
         /* Negative: flip bits and add 1. */
         uint64_t carry = 1;
         for (ssize_t i = 0; i < a->length; i++) {
-            uint64_t v = (~a->digits[i] & 0xFFFFFFFFULL) + carry;
+            uint64_t v = (~(uint64_t)a->digits[i] & 0xFFFFFFFFULL) + carry;
             buf[i] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = v >> 32;
         }
@@ -1540,7 +1546,7 @@ _from_twos_complement(const uint32_t *buf, ssize_t len, MenaiBigInt *result)
 
         uint64_t carry = 1;
         for (ssize_t i = 0; i < len; i++) {
-            uint64_t v = (~buf[i] & 0xFFFFFFFFULL) + carry;
+            uint64_t v = (~(uint64_t)buf[i] & 0xFFFFFFFFULL) + carry;
             digits[i] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = v >> 32;
         }
