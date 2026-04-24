@@ -9,9 +9,7 @@ from contextlib import contextmanager
 from menai.menai_bytecode import CodeObject
 from menai.menai_compiler import MenaiCompiler
 from menai.menai_ast import MenaiASTNode
-from menai.menai_value import MenaiDict as SlowMenaiDict
-from menai.menai_value import MenaiFunction as SlowMenaiFunction
-from menai.menai_value import MenaiString as SlowMenaiString, MenaiValue
+from menai.menai_value import MenaiFunction, MenaiValue
 from menai.menai_vm import MenaiVM, MenaiTraceWatcher
 from menai.menai_error import MenaiModuleNotFoundError, MenaiModuleError, MenaiCircularImportError
 
@@ -1086,35 +1084,7 @@ class Menai:
         "e" e))
 """
 
-    # Class-level cache for prelude functions
-    _prelude_cache = None
-
-    @classmethod
-    def _load_prelude(
-        cls,
-        compiler: MenaiCompiler,
-        vm: MenaiVM
-    ) -> Dict[str, MenaiValue]:
-        """Load prelude globals (functions and constants) as MenaiValue objects (cached)."""
-        if cls._prelude_cache is not None:
-            return cls._prelude_cache
-
-        bytecode = compiler.compile(cls._PRELUDE_SOURCE, name="<prelude>")
-
-        result = vm.execute(bytecode, {})
-        assert isinstance(result, MenaiDict), \
-            f"Prelude must evaluate to a dict, got {result.type_name()}"
-
-        stdlib: dict[str, MenaiValue] = {}
-        for key, value in result.pairs:
-            assert isinstance(key, MenaiString), \
-                f"Prelude dict key must be a string, got {key.type_name()}"
-            assert stdlib.get(key.value) is None, \
-                f"Duplicate name in prelude: '{key.value}'"
-            stdlib[key.value] = value
-
-        cls._prelude_cache = stdlib
-        return stdlib
+    _prelude_code: CodeObject | None = None
 
     def __init__(self, module_path: List[str] | None = None):
         """
@@ -1134,8 +1104,10 @@ class Menai:
         self.compiler = MenaiCompiler(module_loader=self)
         self.vm = MenaiVM()
 
-        # Load prelude once at initialization
-        self._prelude = self._load_prelude(self.compiler, self.vm)
+        if Menai._prelude_code is None:
+            Menai._prelude_code = self.compiler.compile(self._PRELUDE_SOURCE, name="<prelude>")
+
+        self._prelude = Menai._prelude_code
 
     def compile(self, expression: str) -> CodeObject:
         """

@@ -1348,23 +1348,11 @@ menai_value_to_slow_value(MenaiValue *val)
             return NULL;
         }
 
-        PyObject *py_caps = PyList_New(fn->ncap);
+        PyObject *py_caps = PyList_New(0);
         if (!py_caps) {
             Py_DECREF(py_params);
             Py_DECREF(py_name);
             return NULL;
-        }
-
-        for (Py_ssize_t i = 0; i < fn->ncap; i++) {
-            PyObject *cv = menai_value_to_slow_value(fn->captures[i]);
-            if (!cv) {
-                Py_DECREF(py_params);
-                Py_DECREF(py_name);
-                Py_DECREF(py_caps);
-                return NULL;
-            }
-
-            PyList_SET_ITEM(py_caps, i, cv);
         }
 
         PyObject *py_variadic = co->is_variadic ? Py_True : Py_False;

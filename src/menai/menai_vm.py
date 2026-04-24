@@ -357,7 +357,7 @@ class MenaiVM:
     def execute(
         self,
         code: CodeObject,
-        globals_dict: Dict[str, MenaiValue] | None = None
+        globals_dict: Dict[str, MenaiValue] | CodeObject | None = None
     ) -> MenaiValue:
         """
         Execute a code object and return the result.

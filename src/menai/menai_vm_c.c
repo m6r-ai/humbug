@@ -647,12 +647,27 @@ menai_raise_eval_errorf(const char *fmt, ...)
     return NULL;
 }
 
+static PyTypeObject *_py_code_object_type = NULL;
+
 int
 menai_vm_shim_init(void)
 {
     if (!menai_vm_bridge_init()) {
         return -1;
     }
+
+    PyObject *bytecode_mod = PyImport_ImportModule("menai.menai_bytecode");
+    if (!bytecode_mod) {
+        return -1;
+    }
+
+    PyObject *co_type = PyObject_GetAttrString(bytecode_mod, "CodeObject");
+    Py_DECREF(bytecode_mod);
+    if (!co_type) {
+        return -1;
+    }
+
+    _py_code_object_type = (PyTypeObject *)co_type;
 
     Menai_NONE = menai_none_singleton();
     Menai_TRUE = menai_boolean_true();
@@ -765,12 +780,16 @@ typedef struct {
     GlobalsEntry *entries;  /* flat array — count entries, for iteration */
     Py_ssize_t slot_count;  /* power of 2 */
     Py_ssize_t count;       /* number of live entries */
+    int owns_names;         /* 1 if entries[i].name are strdup'd and must be freed */
 } GlobalsTable;
 
 static void
 globals_free(GlobalsTable *gt)
 {
     for (Py_ssize_t i = 0; i < gt->count; i++) {
+        if (gt->owns_names) {
+            free((char *)gt->entries[i].name);
+        }
         menai_xrelease(gt->entries[i].value);
     }
 
@@ -794,18 +813,24 @@ static PyObject *_cached_globals_dict = NULL;
 static GlobalsTable _cached_globals_gt;
 static int _cached_globals_gt_valid = 0;
 
+/* Forward declaration — execute_loop is defined later in this file. */
+static MenaiValue *execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
+                                MenaiValue **regs, int max_locals);
+
 /*
  * globals_get — return a pointer to the cached GlobalsTable, building it the
  * first time a given globals_dict is seen.
  *
- * globals_dict must already contain fast MenaiValue * objects (as produced by
- * executing the prelude through the C VM).  Returns NULL on error with a Python
- * exception set.
+ * globals_key is either a Python dict of slow MenaiValue objects, or a Python
+ * CodeObject representing the prelude.  When it is a CodeObject the prelude is
+ * executed here once and the resulting dict is unpacked into the GlobalsTable;
+ * subsequent calls with the same CodeObject identity reuse the cached table.
+ * Returns NULL on error with a Python exception set.
  */
 static const GlobalsTable *
-globals_get(PyObject *globals_dict)
+globals_get(PyObject *globals_key)
 {
-    if (globals_dict == _cached_globals_dict && _cached_globals_gt_valid) {
+    if (globals_key == _cached_globals_dict && _cached_globals_gt_valid) {
         return &_cached_globals_gt;
     }
 
@@ -816,41 +841,134 @@ globals_get(PyObject *globals_dict)
         _cached_globals_dict = NULL;
     }
 
-    Py_ssize_t n = PyDict_Size(globals_dict);
     _cached_globals_gt.slots = NULL;
     _cached_globals_gt.entries = NULL;
     _cached_globals_gt.slot_count = 0;
     _cached_globals_gt.count = 0;
-    if (n > 0) {
-        _cached_globals_gt.entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
-        if (!_cached_globals_gt.entries) {
-            PyErr_NoMemory();
+    _cached_globals_gt.owns_names = 1;
+
+    if (_py_code_object_type && Py_TYPE(globals_key) == _py_code_object_type) {
+        /*
+         * globals_key is a prelude CodeObject.  Execute it to obtain a
+         * MenaiDict of fast values, then unpack directly into the GlobalsTable
+         * without any slow round-trip.
+         */
+        MenaiCodeObject *prelude_co = menai_code_object_from_python(globals_key);
+        if (!prelude_co) {
             return NULL;
         }
 
-        PyObject *key, *val;
-        Py_ssize_t pos = 0;
-        while (PyDict_Next(globals_dict, &pos, &key, &val)) {
-            const char *name_utf8 = PyUnicode_AsUTF8(key);
-            if (!name_utf8) {
-                globals_free(&_cached_globals_gt);
+        int max_locals = menai_code_object_max_locals(prelude_co);
+        MenaiValue **regs = menai_regs_alloc((size_t)(MAX_FRAME_DEPTH + 1) * max_locals, Menai_NONE);
+        if (!regs) {
+            menai_code_object_release(prelude_co);
+            return NULL;
+        }
+
+        GlobalsTable empty;
+        empty.slots = NULL;
+        empty.entries = NULL;
+        empty.slot_count = 0;
+        empty.count = 0;
+        MenaiValue *result = execute_loop(prelude_co, &empty, regs, max_locals);
+        menai_regs_free(regs, (size_t)(MAX_FRAME_DEPTH + 1) * max_locals);
+        menai_code_object_release(prelude_co);
+        if (!result) {
+            return NULL;
+        }
+
+        if (!IS_MENAI_DICT(result)) {
+            menai_release(result);
+            PyErr_SetString(PyExc_TypeError, "Prelude must evaluate to a dict");
+            return NULL;
+        }
+
+        MenaiDict *d = (MenaiDict *)result;
+        Py_ssize_t n = d->length;
+        if (n > 0) {
+            _cached_globals_gt.entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
+            if (!_cached_globals_gt.entries) {
+                menai_release(result);
+                PyErr_NoMemory();
                 return NULL;
             }
 
-            MenaiValue *fast_val = menai_convert_value(val);
-            if (!fast_val) {
-                globals_free(&_cached_globals_gt);
+            for (Py_ssize_t i = 0; i < n; i++) {
+                MenaiValue *k = d->keys[i];
+                if (!IS_MENAI_STRING(k)) {
+                    menai_release(result);
+                    globals_free(&_cached_globals_gt);
+                    PyErr_SetString(PyExc_TypeError, "Prelude dict keys must be strings");
+                    return NULL;
+                }
+
+                menai_retain(d->values[i]);
+                PyObject *py_key = menai_string_to_pyunicode(k);
+                if (!py_key) {
+                    menai_release(result);
+                    globals_free(&_cached_globals_gt);
+                    return NULL;
+                }
+
+                const char *utf8 = PyUnicode_AsUTF8(py_key);
+                char *name_copy = utf8 ? strdup(utf8) : NULL;
+                Py_DECREF(py_key);
+                if (!name_copy) {
+                    menai_release(result);
+                    globals_free(&_cached_globals_gt);
+                    PyErr_NoMemory();
+                    return NULL;
+                }
+
+                _cached_globals_gt.entries[i].name = name_copy;
+                _cached_globals_gt.entries[i].value = d->values[i];
+                _cached_globals_gt.count++;
+            }
+        }
+
+        menai_release(result);
+    } else {
+        /* globals_key is a Python dict of slow MenaiValue objects. */
+        Py_ssize_t n = PyDict_Size(globals_key);
+        if (n > 0) {
+            _cached_globals_gt.entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
+            if (!_cached_globals_gt.entries) {
+                PyErr_NoMemory();
                 return NULL;
             }
 
-            _cached_globals_gt.entries[_cached_globals_gt.count].name = name_utf8;
-            _cached_globals_gt.entries[_cached_globals_gt.count].value = fast_val;
-            _cached_globals_gt.count++;
+            PyObject *key, *val;
+            Py_ssize_t pos = 0;
+            while (PyDict_Next(globals_key, &pos, &key, &val)) {
+                const char *name_utf8 = PyUnicode_AsUTF8(key);
+                if (!name_utf8) {
+                    globals_free(&_cached_globals_gt);
+                    return NULL;
+                }
+
+                char *name_copy = strdup(name_utf8);
+                if (!name_copy) {
+                    globals_free(&_cached_globals_gt);
+                    PyErr_NoMemory();
+                    return NULL;
+                }
+
+                MenaiValue *fast_val = menai_convert_value(val);
+                if (!fast_val) {
+                    free(name_copy);
+                    globals_free(&_cached_globals_gt);
+                    return NULL;
+                }
+
+                _cached_globals_gt.entries[_cached_globals_gt.count].name = name_copy;
+                _cached_globals_gt.entries[_cached_globals_gt.count].value = fast_val;
+                _cached_globals_gt.count++;
+            }
         }
     }
 
-    Py_INCREF(globals_dict);
-    _cached_globals_dict = globals_dict;
+    Py_INCREF(globals_key);
+    _cached_globals_dict = globals_key;
     _cached_globals_gt_valid = 1;
     return &_cached_globals_gt;
 }
@@ -871,6 +989,7 @@ globals_build(GlobalsTable *gt, const GlobalsTable *globals_gt)
     gt->entries = NULL;
     gt->slot_count = 0;
     gt->count = 0;
+    gt->owns_names = 0;
 
     if (total > 0) {
         gt->entries = (GlobalsEntry *)malloc(total * sizeof(GlobalsEntry));
@@ -6619,7 +6738,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
 
     /* Get (or build) the cached GlobalsTable. */
     const GlobalsTable *globals_gt = NULL;
-    if (globals_dict && globals_dict != Py_None && PyDict_Size(globals_dict) > 0) {
+    if (globals_dict && globals_dict != Py_None) {
         globals_gt = globals_get(globals_dict);
         if (!globals_gt) {
             menai_code_object_release(native_code);
