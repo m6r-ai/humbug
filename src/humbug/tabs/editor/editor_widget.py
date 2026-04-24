@@ -1378,8 +1378,11 @@ class EditorWidget(QPlainTextEdit):
         Returns:
             True if a replacement was made, False if there was no current match.
         """
-        if self._current_match < 0 or not self._matches:
+        if not self._matches:
             return False
+
+        if self._current_match < 0:
+            self._current_match = 0
 
         start, end = self._matches[self._current_match]
         _search_text, case_sensitive, regexp = self._last_search
