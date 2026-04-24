@@ -19,6 +19,7 @@ class FindWidget(QWidget):
     closed = Signal()
     find_next = Signal()
     find_previous = Signal()
+    search_changed = Signal()
     replace_current = Signal(str)   # replace text
     replace_all = Signal(str)       # replace text
 
@@ -455,11 +456,11 @@ class FindWidget(QWidget):
 
     def _on_text_changed(self) -> None:
         """Handle changes to search text."""
-        self.find_next.emit()
+        self.search_changed.emit()
 
     def _on_mode_changed(self) -> None:
         """Handle changes to match-case or regexp toggle."""
-        self.find_next.emit()
+        self.search_changed.emit()
 
     def get_search_text(self) -> str:
         """Get the current search text."""

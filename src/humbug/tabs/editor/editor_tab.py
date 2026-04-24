@@ -46,6 +46,7 @@ class EditorTab(TabBase):
         self._find_widget.hide()
         self._find_widget.enable_replace_row()
         self._find_widget.closed.connect(self._close_find)
+        self._find_widget.search_changed.connect(self._on_search_changed)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
         self._find_widget.replace_current.connect(self._replace_current)
@@ -336,6 +337,20 @@ class EditorTab(TabBase):
                 return
 
         self._editor_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
+        current, total = self._editor_widget.get_match_status()
+        self._find_widget.set_match_status(current, total)
+
+    def _on_search_changed(self) -> None:
+        """Handle search text or mode changes - update matches without navigating."""
+        text = self._find_widget.get_search_text()
+        case_sensitive = self._find_widget.is_case_sensitive()
+        regexp = self._find_widget.is_regexp()
+        if regexp:
+            if text and not QRegularExpression(text).isValid():
+                self._find_widget.set_invalid_regexp()
+                return
+
+        self._editor_widget.find_text(text, forward=True, move_cursor=False, case_sensitive=case_sensitive, regexp=regexp)
         current, total = self._editor_widget.get_match_status()
         self._find_widget.set_match_status(current, total)
 
