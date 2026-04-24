@@ -43,7 +43,7 @@
 /* Sign-magnitude arbitrary-precision integer. */
 typedef struct {
     uint32_t *digits;  /* little-endian base-2^32 magnitude; NULL when zero */
-    Py_ssize_t length; /* number of valid digits; 0 when zero */
+    ssize_t length;    /* number of valid digits; 0 when zero */
     int sign;          /* -1, 0, or 1 */
 } MenaiBigInt;
 
@@ -55,7 +55,7 @@ int menai_bigint_copy(const MenaiBigInt *src, MenaiBigInt *dst);
 int menai_bigint_from_long(long v, MenaiBigInt *a);
 int menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a);
 int menai_bigint_from_string(const char *s, int base, MenaiBigInt *a);
-int menai_bigint_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiBigInt *a);
+int menai_bigint_from_codepoints(const uint32_t *data, ssize_t len, int base, MenaiBigInt *a);
 int menai_bigint_from_double(double v, MenaiBigInt *a);
 int menai_bigint_fits_long(const MenaiBigInt *a);
 int menai_bigint_to_long(const MenaiBigInt *a, long *out);
@@ -76,8 +76,8 @@ int menai_bigint_and(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *re
 int menai_bigint_or(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
 int menai_bigint_xor(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
 int menai_bigint_not(const MenaiBigInt *a, MenaiBigInt *result);
-int menai_bigint_shift_left(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *result);
-int menai_bigint_shift_right(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *result);
+int menai_bigint_shift_left(const MenaiBigInt *a, ssize_t shift, MenaiBigInt *result);
+int menai_bigint_shift_right(const MenaiBigInt *a, ssize_t shift, MenaiBigInt *result);
 int menai_bigint_eq(const MenaiBigInt *a, const MenaiBigInt *b);
 int menai_bigint_ne(const MenaiBigInt *a, const MenaiBigInt *b);
 int menai_bigint_lt(const MenaiBigInt *a, const MenaiBigInt *b);

@@ -24,10 +24,8 @@ static int _menai_bigint_cmp_mag(const MenaiBigInt *a, const MenaiBigInt *b);
 static int _menai_bigint_add_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
 static int _menai_bigint_sub_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
 static void _menai_bigint_normalize(MenaiBigInt *a);
-static int _menai_bigint_divmod_1(
-    const MenaiBigInt *a, uint32_t b, MenaiBigInt *quotient, uint32_t *remainder);
-static int _menai_bigint_divmod_mag(
-    const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *quotient, MenaiBigInt *remainder);
+static int _menai_bigint_divmod_1(const MenaiBigInt *a, uint32_t b, MenaiBigInt *quotient, uint32_t *remainder);
+static int _menai_bigint_divmod_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *quotient, MenaiBigInt *remainder);
 
 /*
  * Multiply two 32-bit values and return the 64-bit product split into
@@ -68,7 +66,7 @@ _menai_bigint_cmp_mag(const MenaiBigInt *a, const MenaiBigInt *b)
         return (a->length < b->length) ? -1 : 1;
     }
 
-    for (Py_ssize_t i = a->length - 1; i >= 0; i--) {
+    for (ssize_t i = a->length - 1; i >= 0; i--) {
         if (a->digits[i] != b->digits[i]) {
             return (a->digits[i] < b->digits[i]) ? -1 : 1;
         }
@@ -83,8 +81,8 @@ _menai_bigint_cmp_mag(const MenaiBigInt *a, const MenaiBigInt *b)
 static int
 _menai_bigint_add_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
-    Py_ssize_t max_len = (a->length > b->length) ? a->length : b->length;
-    Py_ssize_t out_len = max_len + 1;
+    ssize_t max_len = (a->length > b->length) ? a->length : b->length;
+    ssize_t out_len = max_len + 1;
     uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
@@ -92,7 +90,7 @@ _menai_bigint_add_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *r
     }
 
     uint64_t carry = 0;
-    for (Py_ssize_t i = 0; i < out_len; i++) {
+    for (ssize_t i = 0; i < out_len; i++) {
         uint64_t da = (i < a->length) ? a->digits[i] : 0;
         uint64_t db = (i < b->length) ? b->digits[i] : 0;
         uint64_t sum = da + db + carry;
@@ -115,7 +113,7 @@ static int
 _menai_bigint_sub_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     /* |a| >= |b| is a precondition. */
-    Py_ssize_t out_len = a->length;
+    ssize_t out_len = a->length;
     uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
@@ -123,7 +121,7 @@ _menai_bigint_sub_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *r
     }
 
     int64_t borrow = 0;
-    for (Py_ssize_t i = 0; i < out_len; i++) {
+    for (ssize_t i = 0; i < out_len; i++) {
         int64_t da = (int64_t)a->digits[i];
         int64_t db = (i < b->length) ? (int64_t)b->digits[i] : 0;
         int64_t diff = da - db - borrow;
@@ -166,7 +164,7 @@ _menai_bigint_divmod_1(
     }
 
     uint64_t rem = 0;
-    for (Py_ssize_t i = a->length - 1; i >= 0; i--) {
+    for (ssize_t i = a->length - 1; i >= 0; i--) {
         uint64_t cur = (rem << 32) | a->digits[i];
         qdigits[i] = (uint32_t)(cur / b);
         rem = cur % b;
@@ -187,11 +185,10 @@ _menai_bigint_divmod_1(
  * Neither quotient nor remainder may alias a or b.
  */
 static int
-_menai_bigint_divmod_mag(
-    const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *quotient, MenaiBigInt *remainder)
+_menai_bigint_divmod_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *quotient, MenaiBigInt *remainder)
 {
-    Py_ssize_t m = a->length;
-    Py_ssize_t n = b->length;
+    ssize_t m = a->length;
+    ssize_t n = b->length;
 
     /* If |a| < |b|, quotient = 0, remainder = |a|. */
     if (m < n) {
@@ -215,7 +212,7 @@ _menai_bigint_divmod_mag(
     }
 
     /* Allocate shifted copies: un has m+1 digits, vn has n digits. */
-    Py_ssize_t un_len = m + 1;
+    ssize_t un_len = m + 1;
     uint32_t *un = (uint32_t *)malloc((size_t)un_len * sizeof(uint32_t));
     if (un == NULL) {
         PyErr_NoMemory();
@@ -231,14 +228,14 @@ _menai_bigint_divmod_mag(
 
     /* Shift a left by d bits into un. */
     if (d == 0) {
-        for (Py_ssize_t i = 0; i < m; i++) {
+        for (ssize_t i = 0; i < m; i++) {
             un[i] = a->digits[i];
         }
 
         un[m] = 0;
     } else {
         uint32_t carry = 0;
-        for (Py_ssize_t i = 0; i < m; i++) {
+        for (ssize_t i = 0; i < m; i++) {
             uint64_t v = ((uint64_t)a->digits[i] << d) | carry;
             un[i] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = (uint32_t)(v >> 32);
@@ -249,12 +246,12 @@ _menai_bigint_divmod_mag(
 
     /* Shift b left by d bits into vn. */
     if (d == 0) {
-        for (Py_ssize_t i = 0; i < n; i++) {
+        for (ssize_t i = 0; i < n; i++) {
             vn[i] = b->digits[i];
         }
     } else {
         uint32_t carry = 0;
-        for (Py_ssize_t i = 0; i < n; i++) {
+        for (ssize_t i = 0; i < n; i++) {
             uint64_t v = ((uint64_t)b->digits[i] << d) | carry;
             vn[i] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = (uint32_t)(v >> 32);
@@ -263,7 +260,7 @@ _menai_bigint_divmod_mag(
         /* carry must be 0 here because we chose d so leading bit is set */
     }
 
-    Py_ssize_t q_len = m - n + 1;
+    ssize_t q_len = m - n + 1;
     uint32_t *qdigits = (uint32_t *)malloc((size_t)q_len * sizeof(uint32_t));
     if (qdigits == NULL) {
         free(un);
@@ -275,7 +272,7 @@ _menai_bigint_divmod_mag(
     uint64_t vn1 = vn[n - 1];
     uint64_t vn2 = (n >= 2) ? vn[n - 2] : 0;
 
-    for (Py_ssize_t j = m - n; j >= 0; j--) {
+    for (ssize_t j = m - n; j >= 0; j--) {
         /* Estimate q_hat = (un[j+n]*B + un[j+n-1]) / vn[n-1]. */
         uint64_t num_hi = un[j + n];
         uint64_t num_lo = un[j + n - 1];
@@ -309,7 +306,7 @@ _menai_bigint_divmod_mag(
 
         /* Multiply and subtract: un[j..j+n] -= q_hat * vn[0..n-1]. */
         int64_t borrow = 0;
-        for (Py_ssize_t i = 0; i < n; i++) {
+        for (ssize_t i = 0; i < n; i++) {
             uint64_t prod = q_hat * (uint64_t)vn[i];
             int64_t sub = (int64_t)un[j + i] - (int64_t)(prod & 0xFFFFFFFFULL) - borrow;
             un[j + i] = (uint32_t)(sub & 0xFFFFFFFFLL);
@@ -325,7 +322,7 @@ _menai_bigint_divmod_mag(
         if (sub < 0) {
             qdigits[j]--;
             uint64_t carry = 0;
-            for (Py_ssize_t i = 0; i < n; i++) {
+            for (ssize_t i = 0; i < n; i++) {
                 uint64_t s = (uint64_t)un[j + i] + (uint64_t)vn[i] + carry;
                 un[j + i] = (uint32_t)(s & 0xFFFFFFFFULL);
                 carry = s >> 32;
@@ -351,12 +348,12 @@ _menai_bigint_divmod_mag(
     }
 
     if (d == 0) {
-        for (Py_ssize_t i = 0; i < n; i++) {
+        for (ssize_t i = 0; i < n; i++) {
             rdigits[i] = un[i];
         }
     } else {
         uint32_t carry = 0;
-        for (Py_ssize_t i = n - 1; i >= 0; i--) {
+        for (ssize_t i = n - 1; i >= 0; i--) {
             uint64_t v = ((uint64_t)carry << 32) | un[i];
             rdigits[i] = (uint32_t)(v >> d);
             carry = un[i] & ((1U << d) - 1U);
@@ -430,7 +427,7 @@ menai_bigint_from_long(long v, MenaiBigInt *a)
     }
 
     /* Determine how many 32-bit digits we need. */
-    Py_ssize_t len;
+    ssize_t len;
     if (sizeof(unsigned long) <= 4 || mag <= 0xFFFFFFFFUL) {
         len = 1;
     } else {
@@ -528,7 +525,7 @@ menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a)
     }
 
     /* Pack bytes into 32-bit digits (little-endian). */
-    Py_ssize_t ndigits = (Py_ssize_t)((nbytes + 3) / 4);
+    ssize_t ndigits = (ssize_t)((nbytes + 3) / 4);
     uint32_t *digits = (uint32_t *)malloc((size_t)ndigits * sizeof(uint32_t));
     if (digits == NULL) {
         free(buf);
@@ -536,7 +533,7 @@ menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a)
         return -1;
     }
 
-    for (Py_ssize_t i = 0; i < ndigits; i++) {
+    for (ssize_t i = 0; i < ndigits; i++) {
         uint32_t d = 0;
         for (int b = 0; b < 4; b++) {
             size_t byte_idx = (size_t)(i * 4 + b);
@@ -685,7 +682,7 @@ fail:
  * via a temporary UTF-8 buffer.
  */
 int
-menai_bigint_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiBigInt *a)
+menai_bigint_from_codepoints(const uint32_t *data, ssize_t len, int base, MenaiBigInt *a)
 {
     if (base != 2 && base != 8 && base != 10 && base != 16) {
         PyErr_SetString(PyExc_ValueError, "invalid base");
@@ -699,7 +696,7 @@ menai_bigint_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, Men
         return -1;
     }
 
-    for (Py_ssize_t i = 0; i < len; i++) {
+    for (ssize_t i = 0; i < len; i++) {
         if (data[i] > 0x7F) {
             free(buf);
             PyErr_SetString(PyExc_ValueError, "non-ASCII character in integer string");
@@ -743,14 +740,14 @@ menai_bigint_from_double(double v, MenaiBigInt *a)
     int exp;
     double frac = frexp(t, &exp);  /* t == frac * 2^exp, 0.5 <= frac < 1.0 */
     /* Number of 32-bit limbs needed: ceil(exp / 32) */
-    Py_ssize_t nlimbs = (exp + 31) / 32;
+    ssize_t nlimbs = (exp + 31) / 32;
     uint32_t *digits = (uint32_t *)malloc((size_t)nlimbs * sizeof(uint32_t));
     if (!digits) {
         PyErr_NoMemory();
         return -1;
     }
 
-    for (Py_ssize_t i = nlimbs - 1; i >= 0; i--) {
+    for (ssize_t i = nlimbs - 1; i >= 0; i--) {
         frac *= 4294967296.0;  /* frac * 2^32 */
         uint32_t limb = (uint32_t)frac;
         digits[i] = limb;
@@ -859,7 +856,7 @@ menai_bigint_to_double(const MenaiBigInt *a, double *out)
     double base = 4294967296.0; /* 2^32 */
     double scale = 1.0;
 
-    for (Py_ssize_t i = 0; i < a->length; i++) {
+    for (ssize_t i = 0; i < a->length; i++) {
         result += (double)a->digits[i] * scale;
         scale *= base;
     }
@@ -889,7 +886,7 @@ menai_bigint_to_pylong(const MenaiBigInt *a)
         return NULL;
     }
 
-    for (Py_ssize_t i = 0; i < a->length; i++) {
+    for (ssize_t i = 0; i < a->length; i++) {
         uint32_t d = a->digits[i];
         buf[i * 4 + 0] = (unsigned char)(d & 0xFF);
         buf[i * 4 + 1] = (unsigned char)((d >> 8) & 0xFF);
@@ -945,8 +942,8 @@ menai_bigint_to_string(const MenaiBigInt *a, int base, char **out)
     tmp.sign = 1; /* work with magnitude */
 
     /* Upper bound on number of digits: ceil(bits / log2(base)) + 2. */
-    Py_ssize_t bits = a->length * 32;
-    Py_ssize_t max_chars;
+    ssize_t bits = a->length * 32;
+    ssize_t max_chars;
     if (base == 2) {
         max_chars = bits + 2;
     } else if (base == 8) {
@@ -966,7 +963,7 @@ menai_bigint_to_string(const MenaiBigInt *a, int base, char **out)
     }
 
     static const char hex_digits[] = "0123456789abcdef";
-    Py_ssize_t pos = 0;
+    ssize_t pos = 0;
 
     MenaiBigInt quotient;
     menai_bigint_init(&quotient);
@@ -998,7 +995,7 @@ menai_bigint_to_string(const MenaiBigInt *a, int base, char **out)
     }
 
     /* Reverse the buffer. */
-    for (Py_ssize_t i = 0, j = pos - 1; i < j; i++, j--) {
+    for (ssize_t i = 0, j = pos - 1; i < j; i++, j--) {
         char c = buf[i];
         buf[i] = buf[j];
         buf[j] = c;
@@ -1024,7 +1021,7 @@ menai_bigint_hash(const MenaiBigInt *a)
 
     /* FNV-1a, 64-bit variant. */
     uint64_t h = 14695981039346656037ULL;
-    for (Py_ssize_t i = 0; i < a->length; i++) {
+    for (ssize_t i = 0; i < a->length; i++) {
         uint32_t d = a->digits[i];
         h ^= (uint64_t)(d & 0xFF);         h *= 1099511628211ULL;
         h ^= (uint64_t)((d >> 8) & 0xFF);  h *= 1099511628211ULL;
@@ -1151,7 +1148,7 @@ menai_bigint_mul(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
         return 0;
     }
 
-    Py_ssize_t out_len = a->length + b->length;
+    ssize_t out_len = a->length + b->length;
     uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
@@ -1160,17 +1157,16 @@ menai_bigint_mul(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
 
     memset(digits, 0, (size_t)out_len * sizeof(uint32_t));
 
-    for (Py_ssize_t i = 0; i < a->length; i++) {
+    for (ssize_t i = 0; i < a->length; i++) {
         uint64_t carry = 0;
-        for (Py_ssize_t j = 0; j < b->length; j++) {
-            uint64_t prod = _mul32(a->digits[i], b->digits[j])
-                + (uint64_t)digits[i + j] + carry;
+        for (ssize_t j = 0; j < b->length; j++) {
+            uint64_t prod = _mul32(a->digits[i], b->digits[j]) + (uint64_t)digits[i + j] + carry;
             digits[i + j] = (uint32_t)(prod & 0xFFFFFFFFULL);
             carry = prod >> 32;
         }
 
         /* Propagate carry through remaining high digits. */
-        for (Py_ssize_t k = i + b->length; carry != 0 && k < out_len; k++) {
+        for (ssize_t k = i + b->length; carry != 0 && k < out_len; k++) {
             uint64_t s = (uint64_t)digits[k] + carry;
             digits[k] = (uint32_t)(s & 0xFFFFFFFFULL);
             carry = s >> 32;
@@ -1470,9 +1466,9 @@ fail:
  * Returns NULL on allocation failure (PyErr_NoMemory set).
  */
 static uint32_t *
-_to_twos_complement(const MenaiBigInt *a, Py_ssize_t *len_out)
+_to_twos_complement(const MenaiBigInt *a, ssize_t *len_out)
 {
-    Py_ssize_t len = a->length + 1; /* extra word for sign bit */
+    ssize_t len = a->length + 1; /* extra word for sign bit */
     uint32_t *buf = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
     if (buf == NULL) {
         PyErr_NoMemory();
@@ -1481,7 +1477,7 @@ _to_twos_complement(const MenaiBigInt *a, Py_ssize_t *len_out)
 
     if (a->sign >= 0) {
         /* Positive or zero: copy digits, pad with 0. */
-        for (Py_ssize_t i = 0; i < a->length; i++) {
+        for (ssize_t i = 0; i < a->length; i++) {
             buf[i] = a->digits[i];
         }
 
@@ -1489,7 +1485,7 @@ _to_twos_complement(const MenaiBigInt *a, Py_ssize_t *len_out)
     } else {
         /* Negative: flip bits and add 1. */
         uint64_t carry = 1;
-        for (Py_ssize_t i = 0; i < a->length; i++) {
+        for (ssize_t i = 0; i < a->length; i++) {
             uint64_t v = (~a->digits[i] & 0xFFFFFFFFULL) + carry;
             buf[i] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = v >> 32;
@@ -1510,7 +1506,7 @@ _to_twos_complement(const MenaiBigInt *a, Py_ssize_t *len_out)
  * The sign bit is the MSB of buf[len-1].
  */
 static int
-_from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiBigInt *result)
+_from_twos_complement(const uint32_t *buf, ssize_t len, MenaiBigInt *result)
 {
     menai_bigint_free(result);
     if (len == 0) {
@@ -1527,7 +1523,7 @@ _from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiBigInt *result)
             return -1;
         }
 
-        for (Py_ssize_t i = 0; i < len; i++) {
+        for (ssize_t i = 0; i < len; i++) {
             digits[i] = buf[i];
         }
 
@@ -1544,7 +1540,7 @@ _from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiBigInt *result)
         }
 
         uint64_t carry = 1;
-        for (Py_ssize_t i = 0; i < len; i++) {
+        for (ssize_t i = 0; i < len; i++) {
             uint64_t v = (~buf[i] & 0xFFFFFFFFULL) + carry;
             digits[i] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = v >> 32;
@@ -1563,19 +1559,20 @@ _from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiBigInt *result)
 int
 menai_bigint_and(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
-    Py_ssize_t la, lb;
+    ssize_t la;
     uint32_t *ta = _to_twos_complement(a, &la);
     if (ta == NULL) {
         return -1;
     }
 
+    ssize_t lb;
     uint32_t *tb = _to_twos_complement(b, &lb);
     if (tb == NULL) {
         free(ta);
         return -1;
     }
 
-    Py_ssize_t out_len = (la > lb) ? la : lb;
+    ssize_t out_len = (la > lb) ? la : lb;
     uint32_t *out = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (out == NULL) {
         free(ta);
@@ -1588,7 +1585,7 @@ menai_bigint_and(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
     uint32_t ext_a = (a->sign == -1) ? 0xFFFFFFFFU : 0U;
     uint32_t ext_b = (b->sign == -1) ? 0xFFFFFFFFU : 0U;
 
-    for (Py_ssize_t i = 0; i < out_len; i++) {
+    for (ssize_t i = 0; i < out_len; i++) {
         uint32_t da = (i < la) ? ta[i] : ext_a;
         uint32_t db = (i < lb) ? tb[i] : ext_b;
         out[i] = da & db;
@@ -1606,19 +1603,20 @@ menai_bigint_and(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
 int
 menai_bigint_or(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
-    Py_ssize_t la, lb;
+    ssize_t la;
     uint32_t *ta = _to_twos_complement(a, &la);
     if (ta == NULL) {
         return -1;
     }
 
+    ssize_t lb;
     uint32_t *tb = _to_twos_complement(b, &lb);
     if (tb == NULL) {
         free(ta);
         return -1;
     }
 
-    Py_ssize_t out_len = (la > lb) ? la : lb;
+    ssize_t out_len = (la > lb) ? la : lb;
     uint32_t *out = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (out == NULL) {
         free(ta);
@@ -1630,7 +1628,7 @@ menai_bigint_or(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
     uint32_t ext_a = (a->sign == -1) ? 0xFFFFFFFFU : 0U;
     uint32_t ext_b = (b->sign == -1) ? 0xFFFFFFFFU : 0U;
 
-    for (Py_ssize_t i = 0; i < out_len; i++) {
+    for (ssize_t i = 0; i < out_len; i++) {
         uint32_t da = (i < la) ? ta[i] : ext_a;
         uint32_t db = (i < lb) ? tb[i] : ext_b;
         out[i] = da | db;
@@ -1648,19 +1646,20 @@ menai_bigint_or(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 int
 menai_bigint_xor(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
-    Py_ssize_t la, lb;
+    ssize_t la;
     uint32_t *ta = _to_twos_complement(a, &la);
     if (ta == NULL) {
         return -1;
     }
 
+    ssize_t lb;
     uint32_t *tb = _to_twos_complement(b, &lb);
     if (tb == NULL) {
         free(ta);
         return -1;
     }
 
-    Py_ssize_t out_len = (la > lb) ? la : lb;
+    ssize_t out_len = (la > lb) ? la : lb;
     uint32_t *out = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (out == NULL) {
         free(ta);
@@ -1672,7 +1671,7 @@ menai_bigint_xor(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
     uint32_t ext_a = (a->sign == -1) ? 0xFFFFFFFFU : 0U;
     uint32_t ext_b = (b->sign == -1) ? 0xFFFFFFFFU : 0U;
 
-    for (Py_ssize_t i = 0; i < out_len; i++) {
+    for (ssize_t i = 0; i < out_len; i++) {
         uint32_t da = (i < la) ? ta[i] : ext_a;
         uint32_t db = (i < lb) ? tb[i] : ext_b;
         out[i] = da ^ db;
@@ -1716,7 +1715,7 @@ menai_bigint_not(const MenaiBigInt *a, MenaiBigInt *result)
 
 /* result = a << shift */
 int
-menai_bigint_shift_left(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *result)
+menai_bigint_shift_left(const MenaiBigInt *a, ssize_t shift, MenaiBigInt *result)
 {
     if (shift < 0) {
         PyErr_SetString(PyExc_ValueError, "negative shift count");
@@ -1735,10 +1734,10 @@ menai_bigint_shift_left(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *res
         return 0;
     }
 
-    Py_ssize_t word_shift = shift / 32;
+    ssize_t word_shift = shift / 32;
     int bit_shift = (int)(shift % 32);
 
-    Py_ssize_t out_len = a->length + word_shift + 1;
+    ssize_t out_len = a->length + word_shift + 1;
     uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
@@ -1748,12 +1747,12 @@ menai_bigint_shift_left(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *res
     memset(digits, 0, (size_t)out_len * sizeof(uint32_t));
 
     if (bit_shift == 0) {
-        for (Py_ssize_t i = 0; i < a->length; i++) {
+        for (ssize_t i = 0; i < a->length; i++) {
             digits[i + word_shift] = a->digits[i];
         }
     } else {
         uint32_t carry = 0;
-        for (Py_ssize_t i = 0; i < a->length; i++) {
+        for (ssize_t i = 0; i < a->length; i++) {
             uint64_t v = ((uint64_t)a->digits[i] << bit_shift) | carry;
             digits[i + word_shift] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = (uint32_t)(v >> 32);
@@ -1772,7 +1771,7 @@ menai_bigint_shift_left(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *res
 
 /* result = a >> shift (arithmetic, floor toward -inf) */
 int
-menai_bigint_shift_right(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *result)
+menai_bigint_shift_right(const MenaiBigInt *a, ssize_t shift, MenaiBigInt *result)
 {
     if (shift < 0) {
         PyErr_SetString(PyExc_ValueError, "negative shift count");
@@ -1796,7 +1795,7 @@ menai_bigint_shift_right(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *re
         return 0;
     }
 
-    Py_ssize_t word_shift = shift / 32;
+    ssize_t word_shift = shift / 32;
     int bit_shift = (int)(shift % 32);
 
     /* If shifting away all digits, result is 0 (positive) or -1 (negative). */
@@ -1816,7 +1815,7 @@ menai_bigint_shift_right(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *re
      */
     int any_bits_out = 0;
     if (a->sign == -1) {
-        for (Py_ssize_t i = 0; i < word_shift && !any_bits_out; i++) {
+        for (ssize_t i = 0; i < word_shift && !any_bits_out; i++) {
             if (a->digits[i] != 0) {
                 any_bits_out = 1;
             }
@@ -1830,7 +1829,7 @@ menai_bigint_shift_right(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *re
         }
     }
 
-    Py_ssize_t out_len = a->length - word_shift;
+    ssize_t out_len = a->length - word_shift;
     uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
@@ -1838,11 +1837,11 @@ menai_bigint_shift_right(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *re
     }
 
     if (bit_shift == 0) {
-        for (Py_ssize_t i = 0; i < out_len; i++) {
+        for (ssize_t i = 0; i < out_len; i++) {
             digits[i] = a->digits[i + word_shift];
         }
     } else {
-        for (Py_ssize_t i = 0; i < out_len; i++) {
+        for (ssize_t i = 0; i < out_len; i++) {
             uint32_t lo = a->digits[i + word_shift] >> bit_shift;
             uint32_t hi = 0;
             if (i + word_shift + 1 < a->length) {
@@ -1896,7 +1895,7 @@ menai_bigint_eq(const MenaiBigInt *a, const MenaiBigInt *b)
         return 0;
     }
 
-    for (Py_ssize_t i = 0; i < a->length; i++) {
+    for (ssize_t i = 0; i < a->length; i++) {
         if (a->digits[i] != b->digits[i]) {
             return 0;
         }
