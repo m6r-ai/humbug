@@ -1,6 +1,6 @@
 """Widget for handling find operations in editor."""
 
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List
 
 from PySide6.QtWidgets import (
     QWidget, QGridLayout, QHBoxLayout, QLineEdit, QToolButton, QLabel, QPushButton
@@ -29,6 +29,11 @@ class FindWidget(QWidget):
         self._language_manager = LanguageManager()
         self._preferred_width_fn: Callable[[], int | None] | None = None
 
+        # Search history for this widget instance
+        self._history: List[str] = []
+        self._history_index: int = -1   # -1 means "not browsing"
+        self._pending_text: str = ""    # text being typed before history browse started
+
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self._replace_row_enabled = False
@@ -48,7 +53,9 @@ class FindWidget(QWidget):
         self._search_input = QLineEdit()
         self._search_input.textChanged.connect(self._on_text_changed)
         self._search_input.returnPressed.connect(self.find_next)
+        self._search_input.returnPressed.connect(self._commit_to_history)
         self._grid.addWidget(self._search_input, 0, 1)
+        self._search_input.installEventFilter(self)
 
         self._replace_input = QLineEdit()
         self._replace_input.returnPressed.connect(self._on_replace_current)
@@ -303,6 +310,70 @@ class FindWidget(QWidget):
         self._preferred_width_fn = fn
         self._update_margins()
 
+    def _commit_to_history(self) -> None:
+        """Add the current search text to history when a search is submitted."""
+        text = self._search_input.text()
+        if not text:
+            return
+
+        if self._history and self._history[-1] == text:
+            self._history_index = -1
+            return
+
+        self._history.append(text)
+        self._history_index = -1
+        self._pending_text = ""
+
+    def _history_up(self) -> None:
+        """Navigate to the previous (older) history entry."""
+        if not self._history:
+            return
+
+        if self._history_index == -1:
+            # Save whatever the user was typing before browsing
+            self._pending_text = self._search_input.text()
+            self._history_index = len(self._history) - 1
+
+        elif self._history_index > 0:
+            self._history_index -= 1
+
+        else:
+            return
+
+        self._set_search_input_text(self._history[self._history_index])
+
+    def _history_down(self) -> None:
+        """Navigate to the next (newer) history entry, or restore pending text."""
+        if self._history_index == -1:
+            return
+
+        if self._history_index < len(self._history) - 1:
+            self._history_index += 1
+            self._set_search_input_text(self._history[self._history_index])
+
+        else:
+            self._history_index = -1
+            self._set_search_input_text(self._pending_text)
+
+    def _set_search_input_text(self, text: str) -> None:
+        """Set search input text without triggering a new history commit."""
+        self._search_input.setText(text)
+        self._search_input.selectAll()
+
+    def eventFilter(self, obj: object, event: QKeyEvent) -> bool:  # type: ignore[override]
+        """Intercept Up/Down arrow keys on the search input for history navigation."""
+        if obj is self._search_input and isinstance(event, QKeyEvent):
+            if event.type() == QKeyEvent.Type.KeyPress:
+                if event.key() == Qt.Key.Key_Up:
+                    self._history_up()
+                    return True
+
+                if event.key() == Qt.Key.Key_Down:
+                    self._history_down()
+                    return True
+
+        return super().eventFilter(obj, event)  # type: ignore[arg-type]
+
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle key events."""
         if event.key() == Qt.Key.Key_Escape:
@@ -334,6 +405,7 @@ class FindWidget(QWidget):
                 current=self._current_match,
                 total=self._matches
             ))
+
         else:
             self._status_label.setText(strings.find_no_matches)
 

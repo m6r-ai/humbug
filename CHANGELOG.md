@@ -6,8 +6,10 @@ New features:
 
 - If an AI generates a diff hunk with `@@` but with no line numbers, the diff applier will try to find with a fuzzy match.
 - Dramatically improve the performance of the Menai VM.
+- The Menai VM C code is now much cleaner and decoupled from the original Python implementation.
 - Added keyboard scrolling of diff tabs.
 - Double-clicking an ephemeral tab label will now make the tab persistent.
+- Find controls now have history buffers, so up and down arrow will navigate previous searches.
 
 Bug fixes:
 
