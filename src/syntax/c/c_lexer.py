@@ -17,8 +17,10 @@ class CLexerState(LexerState):
 
     Attributes:
         in_block_comment: Indicates if we're currently parsing a block comment
+        in_preprocessor: Indicates if we're currently parsing a preprocessor continuation line
     """
     in_block_comment: bool = False
+    in_preprocessor: bool = False
 
 
 class CLexer(Lexer):
@@ -44,6 +46,7 @@ class CLexer(Lexer):
     def __init__(self) -> None:
         super().__init__()
         self._in_block_comment = False
+        self._in_preprocessor = False
 
     def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> CLexerState:
         """
@@ -61,15 +64,20 @@ class CLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, CLexerState), f"Expected CLexerState, got {type(prev_lexer_state).__name__}"
             self._in_block_comment = prev_lexer_state.in_block_comment
+            self._in_preprocessor = prev_lexer_state.in_preprocessor
 
         if self._in_block_comment:
             self._read_block_comment(0)
 
-        if not self._in_block_comment:
+        if not self._in_block_comment and self._in_preprocessor:
+            self._read_preprocessor_continuation()
+
+        if not self._in_block_comment and not self._in_preprocessor:
             self._inner_lex()
 
         lexer_state = CLexerState()
         lexer_state.in_block_comment = self._in_block_comment
+        lexer_state.in_preprocessor = self._in_preprocessor
         return lexer_state
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
@@ -355,12 +363,34 @@ class CLexer(Lexer):
         """
         Read a preprocessor directive token.
         """
+        start = self._position
+        self._position = self._input_len
         self._tokens.append(Token(
             type=TokenType.PREPROCESSOR,
-            value=self._input[self._position:],
-            start=self._position
+            value=self._input[start:self._position],
+            start=start
+        ))
+        self._in_preprocessor = self._line_continues(self._input)
+
+    def _read_preprocessor_continuation(self) -> None:
+        """
+        Read a preprocessor continuation line token.
+        """
+        self._tokens.append(Token(
+            type=TokenType.PREPROCESSOR,
+            value=self._input,
+            start=0
         ))
         self._position = self._input_len
+        self._in_preprocessor = self._line_continues(self._input)
+
+    def _line_continues(self, line: str) -> bool:
+        """
+        Return True if the line ends with a backslash (optionally followed by spaces/tabs),
+        indicating that the next line is a continuation.
+        """
+        stripped = line.rstrip(' \t')
+        return stripped.endswith('\\')
 
     def _is_keyword(self, value: str) -> bool:
         """

@@ -101,8 +101,8 @@ class CppParser(CParser):
             self._tokens.append(token)
 
         parser_state = CppParserState()
-        parser_state.continuation_state = 1 if lexer_state.in_block_comment else 0
-        parser_state.parsing_continuation = lexer_state.in_block_comment
+        parser_state.parsing_continuation = lexer_state.in_block_comment or lexer_state.in_preprocessor
+        parser_state.continuation_state = 1 if lexer_state.in_block_comment else (2 if lexer_state.in_preprocessor else 0)
         parser_state.lexer_state = lexer_state
         parser_state.in_element = in_element
         return parser_state

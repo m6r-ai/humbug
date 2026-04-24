@@ -22,6 +22,7 @@ Bug fixes:
 - Resolved a problem where find positions could be lost when hiding and unhiding the find bar in a tab.
 - If you attempt to drag a file that cannot be opened then an exception would trigger and the exception canary would activate.
   Now this action will trigger a popup message box.
+- Fixed a problem in the C and C++ syntax highlighters when preprocessor lines are continued with `\`.
 
 ## v44 (2026-04-19)
 

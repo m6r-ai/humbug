@@ -399,3 +399,74 @@ class TestCParser:
         field2_tokens = [t for t in tokens3 if t.value == 'field2']
         assert len(field2_tokens) == 1
         assert field2_tokens[0].type == TokenType.ELEMENT
+
+    def test_parse_preprocessor_continuation_sets_state(self):
+        """Test that a preprocessor line ending with backslash sets continuation state."""
+        parser = CParser()
+        state = parser.parse(None, '#define MAX(a, b) \\')
+
+        assert state.parsing_continuation is True
+        assert state.continuation_state == 2
+        assert state.lexer_state.in_preprocessor is True
+
+    def test_parse_preprocessor_no_continuation(self):
+        """Test that a preprocessor line not ending with backslash does not set continuation."""
+        parser = CParser()
+        state = parser.parse(None, '#include <stdio.h>')
+
+        assert state.parsing_continuation is False
+        assert state.continuation_state == 0
+        assert state.lexer_state.in_preprocessor is False
+
+    def test_parse_preprocessor_continuation_line_is_preprocessor_token(self):
+        """Test that a continuation line is emitted as a PREPROCESSOR token."""
+        parser1 = CParser()
+        state1 = parser1.parse(None, '#define MAX(a, b) \\')
+
+        parser2 = CParser()
+        state2 = parser2.parse(state1, '    ((a) > (b) ? (a) : (b))')
+
+        tokens = list(parser2._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.PREPROCESSOR
+        assert tokens[0].value == '    ((a) > (b) ? (a) : (b))'
+
+    def test_parse_preprocessor_continuation_ends(self):
+        """Test that a continuation line without trailing backslash ends the continuation."""
+        parser1 = CParser()
+        state1 = parser1.parse(None, '#define MAX(a, b) \\')
+
+        parser2 = CParser()
+        state2 = parser2.parse(state1, '    ((a) > (b) ? (a) : (b))')
+
+        assert state2.parsing_continuation is False
+        assert state2.continuation_state == 0
+        assert state2.lexer_state.in_preprocessor is False
+
+    def test_parse_preprocessor_multi_continuation(self):
+        """Test a macro spanning three lines via two trailing backslashes."""
+        parser1 = CParser()
+        state1 = parser1.parse(None, '#define FOO(x) \\')
+        assert state1.parsing_continuation is True
+
+        parser2 = CParser()
+        state2 = parser2.parse(state1, '    do { \\')
+        assert state2.parsing_continuation is True
+        assert state2.continuation_state == 2
+        tokens2 = list(parser2._tokens)
+        assert tokens2[0].type == TokenType.PREPROCESSOR
+
+        parser3 = CParser()
+        state3 = parser3.parse(state2, '    } while (0)')
+        assert state3.parsing_continuation is False
+        tokens3 = list(parser3._tokens)
+        assert tokens3[0].type == TokenType.PREPROCESSOR
+
+    def test_parse_preprocessor_continuation_trailing_spaces(self):
+        """Test that trailing spaces after backslash still trigger continuation."""
+        parser = CParser()
+        state = parser.parse(None, '#define FOO \\   ')
+
+        assert state.parsing_continuation is True
+        assert state.continuation_state == 2
+        assert state.lexer_state.in_preprocessor is True
