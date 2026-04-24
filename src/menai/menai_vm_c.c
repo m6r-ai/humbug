@@ -388,9 +388,6 @@ _menai_mul_overflow(long a, long b, long *r) {
 MenaiValue *Menai_NONE = NULL;
 MenaiValue *Menai_TRUE = NULL;
 MenaiValue *Menai_FALSE = NULL;
-MenaiValue *Menai_EMPTY_LIST = NULL;
-MenaiValue *Menai_EMPTY_DICT = NULL;
-MenaiValue *Menai_EMPTY_SET = NULL;
 
 /*
  * Module-level state fetched at init
@@ -650,68 +647,32 @@ menai_raise_eval_errorf(const char *fmt, ...)
     return NULL;
 }
 
-static int
-fetch_singleton(PyObject *module, const char *name, MenaiValue **dst)
-{
-    PyObject *obj = PyObject_GetAttrString(module, name);
-    if (obj == NULL) {
-        return -1;
-    }
-
-    *dst = (MenaiValue *)obj;
-    return 0;
-}
-
 int
 menai_vm_shim_init(void)
 {
-    PyObject *vc = menai_vm_bridge_init();
-    if (vc == NULL) {
+    if (!menai_vm_bridge_init()) {
         return -1;
     }
 
-    if (fetch_singleton(vc, "Menai_NONE", &Menai_NONE) < 0) {
-        goto fail;
-    }
-
-    if (fetch_singleton(vc, "Menai_BOOLEAN_TRUE", &Menai_TRUE) < 0) {
-        goto fail;
-    }
-
-    if (fetch_singleton(vc, "Menai_BOOLEAN_FALSE", &Menai_FALSE) < 0) {
-        goto fail;
-    }
-
-    if (fetch_singleton(vc, "Menai_LIST_EMPTY", &Menai_EMPTY_LIST) < 0) {
-        goto fail;
-    }
-
-    if (fetch_singleton(vc, "Menai_DICT_EMPTY", &Menai_EMPTY_DICT) < 0) {
-        goto fail;
-    }
-
-    if (fetch_singleton(vc, "Menai_SET_EMPTY", &Menai_EMPTY_SET) < 0) {
-        goto fail;
-    }
+    Menai_NONE = menai_none_singleton();
+    Menai_TRUE = menai_boolean_true();
+    Menai_FALSE = menai_boolean_false();
 
     PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
     if (err_mod == NULL) {
-        goto fail;
+        return -1;
     }
 
     MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
     MenaiCancelledException_type = PyObject_GetAttrString(err_mod, "MenaiCancelledException");
     Py_DECREF(err_mod);
     if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL) {
-        goto fail;
+        Py_XDECREF(MenaiEvalError_type);
+        Py_XDECREF(MenaiCancelledException_type);
+        return -1;
     }
 
-    Py_DECREF(vc);
     return 0;
-
-fail:
-    Py_DECREF(vc);
-    return -1;
 }
 
 /*
@@ -1122,15 +1083,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_LOAD_EMPTY_LIST:
-            menai_reg_set_borrow(regs, base + dest, Menai_EMPTY_LIST);
+            menai_reg_set_borrow(regs, base + dest, menai_list_new_empty());
             break;
 
         case OP_LOAD_EMPTY_DICT:
-            menai_reg_set_borrow(regs, base + dest, Menai_EMPTY_DICT);
+            menai_reg_set_borrow(regs, base + dest, menai_dict_new_empty());
             break;
 
         case OP_LOAD_EMPTY_SET:
-            menai_reg_set_borrow(regs, base + dest, Menai_EMPTY_SET);
+            menai_reg_set_borrow(regs, base + dest, menai_set_new_empty());
             break;
 
         case OP_LOAD_CONST: {
@@ -6636,10 +6597,9 @@ error:
     }
 }
 
-/* ---------------------------------------------------------------------------
+/*
  * menai_vm_c_execute — the Python-callable entry point
- * ------------------------------------------------------------------------- */
-
+ */
 static PyObject *
 menai_vm_c_execute(PyObject *self, PyObject *args)
 {

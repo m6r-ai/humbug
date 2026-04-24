@@ -31,5 +31,6 @@ typedef struct {
 
 MenaiValue *menai_set_new_empty(void);
 MenaiValue *menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n);
+MenaiValue *menai_set_new_empty(void);
 
 #endif /* MENAI_VM_SET_H */

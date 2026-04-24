@@ -36,13 +36,6 @@
 #include "menai_vm_hashtable.h"
 
 /*
- * Module-level singletons
- */
-static MenaiValue *_Menai_EMPTY_LIST = NULL;
-static MenaiValue *_Menai_EMPTY_DICT = NULL;
-static MenaiValue *_Menai_EMPTY_SET = NULL;
-
-/*
  * Slow-world type objects — fetched once at module init.
  * Used by menai_convert_value to identify slow objects by type.
  * Will be removed in Phase 2 when the compiler emits fast types directly.
@@ -1091,14 +1084,6 @@ fetch_slow_type(PyObject *mod, const char *name, PyTypeObject **dst)
     return 0;
 }
 
-static struct PyModuleDef module_def = {
-    PyModuleDef_HEAD_INIT,
-    "menai.menai_vm_bridge",
-    NULL,
-    -1,
-    NULL
-};
-
 /*
  * menai_value_to_slow_value — convert a fast MenaiValue * to its equivalent
  * slow menai_value.py Python object.
@@ -1402,13 +1387,13 @@ menai_value_to_slow_value(MenaiValue *val)
     return NULL;
 }
 
-PyObject *
+int
 menai_vm_bridge_init(void)
 {
     /* Fetch slow-world types — needed by menai_convert_value. */
     PyObject *slow_mod = PyImport_ImportModule("menai.menai_value");
     if (!slow_mod) {
-        return NULL;
+        return 0;
     }
 
     if (fetch_slow_type(slow_mod, "MenaiNone", &Slow_NoneType) < 0) {
@@ -1469,105 +1454,23 @@ menai_vm_bridge_init(void)
     /* Fetch MenaiEvalError */
     PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
     if (!err_mod) {
-        return NULL;
+        return 0;
     }
 
     MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
     Py_DECREF(err_mod);
     if (!MenaiEvalError_type) {
-        return NULL;
+        return 0;
     }
 
     menai_vm_none_init();
     menai_vm_boolean_init();
     if (menai_vm_integer_init() < 0) {
-        return NULL;
+        return 0;
     }
-
-    /* Create module */
-    PyObject *module = PyModule_Create(&module_def);
-    if (!module) {
-        return NULL;
-    }
-
-    /* Register in sys.modules so Python code can import menai.menai_vm_bridge
-     * after menai_vm_c has been loaded. */
-    PyObject *sys_modules = PySys_GetObject("modules");
-    if (sys_modules == NULL) {
-        Py_DECREF(module);
-        return NULL;
-    }
-
-    if (PyDict_SetItemString(sys_modules, "menai.menai_vm_bridge", module) < 0) {
-        Py_DECREF(module);
-        return NULL;
-    }
-
-    /* Create empty collection singletons */
-    _Menai_EMPTY_LIST = menai_list_new_empty();
-    if (!_Menai_EMPTY_LIST) {
-        Py_DECREF(module);
-        return NULL;
-    }
-
-    _Menai_EMPTY_DICT = menai_dict_new_empty();
-    if (!_Menai_EMPTY_DICT) {
-        Py_DECREF(module);
-        return NULL;
-    }
-
-    _Menai_EMPTY_SET = menai_set_new_empty();
-    if (!_Menai_EMPTY_SET) {
-        Py_DECREF(module);
-        return NULL;
-    }
-
-    /* Add singletons to module.  menai_retain increments ob_refcnt at offset 0,
-     * which is the same field Py_INCREF would increment given the shared layout. */
-    MenaiValue *none_val = menai_none_singleton();
-    menai_retain(none_val);
-    if (PyModule_AddObject(module, "Menai_NONE", (PyObject *)none_val) < 0) {
-        menai_release(none_val);
-        Py_DECREF(module);
-        return NULL;
-    }
-
-    MenaiValue *bool_true = menai_boolean_true();
-    menai_retain(bool_true);
-    if (PyModule_AddObject(module, "Menai_BOOLEAN_TRUE", (PyObject *)bool_true) < 0) {
-        menai_release(bool_true);
-        Py_DECREF(module);
-        return NULL;
-    }
-
-    MenaiValue *bool_false = menai_boolean_false();
-    menai_retain(bool_false);
-    if (PyModule_AddObject(module, "Menai_BOOLEAN_FALSE", (PyObject *)bool_false) < 0) {
-        menai_release(bool_false);
-        Py_DECREF(module);
-        return NULL;
-    }
-
-    struct {
-        const char *name;
-        MenaiValue **obj;
-    } singletons[] = {
-        {"Menai_LIST_EMPTY", &_Menai_EMPTY_LIST},
-        {"Menai_DICT_EMPTY", &_Menai_EMPTY_DICT},
-        {"Menai_SET_EMPTY", &_Menai_EMPTY_SET},
-    };
-    for (int i = 0; i < (int)(sizeof(singletons)/sizeof(singletons[0])); i++) {
-        menai_retain(*singletons[i].obj);
-        if (PyModule_AddObject(module, singletons[i].name, (PyObject *)*singletons[i].obj) < 0) {
-            menai_release(*singletons[i].obj);
-            Py_DECREF(module);
-            return NULL;
-        }
-    }
-
-    return module;
+    return 1;
 
 fail:
     Py_XDECREF(slow_mod);
-    return NULL;
+    return 0;
 }

@@ -31,5 +31,6 @@ typedef struct {
 
 MenaiValue *menai_dict_new_empty(void);
 MenaiValue *menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_ssize_t n);
+MenaiValue *menai_dict_new_empty(void);
 
 #endif /* MENAI_VM_DICT_H */

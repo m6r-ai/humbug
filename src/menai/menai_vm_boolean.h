@@ -16,8 +16,6 @@ typedef struct {
     int value;          /* 0 or 1 */
 } MenaiBoolean;
 
-extern MenaiType MenaiBoolean_Type;
-
 MenaiValue *menai_boolean_true(void);
 MenaiValue *menai_boolean_false(void);
 void menai_vm_boolean_init(void);
