@@ -261,18 +261,18 @@ class Opcode(IntEnum):
     SET_TO_LIST = _op(352, 1)           # r_dest = (set->list r_src0)
 
     # Struct operations
-    MAKE_STRUCT      = _op(360, 2)      # MAKE_STRUCT type_idx arity — pops arity field regs, pushes MenaiStruct
-    STRUCT_P         = _op(361, 1)      # r_dest = (struct? r_src0)
-    STRUCT_TYPE_P    = _op(362, 2)      # r_dest = (struct-type? r_type r_src0) — tag check
-    STRUCT_GET       = _op(363, 2)      # r_dest = (struct-get r_src0 field_idx) — indexed field access
-    STRUCT_GET_IMM   = _op(364, 2)      # r_dest = (struct-get r_src0 field_idx) — indexed field access by immediate
-    STRUCT_SET       = _op(365, 3)      # r_dest = (struct-set r_src0 field_idx r_src1) — functional update
-    STRUCT_SET_IMM   = _op(366, 3)      # r_dest = (struct-set r_src0 field_idx r_src1) — functional update by immediate
-    STRUCT_EQ_P      = _op(367, 2)      # r_dest = (struct=? r_src0 r_src1)
-    STRUCT_NEQ_P     = _op(368, 2)      # r_dest = (struct!=? r_src0 r_src1)
-    STRUCT_TYPE      = _op(369, 1)      # r_dest = (struct-type r_src0) → MenaiStructType value
+    MAKE_STRUCT = _op(360, 2)           # MAKE_STRUCT type_idx arity — pops arity field regs, pushes MenaiStruct
+    STRUCT_P = _op(361, 1)              # r_dest = (struct? r_src0)
+    STRUCT_TYPE_P = _op(362, 2)         # r_dest = (struct-type? r_type r_src0) — tag check
+    STRUCT_GET = _op(363, 2)            # r_dest = (struct-get r_src0 field_idx) — indexed field access
+    STRUCT_GET_IMM = _op(364, 2)        # r_dest = (struct-get r_src0 field_idx) — indexed field access by immediate
+    STRUCT_SET = _op(365, 3)            # r_dest = (struct-set r_src0 field_idx r_src1) — functional update
+    STRUCT_SET_IMM = _op(366, 3)        # r_dest = (struct-set r_src0 field_idx r_src1) — functional update by immediate
+    STRUCT_EQ_P = _op(367, 2)           # r_dest = (struct=? r_src0 r_src1)
+    STRUCT_NEQ_P = _op(368, 2)          # r_dest = (struct!=? r_src0 r_src1)
+    STRUCT_TYPE = _op(369, 1)           # r_dest = (struct-type r_src0) → MenaiStructType value
     STRUCT_TYPE_NAME = _op(370, 1)      # r_dest = (struct-type-name r_src0) → string
-    STRUCT_FIELDS    = _op(371, 1)      # r_dest = (struct-fields r_src0) → list of symbols
+    STRUCT_FIELDS = _op(371, 1)         # r_dest = (struct-fields r_src0) → list of symbols
 
     # Generate integer range list
     RANGE = _op(380, 3)                 # r_dest = (range r_src0 r_src1 r_src2)
