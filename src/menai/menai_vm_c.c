@@ -1353,7 +1353,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_MOVE: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
-            menai_reg_set_borrow(regs, base + dest, regs[base +src0]);
+            menai_reg_set_borrow(regs, base + dest, regs[base + src0]);
             break;
         }
 
@@ -6654,8 +6654,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            menai_reg_set_borrow(regs, base + dest,
-                ((MenaiStructType *)val)->name);
+            menai_reg_set_borrow(regs, base + dest, ((MenaiStructType *)val)->name);
             break;
         }
 

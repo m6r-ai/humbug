@@ -19,19 +19,19 @@ typedef struct MenaiValue_s MenaiValue;
  */
 typedef uint16_t MenaiType;
 
-#define MENAITYPE_NONE       ((MenaiType)0x8271)
-#define MENAITYPE_BOOLEAN    ((MenaiType)0x9a3f)
-#define MENAITYPE_FUNCTION   ((MenaiType)0x18ab)
-#define MENAITYPE_SYMBOL     ((MenaiType)0xa4c7)
-#define MENAITYPE_STRING     ((MenaiType)0x89b2)
-#define MENAITYPE_INTEGER    ((MenaiType)0x79ae)
-#define MENAITYPE_FLOAT      ((MenaiType)0x87fb)
-#define MENAITYPE_COMPLEX    ((MenaiType)0x362b)
-#define MENAITYPE_LIST       ((MenaiType)0x9aa8)
-#define MENAITYPE_DICT       ((MenaiType)0xd087)
-#define MENAITYPE_SET        ((MenaiType)0x8954)
-#define MENAITYPE_STRUCT     ((MenaiType)0x76dd)
-#define MENAITYPE_STRUCTTYPE ((MenaiType)0x6acd)
+#define MENAITYPE_NONE 0x8271
+#define MENAITYPE_BOOLEAN 0x9a3f
+#define MENAITYPE_FUNCTION 0x18ab
+#define MENAITYPE_SYMBOL 0xa4c7
+#define MENAITYPE_STRING 0x89b2
+#define MENAITYPE_INTEGER 0x79ae
+#define MENAITYPE_FLOAT 0x87fb
+#define MENAITYPE_COMPLEX 0x362b
+#define MENAITYPE_LIST 0x9aa8
+#define MENAITYPE_DICT 0xd087
+#define MENAITYPE_SET 0x8954
+#define MENAITYPE_STRUCT 0x76dd
+#define MENAITYPE_STRUCTTYPE 0x6acd
 
 /*
  * MenaiValue_HEAD — common prefix for every Menai value struct.
@@ -49,7 +49,7 @@ typedef void (*menai_destructor)(MenaiValue *);
 
 #define MenaiValue_HEAD              \
     uint32_t ob_refcnt;              \
-    uint16_t ob_type;                \
+    MenaiType ob_type;               \
     uint16_t ob_alloc;               \
     menai_destructor ob_destructor;
 
