@@ -19,9 +19,6 @@
 
 static void MenaiString_dealloc(MenaiValue *self);
 
-/* MenaiEvalError — fetched at init time by menai_vm_string_init(). */
-static PyObject *_MenaiEvalError = NULL;
-
 /*
  * Allocate a MenaiString with room for len codepoints.
  * length is set to len; hash is set to -1; data is uninitialised.
@@ -37,7 +34,7 @@ _menai_string_alloc(Py_ssize_t len)
     }
 
     obj->ob_refcnt = 1;
-    obj->ob_type = &MenaiString_Type;
+    obj->ob_type = MENAITYPE_STRING;
     obj->ob_destructor = MenaiString_dealloc;
     obj->length = len;
     obj->hash = -1;
@@ -52,16 +49,6 @@ MenaiString_dealloc(MenaiValue *self)
     size_t sz = sizeof(MenaiString) + (size_t)s->length * sizeof(uint32_t);
     menai_free(self, sz);
 }
-
-PyTypeObject MenaiString_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "menai.MenaiString",          /* tp_name */
-    sizeof(MenaiString),   /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)MenaiString_dealloc, /* tp_dealloc */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    Py_TPFLAGS_DEFAULT,
-};
 
 /*
  * Decode a UTF-8 byte sequence into a freshly allocated uint32_t array.
@@ -609,13 +596,4 @@ menai_string_replace(MenaiValue *s, MenaiValue *from, MenaiValue *to)
     }
 
     return (MenaiValue *)obj;
-}
-
-int
-menai_vm_string_init(PyObject *eval_error_type)
-{
-    _MenaiEvalError = eval_error_type;
-    Py_INCREF(_MenaiEvalError);
-
-    return 0;
 }

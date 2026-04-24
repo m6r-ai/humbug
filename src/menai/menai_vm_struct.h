@@ -46,9 +46,6 @@ typedef struct {
     MenaiValue *items[1];        /* inline field values, nfields entries */
 } MenaiStruct;
 
-extern MenaiType MenaiStructType_Type;
-extern MenaiType MenaiStruct_Type;
-
 /*
  * menai_struct_field_index — look up a field index by name in O(1).
  * name must be a MenaiString *.  Returns the 0-based index, or -1
@@ -63,6 +60,5 @@ menai_struct_field_index(MenaiStructType *st, MenaiValue *name)
 
 MenaiValue *menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, Py_ssize_t nfields);
 MenaiValue *menai_struct_type_new_from_args(PyObject *args);
-int menai_vm_struct_init(void);
 
 #endif /* MENAI_VM_STRUCT_H */

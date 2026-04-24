@@ -27,6 +27,7 @@
 #include "menai_vm_symbol.h"
 
 MenaiValue *menai_convert_value(PyObject *src);
+PyObject *menai_value_to_slow_value(MenaiValue *raw);
 PyObject *menai_vm_bridge_init(void);
 
 #endif /* MENAI_VM_VALUE_H */

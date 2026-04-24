@@ -29,10 +29,7 @@ typedef struct {
     Py_ssize_t length;
 } MenaiSet;
 
-extern MenaiType MenaiSet_Type;
-
 MenaiValue *menai_set_new_empty(void);
 MenaiValue *menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n);
-int menai_vm_set_init(void);
 
 #endif /* MENAI_VM_SET_H */

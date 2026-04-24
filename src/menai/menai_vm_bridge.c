@@ -1019,17 +1019,53 @@ menai_value_describe_function(MenaiValue *val)
 }
 
 PyObject *
-menai_value_to_python_none(MenaiValue *val)
+menai_value_describe(MenaiValue *val)
 {
-    (void)val;
-    Py_RETURN_NONE;
-}
+    MenaiType t = val->ob_type;
 
-PyObject *
-menai_value_to_python_boolean(MenaiValue *val)
-{
-    int v = ((MenaiBoolean *)val)->value;
-    return PyBool_FromLong(v);
+    switch (t) {
+    case MENAITYPE_NONE:
+        return menai_value_describe_none(val);
+
+    case MENAITYPE_BOOLEAN:
+        return menai_value_describe_boolean(val);
+
+    case MENAITYPE_INTEGER:
+        return menai_value_describe_integer(val);
+
+    case MENAITYPE_FLOAT:
+        return menai_value_describe_float(val);
+
+    case MENAITYPE_COMPLEX:
+        return menai_value_describe_complex(val);
+
+    case MENAITYPE_STRING:
+        return menai_value_describe_string(val);
+
+    case MENAITYPE_SYMBOL:
+        return menai_value_describe_symbol(val);
+
+    case MENAITYPE_STRUCTTYPE:
+        return menai_value_describe_structtype(val);
+
+    case MENAITYPE_STRUCT:
+        return menai_value_describe_struct(val);
+
+    case MENAITYPE_LIST:
+        return menai_value_describe_list(val);
+
+    case MENAITYPE_DICT:
+        return menai_value_describe_dict(val);
+
+    case MENAITYPE_SET:
+        return menai_value_describe_set(val);
+ 
+    case MENAITYPE_FUNCTION:
+        return menai_value_describe_function(val);
+    }
+
+    PyErr_Format(PyExc_TypeError, "menai_value_describe: unknown type %s", menai_short_type_name(t));
+    return NULL;
 }
 
 PyObject *
@@ -1042,509 +1078,6 @@ menai_value_to_python_integer(MenaiValue *val)
 
     return menai_bigint_to_pylong(&obj->big);
 }
-
-PyObject *
-menai_value_to_python_float(MenaiValue *val)
-{
-    return PyFloat_FromDouble(((MenaiFloat *)val)->value);
-}
-
-PyObject *
-menai_value_to_python_complex(MenaiValue *val)
-{
-    MenaiComplex *c = (MenaiComplex *)val;
-    return PyComplex_FromDoubles(c->real, c->imag);
-}
-
-PyObject *
-menai_value_to_python_string(MenaiValue *val)
-{
-    return menai_string_to_pyunicode(val);
-}
-
-PyObject *
-menai_value_to_python_symbol(MenaiValue *val)
-{
-    return menai_string_to_pyunicode(((MenaiSymbol *)val)->name);
-}
-
-PyObject *
-menai_value_to_python_structtype(MenaiValue *val)
-{
-    MenaiStructType *st = (MenaiStructType *)val;
-    PyObject *name = menai_string_to_pyunicode(st->name);
-    if (!name) {
-        return NULL;
-    }
-
-    PyObject *result = PyUnicode_FromFormat("<struct-type %U>", name);
-    Py_DECREF(name);
-    return result;
-}
-
-PyObject *
-menai_value_to_python_struct(MenaiValue *val)
-{
-    MenaiStruct *s = (MenaiStruct *)val;
-    MenaiStructType *st = (MenaiStructType *)s->struct_type;
-    int nf = s->nfields;
-
-    PyObject *result = PyDict_New();
-    if (!result) {
-        return NULL;
-    }
-
-    for (int i = 0; i < nf; i++) {
-        PyObject *fname = menai_string_to_pyunicode(st->fields[i].name);
-        if (!fname) {
-            Py_DECREF(result);
-            return NULL;
-        }
-
-        PyObject *fval = menai_value_to_python(s->items[i]);
-        if (!fval) {
-            Py_DECREF(fname);
-            Py_DECREF(result);
-            return NULL;
-        }
-
-        int ok = PyDict_SetItem(result, fname, fval);
-        Py_DECREF(fname);
-        Py_DECREF(fval);
-        if (ok < 0) {
-            Py_DECREF(result);
-            return NULL;
-        }
-    }
-
-    return result;
-}
-
-PyObject *
-menai_value_to_python_list(MenaiValue *val)
-{
-    MenaiList *lst = (MenaiList *)val;
-    Py_ssize_t n = lst->length;
-
-    PyObject *result = PyList_New(n);
-    if (!result) {
-        return NULL;
-    }
-
-    for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *item = menai_value_to_python(lst->elements[i]);
-        if (!item) {
-            Py_DECREF(result);
-            return NULL;
-        }
-
-        PyList_SET_ITEM(result, i, item);
-    }
-
-    return result;
-}
-
-PyObject *
-menai_value_to_python_dict(MenaiValue *val)
-{
-    MenaiDict *d = (MenaiDict *)val;
-    Py_ssize_t n = d->length;
-
-    PyObject *result = PyDict_New();
-    if (!result) {
-        return NULL;
-    }
-
-    for (Py_ssize_t i = 0; i < n; i++) {
-        MenaiValue *k = d->keys[i];
-        MenaiType *kt = k->ob_type;
-        PyObject *py_key;
-
-        /* Use string representation for Python dict keys, matching Python layer */
-        if (kt == &MenaiString_Type) {
-            py_key = menai_string_to_pyunicode(k);
-        } else if (kt == &MenaiSymbol_Type) {
-            py_key = menai_string_to_pyunicode(((MenaiSymbol *)k)->name);
-        } else {
-            /* Non-string/symbol keys are stringified, matching slow VM behaviour */
-            PyObject *native = menai_value_to_python(k);
-            if (!native) {
-                Py_DECREF(result); return NULL;
-            }
-
-            py_key = PyObject_Str(native);
-            Py_DECREF(native);
-        }
-
-        if (!py_key) {
-            Py_DECREF(result);
-            return NULL;
-        }
-
-        PyObject *py_val = menai_value_to_python(d->values[i]);
-        if (!py_val) {
-            Py_DECREF(py_key);
-            Py_DECREF(result);
-            return NULL;
-        }
-
-        int ok = PyDict_SetItem(result, py_key, py_val);
-        Py_DECREF(py_key);
-        Py_DECREF(py_val);
-        if (ok < 0) {
-            Py_DECREF(result);
-            return NULL;
-        }
-    }
-
-    return result;
-}
-
-PyObject *
-menai_value_to_python_set(MenaiValue *val)
-{
-    MenaiSet *s = (MenaiSet *)val;
-    Py_ssize_t n = s->length;
-
-    PyObject *result = PySet_New(NULL);
-    if (!result) {
-        return NULL;
-    }
-
-    for (Py_ssize_t i = 0; i < n; i++) {
-        MenaiValue *elem = s->elements[i];
-        MenaiType *et = elem->ob_type;
-        PyObject *py_elem;
-
-        if (et == &MenaiString_Type) {
-            py_elem = menai_string_to_pyunicode(elem);
-        } else if (et == &MenaiSymbol_Type) {
-            py_elem = menai_string_to_pyunicode(((MenaiSymbol *)elem)->name);
-        } else {
-            py_elem = menai_value_to_python(elem);
-        }
-
-        if (!py_elem) {
-            Py_DECREF(result);
-            return NULL;
-        }
-
-        int ok = PySet_Add(result, py_elem);
-        Py_DECREF(py_elem);
-        if (ok < 0) {
-            Py_DECREF(result);
-            return NULL;
-        }
-    }
-
-    return result;
-}
-
-PyObject *
-menai_value_to_python_function(MenaiValue *val)
-{
-    /* Functions return themselves as opaque Python objects */
-    Py_INCREF((PyObject *)val);
-    return (PyObject *)val;
-}
-
-/*
- * Python-facing methods and getsets for all fast value types.
- *
- * These are patched onto each PyTypeObject before PyType_Ready() is called
- * in _menai_vm_bridge_init().  They provide the Python API expected by
- * menai.py and tests: type_name(), describe(), to_python(), and properties
- * such as .pairs, .value, .parameters, etc.
- */
-
-/* Shared method wrappers — dispatch via menai_value_describe/to_python */
-
-static PyObject *
-py_type_name(PyObject *self, PyObject *args)
-{
-    (void)args;
-    MenaiType *t = (MenaiType *)Py_TYPE(self);
-    if (t == &MenaiNone_Type) {
-        return PyUnicode_FromString("none");
-    }
-
-    if (t == &MenaiBoolean_Type) {
-        return PyUnicode_FromString("boolean");
-    }
-
-    if (t == &MenaiInteger_Type) {
-        return PyUnicode_FromString("integer");
-    }
-
-    if (t == &MenaiFloat_Type) {
-        return PyUnicode_FromString("float");
-    }
-
-    if (t == &MenaiComplex_Type) {
-        return PyUnicode_FromString("complex");
-    }
-
-    if (t == &MenaiString_Type) {
-        return PyUnicode_FromString("string");
-    }
-
-    if (t == &MenaiSymbol_Type) {
-        return PyUnicode_FromString("symbol");
-    }
-
-    if (t == &MenaiList_Type) {
-        return PyUnicode_FromString("list");
-    }
-
-    if (t == &MenaiDict_Type) {
-        return PyUnicode_FromString("dict");
-    }
-
-    if (t == &MenaiSet_Type) {
-        return PyUnicode_FromString("set");
-    }
-
-    if (t == &MenaiFunction_Type) {
-        return PyUnicode_FromString("function");
-    }
-
-    if (t == &MenaiStructType_Type) {
-        return PyUnicode_FromString("struct-type");
-    }
-
-    if (t == &MenaiStruct_Type) {
-        return PyUnicode_FromString("struct");
-    }
-
-    return PyUnicode_FromString(t->tp_name);
-}
-
-static PyObject *
-py_describe(PyObject *self, PyObject *args)
-{
-    (void)args;
-    return menai_value_describe((MenaiValue *)self);
-}
-
-static PyObject *
-py_to_python(PyObject *self, PyObject *args)
-{
-    (void)args;
-    return menai_value_to_python((MenaiValue *)self);
-}
-
-static PyMethodDef _shared_methods[] = {
-    {"type_name", py_type_name, METH_NOARGS, NULL},
-    {"describe",  py_describe,  METH_NOARGS, NULL},
-    {"to_python", py_to_python, METH_NOARGS, NULL},
-    {NULL, NULL, 0, NULL}
-};
-
-/* MenaiDict.pairs — returns tuple of (key, value) 2-tuples */
-static PyObject *
-dict_get_pairs(PyObject *self, void *closure)
-{
-    (void)closure;
-    MenaiDict *d = (MenaiDict *)self;
-    Py_ssize_t n = d->length;
-    PyObject *tup = PyTuple_New(n);
-    if (!tup) {
-        return NULL;
-    }
-
-    for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *pair = PyTuple_Pack(2,
-            (PyObject *)d->keys[i], (PyObject *)d->values[i]);
-        if (!pair) {
-            Py_DECREF(tup); return NULL;
-        }
-
-        PyTuple_SET_ITEM(tup, i, pair);
-    }
-
-    return tup;
-}
-
-static PyGetSetDef _dict_getsets[] = {
-    {"pairs", dict_get_pairs, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-/* MenaiString.value — returns Python str */
-static PyObject *
-string_get_value(PyObject *self, void *closure)
-{
-    (void)closure;
-    return menai_string_to_pyunicode((MenaiValue *)self);
-}
-
-static PyGetSetDef _string_getsets[] = {
-    {"value", string_get_value, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-/* MenaiFloat.value */
-static PyObject *
-float_get_value(PyObject *self, void *closure)
-{
-    (void)closure;
-    return PyFloat_FromDouble(((MenaiFloat *)self)->value);
-}
-
-static PyGetSetDef _float_getsets[] = {
-    {"value", float_get_value, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-/* MenaiInteger.value */
-static PyObject *
-integer_get_value(PyObject *self, void *closure)
-{
-    (void)closure;
-    MenaiInteger *obj = (MenaiInteger *)self;
-    if (!obj->is_big) {
-        return PyLong_FromLong(obj->small);
-    }
-
-    return menai_bigint_to_pylong(&obj->big);
-}
-
-static PyGetSetDef _integer_getsets[] = {
-    {"value", integer_get_value, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-/* MenaiFunction getsets */
-static PyObject *
-func_get_parameters(PyObject *self, void *closure)
-{
-    (void)closure;
-    MenaiCodeObject *co = ((MenaiFunction *)self)->bytecode;
-    PyObject *lst = PyList_New(co->param_count);
-    if (!lst) {
-        return NULL;
-    }
-
-    /* param_names are not stored on MenaiCodeObject yet — return empty list. */
-    return lst;
-}
-
-static PyObject *
-func_get_name(PyObject *self, void *closure)
-{
-    (void)closure;
-    MenaiCodeObject *co = ((MenaiFunction *)self)->bytecode;
-    if (co->name) {
-        return PyUnicode_FromString(co->name);
-    }
-
-    Py_RETURN_NONE;
-}
-
-static PyObject *
-func_get_bytecode(PyObject *self, void *closure)
-{
-    (void)closure;
-    /* The Python CodeObject is not retained — return None for now. */
-    Py_RETURN_NONE;
-}
-
-static PyObject *
-func_get_is_variadic(PyObject *self, void *closure)
-{
-    (void)closure;
-    return PyBool_FromLong(((MenaiFunction *)self)->bytecode->is_variadic);
-}
-
-static PyObject *
-func_get_param_count(PyObject *self, void *closure)
-{
-    (void)closure;
-    return PyLong_FromLong(((MenaiFunction *)self)->bytecode->param_count);
-}
-
-static PyObject *
-func_get_captured_values(PyObject *self, void *closure)
-{
-    (void)closure;
-    MenaiFunction *f = (MenaiFunction *)self;
-    Py_ssize_t ncap = f->ncap;
-    PyObject *lst = PyList_New(ncap);
-    if (!lst) {
-        return NULL;
-    }
-
-    for (Py_ssize_t i = 0; i < ncap; i++) {
-        PyObject *cv = f->captures[i] ? (PyObject *)f->captures[i] : Py_None;
-        Py_INCREF(cv);
-        PyList_SET_ITEM(lst, i, cv);
-    }
-
-    return lst;
-}
-
-static int
-func_set_captured_values(PyObject *self, PyObject *value, void *closure)
-{
-    (void)closure;
-    if (!PyList_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, "captured_values must be a list");
-        return -1;
-    }
-
-    MenaiFunction *f = (MenaiFunction *)self;
-    Py_ssize_t ncap = f->ncap;
-    if (PyList_GET_SIZE(value) != ncap) {
-        PyErr_SetString(PyExc_ValueError,
-            "captured_values length does not match function capture count");
-        return -1;
-    }
-
-    for (Py_ssize_t i = 0; i < ncap; i++) {
-        MenaiValue *nv = (MenaiValue *)PyList_GET_ITEM(value, i);
-        menai_retain(nv);
-        menai_xrelease(f->captures[i]);
-        f->captures[i] = nv;
-    }
-
-    return 0;
-}
-
-static PyGetSetDef _function_getsets[] = {
-    {"parameters", func_get_parameters, NULL, NULL, NULL},
-    {"name", func_get_name, NULL, NULL, NULL},
-    {"bytecode", func_get_bytecode, NULL, NULL, NULL},
-    {"is_variadic", func_get_is_variadic, NULL, NULL, NULL},
-    {"param_count", func_get_param_count, NULL, NULL, NULL},
-    {"captured_values", func_get_captured_values, func_set_captured_values,  NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-/* MenaiBoolean.value */
-static PyObject *
-boolean_get_value(PyObject *self, void *closure)
-{
-    (void)closure;
-    return PyBool_FromLong(((MenaiBoolean *)self)->value);
-}
-
-static PyGetSetDef _boolean_getsets[] = {
-    {"value", boolean_get_value, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-/* MenaiSymbol.name */
-static PyObject *
-symbol_get_name(PyObject *self, void *closure)
-{
-    (void)closure;
-    return menai_string_to_pyunicode(((MenaiSymbol *)self)->name);
-}
-
-static PyGetSetDef _symbol_getsets[] = {
-    {"name", symbol_get_name, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
 
 static int
 fetch_slow_type(PyObject *mod, const char *name, PyTypeObject **dst)
@@ -1565,6 +1098,309 @@ static struct PyModuleDef module_def = {
     -1,
     NULL
 };
+
+/*
+ * menai_value_to_slow_value — convert a fast MenaiValue * to its equivalent
+ * slow menai_value.py Python object.
+ *
+ * This is the inverse of menai_convert_value.  It is used at the C VM execute
+ * boundary to ensure all values returned to Python callers are proper Python
+ * objects with the full MenaiValue interface (to_python, describe, etc.).
+ *
+ * For MenaiFunction, bytecode is set to None because the slow Python VM will
+ * never be asked to execute these functions — they are returned as values only.
+ * captured_values are recursively converted to slow values.
+ *
+ * Returns a new reference, or NULL on error with a Python exception set.
+ */
+PyObject *
+menai_value_to_slow_value(MenaiValue *val)
+{
+    MenaiType t = val->ob_type;
+
+    if (t == MENAITYPE_NONE) {
+        return PyObject_CallNoArgs((PyObject *)Slow_NoneType);
+    }
+
+    if (t == MENAITYPE_BOOLEAN) {
+        int b = ((MenaiBoolean *)val)->value;
+        return PyObject_CallOneArg((PyObject *)Slow_BooleanType, b ? Py_True : Py_False);
+    }
+
+    if (t == MENAITYPE_INTEGER) {
+        PyObject *py_int = menai_value_to_python_integer(val);
+        if (!py_int) {
+            return NULL;
+        }
+
+        PyObject *result = PyObject_CallOneArg((PyObject *)Slow_IntegerType, py_int);
+        Py_DECREF(py_int);
+        return result;
+    }
+
+    if (t == MENAITYPE_FLOAT) {
+        PyObject *py_float = PyFloat_FromDouble(((MenaiFloat *)val)->value);
+        if (!py_float) {
+            return NULL;
+        }
+
+        PyObject *result = PyObject_CallOneArg((PyObject *)Slow_FloatType, py_float);
+        Py_DECREF(py_float);
+        return result;
+    }
+
+    if (t == MENAITYPE_COMPLEX) {
+        MenaiComplex *c = (MenaiComplex *)val;
+        PyObject *py_complex = PyComplex_FromDoubles(c->real, c->imag);
+        if (!py_complex) {
+            return NULL;
+        }
+
+        PyObject *result = PyObject_CallOneArg((PyObject *)Slow_ComplexType, py_complex);
+        Py_DECREF(py_complex);
+        return result;
+    }
+
+    if (t == MENAITYPE_STRING) {
+        PyObject *py_str = menai_string_to_pyunicode(val);
+        if (!py_str) {
+            return NULL;
+        }
+
+        PyObject *result = PyObject_CallOneArg((PyObject *)Slow_StringType, py_str);
+        Py_DECREF(py_str);
+        return result;
+    }
+
+    if (t == MENAITYPE_SYMBOL) {
+        PyObject *py_str = menai_string_to_pyunicode(((MenaiSymbol *)val)->name);
+        if (!py_str) {
+            return NULL;
+        }
+
+        PyObject *result = PyObject_CallOneArg((PyObject *)Slow_SymbolType, py_str);
+        Py_DECREF(py_str);
+        return result;
+    }
+
+    if (t == MENAITYPE_LIST) {
+        MenaiList *lst = (MenaiList *)val;
+        Py_ssize_t n = lst->length;
+        PyObject *py_tuple = PyTuple_New(n);
+        if (!py_tuple) {
+            return NULL;
+        }
+
+        for (Py_ssize_t i = 0; i < n; i++) {
+            PyObject *elem = menai_value_to_slow_value(lst->elements[i]);
+            if (!elem) {
+                Py_DECREF(py_tuple);
+                return NULL;
+            }
+
+            PyTuple_SET_ITEM(py_tuple, i, elem);
+        }
+
+        PyObject *result = PyObject_CallOneArg((PyObject *)Slow_ListType, py_tuple);
+        Py_DECREF(py_tuple);
+        return result;
+    }
+
+    if (t == MENAITYPE_DICT) {
+        MenaiDict *d = (MenaiDict *)val;
+        Py_ssize_t n = d->length;
+        PyObject *py_pairs = PyTuple_New(n);
+        if (!py_pairs) {
+            return NULL;
+        }
+
+        for (Py_ssize_t i = 0; i < n; i++) {
+            PyObject *slow_key = menai_value_to_slow_value(d->keys[i]);
+            if (!slow_key) {
+                Py_DECREF(py_pairs);
+                return NULL;
+            }
+
+            PyObject *slow_val = menai_value_to_slow_value(d->values[i]);
+            if (!slow_val) {
+                Py_DECREF(slow_key);
+                Py_DECREF(py_pairs);
+                return NULL;
+            }
+
+            PyObject *pair = PyTuple_Pack(2, slow_key, slow_val);
+            Py_DECREF(slow_key);
+            Py_DECREF(slow_val);
+            if (!pair) {
+                Py_DECREF(py_pairs);
+                return NULL;
+            }
+
+            PyTuple_SET_ITEM(py_pairs, i, pair);
+        }
+
+        PyObject *result = PyObject_CallOneArg((PyObject *)Slow_DictType, py_pairs);
+        Py_DECREF(py_pairs);
+        return result;
+    }
+
+    if (t == MENAITYPE_SET) {
+        MenaiSet *s = (MenaiSet *)val;
+        Py_ssize_t n = s->length;
+        PyObject *py_tuple = PyTuple_New(n);
+        if (!py_tuple) {
+            return NULL;
+        }
+
+        for (Py_ssize_t i = 0; i < n; i++) {
+            PyObject *elem = menai_value_to_slow_value(s->elements[i]);
+            if (!elem) {
+                Py_DECREF(py_tuple);
+                return NULL;
+            }
+
+            PyTuple_SET_ITEM(py_tuple, i, elem);
+        }
+
+        PyObject *result = PyObject_CallOneArg((PyObject *)Slow_SetType, py_tuple);
+        Py_DECREF(py_tuple);
+        return result;
+    }
+
+    if (t == MENAITYPE_STRUCTTYPE) {
+        MenaiStructType *st = (MenaiStructType *)val;
+        PyObject *py_name = menai_string_to_pyunicode(st->name);
+        if (!py_name) {
+            return NULL;
+        }
+
+        PyObject *py_tag = PyLong_FromLong((long)st->tag);
+        if (!py_tag) {
+            Py_DECREF(py_name);
+            return NULL;
+        }
+
+        PyObject *py_fields = PyTuple_New(st->nfields);
+        if (!py_fields) {
+            Py_DECREF(py_name);
+            Py_DECREF(py_tag);
+            return NULL;
+        }
+
+        for (int i = 0; i < st->nfields; i++) {
+            PyObject *fname = menai_string_to_pyunicode(st->fields[i].name);
+            if (!fname) {
+                Py_DECREF(py_name);
+                Py_DECREF(py_tag);
+                Py_DECREF(py_fields);
+                return NULL;
+            }
+
+            PyTuple_SET_ITEM(py_fields, i, fname);
+        }
+
+        PyObject *result = PyObject_CallFunctionObjArgs(
+            (PyObject *)Slow_StructTypeType, py_name, py_tag, py_fields, NULL);
+        Py_DECREF(py_name);
+        Py_DECREF(py_tag);
+        Py_DECREF(py_fields);
+        return result;
+    }
+
+    if (t == MENAITYPE_STRUCT) {
+        MenaiStruct *s = (MenaiStruct *)val;
+        PyObject *slow_st = menai_value_to_slow_value(s->struct_type);
+        if (!slow_st) {
+            return NULL;
+        }
+
+        PyObject *py_fields = PyTuple_New(s->nfields);
+        if (!py_fields) {
+            Py_DECREF(slow_st);
+            return NULL;
+        }
+
+        for (int i = 0; i < s->nfields; i++) {
+            PyObject *fval = menai_value_to_slow_value(s->items[i]);
+            if (!fval) {
+                Py_DECREF(slow_st);
+                Py_DECREF(py_fields);
+                return NULL;
+            }
+
+            PyTuple_SET_ITEM(py_fields, i, fval);
+        }
+
+        PyObject *result = PyObject_CallFunctionObjArgs(
+            (PyObject *)Slow_StructType, slow_st, py_fields, NULL);
+        Py_DECREF(slow_st);
+        Py_DECREF(py_fields);
+        return result;
+    }
+
+    if (t == MENAITYPE_FUNCTION) {
+        MenaiFunction *fn = (MenaiFunction *)val;
+        MenaiCodeObject *co = fn->bytecode;
+
+        PyObject *py_params = PyTuple_New(co->nparam_names);
+        if (!py_params) {
+            return NULL;
+        }
+
+        for (Py_ssize_t i = 0; i < co->nparam_names; i++) {
+            PyObject *p = PyUnicode_FromString(co->param_names[i]);
+            if (!p) {
+                Py_DECREF(py_params);
+                return NULL;
+            }
+
+            PyTuple_SET_ITEM(py_params, i, p);
+        }
+
+        PyObject *py_name = co->name ? PyUnicode_FromString(co->name) : (Py_INCREF(Py_None), Py_None);
+        if (!py_name) {
+            Py_DECREF(py_params);
+            return NULL;
+        }
+
+        PyObject *py_caps = PyList_New(fn->ncap);
+        if (!py_caps) {
+            Py_DECREF(py_params);
+            Py_DECREF(py_name);
+            return NULL;
+        }
+
+        for (Py_ssize_t i = 0; i < fn->ncap; i++) {
+            PyObject *cv = menai_value_to_slow_value(fn->captures[i]);
+            if (!cv) {
+                Py_DECREF(py_params);
+                Py_DECREF(py_name);
+                Py_DECREF(py_caps);
+                return NULL;
+            }
+
+            PyList_SET_ITEM(py_caps, i, cv);
+        }
+
+        PyObject *py_variadic = co->is_variadic ? Py_True : Py_False;
+        PyObject *result = PyObject_CallFunctionObjArgs(
+            (PyObject *)Slow_FunctionType,
+            py_params,
+            py_name,
+            Py_None,   /* bytecode — not needed; slow VM won't execute this */
+            py_caps,
+            py_variadic,
+            NULL);
+        Py_DECREF(py_params);
+        Py_DECREF(py_name);
+        Py_DECREF(py_caps);
+        return result;
+    }
+
+    PyErr_Format(PyExc_TypeError,
+        "menai_value_to_slow_value: unknown type tag 0x%08x", (unsigned)t);
+    return NULL;
+}
 
 PyObject *
 menai_vm_bridge_init(void)
@@ -1642,82 +1478,9 @@ menai_vm_bridge_init(void)
         return NULL;
     }
 
-    /*
-     * Patch tp_methods and tp_getset onto each type before PyType_Ready.
-     * All types get the shared methods (type_name, describe, to_python).
-     * Selected types also get type-specific getsets.
-     */
-    MenaiNone_Type.tp_methods = _shared_methods;
-    MenaiBoolean_Type.tp_methods = _shared_methods;
-    MenaiBoolean_Type.tp_getset = _boolean_getsets;
-    MenaiInteger_Type.tp_methods = _shared_methods;
-    MenaiInteger_Type.tp_getset = _integer_getsets;
-    MenaiFloat_Type.tp_methods = _shared_methods;
-    MenaiFloat_Type.tp_getset = _float_getsets;
-    MenaiComplex_Type.tp_methods = _shared_methods;
-    MenaiString_Type.tp_methods = _shared_methods;
-    MenaiString_Type.tp_getset = _string_getsets;
-    MenaiSymbol_Type.tp_methods = _shared_methods;
-    MenaiSymbol_Type.tp_getset = _symbol_getsets;
-    MenaiList_Type.tp_methods = _shared_methods;
-    MenaiDict_Type.tp_methods = _shared_methods;
-    MenaiDict_Type.tp_getset = _dict_getsets;
-    MenaiSet_Type.tp_methods = _shared_methods;
-    MenaiFunction_Type.tp_methods = _shared_methods;
-    MenaiFunction_Type.tp_getset = _function_getsets;
-    MenaiStructType_Type.tp_methods = _shared_methods;
-    MenaiStruct_Type.tp_methods = _shared_methods;
-
-    if (menai_vm_string_init(MenaiEvalError_type) < 0) {
-        return NULL;
-    }
-
-    if (menai_vm_none_init() < 0) {
-        return NULL;
-    }
-
-    if (menai_vm_boolean_init() < 0) {
-        return NULL;
-    }
-
-    if (menai_vm_float_init() < 0) {
-        return NULL;
-    }
-
+    menai_vm_none_init();
+    menai_vm_boolean_init();
     if (menai_vm_integer_init() < 0) {
-        return NULL;
-    }
-
-    if (menai_vm_complex_init() < 0) {
-        return NULL;
-    }
-
-    if (menai_vm_function_init() < 0) {
-        return NULL;
-    }
-
-    if (menai_vm_symbol_init() < 0) {
-        return NULL;
-    }
-
-    if (menai_vm_list_init() < 0) {
-        return NULL;
-    }
-
-    if (menai_vm_set_init() < 0) {
-        return NULL;
-    }
-
-    if (menai_vm_struct_init() < 0) {
-        return NULL;
-    }
-
-    if (menai_vm_dict_init() < 0) {
-        return NULL;
-    }
-
-    /* Call PyType_Ready for types whose init functions don't do it. */
-    if (PyType_Ready(&MenaiString_Type) < 0) {
         return NULL;
     }
 
@@ -1797,35 +1560,6 @@ menai_vm_bridge_init(void)
         menai_retain(*singletons[i].obj);
         if (PyModule_AddObject(module, singletons[i].name, (PyObject *)*singletons[i].obj) < 0) {
             menai_release(*singletons[i].obj);
-            Py_DECREF(module);
-            return NULL;
-        }
-    }
-
-    /* Add type objects to the module so Python code can import them for
-     * isinstance checks and type introspection. */
-    struct {
-        const char *name;
-        PyTypeObject *type;
-    } types[] = {
-        {"MenaiNone", &MenaiNone_Type},
-        {"MenaiBoolean", &MenaiBoolean_Type},
-        {"MenaiInteger", &MenaiInteger_Type},
-        {"MenaiFloat", &MenaiFloat_Type},
-        {"MenaiComplex", &MenaiComplex_Type},
-        {"MenaiString", &MenaiString_Type},
-        {"MenaiSymbol", &MenaiSymbol_Type},
-        {"MenaiList", &MenaiList_Type},
-        {"MenaiDict", &MenaiDict_Type},
-        {"MenaiSet", &MenaiSet_Type},
-        {"MenaiFunction", &MenaiFunction_Type},
-        {"MenaiStructType", &MenaiStructType_Type},
-        {"MenaiStruct", &MenaiStruct_Type},
-    };
-    for (int i = 0; i < (int)(sizeof(types)/sizeof(types[0])); i++) {
-        Py_INCREF(types[i].type);
-        if (PyModule_AddObject(module, types[i].name, (PyObject *)types[i].type) < 0) {
-            Py_DECREF(types[i].type);
             Py_DECREF(module);
             return NULL;
         }

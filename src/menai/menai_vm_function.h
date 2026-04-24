@@ -34,9 +34,6 @@ typedef struct {
     MenaiValue *captures[1];       /* flexible array member (C99 [1] for MSVC compat) */
 } MenaiFunction;
 
-extern MenaiType MenaiFunction_Type;
-
 MenaiValue *menai_function_alloc(MenaiCodeObject *co, MenaiValue *none_val);
-int menai_vm_function_init(void);
 
 #endif /* MENAI_VM_FUNCTION_H */

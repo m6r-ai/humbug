@@ -26,16 +26,6 @@ MenaiBoolean_dealloc(MenaiValue *self)
     (void)self;
 }
 
-PyTypeObject MenaiBoolean_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "menai.MenaiBoolean",          /* tp_name */
-    sizeof(MenaiBoolean),   /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)MenaiBoolean_dealloc, /* tp_dealloc */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    Py_TPFLAGS_DEFAULT,
-};
-
 MenaiValue *
 menai_boolean_true(void)
 {
@@ -48,24 +38,18 @@ menai_boolean_false(void)
     return _Menai_FALSE;
 }
 
-int
+void
 menai_vm_boolean_init(void)
 {
-    if (PyType_Ready(&MenaiBoolean_Type) < 0) {
-        return -1;
-    }
-
     _true_storage.ob_refcnt = 1;
-    _true_storage.ob_type = &MenaiBoolean_Type;
+    _true_storage.ob_type = MENAITYPE_BOOLEAN;
     _true_storage.ob_destructor = MenaiBoolean_dealloc;
     _true_storage.value = 1;
     _Menai_TRUE = (MenaiValue *)&_true_storage;
 
     _false_storage.ob_refcnt = 1;
-    _false_storage.ob_type = &MenaiBoolean_Type;
+    _false_storage.ob_type = MENAITYPE_BOOLEAN;
     _false_storage.ob_destructor = MenaiBoolean_dealloc;
     _false_storage.value = 0;
     _Menai_FALSE = (MenaiValue *)&_false_storage;
-
-    return 0;
 }

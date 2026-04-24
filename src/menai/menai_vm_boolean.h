@@ -20,6 +20,6 @@ extern MenaiType MenaiBoolean_Type;
 
 MenaiValue *menai_boolean_true(void);
 MenaiValue *menai_boolean_false(void);
-int menai_vm_boolean_init(void);
+void menai_vm_boolean_init(void);
 
 #endif /* MENAI_VM_BOOLEAN_H */

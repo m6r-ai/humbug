@@ -1,10 +1,6 @@
 /*
  * menai_vm_hashtable.c — pure-C hash table and value operations.
  *
- * menai_value_hash, menai_value_equal, menai_value_describe, and
- * menai_value_to_python operate directly on MenaiValue structs, dispatching
- * to the C-level type functions without going through Python method lookup.
- *
  * MenaiHashTable is an open-addressing table with power-of-2 slot counts and
  * a 2/3 maximum load factor.  Probing uses the same quadratic-ish sequence
  * CPython uses: slot = (5*slot + 1 + perturb) & mask, perturb >>= 5.
@@ -32,109 +28,8 @@
 #include "menai_vm_set.h"
 #include "menai_vm_function.h"
 
-/*
- * Boundary-layer describe/to_python functions — defined in menai_vm_value.c.
- * Forward-declared here so the dispatch tables below can call them without
- * a circular include dependency.
- */
-PyObject *menai_value_describe_none(MenaiValue *val);
-PyObject *menai_value_describe_boolean(MenaiValue *val);
-PyObject *menai_value_describe_integer(MenaiValue *val);
-PyObject *menai_value_describe_float(MenaiValue *val);
-PyObject *menai_value_describe_complex(MenaiValue *val);
-PyObject *menai_value_describe_string(MenaiValue *val);
-PyObject *menai_value_describe_symbol(MenaiValue *val);
-PyObject *menai_value_describe_structtype(MenaiValue *val);
-PyObject *menai_value_describe_struct(MenaiValue *val);
-PyObject *menai_value_describe_list(MenaiValue *val);
-PyObject *menai_value_describe_dict(MenaiValue *val);
-PyObject *menai_value_describe_set(MenaiValue *val);
-PyObject *menai_value_describe_function(MenaiValue *val);
-
-PyObject *menai_value_to_python_none(MenaiValue *val);
-PyObject *menai_value_to_python_boolean(MenaiValue *val);
-PyObject *menai_value_to_python_integer(MenaiValue *val);
-PyObject *menai_value_to_python_float(MenaiValue *val);
-PyObject *menai_value_to_python_complex(MenaiValue *val);
-PyObject *menai_value_to_python_string(MenaiValue *val);
-PyObject *menai_value_to_python_symbol(MenaiValue *val);
-PyObject *menai_value_to_python_structtype(MenaiValue *val);
-PyObject *menai_value_to_python_struct(MenaiValue *val);
-PyObject *menai_value_to_python_list(MenaiValue *val);
-PyObject *menai_value_to_python_dict(MenaiValue *val);
-PyObject *menai_value_to_python_set(MenaiValue *val);
-PyObject *menai_value_to_python_function(MenaiValue *val);
-
 /* Defined in menai_vm_value.c, */
 extern PyObject *MenaiEvalError_type;
-
-/*
- * _menai_short_type_name — return the short lowercase Menai type name for
- * use in error messages (e.g. "string", "integer", "dict").
- *
- * tp_name is "menai.MenaiXxx"; we return the canonical short name instead.
- */
-static const char *
-_menai_short_type_name(MenaiType *t)
-{
-    if (t == &MenaiNone_Type) {
-        return "none";
-    }
-
-    if (t == &MenaiBoolean_Type) {
-        return "boolean";
-    }
-
-    if (t == &MenaiInteger_Type) {
-        return "integer";
-    }
-
-    if (t == &MenaiFloat_Type) {
-        return "float";
-    }
-
-    if (t == &MenaiComplex_Type) {
-        return "complex";
-    }
-
-    if (t == &MenaiString_Type) {
-        return "string";
-    }
-
-    if (t == &MenaiSymbol_Type) {
-        return "symbol";
-    }
-
-    if (t == &MenaiList_Type) {
-        return "list";
-    }
-
-    if (t == &MenaiDict_Type) {
-        return "dict";
-    }
-
-    if (t == &MenaiSet_Type) {
-        return "set";
-    }
-
-    if (t == &MenaiFunction_Type) {
-        return "function";
-    }
-
-    if (t == &MenaiStructType_Type) {
-        return "struct-type";
-    }
-
-    if (t == &MenaiStruct_Type) {
-        return "struct";
-    }
-
-    return t->tp_name;
-}
-
-/* ---------------------------------------------------------------------------
- * Hash mixing helpers
- * ------------------------------------------------------------------------- */
 
 static inline Py_uhash_t
 _hash_combine(Py_uhash_t acc, Py_hash_t h)
@@ -149,24 +44,19 @@ _hash_finalise(Py_uhash_t acc, Py_ssize_t n)
     return (Py_hash_t)(acc == (Py_uhash_t)-1 ? -2 : acc);
 }
 
-/* ---------------------------------------------------------------------------
- * menai_value_hash
- * ------------------------------------------------------------------------- */
-
 Py_hash_t
 menai_value_hash(MenaiValue *val)
 {
-    MenaiType *t = val->ob_type;
+    MenaiType t = val->ob_type;
 
-    if (t == &MenaiNone_Type) {
+    switch (t) {
+    case MENAITYPE_NONE:
         return (Py_hash_t)0x4e6f6e65UL;
-    }
 
-    if (t == &MenaiBoolean_Type) {
+    case MENAITYPE_BOOLEAN:
         return (Py_hash_t)((MenaiBoolean *)val)->value;
-    }
 
-    if (t == &MenaiInteger_Type) {
+    case MENAITYPE_INTEGER: {
         MenaiInteger *obj = (MenaiInteger *)val;
         if (!obj->is_big) {
             Py_hash_t h = (Py_hash_t)obj->small;
@@ -176,11 +66,10 @@ menai_value_hash(MenaiValue *val)
         return menai_bigint_hash(&obj->big);
     }
 
-    if (t == &MenaiFloat_Type) {
+    case MENAITYPE_FLOAT:
         return menai_hash_double(((MenaiFloat *)val)->value);
-    }
 
-    if (t == &MenaiComplex_Type) {
+    case MENAITYPE_COMPLEX: {
         MenaiComplex *c = (MenaiComplex *)val;
         Py_hash_t hr = menai_hash_double(c->real);
         Py_hash_t hi = menai_hash_double(c->imag);
@@ -189,19 +78,16 @@ menai_value_hash(MenaiValue *val)
         return h == -1 ? -2 : h;
     }
 
-    if (t == &MenaiString_Type) {
+    case MENAITYPE_STRING:
         return menai_string_hash(val);
-    }
 
-    if (t == &MenaiSymbol_Type) {
+    case MENAITYPE_SYMBOL:
         return menai_string_hash(((MenaiSymbol *)val)->name);
-    }
 
-    if (t == &MenaiStructType_Type) {
+    case MENAITYPE_STRUCTTYPE:
         return (Py_hash_t)((MenaiStructType *)val)->tag;
-    }
 
-    if (t == &MenaiStruct_Type) {
+    case MENAITYPE_STRUCT: {
         MenaiStruct *s = (MenaiStruct *)val;
         int tag = ((MenaiStructType *)s->struct_type)->tag;
         int n = s->nfields;
@@ -217,16 +103,13 @@ menai_value_hash(MenaiValue *val)
 
         return _hash_finalise(acc, n);
     }
+    }
 
     PyErr_Format(MenaiEvalError_type,
         "Dict keys must be strings, numbers, booleans, or symbols, got %s",
-        _menai_short_type_name(t));
+        menai_short_type_name(t));
     return -1;
 }
-
-/* ---------------------------------------------------------------------------
- * menai_value_equal
- * ------------------------------------------------------------------------- */
 
 int
 menai_value_equal(MenaiValue *a, MenaiValue *b)
@@ -235,22 +118,21 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
         return 1;
     }
 
-    MenaiType *ta = a->ob_type;
-    MenaiType *tb = b->ob_type;
+    MenaiType ta = a->ob_type;
+    MenaiType tb = b->ob_type;
 
     if (ta != tb) {
         return 0;
     }
 
-    if (ta == &MenaiNone_Type) {
+    switch (ta) {
+    case MENAITYPE_NONE:
         return 1;
-    }
 
-    if (ta == &MenaiBoolean_Type) {
+    case MENAITYPE_BOOLEAN:
         return ((MenaiBoolean *)a)->value == ((MenaiBoolean *)b)->value;
-    }
 
-    if (ta == &MenaiInteger_Type) {
+    case MENAITYPE_INTEGER: {
         MenaiInteger *ia = (MenaiInteger *)a;
         MenaiInteger *ib = (MenaiInteger *)b;
         if (!ia->is_big && !ib->is_big) {
@@ -264,29 +146,25 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
         return menai_bigint_eq(&ia->big, &ib->big);
     }
 
-    if (ta == &MenaiFloat_Type) {
+    case MENAITYPE_FLOAT:
         return ((MenaiFloat *)a)->value == ((MenaiFloat *)b)->value;
-    }
 
-    if (ta == &MenaiComplex_Type) {
+    case MENAITYPE_COMPLEX: {
         MenaiComplex *ca = (MenaiComplex *)a;
         MenaiComplex *cb = (MenaiComplex *)b;
         return ca->real == cb->real && ca->imag == cb->imag;
     }
 
-    if (ta == &MenaiString_Type) {
+    case MENAITYPE_STRING:
         return menai_string_equal(a, b);
-    }
 
-    if (ta == &MenaiSymbol_Type) {
+    case MENAITYPE_SYMBOL:
         return menai_string_equal(((MenaiSymbol *)a)->name, ((MenaiSymbol *)b)->name);
-    }
 
-    if (ta == &MenaiStructType_Type) {
+    case MENAITYPE_STRUCTTYPE:
         return ((MenaiStructType *)a)->tag == ((MenaiStructType *)b)->tag;
-    }
 
-    if (ta == &MenaiStruct_Type) {
+    case MENAITYPE_STRUCT: {
         MenaiStruct *sa = (MenaiStruct *)a;
         MenaiStruct *sb = (MenaiStruct *)b;
         if (((MenaiStructType *)sa->struct_type)->tag != ((MenaiStructType *)sb->struct_type)->tag) {
@@ -307,7 +185,7 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
         return 1;
     }
 
-    if (ta == &MenaiList_Type) {
+    case MENAITYPE_LIST: {
         MenaiList *la = (MenaiList *)a;
         MenaiList *lb = (MenaiList *)b;
         if (la->length != lb->length) {
@@ -323,7 +201,7 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
         return 1;
     }
 
-    if (ta == &MenaiDict_Type) {
+    case MENAITYPE_DICT: {
         MenaiDict *da = (MenaiDict *)a;
         MenaiDict *db = (MenaiDict *)b;
         if (da->length != db->length) {
@@ -347,7 +225,7 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
         return 1;
     }
 
-    if (ta == &MenaiSet_Type) {
+    case MENAITYPE_SET: {
         MenaiSet *sa = (MenaiSet *)a;
         MenaiSet *sb = (MenaiSet *)b;
         if (sa->length != sb->length) {
@@ -362,138 +240,9 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
 
         return 1;
     }
+    }
 
     return 0;
-}
-
-/* ---------------------------------------------------------------------------
- * menai_value_describe
- * ------------------------------------------------------------------------- */
-
-PyObject *
-menai_value_describe(MenaiValue *val)
-{
-    MenaiType *t = val->ob_type;
-
-    if (t == &MenaiNone_Type) {
-        return menai_value_describe_none(val);
-    }
-
-    if (t == &MenaiBoolean_Type) {
-        return menai_value_describe_boolean(val);
-    }
-
-    if (t == &MenaiInteger_Type) {
-        return menai_value_describe_integer(val);
-    }
-
-    if (t == &MenaiFloat_Type) {
-        return menai_value_describe_float(val);
-    }
-
-    if (t == &MenaiComplex_Type) {
-        return menai_value_describe_complex(val);
-    }
-
-    if (t == &MenaiString_Type) {
-        return menai_value_describe_string(val);
-    }
-
-    if (t == &MenaiSymbol_Type) {
-        return menai_value_describe_symbol(val);
-    }
-
-    if (t == &MenaiStructType_Type) {
-        return menai_value_describe_structtype(val);
-    }
-
-    if (t == &MenaiStruct_Type) {
-        return menai_value_describe_struct(val);
-    }
-
-    if (t == &MenaiList_Type) {
-        return menai_value_describe_list(val);
-    }
-
-    if (t == &MenaiDict_Type) {
-        return menai_value_describe_dict(val);
-    }
-
-    if (t == &MenaiSet_Type) {
-        return menai_value_describe_set(val);
-    }
-
-    if (t == &MenaiFunction_Type) {
-        return menai_value_describe_function(val);
-    }
-
-    PyErr_Format(PyExc_TypeError, "menai_value_describe: unknown type %s", _menai_short_type_name(t));
-    return NULL;
-}
-
-/* ---------------------------------------------------------------------------
- * menai_value_to_python
- * ------------------------------------------------------------------------- */
-
-PyObject *
-menai_value_to_python(MenaiValue *val)
-{
-    MenaiType *t = val->ob_type;
-
-    if (t == &MenaiNone_Type) {
-        return menai_value_to_python_none(val);
-    }
-
-    if (t == &MenaiBoolean_Type) {
-        return menai_value_to_python_boolean(val);
-    }
-
-    if (t == &MenaiInteger_Type) {
-        return menai_value_to_python_integer(val);
-    }
-
-    if (t == &MenaiFloat_Type) {
-        return menai_value_to_python_float(val);
-    }
-
-    if (t == &MenaiComplex_Type) {
-        return menai_value_to_python_complex(val);
-    }
-
-    if (t == &MenaiString_Type) {
-        return menai_value_to_python_string(val);
-    }
-
-    if (t == &MenaiSymbol_Type) {
-        return menai_value_to_python_symbol(val);
-    }
-
-    if (t == &MenaiStructType_Type) {
-        return menai_value_to_python_structtype(val);
-    }
-
-    if (t == &MenaiStruct_Type) {
-        return menai_value_to_python_struct(val);
-    }
-
-    if (t == &MenaiList_Type) {
-        return menai_value_to_python_list(val);
-    }
-
-    if (t == &MenaiDict_Type) {
-        return menai_value_to_python_dict(val);
-    }
-
-    if (t == &MenaiSet_Type) {
-        return menai_value_to_python_set(val);
-    }
-
-    if (t == &MenaiFunction_Type) {
-        return menai_value_to_python_function(val);
-    }
-
-    PyErr_Format(PyExc_TypeError, "menai_value_to_python: unknown type %s", _menai_short_type_name(t));
-    return NULL;
 }
 
 static Py_ssize_t
@@ -503,9 +252,7 @@ _ht_slot_count(Py_ssize_t n)
         return 0;
     }
 
-    Py_ssize_t min_slots =
-        (n * MENAI_HT_MAX_LOAD_DEN + MENAI_HT_MAX_LOAD_NUM - 1)
-        / MENAI_HT_MAX_LOAD_NUM;
+    Py_ssize_t min_slots = (n * MENAI_HT_MAX_LOAD_DEN + MENAI_HT_MAX_LOAD_NUM - 1) / MENAI_HT_MAX_LOAD_NUM;
     Py_ssize_t sc = 4;
     while (sc < min_slots) {
         sc <<= 1;

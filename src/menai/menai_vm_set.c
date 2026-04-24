@@ -46,16 +46,6 @@ MenaiSet_dealloc(MenaiValue *self)
     menai_free(self, sizeof(MenaiSet));
 }
 
-PyTypeObject MenaiSet_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "menai.MenaiSet",          /* tp_name */
-    sizeof(MenaiSet),   /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)MenaiSet_dealloc, /* tp_dealloc */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    Py_TPFLAGS_DEFAULT,
-};
-
 MenaiValue *
 menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n)
 {
@@ -66,7 +56,7 @@ menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t
     }
 
     obj->ob_refcnt = 1;
-    obj->ob_type = &MenaiSet_Type;
+    obj->ob_type = MENAITYPE_SET;
     obj->ob_destructor = MenaiSet_dealloc;
 
     if (menai_ht_build(&obj->ht, elements, hashes, n) < 0) {
@@ -91,7 +81,7 @@ menai_set_new_empty(void)
     }
 
     obj->ob_refcnt = 1;
-    obj->ob_type = &MenaiSet_Type;
+    obj->ob_type = MENAITYPE_SET;
     obj->ob_destructor = MenaiSet_dealloc;
     obj->elements = NULL;
     obj->hashes = NULL;
@@ -101,14 +91,4 @@ menai_set_new_empty(void)
     obj->length = 0;
 
     return (MenaiValue *)obj;
-}
-
-int
-menai_vm_set_init(void)
-{
-    if (PyType_Ready(&MenaiSet_Type) < 0) {
-        return -1;
-    }
-
-    return 0;
 }

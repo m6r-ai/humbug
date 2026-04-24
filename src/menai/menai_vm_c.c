@@ -401,19 +401,19 @@ static PyObject *MenaiCancelledException_type = NULL;
 /*
  * Fast type-check macros
  */
-#define IS_MENAI_NONE(o) (((MenaiValue *)(o))->ob_type == &MenaiNone_Type)
-#define IS_MENAI_BOOLEAN(o) (((MenaiValue *)(o))->ob_type == &MenaiBoolean_Type)
-#define IS_MENAI_INTEGER(o) (((MenaiValue *)(o))->ob_type == &MenaiInteger_Type)
-#define IS_MENAI_FLOAT(o) (((MenaiValue *)(o))->ob_type == &MenaiFloat_Type)
-#define IS_MENAI_COMPLEX(o) (((MenaiValue *)(o))->ob_type == &MenaiComplex_Type)
-#define IS_MENAI_STRING(o) (((MenaiValue *)(o))->ob_type == &MenaiString_Type)
-#define IS_MENAI_SYMBOL(o) (((MenaiValue *)(o))->ob_type == &MenaiSymbol_Type)
-#define IS_MENAI_LIST(o) (((MenaiValue *)(o))->ob_type == &MenaiList_Type)
-#define IS_MENAI_DICT(o) (((MenaiValue *)(o))->ob_type == &MenaiDict_Type)
-#define IS_MENAI_SET(o) (((MenaiValue *)(o))->ob_type == &MenaiSet_Type)
-#define IS_MENAI_FUNCTION(o) (((MenaiValue *)(o))->ob_type == &MenaiFunction_Type)
-#define IS_MENAI_STRUCTTYPE(o) (((MenaiValue *)(o))->ob_type == &MenaiStructType_Type)
-#define IS_MENAI_STRUCT(o) (((MenaiValue *)(o))->ob_type == &MenaiStruct_Type)
+#define IS_MENAI_NONE(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_NONE)
+#define IS_MENAI_BOOLEAN(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_BOOLEAN)
+#define IS_MENAI_INTEGER(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_INTEGER)
+#define IS_MENAI_FLOAT(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_FLOAT)
+#define IS_MENAI_COMPLEX(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_COMPLEX)
+#define IS_MENAI_STRING(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_STRING)
+#define IS_MENAI_SYMBOL(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_SYMBOL)
+#define IS_MENAI_LIST(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_LIST)
+#define IS_MENAI_DICT(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_DICT)
+#define IS_MENAI_SET(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_SET)
+#define IS_MENAI_FUNCTION(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_FUNCTION)
+#define IS_MENAI_STRUCTTYPE(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_STRUCTTYPE)
+#define IS_MENAI_STRUCT(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_STRUCT)
 
 
 static inline int
@@ -526,70 +526,6 @@ static inline void bool_store(MenaiValue **regs, int slot, int cond)
 static PyObject *menai_raise_eval_error(const char *message);
 static PyObject *menai_raise_eval_errorf(const char *fmt, ...);
 
-static const char *
-menai_type_name(MenaiValue *val)
-{
-    /*
-     * tp_name is "menai.MenaiXxx" — map to the short lowercase Menai type
-     * name expected by error messages and tests (e.g. "string", "integer").
-     * Use a lookup table keyed on the PyTypeObject address for O(1) dispatch.
-     */
-    MenaiType *t = val->ob_type;
-    if (t == &MenaiNone_Type) {
-        return "none";
-    }
-
-    if (t == &MenaiBoolean_Type) {
-        return "boolean";
-    }
-
-    if (t == &MenaiInteger_Type) {
-        return "integer";
-    }
-
-    if (t == &MenaiFloat_Type) {
-        return "float";
-    }
-
-    if (t == &MenaiComplex_Type) {
-        return "complex";
-    }
-
-    if (t == &MenaiString_Type) {
-        return "string";
-    }
-
-    if (t == &MenaiSymbol_Type) {
-        return "symbol";
-    }
-
-    if (t == &MenaiList_Type) {
-        return "list";
-    }
-
-    if (t == &MenaiDict_Type) {
-        return "dict";
-    }
-
-    if (t == &MenaiSet_Type) {
-        return "set";
-    }
-
-    if (t == &MenaiFunction_Type) {
-        return "function";
-    }
-
-    if (t == &MenaiStructType_Type) {
-        return "struct-type";
-    }
-
-    if (t == &MenaiStruct_Type) {
-        return "struct";
-    }
-
-    return t->tp_name;
-}
-
 static inline int
 require_type_impl(int ok, MenaiValue *val, const char *op_name, const char *noun)
 {
@@ -597,8 +533,7 @@ require_type_impl(int ok, MenaiValue *val, const char *op_name, const char *noun
         return 1;
     }
 
-    menai_raise_eval_errorf("Function '%s' requires %s, got %s",
-                            op_name, noun, menai_type_name(val));
+    menai_raise_eval_errorf("Function '%s' requires %s, got %s", op_name, noun, menai_short_type_name(val->ob_type));
     return 0;
 }
 
@@ -941,9 +876,14 @@ globals_get(PyObject *globals_dict)
                 return NULL;
             }
 
-            menai_retain((MenaiValue *)val);
+            MenaiValue *fast_val = menai_convert_value(val);
+            if (!fast_val) {
+                globals_free(&_cached_globals_gt);
+                return NULL;
+            }
+
             _cached_globals_gt.entries[_cached_globals_gt.count].name = name_utf8;
-            _cached_globals_gt.entries[_cached_globals_gt.count].value = (MenaiValue *)val;
+            _cached_globals_gt.entries[_cached_globals_gt.count].value = fast_val;
             _cached_globals_gt.count++;
         }
     }
@@ -1121,7 +1061,7 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
  * Internal execute — called by menai_vm_c_execute after setup.
  * Returns the result value (new reference) or NULL on error.
  */
-static PyObject *
+static MenaiValue *
 execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              MenaiValue **regs, int max_locals)
 {
@@ -1312,7 +1252,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             if (caller->is_sentinel) {
                 /* Top-level return — exit the loop. */
-                return (PyObject *)retval;
+                return retval;
             }
 
             /* Store result into caller's register window. */
@@ -1436,7 +1376,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 Frame *caller = &frames[frame_depth];
                 if (caller->is_sentinel) {
                     menai_release(raw);
-                    return (PyObject *)retval;
+                    return retval;
                 }
 
                 menai_reg_set_own(regs, caller->base + saved_return_dest, retval);
@@ -1587,7 +1527,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 if (caller->is_sentinel) {
                     menai_release(raw_args);
                     menai_release(raw_func);
-                    return (PyObject *)retval;
+                    return retval;
                 }
 
                 menai_reg_set_own(regs, caller->base + saved_return_dest, retval);
@@ -6755,7 +6695,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     }
 
     /* Run the VM. */
-    PyObject *result = execute_loop(native_code, &globals, regs, max_locals);
+    MenaiValue *result = execute_loop(native_code, &globals, regs, max_locals);
 
     /* Clean up. */
     menai_regs_free(regs, (size_t)(MAX_FRAME_DEPTH + 1) * max_locals);
@@ -6766,8 +6706,10 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    /* Return the fast C value directly — callers use to_python() / describe(). */
-    return result;
+    /* Convert to a slow Python MenaiValue before returning to Python callers. */
+    PyObject *slow = menai_value_to_slow_value(result);
+    menai_release((MenaiValue *)result);
+    return slow;
 }
 
 /*

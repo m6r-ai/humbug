@@ -19,16 +19,6 @@ MenaiSymbol_dealloc(MenaiValue *self)
     menai_free(self, sizeof(MenaiSymbol));
 }
 
-PyTypeObject MenaiSymbol_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "menai.MenaiSymbol",          /* tp_name */
-    sizeof(MenaiSymbol),   /* tp_basicsize */
-    0,                            /* tp_itemsize */
-    (destructor)MenaiSymbol_dealloc, /* tp_dealloc */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    Py_TPFLAGS_DEFAULT,
-};
-
 MenaiValue *
 menai_symbol_alloc(MenaiValue *name)
 {
@@ -38,16 +28,10 @@ menai_symbol_alloc(MenaiValue *name)
     }
 
     self->ob_refcnt = 1;
-    self->ob_type = &MenaiSymbol_Type;
+    self->ob_type = MENAITYPE_SYMBOL;
     self->ob_destructor = MenaiSymbol_dealloc;
     menai_retain(name);
     self->name = name;
 
     return (MenaiValue *)self;
-}
-
-int
-menai_vm_symbol_init(void)
-{
-    return PyType_Ready(&MenaiSymbol_Type);
 }

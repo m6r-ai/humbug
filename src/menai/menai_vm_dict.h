@@ -29,10 +29,7 @@ typedef struct {
     Py_ssize_t length;
 } MenaiDict;
 
-extern MenaiType MenaiDict_Type;
-
 MenaiValue *menai_dict_new_empty(void);
 MenaiValue *menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_ssize_t n);
-int menai_vm_dict_init(void);
 
 #endif /* MENAI_VM_DICT_H */

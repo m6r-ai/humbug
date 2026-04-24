@@ -15,16 +15,6 @@ MenaiComplex_dealloc(MenaiValue *self)
     menai_free(self, sizeof(MenaiComplex));
 }
 
-PyTypeObject MenaiComplex_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "menai.MenaiComplex",          /* tp_name */
-    sizeof(MenaiComplex),   /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)MenaiComplex_dealloc, /* tp_dealloc */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    Py_TPFLAGS_DEFAULT,
-};
-
 MenaiValue *
 menai_complex_alloc(double real, double imag)
 {
@@ -34,15 +24,9 @@ menai_complex_alloc(double real, double imag)
     }
 
     self->ob_refcnt = 1;
-    self->ob_type = &MenaiComplex_Type;
+    self->ob_type = MENAITYPE_COMPLEX;
     self->ob_destructor = MenaiComplex_dealloc;
     self->real = real;
     self->imag = imag;
     return (MenaiValue *)self;
-}
-
-int
-menai_vm_complex_init(void)
-{
-    return PyType_Ready(&MenaiComplex_Type);
 }

@@ -28,14 +28,11 @@ typedef struct {
     MenaiValue *owner;
 } MenaiList;
 
-extern MenaiType MenaiList_Type;
-
 MenaiValue *menai_list_from_array(MenaiValue **items, Py_ssize_t n);
 MenaiValue *menai_list_from_array_steal(MenaiValue **items, Py_ssize_t n);
 MenaiValue *menai_list_new_empty(void);
 MenaiValue *menai_list_rest(MenaiValue *lst);
 MenaiValue *menai_list_slice(MenaiValue *lst, Py_ssize_t start, Py_ssize_t end);
-int menai_vm_list_init(void);
 
 static inline MenaiValue *
 menai_list_get(MenaiList *list, Py_ssize_t i)

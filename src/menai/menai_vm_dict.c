@@ -55,16 +55,6 @@ MenaiDict_dealloc(MenaiValue *self)
     menai_free(self, sizeof(MenaiDict));
 }
 
-PyTypeObject MenaiDict_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "menai.MenaiDict",          /* tp_name */
-    sizeof(MenaiDict),   /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)MenaiDict_dealloc, /* tp_dealloc */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    Py_TPFLAGS_DEFAULT,
-};
-
 MenaiValue *
 menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_ssize_t n)
 {
@@ -75,7 +65,7 @@ menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *
     }
 
     obj->ob_refcnt = 1;
-    obj->ob_type = &MenaiDict_Type;
+    obj->ob_type = MENAITYPE_DICT;
     obj->ob_destructor = MenaiDict_dealloc;
 
     if (menai_ht_build(&obj->ht, keys, hashes, n) < 0) {
@@ -101,7 +91,7 @@ menai_dict_new_empty(void)
     }
 
     obj->ob_refcnt = 1;
-    obj->ob_type = &MenaiDict_Type;
+    obj->ob_type = MENAITYPE_DICT;
     obj->ob_destructor = MenaiDict_dealloc;
     obj->keys = NULL;
     obj->values = NULL;
@@ -112,14 +102,4 @@ menai_dict_new_empty(void)
     obj->length = 0;
 
     return (MenaiValue *)obj;
-}
-
-int
-menai_vm_dict_init(void)
-{
-    if (PyType_Ready(&MenaiDict_Type) < 0) {
-        return -1;
-    }
-
-    return 0;
 }

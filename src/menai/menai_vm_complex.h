@@ -16,9 +16,6 @@ typedef struct {
     double imag;
 } MenaiComplex;
 
-extern MenaiType MenaiComplex_Type;
-
 MenaiValue *menai_complex_alloc(double real, double imag);
-int menai_vm_complex_init(void);
 
 #endif /* MENAI_VM_COMPLEX_H */

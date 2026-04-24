@@ -14,9 +14,7 @@ typedef struct {
     MenaiValue_HEAD
 } MenaiNone;
 
-extern MenaiType MenaiNone_Type;
-
 MenaiValue *menai_none_singleton(void);
-int menai_vm_none_init(void);
+void menai_vm_none_init(void);
 
 #endif /* MENAI_VM_NONE_H */

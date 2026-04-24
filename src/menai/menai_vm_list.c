@@ -18,12 +18,6 @@
 #include "menai_vm_memory.h"
 #include "menai_vm_hashtable.h"
 
-static void MenaiList_dealloc(MenaiValue *self);
-
-/* ---------------------------------------------------------------------------
- * Type implementation
- * ------------------------------------------------------------------------- */
-
 static void
 MenaiList_dealloc(MenaiValue *self)
 {
@@ -50,16 +44,6 @@ MenaiList_dealloc(MenaiValue *self)
 
     menai_free(lst, sizeof(MenaiList));
 }
-
-PyTypeObject MenaiList_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "menai.MenaiList",          /* tp_name */
-    sizeof(MenaiList),   /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)MenaiList_dealloc, /* tp_dealloc */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    Py_TPFLAGS_DEFAULT,
-};
 
 MenaiValue *
 menai_list_from_array(MenaiValue **items, Py_ssize_t n)
@@ -88,7 +72,7 @@ menai_list_from_array(MenaiValue **items, Py_ssize_t n)
     }
 
     obj->ob_refcnt = 1;
-    obj->ob_type = &MenaiList_Type;
+    obj->ob_type = MENAITYPE_LIST;
     obj->ob_destructor = MenaiList_dealloc;
     obj->elements = arr;
     obj->length = n;
@@ -112,7 +96,7 @@ menai_list_from_array_steal(MenaiValue **items, Py_ssize_t n)
     }
 
     obj->ob_refcnt = 1;
-    obj->ob_type = &MenaiList_Type;
+    obj->ob_type = MENAITYPE_LIST;
     obj->ob_destructor = MenaiList_dealloc;
     obj->elements = items;
     obj->length = n;
@@ -130,7 +114,7 @@ menai_list_new_empty(void)
     }
 
     obj->ob_refcnt = 1;
-    obj->ob_type = &MenaiList_Type;
+    obj->ob_type = MENAITYPE_LIST;
     obj->ob_destructor = MenaiList_dealloc;
     obj->elements = NULL;
     obj->length = 0;
@@ -162,7 +146,7 @@ menai_list_rest(MenaiValue *lst_val)
     }
 
     view->ob_refcnt = 1;
-    view->ob_type = &MenaiList_Type;
+    view->ob_type = MENAITYPE_LIST;
     view->ob_destructor = MenaiList_dealloc;
     menai_retain(owner);
     view->owner = owner;
@@ -189,7 +173,7 @@ menai_list_slice(MenaiValue *lst_val, Py_ssize_t start, Py_ssize_t end)
     }
 
     view->ob_refcnt = 1;
-    view->ob_type = &MenaiList_Type;
+    view->ob_type = MENAITYPE_LIST;
     view->ob_destructor = MenaiList_dealloc;
     menai_retain(owner);
     view->owner = owner;
@@ -197,10 +181,4 @@ menai_list_slice(MenaiValue *lst_val, Py_ssize_t start, Py_ssize_t end)
     view->length = end - start;
 
     return (MenaiValue *)view;
-}
-
-int
-menai_vm_list_init(void)
-{
-    return PyType_Ready(&MenaiList_Type);
 }

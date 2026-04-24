@@ -42,16 +42,6 @@ MenaiStructType_dealloc(MenaiValue *self)
     menai_free(self, sz);
 }
 
-PyTypeObject MenaiStructType_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "menai.MenaiStructType",          /* tp_name */
-    sizeof(MenaiStructType),   /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)MenaiStructType_dealloc, /* tp_dealloc */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    Py_TPFLAGS_DEFAULT,
-};
-
 /*
  * _build_struct_type — shared constructor body for MenaiStructType.
  * name must be a MenaiString * (borrowed).  tag is a C int.
@@ -70,7 +60,7 @@ _build_struct_type(MenaiValue *name, int tag, PyObject *fn_tup)
     }
 
     self->ob_refcnt = 1;
-    self->ob_type = &MenaiStructType_Type;
+    self->ob_type = MENAITYPE_STRUCTTYPE;
     self->ob_destructor = MenaiStructType_dealloc;
     menai_retain(name);
     self->field_ht.slots = NULL;
@@ -147,16 +137,6 @@ MenaiStruct_dealloc(MenaiValue *self)
     menai_free(self, sz);
 }
 
-PyTypeObject MenaiStruct_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "menai.MenaiStruct",          /* tp_name */
-    sizeof(MenaiStruct) - sizeof(MenaiValue *),   /* tp_basicsize */
-    0,                             /* tp_itemsize */
-    (destructor)MenaiStruct_dealloc, /* tp_dealloc */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    Py_TPFLAGS_DEFAULT,
-};
-
 MenaiValue *
 menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, Py_ssize_t nfields)
 {
@@ -167,7 +147,7 @@ menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, Py_ssize_
     }
 
     self->ob_refcnt = 1;
-    self->ob_type = &MenaiStruct_Type;
+    self->ob_type = MENAITYPE_STRUCT;
     self->ob_destructor = MenaiStruct_dealloc;
     self->nfields = (int)nfields;
     menai_retain(struct_type);
@@ -179,18 +159,4 @@ menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, Py_ssize_
     }
 
     return (MenaiValue *)self;
-}
-
-int
-menai_vm_struct_init(void)
-{
-    if (PyType_Ready(&MenaiStruct_Type) < 0) {
-        return -1;
-    }
-
-    if (PyType_Ready(&MenaiStructType_Type) < 0) {
-        return -1;
-    }
-
-    return 0;
 }

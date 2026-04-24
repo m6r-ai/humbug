@@ -19,9 +19,6 @@ typedef struct {
     MenaiValue *name;    /* owned MenaiString * */
 } MenaiSymbol;
 
-extern MenaiType MenaiSymbol_Type;
-
 MenaiValue *menai_symbol_alloc(MenaiValue *name);
-int menai_vm_symbol_init(void);
 
 #endif /* MENAI_VM_SYMBOL_H */

@@ -15,13 +15,6 @@ from menai.menai_value import MenaiString as SlowMenaiString, MenaiValue
 from menai.menai_vm import MenaiVM, MenaiTraceWatcher
 from menai.menai_error import MenaiModuleNotFoundError, MenaiModuleError, MenaiCircularImportError
 
-try:
-    from menai.menai_vm_bridge import MenaiDict, MenaiFunction, MenaiString  # type: ignore[import-not-found]
-except ImportError:
-    MenaiDict = SlowMenaiDict  # type: ignore[assignment,misc]
-    MenaiFunction = SlowMenaiFunction  # type: ignore[assignment,misc]
-    MenaiString = SlowMenaiString  # type: ignore[assignment,misc]
-
 
 class Menai:
     """

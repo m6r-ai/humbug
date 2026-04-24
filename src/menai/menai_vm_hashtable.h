@@ -72,7 +72,6 @@ menai_name_str_hash(const char *s)
 Py_hash_t menai_value_hash(MenaiValue *val);
 int menai_value_equal(MenaiValue *a, MenaiValue *b);
 PyObject *menai_value_describe(MenaiValue *val);
-PyObject *menai_value_to_python(MenaiValue *val);
 
 /* ---------------------------------------------------------------------------
  * MenaiHashTable — open-addressing hash table

@@ -15,9 +15,6 @@ typedef struct {
     double value;
 } MenaiFloat;
 
-extern MenaiType MenaiFloat_Type;
-
 MenaiValue *menai_float_alloc(double value);
-int menai_vm_float_init(void);
 
 #endif /* MENAI_VM_FLOAT_H */

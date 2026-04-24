@@ -34,8 +34,6 @@ typedef struct {
     uint32_t data[];            /* UTF-32 codepoints, flexible array */
 } MenaiString;
 
-extern MenaiType MenaiString_Type;
-
 static inline Py_ssize_t
 menai_string_length(MenaiValue *s)
 {
@@ -74,6 +72,5 @@ Py_ssize_t menai_string_find(MenaiValue *haystack, MenaiValue *needle);
 int menai_string_has_prefix(MenaiValue *s, MenaiValue *prefix);
 int menai_string_has_suffix(MenaiValue *s, MenaiValue *suffix);
 MenaiValue *menai_string_replace(MenaiValue *s, MenaiValue *from, MenaiValue *to);
-int menai_vm_string_init(PyObject *eval_error_type);
 
 #endif /* MENAI_VM_STRING_H */
