@@ -24,8 +24,6 @@ typedef struct {
     MenaiBigInt big;   /* valid when is_big == 1 */
 } MenaiInteger;
 
-extern MenaiType MenaiInteger_Type;
-
 /*
  * Small integer cache — covers [MENAI_INT_CACHE_MIN, MENAI_INT_CACHE_MAX].
  * menai_integer_from_long() returns a retained reference, hitting the

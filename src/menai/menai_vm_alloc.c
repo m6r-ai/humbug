@@ -6,11 +6,9 @@
  * threaded through the first sizeof(void *) bytes of the free block.  A
  * per-bucket depth cap of 256 entries prevents unbounded memory retention.
  *
- * menai_alloc writes the pool block size into ob_alloc in the returned header
- * (0 for out-of-pool allocations).  menai_free reads ob_alloc to route the
+ * menai_alloc writes the pool block into ob_alloc_bucket in the returned header
+ * (0 for out-of-pool allocations).  menai_free reads ob_alloc_bucket to route the
  * block back to the correct bucket or to free().
- *
- * Sizes outside [32, 4096] fall through to malloc/free.
  */
 #include <stdlib.h>
 #include <stddef.h>
@@ -20,7 +18,8 @@
 
 #include "menai_vm_alloc.h"
 
-#define MENAI_POOL_MIN_SIZE 32
+#define MENAI_POOL_LOG_MIN_SIZE 5
+#define MENAI_POOL_MIN_SIZE (1 << MENAI_POOL_LOG_MIN_SIZE)
 #define MENAI_POOL_MAX_SIZE 4096
 #define MENAI_POOL_NUM_BUCKETS 8
 #define MENAI_POOL_MAX_DEPTH 256
@@ -42,6 +41,9 @@ static int _pool_depths[MENAI_POOL_NUM_BUCKETS];
 static inline int
 _bucket_for(size_t size, size_t *block_size_out)
 {
+#if defined(__GNUC__) || defined(__clang__)
+    return size <= MENAI_POOL_MIN_SIZE ? 0 : 31 - __builtin_clz(size - 1) + 1 - MENAI_POOL_LOG_MIN_SIZE;
+#else
     size_t block = MENAI_POOL_MIN_SIZE;
     int bucket = 0;
     while (block < size) {
@@ -51,15 +53,16 @@ _bucket_for(size_t size, size_t *block_size_out)
 
     *block_size_out = block;
     return bucket;
+#endif
 }
 
 void *
 menai_alloc(size_t size)
 {
-    if (size < MENAI_POOL_MIN_SIZE || size > MENAI_POOL_MAX_SIZE) {
+    if (size > MENAI_POOL_MAX_SIZE) {
         void *ptr = malloc(size);
         if (ptr) {
-            ((MenaiValue *)ptr)->ob_alloc = 0;
+            ((MenaiValue *)ptr)->ob_alloc_bucket = -1;
         }
 
         return ptr;
@@ -75,34 +78,25 @@ menai_alloc(size_t size)
         _pool_depths[bucket]--;
         assert(((MenaiValue *)ptr)->ob_type == 0);
     } else {
-        ptr = malloc(block_size);
+        ptr = malloc(1 << (bucket + MENAI_POOL_LOG_MIN_SIZE));
         if (!ptr) {
             return NULL;
         }
     }
 
-    ((MenaiValue *)ptr)->ob_alloc = (uint16_t)block_size;
+    ((MenaiValue *)ptr)->ob_alloc_bucket = (int16_t)bucket;
     return ptr;
 }
 
 void
 menai_free(void *ptr)
 {
-    if (ptr == NULL) {
-        return;
-    }
-
-    uint16_t block_size = ((MenaiValue *)ptr)->ob_alloc;
-
-    if (block_size == 0) {
+    int16_t bucket = ((MenaiValue *)ptr)->ob_alloc_bucket;
+    if (bucket == -1) {
         /* Out-of-pool allocation — return directly to malloc. */
         free(ptr);
         return;
     }
-
-    size_t sz = (size_t)block_size;
-    size_t dummy;
-    int bucket = _bucket_for(sz, &dummy);
 
     if (_pool_depths[bucket] < MENAI_POOL_MAX_DEPTH) {
         assert(((MenaiValue *)ptr)->ob_type != 0);

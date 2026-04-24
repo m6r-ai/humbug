@@ -30,24 +30,19 @@ MenaiList_dealloc(MenaiValue *self)
     MenaiList *lst = (MenaiList *)self;
     if (lst->owner != NULL) {
         /* View — release the backing list; do not touch the element array. */
-        MenaiValue *owner = lst->owner;
-        lst->owner = NULL;
-        lst->elements = NULL;
-        lst->length = 0;
-        menai_release(owner);
+        menai_release(lst->owner);
         menai_free(lst);
-    } else {
-        /* Owner — release all elements then free the combined block. */
-        ssize_t n = lst->length;
-        lst->length = 0;
-        MenaiValue **arr = lst->elements;
-        lst->elements = NULL;
-        for (ssize_t i = 0; i < n; i++) {
-            menai_release(arr[i]);
-        }
-
-        menai_free(lst);
+        return;
     }
+
+    /* Owner — release all elements then free the combined block. */
+    ssize_t n = lst->length;
+    MenaiValue **arr = lst->elements;
+    for (ssize_t i = 0; i < n; i++) {
+        menai_release(*arr++);
+    }
+
+    menai_free(lst);
 }
 
 MenaiValue *

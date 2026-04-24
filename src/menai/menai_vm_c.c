@@ -21,6 +21,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "menai_vm_compiler.h"
 #include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"
 #include "menai_vm_code.h"
@@ -1192,7 +1193,7 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
     int param_count = co->param_count;
     int is_variadic = co->is_variadic;
 
-    if (is_variadic) {
+    if (MENAI_UNLIKELY(is_variadic)) {
         int min_arity = param_count - 1;
         if (arity < min_arity) {
             const char *fname = co->name ? co->name : "<lambda>";
@@ -1215,7 +1216,7 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
         }
 
         menai_reg_set_own(regs, callee_base + min_arity, rest_list);
-    } else if (arity != param_count) {
+    } else if (MENAI_UNLIKELY(arity != param_count)) {
         const char *fname = co->name ? co->name : "<lambda>";
         menai_raise_eval_errorf(
             "Function '%s' expects %d argument%s, got %d",
@@ -1225,8 +1226,9 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
 
     /* Populate capture slots: regs[callee_base + param_count + i] */
     ssize_t ncap = func->ncap;
+    MenaiValue **captures = func->captures;
     for (ssize_t i = 0; i < ncap; i++) {
-        MenaiValue *cv = func->captures[i];
+        MenaiValue *cv = *captures++;
         menai_reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
     }
 
@@ -1459,7 +1461,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 new_frame->constants_items = NULL;
                 new_frame->instrs = NULL;
 
-                if (call_setup(new_frame, raw, regs, callee_base, arity, dest) < 0) {
+                if (MENAI_UNLIKELY(call_setup(new_frame, raw, regs, callee_base, arity, dest) < 0)) {
                     frame_depth--;
                     goto error;
                 }
@@ -1518,7 +1520,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 frame->code_obj = NULL;  /* frame_setup will retain the new one */
 
                 int saved_return_dest = frame->return_dest;
-                if (call_setup(frame, raw, regs, base, n_args, saved_return_dest) < 0) {
+                if (MENAI_UNLIKELY(call_setup(frame, raw, regs, base, n_args, saved_return_dest) < 0)) {
                     menai_release(raw);
                     goto error;
                 }
@@ -1605,7 +1607,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 new_frame->constants_items = NULL;
                 new_frame->instrs = NULL;
 
-                if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
+                if (MENAI_UNLIKELY(call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0)) {
                     frame_depth--;
                     goto error;
                 }
@@ -1672,7 +1674,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 frame->code_obj = NULL;  /* frame_setup will retain the new one */
 
                 int saved_return_dest = frame->return_dest;
-                if (call_setup(frame, raw_func, regs, base, arity, saved_return_dest) < 0) {
+                if (MENAI_UNLIKELY(call_setup(frame, raw_func, regs, base, arity, saved_return_dest) < 0)) {
                     menai_release(raw_func);
                     goto error;
                 }

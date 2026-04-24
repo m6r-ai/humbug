@@ -45,11 +45,10 @@ typedef uint16_t MenaiType;
  *
  * ob_refcnt    — reference count.
  * ob_type      — type tag (MenaiType, uint16_t).
- * ob_alloc     — pool block size in bytes if this object was served from the
- *                pool allocator, or 0 if it was allocated directly via malloc.
+ * ob_alloc     — pool bucket number if this object was served from the
+ *                pool allocator, or -1 if it was allocated directly via malloc.
  *                Written by menai_alloc; read by menai_free to determine how
- *                to return the block.  Stored as uint16_t; pool sizes fit
- *                within [32, 4096].
+ *                to return the block.
  * ob_destructor — called when ob_refcnt reaches zero.
  */
 typedef void (*menai_destructor)(MenaiValue *);
@@ -57,12 +56,11 @@ typedef void (*menai_destructor)(MenaiValue *);
 #define MenaiValue_HEAD              \
     uint32_t ob_refcnt;              \
     MenaiType ob_type;               \
-    uint16_t ob_alloc;               \
+    int16_t ob_alloc_bucket;         \
     menai_destructor ob_destructor;
 
 /*
- * MenaiValue — the minimal struct that every MenaiValue pointer can be
- * safely cast to in order to read ob_refcnt, ob_type, and ob_alloc.
+ * MenaiValue — the minimal struct that every MenaiValue pointer can be safely cast to
  */
 struct MenaiValue_s {
     MenaiValue_HEAD
