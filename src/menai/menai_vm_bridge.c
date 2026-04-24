@@ -11,14 +11,15 @@
  * Exported singletons: Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE,
  *                      Menai_LIST_EMPTY, Menai_DICT_EMPTY, Menai_SET_EMPTY
  */
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include "menai_vm_alloc.h"
+#include "menai_vm_hashtable.h"
 #include "menai_vm_float.h"
 #include "menai_vm_dict.h"
 #include "menai_vm_function.h"
@@ -32,8 +33,8 @@
 #include "menai_vm_boolean.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
+
 #include "menai_vm_bridge.h"
-#include "menai_vm_hashtable.h"
 
 /*
  * Slow-world type objects — fetched once at module init.

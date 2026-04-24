@@ -5,11 +5,8 @@
  * created at init time and returned by menai_boolean_true() and
  * menai_boolean_false().
  */
-
 #ifndef MENAI_VM_BOOLEAN_H
 #define MENAI_VM_BOOLEAN_H
-
-#include "menai_vm_value.h"
 
 typedef struct {
     MenaiValue_HEAD

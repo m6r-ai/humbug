@@ -13,9 +13,11 @@
 #include <stdlib.h>
 
 #include "menai_vm_alloc.h"
-#include "menai_vm_dict.h"
 #include "menai_vm_memory.h"
 #include "menai_vm_hashtable.h"
+#include "menai_vm_value.h"
+
+#include "menai_vm_dict.h"
 
 /*
  * _dict_free_arrays — release n owned references in keys and values, then

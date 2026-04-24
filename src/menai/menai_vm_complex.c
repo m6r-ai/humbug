@@ -4,6 +4,8 @@
 #include <stdlib.h>
 
 #include "menai_vm_alloc.h"
+#include "menai_vm_value.h"
+
 #include "menai_vm_complex.h"
 
 static void

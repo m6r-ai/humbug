@@ -8,8 +8,6 @@
 #ifndef MENAI_VM_COMPLEX_H
 #define MENAI_VM_COMPLEX_H
 
-#include "menai_vm_value.h"
-
 typedef struct {
     MenaiValue_HEAD
     double real;

@@ -13,12 +13,8 @@
  *   - No duplicate keys: all keys[i] are distinct by menai_value_equal.
  *   - Insertion order is preserved by the array indices.
  */
-
 #ifndef MENAI_VM_DICT_H
 #define MENAI_VM_DICT_H
-
-#include "menai_vm_value.h"
-#include "menai_vm_hashtable.h"
 
 typedef struct {
     MenaiValue_HEAD
