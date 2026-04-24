@@ -1131,7 +1131,9 @@ class EditorWidget(QPlainTextEdit):
         document = self.document()
 
         # Find all matches if this is a new search
+        rescanned = False
         if not self._matches and text:
+            rescanned = True
             cursor = QTextCursor(document)
             if regexp:
                 flags = QRegularExpression.PatternOption(0)
@@ -1168,6 +1170,12 @@ class EditorWidget(QPlainTextEdit):
 
         if move_cursor:
             # User navigation - move to next/previous match
+            # If we just re-scanned because matches were invalidated by an edit,
+            # re-anchor _current_match from the cursor position before stepping,
+            # so we don't navigate from a stale index.
+            if rescanned:
+                self._current_match = self._last_match_before_cursor()
+
             if forward:
                 self._current_match = (self._current_match + 1) % len(self._matches)
 
@@ -1195,18 +1203,14 @@ class EditorWidget(QPlainTextEdit):
             self._current_match = index
             self._highlight_matches()
 
-    def refresh_find(self, previous_match_index: int) -> None:
+    def refresh_find(self) -> None:
         """Re-run the current search after a document edit, restoring the match index.
 
         Clears the cached match list and re-scans the document using the same
-        search parameters as the last search.  The current match is set to
-        *previous_match_index* (0-based) clamped to the new total, so the
-        highlighted match stays as stable as possible across edits.  The cursor
+        search parameters as the last search.  After re-scanning, _current_match
+        is set to the last match before the cursor so that the next forward
+        navigation lands on the first match at or after the cursor.  The cursor
         and scroll position are not changed.
-
-        Args:
-            previous_match_index: 0-based index of the match that was active
-                before the edit, or -1 if there was no active match.
         """
         search_text, case_sensitive, regexp = self._last_search
         if not search_text:
@@ -1219,9 +1223,29 @@ class EditorWidget(QPlainTextEdit):
         self._last_search = ("", False, False)
         self.find_text(search_text, forward=True, move_cursor=False, case_sensitive=case_sensitive, regexp=regexp)
 
-        if self._matches and previous_match_index >= 0:
-            self._current_match = min(previous_match_index, len(self._matches) - 1)
+        if self._matches:
+            self._current_match = self._last_match_before_cursor()
             self._highlight_matches()
+
+    def _last_match_before_cursor(self) -> int:
+        """
+        Return the index of the last match whose start is before the cursor.
+
+        This is used after a re-scan so that the next forward navigation lands
+        on the first match at or after the cursor position.  Returns -1 if all
+        matches are at or after the cursor (so the next forward step wraps to
+        match 0).
+        """
+        cursor_pos = self.textCursor().position()
+        result = -1
+        for i, (start, _end) in enumerate(self._matches):
+            if start < cursor_pos:
+                result = i
+
+            else:
+                break
+
+        return result
 
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""

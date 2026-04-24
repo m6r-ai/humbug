@@ -103,10 +103,7 @@ class EditorTab(TabBase):
         if self._find_widget.isHidden():
             return
 
-        current_match, _total_matches = self._editor_widget.get_match_status()
-        previous_match_index = current_match - 1  # convert 1-based to 0-based; -1 when no active match
-
-        self._editor_widget.refresh_find(previous_match_index)
+        self._editor_widget.refresh_find()
 
         new_current, new_total = self._editor_widget.get_match_status()
         self._find_widget.set_match_status(new_current, new_total)
