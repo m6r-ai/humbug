@@ -6625,8 +6625,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiStructType *st = (MenaiStructType *)val;
             int n = st->nfields;
-            MenaiValue **sf_arr = n > 0
-                ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
+            MenaiValue **sf_arr = n > 0 ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !sf_arr) {
                 PyErr_NoMemory();

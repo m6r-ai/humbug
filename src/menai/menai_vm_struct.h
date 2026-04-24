@@ -58,7 +58,7 @@ menai_struct_field_index(MenaiStructType *st, MenaiValue *name)
     return (int)menai_ht_lookup(&st->field_ht, name, h);
 }
 
-MenaiValue *menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, Py_ssize_t nfields);
+MenaiValue *menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, ssize_t nfields);
 MenaiValue *menai_struct_type_new_from_args(PyObject *args);
 
 #endif /* MENAI_VM_STRUCT_H */
