@@ -12,37 +12,50 @@
 typedef struct MenaiValue_s MenaiValue;
 
 /*
- * MenaiType — the type descriptor for a Menai value type.
+ * MenaiType — the type tag for a Menai value.  uint16_t is sufficient for
+ * the 13 current types and leaves room for future additions.  The values are
+ * chosen to be distinct and non-zero so that ob_type == 0 reliably detects
+ * use-after-free (the allocator poisons freed blocks with ob_type = 0).
  */
-typedef uint32_t MenaiType;
+typedef uint16_t MenaiType;
 
-#define MENAITYPE_NONE 0x892a8271
-#define MENAITYPE_BOOLEAN 0x186fce9a
-#define MENAITYPE_FUNCTION 0xf00018ab
-#define MENAITYPE_SYMBOL 0xebac98a4
-#define MENAITYPE_STRING 0x2397a89b
-#define MENAITYPE_INTEGER 0x752879ae
-#define MENAITYPE_FLOAT 0x339a87fb
-#define MENAITYPE_COMPLEX 0xcc92362b
-#define MENAITYPE_LIST 0x12879aa8
-#define MENAITYPE_DICT 0xd0c0d087
-#define MENAITYPE_SET 0x5e188954
-#define MENAITYPE_STRUCT 0x518976dd
-#define MENAITYPE_STRUCTTYPE 0x89986acd
+#define MENAITYPE_NONE       ((MenaiType)0x8271)
+#define MENAITYPE_BOOLEAN    ((MenaiType)0x9a3f)
+#define MENAITYPE_FUNCTION   ((MenaiType)0x18ab)
+#define MENAITYPE_SYMBOL     ((MenaiType)0xa4c7)
+#define MENAITYPE_STRING     ((MenaiType)0x89b2)
+#define MENAITYPE_INTEGER    ((MenaiType)0x79ae)
+#define MENAITYPE_FLOAT      ((MenaiType)0x87fb)
+#define MENAITYPE_COMPLEX    ((MenaiType)0x362b)
+#define MENAITYPE_LIST       ((MenaiType)0x9aa8)
+#define MENAITYPE_DICT       ((MenaiType)0xd087)
+#define MENAITYPE_SET        ((MenaiType)0x8954)
+#define MENAITYPE_STRUCT     ((MenaiType)0x76dd)
+#define MENAITYPE_STRUCTTYPE ((MenaiType)0x6acd)
 
 /*
  * MenaiValue_HEAD — common prefix for every Menai value struct.
+ *
+ * ob_refcnt    — reference count.
+ * ob_type      — type tag (MenaiType, uint16_t).
+ * ob_alloc     — pool block size in bytes if this object was served from the
+ *                pool allocator, or 0 if it was allocated directly via malloc.
+ *                Written by menai_alloc; read by menai_free to determine how
+ *                to return the block.  Stored as uint16_t; pool sizes fit
+ *                within [32, 4096].
+ * ob_destructor — called when ob_refcnt reaches zero.
  */
 typedef void (*menai_destructor)(MenaiValue *);
 
 #define MenaiValue_HEAD              \
     uint32_t ob_refcnt;              \
-    MenaiType ob_type;               \
+    uint16_t ob_type;                \
+    uint16_t ob_alloc;               \
     menai_destructor ob_destructor;
 
 /*
  * MenaiValue — the minimal struct that every MenaiValue pointer can be
- * safely cast to in order to read ob_refcnt and ob_type.
+ * safely cast to in order to read ob_refcnt, ob_type, and ob_alloc.
  */
 struct MenaiValue_s {
     MenaiValue_HEAD

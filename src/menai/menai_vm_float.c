@@ -11,7 +11,7 @@
 static void
 MenaiFloat_dealloc(MenaiValue *self)
 {
-    menai_free(self, sizeof(MenaiFloat));
+    menai_free(self);
 }
 
 MenaiValue *

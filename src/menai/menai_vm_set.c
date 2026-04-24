@@ -1,12 +1,15 @@
 /*
  * menai_vm_set.c — MenaiSet type implementation.
  *
- * MenaiSet stores an ordered, deduplicated sequence of elements as two
- * parallel C arrays (elements, hashes) plus a pure-C MenaiHashTable for O(1)
- * membership testing.  Hash values are computed once at construction time via
- * menai_value_hash() and reused for all subsequent set operations.
+ * MenaiSet stores its elements and hashes inline in the same allocation as the
+ * struct, using a C99 flexible array member.  inline_data holds the elements
+ * array followed immediately by the hashes array.  A single menai_alloc call
+ * covers the header and both arrays.  The MenaiHashTable (ht) is a separate
+ * allocation managed by menai_ht_build/menai_ht_free.
  *
- * Primary construction path for VM operations: menai_set_from_arrays_steal.
+ * The primary constructor is menai_set_alloc(n), which allocates for n
+ * elements and returns a set with uninitialised elements ready for the caller
+ * to fill.  The caller then sets length and calls menai_ht_build.
  * menai_set_new_empty() creates the empty-set singleton.
  */
 #include <stdlib.h>
@@ -20,55 +23,37 @@
 
 #include "menai_vm_set.h"
 
-/*
- * _set_free_arrays — release n owned references in elements, then free
- * both arrays.  NULL pointers are safely ignored.
- */
-static void
-_set_free_arrays(MenaiValue **elements, hash_t *hashes, ssize_t n)
-{
-    if (elements) {
-        for (ssize_t i = 0; i < n; i++) {
-            menai_xrelease(elements[i]);
-        }
-
-        free(elements);
-    }
-
-    free(hashes);
-}
-
 static void
 MenaiSet_dealloc(MenaiValue *self)
 {
     MenaiSet *s = (MenaiSet *)self;
-    _set_free_arrays(s->elements, s->hashes, s->length);
+    ssize_t n = s->length;
+    for (ssize_t i = 0; i < n; i++) {
+        menai_release(s->elements[i]);
+    }
+
     menai_ht_free(&s->ht);
-    menai_free(self, sizeof(MenaiSet));
+    menai_free(self);
 }
 
 MenaiValue *
-menai_set_from_arrays_steal(MenaiValue **elements, hash_t *hashes, ssize_t n)
+menai_set_alloc(ssize_t cap)
 {
-    MenaiSet *obj = (MenaiSet *)menai_alloc(sizeof(MenaiSet));
+    size_t sz = sizeof(MenaiSet) + (size_t)cap * (sizeof(MenaiValue *) + sizeof(hash_t));
+    MenaiSet *obj = (MenaiSet *)menai_alloc(sz);
     if (!obj) {
-        _set_free_arrays(elements, hashes, n);
         return NULL;
     }
 
     obj->ob_refcnt = 1;
     obj->ob_type = MENAITYPE_SET;
     obj->ob_destructor = MenaiSet_dealloc;
-
-    if (menai_ht_build(&obj->ht, elements, hashes, n) < 0) {
-        _set_free_arrays(elements, hashes, n);
-        menai_free(obj, sizeof(MenaiSet));
-        return NULL;
-    }
-
-    obj->elements = elements;
-    obj->hashes = hashes;
-    obj->length = n;
+    obj->elements = (MenaiValue **)obj->inline_data;
+    obj->hashes = (hash_t *)(obj->inline_data + cap);
+    obj->length = 0;
+    obj->ht.slots = NULL;
+    obj->ht.slot_count = 0;
+    obj->ht.used = 0;
 
     return (MenaiValue *)obj;
 }

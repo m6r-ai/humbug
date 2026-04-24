@@ -48,9 +48,7 @@ _menai_string_alloc(ssize_t len)
 static void
 MenaiString_dealloc(MenaiValue *self)
 {
-    MenaiString *s = (MenaiString *)self;
-    size_t sz = sizeof(MenaiString) + (size_t)s->length * sizeof(uint32_t);
-    menai_free(self, sz);
+    menai_free(self);
 }
 
 /*

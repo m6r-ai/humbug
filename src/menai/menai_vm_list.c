@@ -35,7 +35,7 @@ MenaiList_dealloc(MenaiValue *self)
         lst->elements = NULL;
         lst->length = 0;
         menai_release(owner);
-        menai_free(lst, sizeof(MenaiList));
+        menai_free(lst);
     } else {
         /* Owner — release all elements then free the combined block. */
         ssize_t n = lst->length;
@@ -46,7 +46,7 @@ MenaiList_dealloc(MenaiValue *self)
             menai_release(arr[i]);
         }
 
-        menai_free(lst, sizeof(MenaiList) + (size_t)n * sizeof(MenaiValue *));
+        menai_free(lst);
     }
 }
 

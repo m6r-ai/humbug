@@ -301,16 +301,15 @@ menai_convert_value(PyObject *src)
         }
 
         Py_ssize_t n = PyTuple_GET_SIZE(elems);
-        MenaiValue **elements = n > 0 ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
-        Py_hash_t *hashes = n > 0 ? (Py_hash_t *)malloc(n * sizeof(Py_hash_t)) : NULL;
-        if (n > 0 && (!elements || !hashes)) {
-            free(elements);
-            free(hashes);
+        MenaiValue *s = menai_set_alloc(n);
+        if (!s) {
             Py_DECREF(elems);
             PyErr_NoMemory();
             return NULL;
         }
 
+        MenaiValue **elements = ((MenaiSet *)s)->elements;
+        hash_t *hashes = ((MenaiSet *)s)->hashes;
         for (Py_ssize_t i = 0; i < n; i++) {
             MenaiValue *fe = menai_convert_value(PyTuple_GET_ITEM(elems, i));
             if (!fe) {
@@ -318,8 +317,7 @@ menai_convert_value(PyObject *src)
                     menai_release(elements[j]);
                 }
 
-                free(elements);
-                free(hashes);
+                menai_release(s);
                 Py_DECREF(elems);
                 return NULL;
             }
@@ -331,8 +329,7 @@ menai_convert_value(PyObject *src)
                     menai_release(elements[j]);
                 }
 
-                free(elements);
-                free(hashes);
+                menai_release(s);
                 Py_DECREF(elems);
                 return NULL;
             }
@@ -342,7 +339,13 @@ menai_convert_value(PyObject *src)
         }
 
         Py_DECREF(elems);
-        return menai_set_from_arrays_steal(elements, hashes, n);
+        ((MenaiSet *)s)->length = n;
+        if (menai_ht_build(&((MenaiSet *)s)->ht, elements, hashes, n) < 0) {
+            menai_release(s);
+            return NULL;
+        }
+
+        return s;
     }
 
     if (t == Slow_StructTypeType) {

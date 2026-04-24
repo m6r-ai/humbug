@@ -38,7 +38,7 @@ MenaiInteger_dealloc(MenaiValue *self)
         menai_bigint_free(&obj->big);
     }
 
-    menai_free(self, sizeof(MenaiInteger));
+    menai_free(self);
 }
 
 MenaiValue *

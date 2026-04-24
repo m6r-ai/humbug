@@ -18,7 +18,7 @@ static void
 MenaiSymbol_dealloc(MenaiValue *self)
 {
     menai_xrelease(((MenaiSymbol *)self)->name);
-    menai_free(self, sizeof(MenaiSymbol));
+    menai_free(self);
 }
 
 MenaiValue *

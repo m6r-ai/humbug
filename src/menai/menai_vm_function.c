@@ -29,8 +29,7 @@ MenaiFunction_dealloc(MenaiValue *self)
         menai_xrelease(f->captures[i]);
     }
 
-    size_t sz = sizeof(MenaiFunction) + (size_t)ncap * sizeof(MenaiValue *);
-    menai_free(self, sz);
+    menai_free(self);
 }
 
 MenaiValue *

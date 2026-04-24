@@ -5349,20 +5349,18 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiList *lst = (MenaiList *)a;
             ssize_t n = lst->length;
-            MenaiValue **nelems = n > 0 ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
-            Py_hash_t *nhashes = n > 0 ? (Py_hash_t *)malloc(n * sizeof(Py_hash_t)) : NULL;
-            if (n > 0 && (!nelems || !nhashes)) {
-                free(nelems);
-                free(nhashes);
+            MenaiValue *r = menai_set_alloc(n);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **nelems = ((MenaiSet *)r)->elements;
+            hash_t *nhashes = ((MenaiSet *)r)->hashes;
             MenaiHashTable lts_seen;
             int lts_err = 0;
             if (n > 0 && menai_ht_init(&lts_seen, n) < 0) {
-                free(nelems);
-                free(nhashes);
+                menai_release(r);
                 goto error;
             }
 
@@ -5399,13 +5397,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     menai_release(nelems[k]);
                 }
 
-                free(nelems);
-                free(nhashes);
+                menai_release(r);
                 goto error;
             }
 
-            MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, out);
-            if (r == NULL) {
+            ((MenaiSet *)r)->length = out;
+            if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out) < 0) {
+                menai_release(r);
                 goto error;
             }
 
@@ -5978,15 +5976,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_reg_set_borrow(regs, base + dest, a);
             } else {
                 ssize_t n = s->length;
-                MenaiValue **nelems = (MenaiValue **)malloc((n + 1) * sizeof(MenaiValue *));
-                Py_hash_t *nhashes = (Py_hash_t *)malloc((n + 1) * sizeof(Py_hash_t));
-                if (!nelems || !nhashes) {
-                    free(nelems);
-                    free(nhashes);
+                MenaiValue *r = menai_set_alloc(n + 1);
+                if (!r) {
                     PyErr_NoMemory();
                     goto error;
                 }
 
+                MenaiValue **nelems = ((MenaiSet *)r)->elements;
+                hash_t *nhashes = ((MenaiSet *)r)->hashes;
                 for (ssize_t i = 0; i < n; i++) {
                     menai_retain(s->elements[i]);
                     nelems[i] = s->elements[i];
@@ -5996,8 +5993,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_retain(item);
                 nelems[n] = item;
                 nhashes[n] = h;
-                MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, n + 1);
-                if (r == NULL) {
+                ((MenaiSet *)r)->length = n + 1;
+                if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, n + 1) < 0) {
+                    menai_release(r);
                     goto error;
                 }
 
@@ -6034,15 +6032,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             ssize_t n = s->length;
             ssize_t new_n = n - 1;
-            MenaiValue **nelems = new_n > 0 ? (MenaiValue **)malloc(new_n * sizeof(MenaiValue *)) : NULL;
-            Py_hash_t *nhashes = new_n > 0 ? (Py_hash_t *)malloc(new_n * sizeof(Py_hash_t)) : NULL;
-            if (new_n > 0 && (!nelems || !nhashes)) {
-                free(nelems);
-                free(nhashes);
+            MenaiValue *r = menai_set_alloc(new_n);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **nelems = ((MenaiSet *)r)->elements;
+            hash_t *nhashes = ((MenaiSet *)r)->hashes;
             for (ssize_t i = 0, j = 0; i < n; i++) {
                 if (i == remove_idx) {
                     continue;
@@ -6054,8 +6051,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 j++;
             }
 
-            MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, new_n);
-            if (r == NULL) {
+            ((MenaiSet *)r)->length = new_n;
+            if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, new_n) < 0) {
+                menai_release(r);
                 goto error;
             }
 
@@ -6080,15 +6078,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet *sb = (MenaiSet *)b;
             ssize_t na = sa->length, nb = sb->length;
             ssize_t cap = na + nb;
-            MenaiValue **nelems = cap > 0 ? (MenaiValue **)malloc(cap * sizeof(MenaiValue *)) : NULL;
-            Py_hash_t *nhashes = cap > 0 ? (Py_hash_t *)malloc(cap * sizeof(Py_hash_t)) : NULL;
-            if (cap > 0 && (!nelems || !nhashes)) {
-                free(nelems);
-                free(nhashes);
+            MenaiValue *r = menai_set_alloc(cap);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **nelems = ((MenaiSet *)r)->elements;
+            hash_t *nhashes = ((MenaiSet *)r)->hashes;
             ssize_t out = 0;
             for (ssize_t i = 0; i < na; i++) {
                 menai_retain(sa->elements[i]);
@@ -6104,8 +6101,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         menai_release(nelems[k]);
                     }
 
-                    free(nelems);
-                    free(nhashes);
+                    menai_release(r);
                     goto error;
                 }
 
@@ -6117,8 +6113,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, out);
-            if (r == NULL) {
+            ((MenaiSet *)r)->length = out;
+            if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out) < 0) {
+                menai_release(r);
                 goto error;
             }
 
@@ -6142,15 +6139,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet *sa = (MenaiSet *)a;
             MenaiSet *sb = (MenaiSet *)b;
             ssize_t na = sa->length;
-            MenaiValue **nelems = na > 0 ? (MenaiValue **)malloc(na * sizeof(MenaiValue *)) : NULL;
-            Py_hash_t *nhashes = na > 0 ? (Py_hash_t *)malloc(na * sizeof(Py_hash_t)) : NULL;
-            if (na > 0 && (!nelems || !nhashes)) {
-                free(nelems);
-                free(nhashes);
+            MenaiValue *r = menai_set_alloc(na);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **nelems = ((MenaiSet *)r)->elements;
+            hash_t *nhashes = ((MenaiSet *)r)->hashes;
             ssize_t out = 0;
             for (ssize_t i = 0; i < na; i++) {
                 ssize_t in_b = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
@@ -6159,8 +6155,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         menai_release(nelems[k]);
                     }
 
-                    free(nelems);
-                    free(nhashes);
+                    menai_release(r);
                     goto error;
                 }
 
@@ -6172,8 +6167,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, out);
-            if (r == NULL) {
+            ((MenaiSet *)r)->length = out;
+            if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out) < 0) {
+                menai_release(r);
                 goto error;
             }
 
@@ -6197,15 +6193,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet *sa = (MenaiSet *)a;
             MenaiSet *sb = (MenaiSet *)b;
             ssize_t na = sa->length;
-            MenaiValue **nelems = na > 0 ? (MenaiValue **)malloc(na * sizeof(MenaiValue *)) : NULL;
-            Py_hash_t *nhashes = na > 0 ? (Py_hash_t *)malloc(na * sizeof(Py_hash_t)) : NULL;
-            if (na > 0 && (!nelems || !nhashes)) {
-                free(nelems);
-                free(nhashes);
+            MenaiValue *r = menai_set_alloc(na);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **nelems = ((MenaiSet *)r)->elements;
+            hash_t *nhashes = ((MenaiSet *)r)->hashes;
             ssize_t out = 0;
             for (ssize_t i = 0; i < na; i++) {
                 ssize_t in_b = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
@@ -6214,8 +6209,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         menai_release(nelems[k]);
                     }
 
-                    free(nelems);
-                    free(nhashes);
+                    menai_release(r);
                     goto error;
                 }
 
@@ -6226,8 +6220,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, out);
-            if (r == NULL) {
+            ((MenaiSet *)r)->length = out;
+            if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out) < 0) {
+                menai_release(r);
                 goto error;
             }
 

@@ -53,7 +53,7 @@ MenaiDict_dealloc(MenaiValue *self)
     MenaiDict *d = (MenaiDict *)self;
     _dict_free_arrays(d->keys, d->values, d->hashes, d->length);
     menai_ht_free(&d->ht);
-    menai_free(self, sizeof(MenaiDict));
+    menai_free(self);
 }
 
 MenaiValue *
@@ -71,7 +71,7 @@ menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, hash_t *has
 
     if (menai_ht_build(&obj->ht, keys, hashes, n) < 0) {
         _dict_free_arrays(keys, values, hashes, n);
-        menai_free(obj, sizeof(MenaiDict));
+        menai_free(obj);
         return NULL;
     }
 

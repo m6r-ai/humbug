@@ -14,7 +14,6 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#include "menai_vm_alloc.h"
 #include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"
 #include "menai_vm_code.h"
@@ -276,7 +275,7 @@ menai_ht_init(MenaiHashTable *ht, ssize_t n)
         return 0;
     }
 
-    ht->slots = (MenaiHashSlot *)menai_alloc((size_t)sc * sizeof(MenaiHashSlot));
+    ht->slots = (MenaiHashSlot *)malloc((size_t)sc * sizeof(MenaiHashSlot));
     if (!ht->slots) {
         PyErr_NoMemory();
         return -1;
@@ -291,7 +290,7 @@ menai_ht_init(MenaiHashTable *ht, ssize_t n)
 void
 menai_ht_free(MenaiHashTable *ht)
 {
-    menai_free(ht->slots, (size_t)ht->slot_count * sizeof(MenaiHashSlot));
+    free(ht->slots);
     ht->slots = NULL;
     ht->slot_count = 0;
     ht->used = 0;

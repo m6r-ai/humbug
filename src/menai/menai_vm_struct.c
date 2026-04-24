@@ -36,8 +36,7 @@ MenaiStructType_dealloc(MenaiValue *self)
         menai_xrelease(s->fields[i].name);
     }
 
-    size_t sz = sizeof(MenaiStructType) + (size_t)n * sizeof(MenaiFieldEntry);
-    menai_free(self, sz);
+    menai_free(self);
 }
 
 /*
@@ -131,8 +130,7 @@ MenaiStruct_dealloc(MenaiValue *self)
         menai_xrelease(s->items[i]);
     }
 
-    size_t sz = sizeof(MenaiStruct) + (size_t)n * sizeof(MenaiValue *);
-    menai_free(self, sz);
+    menai_free(self);
 }
 
 MenaiValue *

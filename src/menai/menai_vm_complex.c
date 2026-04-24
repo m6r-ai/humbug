@@ -3,6 +3,9 @@
  */
 #include <stdlib.h>
 
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include "menai_vm_alloc.h"
 #include "menai_vm_value.h"
 
@@ -11,14 +14,14 @@
 static void
 MenaiComplex_dealloc(MenaiValue *self)
 {
-    menai_free(self, sizeof(MenaiComplex));
+    menai_free(self);
 }
 
 MenaiValue *
 menai_complex_alloc(double real, double imag)
 {
     MenaiComplex *self = (MenaiComplex *)menai_alloc(sizeof(MenaiComplex));
-    if (self == NULL) {
+    if (!self) {
         return NULL;
     }
 
@@ -27,5 +30,6 @@ menai_complex_alloc(double real, double imag)
     self->ob_destructor = MenaiComplex_dealloc;
     self->real = real;
     self->imag = imag;
+
     return (MenaiValue *)self;
 }
