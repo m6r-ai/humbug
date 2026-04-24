@@ -9,9 +9,6 @@
  * Primary construction path for VM operations: menai_set_from_arrays_steal.
  * menai_set_new_empty() creates the empty-set singleton.
  */
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdlib.h>
 
 #include "menai_vm_alloc.h"

@@ -4,10 +4,7 @@
  * MenaiNone is a singleton with no payload.  A single instance (_Menai_NONE)
  * is created at init time and returned by menai_none_singleton().
  */
-
 #include <stdlib.h>
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 
 #include "menai_vm_none.h"
 

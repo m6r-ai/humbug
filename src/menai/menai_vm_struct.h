@@ -10,12 +10,8 @@
  * in an inline C array (nfields entries), eliminating the Python tuple object
  * that was previously heap-allocated on every struct construction.
  */
-
 #ifndef MENAI_VM_STRUCT_H
 #define MENAI_VM_STRUCT_H
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 
 #include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"

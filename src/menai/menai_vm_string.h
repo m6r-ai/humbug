@@ -10,12 +10,9 @@
  *   - Error reporting (MenaiEvalError)
  *   - menai_string_from_pyunicode / menai_string_to_pyunicode (conversion boundary)
  */
-
 #ifndef MENAI_VM_STRING_H
 #define MENAI_VM_STRING_H
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdint.h>
 
 #include "menai_vm_value.h"

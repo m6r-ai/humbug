@@ -11,9 +11,6 @@
  * eliminating the Python tuple previously heap-allocated on every struct
  * construction.
  */
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdlib.h>
 
 #include "menai_vm_alloc.h"

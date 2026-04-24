@@ -6,9 +6,6 @@
  * uint32_t arrays.  The only Python string API used is PyUnicode at the
  * conversion boundary (menai_string_from_pyunicode / menai_string_to_pyunicode).
  */
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

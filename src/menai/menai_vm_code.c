@@ -4,9 +4,6 @@
  * Converts Python CodeObject trees to native C MenaiCodeObject trees and
  * manages their lifetimes via reference counting.
  */
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdlib.h>
 #include <string.h>
 

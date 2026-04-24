@@ -6,10 +6,7 @@
  * The Python C API is only used at the boundary (menai_bigint_from_pylong /
  * menai_bigint_to_pylong in menai_vm_bigint.c).
  */
-
 #include <stdlib.h>
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <string.h>
 
 #include "menai_vm_alloc.h"

@@ -1,10 +1,7 @@
 /*
  * menai_vm_float.c — MenaiFloat type implementation.
  */
-
 #include <stdlib.h>
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 
 #include "menai_vm_alloc.h"
 #include "menai_vm_float.h"

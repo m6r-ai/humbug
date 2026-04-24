@@ -4,9 +4,6 @@
  * MenaiSymbol stores its name as an owned MenaiString *.  Equality
  * is determined by menai_string_equal() on the name field.
  */
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdlib.h>
 
 #include "menai_vm_alloc.h"

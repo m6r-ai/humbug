@@ -5,9 +5,6 @@
  * a MenaiCodeObject (which owns all frame metadata) and an inline C array of
  * captured MenaiValue *s.  No Python objects are referenced after construction.
  */
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdlib.h>
 #include <stdint.h>
 

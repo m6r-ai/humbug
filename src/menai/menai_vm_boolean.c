@@ -4,10 +4,7 @@
  * MenaiBoolean stores a C int (0 or 1).  Two singletons (_Menai_TRUE and
  * _Menai_FALSE) are created at init time.
  */
-
 #include <stdlib.h>
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 
 #include "menai_vm_boolean.h"
 

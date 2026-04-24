@@ -8,7 +8,6 @@
  *   menai_list_from_array_steal  — take ownership of a menai_alloc'd array whose
  *                                  elements already carry a reference each
  */
-
 #include <stdlib.h>
 #include <string.h>
 

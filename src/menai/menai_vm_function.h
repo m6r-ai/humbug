@@ -5,12 +5,9 @@
  * a MenaiCodeObject (which owns all frame metadata) and an inline C array of
  * captured MenaiValues.  No Python objects are held after construction.
  */
-
 #ifndef MENAI_VM_FUNCTION_H
 #define MENAI_VM_FUNCTION_H
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdint.h>
 
 #include "menai_vm_value.h"

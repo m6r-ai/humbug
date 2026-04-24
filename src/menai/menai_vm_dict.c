@@ -10,9 +10,6 @@
  * Primary construction path for VM operations: menai_dict_from_arrays_steal.
  * menai_dict_new_empty() creates the empty-dict singleton.
  */
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdlib.h>
 
 #include "menai_vm_alloc.h"
