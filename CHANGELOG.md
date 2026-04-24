@@ -23,6 +23,7 @@ Bug fixes:
 - If you attempt to drag a file that cannot be opened then an exception would trigger and the exception canary would activate.
   Now this action will trigger a popup message box.
 - Fixed a problem in the C and C++ syntax highlighters when preprocessor lines are continued with `\`.
+- Fixed menu and dialog edit control scaling problem on Ubuntu under WSL2 on Windows 11.
 
 ## v44 (2026-04-19)
 
