@@ -194,13 +194,14 @@ menai_convert_value(PyObject *src)
         }
 
         Py_ssize_t n = PyTuple_GET_SIZE(elems);
-        MenaiValue **arr = n > 0 ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
-        if (n > 0 && !arr) {
+        MenaiValue *lst = menai_list_alloc(n);
+        if (!lst) {
             Py_DECREF(elems);
             PyErr_NoMemory();
             return NULL;
         }
 
+        MenaiValue **arr = menai_list_elements(lst);
         for (Py_ssize_t i = 0; i < n; i++) {
             arr[i] = menai_convert_value(PyTuple_GET_ITEM(elems, i));
             if (!arr[i]) {
@@ -208,14 +209,14 @@ menai_convert_value(PyObject *src)
                     menai_release(arr[j]);
                 }
 
-                menai_free(arr, (size_t)n * sizeof(MenaiValue *));
+                menai_release(lst);
                 Py_DECREF(elems);
                 return NULL;
             }
         }
 
         Py_DECREF(elems);
-        return menai_list_from_array_steal(arr, n);
+        return lst;
     }
 
     if (t == Slow_DictType) {

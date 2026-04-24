@@ -1200,19 +1200,14 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
 
         /* Pack excess args into a MenaiList for the rest parameter. */
         int rest_count = arity - min_arity;
-        MenaiValue **rest_arr = rest_count > 0 ? (MenaiValue **)menai_alloc((size_t)rest_count * sizeof(MenaiValue *)) : NULL;
-        if (rest_count > 0 && !rest_arr) {
+        MenaiValue *rest_list = menai_list_alloc(rest_count);
+        if (!rest_list) {
             return -1;
         }
 
         for (int k = 0; k < rest_count; k++) {
-            rest_arr[k] = regs[callee_base + min_arity + k];
-            menai_retain(rest_arr[k]);
-        }
-
-        MenaiValue *rest_list = menai_list_from_array_steal(rest_arr, rest_count);
-        if (rest_list == NULL) {
-            return -1;
+            menai_list_elements(rest_list)[k] = regs[callee_base + min_arity + k];
+            menai_retain(menai_list_elements(rest_list)[k]);
         }
 
         menai_reg_set_own(regs, callee_base + min_arity, rest_list);
@@ -4752,14 +4747,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *r;
             if (blen == 0) {
                 /* Split into individual codepoints */
-                MenaiValue **stl_arr = alen > 0
-                    ? (MenaiValue **)menai_alloc((size_t)alen * sizeof(MenaiValue *)) : NULL;
-
-                if (alen > 0 && !stl_arr) {
+                MenaiValue *r_stl = menai_list_alloc(alen);
+                if (!r_stl) {
                     PyErr_NoMemory();
                     goto error;
                 }
 
+                MenaiValue **stl_arr = menai_list_elements(r_stl);
                 for (ssize_t i = 0; i < alen; i++) {
                     stl_arr[i] = menai_string_from_codepoint(adata[i]);
                     if (!stl_arr[i]) {
@@ -4767,12 +4761,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                             menai_release(stl_arr[k]);
                         }
 
-                        menai_free(stl_arr, (size_t)alen * sizeof(MenaiValue *));
+                        menai_release(r_stl);
                         goto error;
                     }
                 }
 
-                r = menai_list_from_array_steal(stl_arr, alen);
+                r = r_stl;
             } else {
                 /* Split on delimiter — find occurrences and build list */
                 ssize_t count = 0;
@@ -4786,12 +4780,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 ssize_t nparts = count + 1;
-                MenaiValue **parts2 = (MenaiValue **)menai_alloc((size_t)nparts * sizeof(MenaiValue *));
-                if (!parts2) {
+                MenaiValue *r_parts = menai_list_alloc(nparts);
+                if (!r_parts) {
                     PyErr_NoMemory();
                     goto error;
                 }
 
+                MenaiValue **parts2 = menai_list_elements(r_parts);
                 ssize_t seg_start = 0, pi2 = 0;
                 for (ssize_t i = 0; i <= alen; ) {
                     int match = (i <= alen - blen) &&
@@ -4803,7 +4798,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                                 menai_release(parts2[k]);
                             }
 
-                            menai_free(parts2, (size_t)nparts * sizeof(MenaiValue *));
+                            menai_release(r_parts);
                             goto error;
                         }
 
@@ -4818,7 +4813,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     }
                 }
 
-                r = menai_list_from_array_steal(parts2, pi2);
+                r = r_parts;
             }
 
             if (r == NULL) {
@@ -5003,22 +4998,18 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiList *lst_pre = (MenaiList *)a;
             ssize_t n = lst_pre->length;
-            MenaiValue **pre_arr = (MenaiValue **)menai_alloc((size_t)(n + 1) * sizeof(MenaiValue *));
-            if (!pre_arr) {
+            MenaiValue *r = menai_list_alloc(n + 1);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **pre_arr = menai_list_elements(r);
             pre_arr[0] = item;
             menai_retain(item);
             for (ssize_t i = 0; i < n; i++) {
                 pre_arr[i + 1] = lst_pre->elements[i];
                 menai_retain(pre_arr[i + 1]);
-            }
-
-            MenaiValue *r = menai_list_from_array_steal(pre_arr, n + 1);
-            if (r == NULL) {
-                goto error;
             }
 
             menai_reg_set_own(regs, base + dest, r);
@@ -5036,12 +5027,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiList *lst_app = (MenaiList *)a;
             ssize_t n = lst_app->length;
-            MenaiValue **app_arr = (MenaiValue **)menai_alloc((size_t)(n + 1) * sizeof(MenaiValue *));
-            if (!app_arr) {
+            MenaiValue *r = menai_list_alloc(n + 1);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **app_arr = menai_list_elements(r);
             for (ssize_t i = 0; i < n; i++) {
                 app_arr[i] = lst_app->elements[i];
                 menai_retain(app_arr[i]);
@@ -5049,11 +5041,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             app_arr[n] = item;
             menai_retain(item);
-            MenaiValue *r = menai_list_from_array_steal(app_arr, n + 1);
-            if (r == NULL) {
-                goto error;
-            }
-
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
@@ -5067,22 +5054,16 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiList *lst_rev = (MenaiList *)a;
             ssize_t n = lst_rev->length;
-            MenaiValue **rev_arr = n > 0
-                ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
-
-            if (n > 0 && !rev_arr) {
+            MenaiValue *r = menai_list_alloc(n);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **rev_arr = menai_list_elements(r);
             for (ssize_t i = 0; i < n; i++) {
                 rev_arr[i] = lst_rev->elements[n - 1 - i];
                 menai_retain(rev_arr[i]);
-            }
-
-            MenaiValue *r = menai_list_from_array_steal(rev_arr, n);
-            if (r == NULL) {
-                goto error;
             }
 
             menai_reg_set_own(regs, base + dest, r);
@@ -5106,14 +5087,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiList *lst_cb = (MenaiList *)b;
             ssize_t na = lst_ca->length, nb = lst_cb->length;
             ssize_t nc = na + nb;
-            MenaiValue **cat_arr = nc > 0
-                ? (MenaiValue **)menai_alloc((size_t)nc * sizeof(MenaiValue *)) : NULL;
-
-            if (nc > 0 && !cat_arr) {
+            MenaiValue *r = menai_list_alloc(nc);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **cat_arr = menai_list_elements(r);
             for (ssize_t i = 0; i < na; i++) {
                 cat_arr[i] = lst_ca->elements[i];
                 menai_retain(cat_arr[i]);
@@ -5122,11 +5102,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             for (ssize_t i = 0; i < nb; i++) {
                 cat_arr[na + i] = lst_cb->elements[i];
                 menai_retain(cat_arr[na + i]);
-            }
-
-            MenaiValue *r = menai_list_from_array_steal(cat_arr, nc);
-            if (r == NULL) {
-                goto error;
             }
 
             menai_reg_set_own(regs, base + dest, r);
@@ -5273,6 +5248,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiList *lst_rm = (MenaiList *)a;
             ssize_t n = lst_rm->length;
+
             /* Count non-matching elements first */
             ssize_t keep = 0;
             for (ssize_t i = 0; i < n; i++) {
@@ -5282,12 +5258,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue **rm_arr = keep > 0 ? (MenaiValue **)menai_alloc((size_t)keep * sizeof(MenaiValue *)) : NULL;
-            if (keep > 0 && !rm_arr) {
+            MenaiValue *r = menai_list_alloc(keep);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **rm_arr = menai_list_elements(r);
             ssize_t j = 0;
             for (ssize_t i = 0; i < n; i++) {
                 MenaiValue *e = lst_rm->elements[i];
@@ -5296,11 +5273,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     menai_retain(e);
                     rm_arr[j++] = e;
                 }
-            }
-
-            MenaiValue *r = menai_list_from_array_steal(rm_arr, keep);
-            if (r == NULL) {
-                goto error;
             }
 
             menai_reg_set_own(regs, base + dest, r);
@@ -5550,21 +5522,16 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiDict *d = (MenaiDict *)a;
             ssize_t n = d->length;
-            MenaiValue **dk_arr = n > 0 ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
-
-            if (n > 0 && !dk_arr) {
+            MenaiValue *r = menai_list_alloc(n);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **dk_arr = menai_list_elements(r);
             for (ssize_t i = 0; i < n; i++) {
                 menai_retain(d->keys[i]);
                 dk_arr[i] = d->keys[i];
-            }
-
-            MenaiValue *r = menai_list_from_array_steal(dk_arr, n);
-            if (r == NULL) {
-                goto error;
             }
 
             menai_reg_set_own(regs, base + dest, r);
@@ -5580,21 +5547,16 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiDict *d = (MenaiDict *)a;
             ssize_t n = d->length;
-            MenaiValue **dv_arr = n > 0 ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
-
-            if (n > 0 && !dv_arr) {
+            MenaiValue *r = menai_list_alloc(n);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **dv_arr = menai_list_elements(r);
             for (ssize_t i = 0; i < n; i++) {
                 menai_retain(d->values[i]);
                 dv_arr[i] = d->values[i];
-            }
-
-            MenaiValue *r = menai_list_from_array_steal(dv_arr, n);
-            if (r == NULL) {
-                goto error;
             }
 
             menai_reg_set_own(regs, base + dest, r);
@@ -6319,21 +6281,16 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiSet *s = (MenaiSet *)a;
             ssize_t set_n = s->length;
-            MenaiValue **stl_arr = set_n > 0 ? (MenaiValue **)menai_alloc((size_t)set_n * sizeof(MenaiValue *)) : NULL;
-
-            if (set_n > 0 && !stl_arr) {
+            MenaiValue *r = menai_list_alloc(set_n);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **stl_arr = menai_list_elements(r);
             for (ssize_t i = 0; i < set_n; i++) {
                 menai_retain(s->elements[i]);
                 stl_arr[i] = s->elements[i];
-            }
-
-            MenaiValue *r = menai_list_from_array_steal(stl_arr, set_n);
-            if (r == NULL) {
-                goto error;
             }
 
             menai_reg_set_own(regs, base + dest, r);
@@ -6394,14 +6351,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 n = (start - end - step - 1) / (-step);
             }
 
-            MenaiValue **rng_arr = n > 0
-                ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
-
-            if (n > 0 && !rng_arr) {
+            MenaiValue *r = menai_list_alloc(n);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **rng_arr = menai_list_elements(r);
             long val = start;
             for (ssize_t i = 0; i < n; i++) {
                 MenaiValue *mi = make_integer_from_long(val);
@@ -6410,17 +6366,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         menai_release(rng_arr[k]);
                     }
 
-                    menai_free(rng_arr, (size_t)n * sizeof(MenaiValue *));
+                    menai_release(r);
                     goto error;
                 }
 
                 rng_arr[i] = mi;
                 val += step;
-            }
-
-            MenaiValue *r = menai_list_from_array_steal(rng_arr, n);
-            if (r == NULL) {
-                goto error;
             }
 
             menai_reg_set_own(regs, base + dest, r);
@@ -6730,13 +6681,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiStructType *st = (MenaiStructType *)val;
             int n = st->nfields;
-            MenaiValue **sf_arr = n > 0 ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
-
-            if (n > 0 && !sf_arr) {
+            MenaiValue *r = menai_list_alloc(n);
+            if (!r) {
                 PyErr_NoMemory();
                 goto error;
             }
 
+            MenaiValue **sf_arr = menai_list_elements(r);
             for (int i = 0; i < n; i++) {
                 MenaiValue *sym = menai_symbol_alloc(st->fields[i].name);
                 if (sym == NULL) {
@@ -6744,16 +6695,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         menai_release(sf_arr[k]);
                     }
 
-                    menai_free(sf_arr, (size_t)n * sizeof(MenaiValue *));
+                    menai_release(r);
                     goto error;
                 }
 
                 sf_arr[i] = sym;
-            }
-
-            MenaiValue *r = menai_list_from_array_steal(sf_arr, (ssize_t)n);
-            if (r == NULL) {
-                goto error;
             }
 
             menai_reg_set_own(regs, base + dest, r);

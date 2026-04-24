@@ -30,7 +30,7 @@ _dict_free_arrays(MenaiValue **keys, MenaiValue **values, hash_t *hashes, ssize_
 {
     if (keys) {
         for (ssize_t i = 0; i < n; i++) {
-            menai_xrelease(keys[i]);
+            menai_release(keys[i]);
         }
 
         free(keys);
@@ -38,7 +38,7 @@ _dict_free_arrays(MenaiValue **keys, MenaiValue **values, hash_t *hashes, ssize_
 
     if (values) {
         for (ssize_t i = 0; i < n; i++) {
-            menai_xrelease(values[i]);
+            menai_release(values[i]);
         }
 
         free(values);

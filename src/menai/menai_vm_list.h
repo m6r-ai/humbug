@@ -1,31 +1,34 @@
 /*
  * menai_vm_list.h — MenaiList type definition and API.
  *
- * MenaiList stores a C array of MenaiValue elements with a length count.
- * It uses a free-list cache for both object structs and element arrays to
- * reduce allocation pressure in the hot VM loop.
+ * MenaiList stores its elements inline in the same allocation as the struct
+ * itself, using a C99 flexible array member.  Owning lists set elements to
+ * point at inline_elements; slice views set elements to point into the owner's
+ * inline_elements array and hold a retain on the owner.
  *
- * The three C-level constructors (menai_list_from_array,
- * menai_list_from_array_steal) are the primary allocation paths used by the VM.
- * menai_list_new_empty() creates the empty-list singleton.
+ * The primary allocation path is menai_list_alloc(n), which allocates the
+ * combined struct+elements block and returns an uninitialised-elements list
+ * ready for the caller to fill.  menai_list_new_empty() creates the
+ * empty-list singleton.
  */
 #ifndef MENAI_VM_LIST_H
 #define MENAI_VM_LIST_H
 
 typedef struct {
     MenaiValue_HEAD
-    MenaiValue **elements; /* pointer to first live element */
+    MenaiValue **elements; /* points to inline_elements for owners, into owner for views */
     ssize_t length;        /* number of live elements */
     /*
      * owner is non-NULL when this list is a slice view into another list's
-     * element array.  In that case elements points into owner->elements and
-     * must not be freed; only menai_release(owner) is needed on dealloc.
+     * inline_elements array.  In that case elements points into owner's storage
+     * and must not be freed; only menai_release(owner) is needed on dealloc.
      * owner always points to a list with owner == NULL (never a chain).
      */
     MenaiValue *owner;
+    MenaiValue *inline_elements[]; /* FAM — storage for owning lists */
 } MenaiList;
 
-MenaiValue *menai_list_from_array_steal(MenaiValue **items, ssize_t n);
+MenaiValue *menai_list_alloc(ssize_t n);
 MenaiValue *menai_list_new_empty(void);
 MenaiValue *menai_list_rest(MenaiValue *lst);
 MenaiValue *menai_list_slice(MenaiValue *lst, ssize_t start, ssize_t end);

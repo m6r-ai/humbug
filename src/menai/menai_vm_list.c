@@ -1,12 +1,15 @@
 /*
  * menai_vm_list.c — MenaiList type implementation.
  *
- * MenaiList stores a C array of MenaiValue elements.  Object structs and element
- * arrays are allocated via menai_alloc/menai_free.  The two C-level constructors
- * used by the VM are:
- *   menai_list_from_array        — copy items array, retain each element
- *   menai_list_from_array_steal  — take ownership of a menai_alloc'd array whose
- *                                  elements already carry a reference each
+ * MenaiList stores its elements inline in the same allocation as the struct,
+ * using a C99 flexible array member.  A single menai_alloc call covers both
+ * the header and the element array for owning lists.  Slice views allocate
+ * only the header (sizeof(MenaiList)) and point their elements pointer into
+ * the owner's inline storage.
+ *
+ * The primary constructor is menai_list_alloc(n), which allocates
+ * sizeof(MenaiList) + n * sizeof(MenaiValue *) bytes and returns a list with
+ * uninitialised elements ready for the caller to fill and retain.
  */
 #include <stdlib.h>
 #include <string.h>
@@ -32,8 +35,9 @@ MenaiList_dealloc(MenaiValue *self)
         lst->elements = NULL;
         lst->length = 0;
         menai_release(owner);
+        menai_free(lst, sizeof(MenaiList));
     } else {
-        /* Owner — release all elements then free the element array. */
+        /* Owner — release all elements then free the combined block. */
         ssize_t n = lst->length;
         lst->length = 0;
         MenaiValue **arr = lst->elements;
@@ -42,30 +46,22 @@ MenaiList_dealloc(MenaiValue *self)
             menai_release(arr[i]);
         }
 
-        menai_free(arr, (size_t)n * sizeof(MenaiValue *));
+        menai_free(lst, sizeof(MenaiList) + (size_t)n * sizeof(MenaiValue *));
     }
-
-    menai_free(lst, sizeof(MenaiList));
 }
 
 MenaiValue *
-menai_list_from_array_steal(MenaiValue **items, ssize_t n)
+menai_list_alloc(ssize_t n)
 {
-    MenaiList *obj = (MenaiList *)menai_alloc(sizeof(MenaiList));
+    MenaiList *obj = (MenaiList *)menai_alloc(sizeof(MenaiList) + (size_t)n * sizeof(MenaiValue *));
     if (!obj) {
-        /* Release elements and free the array on failure. */
-        for (ssize_t i = 0; i < n; i++) {
-            menai_release(items[i]);
-        }
-
-        menai_free(items, (size_t)n * sizeof(MenaiValue *));
         return NULL;
     }
 
     obj->ob_refcnt = 1;
     obj->ob_type = MENAITYPE_LIST;
     obj->ob_destructor = MenaiList_dealloc;
-    obj->elements = items;
+    obj->elements = obj->inline_elements;
     obj->length = n;
     obj->owner = NULL;
 
@@ -83,7 +79,7 @@ menai_list_new_empty(void)
     obj->ob_refcnt = 1;
     obj->ob_type = MENAITYPE_LIST;
     obj->ob_destructor = MenaiList_dealloc;
-    obj->elements = NULL;
+    obj->elements = obj->inline_elements;
     obj->length = 0;
     obj->owner = NULL;
 
