@@ -5249,16 +5249,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiList *lst_rm = (MenaiList *)a;
             ssize_t n = lst_rm->length;
 
-            /* Count non-matching elements first */
-            ssize_t keep = 0;
-            for (ssize_t i = 0; i < n; i++) {
-                int eq = menai_value_equal(lst_rm->elements[i], item);
-                if (!eq) {
-                    keep++;
-                }
-            }
-
-            MenaiValue *r = menai_list_alloc(keep);
+            MenaiValue *r = menai_list_alloc(n);
             if (!r) {
                 PyErr_NoMemory();
                 goto error;
@@ -5275,6 +5266,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
+            ((MenaiList *)r)->length = j;
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
