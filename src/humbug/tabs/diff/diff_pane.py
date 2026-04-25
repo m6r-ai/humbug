@@ -143,7 +143,7 @@ class DiffPane(QPlainTextEdit):
     single shared scrollbar that drives both panes simultaneously.
     """
 
-    open_in_editor_requested = Signal()
+    open_in_editor_requested = Signal(int, int)
     open_in_preview_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -265,6 +265,11 @@ class DiffPane(QPlainTextEdit):
 
     def contextMenuEvent(self, event: QContextMenuEvent) -> None:
         """Show a styled context menu with a Copy action."""
+        cursor = self.cursorForPosition(event.pos())
+        block = cursor.block()
+        block_data = block.userData()
+        block_number = block.blockNumber()
+        column = cursor.positionInBlock() + 1
         menu = QMenu(self)
         strings = self._language_manager.strings()
         copy_action = menu.addAction(strings.copy)
@@ -272,7 +277,7 @@ class DiffPane(QPlainTextEdit):
         copy_action.triggered.connect(self.copy)
         menu.addSeparator()
         edit_action = menu.addAction(strings.edit)
-        edit_action.triggered.connect(self.open_in_editor_requested)
+        edit_action.triggered.connect(lambda: self.open_in_editor_requested.emit(block_number, column))
         preview_action = menu.addAction(strings.preview)
         preview_action.triggered.connect(self.open_in_preview_requested)
         menu.exec_(event.globalPos())

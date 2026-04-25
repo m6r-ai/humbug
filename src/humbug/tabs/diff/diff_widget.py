@@ -40,7 +40,7 @@ class DiffWidget(QWidget):
     """
 
     status_updated = Signal()
-    open_in_editor_requested = Signal()
+    open_in_editor_requested = Signal(int, int)
     open_in_preview_requested = Signal()
 
     def __init__(self, path: str, parent: QWidget | None = None) -> None:
@@ -101,8 +101,8 @@ class DiffWidget(QWidget):
         self._scrollbar.valueChanged.connect(self._on_shared_scrollbar_moved)
 
         # Wire pane open requests up to widget-level signals.
-        self._left_pane.open_in_editor_requested.connect(self.open_in_editor_requested)
-        self._right_pane.open_in_editor_requested.connect(self.open_in_editor_requested)
+        self._left_pane.open_in_editor_requested.connect(self._on_left_pane_open_in_editor_requested)
+        self._right_pane.open_in_editor_requested.connect(self._on_right_pane_open_in_editor_requested)
         self._left_pane.open_in_preview_requested.connect(self.open_in_preview_requested)
         self._right_pane.open_in_preview_requested.connect(self.open_in_preview_requested)
 
@@ -130,6 +130,53 @@ class DiffWidget(QWidget):
         self._smooth_scroll_distance: int = 0
         self._smooth_scroll_duration: int = SMOOTH_SCROLL_DURATION_MS
         self._smooth_scroll_time: int = 0
+
+    def _on_left_pane_open_in_editor_requested(self, block_number: int, column: int) -> None:
+        """
+        Translate a left-pane editor request to a working-tree line number and emit.
+
+        The left pane shows the HEAD version.  Since the editor opens the working-tree
+        file, we map the clicked row to its right_line_no.  When that row has no
+        corresponding right-side line (a pure removal), we walk forward to find the
+        nearest row that does.
+
+        Args:
+            block_number: Zero-based block index of the clicked row in the left pane.
+            column: One-based column position of the click within the block.
+        """
+        line = self._nearest_right_line_no(block_number)
+        self.open_in_editor_requested.emit(line, column)
+
+    def _on_right_pane_open_in_editor_requested(self, block_number: int, column: int) -> None:
+        """
+        Translate a right-pane editor request to a working-tree line number and emit.
+
+        Args:
+            block_number: Zero-based block index of the clicked row in the right pane.
+            column: One-based column position of the click within the block.
+        """
+        line = self._nearest_right_line_no(block_number)
+        self.open_in_editor_requested.emit(line, column)
+
+    def _nearest_right_line_no(self, block_number: int) -> int:
+        """
+        Return the working-tree (right-side) line number for the given row index.
+
+        If the row at *block_number* has no right_line_no (a pure removal), walk
+        forward through subsequent rows until one is found.  Falls back to 1.
+
+        Args:
+            block_number: Zero-based row index into self._rows.
+
+        Returns:
+            A 1-based line number for the working-tree file.
+        """
+        for i in range(block_number, len(self._rows)):
+            line_no = self._rows[i].right_line_no
+            if line_no is not None:
+                return line_no
+
+        return 1
 
     def load_diff(self, initial_load: bool = False) -> None:
         """

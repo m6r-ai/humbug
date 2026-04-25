@@ -1855,9 +1855,10 @@ class ColumnManager(QWidget):
         """Edit a file from a preview page."""
         self.edit_file_requested.emit(path)
 
-    def _on_diff_open_file_requested(self, path: str) -> None:
+    def _on_diff_open_file_requested(self, path: str, line: int, column: int) -> None:
         """Open a file in an editor tab from a diff tab context menu."""
-        self.open_file(path, False)
+        editor = self.open_file(path, False)
+        editor.goto_line(line, column)
 
     def _on_diff_open_preview_requested(self, path: str) -> None:
         """Open a file in a preview tab from a diff tab context menu."""
