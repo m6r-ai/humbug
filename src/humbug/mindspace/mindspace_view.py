@@ -54,7 +54,7 @@ class MindspaceView(QWidget):
         self._vcs_available = False
         self._sidebar_collapsed = False
         self._expanded_sidebar_width = 320
-        self._rail_collapsed_width = 52
+        self._rail_collapsed_width = 48
         self._content_min_width = 240
         self._view_buttons: dict[MindspaceViewType, QToolButton] = {}
         self._view_widgets: dict[MindspaceViewType, QWidget] = {}
@@ -313,7 +313,7 @@ class MindspaceView(QWidget):
     def _update_button_styling(self) -> None:
         """Update button icons and sizes."""
         zoom_factor = self._style_manager.zoom_factor()
-        icon_base_size = 18
+        icon_base_size = 22
         icon_size = QSize(round(icon_base_size * zoom_factor), round(icon_base_size * zoom_factor))
 
         if self.layoutDirection() == Qt.LayoutDirection.LeftToRight:
@@ -322,8 +322,8 @@ class MindspaceView(QWidget):
         else:
             collapse_icon = "expand-left" if self._sidebar_collapsed else "expand-right"
 
-        self._sidebar_toggle_button.setIcon(QIcon(self._style_manager.scale_icon(collapse_icon, 16)))
-        self._sidebar_toggle_button.setIconSize(QSize(round(16 * zoom_factor), round(16 * zoom_factor)))
+        self._sidebar_toggle_button.setIcon(QIcon(self._style_manager.scale_icon(collapse_icon, 20)))
+        self._sidebar_toggle_button.setIconSize(QSize(round(20 * zoom_factor), round(20 * zoom_factor)))
 
         for view_type, button in self._view_buttons.items():
             icon_name = button.property("icon_name")
@@ -339,15 +339,15 @@ class MindspaceView(QWidget):
             button.setIconSize(icon_size)
             button.setChecked(view_type == self._active_view_type)
 
-        self._settings_button.setIcon(QIcon(self._style_manager.scale_icon("cog", 16)))
-        self._settings_button.setIconSize(QSize(round(16 * zoom_factor), round(16 * zoom_factor)))
+        self._settings_button.setIcon(QIcon(self._style_manager.scale_icon("cog", 20)))
+        self._settings_button.setIconSize(QSize(round(20 * zoom_factor), round(20 * zoom_factor)))
 
     def apply_style(self) -> None:
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
 
-        self._rail_collapsed_width = round(52 * zoom_factor)
+        self._rail_collapsed_width = round(48 * zoom_factor)
         self._content_min_width = round(230 * zoom_factor)
 
         header_font = self._mindspace_button.font()
@@ -363,13 +363,12 @@ class MindspaceView(QWidget):
 
         rail_width = self._rail_collapsed_width
         rail_button_height = round(48 * zoom_factor)
-        toggle_button_height = round(40 * zoom_factor)
-        rail_padding = round(8 * zoom_factor)
+        rail_padding = round(6 * zoom_factor)
         rail_indicator = round(3 * zoom_factor)
         content_radius = round(8 * zoom_factor)
         header_bottom_border = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
         panel_background = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
-        rail_background = self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
+        rail_background = self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)
         rail_hover = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
         selected_background = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
         header_background = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
@@ -386,7 +385,7 @@ class MindspaceView(QWidget):
 
         self._rail_widget.setFixedWidth(rail_width)
         self.setMinimumWidth(rail_width)
-        self._sidebar_toggle_button.setFixedHeight(toggle_button_height)
+        self._sidebar_toggle_button.setFixedHeight(rail_button_height)
         for button in self._view_buttons.values():
             button.setFixedHeight(rail_button_height)
 
@@ -446,7 +445,7 @@ class MindspaceView(QWidget):
                 background-color: transparent;
                 border: none;
                 padding: {rail_padding}px;
-                margin: 0px;
+                margin: 2px 4px;
             }}
 
             QToolButton#_sidebar_toggle_button:hover {{

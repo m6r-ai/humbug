@@ -206,7 +206,7 @@ class StyleManager(QObject):
 
             # Tab colours
             ColorRole.TAB_BAR_BACKGROUND: {
-                ColorMode.DARK: "#242424",
+                ColorMode.DARK: "#1c1c1c",
                 ColorMode.LIGHT: "#ececec"
             },
             ColorRole.TAB_BACKGROUND_ACTIVE: {
