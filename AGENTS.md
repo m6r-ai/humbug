@@ -11,14 +11,16 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
   tabs.  They can get pretty cluttered though so if you don't need the tab again then close it.
 - If you open a terminal it will automatically be in the root of the mindspace directory.  Don't change directory unless
   you want to be somewhere else.
-- Terminals will not open with a python virtual environment by default.  If you want a venv then you have to do that yourself.
+- Terminals will not open with a python virtual environment by default.  If you want a venv then you must do that yourself.
 
 
 ## Code generation
 
 - When you help write code, do not write lengthy file-level docstrings.  These go stale very fast as the code evolves.
-- Do not add comments marking blocks of functionality within files.  Functions, classes, etc., have docstrings so we have everything we need anyway,
-- and these sorts of delimeter comments simply add clutter to the code.
+- Do not add comments marking blocks of functionality within files.  Functions, classes, etc., have docstrings so we have
+  everything we need anyway and these sorts of delimeter comments simply add clutter to the code.
+- If you are writing tests, the tests must reflect the correct and desired behaviour.  NEVER write or patch a test to
+  mask broken implementation logic.  If the logic is wrong then a test must fail.
 
 
 ## Top-Level Structure
