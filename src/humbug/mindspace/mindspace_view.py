@@ -2,7 +2,7 @@
 
 import os
 
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtCore import Qt, Signal, QSize, QEvent, QObject
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -78,6 +78,8 @@ class MindspaceView(QWidget):
         self._sidebar_toggle_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         self._sidebar_toggle_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._sidebar_toggle_button.clicked.connect(self._toggle_sidebar)
+        self._sidebar_toggle_button.setProperty("icon_name", "expand-right")
+        self._sidebar_toggle_button.installEventFilter(self)
         rail_layout.addWidget(self._sidebar_toggle_button)
 
         self._conversations_button = self._create_view_button(MindspaceViewType.CONVERSATIONS, "conversation")
@@ -100,6 +102,8 @@ class MindspaceView(QWidget):
         self._settings_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         self._settings_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._settings_button.clicked.connect(self._on_settings_button_clicked)
+        self._settings_button.setProperty("icon_name", "cog")
+        self._settings_button.installEventFilter(self)
         self._settings_button.hide()
         rail_layout.addWidget(self._settings_button)
 
@@ -186,6 +190,7 @@ class MindspaceView(QWidget):
         button.setAutoRaise(False)
         button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         button.clicked.connect(lambda checked, vt=view_type: self._on_view_button_clicked(vt, checked))
+        button.installEventFilter(self)
         self._view_button_group.addButton(button)
         self._view_buttons[view_type] = button
         return button
@@ -318,29 +323,61 @@ class MindspaceView(QWidget):
 
         if self.layoutDirection() == Qt.LayoutDirection.LeftToRight:
             collapse_icon = "expand-right" if self._sidebar_collapsed else "expand-left"
-
         else:
             collapse_icon = "expand-left" if self._sidebar_collapsed else "expand-right"
 
-        self._sidebar_toggle_button.setIcon(QIcon(self._style_manager.scale_icon(collapse_icon, 20)))
-        self._sidebar_toggle_button.setIconSize(QSize(round(20 * zoom_factor), round(20 * zoom_factor)))
+        toggle_icon_size = round(20 * zoom_factor)
+        self._sidebar_toggle_button.setIcon(QIcon(self._style_manager.scale_icon(f"inactive-{collapse_icon}", 20)))
+        self._sidebar_toggle_button.setIconSize(QSize(toggle_icon_size, toggle_icon_size))
+        self._sidebar_toggle_button.setProperty("icon_name", collapse_icon)
 
         for view_type, button in self._view_buttons.items():
             icon_name = button.property("icon_name")
             assert isinstance(icon_name, str)
 
-            if button.isChecked():
-                pixmap = self._style_manager.scale_icon(icon_name, icon_base_size)
+            is_checked = view_type == self._active_view_type
+            if is_checked:
+                button.setIcon(QIcon(self._style_manager.scale_icon(f"bright-{icon_name}", icon_base_size)))
 
             else:
-                pixmap = self._style_manager.scale_icon(f"inactive-{icon_name}", icon_base_size)
+                button.setIcon(QIcon(self._style_manager.scale_icon(f"inactive-{icon_name}", icon_base_size)))
 
-            button.setIcon(QIcon(pixmap))
             button.setIconSize(icon_size)
-            button.setChecked(view_type == self._active_view_type)
+            button.setChecked(is_checked)
 
-        self._settings_button.setIcon(QIcon(self._style_manager.scale_icon("cog", 20)))
-        self._settings_button.setIconSize(QSize(round(20 * zoom_factor), round(20 * zoom_factor)))
+        settings_icon_size = round(20 * zoom_factor)
+        self._settings_button.setIcon(QIcon(self._style_manager.scale_icon("inactive-cog", 20)))
+        self._settings_button.setIconSize(QSize(settings_icon_size, settings_icon_size))
+
+    def _set_button_hover_icon(self, button: QToolButton, hovered: bool) -> None:
+        """Update a rail button's icon to reflect hover state."""
+        zoom_factor = self._style_manager.zoom_factor()
+        icon_name = button.property("icon_name")
+        if not isinstance(icon_name, str):
+            return
+
+        is_checked = button.isChecked()
+        if hovered:
+            size = 20 if button in (self._sidebar_toggle_button, self._settings_button) else 22
+            button.setIcon(QIcon(self._style_manager.scale_icon(icon_name, size)))
+
+        elif is_checked:
+            button.setIcon(QIcon(self._style_manager.scale_icon(f"bright-{icon_name}", 22)))
+
+        else:
+            size = 20 if button in (self._sidebar_toggle_button, self._settings_button) else 22
+            button.setIcon(QIcon(self._style_manager.scale_icon(f"inactive-{icon_name}", size)))
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        """Handle hover events on rail buttons to update icon brightness."""
+        if isinstance(obj, QToolButton) and obj.parent() is self._rail_widget:
+            if event.type() == QEvent.Type.Enter:
+                self._set_button_hover_icon(obj, hovered=True)
+
+            elif event.type() == QEvent.Type.Leave:
+                self._set_button_hover_icon(obj, hovered=False)
+
+        return super().eventFilter(obj, event)
 
     def apply_style(self) -> None:
         """Update styling when application style changes."""
@@ -364,7 +401,7 @@ class MindspaceView(QWidget):
         rail_width = self._rail_collapsed_width
         rail_button_height = round(48 * zoom_factor)
         rail_padding = round(6 * zoom_factor)
-        rail_indicator = round(3 * zoom_factor)
+        rail_indicator = round(2 * zoom_factor)
         content_radius = round(8 * zoom_factor)
         header_bottom_border = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
         panel_background = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
@@ -448,10 +485,6 @@ class MindspaceView(QWidget):
                 margin: 2px 4px;
             }}
 
-            QToolButton#_sidebar_toggle_button:hover {{
-                background-color: {rail_hover};
-            }}
-
             QToolButton#_settings_button,
             QToolButton[view_type] {{
                 color: {text_color};
@@ -459,17 +492,11 @@ class MindspaceView(QWidget):
                 border: none;
                 padding: {rail_padding}px;
                 margin: 2px 4px;
-                border-radius: {content_radius}px;
-            }}
-
-            QToolButton[view_type]:hover,
-            QToolButton#_settings_button:hover {{
-                background-color: {rail_hover};
             }}
 
             QToolButton[view_type]:checked {{
-                background-color: {selected_background};
                 {indicator_side}: {rail_indicator}px solid {accent_color};
+                padding-{("left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "right")}: {rail_padding - rail_indicator}px;
             }}
 
             QToolButton[view_type]:disabled,

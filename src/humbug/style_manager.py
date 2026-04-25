@@ -839,8 +839,9 @@ class StyleManager(QObject):
         with open(os.path.join(icon_dir, name), 'w', encoding='utf-8') as f:
             f.write(svg_data)
 
-    def _create_active_inactive_theme_icons(self, active: bool, suffix: str, color: str) -> None:
-        prefix = "" if active else "inactive-"
+    def _create_active_inactive_theme_icons(self, active: bool, suffix: str, color: str, prefix: str | None = None) -> None:
+        if prefix is None:
+            prefix = "" if active else "inactive-"
 
         # Close button - visible version
         self._write_icon(f'{prefix}close-{suffix}.svg', f'''
@@ -959,6 +960,7 @@ class StyleManager(QObject):
         for mode in (ColorMode.LIGHT, ColorMode.DARK):
             color = self._colors[ColorRole.TEXT_PRIMARY][mode]
             inactive_color = self._colors[ColorRole.TEXT_INACTIVE][mode]
+            bright_color = self._colors[ColorRole.TEXT_BRIGHT][mode]
             suffix = mode.name.lower()
 
             # Right-pointing arrow
@@ -1016,6 +1018,30 @@ class StyleManager(QObject):
             self._write_icon(f'expand-left-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path stroke="{color}" stroke-width="6" fill="none" d="M44,8 L20,32 L44,56"/>
+                </svg>
+            ''')
+
+            self._write_icon(f'inactive-expand-right-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{inactive_color}" stroke-width="6" fill="none" d="M20,8 L44,32 L20,56"/>
+                </svg>
+            ''')
+
+            self._write_icon(f'inactive-expand-left-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{inactive_color}" stroke-width="6" fill="none" d="M44,8 L20,32 L44,56"/>
+                </svg>
+            ''')
+
+            self._write_icon(f'bright-expand-right-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{bright_color}" stroke-width="6" fill="none" d="M20,8 L44,32 L20,56"/>
+                </svg>
+            ''')
+
+            self._write_icon(f'bright-expand-left-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{bright_color}" stroke-width="6" fill="none" d="M44,8 L20,32 L44,56"/>
                 </svg>
             ''')
 
@@ -1098,6 +1124,24 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            self._write_icon(f'inactive-cog-{suffix}.svg', f'''
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{inactive_color}" stroke-width="4" fill="none" stroke-linejoin="miter"
+                        d="M24,16 L31,14 L33,6 L44,9 L42,17 L47,22 L55,20 L58,31 L50,33 L48,40 L54,46 L46,54
+                        L40,48 L33,50 L31,58 L20,55 L22,47 L17,42 L9,44 L6,33 L14,31 L16,24 L10,18 L18,10 Z
+                        M40,32 A8,8 0 1,1 24,32 A8,8 0 1,1 40,32 Z"/>
+                </svg>
+            ''')
+
+            self._write_icon(f'bright-cog-{suffix}.svg', f'''
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{bright_color}" stroke-width="4" fill="none" stroke-linejoin="miter"
+                        d="M24,16 L31,14 L33,6 L44,9 L42,17 L47,22 L55,20 L58,31 L50,33 L48,40 L54,46 L46,54
+                        L40,48 L33,50 L31,58 L20,55 L22,47 L17,42 L9,44 L6,33 L14,31 L16,24 L10,18 L18,10 Z
+                        M40,32 A8,8 0 1,1 24,32 A8,8 0 1,1 40,32 Z"/>
+                </svg>
+            ''')
+
             self._write_icon(f'copy-{suffix}.svg', f'''
                 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <rect x="22" y="10" width="32" height="32" stroke="{color}" stroke-width="6" fill="none"/>
@@ -1152,6 +1196,7 @@ class StyleManager(QObject):
 
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)
+            self._create_active_inactive_theme_icons(True, suffix, bright_color, prefix="bright-")
 
             # Match-case toggle icon — "Aa" letterform
             self._write_icon(f'find-match-case-{suffix}.svg', f'''
