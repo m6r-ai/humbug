@@ -64,7 +64,7 @@ Raw profile data can optionally be saved to a `.prof` file for further
 inspection with `pstats` or `snakeviz`. Benchmark programs are in
 `tests/` (e.g. `sudoku-solver.menai`, `rubiks_cube.menai`, `list-sort.menai`).
 
-## runner — `runner/run.py`
+## test-runner — `test-runner/test-run.py`
 
 Discovers `*_test.menai` files, parses their test trees, and executes each
 leaf thunk in an isolated VM invocation. A runtime error in one test does not
@@ -76,7 +76,7 @@ The runner reports pass/fail per leaf with the full group path, and exits with
 a non-zero code if any test fails. An optional name filter runs only the tests
 whose path contains a given substring.
 
-The `menai_test` support module (`runner/menai_test.menai`) is injected by the
+The `menai_test` support module (`test-runner/menai_test.menai`) is injected by the
 runner and provides `assert-equal` (polymorphic structural equality check) and
 the internal `test-find` navigation helper. It is not part of the standard
 `menai_modules/` library.
