@@ -13,7 +13,7 @@ from git import VCSFileStatus, VCSStatusCode
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
+from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -96,7 +96,6 @@ class MindspaceVCSView(QWidget):
     file_opened_in_preview = Signal(str, bool)             # path, ephemeral
     file_deleted = Signal(str)                             # path
     file_opened_in_diff = Signal(str, bool)                # path, ephemeral
-    toggled = Signal(bool)                                 # expanded state
     repo_available = Signal(bool)                          # True = repo found, False = hidden
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -116,13 +115,10 @@ class MindspaceVCSView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self._header = MindspaceCollapsibleHeader(
+        self._header = MindspaceSectionHeader(
             self._language_manager.strings().mindspace_vcs,
             self
         )
-        self._header.setProperty("splitter", True)
-        self._header.set_collapsible(False)
-        self._header.toggled.connect(self._on_header_toggled)
         layout.addWidget(self._header)
 
         self._list_widget = _VCSList()
@@ -141,14 +137,6 @@ class MindspaceVCSView(QWidget):
 
         # Start hidden — only shown once a repo is confirmed present.
         self.hide()
-
-    def get_header_height(self) -> int:
-        """Return the pixel height of the collapsible header."""
-        return self._header.sizeHint().height()
-
-    def is_expanded(self) -> bool:
-        """Return True if the section is currently expanded."""
-        return self._header.is_expanded()
 
     def set_mindspace(self, path: str) -> None:
         """
@@ -185,15 +173,6 @@ class MindspaceVCSView(QWidget):
             "QListWidget#_list_widget",
             self.layoutDirection(),
         ))
-
-    def _on_header_toggled(self, expanded: bool) -> None:
-        """Show or hide the list when the header is toggled."""
-        if expanded:
-            self._list_widget.show()
-        else:
-            self._list_widget.hide()
-
-        self.toggled.emit(expanded)
 
     def _on_repo_state_changed(self, has_repo: bool) -> None:
         """Show or hide the entire widget as the repository appears or disappears."""

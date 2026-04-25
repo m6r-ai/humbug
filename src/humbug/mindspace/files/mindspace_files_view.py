@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.files.mindspace_files_model import MindspaceFilesModel
 from humbug.mindspace.files.mindspace_files_tree_view import MindspaceFilesTreeView
-from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
+from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
@@ -36,7 +36,6 @@ class MindspaceFilesView(QWidget):
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
     file_opened_in_preview = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in preview
     file_opened_in_diff = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in diff
-    toggled = Signal(bool)  # Emitted when expand/collapse state changes (expanded state)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the files view widget."""
@@ -56,13 +55,10 @@ class MindspaceFilesView(QWidget):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        self._header = MindspaceCollapsibleHeader(
+        self._header = MindspaceSectionHeader(
             self._language_manager.strings().mindspace_files,
             self
         )
-        self._header.setProperty("splitter", True)
-        self._header.set_collapsible(False)
-        self._header.toggled.connect(self._on_header_toggled)
         layout.addWidget(self._header)
 
         # Create tree view
@@ -109,39 +105,6 @@ class MindspaceFilesView(QWidget):
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
-
-    def get_header_height(self) -> int:
-        """
-        Get the height of the header.
-
-        Returns:
-            Header height in pixels
-        """
-        return self._header.sizeHint().height()
-
-    def _on_header_toggled(self, expanded: bool) -> None:
-        """
-        Handle header expand/collapse toggle.
-
-        Args:
-            expanded: Whether the section is now expanded
-        """
-        if expanded:
-            self._tree_view.show()
-
-        else:
-            self._tree_view.hide()
-
-        self.toggled.emit(expanded)
-
-    def is_expanded(self) -> bool:
-        """
-        Check if the files section is expanded.
-
-        Returns:
-            True if expanded, False if collapsed
-        """
-        return self._header.is_expanded()
 
     def _on_drop_target_changed(self) -> None:
         """
