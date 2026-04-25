@@ -17,6 +17,7 @@ from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHe
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_pane_style import build_list_pane_stylesheet
 from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
 from humbug.mindspace.vcs.mindspace_vcs_delegate import MindspaceVCSDelegate
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
@@ -177,33 +178,12 @@ class MindspaceVCSView(QWidget):
 
     def _apply_stylesheet(self) -> None:
         """Build and apply the widget stylesheet."""
-        bg = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
-        selected = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
-        hover = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)
-
-        if self.layoutDirection() == Qt.LayoutDirection.LeftToRight:
-            list_padding = "2px 0 0 5px"
-        else:
-            list_padding = "2px 5px 0 0"
-
-        self.setStyleSheet(f"""
-            QListWidget#_list_widget {{
-                background-color: {bg};
-                border: none;
-                outline: none;
-                padding: {list_padding};
-            }}
-            QListWidget#_list_widget::item {{
-                padding: 2px 0 2px 0;
-                margin: 0px;
-            }}
-            QListWidget#_list_widget::item:selected {{
-                background-color: {selected};
-            }}
-            QListWidget#_list_widget::item:hover {{
-                background-color: {hover};
-            }}
-        """)
+        self.setStyleSheet(build_list_pane_stylesheet(
+            self._style_manager,
+            "MindspaceVCSView",
+            "QListWidget#_list_widget",
+            self.layoutDirection(),
+        ))
 
     def _on_header_toggled(self, expanded: bool) -> None:
         """Show or hide the list when the header is toggled."""

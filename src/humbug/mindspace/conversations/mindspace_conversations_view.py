@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
 )
 
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
-from humbug.color_role import ColorRole
 from humbug.mindspace.conversations.mindspace_conversations_tree_delegate import MindspaceConversationsTreeDelegate
 from humbug.mindspace.conversations.mindspace_conversations_tree_view import MindspaceConversationsTreeView
 from humbug.mindspace.conversations.mindspace_conversations_dag_model import MindspaceConversationsDAGModel
@@ -18,6 +17,7 @@ from humbug.mindspace.conversations.mindspace_conversations_index import Mindspa
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
 from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
@@ -1181,15 +1181,6 @@ class MindspaceConversationsView(QWidget):
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
-        panel_bg = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
-        tree_bg = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
-        tree_hover = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
-        tree_selected = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
-        border = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
-        text = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-        branch_icon_size = round(12 * zoom_factor)
-        collapsed_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
-        expanded_icon = "arrow-down"
 
         # Apply style to header
         self._header.apply_style()
@@ -1209,42 +1200,10 @@ class MindspaceConversationsView(QWidget):
 
         # Adjust tree indentation
         self._tree_view.setIndentation(file_icon_size)
-        self.setStyleSheet(f"""
-            MindspaceConversationsView {{
-                background-color: {panel_bg};
-            }}
-            MindspaceConversationsTreeView {{
-                background-color: {tree_bg};
-                color: {text};
-                border: 1px solid {border};
-                border-top: none;
-                outline: none;
-            }}
-            MindspaceConversationsTreeView::item {{
-                color: {text};
-                padding: 3px 0px;
-                margin: 0px;
-            }}
-            MindspaceConversationsTreeView::item:hover {{
-                background-color: {tree_hover};
-            }}
-            MindspaceConversationsTreeView::item:selected {{
-                background-color: {tree_selected};
-                color: {text};
-            }}
-            MindspaceConversationsTreeView::branch {{
-                background-color: {tree_bg};
-            }}
-            MindspaceConversationsTreeView::branch:has-children:!has-siblings:closed,
-            MindspaceConversationsTreeView::branch:closed:has-children:has-siblings {{
-                image: url("{self._style_manager.get_icon_path(collapsed_icon)}");
-                width: {branch_icon_size}px;
-                height: {branch_icon_size}px;
-            }}
-            MindspaceConversationsTreeView::branch:open:has-children:!has-siblings,
-            MindspaceConversationsTreeView::branch:open:has-children:has-siblings {{
-                image: url("{self._style_manager.get_icon_path(expanded_icon)}");
-                width: {branch_icon_size}px;
-                height: {branch_icon_size}px;
-            }}
-        """)
+        self.setStyleSheet(build_tree_pane_stylesheet(
+            self._style_manager,
+            "MindspaceConversationsView",
+            "MindspaceConversationsTreeView",
+            self.layoutDirection(),
+            zoom_factor,
+        ))
