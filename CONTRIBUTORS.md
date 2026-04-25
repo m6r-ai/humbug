@@ -14,6 +14,7 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Refactored scrollbar styling.
 * Added support for mousewheel scrolling of tab bars.
 * Designed the original file attachment concept for conversations.
+* Designed the original implementation of the hierarchical conversation view.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 

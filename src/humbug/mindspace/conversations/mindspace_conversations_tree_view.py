@@ -1,11 +1,12 @@
 """Conversations tree view implementation for mindspace conversations with drag and drop support and inline editing."""
 
 import os
-from typing import cast
+from typing import Callable
 
-from PySide6.QtCore import QSortFilterProxyModel, QDir, QModelIndex
-from PySide6.QtWidgets import QWidget, QFileSystemModel
+from PySide6.QtCore import QModelIndex, QTimer
+from PySide6.QtWidgets import QWidget
 
+from humbug.mindspace.conversations.mindspace_conversations_dag_model import MindspaceConversationsDAGModel
 from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
 
 
@@ -74,13 +75,59 @@ class MindspaceConversationsTreeView(MindspaceTreeView):
         if not index.isValid():
             return None
 
-        source_model = cast(QSortFilterProxyModel, self.model())
-        if not source_model:
+        dag_model = self.model()
+        if not isinstance(dag_model, MindspaceConversationsDAGModel):
             return None
 
-        source_index = source_model.mapToSource(index)
-        file_model = cast(QFileSystemModel, source_model.sourceModel())
-        if not file_model:
-            return None
+        return dag_model.path_for_index(index)
 
-        return QDir.toNativeSeparators(file_model.filePath(source_index))
+    def ensure_path_visible_for_editing(self, file_path: str, callback: Callable) -> None:
+        """
+        Ensure the specified file path is visible and optimally positioned for editing.
+
+        Args:
+            file_path: Absolute path to the file to make visible
+            callback: Callback to execute after the item is visible
+        """
+        dag_model = self.model()
+        if not isinstance(dag_model, MindspaceConversationsDAGModel):
+            return
+
+        index = dag_model.index_for_path(file_path)
+        if not index.isValid():
+            return
+
+        # Expand all parents
+        parent = index.parent()
+        parents = []
+        while parent.isValid():
+            parents.append(parent)
+            parent = parent.parent()
+
+        for p in reversed(parents):
+            if not self.isExpanded(p):
+                self.expand(p)
+
+        QTimer.singleShot(200, lambda: self._scroll_to_and_edit(index, file_path, callback))
+
+    def _scroll_to_and_edit(self, index: QModelIndex, file_path: str, callback: Callable) -> None:
+        """
+        Scroll to index and invoke callback.
+
+        Args:
+            index: Model index to scroll to
+            file_path: Path for viewport position check
+            callback: Callback to invoke after scrolling
+        """
+        viewport_rect = self.viewport().rect()
+        item_rect = self.visualRect(index)
+        margin = 40
+        is_visible = (
+            item_rect.top() >= margin and
+            item_rect.bottom() <= viewport_rect.height() - margin
+        )
+        if not is_visible:
+            self.scrollTo(index, self.ScrollHint.PositionAtCenter)
+            QTimer.singleShot(100, callback)
+        else:
+            callback()

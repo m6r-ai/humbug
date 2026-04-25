@@ -3,17 +3,17 @@
 import logging
 import os
 import shutil
-from typing import cast
 
-from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QDir
+from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QTimer
 from PySide6.QtWidgets import (
-    QFileSystemModel, QWidget, QVBoxLayout, QMenu
+    QWidget, QVBoxLayout, QMenu
 )
 
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
-from humbug.mindspace.conversations.mindspace_conversations_model import MindspaceConversationsModel
 from humbug.mindspace.conversations.mindspace_conversations_tree_delegate import MindspaceConversationsTreeDelegate
 from humbug.mindspace.conversations.mindspace_conversations_tree_view import MindspaceConversationsTreeView
+from humbug.mindspace.conversations.mindspace_conversations_dag_model import MindspaceConversationsDAGModel
+from humbug.mindspace.conversations.mindspace_conversations_index import MindspaceConversationsIndex
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -69,15 +69,12 @@ class MindspaceConversationsView(QWidget):
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
 
-        # Create file system model
+        # Create icon provider for styling
         self._icon_provider = MindspaceTreeIconProvider()
-        self._fs_model = QFileSystemModel()
-        self._fs_model.setReadOnly(True)
-        self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.Hidden | QDir.Filter.NoDotDot)
 
-        # Create filter model
-        self._filter_model = MindspaceConversationsModel()
-        self._filter_model.setSourceModel(self._fs_model)
+        # Conversation DAG index and model (model created after index in set_mindspace)
+        self._conversations_index = MindspaceConversationsIndex(self)
+        self._dag_model = MindspaceConversationsDAGModel(self._conversations_index, self._icon_provider, self)
 
         # Create and set the specialized conversations delegate
         self._delegate = MindspaceConversationsTreeDelegate(self._tree_view, self._style_manager)
@@ -86,7 +83,7 @@ class MindspaceConversationsView(QWidget):
         self._tree_view.setItemDelegate(self._delegate)
 
         # Set model on tree view
-        self._tree_view.setModel(self._filter_model)
+        self._tree_view.setModel(self._dag_model)
 
         # Connect signals
         self._tree_view.clicked.connect(self._on_tree_clicked)
@@ -607,77 +604,17 @@ class MindspaceConversationsView(QWidget):
         if not self._conversations_path:
             return
 
-        # Normalize the file path
-        normalized_path = os.path.normpath(file_path)
-
-        # Ensure the file path is within the conversations directory
-        if not normalized_path.startswith(self._conversations_path):
-            return
-
-        # Check if the file exists
-        if not os.path.exists(normalized_path):
+        if not os.path.exists(file_path):
             return
 
         # Expand to the file and select it
-        target_index = self._expand_to_path(normalized_path)
-        if target_index is None:
-            return
-
+        target_index = self._dag_model.index_for_path(file_path)
         if not target_index.isValid():
             return
 
         self._tree_view.clearSelection()
         self._tree_view.setCurrentIndex(target_index)
         self._tree_view.scrollTo(target_index, self._tree_view.ScrollHint.EnsureVisible)
-
-    def _expand_to_path(self, file_path: str) -> QModelIndex | None:
-        """
-        Expand tree nodes to reveal the given file path.
-
-        Args:
-            file_path: Absolute path to expand to
-
-        Returns:
-            QModelIndex of the target file if found, None otherwise
-        """
-        # Build list of paths from conversations root to target file
-        paths_to_expand = []
-        current_path = file_path
-
-        while current_path and current_path != self._conversations_path:
-            paths_to_expand.append(current_path)
-            parent_path = os.path.dirname(current_path)
-            # Prevent infinite loop if we can't go up further
-            if parent_path == current_path:
-                break
-
-            current_path = parent_path
-
-        # Reverse the list so we expand from root to leaf
-        paths_to_expand.reverse()
-
-        # Start from the conversations root
-        current_index = QModelIndex()
-
-        # Expand each directory in the path
-        for path in paths_to_expand:
-            # Get the source index for this path
-            source_index = self._fs_model.index(path)
-            if not source_index.isValid():
-                return None
-
-            # Map to filter model
-            filter_index = self._filter_model.mapFromSource(source_index)
-            if not filter_index.isValid():
-                return None
-
-            # If this is a directory, expand it
-            if os.path.isdir(path):
-                self._tree_view.expand(filter_index)
-
-            current_index = filter_index
-
-        return current_index
 
     def _ensure_item_visible_and_edit(self, item_path: str, select_extension: bool = True) -> None:
         """
@@ -699,14 +636,9 @@ class MindspaceConversationsView(QWidget):
             select_extension: Whether to select the file extension in addition to the name
         """
         # Find the item in the model
-        source_index = self._fs_model.index(item_path)
-        if not source_index.isValid():
-            self._logger.warning("Source index not valid for path: '%s'", item_path)
-            return
-
-        filter_index = self._filter_model.mapFromSource(source_index)
+        filter_index = self._dag_model.index_for_path(item_path)
         if not filter_index.isValid():
-            self._logger.warning("Filter index not valid for path: '%s'", item_path)
+            self._logger.warning("Index not valid for path: '%s'", item_path)
             return
 
         # Get the delegate and start editing
@@ -730,54 +662,30 @@ class MindspaceConversationsView(QWidget):
         # Conversations root actions
         new_conversation_action = menu.addAction(strings.new_conversation)
         new_conversation_action.triggered.connect(
-            lambda: self.new_conversation_requested.emit(cast(str, self._conversations_path))
+            lambda: self.new_conversation_requested.emit(self._conversations_path or "")
         )
         new_folder_action = menu.addAction(strings.new_folder)
         new_folder_action.triggered.connect(
-            lambda: self._start_new_folder_creation(cast(str, self._conversations_path))
-        )
-
-        # Add sorting options
-        menu.addSeparator()
-        sort_menu = menu.addMenu(strings.sort_by)
-
-        current_mode = self._filter_model.get_conversation_sort_mode()
-
-        sort_by_name = sort_menu.addAction(strings.sort_by_name)
-        sort_by_name.setCheckable(True)
-        sort_by_name.setChecked(current_mode == MindspaceConversationsModel.SortMode.NAME)
-        sort_by_name.triggered.connect(
-            lambda: self._filter_model.set_conversation_sort_mode(MindspaceConversationsModel.SortMode.NAME)
-        )
-
-        sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
-        sort_by_creation.setCheckable(True)
-        sort_by_creation.setChecked(current_mode == MindspaceConversationsModel.SortMode.CREATION_TIME)
-        sort_by_creation.triggered.connect(
-            lambda: self._filter_model.set_conversation_sort_mode(MindspaceConversationsModel.SortMode.CREATION_TIME)
+            lambda: self._start_new_folder_creation(self._conversations_path or "")
         )
 
         return menu
 
     def _is_current_directory_item(self, index: QModelIndex) -> bool:
         """
-        Check if the given index represents the current directory (".") item.
+        Check if the given index represents the root sentinel (".") item.
 
         Args:
             index: Model index to check
 
         Returns:
-            True if this is the current directory item
+            True if this is the root sentinel item
         """
         if not index.isValid():
             return False
 
-        source_index = self._filter_model.mapToSource(index)
-        if not source_index.isValid():
-            return False
-
-        file_name = self._fs_model.fileName(source_index)
-        return file_name == "."
+        path = self._tree_view.get_path_from_index(index)
+        return path is not None and os.path.basename(path) == "."
 
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for conversations tree items."""
@@ -786,7 +694,6 @@ class MindspaceConversationsView(QWidget):
 
         # Create context menu
         menu = QMenu(self)
-        strings = self._language_manager.strings()
 
         # Determine the path and whether it's a file or directory
         if not index.isValid():
@@ -794,14 +701,15 @@ class MindspaceConversationsView(QWidget):
             menu = self._create_root_context_menu()
 
         elif self._is_current_directory_item(index):
-            # Clicked on the current directory (".") item - show root context menu
             menu = self._create_root_context_menu()
 
         else:
-            # Map to source model to get actual file path
-            source_index = self._filter_model.mapToSource(index)
-            path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
+            path = self._tree_view.get_path_from_index(index)
+            if not path:
+                return
+
             is_dir = os.path.isdir(path)
+            strings = self._language_manager.strings()
 
             # Create actions based on item type
             if is_dir:
@@ -832,26 +740,6 @@ class MindspaceConversationsView(QWidget):
                 rename_action.triggered.connect(lambda: self._start_rename(index))
                 delete_action = menu.addAction(strings.delete)
                 delete_action.triggered.connect(lambda: self._handle_delete_file(path))
-
-            # Add sorting options
-            menu.addSeparator()
-            sort_menu = menu.addMenu(strings.sort_by)
-
-            current_mode = self._filter_model.get_conversation_sort_mode()
-
-            sort_by_name = sort_menu.addAction(strings.sort_by_name)
-            sort_by_name.setCheckable(True)
-            sort_by_name.setChecked(current_mode == MindspaceConversationsModel.SortMode.NAME)
-            sort_by_name.triggered.connect(
-                lambda: self._filter_model.set_conversation_sort_mode(MindspaceConversationsModel.SortMode.NAME)
-            )
-
-            sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
-            sort_by_creation.setCheckable(True)
-            sort_by_creation.setChecked(current_mode == MindspaceConversationsModel.SortMode.CREATION_TIME)
-            sort_by_creation.triggered.connect(
-                lambda: self._filter_model.set_conversation_sort_mode(MindspaceConversationsModel.SortMode.CREATION_TIME)
-            )
 
         menu.exec_(self._tree_view.viewport().mapToGlobal(position))
 
@@ -914,10 +802,6 @@ class MindspaceConversationsView(QWidget):
             index: Model index of the item to rename
         """
         if not index.isValid():
-            return
-
-        # Don't allow renaming the current directory item
-        if self._is_current_directory_item(index):
             return
 
         # Get the delegate and start Qt-based editing (excludes extension from selection)
@@ -1046,13 +930,10 @@ class MindspaceConversationsView(QWidget):
         if not index.isValid():
             return
 
-        # Don't allow deleting the current directory item
         if self._is_current_directory_item(index):
             return
 
-        # Map to source model to get actual file path
-        source_index = self._filter_model.mapToSource(index)
-        path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
+        path = self._tree_view.get_path_from_index(index)
         if not path:
             return
 
@@ -1070,7 +951,7 @@ class MindspaceConversationsView(QWidget):
         if not path:
             # Clear the model when no mindspace is active
             self._conversations_path = None
-            self._filter_model.set_conversations_root("")
+            self._conversations_index.set_conversations_dir("")
             # Configure tree view for empty path
             self._tree_view.configure_for_path("")
             return
@@ -1086,33 +967,31 @@ class MindspaceConversationsView(QWidget):
             except OSError as e:
                 self._logger.error("Failed to create conversations directory '%s': %s", self._conversations_path, str(e))
                 self._conversations_path = None
-                self._filter_model.set_conversations_root("")
                 self._tree_view.configure_for_path("")
+                self._conversations_index.set_conversations_dir("")
                 return
-
-        # Set the root path to the parent directory of the conversations directory
-        parent_path = os.path.dirname(self._conversations_path)
-        self._fs_model.setRootPath(parent_path)
-        self._filter_model.set_conversations_root(self._conversations_path)
 
         # Configure tree view with the conversations path
         self._tree_view.configure_for_path(self._conversations_path)
 
-        # Set the root index to the conversations directory itself
-        conversations_source_index = self._fs_model.index(self._conversations_path)
-        root_index = self._filter_model.mapFromSource(conversations_source_index)
-        self._tree_view.setRootIndex(root_index)
+        # Start the DAG index for this conversations directory
+        self._conversations_index.set_conversations_dir(self._conversations_path)
 
-        # Hide size, type, and date columns
-        self._tree_view.header().hideSection(1)  # Size
-        self._tree_view.header().hideSection(2)  # Type
-        self._tree_view.header().hideSection(3)  # Date
+        # Schedule a repaint after the event loop processes the index scan and model reset
+        QTimer.singleShot(0, self._tree_view.viewport().update)
+
+    def conversations_index(self) -> MindspaceConversationsIndex:
+        """
+        Get the live DAG index for the current conversations directory.
+
+        Returns:
+            MindspaceConversationsIndex instance.
+        """
+        return self._conversations_index
 
     def _on_tree_clicked(self, index: QModelIndex) -> None:
         """Handle click events."""
-        # Get the file path from the source model
-        source_index = self._filter_model.mapToSource(index)
-        path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
+        path = self._tree_view.get_path_from_index(index)
         if not path:
             return
 
@@ -1120,9 +999,7 @@ class MindspaceConversationsView(QWidget):
 
     def _on_tree_double_clicked(self, index: QModelIndex) -> None:
         """Handle double click events."""
-        # Get the file path from the source model
-        source_index = self._filter_model.mapToSource(index)
-        path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
+        path = self._tree_view.get_path_from_index(index)
         if not path:
             return
 
@@ -1142,7 +1019,9 @@ class MindspaceConversationsView(QWidget):
         self._header.apply_style()
 
         self._icon_provider.update_icons()
-        self._fs_model.setIconProvider(self._icon_provider)
+        # Invalidate icon cache in model after icon provider refresh
+        self._dag_model.beginResetModel()
+        self._dag_model.endResetModel()
         file_icon_size = round(16 * zoom_factor)
         self._tree_view.setIconSize(QSize(file_icon_size, file_icon_size))
 

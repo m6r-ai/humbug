@@ -11,6 +11,8 @@ New features:
 - Added keyboard scrolling of diff tabs.
 - Double-clicking an ephemeral tab label will now make the tab persistent.
 - Find controls now have history buffers, so up and down arrow will navigate previous searches.
+- Conversations now track the relationships between parent conversations and child conversations, so the mindspace conversations
+  view now groups conversations under each other.
 
 Bug fixes:
 
