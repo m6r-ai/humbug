@@ -109,15 +109,6 @@ menai_xrelease(MenaiValue *val)
     }
 }
 
-/*
- * menai_is_unique — return non-zero if val has exactly one live reference.
- */
-static inline int
-menai_is_unique(MenaiValue *val)
-{
-    return val->ob_refcnt == 1;
-}
-
 typedef ssize_t hash_t;
 typedef size_t uhash_t;
 
@@ -516,73 +507,6 @@ menai_symbol_dealloc(MenaiValue *self)
 }
 
 /*
- * One entry in the MenaiStructType field-index table.
- * name is an owned MenaiString *; index is the 0-based field position.
- */
-typedef struct {
-    MenaiValue *name;
-    int index;
-} MenaiFieldEntry;
-
-typedef struct {
-    MenaiValue_HEAD
-    MenaiValue *name;            /* owned MenaiString * — struct type name */
-    int tag;                     /* unique integer tag */
-    int nfields;                 /* number of fields */
-    MenaiHashTable field_ht;     /* name -> index hash table; keys are borrowed from fields[] */
-    MenaiFieldEntry fields[];    /* inline field-index table, nfields entries */
-} MenaiStructType;
-
-typedef struct {
-    MenaiValue_HEAD
-    int nfields;                 /* number of fields */
-    MenaiValue *struct_type;     /* owned reference to MenaiStructType */
-    MenaiValue *items[1];        /* inline field values, nfields entries */
-} MenaiStruct;
-
-/*
- * menai_struct_field_index — look up a field index by name in O(1).
- * name must be a MenaiString *.  Returns the 0-based index, or -1
- * if not found.
- */
-static inline int
-menai_struct_field_index(MenaiStructType *st, MenaiValue *name)
-{
-    Py_hash_t h = menai_string_hash(name);
-    return (int)menai_ht_lookup(&st->field_ht, name, h);
-}
-
-MenaiValue *menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, ssize_t nfields);
-MenaiValue *menai_struct_type_new_from_args(PyObject *args);
-
-static inline void
-menai_struct_type_dealloc(MenaiValue *self)
-{
-    MenaiStructType *s = (MenaiStructType *)self;
-    menai_ht_free(&s->field_ht);
-    menai_xrelease(s->name);
-    int n = s->nfields;
-    for (int i = 0; i < n; i++) {
-        menai_xrelease(s->fields[i].name);
-    }
-
-    menai_free(self);
-}
-
-static inline void
-menai_struct_dealloc(MenaiValue *self)
-{
-    MenaiStruct *s = (MenaiStruct *)self;
-    menai_xrelease(s->struct_type);
-    int n = s->nfields;
-    for (int i = 0; i < n; i++) {
-        menai_xrelease(s->items[i]);
-    }
-
-    menai_free(self);
-}
-
-/*
  * Three-tier integer representation:
  *
  *   is_big == 0: value is stored inline as a C long in the small field.
@@ -652,6 +576,73 @@ menai_integer_dealloc(MenaiValue *self)
         }
     } else {
         menai_bigint_free(&obj->big);
+    }
+
+    menai_free(self);
+}
+
+/*
+ * One entry in the MenaiStructType field-index table.
+ * name is an owned MenaiString *; index is the 0-based field position.
+ */
+typedef struct {
+    MenaiValue *name;
+    int index;
+} MenaiFieldEntry;
+
+typedef struct {
+    MenaiValue_HEAD
+    MenaiValue *name;            /* owned MenaiString * — struct type name */
+    int tag;                     /* unique integer tag */
+    int nfields;                 /* number of fields */
+    MenaiHashTable field_ht;     /* name -> index hash table; keys are borrowed from fields[] */
+    MenaiFieldEntry fields[];    /* inline field-index table, nfields entries */
+} MenaiStructType;
+
+typedef struct {
+    MenaiValue_HEAD
+    int nfields;                 /* number of fields */
+    MenaiValue *struct_type;     /* owned reference to MenaiStructType */
+    MenaiValue *items[1];        /* inline field values, nfields entries */
+} MenaiStruct;
+
+/*
+ * menai_struct_field_index — look up a field index by name in O(1).
+ * name must be a MenaiString *.  Returns the 0-based index, or -1
+ * if not found.
+ */
+static inline int
+menai_struct_field_index(MenaiStructType *st, MenaiValue *name)
+{
+    Py_hash_t h = menai_string_hash(name);
+    return (int)menai_ht_lookup(&st->field_ht, name, h);
+}
+
+MenaiValue *menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, ssize_t nfields);
+MenaiValue *menai_struct_type_new_from_args(PyObject *args);
+
+static inline void
+menai_struct_type_dealloc(MenaiValue *self)
+{
+    MenaiStructType *s = (MenaiStructType *)self;
+    menai_ht_free(&s->field_ht);
+    menai_xrelease(s->name);
+    int n = s->nfields;
+    for (int i = 0; i < n; i++) {
+        menai_xrelease(s->fields[i].name);
+    }
+
+    menai_free(self);
+}
+
+static inline void
+menai_struct_dealloc(MenaiValue *self)
+{
+    MenaiStruct *s = (MenaiStruct *)self;
+    menai_xrelease(s->struct_type);
+    int n = s->nfields;
+    for (int i = 0; i < n; i++) {
+        menai_xrelease(s->items[i]);
     }
 
     menai_free(self);
