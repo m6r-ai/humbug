@@ -53,4 +53,31 @@ menai_struct_field_index(MenaiStructType *st, MenaiValue *name)
 MenaiValue *menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, ssize_t nfields);
 MenaiValue *menai_struct_type_new_from_args(PyObject *args);
 
+static inline void
+menai_struct_type_dealloc(MenaiValue *self)
+{
+    MenaiStructType *s = (MenaiStructType *)self;
+    menai_ht_free(&s->field_ht);
+    menai_xrelease(s->name);
+    int n = s->nfields;
+    for (int i = 0; i < n; i++) {
+        menai_xrelease(s->fields[i].name);
+    }
+
+    menai_free(self);
+}
+
+static inline void
+menai_struct_dealloc(MenaiValue *self)
+{
+    MenaiStruct *s = (MenaiStruct *)self;
+    menai_xrelease(s->struct_type);
+    int n = s->nfields;
+    for (int i = 0; i < n; i++) {
+        menai_xrelease(s->items[i]);
+    }
+
+    menai_free(self);
+}
+
 #endif /* MENAI_VM_STRUCT_H */

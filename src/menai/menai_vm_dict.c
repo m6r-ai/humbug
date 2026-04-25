@@ -21,41 +21,6 @@
 
 #include "menai_vm_dict.h"
 
-/*
- * _dict_free_arrays — release n owned references in keys and values, then
- * free all three arrays.  NULL pointers are safely ignored.
- */
-static void
-_dict_free_arrays(MenaiValue **keys, MenaiValue **values, hash_t *hashes, ssize_t n)
-{
-    if (keys) {
-        for (ssize_t i = 0; i < n; i++) {
-            menai_release(keys[i]);
-        }
-
-        free(keys);
-    }
-
-    if (values) {
-        for (ssize_t i = 0; i < n; i++) {
-            menai_release(values[i]);
-        }
-
-        free(values);
-    }
-
-    free(hashes);
-}
-
-static void
-MenaiDict_dealloc(MenaiValue *self)
-{
-    MenaiDict *d = (MenaiDict *)self;
-    _dict_free_arrays(d->keys, d->values, d->hashes, d->length);
-    menai_ht_free(&d->ht);
-    menai_free(self);
-}
-
 MenaiValue *
 menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, hash_t *hashes, ssize_t n)
 {
@@ -67,7 +32,6 @@ menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, hash_t *has
 
     obj->ob_refcnt = 1;
     obj->ob_type = MENAITYPE_DICT;
-    obj->ob_destructor = MenaiDict_dealloc;
 
     if (menai_ht_build(&obj->ht, keys, hashes, n) < 0) {
         _dict_free_arrays(keys, values, hashes, n);
@@ -93,7 +57,6 @@ menai_dict_new_empty(void)
 
     obj->ob_refcnt = 1;
     obj->ob_type = MENAITYPE_DICT;
-    obj->ob_destructor = MenaiDict_dealloc;
     obj->keys = NULL;
     obj->values = NULL;
     obj->hashes = NULL;

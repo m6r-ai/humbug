@@ -66,4 +66,10 @@ int menai_string_has_prefix(MenaiValue *s, MenaiValue *prefix);
 int menai_string_has_suffix(MenaiValue *s, MenaiValue *suffix);
 MenaiValue *menai_string_replace(MenaiValue *s, MenaiValue *from, MenaiValue *to);
 
+static inline void
+menai_string_dealloc(MenaiValue *self)
+{
+    menai_free(self);
+}
+
 #endif /* MENAI_VM_STRING_H */

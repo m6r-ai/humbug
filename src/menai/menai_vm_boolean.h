@@ -17,4 +17,13 @@ MenaiValue *menai_boolean_true(void);
 MenaiValue *menai_boolean_false(void);
 void menai_vm_boolean_init(void);
 
+static inline void
+menai_boolean_dealloc(MenaiValue *self)
+{
+    /*
+     * Singletons are never freed.
+     */
+    (void)self;
+}
+
 #endif /* MENAI_VM_BOOLEAN_H */

@@ -25,20 +25,6 @@
 
 #include "menai_vm_struct.h"
 
-static void
-MenaiStructType_dealloc(MenaiValue *self)
-{
-    MenaiStructType *s = (MenaiStructType *)self;
-    menai_ht_free(&s->field_ht);
-    menai_xrelease(s->name);
-    int n = s->nfields;
-    for (int i = 0; i < n; i++) {
-        menai_xrelease(s->fields[i].name);
-    }
-
-    menai_free(self);
-}
-
 /*
  * _build_struct_type — shared constructor body for MenaiStructType.
  * name must be a MenaiString * (borrowed).  tag is a C int.
@@ -58,7 +44,6 @@ _build_struct_type(MenaiValue *name, int tag, PyObject *fn_tup)
 
     self->ob_refcnt = 1;
     self->ob_type = MENAITYPE_STRUCTTYPE;
-    self->ob_destructor = MenaiStructType_dealloc;
     menai_retain(name);
     self->field_ht.slots = NULL;
     self->field_ht.slot_count = 0;
@@ -73,7 +58,7 @@ _build_struct_type(MenaiValue *name, int tag, PyObject *fn_tup)
         if (!fname_str) {
             /* Release fields already populated, then the object. */
             self->nfields = (int)i;
-            MenaiStructType_dealloc((MenaiValue *)self);
+            menai_struct_type_dealloc((MenaiValue *)self);
             return NULL;
         }
 
@@ -82,7 +67,7 @@ _build_struct_type(MenaiValue *name, int tag, PyObject *fn_tup)
     }
 
     if (menai_ht_init(&self->field_ht, n) < 0) {
-        MenaiStructType_dealloc((MenaiValue *)self);
+        menai_struct_type_dealloc((MenaiValue *)self);
         return NULL;
     }
 
@@ -120,19 +105,6 @@ menai_struct_type_new_from_args(PyObject *args)
     return result;
 }
 
-static void
-MenaiStruct_dealloc(MenaiValue *self)
-{
-    MenaiStruct *s = (MenaiStruct *)self;
-    menai_xrelease(s->struct_type);
-    int n = s->nfields;
-    for (int i = 0; i < n; i++) {
-        menai_xrelease(s->items[i]);
-    }
-
-    menai_free(self);
-}
-
 MenaiValue *
 menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, ssize_t nfields)
 {
@@ -144,7 +116,6 @@ menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, ssize_t n
 
     self->ob_refcnt = 1;
     self->ob_type = MENAITYPE_STRUCT;
-    self->ob_destructor = MenaiStruct_dealloc;
     self->nfields = (int)nfields;
     menai_retain(struct_type);
     self->struct_type = struct_type;

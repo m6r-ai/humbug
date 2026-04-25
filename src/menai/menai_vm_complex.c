@@ -11,12 +11,6 @@
 
 #include "menai_vm_complex.h"
 
-static void
-MenaiComplex_dealloc(MenaiValue *self)
-{
-    menai_free(self);
-}
-
 MenaiValue *
 menai_complex_alloc(double real, double imag)
 {
@@ -27,7 +21,6 @@ menai_complex_alloc(double real, double imag)
 
     self->ob_refcnt = 1;
     self->ob_type = MENAITYPE_COMPLEX;
-    self->ob_destructor = MenaiComplex_dealloc;
     self->real = real;
     self->imag = imag;
 

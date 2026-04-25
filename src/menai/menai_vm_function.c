@@ -19,19 +19,6 @@
 
 #include "menai_vm_function.h"
 
-static void
-MenaiFunction_dealloc(MenaiValue *self)
-{
-    MenaiFunction *f = (MenaiFunction *)self;
-    menai_code_object_release(f->bytecode);
-    ssize_t ncap = f->ncap;
-    for (ssize_t i = 0; i < ncap; i++) {
-        menai_xrelease(f->captures[i]);
-    }
-
-    menai_free(self);
-}
-
 MenaiValue *
 menai_function_alloc(MenaiCodeObject *co, MenaiValue *none_val)
 {
@@ -44,7 +31,6 @@ menai_function_alloc(MenaiCodeObject *co, MenaiValue *none_val)
 
     self->ob_refcnt = 1;
     self->ob_type = MENAITYPE_FUNCTION;
-    self->ob_destructor = MenaiFunction_dealloc;
     self->ncap = ncap;
     menai_code_object_retain(co);
     self->bytecode = co;

@@ -12,6 +12,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "menai_vm_alloc.h"
 #include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"
 #include "menai_vm_string.h"

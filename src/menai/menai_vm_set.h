@@ -35,4 +35,17 @@ typedef struct {
 MenaiValue *menai_set_alloc(ssize_t cap);
 MenaiValue *menai_set_new_empty(void);
 
+static inline void
+menai_set_dealloc(MenaiValue *self)
+{
+    MenaiSet *s = (MenaiSet *)self;
+    ssize_t n = s->length;
+    for (ssize_t i = 0; i < n; i++) {
+        menai_release(s->elements[i]);
+    }
+
+    menai_ht_free(&s->ht);
+    menai_free(self);
+}
+
 #endif /* MENAI_VM_SET_H */

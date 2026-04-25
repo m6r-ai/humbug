@@ -20,27 +20,6 @@
 
 static MenaiValue *_integer_cache[MENAI_INT_CACHE_SIZE];
 
-static void
-MenaiInteger_dealloc(MenaiValue *self)
-{
-    MenaiInteger *obj = (MenaiInteger *)self;
-    if (!obj->is_big) {
-        long v = obj->small;
-        if (v >= MENAI_INT_CACHE_MIN && v <= MENAI_INT_CACHE_MAX) {
-            /*
-             * Cached singleton — must never be freed.  Restore refcount so
-             * the object remains live.
-             */
-            obj->ob_refcnt = 1;
-            return;
-        }
-    } else {
-        menai_bigint_free(&obj->big);
-    }
-
-    menai_free(self);
-}
-
 MenaiValue *
 menai_integer_from_long(long n)
 {
@@ -57,7 +36,6 @@ menai_integer_from_long(long n)
 
     r->ob_refcnt = 1;
     r->ob_type = MENAITYPE_INTEGER;
-    r->ob_destructor = MenaiInteger_dealloc;
     r->is_big = 0;
     r->small = n;
     menai_bigint_init(&r->big);
@@ -91,7 +69,6 @@ menai_integer_from_bigint(MenaiBigInt src)
 
     r->ob_refcnt = 1;
     r->ob_type = MENAITYPE_INTEGER;
-    r->ob_destructor = MenaiInteger_dealloc;
     r->is_big = 1;
     r->small = 0;
     r->big = src; /* transfer ownership */
@@ -110,7 +87,6 @@ menai_vm_integer_init(void)
 
         obj->ob_refcnt = 1;
     	obj->ob_type = MENAITYPE_INTEGER;
-        obj->ob_destructor = MenaiInteger_dealloc;
         obj->is_big = 0;
         obj->small = v;
         menai_bigint_init(&obj->big);

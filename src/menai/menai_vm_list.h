@@ -51,4 +51,25 @@ menai_list_length(MenaiValue *list_obj)
     return ((MenaiList *)list_obj)->length;
 }
 
+static inline void
+menai_list_dealloc(MenaiValue *self)
+{
+    MenaiList *lst = (MenaiList *)self;
+    if (lst->owner != NULL) {
+        /* View — release the backing list; do not touch the element array. */
+        menai_release(lst->owner);
+        menai_free(lst);
+        return;
+    }
+
+    /* Owner — release all elements then free the combined block. */
+    ssize_t n = lst->length;
+    MenaiValue **arr = lst->elements;
+    for (ssize_t i = 0; i < n; i++) {
+        menai_release(*arr++);
+    }
+
+    menai_free(lst);
+}
+
 #endif /* MENAI_VM_LIST_H */

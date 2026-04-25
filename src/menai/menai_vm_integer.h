@@ -58,4 +58,25 @@ menai_integer_small(MenaiValue *o)
 
 int menai_vm_integer_init(void);
 
+static inline void
+menai_integer_dealloc(MenaiValue *self)
+{
+    MenaiInteger *obj = (MenaiInteger *)self;
+    if (!obj->is_big) {
+        long v = obj->small;
+        if (v >= MENAI_INT_CACHE_MIN && v <= MENAI_INT_CACHE_MAX) {
+            /*
+             * Cached singleton — must never be freed.  Restore refcount so
+             * the object remains live.
+             */
+            obj->ob_refcnt = 1;
+            return;
+        }
+    } else {
+        menai_bigint_free(&obj->big);
+    }
+
+    menai_free(self);
+}
+
 #endif /* MENAI_VM_INTEGER_H */

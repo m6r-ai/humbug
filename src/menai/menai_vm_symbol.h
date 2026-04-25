@@ -14,4 +14,11 @@ typedef struct {
 
 MenaiValue *menai_symbol_alloc(MenaiValue *name);
 
+static inline void
+menai_symbol_dealloc(MenaiValue *self)
+{
+    menai_xrelease(((MenaiSymbol *)self)->name);
+    menai_free(self);
+}
+
 #endif /* MENAI_VM_SYMBOL_H */

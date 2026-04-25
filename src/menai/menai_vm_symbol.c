@@ -14,13 +14,6 @@
 
 #include "menai_vm_symbol.h"
 
-static void
-MenaiSymbol_dealloc(MenaiValue *self)
-{
-    menai_xrelease(((MenaiSymbol *)self)->name);
-    menai_free(self);
-}
-
 MenaiValue *
 menai_symbol_alloc(MenaiValue *name)
 {
@@ -31,7 +24,6 @@ menai_symbol_alloc(MenaiValue *name)
 
     self->ob_refcnt = 1;
     self->ob_type = MENAITYPE_SYMBOL;
-    self->ob_destructor = MenaiSymbol_dealloc;
     menai_retain(name);
     self->name = name;
 

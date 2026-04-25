@@ -20,8 +20,6 @@
 
 #include "menai_vm_string.h"
 
-static void MenaiString_dealloc(MenaiValue *self);
-
 /*
  * Allocate a MenaiString with room for len codepoints.
  * length is set to len; hash is set to -1; data is uninitialised.
@@ -38,17 +36,10 @@ _menai_string_alloc(ssize_t len)
 
     obj->ob_refcnt = 1;
     obj->ob_type = MENAITYPE_STRING;
-    obj->ob_destructor = MenaiString_dealloc;
     obj->length = len;
     obj->hash = -1;
 
     return obj;
-}
-
-static void
-MenaiString_dealloc(MenaiValue *self)
-{
-    menai_free(self);
 }
 
 /*

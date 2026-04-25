@@ -23,19 +23,6 @@
 
 #include "menai_vm_set.h"
 
-static void
-MenaiSet_dealloc(MenaiValue *self)
-{
-    MenaiSet *s = (MenaiSet *)self;
-    ssize_t n = s->length;
-    for (ssize_t i = 0; i < n; i++) {
-        menai_release(s->elements[i]);
-    }
-
-    menai_ht_free(&s->ht);
-    menai_free(self);
-}
-
 MenaiValue *
 menai_set_alloc(ssize_t cap)
 {
@@ -47,7 +34,6 @@ menai_set_alloc(ssize_t cap)
 
     obj->ob_refcnt = 1;
     obj->ob_type = MENAITYPE_SET;
-    obj->ob_destructor = MenaiSet_dealloc;
     obj->elements = (MenaiValue **)obj->inline_data;
     obj->hashes = (hash_t *)(obj->inline_data + cap);
     obj->length = 0;
@@ -68,7 +54,6 @@ menai_set_new_empty(void)
 
     obj->ob_refcnt = 1;
     obj->ob_type = MENAITYPE_SET;
-    obj->ob_destructor = MenaiSet_dealloc;
     obj->elements = NULL;
     obj->hashes = NULL;
     obj->ht.slots = NULL;

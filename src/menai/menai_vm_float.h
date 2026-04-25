@@ -14,4 +14,10 @@ typedef struct {
 
 MenaiValue *menai_float_alloc(double value);
 
+static inline void
+menai_float_dealloc(MenaiValue *self)
+{
+    menai_free(self);
+}
+
 #endif /* MENAI_VM_FLOAT_H */

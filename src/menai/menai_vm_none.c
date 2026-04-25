@@ -13,17 +13,6 @@
 static MenaiNone _none_storage;
 static MenaiValue *_Menai_NONE = NULL;
 
-static void
-MenaiNone_dealloc(MenaiValue *self)
-{
-    /*
-     * The singleton is never freed — its refcount should never reach zero.
-     * ob_destructor points here so menai_release has a valid target, but
-     * this body is intentionally empty.
-     */
-    (void)self;
-}
-
 MenaiValue *
 menai_none_singleton(void)
 {
@@ -35,6 +24,5 @@ menai_vm_none_init(void)
 {
     _none_storage.ob_refcnt = 1;
     _none_storage.ob_type = MENAITYPE_NONE;
-    _none_storage.ob_destructor = MenaiNone_dealloc;
     _Menai_NONE = (MenaiValue *)&_none_storage;
 }

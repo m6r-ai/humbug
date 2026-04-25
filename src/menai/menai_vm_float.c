@@ -8,12 +8,6 @@
 
 #include "menai_vm_float.h"
 
-static void
-MenaiFloat_dealloc(MenaiValue *self)
-{
-    menai_free(self);
-}
-
 MenaiValue *
 menai_float_alloc(double value)
 {
@@ -24,7 +18,6 @@ menai_float_alloc(double value)
 
     self->ob_refcnt = 1;
     self->ob_type = MENAITYPE_FLOAT;
-    self->ob_destructor = MenaiFloat_dealloc;
     self->value = value;
     return (MenaiValue *)self;
 }

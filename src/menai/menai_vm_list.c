@@ -24,27 +24,6 @@
 
 #include "menai_vm_list.h"
 
-static void
-MenaiList_dealloc(MenaiValue *self)
-{
-    MenaiList *lst = (MenaiList *)self;
-    if (lst->owner != NULL) {
-        /* View — release the backing list; do not touch the element array. */
-        menai_release(lst->owner);
-        menai_free(lst);
-        return;
-    }
-
-    /* Owner — release all elements then free the combined block. */
-    ssize_t n = lst->length;
-    MenaiValue **arr = lst->elements;
-    for (ssize_t i = 0; i < n; i++) {
-        menai_release(*arr++);
-    }
-
-    menai_free(lst);
-}
-
 MenaiValue *
 menai_list_alloc(ssize_t n)
 {
@@ -55,7 +34,6 @@ menai_list_alloc(ssize_t n)
 
     obj->ob_refcnt = 1;
     obj->ob_type = MENAITYPE_LIST;
-    obj->ob_destructor = MenaiList_dealloc;
     obj->elements = obj->inline_elements;
     obj->length = n;
     obj->owner = NULL;
@@ -73,7 +51,6 @@ menai_list_new_empty(void)
 
     obj->ob_refcnt = 1;
     obj->ob_type = MENAITYPE_LIST;
-    obj->ob_destructor = MenaiList_dealloc;
     obj->elements = obj->inline_elements;
     obj->length = 0;
     obj->owner = NULL;
@@ -105,7 +82,6 @@ menai_list_rest(MenaiValue *lst_val)
 
     view->ob_refcnt = 1;
     view->ob_type = MENAITYPE_LIST;
-    view->ob_destructor = MenaiList_dealloc;
     menai_retain(owner);
     view->owner = owner;
     view->elements = lst->elements + 1;
@@ -132,7 +108,6 @@ menai_list_slice(MenaiValue *lst_val, ssize_t start, ssize_t end)
 
     view->ob_refcnt = 1;
     view->ob_type = MENAITYPE_LIST;
-    view->ob_destructor = MenaiList_dealloc;
     menai_retain(owner);
     view->owner = owner;
     view->elements = lst->elements + start;

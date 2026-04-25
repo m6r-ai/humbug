@@ -14,4 +14,13 @@ typedef struct {
 MenaiValue *menai_none_singleton(void);
 void menai_vm_none_init(void);
 
+static inline void
+menai_none_dealloc(MenaiValue *self)
+{
+    /*
+     * The singleton is never freed — its refcount should never reach zero.
+     */
+    (void)self;
+}
+
 #endif /* MENAI_VM_NONE_H */

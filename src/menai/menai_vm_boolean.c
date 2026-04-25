@@ -15,16 +15,6 @@ static MenaiBoolean _false_storage;
 static MenaiValue *_Menai_TRUE = NULL;
 static MenaiValue *_Menai_FALSE = NULL;
 
-static void
-MenaiBoolean_dealloc(MenaiValue *self)
-{
-    /*
-     * Singletons are never freed.  ob_destructor points here so
-     * menai_release has a valid target, but this body is intentionally empty.
-     */
-    (void)self;
-}
-
 MenaiValue *
 menai_boolean_true(void)
 {
@@ -42,13 +32,11 @@ menai_vm_boolean_init(void)
 {
     _true_storage.ob_refcnt = 1;
     _true_storage.ob_type = MENAITYPE_BOOLEAN;
-    _true_storage.ob_destructor = MenaiBoolean_dealloc;
     _true_storage.value = 1;
     _Menai_TRUE = (MenaiValue *)&_true_storage;
 
     _false_storage.ob_refcnt = 1;
     _false_storage.ob_type = MENAITYPE_BOOLEAN;
-    _false_storage.ob_destructor = MenaiBoolean_dealloc;
     _false_storage.value = 0;
     _Menai_FALSE = (MenaiValue *)&_false_storage;
 }

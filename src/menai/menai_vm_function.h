@@ -28,4 +28,18 @@ typedef struct {
 
 MenaiValue *menai_function_alloc(MenaiCodeObject *co, MenaiValue *none_val);
 
+static inline void
+menai_function_dealloc(MenaiValue *self)
+{
+    MenaiFunction *f = (MenaiFunction *)self;
+    menai_code_object_release(f->bytecode);
+    ssize_t ncap = f->ncap;
+    for (ssize_t i = 0; i < ncap; i++) {
+        menai_xrelease(f->captures[i]);
+    }
+
+    menai_free(self);
+}
+
+
 #endif /* MENAI_VM_FUNCTION_H */

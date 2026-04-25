@@ -15,4 +15,10 @@ typedef struct {
 
 MenaiValue *menai_complex_alloc(double real, double imag);
 
+static inline void
+menai_complex_dealloc(MenaiValue *self)
+{
+    menai_free(self);
+}
+
 #endif /* MENAI_VM_COMPLEX_H */

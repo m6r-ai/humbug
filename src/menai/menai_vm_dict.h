@@ -29,4 +29,39 @@ MenaiValue *menai_dict_new_empty(void);
 MenaiValue *menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, hash_t *hashes, ssize_t n);
 MenaiValue *menai_dict_new_empty(void);
 
+/*
+ * _dict_free_arrays — release n owned references in keys and values, then
+ * free all three arrays.  NULL pointers are safely ignored.
+ */
+static inline void
+_dict_free_arrays(MenaiValue **keys, MenaiValue **values, hash_t *hashes, ssize_t n)
+{
+    if (keys) {
+        for (ssize_t i = 0; i < n; i++) {
+            menai_release(keys[i]);
+        }
+
+        free(keys);
+    }
+
+    if (values) {
+        for (ssize_t i = 0; i < n; i++) {
+            menai_release(values[i]);
+        }
+
+        free(values);
+    }
+
+    free(hashes);
+}
+
+static inline void
+menai_dict_dealloc(MenaiValue *self)
+{
+    MenaiDict *d = (MenaiDict *)self;
+    _dict_free_arrays(d->keys, d->values, d->hashes, d->length);
+    menai_ht_free(&d->ht);
+    menai_free(self);
+}
+
 #endif /* MENAI_VM_DICT_H */

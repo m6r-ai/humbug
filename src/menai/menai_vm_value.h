@@ -26,19 +26,19 @@ typedef struct MenaiValue_s MenaiValue;
  */
 typedef uint16_t MenaiType;
 
-#define MENAITYPE_NONE 0x8271
-#define MENAITYPE_BOOLEAN 0x9a3f
-#define MENAITYPE_FUNCTION 0x18ab
-#define MENAITYPE_SYMBOL 0xa4c7
-#define MENAITYPE_STRING 0x89b2
-#define MENAITYPE_INTEGER 0x79ae
-#define MENAITYPE_FLOAT 0x87fb
-#define MENAITYPE_COMPLEX 0x362b
-#define MENAITYPE_LIST 0x9aa8
-#define MENAITYPE_DICT 0xd087
-#define MENAITYPE_SET 0x8954
-#define MENAITYPE_STRUCT 0x76dd
-#define MENAITYPE_STRUCTTYPE 0x6acd
+#define MENAITYPE_NONE 0x0001
+#define MENAITYPE_BOOLEAN 0x0002
+#define MENAITYPE_FUNCTION 0x0003
+#define MENAITYPE_SYMBOL 0x0004
+#define MENAITYPE_STRING 0x0005
+#define MENAITYPE_INTEGER 0x0006
+#define MENAITYPE_FLOAT 0x0007
+#define MENAITYPE_COMPLEX 0x0008
+#define MENAITYPE_LIST 0x0009
+#define MENAITYPE_DICT 0x000a
+#define MENAITYPE_SET 0x000b
+#define MENAITYPE_STRUCT 0x000c
+#define MENAITYPE_STRUCTTYPE 0x000d
 
 /*
  * MenaiValue_HEAD — common prefix for every Menai value struct.
@@ -49,15 +49,11 @@ typedef uint16_t MenaiType;
  *                pool allocator, or -1 if it was allocated directly via malloc.
  *                Written by menai_alloc; read by menai_free to determine how
  *                to return the block.
- * ob_destructor — called when ob_refcnt reaches zero.
  */
-typedef void (*menai_destructor)(MenaiValue *);
-
 #define MenaiValue_HEAD              \
     uint32_t ob_refcnt;              \
     MenaiType ob_type;               \
-    int16_t ob_alloc_bucket;         \
-    menai_destructor ob_destructor;
+    int16_t ob_alloc_bucket;
 
 /*
  * MenaiValue — the minimal struct that every MenaiValue pointer can be safely cast to
@@ -67,6 +63,7 @@ struct MenaiValue_s {
 };
 
 const char *menai_short_type_name(MenaiType t);
+void menai_value_dealloc(MenaiValue *v);
 
 /*
  * menai_retain — claim an interest in val.
@@ -74,7 +71,7 @@ const char *menai_short_type_name(MenaiType t);
 static inline void
 menai_retain(MenaiValue *val)
 {
-    assert(val->ob_type != 0);
+//    assert(val->ob_type != 0);
     val->ob_refcnt++;
 }
 
@@ -86,9 +83,9 @@ menai_retain(MenaiValue *val)
 static inline void
 menai_release(MenaiValue *val)
 {
-    assert(val->ob_type != 0);
+//    assert(val->ob_type != 0);
     if (--val->ob_refcnt == 0) {
-        val->ob_destructor(val);
+        menai_value_dealloc(val);
     }
 }
 
