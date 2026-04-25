@@ -2,14 +2,13 @@
 
 import os
 
-from PySide6.QtCore import QEasingCurve, Qt, QVariantAnimation, Signal, QSize
+from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QButtonGroup,
     QHBoxLayout,
     QPushButton,
     QSizePolicy,
-    QSplitter,
     QStackedWidget,
     QToolButton,
     QVBoxLayout,
@@ -32,6 +31,7 @@ class MindspaceView(QWidget):
 
     open_mindspace_requested = Signal()
     file_clicked = Signal(MindspaceViewType, str, bool)
+    toggle_requested = Signal()
     file_deleted = Signal(str)
     file_renamed = Signal(str, str)
     file_moved = Signal(str, str)
@@ -58,11 +58,6 @@ class MindspaceView(QWidget):
         self._content_min_width = 240
         self._view_buttons: dict[MindspaceViewType, QToolButton] = {}
         self._view_widgets: dict[MindspaceViewType, QWidget] = {}
-        self._sidebar_animation = QVariantAnimation(self)
-        self._sidebar_animation.setDuration(160)
-        self._sidebar_animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
-        self._sidebar_animation.valueChanged.connect(self._on_sidebar_animation_value_changed)
-        self._sidebar_animation.finished.connect(self._on_sidebar_animation_finished)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -70,6 +65,7 @@ class MindspaceView(QWidget):
 
         self._rail_widget = QWidget(self)
         self._rail_widget.setObjectName("_rail_widget")
+        self._rail_widget.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         rail_layout = QVBoxLayout(self._rail_widget)
         rail_layout.setContentsMargins(0, 0, 0, 0)
         rail_layout.setSpacing(0)
@@ -111,6 +107,7 @@ class MindspaceView(QWidget):
 
         self._content_widget = QWidget(self)
         self._content_widget.setObjectName("_content_widget")
+        self._content_widget.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding)
         content_layout = QVBoxLayout(self._content_widget)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
@@ -220,76 +217,18 @@ class MindspaceView(QWidget):
 
     def _toggle_sidebar(self) -> None:
         """Toggle the mindspace sidebar between expanded and collapsed states."""
-        self._set_sidebar_collapsed(not self._sidebar_collapsed, animated=True)
+        self.toggle_requested.emit()
 
-    def _set_sidebar_collapsed(self, collapsed: bool, animated: bool) -> None:
-        """Collapse or expand the sidebar."""
-        if self._sidebar_collapsed == collapsed and not self._sidebar_animation.state():
-            return
-
-        current_width = max(self.width(), self._rail_collapsed_width + 1)
-        expanded_width = max(self._expanded_sidebar_width, self._rail_collapsed_width + self._content_min_width)
-        target_width = self._rail_collapsed_width if collapsed else expanded_width
-
-        if collapsed:
-            self._expanded_sidebar_width = max(current_width, expanded_width)
-            self._content_widget.setMinimumWidth(0)
-
+    def set_collapsed(self, collapsed: bool) -> None:
+        """Set the collapsed state, called by the splitter after it has moved."""
         self._sidebar_collapsed = collapsed
         self._update_button_styling()
         self.apply_style()
 
-        if animated:
-            self._sidebar_animation.stop()
-            self._sidebar_animation.setStartValue(current_width)
-            self._sidebar_animation.setEndValue(target_width)
-            self._sidebar_animation.start()
-        else:
-            self._apply_sidebar_width(target_width)
-            self._on_sidebar_animation_finished()
-
-    def _on_sidebar_animation_value_changed(self, value: object) -> None:
-        """Apply animated sidebar width changes."""
-        width = int(value)
-        self._content_widget.setMaximumWidth(max(0, width - self._rail_collapsed_width))
-        if not self._sidebar_collapsed and not self._content_widget.isVisible():
-            self._content_widget.show()
-        self._apply_sidebar_width(width)
-
-    def _on_sidebar_animation_finished(self) -> None:
-        """Finalize sidebar state after animation."""
-        if self._sidebar_collapsed:
-            self._content_widget.hide()
-            self.setFixedWidth(self._rail_collapsed_width)
-        else:
-            self._content_widget.setMaximumWidth(16777215)
-            self._content_widget.setMinimumWidth(self._content_min_width)
-            self.setMinimumWidth(self._rail_collapsed_width + self._content_min_width)
-            self.setMaximumWidth(16777215)
-
-    def _apply_sidebar_width(self, width: int) -> None:
-        """Apply a sidebar width and redistribute splitter space if needed."""
-        width = max(self._rail_collapsed_width, width)
-        self.setMinimumWidth(width)
-        self.setMaximumWidth(width)
-        self.resize(width, self.height())
-
-        parent = self.parentWidget()
-        if isinstance(parent, QSplitter):
-            index = parent.indexOf(self)
-            if index >= 0:
-                sizes = parent.sizes()
-                if index < len(sizes):
-                    delta = width - sizes[index]
-                    sizes[index] = width
-                    for i in range(len(sizes) - 1, -1, -1):
-                        if i == index:
-                            continue
-
-                        sizes[i] = max(1, sizes[i] - delta)
-                        break
-
-                    parent.setSizes(sizes)
+    @property
+    def rail_width(self) -> int:
+        """Return the fixed width of the icon rail."""
+        return self._rail_collapsed_width
 
     def _on_vcs_repo_available(self, has_repo: bool) -> None:
         """Show or hide the VCS rail button when repository state changes."""
@@ -298,7 +237,6 @@ class MindspaceView(QWidget):
 
         if not has_repo and self._active_view_type == MindspaceViewType.VCS:
             self._set_active_view(MindspaceViewType.CONVERSATIONS)
-
         else:
             self._update_button_styling()
 
@@ -447,11 +385,12 @@ class MindspaceView(QWidget):
         indicator_side = "border-left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "border-right"
 
         self._rail_widget.setFixedWidth(rail_width)
+        self.setMinimumWidth(rail_width)
         self._sidebar_toggle_button.setFixedHeight(toggle_button_height)
         for button in self._view_buttons.values():
             button.setFixedHeight(rail_button_height)
+
         self._settings_button.setFixedHeight(rail_button_height)
-        self._content_widget.setMinimumWidth(0)
 
         self.setStyleSheet(f"""
             {self._style_manager.get_menu_stylesheet()}
