@@ -428,7 +428,7 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
 
-        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
 
     def path_for_index(self, index: QModelIndex | QPersistentModelIndex) -> str | None:
         """

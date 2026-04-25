@@ -281,7 +281,17 @@ class MindspaceConversationsView(QWidget):
             strings = self._language_manager.strings()
             is_folder = os.path.isdir(source_path)
             title = strings.move_folder_title if is_folder else strings.move_file_title
+
+            # For conversation files, compute the DAG scope
+            included: set = {source_path}
+            excluded: set = set()
+            if not is_folder and source_path.lower().endswith('.conv'):
+                included, excluded = self._conversations_index.compute_operation_scope({source_path})
+
+            scope_detail = self._build_scope_detail(included, excluded, source_path)
             message = self._create_move_confirmation_message(item_name, source_path, destination_path)
+            if scope_detail:
+                message += scope_detail
 
             result = MessageBox.show_message(
                 self,
@@ -295,7 +305,7 @@ class MindspaceConversationsView(QWidget):
                 return
 
             # Perform the move operation
-            self._perform_move_operation(source_path, destination_path)
+            self._perform_move_operation(source_path, destination_path, included)
 
         except Exception as e:
             self._logger.error("Error handling file drop from '%s' to '%s': %s", source_path, target_path, str(e))
@@ -307,13 +317,20 @@ class MindspaceConversationsView(QWidget):
                 strings.move_error_failed.format(str(e))
             )
 
-    def _perform_move_operation(self, source_path: str, destination_path: str) -> None:
+    def _perform_move_operation(
+        self,
+        source_path: str,
+        destination_path: str,
+        included: set | None = None
+    ) -> None:
         """
         Perform the actual file/folder move operation.
 
         Args:
             source_path: Source path of the item to move
             destination_path: Destination path where the item will be moved
+            included: Set of additional paths (DAG children) to move to the
+                same target directory.  If None, only source_path is moved.
 
         Raises:
             OSError: If the move operation fails
@@ -327,9 +344,66 @@ class MindspaceConversationsView(QWidget):
 
             self._logger.info("Successfully moved '%s' to '%s'", source_path, destination_path)
 
+            # Move any exclusively-owned children to the same target directory
+            if included:
+                target_dir = os.path.dirname(destination_path)
+                for child_path in included:
+                    if os.path.normpath(child_path) == os.path.normpath(source_path):
+                        continue
+
+                    child_dest = os.path.join(target_dir, os.path.basename(child_path))
+                    self.file_moved.emit(child_path, child_dest)
+                    shutil.move(child_path, child_dest)
+                    self._logger.info("Successfully moved '%s' to '%s'", child_path, child_dest)
+
         except OSError as e:
             self._logger.error("Failed to move '%s' to '%s': %s", source_path, destination_path, str(e))
             raise
+
+    def _display_name(self, path: str) -> str:
+        """
+        Get a human-readable display name for a conversation file.
+
+        Args:
+            path: Absolute path to the conversation file.
+
+        Returns:
+            Display name with .conv extension and dAI- prefix removed.
+        """
+        name = os.path.basename(path)
+        if name.lower().endswith('.conv'):
+            name = name[:-5]
+
+        if name.startswith('dAI-'):
+            name = name[4:]
+
+        return name
+
+    def _build_scope_detail(self, included: set, excluded: set, original: str) -> str:
+        """
+        Build a detail string describing the operation scope.
+
+        Args:
+            included: Paths that will be included in the operation.
+            excluded: Paths that will be left behind.
+            original: The directly selected path.
+
+        Returns:
+            Detail string for the confirmation dialog, or empty string if no children.
+        """
+        children = sorted(included - {os.path.normpath(original)})
+        lines = []
+        if children:
+            lines.append("\n\nRelated conversations that will also be affected:")
+            for p in children:
+                lines.append(f"  \u2022 {self._display_name(p)}")
+
+        if excluded:
+            lines.append("\n\nThe following will be left in place (referenced by other conversations):")
+            for p in sorted(excluded):
+                lines.append(f"  \u2022 {self._display_name(p)}")
+
+        return "".join(lines)
 
     def _on_delegate_edit_finished(self, index: QModelIndex, new_name: str) -> None:
         """
@@ -872,42 +946,51 @@ class MindspaceConversationsView(QWidget):
         Args:
             path: Path to the file to delete
         """
+        # Compute which related conversations will also be deleted
+        included, excluded = self._conversations_index.compute_operation_scope({path})
+
         # Show confirmation dialog using MessageBox
         strings = self._language_manager.strings()
+        detail = self._build_scope_detail(included, excluded, path)
+        message = (
+            strings.confirm_delete_item_message.format(self._display_name(path))
+            + "\n\n" + strings.delete_warning_detail
+            + detail
+        )
         result = MessageBox.show_message(
             self,
             MessageBoxType.WARNING,
             strings.confirm_delete_title,
-            strings.confirm_delete_item_message.format(os.path.basename(path)) + "\n\n" + strings.delete_warning_detail,
+            message,
             [MessageBoxButton.YES, MessageBoxButton.NO],
             True
         )
 
         if result == MessageBoxButton.YES:
-            try:
-                # First emit signal so tabs can be closed
-                self.file_deleted.emit(path)
+            # Delete all included files — deepest paths first to avoid
+            # trying to delete a parent before its children are gone
+            for file_path in sorted(included, key=lambda p: len(p), reverse=True):
+                try:
+                    self.file_deleted.emit(file_path)
+                    os.remove(file_path)
+                    self._mindspace_manager.add_interaction(
+                        MindspaceLogLevel.INFO,
+                        f"User deleted file '{file_path}'"
+                    )
 
-                # Then delete the file
-                os.remove(path)
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"User deleted file '{path}'"
-                )
+                except FileNotFoundError:
+                    # This can happen if the file gets auto-deleted before we get to it - ignore!
+                    pass
 
-            except FileNotFoundError:
-                # This can happen if the file gets auto-deleted before we get to it - ignore!
-                pass
-
-            except OSError as e:
-                self._logger.error("Failed to delete file '%s': %s", path, str(e))
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    strings.file_error_title,
-                    strings.error_deleting_file.format(str(e)),
-                    [MessageBoxButton.OK]
-                )
+                except OSError as e:
+                    self._logger.error("Failed to delete file '%s': %s", file_path, str(e))
+                    MessageBox.show_message(
+                        self,
+                        MessageBoxType.CRITICAL,
+                        strings.file_error_title,
+                        strings.error_deleting_file.format(str(e)),
+                        [MessageBoxButton.OK]
+                    )
 
     def _handle_delete_folder(self, path: str) -> None:
         """Handle request to delete a folder.

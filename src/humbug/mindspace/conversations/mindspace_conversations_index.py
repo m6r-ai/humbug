@@ -184,6 +184,60 @@ class MindspaceConversationsIndex(QObject):
             if not self.get_parent_paths(path)
         ]
 
+    def compute_operation_scope(self, paths: Set[str]) -> tuple[Set[str], Set[str]]:
+        """
+        Compute which conversations can safely be moved or deleted as part of an operation.
+
+        Given a set of root paths being operated on, walks the DAG to find all
+        descendants.  A descendant is included in the operation if every one of
+        its parents is also included.  A descendant is excluded (left behind) if
+        any of its parents falls outside the included set — typically because it
+        is a shared child referenced by a conversation not being operated on.
+
+        Args:
+            paths: Absolute paths of the conversations being directly operated on.
+
+        Returns:
+            Tuple of (included, excluded) where:
+            - included: paths that will be moved/deleted, including the originals
+              and any exclusively-owned descendants.
+            - excluded: descendant paths that must be left behind because they
+              are shared with conversations outside the operation scope.
+        """
+        included: Set[str] = set()
+        excluded: Set[str] = set()
+
+        # Normalise the seed paths
+        queue: List[str] = [os.path.normpath(p) for p in paths]
+        for p in queue:
+            included.add(p)
+
+        # BFS over descendants
+        visited: Set[str] = set(included)
+        while queue:
+            current = queue.pop(0)
+            for child in self.get_children(current):
+                child = os.path.normpath(child)
+                if child in visited:
+                    continue
+
+                visited.add(child)
+
+                # Check whether all parents of this child are within included
+                parent_paths = self.get_parent_paths(child)
+                all_parents_included = all(
+                    os.path.normpath(p) in included for p in parent_paths
+                )
+
+                if all_parents_included:
+                    included.add(child)
+                    queue.append(child)
+
+                else:
+                    excluded.add(child)
+
+        return included, excluded
+
     def _clear(self) -> None:
         """Clear all index state."""
         self._nodes.clear()
@@ -234,7 +288,7 @@ class MindspaceConversationsIndex(QObject):
 
         self._recompute_fork_edges()
 
-    def _reconcile_watched_dirs(self, current_dirs: Set[str]) -> None:
+    def _reconcile_watched_dirs(self, current_dirs: Set[str]) -> bool:
         """
         Reconcile the set of watched directories against the current filesystem state.
 
@@ -243,12 +297,23 @@ class MindspaceConversationsIndex(QObject):
 
         Args:
             current_dirs: Set of normalised directory paths currently on disk.
-        """
-        for new_dir in current_dirs - self._watched_dirs:
-            self._watch_dir(new_dir)
 
-        for gone_dir in self._watched_dirs - current_dirs:
+        Returns:
+            True if the set of watched directories changed, False otherwise.
+        """
+        dirs_changed = False
+        new_dirs = current_dirs - self._watched_dirs
+        gone_dirs = self._watched_dirs - current_dirs
+
+        for new_dir in new_dirs:
+            self._watch_dir(new_dir)
+            dirs_changed = True
+
+        for gone_dir in gone_dirs:
             self._unwatch_dir(gone_dir)
+            dirs_changed = True
+
+        return dirs_changed
 
     def _on_directory_changed(self, _path: str) -> None:
         """
@@ -278,14 +343,14 @@ class MindspaceConversationsIndex(QObject):
 
         # Reconcile watched directories before processing file changes so that
         # newly added subdirectories are watched immediately.
-        self._reconcile_watched_dirs(current_dirs)
+        dirs_changed = self._reconcile_watched_dirs(current_dirs)
 
         indexed_paths = set(self._nodes.keys())
         added = current_paths - indexed_paths
         removed = indexed_paths - current_paths
         possibly_modified = current_paths & indexed_paths
 
-        changed = bool(added or removed)
+        changed = bool(added or removed or dirs_changed)
 
         for path in removed:
             self._remove_file(path)
