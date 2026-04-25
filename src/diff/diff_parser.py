@@ -6,6 +6,19 @@ from typing import List
 from diff.diff_exceptions import DiffParseError
 from diff.diff_types import DiffLine, DiffHunk
 
+# Unicode characters that visually resemble dash prefix characters and are
+# commonly substituted by LLMs when generating diffs.
+_DASH_LOOKALIKES = frozenset([
+    '\u2012',  # figure dash
+    '\u2013',  # en dash
+    '\u2014',  # em dash
+    '\u2015',  # horizontal bar
+    '\u2212',  # minus sign
+    '\ufe58',  # small em dash
+    '\ufe63',  # small hyphen-minus
+    '\uff0d',  # fullwidth hyphen-minus
+])
+
 
 class DiffParser:
     """Parser for unified diff format."""
@@ -107,10 +120,22 @@ class DiffParser:
             if line.startswith('@@'):
                 break
 
-            # Skip empty lines at the end
+            # Stop at next file header (--- or +++)
+            if line.startswith('---') or line.startswith('+++'):
+                break
+
+            # Skip empty lines
             if not line:
                 i += 1
                 continue
+
+            # Reject lookalike dash characters used as a deletion prefix
+            if line[0] in _DASH_LOOKALIKES:
+                raise DiffParseError(
+                    f"Invalid diff prefix character U+{ord(line[0]):04X} "
+                    f"resembles a dash but is not ASCII '-'. "
+                    f"Use '-' for deletions, '+' for additions, ' ' for context."
+                )
 
             # Parse diff line
             if line.startswith(' '):

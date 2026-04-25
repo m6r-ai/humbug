@@ -3,7 +3,7 @@
 import logging
 from typing import List
 
-from diff import DiffApplier, DiffApplicationResult, DiffHunk, DiffMatcher
+from diff import DiffApplier, DiffApplicationError, DiffApplicationResult, DiffHunk, DiffMatcher
 
 
 class FilesystemDiffMatcher(DiffMatcher):
@@ -104,8 +104,11 @@ class FilesystemDiffApplier(DiffApplier):
 
             elif line.type == '-':
                 # Deletion - remove this line
-                if current_line < len(document):
-                    del document[current_line]
+                if current_line >= len(document):
+                    raise DiffApplicationError(
+                        f"Cannot delete line {current_line + 1}: document only has {len(document)} lines"
+                    )
+                del document[current_line]
                 # Don't increment current_line (next line moved into this position)
 
             elif line.type == '+':

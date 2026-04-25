@@ -694,3 +694,113 @@ line 4"""
         assert result.success is True
         assert result.location == 2
         assert result.confidence == 1.0
+
+
+class TestDiffMatcherOutOfRange:
+    """Test the full-file exact search and out_of_range_location reporting."""
+
+    def test_out_of_range_location_populated_when_match_outside_window(self, simple_matcher_custom):
+        """Test that out_of_range_location is set when an exact match exists
+        outside the search window."""
+        matcher = simple_matcher_custom(search_window=2)
+
+        document = ["line " + str(i) for i in range(1, 20)]
+        document[14] = "unique target line"  # At line 15, well outside window around line 1
+
+        hunk = DiffHunk(
+            old_start=1,
+            old_count=1,
+            new_start=1,
+            new_count=1,
+            lines=[
+                DiffLine('-', 'unique target line'),
+                DiffLine('+', 'replacement')
+            ]
+        )
+
+        result = matcher.find_match(hunk, document)
+
+        assert result.success is False
+        assert result.out_of_range_location == 15
+
+    def test_out_of_range_location_none_when_no_match_anywhere(self, simple_matcher_custom):
+        """Test that out_of_range_location is None when content does not exist
+        anywhere in the document."""
+        matcher = simple_matcher_custom(search_window=2)
+
+        document = ["line 1", "line 2", "line 3"]
+
+        hunk = DiffHunk(
+            old_start=1,
+            old_count=1,
+            new_start=1,
+            new_count=1,
+            lines=[
+                DiffLine('-', 'completely absent line'),
+                DiffLine('+', 'replacement')
+            ]
+        )
+
+        result = matcher.find_match(hunk, document)
+
+        assert result.success is False
+        assert result.out_of_range_location is None
+
+    def test_bare_at_at_hunk_matches_via_full_file_search(self, simple_matcher):
+        """Test that a bare @@ hunk (old_count=0, new_count=0 sentinel) succeeds
+        by finding the content anywhere in the file."""
+        document = ["line 1", "line 2", "target content", "line 4"]
+
+        hunk = DiffHunk(
+            old_start=1,
+            old_count=0,   # sentinel: location unknown
+            new_start=1,
+            new_count=0,
+            lines=[
+                DiffLine('-', 'target content'),
+                DiffLine('+', 'replacement')
+            ]
+        )
+
+        result = simple_matcher.find_match(hunk, document)
+
+        assert result.success is True
+        assert result.location == 3
+        assert result.confidence == 1.0
+
+
+class TestDiffMatcherDefaultLineCount:
+    """Test the base DiffMatcher._get_document_line_count default implementation."""
+
+    def test_default_line_count_via_get_document_lines(self):
+        """Test that the default _get_document_line_count works correctly by
+        using a matcher subclass that does not override it."""
+        from diff.diff_matcher import DiffMatcher
+        from typing import Any, List
+
+        class MinimalMatcher(DiffMatcher):
+            """Matcher that relies entirely on the base _get_document_line_count."""
+
+            def _get_document_lines(self, document: Any, start_line: int, count: int) -> List[str]:
+                lines = document
+                start = start_line - 1
+                return lines[start:start + count]
+
+        matcher = MinimalMatcher()
+        document = ["a", "b", "c", "d", "e"]
+
+        hunk = DiffHunk(
+            old_start=3,
+            old_count=1,
+            new_start=3,
+            new_count=1,
+            lines=[
+                DiffLine('-', 'c'),
+                DiffLine('+', 'C')
+            ]
+        )
+
+        result = matcher.find_match(hunk, document)
+
+        assert result.success is True
+        assert result.location == 3

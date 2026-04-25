@@ -561,3 +561,87 @@ class TestDiffModulePublicAPI:
         result = simple_matcher.find_match(hunk, document)
         assert result.success is True
         assert result.location == 2
+
+
+class TestDiffOutOfRangeErrorDetails:
+    """Test that out_of_range_location is surfaced in DiffMatchError details."""
+
+    def test_match_error_reports_out_of_range_location(self, simple_applier_custom, helpers):
+        """Test that when content exists in the file but outside the search window,
+        the DiffMatchError includes exact_match_out_of_range and an actionable
+        suggestion."""
+        from diff.diff_exceptions import DiffMatchError
+
+        applier = simple_applier_custom(search_window=2)
+
+        document = helpers.create_simple_document(
+            ["line " + str(i) for i in range(1, 20)]
+        )
+        document[14] = "unique target line"  # At line 15
+
+        # Diff claims the target is at line 1, which is outside the window around 15
+        diff_text = """@@ -1,1 +1,1 @@
+-unique target line
++replacement
+"""
+
+        with pytest.raises(DiffMatchError) as exc_info:
+            applier.apply_diff(diff_text, document)
+
+        error = exc_info.value
+        assert 'exact_match_out_of_range' in error.error_details
+        assert error.error_details['exact_match_out_of_range'] == 15
+        assert 'stale' in error.error_details['suggestion'].lower()
+
+    def test_match_error_has_no_out_of_range_when_content_absent(self, simple_applier, helpers):
+        """Test that when content does not exist anywhere, out_of_range is absent
+        from the error details and the suggestion is the generic one."""
+        from diff.diff_exceptions import DiffMatchError
+
+        document = helpers.create_simple_document(["line 1", "line 2", "line 3"])
+
+        diff_text = """@@ -2,1 +2,1 @@
+-completely absent content
++replacement
+"""
+
+        with pytest.raises(DiffMatchError) as exc_info:
+            simple_applier.apply_diff(diff_text, document)
+
+        error = exc_info.value
+        assert 'exact_match_out_of_range' not in error.error_details
+        assert 'regenerating' in error.error_details['suggestion'].lower()
+
+
+class TestDiffMultiFileHeaders:
+    """Test that multi-file diff headers are handled correctly by the applier."""
+
+    def test_apply_ignores_second_file_header_between_hunks(self, simple_applier, helpers):
+        """Test that --- / +++ headers interspersed between hunks are skipped
+        and both hunks are still applied correctly."""
+        document = helpers.create_simple_document([
+            "line 1",
+            "old 1",
+            "line 3",
+            "line 4",
+            "old 2",
+            "line 6"
+        ])
+
+        diff_text = """--- a/file.txt
++++ b/file.txt
+@@ -2,1 +2,1 @@
+-old 1
++new 1
+--- a/file.txt
++++ b/file.txt
+@@ -5,1 +5,1 @@
+-old 2
++new 2
+"""
+
+        result = simple_applier.apply_diff(diff_text, document)
+
+        assert result.success is True
+        assert result.hunks_applied == 2
+        assert document == ["line 1", "new 1", "line 3", "line 4", "new 2", "line 6"]

@@ -522,3 +522,65 @@ class TestDiffParserIntegration:
         assert len(hunks2) == 1
         assert hunks1[0].lines[0].content == 'old1'
         assert hunks2[0].lines[0].content == 'old2'
+
+
+class TestDiffParserUnicodePrefixEdgeCases:
+    """Test parser behaviour when diff prefix characters are look-alike Unicode."""
+
+    def test_em_dash_as_deletion_prefix_raises_parse_error(self):
+        """Test that an em-dash used instead of '-' as a deletion prefix raises
+        DiffParseError with a clear message."""
+        parser = DiffParser()
+        diff_text = "@@ -1,2 +1,1 @@\n\u2014old line\n+new line\n"
+
+        with pytest.raises(DiffParseError, match="U\\+2014"):
+            parser.parse(diff_text)
+
+    def test_other_dash_lookalikes_raise_parse_error(self):
+        """Test that other common lookalike dash characters also raise DiffParseError."""
+        parser = DiffParser()
+        lookalikes = [
+            '\u2012',  # figure dash
+            '\u2013',  # en dash
+            '\u2015',  # horizontal bar
+            '\u2212',  # minus sign
+            '\uff0d',  # fullwidth hyphen-minus
+        ]
+        for char in lookalikes:
+            diff_text = f"@@ -1,1 +1,1 @@\n{char}old line\n+new line\n"
+            with pytest.raises(DiffParseError, match=f"U\\+{ord(char):04X}"):
+                parser.parse(diff_text)
+
+    def test_source_line_starting_with_em_dash_round_trips(self):
+        """Test that a source line whose content genuinely begins with an em-dash
+        is preserved correctly when the diff prefix is a proper space or minus."""
+        parser = DiffParser()
+        diff_text = "@@ -1,2 +1,2 @@\n \u2014section title\n-\u2014old subtitle\n+\u2014new subtitle\n"
+
+        hunks = parser.parse(diff_text)
+
+        assert len(hunks) == 1
+        assert hunks[0].lines[0].type == ' '
+        assert hunks[0].lines[0].content == '\u2014section title'
+        assert hunks[0].lines[1].type == '-'
+        assert hunks[0].lines[1].content == '\u2014old subtitle'
+        assert hunks[0].lines[2].type == '+'
+        assert hunks[0].lines[2].content == '\u2014new subtitle'
+
+    def test_space_only_context_line_is_parsed_correctly(self):
+        """Test that a line consisting of a single space (a context line with empty
+        content) is parsed correctly. The `if not line` guard only fires for truly
+        empty strings, not for a string containing a space."""
+        parser = DiffParser()
+        # The middle line is a single space: one space prefix + zero content chars.
+        # `if not line` is False for ' ', so it reaches the startswith(' ') branch.
+        diff_text = "@@ -1,3 +1,3 @@\n line 1\n \n line 3\n"
+
+        hunks = parser.parse(diff_text)
+
+        assert len(hunks) == 1
+        assert len(hunks[0].lines) == 3
+        assert hunks[0].lines[0].content == 'line 1'
+        assert hunks[0].lines[1].type == ' '
+        assert hunks[0].lines[1].content == ''
+        assert hunks[0].lines[2].content == 'line 3'
