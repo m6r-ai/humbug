@@ -40,6 +40,7 @@ class MainWindowSplitter(QSplitter):
         self._animation.valueChanged.connect(self._on_animation_value_changed)
         self._animation.finished.connect(self._on_animation_finished)
         self._animating = False
+        self.splitterMoved.connect(self._on_splitter_moved)
 
     def createHandle(self) -> QSplitterHandle:
         """Create a custom handle that paints itself without stylesheets."""
@@ -79,45 +80,28 @@ class MainWindowSplitter(QSplitter):
 
     def _on_animation_value_changed(self, value: object) -> None:
         """Move the splitter to the animated position."""
-        self.moveSplitter(int(value), 1)
+        super().moveSplitter(int(value), 1)
 
     def _on_animation_finished(self) -> None:
         """Clean up after animation completes."""
         self._animating = False
 
-    def moveSplitter(self, pos: int, index: int) -> None:
-        """Handle splitter drags, auto-collapsing and expanding the mindspace view."""
+    def _on_splitter_moved(self, pos: int, index: int) -> None:
+        """Update the mindspace collapsed state to reflect where the splitter ended up."""
         from humbug.mindspace.mindspace_view import MindspaceView
 
-        if index != 1 or self.count() == 0:
-            super().moveSplitter(pos, index)
+        if self._animating or index != 1 or self.count() == 0:
             return
 
         widget = self.widget(0)
         if not isinstance(widget, MindspaceView):
-            super().moveSplitter(pos, index)
             return
 
         rail_width = widget.rail_width
-        collapse_threshold = rail_width * 3
+        is_collapsed = pos <= rail_width
 
-        if self._animating:
-            super().moveSplitter(pos, index)
-            return
-
-        if widget._sidebar_collapsed:
-            if pos > collapse_threshold:
+        if is_collapsed != widget._sidebar_collapsed:
+            if not is_collapsed:
                 widget._expanded_sidebar_width = pos
-                widget.set_collapsed(False)
-                super().moveSplitter(pos, index)
 
-            # else: below threshold while collapsed — splitter minimum enforces rail_width
-
-       else:
-            if pos <= collapse_threshold:
-                widget._expanded_sidebar_width = self.sizes()[0]
-                widget.set_collapsed(True)
-                super().moveSplitter(rail_width, index)
-
-            else:
-                super().moveSplitter(pos, index)
+            widget.set_collapsed(is_collapsed)
