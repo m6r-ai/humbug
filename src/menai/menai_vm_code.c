@@ -8,19 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-
-#include "menai_vm_value.h"
-#include "menai_vm_hashtable.h"
-
-#include "menai_vm_code.h"
-
-/*
- * Forward declaration — menai_convert_value lives in menai_vm_bridge.c and is
- * linked into the same shared library.
- */
-extern MenaiValue *menai_convert_value(PyObject *src);
+#include "menai_vm_c.h"
 
 void
 menai_code_object_release(MenaiCodeObject *co)

@@ -9,15 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-
-#include "menai_vm_alloc.h"
-#include "menai_vm_value.h"
-#include "menai_vm_hashtable.h"
-#include "menai_vm_string.h"
-
-#include "menai_vm_format.h"
+#include "menai_vm_c.h"
 
 /*
  * shortest_double — write the shortest round-trip decimal representation of

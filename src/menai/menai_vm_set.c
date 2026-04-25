@@ -14,14 +14,8 @@
  */
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 
-#include "menai_vm_alloc.h"
-#include "menai_vm_value.h"
-#include "menai_vm_hashtable.h"
-#include "menai_vm_memory.h"
-
-#include "menai_vm_set.h"
+#include "menai_vm_c.h"
 
 MenaiValue *
 menai_set_alloc(ssize_t cap)

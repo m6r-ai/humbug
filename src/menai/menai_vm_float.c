@@ -3,10 +3,7 @@
  */
 #include <stdlib.h>
 
-#include "menai_vm_alloc.h"
-#include "menai_vm_value.h"
-
-#include "menai_vm_float.h"
+#include "menai_vm_c.h"
 
 MenaiValue *
 menai_float_alloc(double value)

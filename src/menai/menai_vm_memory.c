@@ -6,9 +6,7 @@
  */
 #include <stdlib.h>
 
-#include "menai_vm_value.h"
-
-#include "menai_vm_memory.h"
+#include "menai_vm_c.h"
 
 MenaiValue **
 menai_regs_alloc(size_t n, MenaiValue *none_val)

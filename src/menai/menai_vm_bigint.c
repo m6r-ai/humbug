@@ -6,9 +6,6 @@
  *
  * Only menai_bigint_from_pylong and menai_bigint_to_pylong may call the Python C API.
  */
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -16,9 +13,7 @@
 #include <math.h>
 #include <limits.h>
 
-#include "menai_vm_value.h"
-
-#include "menai_vm_bigint.h"
+#include "menai_vm_c.h"
 
 /* Internal forward declarations. */
 static int _menai_bigint_cmp_mag(const MenaiBigInt *a, const MenaiBigInt *b);

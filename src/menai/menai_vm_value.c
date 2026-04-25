@@ -4,26 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-
-#include "menai_vm_value.h"
-#include "menai_vm_hashtable.h"
-#include "menai_vm_code.h"
-#include "menai_vm_bigint.h"
-#include "menai_vm_alloc.h"
-#include "menai_vm_none.h"
-#include "menai_vm_boolean.h"
-#include "menai_vm_float.h"
-#include "menai_vm_complex.h"
-#include "menai_vm_function.h"
-#include "menai_vm_string.h"
-#include "menai_vm_symbol.h"
-#include "menai_vm_struct.h"
-#include "menai_vm_integer.h"
-#include "menai_vm_dict.h"
-#include "menai_vm_list.h"
-#include "menai_vm_set.h"
+#include "menai_vm_c.h"
 
 /*
  * menai_short_type_name — return the short lowercase Menai type name for

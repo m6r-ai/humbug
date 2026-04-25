@@ -9,14 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-
-#include "menai_vm_alloc.h"
-#include "menai_vm_value.h"
-#include "menai_vm_bigint.h"
-
-#include "menai_vm_integer.h"
+#include "menai_vm_c.h"
 
 static MenaiValue *_integer_cache[MENAI_INT_CACHE_SIZE];
 

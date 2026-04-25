@@ -6,9 +6,7 @@
  */
 #include <stdlib.h>
 
-#include "menai_vm_value.h"
-
-#include "menai_vm_none.h"
+#include "menai_vm_c.h"
 
 static MenaiNone _none_storage;
 static MenaiValue *_Menai_NONE = NULL;

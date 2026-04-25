@@ -12,14 +12,8 @@
  */
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 
-#include "menai_vm_alloc.h"
-#include "menai_vm_value.h"
-#include "menai_vm_hashtable.h"
-#include "menai_vm_memory.h"
-
-#include "menai_vm_dict.h"
+#include "menai_vm_c.h"
 
 MenaiValue *
 menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, hash_t *hashes, ssize_t n)

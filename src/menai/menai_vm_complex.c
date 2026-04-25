@@ -3,13 +3,7 @@
  */
 #include <stdlib.h>
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-
-#include "menai_vm_alloc.h"
-#include "menai_vm_value.h"
-
-#include "menai_vm_complex.h"
+#include "menai_vm_c.h"
 
 MenaiValue *
 menai_complex_alloc(double real, double imag)

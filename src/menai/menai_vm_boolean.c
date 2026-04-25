@@ -6,9 +6,7 @@
  */
 #include <stdlib.h>
 
-#include "menai_vm_value.h"
-
-#include "menai_vm_boolean.h"
+#include "menai_vm_c.h"
 
 static MenaiBoolean _true_storage;
 static MenaiBoolean _false_storage;

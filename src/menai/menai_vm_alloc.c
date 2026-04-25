@@ -14,9 +14,7 @@
 #include <stddef.h>
 #include <assert.h>
 
-#include "menai_vm_value.h"
-
-#include "menai_vm_alloc.h"
+#include "menai_vm_c.h"
 
 #define MENAI_POOL_LOG_MIN_SIZE 5
 #define MENAI_POOL_MIN_SIZE (1 << MENAI_POOL_LOG_MIN_SIZE)
