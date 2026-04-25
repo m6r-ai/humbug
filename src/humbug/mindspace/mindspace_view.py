@@ -85,15 +85,15 @@ class MindspaceView(QWidget):
         self._conversations_button = self._create_view_button(MindspaceViewType.CONVERSATIONS, "conversation")
         rail_layout.addWidget(self._conversations_button)
 
+        self._vcs_button = self._create_view_button(MindspaceViewType.VCS, "diff")
+        self._vcs_button.hide()
+        rail_layout.addWidget(self._vcs_button)
+
         self._files_button = self._create_view_button(MindspaceViewType.FILES, "files")
         rail_layout.addWidget(self._files_button)
 
         self._preview_button = self._create_view_button(MindspaceViewType.PREVIEW, "preview")
         rail_layout.addWidget(self._preview_button)
-
-        self._vcs_button = self._create_view_button(MindspaceViewType.VCS, "diff")
-        self._vcs_button.hide()
-        rail_layout.addWidget(self._vcs_button)
 
         rail_layout.addStretch()
 
