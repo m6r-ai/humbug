@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
+from humbug.color_role import ColorRole
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -57,10 +58,8 @@ class MindspacePreviewView(QWidget):
             self
         )
         self._header.setProperty("splitter", True)
+        self._header.set_collapsible(False)
         self._header.toggled.connect(self._on_header_toggled)
-
-        # Start collapsed by default
-        self._header.set_expanded(False, emit_signal=False)
         layout.addWidget(self._header)
 
         # Create tree view
@@ -97,9 +96,6 @@ class MindspacePreviewView(QWidget):
 
         # Add to layout
         layout.addWidget(self._tree_view)
-
-        # Hide tree view initially since header starts collapsed
-        self._tree_view.hide()
 
         # Hide horizontal scrollbar
         self._tree_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -1023,6 +1019,15 @@ class MindspacePreviewView(QWidget):
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
+        panel_bg = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        tree_bg = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
+        tree_hover = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
+        tree_selected = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
+        border = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
+        text = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        branch_icon_size = round(12 * zoom_factor)
+        collapsed_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
+        expanded_icon = "arrow-down"
 
         # Apply style to header
         self._header.apply_style()
@@ -1040,3 +1045,42 @@ class MindspacePreviewView(QWidget):
 
         # Adjust tree indentation
         self._tree_view.setIndentation(file_icon_size)
+        self.setStyleSheet(f"""
+            MindspacePreviewView {{
+                background-color: {panel_bg};
+            }}
+            MindspacePreviewTreeView {{
+                background-color: {tree_bg};
+                color: {text};
+                border: 1px solid {border};
+                border-top: none;
+                outline: none;
+            }}
+            MindspacePreviewTreeView::item {{
+                color: {text};
+                padding: 3px 0px;
+                margin: 0px;
+            }}
+            MindspacePreviewTreeView::item:hover {{
+                background-color: {tree_hover};
+            }}
+            MindspacePreviewTreeView::item:selected {{
+                background-color: {tree_selected};
+                color: {text};
+            }}
+            MindspacePreviewTreeView::branch {{
+                background-color: {tree_bg};
+            }}
+            MindspacePreviewTreeView::branch:has-children:!has-siblings:closed,
+            MindspacePreviewTreeView::branch:closed:has-children:has-siblings {{
+                image: url("{self._style_manager.get_icon_path(collapsed_icon)}");
+                width: {branch_icon_size}px;
+                height: {branch_icon_size}px;
+            }}
+            MindspacePreviewTreeView::branch:open:has-children:!has-siblings,
+            MindspacePreviewTreeView::branch:open:has-children:has-siblings {{
+                image: url("{self._style_manager.get_icon_path(expanded_icon)}");
+                width: {branch_icon_size}px;
+                height: {branch_icon_size}px;
+            }}
+        """)

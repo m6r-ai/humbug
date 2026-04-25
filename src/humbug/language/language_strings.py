@@ -149,6 +149,8 @@ class LanguageStrings:
     mindspace_vcs_no_repo: str
     mindspace_conversations: str
     mindspace_preview: str
+    mindspace_expand_sidebar: str
+    mindspace_collapse_sidebar: str
 
     # Mindspace folders dialog
     mindspace_folders_title: str

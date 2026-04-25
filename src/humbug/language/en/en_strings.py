@@ -158,6 +158,8 @@ def get_english_strings() -> LanguageStrings:
         mindspace_vcs_no_repo="No repository found",
         mindspace_conversations="Conversations",
         mindspace_preview="Preview",
+        mindspace_expand_sidebar="Expand sidebar",
+        mindspace_collapse_sidebar="Collapse sidebar",
 
         # Mindspace folders dialog
         mindspace_folders_title="Configure Mindspace Folders",

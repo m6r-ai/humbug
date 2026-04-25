@@ -877,6 +877,16 @@ class StyleManager(QObject):
             </svg>
         ''')
 
+        # Files icon
+        self._write_icon(f'{prefix}files-{suffix}.svg', f'''
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 7C4 5.89543 4.89543 5 6 5H10L12 7H18C19.1046 7 20 7.89543 20 9V17C20 18.1046 19.1046 19 18 19H6
+                    C4.89543 19 4 18.1046 4 17V7Z"
+                    stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M4 10H20" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        ''')
+
         # Log tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
         self._write_icon(f'{prefix}log-{suffix}.svg', f'''
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

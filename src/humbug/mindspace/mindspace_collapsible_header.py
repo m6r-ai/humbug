@@ -4,6 +4,7 @@ from PySide6.QtCore import Signal, Qt, QSize, QEvent
 from PySide6.QtGui import QIcon, QMouseEvent, QEnterEvent
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QToolButton
 
+from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
 
@@ -27,6 +28,7 @@ class MindspaceCollapsibleHeader(QWidget):
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
         self._is_expanded = True  # Default to expanded
+        self._is_collapsible = True
 
         # Create layout
         layout = QHBoxLayout(self)
@@ -90,13 +92,29 @@ class MindspaceCollapsibleHeader(QWidget):
         if emit_signal:
             self.toggled.emit(expanded)
 
+    def set_collapsible(self, collapsible: bool) -> None:
+        """Enable or disable expand/collapse interaction for the header."""
+        self._is_collapsible = collapsible
+        self._expand_button.setVisible(collapsible)
+        self.setCursor(
+            Qt.CursorShape.PointingHandCursor if collapsible else Qt.CursorShape.ArrowCursor
+        )
+        self._update_expand_button()
+
     def _toggle_expanded(self) -> None:
         """Toggle the expanded state."""
+        if not self._is_collapsible:
+            return
+
         self.set_expanded(not self._is_expanded)
 
     def _update_expand_button(self) -> None:
         """Update the expand button icon and tooltip based on current state."""
         strings = self._language_manager.strings()
+
+        if not self._is_collapsible:
+            self.setToolTip("")
+            return
 
         if self._is_expanded:
             # Show down arrow when expanded
@@ -134,7 +152,7 @@ class MindspaceCollapsibleHeader(QWidget):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press events to make entire header clickable."""
-        if event.button() == Qt.MouseButton.LeftButton:
+        if self._is_collapsible and event.button() == Qt.MouseButton.LeftButton:
             self._toggle_expanded()
             event.accept()
             return
@@ -145,11 +163,45 @@ class MindspaceCollapsibleHeader(QWidget):
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
+        background = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        hover = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
+        border = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
+        text = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        subtle = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
+        radius = round(8 * zoom_factor)
 
         # Update font size for title label
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
+        font.setBold(True)
         self._title_label.setFont(font)
 
         # Update expand button
         self._update_expand_button()
+        self.setStyleSheet(f"""
+            QWidget#MindspaceCollapsibleHeader {{
+                background-color: {background};
+                border-top: 1px solid {border};
+                border-bottom: 1px solid {border};
+                border-left: none;
+                border-right: none;
+            }}
+            QWidget#MindspaceCollapsibleHeader[hovered="true"] {{
+                background-color: {hover};
+            }}
+            QWidget#MindspaceCollapsibleHeader QLabel {{
+                color: {text};
+                background: transparent;
+            }}
+            QWidget#MindspaceCollapsibleHeader QToolButton#_expand_button {{
+                color: {subtle};
+                background: transparent;
+                border: none;
+                padding: 0px;
+                margin: 0px;
+                border-radius: {radius}px;
+            }}
+            QWidget#MindspaceCollapsibleHeader QToolButton#_expand_button:hover {{
+                background-color: {hover};
+            }}
+        """)
