@@ -159,6 +159,8 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_vcs_no_repo="لم يتم العثور على مستودع",
         mindspace_conversations="محادثات",
         mindspace_preview="معاينة",
+        mindspace_expand_sidebar="توسيع الشريط الجانبي",
+        mindspace_collapse_sidebar="طي الشريط الجانبي",
 
         # Mindspace folders dialog
         mindspace_folders_title="تكوين مجلدات المساحة الذهنية",

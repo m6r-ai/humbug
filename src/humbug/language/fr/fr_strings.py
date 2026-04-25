@@ -158,6 +158,8 @@ def get_french_strings() -> LanguageStrings:
         mindspace_vcs_no_repo="Aucun dépôt trouvé",
         mindspace_conversations="Conversations",
         mindspace_preview="Aperçu",
+        mindspace_expand_sidebar="Développer la barre latérale",
+        mindspace_collapse_sidebar="Réduire la barre latérale",
 
         # Mindspace folders dialog
         mindspace_folders_title="Configurer les dossiers de l'espace mental",

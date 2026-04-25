@@ -119,6 +119,7 @@ class MindspaceVCSView(QWidget):
             self
         )
         self._header.setProperty("splitter", True)
+        self._header.set_collapsible(False)
         self._header.toggled.connect(self._on_header_toggled)
         layout.addWidget(self._header)
 
