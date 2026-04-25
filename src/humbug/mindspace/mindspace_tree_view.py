@@ -3,7 +3,7 @@
 import os
 from typing import cast, Callable, Union
 
-from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
+from PySide6.QtWidgets import QFrame, QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import (
     Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer, QDir, QRect
 )
@@ -22,6 +22,7 @@ class MindspaceTreeView(QTreeView):
     def __init__(self, parent: QWidget | None = None):
         """Initialize the base tree view."""
         super().__init__(parent)
+        self.setFrameShape(QFrame.Shape.NoFrame)
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.setDragDropMode(QTreeView.DragDropMode.DragDrop)

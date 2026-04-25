@@ -165,7 +165,6 @@ class MindspaceCollapsibleHeader(QWidget):
         base_font_size = self._style_manager.base_font_size()
         background = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
         hover = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
-        border = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
         text = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
         subtle = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
         radius = round(8 * zoom_factor)
@@ -181,10 +180,7 @@ class MindspaceCollapsibleHeader(QWidget):
         self.setStyleSheet(f"""
             QWidget#MindspaceCollapsibleHeader {{
                 background-color: {background};
-                border-top: 1px solid {border};
-                border-bottom: 1px solid {border};
-                border-left: none;
-                border-right: none;
+                border: none;
             }}
             QWidget#MindspaceCollapsibleHeader[hovered="true"] {{
                 background-color: {hover};
