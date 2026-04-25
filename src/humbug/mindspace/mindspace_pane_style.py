@@ -18,7 +18,6 @@ def build_tree_pane_stylesheet(
     tree_bg = style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
     tree_hover = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
     tree_selected = style_manager.get_color_str(ColorRole.TEXT_SELECTED)
-    border = style_manager.get_color_str(ColorRole.MENU_BORDER)
     text = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
     branch_icon_size = round(12 * zoom_factor)
     collapsed_icon = "arrow-right" if layout_direction == Qt.LayoutDirection.LeftToRight else "arrow-left"
@@ -31,8 +30,6 @@ def build_tree_pane_stylesheet(
         {tree_selector} {{
             background-color: {tree_bg};
             color: {text};
-            border: 1px solid {border};
-            border-top: none;
             outline: none;
         }}
         {tree_selector}::item {{
@@ -76,7 +73,6 @@ def build_list_pane_stylesheet(
     list_bg = style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
     hover = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
     selected = style_manager.get_color_str(ColorRole.TEXT_SELECTED)
-    border = style_manager.get_color_str(ColorRole.MENU_BORDER)
     text = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
     padding = "2px 0 0 5px" if layout_direction == Qt.LayoutDirection.LeftToRight else "2px 5px 0 0"
 
@@ -87,8 +83,6 @@ def build_list_pane_stylesheet(
         {list_selector} {{
             background-color: {list_bg};
             color: {text};
-            border: 1px solid {border};
-            border-top: none;
             outline: none;
             padding: {padding};
         }}
