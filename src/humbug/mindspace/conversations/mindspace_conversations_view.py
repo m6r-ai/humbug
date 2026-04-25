@@ -78,6 +78,7 @@ class MindspaceConversationsView(QWidget):
         self._dag_model.about_to_rebuild.connect(self._save_expanded_state)
         self._dag_model.rebuilt.connect(self._restore_expanded_state)
         self._expanded_paths: set[str] = set()
+        self._suppress_save_expanded: bool = False
 
         # Create and set the specialized conversations delegate
         self._delegate = MindspaceConversationsTreeDelegate(self._tree_view, self._style_manager)
@@ -550,9 +551,44 @@ class MindspaceConversationsView(QWidget):
         new_path = os.path.join(directory, final_name)
 
         try:
+            # Save expansion state now with current paths, before the rename triggers
+            # a file watcher event.  The flag prevents _save_expanded_state from
+            # overwriting this with stale paths from the tree view.
+            self._expanded_paths.clear()
+            self._collect_expanded_paths(QModelIndex())
+            current = self._tree_view.currentIndex()
+            self._selected_path = self._dag_model.path_for_index(current) if current.isValid() else None
+
             # Perform the rename
             os.rename(current_path, new_path)
             self.file_renamed.emit(current_path, new_path)
+
+            # Update saved expansion state so the renamed node stays expanded
+            # after the model rebuilds in response to the file watcher firing.
+            if current_path in self._expanded_paths:
+                self._expanded_paths.discard(current_path)
+                self._expanded_paths.add(new_path)
+
+            # Update saved selection if the renamed item was selected
+            if self._selected_path == current_path:
+                self._selected_path = new_path
+
+            # For directory renames, update any child paths that were expanded
+            if os.path.isdir(new_path):
+                old_prefix = current_path + os.sep
+                new_prefix = new_path + os.sep
+                updated = {
+                    new_prefix + p[len(old_prefix):]
+                    if p.startswith(old_prefix) else p
+                    for p in self._expanded_paths
+                }
+                self._expanded_paths = updated
+
+                # Also update selected path if it was under the renamed directory
+                if self._selected_path and self._selected_path.startswith(current_path + os.sep):
+                    self._selected_path = new_path + os.sep + self._selected_path[len(current_path + os.sep):]
+
+            self._suppress_save_expanded = True
 
             self._logger.info("Successfully renamed '%s' to '%s'", current_path, new_path)
 
@@ -770,6 +806,11 @@ class MindspaceConversationsView(QWidget):
 
     def _save_expanded_state(self) -> None:
         """Save the set of expanded node paths and current selection before a model rebuild."""
+        if self._suppress_save_expanded:
+            # Paths already updated for a rename — don't overwrite with stale tree state
+            self._suppress_save_expanded = False
+            return
+
         self._expanded_paths.clear()
         self._collect_expanded_paths(QModelIndex())
 
