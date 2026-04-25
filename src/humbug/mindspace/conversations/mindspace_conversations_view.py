@@ -369,14 +369,11 @@ class MindspaceConversationsView(QWidget):
             path: Absolute path to the conversation file.
 
         Returns:
-            Display name with .conv extension and dAI- prefix removed.
+            Display name with .conv extension removed.
         """
         name = os.path.basename(path)
         if name.lower().endswith('.conv'):
             name = name[:-5]
-
-        if name.startswith('dAI-'):
-            name = name[4:]
 
         return name
 
@@ -393,18 +390,16 @@ class MindspaceConversationsView(QWidget):
             Detail string for the confirmation dialog, or empty string if no children.
         """
         children = sorted(included - {os.path.normpath(original)})
-        lines = []
+        parts = []
         if children:
-            lines.append("\n\nRelated conversations that will also be affected:")
-            for p in children:
-                lines.append(f"  \u2022 {self._display_name(p)}")
+            bullets = "\n".join(f"  \u2022 {self._display_name(p)}" for p in children)
+            parts.append(f"\n\nRelated conversations that will also be affected:\n\n{bullets}")
 
         if excluded:
-            lines.append("\n\nThe following will be left in place (referenced by other conversations):")
-            for p in sorted(excluded):
-                lines.append(f"  \u2022 {self._display_name(p)}")
+            bullets = "\n".join(f"  \u2022 {self._display_name(p)}" for p in sorted(excluded))
+            parts.append(f"\n\nThe following will be left in place (referenced by other conversations):\n{bullets}")
 
-        return "".join(lines)
+        return "".join(parts)
 
     def _on_delegate_edit_finished(self, index: QModelIndex, new_name: str) -> None:
         """
