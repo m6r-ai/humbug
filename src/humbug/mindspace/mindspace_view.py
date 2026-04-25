@@ -438,7 +438,6 @@ class MindspaceView(QWidget):
 
             QWidget#_rail_widget {{
                 background-color: {rail_background};
-                border-right: 1px solid {border_color};
             }}
 
             QWidget#_content_widget {{
@@ -482,7 +481,7 @@ class MindspaceView(QWidget):
                 background-color: transparent;
                 border: none;
                 padding: {rail_padding}px;
-                margin: 2px 4px;
+                margin: 2px 0px;
             }}
 
             QToolButton#_settings_button,
@@ -491,12 +490,11 @@ class MindspaceView(QWidget):
                 background-color: transparent;
                 border: none;
                 padding: {rail_padding}px;
-                margin: 2px 4px;
+                margin: 2px 0px;
             }}
 
             QToolButton[view_type]:checked {{
                 {indicator_side}: {rail_indicator}px solid {accent_color};
-                padding-{("left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "right")}: {rail_padding - rail_indicator}px;
             }}
 
             QToolButton[view_type]:disabled,
