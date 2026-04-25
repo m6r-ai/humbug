@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any, Dict, List, overload
 
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt, QPersistentModelIndex
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtCore import QFileInfo
 from humbug.mindspace.conversations.mindspace_conversations_index import MindspaceConversationsIndex
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
@@ -52,6 +52,9 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
     PathRole = Qt.ItemDataRole.UserRole + 1
     IsSharedRole = Qt.ItemDataRole.UserRole + 2
     IsDirRole = Qt.ItemDataRole.UserRole + 3
+
+    about_to_rebuild = Signal()
+    rebuilt = Signal()
 
     def __init__(
         self,
@@ -310,9 +313,11 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
 
     def _rebuild(self) -> None:
         """Rebuild the model, notifying views."""
+        self.about_to_rebuild.emit()
         self.beginResetModel()
         self._build()
         self.endResetModel()
+        self.rebuilt.emit()
 
     def _on_index_changed(self) -> None:
         """Handle index change notification."""

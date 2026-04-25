@@ -240,6 +240,13 @@ class ConversationWidget(QWidget):
             raise ConversationError(f"Failed to read conversation transcript: {str(e)}") from e
 
         self._load_message_history(conversation_history.get_messages(), ai_conversation is not None)
+
+        # Restore parent metadata from the transcript onto the ai_conversation history.
+        # load_message_history calls clear() which discards it, so we reapply it here.
+        transcript_parent = conversation_history.parent()
+        if transcript_parent is not None:
+            self._ai_conversation.get_conversation_history().set_parent(transcript_parent)
+
         self._is_delegated_conversation = os.path.basename(path).startswith("dAI-")
 
         # Any active tool approval

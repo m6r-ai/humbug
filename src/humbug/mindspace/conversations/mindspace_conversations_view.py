@@ -75,6 +75,9 @@ class MindspaceConversationsView(QWidget):
         # Conversation DAG index and model (model created after index in set_mindspace)
         self._conversations_index = MindspaceConversationsIndex(self)
         self._dag_model = MindspaceConversationsDAGModel(self._conversations_index, self._icon_provider, self)
+        self._dag_model.about_to_rebuild.connect(self._save_expanded_state)
+        self._dag_model.rebuilt.connect(self._restore_expanded_state)
+        self._expanded_paths: set[str] = set()
 
         # Create and set the specialized conversations delegate
         self._delegate = MindspaceConversationsTreeDelegate(self._tree_view, self._style_manager)
@@ -98,6 +101,7 @@ class MindspaceConversationsView(QWidget):
         # Track current mindspace and conversations directory
         self._mindspace_path: str | None = None
         self._conversations_path: str | None = None
+        self._selected_path: str | None = None
 
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
@@ -670,6 +674,48 @@ class MindspaceConversationsView(QWidget):
         )
 
         return menu
+
+    def _collect_expanded_paths(self, parent: QModelIndex) -> None:
+        """
+        Recursively collect paths of all expanded nodes under parent.
+
+        Args:
+            parent: Parent model index to recurse from.
+        """
+        for row in range(self._dag_model.rowCount(parent)):
+            index = self._dag_model.index(row, 0, parent)
+            if not index.isValid():
+                continue
+
+            if self._tree_view.isExpanded(index):
+                path = self._dag_model.path_for_index(index)
+                if path:
+                    self._expanded_paths.add(path)
+
+                self._collect_expanded_paths(index)
+
+    def _save_expanded_state(self) -> None:
+        """Save the set of expanded node paths and current selection before a model rebuild."""
+        self._expanded_paths.clear()
+        self._collect_expanded_paths(QModelIndex())
+
+        current = self._tree_view.currentIndex()
+        if current.isValid():
+            self._selected_path = self._dag_model.path_for_index(current)
+        else:
+            self._selected_path = None
+
+    def _restore_expanded_state(self) -> None:
+        """Restore expanded nodes and selection after a model rebuild."""
+        for path in self._expanded_paths:
+            index = self._dag_model.index_for_path(path)
+            if index.isValid():
+                self._tree_view.expand(index)
+
+        if self._selected_path:
+            index = self._dag_model.index_for_path(self._selected_path)
+            if index.isValid():
+                self._tree_view.setCurrentIndex(index)
 
     def _is_current_directory_item(self, index: QModelIndex) -> bool:
         """
