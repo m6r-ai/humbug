@@ -405,7 +405,7 @@ class MindspaceView(QWidget):
         content_radius = round(8 * zoom_factor)
         header_bottom_border = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
         panel_background = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
-        rail_background = self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)
+        rail_background = self._style_manager.get_color_str(ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND)
         rail_hover = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
         selected_background = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
         header_background = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)

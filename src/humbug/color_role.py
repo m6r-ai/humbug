@@ -44,6 +44,8 @@ class ColorRole(Enum):
     MINDSPACE_NAME_BACKGROUND_PRESSED = auto()
                                         # Mindspace name background pressed
     MINDSPACE_HEADING = auto()          # Mindspace heading
+    MINDSPACE_TOOL_RAIL_BACKGROUND = auto()
+                                        # Mindspace icon rail background
 
     # Tab colours
     TAB_BAR_BACKGROUND = auto()         # Tab bar background

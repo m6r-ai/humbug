@@ -204,6 +204,11 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#e0e0e0"
             },
 
+            ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND: {
+                ColorMode.DARK: "#181818",
+                ColorMode.LIGHT: "#f0f0f0"
+            },
+
             # Tab colours
             ColorRole.TAB_BAR_BACKGROUND: {
                 ColorMode.DARK: "#1c1c1c",
