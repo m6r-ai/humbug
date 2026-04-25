@@ -1,15 +1,28 @@
 """AI conversation state management."""
 
+from dataclasses import dataclass
 from typing import Dict, List
 
 from ai.ai_message import AIMessage
 from ai.ai_usage import AIUsage
 
 
+@dataclass
+class AIConversationParent:
+    """Identifies the parent delegation relationship for a child conversation."""
+    message_id: str
+    tool_call_id: str
+
+
 class AIConversationHistory:
     """Manages the conversation history and state."""
 
-    def __init__(self, messages: List[AIMessage] | None = None, version: str = "0.1", parent: str | None = None) -> None:
+    def __init__(
+        self,
+        messages: List[AIMessage] | None = None,
+        version: str = "0.1",
+        parent: AIConversationParent | None = None
+    ) -> None:
         """Initialize conversation history with optional metadata."""
         self._messages: List[AIMessage] = messages if messages is not None else []
         self._version = version
@@ -20,9 +33,17 @@ class AIConversationHistory:
         """Get the transcript version."""
         return self._version
 
-    def parent(self) -> str | None:
-        """Get the parent transcript reference."""
+    def parent(self) -> AIConversationParent | None:
+        """Get the parent delegation reference."""
         return self._parent
+
+    def set_parent(self, parent: AIConversationParent) -> None:
+        """Set the parent delegation reference.
+
+        Args:
+            parent: Parent delegation reference to set
+        """
+        self._parent = parent
 
     def clear(self) -> None:
         """Clear the conversation history."""

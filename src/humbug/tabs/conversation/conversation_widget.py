@@ -2855,6 +2855,21 @@ class ConversationWidget(QWidget):
 
     # AI Tool Support Methods
 
+    def _serialize_parent(self, parent: Any) -> Any:
+        """
+        Serialize an AIConversationParent to a JSON-safe dict, or return None.
+
+        Args:
+            parent: AIConversationParent instance or None
+
+        Returns:
+            Dict with message_id and tool_call_id, or None
+        """
+        if parent is None:
+            return None
+
+        return {"message_id": parent.message_id, "tool_call_id": parent.tool_call_id}
+
     def get_conversation_info(self) -> Dict[str, Any]:
         """
         Get high-level metadata about the conversation.
@@ -2875,7 +2890,7 @@ class ConversationWidget(QWidget):
                 "last_message_timestamp": None,
                 "models_used": [],
                 "total_tokens": history.get_token_counts(),
-                "parent": history.parent(),
+                "parent": self._serialize_parent(history.parent()),
                 "version": history.version()
             }
 
@@ -2888,7 +2903,7 @@ class ConversationWidget(QWidget):
             "last_message_timestamp": messages[-1].timestamp.isoformat(),
             "models_used": models_used,
             "total_tokens": history.get_token_counts(),
-            "parent": history.parent(),
+            "parent": self._serialize_parent(history.parent()),
             "version": history.version()
         }
 

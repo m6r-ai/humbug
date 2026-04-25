@@ -3,7 +3,7 @@ import json
 import logging
 from typing import Dict, Any, cast
 
-from ai import AIConversation, AIConversationEvent, AIConversationSettings, AIManager, AIMessageSource, AIReasoningCapability
+from ai import AIConversation, AIConversationEvent, AIConversationParent, AIConversationSettings, AIManager, AIMessageSource, AIReasoningCapability
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback,
@@ -433,6 +433,9 @@ class DelegateAITool(AITool):
             # Submit the prompt directly to the child AIConversation
             requester = parent_ai_conversation.conversation_settings().model
 
+            # Record the parent relationship on the child before the first message is written
+            self._set_child_parent_metadata(child_ai_conversation, parent_ai_conversation, tool_call)
+
             # Create the display tab first so it registers event callbacks before we submit the prompt.
             # If we submit first, the MESSAGE_ADDED event for the user prompt fires before the
             # widget is listening, and the prompt never appears in the on-screen history.
@@ -498,3 +501,40 @@ class DelegateAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to delegate AI task: {str(e)}") from e
+
+    def _set_child_parent_metadata(
+        self,
+        child_ai_conversation: AIConversation,
+        parent_ai_conversation: AIConversation,
+        tool_call: AIToolCall
+    ) -> None:
+        """
+        Set the parent relationship metadata on the child conversation history.
+
+        Finds the parent ai_response message that contains the triggering tool call,
+        then records its ID and the tool call ID on the child history. This is written
+        to the transcript on the child's first message, establishing the DAG edge.
+
+        Args:
+            child_ai_conversation: The child AIConversation to update
+            parent_ai_conversation: The parent AIConversation making the delegation
+            tool_call: The tool call that triggered this delegation
+        """
+        parent_message_id = None
+        for message in parent_ai_conversation.get_conversation_history().get_messages():
+            if message.tool_calls:
+                for tc in message.tool_calls:
+                    if tc.id == tool_call.id:
+                        parent_message_id = message.id
+                        break
+
+            if parent_message_id:
+                break
+
+        if parent_message_id is None:
+            self._logger.warning("Could not find parent message for tool_call_id %s", tool_call.id)
+            return
+
+        child_ai_conversation.get_conversation_history().set_parent(
+            AIConversationParent(message_id=parent_message_id, tool_call_id=tool_call.id)
+        )

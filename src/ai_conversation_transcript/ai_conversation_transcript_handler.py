@@ -6,7 +6,8 @@ import os
 import time
 from typing import Dict, Any
 
-from ai import AIMessage, AIConversationHistory
+from ai import AIConversationHistory, AIConversationParent
+from ai.ai_message import AIMessage
 
 from ai_conversation_transcript.ai_conversation_transcript_error import (
     AIConversationTranscriptFormatError, AIConversationTranscriptIOError
@@ -149,6 +150,34 @@ class AIConversationTranscriptHandler:
         if not isinstance(data["conversation"], list):
             raise AIConversationTranscriptFormatError("Conversation must be array")
 
+    def _parse_parent(self, raw_parent: Any) -> AIConversationParent | None:
+        """
+        Parse parent metadata from transcript.
+
+        Accepts both the legacy string format and the current dict format.
+        The legacy string format is silently discarded since it carried no
+        useful relationship information.
+
+        Args:
+            raw_parent: Raw parent value from transcript metadata
+
+        Returns:
+            AIConversationParent if valid structured parent data present, else None
+        """
+        if raw_parent is None:
+            return None
+
+        if isinstance(raw_parent, dict):
+            message_id = raw_parent.get("message_id")
+            tool_call_id = raw_parent.get("tool_call_id")
+            if isinstance(message_id, str) and isinstance(tool_call_id, str):
+                return AIConversationParent(
+                    message_id=message_id,
+                    tool_call_id=tool_call_id
+                )
+
+        return None
+
     def read(self) -> AIConversationHistory:
         """
         Read and validate transcript file.
@@ -182,10 +211,12 @@ class AIConversationTranscriptHandler:
             except ValueError as e:
                 raise AIConversationTranscriptFormatError(f"Invalid message format: {str(e)}") from e
 
+        parent = self._parse_parent(data["metadata"].get("parent"))
+
         return AIConversationHistory(
             messages=messages,
             version=data["metadata"]["version"],
-            parent=data["metadata"].get("parent", None)
+            parent=parent
         )
 
     def write(self, history: AIConversationHistory) -> None:
@@ -203,11 +234,20 @@ class AIConversationTranscriptHandler:
             # Convert messages to transcript format
             transcript_messages = [msg.to_transcript_dict() for msg in history.get_messages()]
 
+            # Serialize parent reference
+            parent = history.parent()
+            parent_data = None
+            if parent is not None:
+                parent_data = {
+                    "message_id": parent.message_id,
+                    "tool_call_id": parent.tool_call_id
+                }
+
             # Create the full transcript structure
             data = {
                 "metadata": {
                     "version": history.version(),
-                    "parent": history.parent()
+                    "parent": parent_data
                 },
                 "conversation": transcript_messages
             }

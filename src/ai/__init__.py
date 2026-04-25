@@ -3,7 +3,7 @@
 from ai.ai_backend import AIBackend
 from ai.ai_backend_settings import AIBackendSettings
 from ai.ai_conversation import AIConversation, AIConversationEvent
-from ai.ai_conversation_history import AIConversationHistory
+from ai.ai_conversation_history import AIConversationHistory, AIConversationParent
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_manager import AIManager
 from ai.ai_message import AIMessage
@@ -17,6 +17,7 @@ __all__ = [
     "AIConversation",
     "AIConversationEvent",
     "AIConversationHistory",
+    "AIConversationParent",
     "AIConversationSettings",
     "AIManager",
     "AIMessage",
