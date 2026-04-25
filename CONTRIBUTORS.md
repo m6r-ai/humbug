@@ -15,6 +15,7 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Added support for mousewheel scrolling of tab bars.
 * Designed the original file attachment concept for conversations.
 * Designed the original implementation of the hierarchical conversation view.
+* Implemented the mindspace expand/collapse functionality, along with the icon bar.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 

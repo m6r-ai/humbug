@@ -14,6 +14,8 @@ New features:
 - Conversations now track the relationships between parent conversations and child conversations, so the mindspace conversations
   view now groups conversations under each other.
 - When opening an editor tab from a diff tab, the editor tab will be scrolled to the same position being shown in the diff.
+- The mindspace panel can be expanded and collapsed.  Also the panel shows just one view at a time, giving more room to see
+  what's there.
 
 Bug fixes:
 
