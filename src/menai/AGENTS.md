@@ -103,10 +103,12 @@ expressive.  Do not add `cond`.
 
 ### Proper lists only
 
-`MenaiList` is backed by a native C array (`PyObject **elements`, `Py_ssize_t length`).  There are no cons cells and no improper lists.
-`cons` requires its second argument to be a list.  This is intentional: improper lists
-add complexity for minimal benefit in a language without pattern-matched list destructuring
-at the cons-cell level.
+There are no cons cells and no improper lists.  On the Python side, `MenaiList`
+(defined in `menai_value.py`) stores its elements in a Python tuple.  The C VM has
+its own internal list representation (see `menai_vm_list.h`), which is an
+implementation detail of that layer.  `cons` requires its second argument to be a
+list.  This is intentional: improper lists add complexity for minimal benefit in a
+language without pattern-matched list destructuring at the cons-cell level.
 
 ### Strict numeric typing
 
@@ -119,8 +121,15 @@ You can find tools related to Menai in tools/menai.
 
 ## VM implementation
 
-We currently have a legacy Python VM implementation but we're replacing it with a C version.  When implementing any new
-functionality, consider that the aim is to remove all python code from the C-based VM.
+The C VM (`menai_vm_c`) is the primary implementation.  It is compiled from C source
+and loaded at runtime; the Python VM (`menai_vm.py`) is retained as a fallback for
+platforms or builds where the C extension is not available.  When implementing new
+functionality, target the C VM first.  The Python VM is a legacy fallback and is
+being phased out.
+
+The C VM currently makes use of some Python runtime library functionality, but with the
+exception of the bridge layer between C and Python, the C code should be systematically
+updated so Python functions and data structures are removed.
 
 ### C formatting
 

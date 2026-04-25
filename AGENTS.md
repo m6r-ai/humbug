@@ -23,7 +23,7 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 
 ## Top-Level Structure
 
-```
+```text
 humbug/
 ├── src/                    # Main source code
 ├── tests/                  # Test suite
@@ -32,7 +32,6 @@ humbug/
 ├── menai_modules/          # Menai standard library modules
 ├── conversations/          # Example AI conversations
 ├── icons/                  # Application icons
-├── metaphor/               # Metaphor prompt examples
 └── pyproject.toml          # Python project configuration
 ```
 
@@ -86,12 +85,6 @@ Lightweight, GUI-free tools for git operations.
 ### `src/dmarkdown/`
 Advanced markdown parsing to AST.
 
-### `src/metaphor/`
-Context and prompting language for AI orchestration.
-
-### `src/dast/`
-Dependency AST for analyzing module dependencies.
-
 ### `src/syntax/`
 Language-specific syntax highlighting system.
 
@@ -110,7 +103,6 @@ Test structure mirrors `src/` organization:
 - `menai/` - Menai language tests
 - `diff/` - Diff system tests
 - `dmarkdown/` - Markdown parser tests
-- `metaphor/` - Metaphor language tests
 - `syntax/` - Syntax highlighting tests
 
 ## `tools/` Directory
