@@ -161,12 +161,12 @@ class BenchmarkRunner:
 class BenchmarkReporter:
     """Formats and prints a comparison table for a completed benchmark run."""
 
-    _SEPARATOR = "─" * 120
+    _SEPARATOR = "─" * 131
     _MS = 1_000.0
     _COL_CASE = 24
-    _COL_MEAN = 8
-    _COL_MIN = 8
-    _COL_VS = 13
+    _COL_MEAN = 9
+    _COL_MIN = 9
+    _COL_VS = 16
 
     def report(
         self,
@@ -201,17 +201,22 @@ class BenchmarkReporter:
         header1_parts = [f"{'Case':<{self._COL_CASE}}"]
         header2_parts = [" " * self._COL_CASE]
         for idx, name in enumerate(impl_names):
-            col_width = self._COL_MEAN + self._COL_MIN + 3
+            col_width = self._COL_MEAN + self._COL_MIN + 2
             if idx > 0:
                 col_width += self._COL_VS + 2
-            header1_parts.append(f"{name:<{col_width}}")
-            sub = f"{'mean (ms)':>{self._COL_MEAN}}  {'min (ms)':<{self._COL_MIN}}"
+
+            header1_parts.append(f"{name:>{col_width}}")
+            sub = f"{'mean (ms)':>{self._COL_MEAN}}  {'min (ms)':>{self._COL_MIN}}"
             if idx > 0:
-                sub += f"  {'vs ref':<{self._COL_VS}}"
+                sub += f" {'vs ref':>{self._COL_VS - 1}}  "
+
+            else:
+                sub += "  "
+
             header2_parts.append(sub)
 
-        print("  ".join(header1_parts))
-        print("  ".join(header2_parts))
+        print("   ".join(header1_parts))
+        print("   ".join(header2_parts))
         print(self._SEPARATOR)
 
         validation_counts: dict[str, int] = {n: 0 for n in impl_names}
@@ -241,17 +246,17 @@ class BenchmarkReporter:
                         validation_counts[name] += 1
 
                 validity = "✓" if r.valid else "✗"
-                cell = f"{mean_str:>{self._COL_MEAN}}  {min_str:<{self._COL_MIN}}"
+                cell = f"{mean_str:>{self._COL_MEAN}}  {min_str:>{self._COL_MIN}}"
 
                 if idx == 0:
                     cell += f" {validity}"
                 else:
                     vs_str = self._vs_ref(ref_mean, r.mean_s if not r.error else None)
-                    cell += f"  {vs_str + ' ' + validity:<{self._COL_VS}}"
+                    cell += f"  {vs_str:>{self._COL_VS - 2}} {validity}"
 
                 row_parts.append(cell)
 
-            print("  ".join(row_parts))
+            print("   ".join(row_parts))
 
         print(self._SEPARATOR)
 
@@ -275,7 +280,9 @@ class BenchmarkReporter:
             return ""
         ratio = ref_mean_s / impl_mean_s
         if ratio >= 1.0:
-            return f"{ratio:.0f}x faster"
-
+            fmt = ".1f" if ratio < 10 else ".0f"
+            return f"{ratio:{fmt}}x faster"
         else:
-            return f"{1.0 / ratio:.0f}x slower"
+            inv = 1.0 / ratio
+            fmt = ".1f" if inv < 10 else ".0f"
+            return f"{inv:{fmt}}x slower"
