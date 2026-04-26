@@ -86,8 +86,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#f4f4f4"
             },
             ColorRole.BACKGROUND_SECONDARY: {
-                ColorMode.DARK: "#141414",
-                ColorMode.LIGHT: "#d8d8d8"
+                ColorMode.DARK: "#282828",
+                ColorMode.LIGHT: "#e4e4e4"
             },
             ColorRole.BACKGROUND_TERTIARY: {
                 ColorMode.DARK: "#060606",

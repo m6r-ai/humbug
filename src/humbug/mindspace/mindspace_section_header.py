@@ -21,7 +21,7 @@ class MindspaceSectionHeader(QWidget):
         layout = QHBoxLayout(self)
         spacing = 5
         layout.setSpacing(spacing)
-        layout.setContentsMargins(spacing, spacing, spacing, spacing)
+        layout.setContentsMargins(spacing + 3, spacing, spacing, spacing)
 
         self._title_label = QLabel(title, self)
         self._title_label.setIndent(0)
@@ -36,12 +36,11 @@ class MindspaceSectionHeader(QWidget):
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
-        background = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
-        text = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        background = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
+        text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
 
         font = self._title_label.font()
         font.setPointSizeF(base_font_size * zoom_factor)
-        font.setBold(True)
         self._title_label.setFont(font)
 
         self.setStyleSheet(f"""

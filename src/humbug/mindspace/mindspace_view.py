@@ -116,17 +116,9 @@ class MindspaceView(QWidget):
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
 
-        self._header_widget = QWidget(self._content_widget)
+        self._header_widget = QPushButton(self._content_widget)
         self._header_widget.setObjectName("_header_widget")
-        header_layout = QHBoxLayout(self._header_widget)
-        header_layout.setContentsMargins(14, 10, 10, 10)
-        header_layout.setSpacing(8)
-
-        self._mindspace_button = QPushButton(self._header_widget)
-        self._mindspace_button.setObjectName("_mindspace_button")
-        self._mindspace_button.clicked.connect(self.open_mindspace_requested.emit)
-        header_layout.addWidget(self._mindspace_button)
-        header_layout.addStretch()
+        self._header_widget.clicked.connect(self.open_mindspace_requested.emit)
 
         content_layout.addWidget(self._header_widget)
 
@@ -176,7 +168,7 @@ class MindspaceView(QWidget):
         self._preview_view.file_edited.connect(self.file_edited.emit)
         self._preview_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
 
-        self._mindspace_button.setText(self._language_manager.strings().mindspace_label_none)
+        self._header_widget.setText(self._language_manager.strings().mindspace_label_none)
         self._set_active_view(MindspaceViewType.CONVERSATIONS)
         self._on_language_changed()
 
@@ -281,10 +273,10 @@ class MindspaceView(QWidget):
             path: Path to the mindspace directory, or empty string to clear
         """
         if not path:
-            self._mindspace_button.setText(self._language_manager.strings().mindspace_label_none)
+            self._header_widget.setText(self._language_manager.strings().mindspace_label_none)
             self._settings_button.hide()
         else:
-            self._mindspace_button.setText(os.path.basename(path.rstrip("\\/")))
+            self._header_widget.setText(os.path.basename(path.rstrip("\\/")))
             self._settings_button.show()
 
         self._files_view.set_mindspace(path)
@@ -298,13 +290,13 @@ class MindspaceView(QWidget):
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
-        current_text = self._mindspace_button.text()
+        current_text = self._header_widget.text()
         none_text = self._language_manager.strings().mindspace_label_none
         if current_text == none_text or not current_text:
-            self._mindspace_button.setText(none_text)
+            self._header_widget.setText(none_text)
 
         strings = self._language_manager.strings()
-        self._mindspace_button.setToolTip(strings.mindspace_name_tooltip)
+        self._header_widget.setToolTip(strings.mindspace_name_tooltip)
         self._settings_button.setToolTip(strings.mindspace_settings)
         self._conversations_button.setToolTip(strings.mindspace_conversations)
         self._files_button.setToolTip(strings.mindspace_files)
@@ -352,7 +344,6 @@ class MindspaceView(QWidget):
 
     def _set_button_hover_icon(self, button: QToolButton, hovered: bool) -> None:
         """Update a rail button's icon to reflect hover state."""
-        zoom_factor = self._style_manager.zoom_factor()
         icon_name = button.property("icon_name")
         if not isinstance(icon_name, str):
             return
@@ -389,10 +380,10 @@ class MindspaceView(QWidget):
         self._rail_collapsed_width = round(48 * zoom_factor)
         self._content_min_width = round(230 * zoom_factor)
 
-        header_font = self._mindspace_button.font()
+        header_font = self._header_widget.font()
         header_font.setPointSizeF(base_font_size * zoom_factor)
         header_font.setBold(True)
-        self._mindspace_button.setFont(header_font)
+        self._header_widget.setFont(header_font)
 
         rail_button_font = self.font()
         rail_button_font.setPointSizeF(base_font_size * zoom_factor)
@@ -403,24 +394,20 @@ class MindspaceView(QWidget):
         rail_width = self._rail_collapsed_width
         rail_button_height = round(48 * zoom_factor)
         rail_padding = round(6 * zoom_factor)
-        rail_indicator = round(2 * zoom_factor)
+        rail_indicator = 2
         content_radius = round(8 * zoom_factor)
-        header_bottom_border = style_manager.get_color_str(ColorRole.MENU_BORDER)
         panel_background = style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
         rail_background = style_manager.get_color_str(ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND)
         rail_hover = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
-        header_background = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
-        header_hover = style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER)
-        header_pressed = style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED)
         text_color = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
         disabled_color = style_manager.get_color_str(ColorRole.TEXT_DISABLED)
         subtle_text = style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
         border_color = style_manager.get_color_str(ColorRole.MENU_BORDER)
         accent_color = style_manager.get_color_str(ColorRole.TAB_BORDER_ACTIVE)
         content_surface = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
-        bubble_spacing = style_manager.message_bubble_spacing()
 
         indicator_side = "border-left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "border-right"
+        indicator_padding_side = "padding-left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "padding-right"
 
         self._rail_widget.setFixedWidth(rail_width)
         self.setMinimumWidth(rail_width)
@@ -446,36 +433,22 @@ class MindspaceView(QWidget):
                 background-color: {panel_background};
             }}
 
-            QWidget#_header_widget {{
-                background-color: {header_background};
-                border-bottom: 1px solid {header_bottom_border};
+            QPushButton#_header_widget {{
+                background-color: {panel_background};
+                border: none;
+                color: {subtle_text};
+                padding: 10px 8px 6px 8px;
+                text-align: left;
+                text-transform: uppercase;
+            }}
+
+            QPushButton#_header_widget:hover {{
+                color: {text_color};
             }}
 
             QWidget#_pane_stack {{
                 background-color: {panel_background};
                 border: none;
-                margin-left: {bubble_spacing}px;
-            }}
-
-            QPushButton#_mindspace_button {{
-                color: {text_color};
-                background-color: transparent;
-                border: none;
-                margin: 0px;
-                padding: 4px 6px;
-                text-align: left;
-            }}
-
-            QPushButton#_mindspace_button:hover {{
-                background-color: {header_hover};
-            }}
-
-            QPushButton#_mindspace_button:pressed {{
-                background-color: {header_pressed};
-            }}
-
-            QPushButton#_mindspace_button:disabled {{
-                color: {disabled_color};
             }}
 
             QToolButton#_sidebar_toggle_button {{
@@ -497,6 +470,7 @@ class MindspaceView(QWidget):
 
             QToolButton[view_type]:checked {{
                 {indicator_side}: {rail_indicator}px solid {accent_color};
+                {indicator_padding_side}: {rail_padding - rail_indicator}px;
             }}
 
             QToolButton[view_type]:disabled,

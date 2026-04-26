@@ -20,6 +20,7 @@ def build_tree_pane_stylesheet(
     tree_selected = style_manager.get_color_str(ColorRole.TEXT_SELECTED)
     text = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
     branch_icon_size = round(12 * zoom_factor)
+    tree_margin = round(6 * zoom_factor)
     collapsed_icon = "arrow-right" if layout_direction == Qt.LayoutDirection.LeftToRight else "arrow-left"
     expanded_icon = "arrow-down"
 
@@ -31,6 +32,7 @@ def build_tree_pane_stylesheet(
             background-color: {tree_bg};
             color: {text};
             outline: none;
+            margin-left: {tree_margin}px;
         }}
         {tree_selector}::item {{
             color: {text};
