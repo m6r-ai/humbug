@@ -242,6 +242,7 @@ class MindspaceView(QWidget):
 
         if not has_repo and self._active_view_type == MindspaceViewType.VCS:
             self._set_active_view(MindspaceViewType.CONVERSATIONS)
+
         else:
             self._update_button_styling()
 
@@ -381,8 +382,9 @@ class MindspaceView(QWidget):
 
     def apply_style(self) -> None:
         """Update styling when application style changes."""
-        zoom_factor = self._style_manager.zoom_factor()
-        base_font_size = self._style_manager.base_font_size()
+        style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
+        base_font_size = style_manager.base_font_size()
 
         self._rail_collapsed_width = round(48 * zoom_factor)
         self._content_min_width = round(230 * zoom_factor)
@@ -403,20 +405,20 @@ class MindspaceView(QWidget):
         rail_padding = round(6 * zoom_factor)
         rail_indicator = round(2 * zoom_factor)
         content_radius = round(8 * zoom_factor)
-        header_bottom_border = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
-        panel_background = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
-        rail_background = self._style_manager.get_color_str(ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND)
-        rail_hover = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
-        selected_background = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
-        header_background = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
-        header_hover = self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER)
-        header_pressed = self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED)
-        text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-        disabled_color = self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)
-        subtle_text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
-        border_color = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
-        accent_color = self._style_manager.get_color_str(ColorRole.TAB_BORDER_ACTIVE)
-        content_surface = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        header_bottom_border = style_manager.get_color_str(ColorRole.MENU_BORDER)
+        panel_background = style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
+        rail_background = style_manager.get_color_str(ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND)
+        rail_hover = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
+        header_background = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        header_hover = style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER)
+        header_pressed = style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED)
+        text_color = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        disabled_color = style_manager.get_color_str(ColorRole.TEXT_DISABLED)
+        subtle_text = style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
+        border_color = style_manager.get_color_str(ColorRole.MENU_BORDER)
+        accent_color = style_manager.get_color_str(ColorRole.TAB_BORDER_ACTIVE)
+        content_surface = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        bubble_spacing = style_manager.message_bubble_spacing()
 
         indicator_side = "border-left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "border-right"
 
@@ -442,7 +444,6 @@ class MindspaceView(QWidget):
 
             QWidget#_content_widget {{
                 background-color: {panel_background};
-                border-right: 1px solid {border_color};
             }}
 
             QWidget#_header_widget {{
@@ -453,6 +454,7 @@ class MindspaceView(QWidget):
             QWidget#_pane_stack {{
                 background-color: {panel_background};
                 border: none;
+                margin-left: {bubble_spacing}px;
             }}
 
             QPushButton#_mindspace_button {{
