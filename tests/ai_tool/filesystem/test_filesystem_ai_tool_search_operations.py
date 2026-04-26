@@ -1,4 +1,5 @@
 import asyncio
+import stat
 import json
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -222,6 +223,7 @@ class TestSearchFile:
 
         mock_stat = MagicMock()
         mock_stat.st_size = 11 * 1024 * 1024  # 11 MB
+        mock_stat.st_mode = stat.S_IFREG | 0o644
 
         tool_call = make_tool_call("filesystem", {
             "operation": "search_file",
@@ -704,6 +706,7 @@ class TestSearchFiles:
             if self == big:
                 mock = MagicMock()
                 mock.st_size = 11 * 1024 * 1024
+                mock.st_mode = stat.S_IFREG | 0o644
                 return mock
             return original_stat(self, *args, **kwargs)
 
