@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "humbug"
-version = "45"
+version = "46"
 requires-python = ">=3.10"
 dependencies = [
     "aiohttp",

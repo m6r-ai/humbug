@@ -1,5 +1,7 @@
 # Change log for Humbug
 
+## v46 (2026-0x-xx)
+
 ## v45 (2026-04-26)
 
 New features:
