@@ -16,10 +16,11 @@ New features:
 - When opening an editor tab from a diff tab, the editor tab will be scrolled to the same position being shown in the diff.
 - The mindspace panel can be expanded and collapsed.  Also the panel shows just one view at a time, giving more room to see
   what's there.
+- If you change a file extension when renaming a file, you will now be prompted to confirm that's what you want to do.
 
 Bug fixes:
 
-- Tighten guidance on regexp syntax.
+- Tighten guidance on regexp syntax to AI models.
 - Despite instructions, and AI may use the wrong alternation format in regexps.  If we get no results using an escaped form,
   but get results when it's unescaped, the tool will now return the results and warning that it had to remove the escaping.
 - If you highlight text and the open the find control in a diff tab it now uses the selected text as the initial search
@@ -30,6 +31,8 @@ Bug fixes:
   Now this action will trigger a popup message box.
 - Fixed a problem in the C and C++ syntax highlighters when preprocessor lines are continued with `\`.
 - Fixed menu and dialog edit control scaling problem on Ubuntu under WSL2 on Windows 11.
+- Fixed bugs in the Menai and Scheme syntax highlighting.
+- Added tests for the Scheme syntax highlighter.
 
 ## v44 (2026-04-19)
 

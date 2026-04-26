@@ -210,7 +210,7 @@ class MenaiLexer(Lexer):
 
     def _read_number_or_identifier(self) -> None:
         """
-        Read an operator as identifier or start of number.
+        Read a +/- operator as an identifier or the start of a number.
         """
         # Check if +/- is followed by a digit or by a dot and digit (like +.5)
         next_pos = self._position + 1
@@ -221,6 +221,11 @@ class MenaiLexer(Lexer):
                 return
 
             if next_char == '.' and next_pos + 1 < self._input_len and self._is_digit(self._input[next_pos + 1]):
+                self._read_number()
+                return
+
+            if (next_char == '#' and next_pos + 1 < self._input_len
+                    and self._input[next_pos + 1].lower() in ('b', 'o', 'd', 'x')):
                 self._read_number()
                 return
 
@@ -247,14 +252,26 @@ class MenaiLexer(Lexer):
         - Integers: 42
         - Decimals: 3.14
         - Scientific: 1e10
-        - Complex: 3+4j
-        - Signed: +42, -42
+        - Complex: 5j, 3+4j, 1.5e2+3.7e-1j
+        - Signed: +42, -42, +3.14, -.5
+        - Signed based: -#xFF, -#b1010, -#o755
         """
         start = self._position
 
         # Handle sign
         if self._input[self._position] in ('+', '-'):
             self._position += 1
+
+        # Handle based literals that follow a sign (e.g. -#xFF, -#b1010, -#o755)
+        if (self._position < self._input_len and self._input[self._position] == '#'
+                and self._position + 1 < self._input_len
+                and self._input[self._position + 1].lower() in ('b', 'o', 'd', 'x')):
+            self._read_based_number(self._input[self._position + 1].lower())
+            # _read_based_number appended its own token; replace it with one that
+            # includes the leading sign character.
+            tok = self._tokens[-1]
+            self._tokens[-1] = Token(type=tok.type, value=self._input[start:self._position], start=start)
+            return
 
         # Read integer part
         while (self._position < self._input_len and self._is_digit(self._input[self._position])):
@@ -269,15 +286,46 @@ class MenaiLexer(Lexer):
         # Handle exponent
         if (self._position < self._input_len and self._input[self._position].lower() == 'e'):
             self._position += 1
-            if self._input[self._position] in ('+', '-'):
+            if self._position < self._input_len and self._input[self._position] in ('+', '-'):
                 self._position += 1
 
             while (self._position < self._input_len and self._is_digit(self._input[self._position])):
                 self._position += 1
 
-        # Handle complex
-        if (self._position < self._input_len and self._input[self._position].lower() == 'j'):
+        # Handle complex suffix (pure imaginary: 5j, or full complex: 3+4j)
+        # After reading the real part, check for an imaginary component
+        if self._position < self._input_len and self._input[self._position].lower() == 'j':
             self._position += 1
+
+        elif (self._position < self._input_len and self._input[self._position] in ('+', '-')
+                and self._position + 1 < self._input_len):
+            # Possible complex literal like 3+4j or 3-4j: consume the imaginary part
+            saved_pos = self._position
+            self._position += 1
+            while self._position < self._input_len and self._is_digit(self._input[self._position]):
+                self._position += 1
+
+            if (self._position < self._input_len and self._input[self._position] == '.'
+                    and self._position + 1 < self._input_len
+                    and self._is_digit(self._input[self._position + 1])):
+                self._position += 1
+                while self._position < self._input_len and self._is_digit(self._input[self._position]):
+                    self._position += 1
+
+            if (self._position < self._input_len and self._input[self._position].lower() == 'e'):
+                self._position += 1
+                if self._position < self._input_len and self._input[self._position] in ('+', '-'):
+                    self._position += 1
+
+                while self._position < self._input_len and self._is_digit(self._input[self._position]):
+                    self._position += 1
+
+            if self._position < self._input_len and self._input[self._position].lower() == 'j':
+                self._position += 1
+
+            else:
+                # Not a complex literal — backtrack
+                self._position = saved_pos
 
         self._tokens.append(Token(
             type=TokenType.NUMBER,

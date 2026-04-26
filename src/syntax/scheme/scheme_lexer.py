@@ -255,10 +255,17 @@ class SchemeLexer(Lexer):
 
     def _read_number_or_identifier(self) -> None:
         """
-        Read an operator as identifier or start of number.
+        Read a +/- operator as an identifier or the start of a number.
         """
+        next_pos = self._position + 1
         if (self._position + 1 < self._input_len and
-            self._is_digit(self._input[self._position + 1])):
+                self._is_digit(self._input[next_pos])):
+            self._read_number()
+            return
+
+        if (next_pos < self._input_len and self._input[next_pos] == '.'
+                and next_pos + 1 < self._input_len
+                and self._is_digit(self._input[next_pos + 1])):
             self._read_number()
             return
 
@@ -266,8 +273,15 @@ class SchemeLexer(Lexer):
 
     def _read_dot_or_number(self) -> None:
         """
-        Read a dot token or start of decimal number.
+        Read a dot token, start of decimal number, or the '...' identifier.
         """
+        # R5RS: '...' is a valid identifier
+        if self._input[self._position:self._position + 3] == '...':
+            start = self._position
+            self._position += 3
+            self._tokens.append(Token(type=TokenType.IDENTIFIER, value='...', start=start))
+            return
+
         if (self._position + 1 < self._input_len and
             self._is_digit(self._input[self._position + 1])):
             self._read_number()
@@ -289,9 +303,9 @@ class SchemeLexer(Lexer):
         - Integers: 42
         - Decimals: 3.14
         - Scientific: 1e10
-        - Complex: 3+4i
+        - Complex: 5i, 3+4i, 1.5e2+3.7e-1i
         - Rationals: 22/7
-        - Signed: +42, -42
+        - Signed: +42, -42, +3.14, -.5
         """
         start = self._position
 
@@ -314,7 +328,7 @@ class SchemeLexer(Lexer):
         if (self._position < self._input_len and
                 self._input[self._position].lower() == 'e'):
             self._position += 1
-            if self._input[self._position] in ('+', '-'):
+            if self._position < self._input_len and self._input[self._position] in ('+', '-'):
                 self._position += 1
 
             while (self._position < self._input_len and self._is_digit(self._input[self._position])):
@@ -326,9 +340,39 @@ class SchemeLexer(Lexer):
             while (self._position < self._input_len and self._is_digit(self._input[self._position])):
                 self._position += 1
 
-        # Handle complex
-        if (self._position < self._input_len and self._input[self._position].lower() == 'i'):
+        # Handle complex suffix (pure imaginary: 5i, or full complex: 3+4i)
+        if self._position < self._input_len and self._input[self._position].lower() == 'i':
             self._position += 1
+
+        elif (self._position < self._input_len and self._input[self._position] in ('+', '-')
+                and self._position + 1 < self._input_len):
+            # Possible rectangular complex literal like 3+4i or 3-4i: consume the imaginary part
+            saved_pos = self._position
+            self._position += 1
+            while self._position < self._input_len and self._is_digit(self._input[self._position]):
+                self._position += 1
+
+            if (self._position < self._input_len and self._input[self._position] == '.'
+                    and self._position + 1 < self._input_len
+                    and self._is_digit(self._input[self._position + 1])):
+                self._position += 1
+                while self._position < self._input_len and self._is_digit(self._input[self._position]):
+                    self._position += 1
+
+            if (self._position < self._input_len and self._input[self._position].lower() == 'e'):
+                self._position += 1
+                if self._position < self._input_len and self._input[self._position] in ('+', '-'):
+                    self._position += 1
+
+                while self._position < self._input_len and self._is_digit(self._input[self._position]):
+                    self._position += 1
+
+            if self._position < self._input_len and self._input[self._position].lower() == 'i':
+                self._position += 1
+
+            else:
+                # Not a complex literal — backtrack
+                self._position = saved_pos
 
         self._tokens.append(Token(
             type=TokenType.NUMBER,
@@ -443,7 +487,7 @@ class SchemeLexer(Lexer):
         Returns:
             True if the character is a delimiter, False otherwise
         """
-        return (self._is_whitespace(ch) or ch in ('(', ')'))
+        return (self._is_whitespace(ch) or ch in ('(', ')', '#'))
 
     def _is_special_form(self, value: str) -> bool:
         """

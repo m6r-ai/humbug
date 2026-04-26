@@ -1,7 +1,6 @@
 """
 Tests for Menai number tokenization.
 """
-import pytest
 
 from syntax.menai.menai_lexer import MenaiLexer
 from syntax.lexer import TokenType
@@ -71,8 +70,9 @@ class TestMenaiNumbers:
             assert tokens[0].value == num
 
     def test_complex_numbers(self):
-        """Test complex numbers with 'j' suffix."""
-        test_cases = ['1j', '2.5j', '0j', '3.14j', '1e10j', '-5j', '+3j']
+        """Test complex numbers with 'j' suffix, including full complex literals."""
+        test_cases = ['1j', '2.5j', '0j', '3.14j', '1e10j', '-5j', '+3j',
+                      '3+4j', '3-4j', '1.5e2+3.7e-1j', '0+1j']
         for num in test_cases:
             lexer = MenaiLexer()
             lexer.lex(None, num)
@@ -211,21 +211,7 @@ class TestMenaiNumbers:
         lexer.lex(None, 'pi e')
 
         tokens = list(lexer._tokens)
-        # Filter out whitespace
-        # whitespace is skipped
         assert len(tokens) == 2
-        assert tokens[0].type == TokenType.IDENTIFIER
-        assert tokens[0].value == 'pi'
-        assert tokens[1].type == TokenType.IDENTIFIER
-        assert tokens[1].value == 'e'
-        assert tokens[0].type == TokenType.IDENTIFIER
-        assert tokens[0].value == 'pi'
-        assert tokens[1].type == TokenType.IDENTIFIER
-        assert tokens[1].value == 'e'
-        assert tokens[0].type == TokenType.IDENTIFIER
-        assert tokens[0].value == 'pi'
-        assert tokens[1].type == TokenType.IDENTIFIER
-        assert tokens[1].value == 'e'
         assert tokens[0].type == TokenType.IDENTIFIER
         assert tokens[0].value == 'pi'
         assert tokens[1].type == TokenType.IDENTIFIER
@@ -262,3 +248,48 @@ class TestMenaiNumbers:
         assert len(tokens) == 1
         assert tokens[0].type == TokenType.NUMBER
         assert tokens[0].value == '+42'
+
+    def test_negative_based_numbers(self):
+        """Test that negative based-number literals are a single token."""
+        test_cases = [
+            ('-#xFF', '-#xFF'),
+            ('-#b1010', '-#b1010'),
+            ('-#o755', '-#o755'),
+            ('-#d42', '-#d42'),
+            ('-#Xff', '-#Xff'),
+        ]
+        for num, expected_value in test_cases:
+            lexer = MenaiLexer()
+            lexer.lex(None, num)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1, f"Negative based number '{num}' should produce one token"
+            assert tokens[0].type == TokenType.NUMBER, f"'{num}' should be NUMBER type"
+            assert tokens[0].value == expected_value
+
+    def test_exponent_at_end_of_input(self):
+        """Test that a trailing 'e' does not crash the lexer."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '1e')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.NUMBER
+        assert tokens[0].value == '1e'
+
+    def test_complex_number_single_token(self):
+        """Test that full complex literals like 3+4j are a single token."""
+        cases = [
+            ('3+4j', '3+4j'),
+            ('3-4j', '3-4j'),
+            ('1.5e2+3.7e-1j', '1.5e2+3.7e-1j'),
+            ('0+1j', '0+1j'),
+        ]
+        for source, expected in cases:
+            lexer = MenaiLexer()
+            lexer.lex(None, source)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1, f"Complex literal '{source}' should produce one token, got {len(tokens)}"
+            assert tokens[0].type == TokenType.NUMBER
+            assert tokens[0].value == expected
