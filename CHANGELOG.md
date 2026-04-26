@@ -33,6 +33,7 @@ Bug fixes:
 - Fixed menu and dialog edit control scaling problem on Ubuntu under WSL2 on Windows 11.
 - Fixed bugs in the Menai and Scheme syntax highlighting.
 - Added tests for the Scheme syntax highlighter.
+- Menai now suports `#d` and `#D` numeric literals.
 
 ## v44 (2026-04-19)
 

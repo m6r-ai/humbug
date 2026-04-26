@@ -265,27 +265,24 @@ class MindspaceView(QWidget):
         Reveal and select a file in the appropriate view.
 
         Args:
-            file_path: Absolute path to the file to reveal and select
+            view_type: The mindspace view type the file belongs to.
+            file_path: Absolute path to the file to reveal and select.
         """
         if not file_path or not self._mindspace_manager.has_mindspace():
             return
 
         match view_type:
             case MindspaceViewType.CONVERSATIONS:
-                self._set_active_view(MindspaceViewType.CONVERSATIONS)
                 self._conversations_view.reveal_and_select_file(file_path)
 
             case MindspaceViewType.FILES:
-                self._set_active_view(MindspaceViewType.FILES)
                 self._files_view.reveal_and_select_file(file_path)
 
             case MindspaceViewType.PREVIEW:
-                self._set_active_view(MindspaceViewType.PREVIEW)
                 self._preview_view.reveal_and_select_file(file_path)
 
             case MindspaceViewType.VCS:
-                if self._vcs_available:
-                    self._set_active_view(MindspaceViewType.VCS)
+                self._vcs_view.reveal_and_select_file(file_path)
 
     def set_mindspace(self, path: str) -> None:
         """

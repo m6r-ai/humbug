@@ -147,6 +147,30 @@ class MindspaceVCSView(QWidget):
         self._list_widget.clear()
         self._poller.set_mindspace(path)
 
+    def reveal_and_select_file(self, file_path: str) -> None:
+        """
+        Select the given file in the VCS list if it appears there.
+
+        Does nothing if the file is not among the currently changed files.
+
+        Args:
+            file_path: Absolute path to the file to reveal and select.
+        """
+        if not self._mindspace_path:
+            return
+
+        normalized_path = os.path.normpath(file_path)
+        for i in range(self._list_widget.count()):
+            item = self._list_widget.item(i)
+            if item is None:
+                continue
+
+            if os.path.normpath(item.data(Qt.ItemDataRole.UserRole)) == normalized_path:
+                self._list_widget.clearSelection()
+                self._list_widget.setCurrentItem(item)
+                self._list_widget.scrollToItem(item, QListWidget.ScrollHint.EnsureVisible)
+                return
+
     def apply_style(self) -> None:
         """Reapply theme and zoom-dependent styling."""
         self._header.apply_style()
