@@ -85,20 +85,38 @@ class AIConversationSettings:
         ),
 
         # Deepseek models
-        "deepseek-chat": AIModel(
-            name="deepseek-chat",
+        "deepseek-v4-flash": AIModel(
+            name="deepseek-v4-flash",
             provider="deepseek",
-            context_window=131072,
-            max_output_tokens=8192,
+            context_window=1000000,
+            max_output_tokens=384000,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "deepseek-reasoner": AIModel(
-            name="deepseek-reasoner",
+        "deepseek-v4-flash (thinking)": AIModel(
+            name="deepseek-v4-flash",
             provider="deepseek",
-            context_window=131072,
-            max_output_tokens=32768,
+            context_window=1000000,
+            max_output_tokens=384000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "deepseek-v4-pro": AIModel(
+            name="deepseek-v4-pro",
+            provider="deepseek",
+            context_window=1000000,
+            max_output_tokens=384000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "deepseek-v4-pro (thinking)": AIModel(
+            name="deepseek-v4-pro",
+            provider="deepseek",
+            context_window=1000000,
+            max_output_tokens=384000,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
@@ -253,8 +271,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.NO_TOOLS
         ),
-        "kimi-k2.5": AIModel(
-            name="kimi-k2.5:cloud",
+        "kimi-k2.6": AIModel(
+            name="kimi-k2.6:cloud",
             provider="ollama",
             context_window=262144,
             max_output_tokens=32768,
@@ -262,8 +280,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "kimi-k2.5 (thinking)": AIModel(
-            name="kimi-k2.5:cloud",
+        "kimi-k2.6 (thinking)": AIModel(
+            name="kimi-k2.6:cloud",
             provider="ollama",
             context_window=262144,
             max_output_tokens=32768,
@@ -298,8 +316,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "qwen3.5": AIModel(
-            name="qwen3.5:397b-cloud",
+        "qwen3.6": AIModel(
+            name="qwen3.6:35b",
             provider="ollama",
             context_window=256000,
             max_output_tokens=2048,
@@ -307,8 +325,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "qwen3.5 (thinking)": AIModel(
-            name="qwen3.5:397b-cloud",
+        "qwen3.6 (thinking)": AIModel(
+            name="qwen3.6:35b",
             provider="ollama",
             context_window=256000,
             max_output_tokens=2048,
@@ -318,8 +336,8 @@ class AIConversationSettings:
         ),
 
         # OpenAI models
-        "gpt-5-nano": AIModel(
-            name="gpt-5-nano",
+        "gpt-5.4-nano": AIModel(
+            name="gpt-5.4-nano",
             provider="openai",
             context_window=400000,
             max_output_tokens=128000,
@@ -327,10 +345,28 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "gpt-5-mini": AIModel(
-            name="gpt-5-mini",
+        "gpt-5.4-mini": AIModel(
+            name="gpt-5.4-mini",
             provider="openai",
             context_window=400000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "gpt-5.5 (non-reasoning)": AIModel(
+            name="gpt-5.5",
+            provider="openai",
+            context_window=1000000,
+            max_output_tokens=128000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "gpt-5.5": AIModel(
+            name="gpt-5.5",
+            provider="openai",
+            context_window=1000000,
             max_output_tokens=128000,
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
@@ -349,24 +385,6 @@ class AIConversationSettings:
             name="gpt-5.4",
             provider="openai",
             context_window=1000000,
-            max_output_tokens=128000,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-5.2 (non-reasoning)": AIModel(
-            name="gpt-5.2",
-            provider="openai",
-            context_window=400000,
-            max_output_tokens=128000,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-5.2": AIModel(
-            name="gpt-5.2",
-            provider="openai",
-            context_window=400000,
             max_output_tokens=128000,
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,

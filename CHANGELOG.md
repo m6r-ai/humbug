@@ -17,6 +17,10 @@ New features:
 - The mindspace panel can be expanded and collapsed.  Also the panel shows just one view at a time, giving more room to see
   what's there.
 - If you change a file extension when renaming a file, you will now be prompted to confirm that's what you want to do.
+- Adding "thinking" support to the DeepSeek backend.
+- Updated the DeepSeek models to v4 (flash and pro).
+- Updated the OpenAI models to include GPT-5.5 and updated nano and mini models to GPT-5.4.
+- Updated the Ollama Qwen 3.5 models to 3.6.
 
 Bug fixes:
 
