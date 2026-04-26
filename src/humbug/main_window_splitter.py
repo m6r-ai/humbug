@@ -80,7 +80,8 @@ class MainWindowSplitter(QSplitter):
 
     def _on_animation_value_changed(self, value: object) -> None:
         """Move the splitter to the animated position."""
-        super().moveSplitter(int(value), 1)
+        assert isinstance(value, int)
+        super().moveSplitter(value, 1)
 
     def _on_animation_finished(self) -> None:
         """Clean up after animation completes."""

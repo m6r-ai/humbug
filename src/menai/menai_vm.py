@@ -402,7 +402,7 @@ class MenaiVM:
                 if not isinstance(prelude_result, MenaiDict):
                     raise MenaiEvalError("Prelude must evaluate to a dict")
 
-                resolved_globals = {k.value: v for k, v in prelude_result.pairs}
+                resolved_globals = {k.to_python(): v for k, v in prelude_result.pairs}
                 for func in resolved_globals.values():
                     if type(func) is MenaiFunction:  # pylint: disable=unidiomatic-typecheck
                         n = self._max_local_count(func.bytecode)
