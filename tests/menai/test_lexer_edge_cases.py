@@ -108,12 +108,26 @@ class TestMenaiLexerEdgeCases:
             result = menai.evaluate(expr)
             assert result == expected
 
+        # Decimal (explicit base prefix)
+        decimal_cases = [
+            ("#d0", 0),
+            ("#d42", 42),
+            ("#d255", 255),
+            ("#D42", 42),
+            ("-#d42", -42),
+        ]
+
+        for expr, expected in decimal_cases:
+            result = menai.evaluate(expr)
+            assert result == expected
+
     def test_invalid_number_tokenization(self, menai):
         """Test invalid number tokenization cases."""
         invalid_numbers = [
             "#x",           # Hex without digits
             "#b",           # Binary without digits
             "#o",           # Octal without digits
+            "#d",           # Decimal without digits
             "1e",           # Missing exponent
             "1.5e+",        # Missing exponent after sign
             "1.5e-",        # Missing exponent after sign

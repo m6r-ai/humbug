@@ -143,7 +143,7 @@ class MenaiLexer:
                 self._handle_number()
                 return
 
-            if next_char == '#' and pos + 2 < len(expression) and expression[pos + 2] in 'xXbBoO':
+            if next_char == '#' and pos + 2 < len(expression) and expression[pos + 2] in 'xXbBoOdD':
                 self._handle_number()
                 return
 
@@ -295,7 +295,7 @@ class MenaiLexer:
             return
 
         # Based numbers (hex, binary, octal)
-        if next_char in 'xXbBoO':
+        if next_char in 'xXbBoOdD':
             start_line = self._line
             start_col = self._column
 
@@ -348,7 +348,7 @@ class MenaiLexer:
         # Check if it looks like they tried Python-style 0x/0b/0o
         suggestion = "Use #t for true or #f for false"
         if invalid_char.isdigit():
-            suggestion = "For hex/binary/octal use #x, #b, or #o prefix (e.g., #xFF, #b1010, #o755)"
+            suggestion = "For hex/binary/octal/decimal use #x, #b, #o, or #d prefix (e.g., #xFF, #b1010, #o755, #d42)"
 
         elif invalid_char in 'xXbBoO':
             suggestion = f"Use #{invalid_char} followed by digits (e.g., #xFF, #b1010, #o755)"
@@ -358,10 +358,10 @@ class MenaiLexer:
             line=self._line,
             column=self._column,
             received=f"Found: #{invalid_char}",
-            expected="Valid # literal: #t, #f, #none, #xFF, #b1010, #o755",
-            example="Correct: #t, #f, #none, #xFF, #b1010, #o755\nIncorrect: #true, #1, 0xFF",
+            expected="Valid # literal: #t, #f, #none, #xFF, #b1010, #o755, #d42",
+            example="Correct: #t, #f, #none, #xFF, #b1010, #o755, #d42\nIncorrect: #true, #1, 0xFF",
             suggestion=suggestion,
-            context="# must be followed by: 't'/'f' (boolean), 'none', 'x'/'X' (hex), 'b'/'B' (binary), or 'o'/'O' (octal)"
+            context="# must be followed by: 't'/'f' (boolean), 'none', 'x'/'X' (hex), 'b'/'B' (binary), 'o'/'O' (octal), or 'd'/'D' (decimal)"
         )
 
     def _handle_number(self) -> None:
@@ -636,14 +636,27 @@ class MenaiLexer:
                     )
                 value = int(digits, 8)
 
+            elif format_char == 'd':
+                # Decimal (explicit base prefix)
+                if not all(c in '0123456789' for c in digits):
+                    raise MenaiTokenError(
+                        message=f"Invalid decimal digits: {digits}",
+                        line=start_line,
+                        column=start_col,
+                        received=f"#{format_char}{digits}",
+                        expected="Decimal digits (0-9)",
+                        example="Valid: #d42, -#d42, #d255"
+                    )
+                value = int(digits, 10)
+
             else:
                 raise MenaiTokenError(
                     message=f"Invalid number format: #{format_char}",
                     line=start_line,
                     column=start_col,
                     received=f"#{format_char}",
-                    expected="#x (hex), #b (binary), or #o (octal)",
-                    example="Valid: #xFF, #b1010, #o755"
+                    expected="#x (hex), #b (binary), #o (octal), or #d (decimal)",
+                    example="Valid: #xFF, #b1010, #o755, #d42"
                 )
 
         except ValueError as e:
@@ -717,7 +730,7 @@ class MenaiLexer:
             # The # should be at position 0 (positive) or 1 (negative with -)
             if hash_pos <= 1 and hash_pos + 1 < len(complete_token):
                 format_char = complete_token[hash_pos + 1]
-                if format_char in 'xXbBoO':
+                if format_char in 'xXbBoOdD':
                     # Delegate to _read_hash_number, adjusting for potential negative sign
                     hash_start = start + hash_pos
                     value, _, token_type = self._read_hash_number(expression, hash_start, start_line, start_col + hash_pos)
