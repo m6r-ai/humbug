@@ -342,7 +342,8 @@ def get_english_strings() -> LanguageStrings:
 
         # File extension change confirmation
         rename_change_extension_title="Change File Type?",
-        rename_change_extension_message="You are changing the file extension from '{0}' to '{1}'. This may change how the file is handled. Are you sure?",
+        rename_change_extension_message="You are changing the file extension from '{0}' to '{1}'."
+            " This may change how the file is handled. Are you sure?",
 
         # Tool use
         approve_tool_call="Approve Tool Call",

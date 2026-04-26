@@ -350,7 +350,9 @@ class MindspacePreviewView(QWidget):
                     self,
                     MessageBoxType.WARNING,
                     strings.rename_change_extension_title,
-                    strings.rename_change_extension_message.format(old_ext or strings.error_empty_name, new_ext or strings.error_empty_name),
+                    strings.rename_change_extension_message.format(
+                        old_ext or strings.error_empty_name, new_ext or strings.error_empty_name
+                    ),
                     [MessageBoxButton.YES, MessageBoxButton.NO]
                 )
                 if result != MessageBoxButton.YES:

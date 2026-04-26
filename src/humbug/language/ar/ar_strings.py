@@ -341,7 +341,8 @@ def get_arabic_strings() -> LanguageStrings:
 
         # File extension change confirmation
         rename_change_extension_title="تغيير نوع الملف؟",
-        rename_change_extension_message="أنت تغير امتداد الملف من '{0}' إلى '{1}'. قد يؤثر ذلك على طريقة التعامل مع الملف. هل أنت متأكد؟",
+        rename_change_extension_message="أنت تغير امتداد الملف من '{0}' إلى '{1}'."
+            " قد يؤثر ذلك على طريقة التعامل مع الملف. هل أنت متأكد؟",
 
         # Tool use
         approve_tool_call="الموافقة على استدعاء الأداة",
