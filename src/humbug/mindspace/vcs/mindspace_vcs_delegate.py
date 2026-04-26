@@ -102,12 +102,14 @@ class MindspaceVCSDelegate(QStyledItemDelegate):
             badge_char,
         )
 
-        # Draw path in normal text colour, elided if too long.
+        # Draw path in normal text colour, elided with trailing ellipsis if too long.
         painter.setPen(path_color)
+        fm = painter.fontMetrics()
+        elided_path = fm.elidedText(path_text, Qt.TextElideMode.ElideRight, path_rect.width())
         painter.drawText(
             path_rect,
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
-            path_text,
+            elided_path,
         )
 
         painter.restore()
