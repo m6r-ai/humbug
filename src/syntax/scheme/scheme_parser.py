@@ -65,7 +65,7 @@ class SchemeParser(Parser):
                 continue
 
             # Handle closing parentheses
-            if token.type == 'RPAREN':
+            if token.type == TokenType.RPAREN:
                 if continuation_state > 0:
                     continuation_state -= 1
                     if continuation_state == 0:
@@ -74,7 +74,7 @@ class SchemeParser(Parser):
                 self._tokens.append(token)
                 continue
 
-            if token.type == 'DOT':
+            if token.type == TokenType.DOT:
                 token.type = TokenType.OPERATOR
                 self._tokens.append(token)
                 continue

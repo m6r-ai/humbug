@@ -702,6 +702,7 @@ class StyleManager(QObject):
             TokenType.DIFF_METADATA: ColorRole.SYNTAX_11,
             TokenType.DIFF_REMOVED: ColorRole.SYNTAX_12,
             TokenType.DOCTYPE: ColorRole.SYNTAX_05,
+            TokenType.DOT: ColorRole.SYNTAX_13,
             TokenType.DIRECTIVE: ColorRole.SYNTAX_18,
             TokenType.ELEMENT: ColorRole.SYNTAX_06,
             TokenType.ERROR: ColorRole.SYNTAX_ERROR,
@@ -754,6 +755,7 @@ class StyleManager(QObject):
             TokenType.TABLE: ColorRole.SYNTAX_03,
             TokenType.TEXT: ColorRole.SYNTAX_17,
             TokenType.TYPE: ColorRole.SYNTAX_21,
+            TokenType.VECTOR_START: ColorRole.SYNTAX_08,
             TokenType.XML_DOC: ColorRole.SYNTAX_03
         }
 
