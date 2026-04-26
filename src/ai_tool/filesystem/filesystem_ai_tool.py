@@ -1677,9 +1677,24 @@ class FileSystemAITool(AITool):
         """Recursively find files whose names match a glob pattern under a directory."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = await self._validate_and_resolve_path(
-            "path", path_arg, tool_call, request_authorization, allow_external=True
-        )
+        try:
+            path, display_path = await self._validate_and_resolve_path(
+                "path", path_arg, tool_call, request_authorization, allow_external=True
+            )
+        except AIToolAuthorizationDenied:
+            result = {
+                "directory": path_arg,
+                "name": self._get_optional_str_value("name", arguments, None),
+                "total_matches": 0,
+                "truncated": False,
+                "matches": []
+            }
+            return AIToolResult(
+                id=tool_call.id,
+                name="filesystem",
+                content=json.dumps(result, indent=2),
+                context="json"
+            )
 
         if not path.exists():
             raise AIToolExecutionError(f"Directory does not exist: {path_arg}")
@@ -1698,6 +1713,14 @@ class FileSystemAITool(AITool):
                 continue
 
             if name and not fnmatch.fnmatch(file_path.name, name):
+                continue
+
+            try:
+                await self._validate_and_resolve_path(
+                    "path", str(file_path), tool_call, request_authorization, allow_external=True
+                )
+
+            except (AIToolExecutionError, AIToolAuthorizationDenied):
                 continue
 
             try:

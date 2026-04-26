@@ -283,7 +283,7 @@ class UserSettings:
             settings.allow_external_file_access = allow_external
 
         # Load allowlist with validation
-        allowlist = data.get("externalFileAllowlist", FilesystemAccessSettings.get_default_allowlist())
+        allowlist = data.get("externalFileAllowlist", [])
         if not cls._validate_list_of_strings(allowlist):
             cls._logger.warning(
                 "Invalid externalFileAllowlist in %s: expected list of strings. Using defaults.",
@@ -292,10 +292,10 @@ class UserSettings:
             settings.external_file_allowlist = FilesystemAccessSettings.get_default_allowlist()
 
         else:
-            settings.external_file_allowlist = allowlist
+            settings.external_file_allowlist = allowlist if allowlist else FilesystemAccessSettings.get_default_allowlist()
 
         # Load denylist with validation
-        denylist = data.get("externalFileDenylist", FilesystemAccessSettings.get_default_denylist())
+        denylist = data.get("externalFileDenylist", [])
         if not cls._validate_list_of_strings(denylist):
             cls._logger.warning(
                 "Invalid externalFileDenylist in %s: expected list of strings. Using defaults.",
@@ -304,7 +304,7 @@ class UserSettings:
             settings.external_file_denylist = FilesystemAccessSettings.get_default_denylist()
 
         else:
-            settings.external_file_denylist = denylist
+            settings.external_file_denylist = denylist if denylist else FilesystemAccessSettings.get_default_denylist()
 
         return settings
 
