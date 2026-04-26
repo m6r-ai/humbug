@@ -331,7 +331,7 @@ int menai_bigint_fits_long(const MenaiBigInt *a);
 int menai_bigint_to_long(const MenaiBigInt *a, long *out);
 int menai_bigint_to_double(const MenaiBigInt *a, double *out);
 PyObject *menai_bigint_to_pylong(const MenaiBigInt *a);
-int menai_bigint_to_string(const MenaiBigInt *a, int base, char **out);
+MenaiValue *menai_bigint_to_menai_string(const MenaiBigInt *a, int base);
 Py_hash_t menai_bigint_hash(const MenaiBigInt *a);
 int menai_bigint_add(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
 int menai_bigint_sub(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);

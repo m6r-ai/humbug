@@ -907,60 +907,62 @@ menai_bigint_to_pylong(const MenaiBigInt *a)
     return result;
 }
 
-/* Write the string representation of a in the given base into *out. */
-int
-menai_bigint_to_string(const MenaiBigInt *a, int base, char **out)
+/*
+ * Convert the integer a to a MenaiString in the given base (2, 8, 10, or 16).
+ * Digit characters are ASCII and map 1:1 to codepoints, so the conversion
+ * writes directly into the MenaiString's uint32_t data array — no intermediate
+ * char buffer or UTF-8 decode step is needed.
+ */
+MenaiValue *
+menai_bigint_to_menai_string(const MenaiBigInt *a, int base)
 {
-    *out = NULL;
     if (base != 2 && base != 8 && base != 10 && base != 16) {
         PyErr_SetString(PyExc_ValueError, "invalid base");
-        return -1;
+        return NULL;
     }
 
     if (a->length == 0) {
-        char *s = (char *)malloc(2);
-        if (s == NULL) {
-            PyErr_NoMemory();
-            return -1;
-        }
-
-        s[0] = '0';
-        s[1] = '\0';
-        *out = s;
-        return 0;
+        return menai_string_from_codepoint((uint32_t)'0');
     }
 
     /* Work on a copy so we can do repeated division. */
     MenaiBigInt tmp;
     menai_bigint_init(&tmp);
     if (menai_bigint_copy(a, &tmp) < 0) {
-        return -1;
+        return NULL;
     }
 
     tmp.sign = 1; /* work with magnitude */
 
-    /* Upper bound on number of digits: ceil(bits / log2(base)) + 2. */
+    /*
+     * Upper bound on codepoint count: ceil(bits / log2(base)) + 1 for sign.
+     * We allocate a temporary uint32_t scratch buffer, fill it in reverse
+     * (least-significant digit first), then allocate the final MenaiString
+     * and copy in forward order.
+     */
     ssize_t bits = a->length * 32;
     ssize_t max_chars;
     if (base == 2) {
-        max_chars = bits + 2;
+        max_chars = bits + 1;
     } else if (base == 8) {
-        max_chars = bits / 3 + 4;
+        max_chars = bits / 3 + 2;
     } else if (base == 16) {
-        max_chars = bits / 4 + 4;
+        max_chars = bits / 4 + 2;
     } else {
         /* base 10: log10(2^32) ~ 9.63 per digit */
-        max_chars = a->length * 10 + 4;
+        max_chars = a->length * 10 + 1;
     }
 
-    char *buf = (char *)malloc((size_t)max_chars);
+    uint32_t *buf = (uint32_t *)malloc((size_t)max_chars * sizeof(uint32_t));
     if (buf == NULL) {
         menai_bigint_free(&tmp);
         PyErr_NoMemory();
-        return -1;
+        return NULL;
     }
 
-    static const char hex_digits[] = "0123456789abcdef";
+    static const uint32_t hex_digits[] = {
+        '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
+    };
     ssize_t pos = 0;
 
     MenaiBigInt quotient;
@@ -972,37 +974,36 @@ menai_bigint_to_string(const MenaiBigInt *a, int base, char **out)
             menai_bigint_free(&tmp);
             menai_bigint_free(&quotient);
             free(buf);
-            return -1;
+            return NULL;
         }
 
         menai_bigint_free(&tmp);
         tmp = quotient;
         menai_bigint_init(&quotient);
-        buf[pos++] = hex_digits[rem];
+        buf[pos++] = hex_digits[rem & 0xF];
     }
 
     menai_bigint_free(&tmp);
     menai_bigint_free(&quotient);
 
     if (pos == 0) {
-        buf[pos++] = '0';
+        buf[pos++] = (uint32_t)'0';
     }
 
     if (a->sign == -1) {
-        buf[pos++] = '-';
+        buf[pos++] = (uint32_t)'-';
     }
 
-    /* Reverse the buffer. */
+    /* Reverse the scratch buffer in place, then wrap it in a MenaiString. */
     for (ssize_t i = 0, j = pos - 1; i < j; i++, j--) {
-        char c = buf[i];
+        uint32_t c = buf[i];
         buf[i] = buf[j];
         buf[j] = c;
     }
 
-    buf[pos] = '\0';
-
-    *out = buf;
-    return 0;
+    MenaiValue *result = menai_string_from_codepoints(buf, pos);
+    free(buf);
+    return result;
 }
 
 /*

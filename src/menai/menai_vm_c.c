@@ -2949,14 +2949,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            char *cstr = NULL;
-            if (menai_bigint_to_string(&tmp, (int)radix, &cstr) < 0) {
-                menai_bigint_free(&tmp); goto error;
-            }
-
+            MenaiValue *r = menai_bigint_to_menai_string(&tmp, (int)radix);
             menai_bigint_free(&tmp);
-            MenaiValue *r = menai_string_from_utf8(cstr, (ssize_t)strlen(cstr));
-            free(cstr);
             if (r == NULL) {
                 goto error;
             }
