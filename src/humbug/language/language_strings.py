@@ -316,6 +316,10 @@ class LanguageStrings:
     # File duplication errors
     error_duplicating_file: str
 
+    # File extension change confirmation
+    rename_change_extension_title: str
+    rename_change_extension_message: str
+
     # Tool use
     approve_tool_call: str
     i_am_unsure_about_tool_call: str

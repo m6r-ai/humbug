@@ -340,6 +340,10 @@ def get_french_strings() -> LanguageStrings:
         # File duplication errors
         error_duplicating_file="Impossible de dupliquer le fichier : {0}",
 
+        # File extension change confirmation
+        rename_change_extension_title="Changer le type de fichier ?",
+        rename_change_extension_message="Vous modifiez l'extension de fichier de '{0}' en '{1}'. Cela peut changer la façon dont le fichier est traité. Êtes-vous sûr ?",
+
         # Tool use
         approve_tool_call="Approuver les appels d'outils",
         i_am_unsure_about_tool_call="Je ne suis pas sûr à propos",

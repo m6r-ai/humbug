@@ -339,6 +339,10 @@ def get_arabic_strings() -> LanguageStrings:
         # File duplication errors
         error_duplicating_file="تعذر تكرار الملف: {0}",
 
+        # File extension change confirmation
+        rename_change_extension_title="تغيير نوع الملف؟",
+        rename_change_extension_message="أنت تغير امتداد الملف من '{0}' إلى '{1}'. قد يؤثر ذلك على طريقة التعامل مع الملف. هل أنت متأكد؟",
+
         # Tool use
         approve_tool_call="الموافقة على استدعاء الأداة",
         i_am_unsure_about_tool_call="لست متأكداً من هذا",

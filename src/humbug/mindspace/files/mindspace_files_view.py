@@ -5,7 +5,7 @@ import os
 import shutil
 from typing import cast
 
-from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QDir
+from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QDir, QTimer
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QVBoxLayout, QMenu
 )
@@ -343,12 +343,29 @@ class MindspaceFilesView(QWidget):
         directory = os.path.dirname(current_path)
         new_path = os.path.join(directory, new_name)
 
+        # For files, warn if the extension is changing
+        if os.path.isfile(current_path):
+            old_ext = os.path.splitext(current_path)[1].lower()
+            new_ext = os.path.splitext(new_name)[1].lower()
+            if old_ext != new_ext:
+                strings = self._language_manager.strings()
+                result = MessageBox.show_message(
+                    self,
+                    MessageBoxType.WARNING,
+                    strings.rename_change_extension_title,
+                    strings.rename_change_extension_message.format(old_ext or strings.error_empty_name, new_ext or strings.error_empty_name),
+                    [MessageBoxButton.YES, MessageBoxButton.NO]
+                )
+                if result != MessageBoxButton.YES:
+                    return
+
         try:
             # Perform the rename
             os.rename(current_path, new_path)
             self.file_renamed.emit(current_path, new_path)
 
             self._logger.info("Successfully renamed '%s' to '%s'", current_path, new_path)
+            QTimer.singleShot(0, lambda: self.reveal_and_select_file(new_path))
 
         except OSError as e:
             self._logger.error("Failed to rename '%s' to '%s': %s", current_path, new_path, str(e))

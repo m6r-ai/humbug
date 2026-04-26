@@ -340,6 +340,10 @@ def get_english_strings() -> LanguageStrings:
         # File duplication errors
         error_duplicating_file="Could not duplicate file: {0}",
 
+        # File extension change confirmation
+        rename_change_extension_title="Change File Type?",
+        rename_change_extension_message="You are changing the file extension from '{0}' to '{1}'. This may change how the file is handled. Are you sure?",
+
         # Tool use
         approve_tool_call="Approve Tool Call",
         i_am_unsure_about_tool_call="I'm Unsure About This",
