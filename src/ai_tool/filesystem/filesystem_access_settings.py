@@ -35,7 +35,16 @@ class FilesystemAccessSettings:
     def get_default_denylist() -> List[str]:
         """Get platform-specific default denylist."""
         if sys.platform == "win32":
-            return []  # TODO: Add Windows-specific sensitive paths
+            return [
+                "~/.humbug/**",
+                "~/AppData/Roaming/ssh/**",
+                "~/AppData/Local/aws/**",
+                "~/AppData/Roaming/gnupg/**",
+                "~/AppData/Local/Microsoft/Credentials/**",
+                "~/AppData/Roaming/Microsoft/Credentials/**",
+                "~/AppData/Roaming/Microsoft/Protect/**",
+                "C:/Windows/System32/config/**",
+            ]
 
         # Unix-like systems (Linux, macOS, etc.)
         return ["~/.humbug/**", "~/.ssh/**", "~/.aws/**", "~/.gnupg/**", "~/.password-store/**"]

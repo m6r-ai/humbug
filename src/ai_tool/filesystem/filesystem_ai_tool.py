@@ -458,20 +458,20 @@ class FileSystemAITool(AITool):
         if not patterns:
             return False
 
-        # Expand ~ in path for matching
-        expanded_path = os.path.expanduser(path_str)
+        # Expand ~ in path and normalise to forward slashes for consistent matching
+        expanded_path = os.path.expanduser(path_str).replace(os.sep, "/")
 
         for pattern in patterns:
             if not pattern:  # Skip empty patterns
                 continue
 
-            # Expand ~ in pattern
-            expanded_pattern = os.path.expanduser(pattern)
+            # Expand ~ in pattern and normalise to forward slashes
+            expanded_pattern = os.path.expanduser(pattern).replace(os.sep, "/")
 
             # If pattern ends with /**, also check if path matches the base directory
             if expanded_pattern.endswith('/**'):
                 base_pattern = expanded_pattern[:-3]  # Remove the /**
-                if expanded_path == base_pattern or expanded_path.startswith(base_pattern + os.sep):
+                if expanded_path == base_pattern or expanded_path.startswith(base_pattern + "/"):
                     return True
 
             # Use fnmatch for glob pattern matching

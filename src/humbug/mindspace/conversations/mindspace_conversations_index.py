@@ -94,6 +94,15 @@ class MindspaceConversationsIndex(QObject):
         self._initial_scan()
         self.changed.emit()
 
+    def conversations_dir(self) -> str:
+        """
+        Get the current conversations directory.
+
+        Returns:
+            Absolute path to the conversations directory, or empty string if not set.
+        """
+        return self._conversations_dir
+
     def get_node(self, path: str) -> ConversationNode | None:
         """
         Get the index node for a conversation file.
@@ -515,17 +524,17 @@ class MindspaceConversationsIndex(QObject):
 
         for paths in shared.values():
             path_list = sorted(paths)  # Deterministic ordering
-            for i in range(len(path_list)):
+            for i, path_a in enumerate(path_list):
                 for j in range(i + 1, len(path_list)):
-                    pair = frozenset([path_list[i], path_list[j]])
+                    pair = frozenset([path_a, path_list[j]])
                     if pair in processed_pairs:
                         continue
 
                     processed_pairs.add(pair)
-                    fork_msg_id = self._find_fork_point(path_list[i], path_list[j])
+                    fork_msg_id = self._find_fork_point(path_a, path_list[j])
                     if fork_msg_id:
                         self._fork_edges.append(ForkEdge(
-                            path_a=path_list[i],
+                            path_a=path_a,
                             path_b=path_list[j],
                             fork_message_id=fork_msg_id
                         ))

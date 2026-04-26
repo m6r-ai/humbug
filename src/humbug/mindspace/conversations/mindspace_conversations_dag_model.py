@@ -196,7 +196,7 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
         self._next_key = 0
         self._timestamp_cache.clear()
 
-        conversations_dir = self._index._conversations_dir
+        conversations_dir = self._index.conversations_dir()
         if not conversations_dir or not os.path.isdir(conversations_dir):
             return
 
@@ -466,10 +466,6 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
                 siblings = self._children.get(parent_key, [])
                 try:
                     row = siblings.index(key)
-                    parent_index = QModelIndex()
-                    if parent_key is not None:
-                        parent_index = self.index_for_key(parent_key)
-
                     return self.createIndex(row, 0, key)
 
                 except ValueError:
@@ -495,5 +491,6 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
         try:
             row = siblings.index(key)
             return self.createIndex(row, 0, key)
+
         except ValueError:
             return QModelIndex()

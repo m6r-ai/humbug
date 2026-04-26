@@ -1381,8 +1381,7 @@ class EditorWidget(QPlainTextEdit):
         if not self._matches:
             return False
 
-        if self._current_match < 0:
-            self._current_match = 0
+        self._current_match = max(self._current_match, 0)
 
         start, end = self._matches[self._current_match]
         _search_text, case_sensitive, regexp = self._last_search

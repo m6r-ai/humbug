@@ -222,10 +222,30 @@ class MindspaceView(QWidget):
         self._update_button_styling()
         self.apply_style()
 
-    @property
     def rail_width(self) -> int:
         """Return the fixed width of the icon rail."""
         return self._rail_collapsed_width
+
+    def sidebar_collapsed(self) -> bool:
+        """Return whether the sidebar is currently collapsed."""
+        return self._sidebar_collapsed
+
+    def expanded_sidebar_width(self) -> int:
+        """Return the last known expanded width of the sidebar."""
+        return self._expanded_sidebar_width
+
+    def set_expanded_sidebar_width(self, width: int) -> None:
+        """
+        Record the expanded sidebar width.
+
+        Args:
+            width: Width in pixels to store as the expanded sidebar width.
+        """
+        self._expanded_sidebar_width = width
+
+    def content_min_width(self) -> int:
+        """Return the minimum width of the sidebar content pane."""
+        return self._content_min_width
 
     def _on_vcs_repo_available(self, has_repo: bool) -> None:
         """Show or hide the VCS rail button when repository state changes."""

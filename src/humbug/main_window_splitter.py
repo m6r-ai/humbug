@@ -57,16 +57,16 @@ class MainWindowSplitter(QSplitter):
         if not isinstance(widget, MindspaceView):
             return
 
-        rail_width = widget.rail_width
+        rail_width = widget.rail_width()
         sizes = self.sizes()
         current = sizes[0]
-        collapsed = widget._sidebar_collapsed
+        collapsed = widget.sidebar_collapsed()
 
         if collapsed:
-            target = max(widget._expanded_sidebar_width, rail_width + widget._content_min_width)
+            target = max(widget.expanded_sidebar_width(), rail_width + widget.content_min_width())
 
         else:
-            widget._expanded_sidebar_width = current
+            widget.set_expanded_sidebar_width(current)
             target = rail_width
             super().moveSplitter(rail_width, 1)
 
@@ -97,11 +97,11 @@ class MainWindowSplitter(QSplitter):
         if not isinstance(widget, MindspaceView):
             return
 
-        rail_width = widget.rail_width
+        rail_width = widget.rail_width()
         is_collapsed = pos <= rail_width
 
-        if is_collapsed != widget._sidebar_collapsed:
+        if is_collapsed != widget.sidebar_collapsed():
             if not is_collapsed:
-                widget._expanded_sidebar_width = pos
+                widget.set_expanded_sidebar_width(pos)
 
             widget.set_collapsed(is_collapsed)
