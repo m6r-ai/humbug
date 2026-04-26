@@ -135,9 +135,6 @@ class MindspaceVCSView(QWidget):
         self._poller.repo_state_changed.connect(self._on_repo_state_changed)
         self._poller.status_changed.connect(self._on_status_changed)
 
-        # Start hidden — only shown once a repo is confirmed present.
-        self.hide()
-
     def set_mindspace(self, path: str) -> None:
         """
         Set the mindspace root to track.
@@ -148,7 +145,6 @@ class MindspaceVCSView(QWidget):
         self._mindspace_path = path
         self._current_status = []
         self._list_widget.clear()
-        self.hide()
         self._poller.set_mindspace(path)
 
     def apply_style(self) -> None:
@@ -175,13 +171,10 @@ class MindspaceVCSView(QWidget):
         ))
 
     def _on_repo_state_changed(self, has_repo: bool) -> None:
-        """Show or hide the entire widget as the repository appears or disappears."""
-        if has_repo:
-            self.show()
-        else:
+        """Clear state when the repository disappears and notify the parent view."""
+        if not has_repo:
             self._current_status = []
             self._list_widget.clear()
-            self.hide()
 
         self.repo_available.emit(has_repo)
 
