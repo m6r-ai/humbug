@@ -67,8 +67,11 @@ class MindspaceVCSPoller(QObject):
         self._timer.stop()
         self._mindspace_path = path
         self._repo_root = ""
-        self._has_repo = False
         self._last_status = []
+
+        if self._has_repo:
+            self._has_repo = False
+            self.repo_state_changed.emit(False)
 
         if path:
             self._poll()
