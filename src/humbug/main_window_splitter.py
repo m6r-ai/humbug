@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QSplitter, QSplitterHandle
 from PySide6.QtGui import QPainter
 
 from humbug.color_role import ColorRole
+from humbug.mindspace.mindspace_view import MindspaceView
 from humbug.style_manager import StyleManager
 
 
@@ -48,7 +49,6 @@ class MainWindowSplitter(QSplitter):
 
     def toggle_mindspace(self) -> None:
         """Animate the mindspace view between collapsed and expanded states."""
-        from humbug.mindspace.mindspace_view import MindspaceView
 
         if self.count() == 0:
             return
@@ -88,7 +88,6 @@ class MainWindowSplitter(QSplitter):
 
     def _on_splitter_moved(self, pos: int, index: int) -> None:
         """Update the mindspace collapsed state to reflect where the splitter ended up."""
-        from humbug.mindspace.mindspace_view import MindspaceView
 
         if self._animating or index != 1 or self.count() == 0:
             return
