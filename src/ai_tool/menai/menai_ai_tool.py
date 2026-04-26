@@ -197,7 +197,7 @@ Syntax: (operator arg1 arg2 ...)
 ## Integer operations
 
 - All args must be integers; type error otherwise
-- Literals: 42 (decimal), #xff (hex), #o755 (octal), #b1010 (binary)
+- Literals: 42 (decimal), #xff (hex), #o755 (octal), #b1010 (binary), #d42 (explicit decimal prefix)
 - Type predicate: (integer? 42) → #t, (integer? 3.14) → #f
 - Inequality: (integer=? 1 1), (integer!=? 1 2)
 - Ordered comparison: (integer<? 1 2), (integer>? 3 2), (integer<=? 1 1), (integer>=? 2 1)
