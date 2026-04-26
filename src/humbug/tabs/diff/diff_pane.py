@@ -267,7 +267,6 @@ class DiffPane(QPlainTextEdit):
         """Show a styled context menu with a Copy action."""
         cursor = self.cursorForPosition(event.pos())
         block = cursor.block()
-        block_data = block.userData()
         block_number = block.blockNumber()
         column = cursor.positionInBlock() + 1
         menu = QMenu(self)

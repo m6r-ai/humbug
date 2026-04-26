@@ -3,7 +3,10 @@ import json
 import logging
 from typing import Dict, Any, cast
 
-from ai import AIConversation, AIConversationEvent, AIConversationParent, AIConversationSettings, AIManager, AIMessageSource, AIReasoningCapability
+from ai import (
+        AIConversation, AIConversationEvent, AIConversationParent,
+        AIConversationSettings, AIManager, AIMessageSource, AIReasoningCapability
+)
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback,

@@ -971,7 +971,7 @@ class MindspaceConversationsView(QWidget):
         if result == MessageBoxButton.YES:
             # Delete all included files — deepest paths first to avoid
             # trying to delete a parent before its children are gone
-            for file_path in sorted(included, key=lambda p: len(p), reverse=True):
+            for file_path in sorted(included, key=len, reverse=True):
                 try:
                     self.file_deleted.emit(file_path)
                     os.remove(file_path)

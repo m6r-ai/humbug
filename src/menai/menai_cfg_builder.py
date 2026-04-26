@@ -53,7 +53,7 @@ from menai.menai_ir import (
     MenaiIRTrace,
     MenaiIRVariable,
 )
-from menai.menai_value import MenaiDict, MenaiList, MenaiSet
+from menai.menai_value import MenaiList
 
 
 @dataclass

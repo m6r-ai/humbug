@@ -108,9 +108,9 @@ class MindspaceConversationsTreeView(MindspaceTreeView):
             if not self.isExpanded(p):
                 self.expand(p)
 
-        QTimer.singleShot(200, lambda: self._scroll_to_and_edit(index, file_path, callback))
+        QTimer.singleShot(200, lambda: self._scroll_to_and_edit(index, callback))
 
-    def _scroll_to_and_edit(self, index: QModelIndex, file_path: str, callback: Callable) -> None:
+    def _scroll_to_and_edit(self, index: QModelIndex, callback: Callable) -> None:
         """
         Scroll to index and invoke callback.
 
@@ -129,5 +129,6 @@ class MindspaceConversationsTreeView(MindspaceTreeView):
         if not is_visible:
             self.scrollTo(index, self.ScrollHint.PositionAtCenter)
             QTimer.singleShot(100, callback)
+
         else:
             callback()

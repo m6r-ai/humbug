@@ -383,7 +383,7 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
         parent_key = None if not parent.isValid() else parent.internalId()
         return len(self._children.get(parent_key, []))
 
-    def columnCount(self, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
+    def columnCount(self, _parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
         """Return the number of columns (always 1)."""
         return 1
 
@@ -471,6 +471,7 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
                         parent_index = self.index_for_key(parent_key)
 
                     return self.createIndex(row, 0, key)
+
                 except ValueError:
                     continue
 

@@ -1,7 +1,6 @@
 """Section header widget for mindspace panes."""
 
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
 from humbug.color_role import ColorRole

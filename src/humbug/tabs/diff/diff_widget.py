@@ -254,31 +254,27 @@ class DiffWidget(QWidget):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle keyboard scrolling for the shared scrollbar."""
         key = event.key()
-        bar = self._scrollbar
+        scroll_bar = self._scrollbar
 
-        _NAVIGATION_MODIFIERS = (
-            Qt.KeyboardModifier.AltModifier
-            | Qt.KeyboardModifier.ControlModifier
-            | Qt.KeyboardModifier.ShiftModifier
-        )
-        if event.modifiers() & _NAVIGATION_MODIFIERS:
+        if event.modifiers() & (Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.ControlModifier |
+                                Qt.KeyboardModifier.ShiftModifier):
             super().keyPressEvent(event)
             return
 
         if key == Qt.Key.Key_Up:
-            bar.setValue(bar.value() - bar.singleStep())
+            scroll_bar.setValue(scroll_bar.value() - scroll_bar.singleStep())
             event.accept()
 
         elif key == Qt.Key.Key_Down:
-            bar.setValue(bar.value() + bar.singleStep())
+            scroll_bar.setValue(scroll_bar.value() + scroll_bar.singleStep())
             event.accept()
 
         elif key == Qt.Key.Key_PageUp:
-            bar.setValue(bar.value() - bar.pageStep())
+            scroll_bar.setValue(scroll_bar.value() - scroll_bar.pageStep())
             event.accept()
 
         elif key == Qt.Key.Key_PageDown:
-            bar.setValue(bar.value() + bar.pageStep())
+            scroll_bar.setValue(scroll_bar.value() + scroll_bar.pageStep())
             event.accept()
 
         else:
