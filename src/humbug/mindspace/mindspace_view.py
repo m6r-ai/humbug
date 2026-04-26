@@ -196,6 +196,8 @@ class MindspaceView(QWidget):
         """Switch active pane from rail selection."""
         if checked:
             self._set_active_view(view_type)
+            if self._sidebar_collapsed:
+                self._toggle_sidebar()
 
     def _set_active_view(self, view_type: MindspaceViewType) -> None:
         """Set the active view in the stacked pane."""
