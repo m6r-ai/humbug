@@ -37,6 +37,7 @@ class ConversationMessage(QFrame):
     tool_call_approved = Signal(AIToolCall)
     tool_call_i_am_unsure = Signal()
     tool_call_rejected = Signal(str)
+    retry_requested = Signal()
 
     def __init__(
         self,
@@ -221,6 +222,10 @@ class ConversationMessage(QFrame):
         self._pending_tool_reason: str | None = None
         self._pending_tool_context: str | None = None
         self._pending_tool_destructive: bool | None = None
+
+        # Retry widget (shown on the last SYSTEM error message)
+        self._retry_widget: QWidget | None = None
+        self._retry_button: QPushButton | None = None
 
         # Track sections
         self._sections: List[ConversationMessageSection] = []
@@ -488,6 +493,9 @@ class ConversationMessage(QFrame):
         if self._approval_reject_button:
             self._approval_reject_button.setText(strings.reject_tool_call)
 
+        if self._retry_button:
+            self._retry_button.setText(strings.retry_error)
+
         if self._expand_button:
             tooltip = strings.tooltip_collapse_message if self._is_expanded else strings.tooltip_expand_message
             self._expand_button.setToolTip(tooltip)
@@ -697,6 +705,50 @@ class ConversationMessage(QFrame):
             "context": self._pending_tool_context,
             "destructive": self._pending_tool_destructive
         }
+
+    def show_retry_ui(self) -> None:
+        """Show a Retry button on this SYSTEM error message."""
+        assert self._retry_widget is None, "Retry widget already exists"
+
+        style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
+        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        font = self.font()
+        font.setPointSizeF(style_manager.base_font_size() * zoom_factor)
+
+        self._retry_widget = QWidget()
+        self._retry_widget.setObjectName("_retry_widget")
+        layout = QHBoxLayout(self._retry_widget)
+        layout.setContentsMargins(0, spacing, 0, 0)
+        layout.setSpacing(spacing)
+        layout.addStretch()
+
+        strings = self._language_manager.strings()
+        min_button_height = 40
+
+        self._retry_button = QPushButton(strings.retry_error)
+        self._retry_button.setObjectName("_retry_button")
+        self._retry_button.clicked.connect(self._on_retry_clicked)
+        self._retry_button.setMinimumHeight(min_button_height)
+        self._retry_button.setContentsMargins(8, 8, 8, 8)
+        self._retry_button.setFont(font)
+        layout.addWidget(self._retry_button)
+        layout.addStretch()
+
+        self._layout.addWidget(self._retry_widget)
+
+    def remove_retry_ui(self) -> None:
+        """Remove the retry button from this message."""
+        if self._retry_widget:
+            self._layout.removeWidget(self._retry_widget)
+            self._retry_widget.deleteLater()
+            self._retry_widget = None
+            self._retry_button = None
+
+    def _on_retry_clicked(self) -> None:
+        """Emit retry_requested and clean up the button."""
+        self.remove_retry_ui()
+        self.retry_requested.emit()
 
     def _get_border_color(self) -> str:
         """Get the border color based on current state."""
@@ -1066,6 +1118,9 @@ class ConversationMessage(QFrame):
 
         if self._approval_context_text_edit:
             self._approval_context_text_edit.setFont(font)
+
+        if self._retry_button:
+            self._retry_button.setFont(font)
 
         # Apply styling to all sections
         for section in self._sections:

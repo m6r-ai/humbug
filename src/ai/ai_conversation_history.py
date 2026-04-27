@@ -95,6 +95,18 @@ class AIConversationHistory:
 
         return None
 
+    def remove_last_message(self) -> AIMessage | None:
+        """
+        Remove and return the last message from the history.
+
+        Returns:
+            The removed message, or None if the history is empty.
+        """
+        if not self._messages:
+            return None
+
+        return self._messages.pop()
+
     def get_messages(self) -> List[AIMessage]:
         """
         Get a copy of all messages in the conversation history.

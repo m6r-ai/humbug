@@ -2,6 +2,11 @@
 
 ## v46 (2026-0x-xx)
 
+New features:
+
+- If a network message fails and the user gets a system error message, there's now a retry button to allow retrying
+  everything back to the last user message or tool call response.
+
 ## v45 (2026-04-26)
 
 New features:

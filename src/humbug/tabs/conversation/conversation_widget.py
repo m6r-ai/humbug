@@ -252,6 +252,9 @@ class ConversationWidget(QWidget):
         # Any active tool approval
         self._pending_tool_call_approval: ConversationMessage | None = None
 
+        # The last SYSTEM error message widget that has a retry button showing
+        self._last_error_message_widget: ConversationMessage | None = None
+
     def _activate_widget(self, widget: QWidget) -> None:
         """
         Handle activation of a widget, spotlighting the associated message.
@@ -397,6 +400,7 @@ class ConversationWidget(QWidget):
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
         msg_widget.tool_call_i_am_unsure.connect(self._on_tool_call_i_am_unsure)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
+        msg_widget.retry_requested.connect(self._on_retry_requested)
 
         self._messages.append(msg_widget)
 
@@ -412,6 +416,7 @@ class ConversationWidget(QWidget):
             message: The message that was added
         """
         self._hide_last_ai_connected_message()
+        self._remove_last_error_retry_ui()
 
         # If this is a USER message, delete any previous USER_QUEUED messages
         if message.source == AIMessageSource.USER:
@@ -813,6 +818,11 @@ class ConversationWidget(QWidget):
                 self._last_submitted_message = ""
                 self._input.setFocus()
 
+            # Show retry button on the error message widget
+            if self._messages:
+                self._last_error_message_widget = self._messages[-1]
+                self._last_error_message_widget.show_retry_ui()
+
         # Scroll to bottom if in auto-scroll mode, otherwise mark tab as updated
         if self._auto_scroll:
             self._scroll_to_bottom()
@@ -881,6 +891,52 @@ class ConversationWidget(QWidget):
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop = asyncio.get_event_loop()
         loop.create_task(ai_conversation.reject_pending_tool_calls(reason))
+
+    def _remove_last_error_retry_ui(self) -> None:
+        """Remove the retry button from the last error message widget, if present."""
+        if self._last_error_message_widget:
+            self._last_error_message_widget.remove_retry_ui()
+            self._last_error_message_widget = None
+
+    def _on_retry_requested(self) -> None:
+        """Handle the user clicking Retry on a SYSTEM error message."""
+        self._last_error_message_widget = None
+
+        # Remove all widgets from the error message back to (but not including) the last
+        # USER or TOOL_RESULT widget, mirroring what retry_last_request does to the history.
+        retry_sources = {AIMessageSource.USER, AIMessageSource.TOOL_RESULT}
+        while self._messages and self._messages[-1].message_source() not in retry_sources:
+            widget = self._messages.pop()
+            if self._message_with_selection == widget:
+                self._message_with_selection = None
+
+            if self._animated_message == widget:
+                self._animated_message = None
+
+            self._messages_layout.removeWidget(widget)
+            widget.deleteLater()
+
+        # If the spotlight index now points beyond the end of the list, reset it
+        if self._spotlighted_message_index >= len(self._messages):
+            self._spotlighted_message_index = -1
+
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+
+        # Clear the input box — the text was restored there by _on_request_error so the
+        # user could edit and resubmit manually, but retry resubmits directly from history.
+        self._input.clear()
+
+        # Re-enter streaming state so the UI reflects that a request is in flight
+        self._is_streaming = True
+        self._input.set_streaming(True)
+        self.status_updated.emit()
+
+        # Start animating immediately so there's visual feedback during the connection wait
+        if not self._is_animating:
+            self._start_message_border_animation()
+
+        loop = asyncio.get_event_loop()
+        loop.create_task(ai_conversation.retry_last_request())
 
     def _on_message_expand_requested(self, expanded: bool) -> None:
         """
@@ -1540,6 +1596,11 @@ class ConversationWidget(QWidget):
             else:
                 message_widget.apply_style()
 
+        # If the last visible message is a SYSTEM error, restore the retry button
+        if messages and messages[-1].source == AIMessageSource.SYSTEM and messages[-1].error:
+            self._last_error_message_widget = self._messages[-1]
+            self._messages[-1].show_retry_ui()
+
         # Ensure we're scrolled to the end
         self._auto_scroll = True
         self._scroll_to_bottom()
@@ -1956,6 +2017,22 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_approval_reject_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
             }}
+
+            #ConversationMessage #_retry_widget {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+            #ConversationMessage #_retry_button {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                border-radius: 4px;
+                padding: 4px 48px;
+            }}
+            #ConversationMessage #_retry_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
+            }}
+            #ConversationMessage #_retry_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
+            }}
         """
 
     def _build_conversation_message_section_styles(self) -> str:
@@ -2173,6 +2250,9 @@ class ConversationWidget(QWidget):
             if self._message_with_selection == message_widget:
                 self._message_with_selection = None
 
+            if self._last_error_message_widget == message_widget:
+                self._last_error_message_widget = None
+
             self._messages_layout.removeWidget(message_widget)
             message_widget.deleteLater()
 
@@ -2250,6 +2330,9 @@ class ConversationWidget(QWidget):
             message_widget = self._messages[i]
             if self._message_with_selection == message_widget:
                 self._message_with_selection = None
+
+            if self._last_error_message_widget == message_widget:
+                self._last_error_message_widget = None
 
             self._messages_layout.removeWidget(message_widget)
             message_widget.deleteLater()

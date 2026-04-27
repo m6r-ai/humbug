@@ -1015,3 +1015,52 @@ class AIConversation:
         self._pending_user_messages.clear()
 
         self._state = ConversationState.IDLE
+
+    async def retry_last_request(self) -> List[str]:
+        """Retry the last request by removing all messages since the last user/tool input.
+
+        This should only be called when the conversation is idle and the last message in history
+        is a SYSTEM error message.  It removes that message plus any partial AI/reasoning/connected
+        messages that were added before it, then restarts the AI from the last USER or TOOL_RESULT
+        message.
+
+        Returns:
+            List of message IDs that were removed from history, so the caller can remove the
+            corresponding widgets from the UI.
+        """
+        if self._state != ConversationState.IDLE:
+            self._logger.warning("retry_last_request called while not idle; ignoring")
+            return []
+
+        messages = self._conversation.get_messages()
+        if not messages:
+            self._logger.warning("retry_last_request called with empty history; ignoring")
+            return []
+
+        last = messages[-1]
+        if last.source != AIMessageSource.SYSTEM or not last.error:
+            self._logger.warning("retry_last_request called but last message is not a SYSTEM error; ignoring")
+            return []
+
+        # Strip all messages back to (but not including) the last USER or TOOL_RESULT message.
+        # That covers: SYSTEM(error), AI(partial), REASONING(partial), AI_CONNECTED.
+        removed_ids: List[str] = []
+        retry_sources = {AIMessageSource.USER, AIMessageSource.TOOL_RESULT}
+        while self._conversation.get_messages() and self._conversation.get_messages()[-1].source not in retry_sources:
+            removed = self._conversation.remove_last_message()
+            if removed:
+                removed_ids.append(removed.id)
+
+        task = asyncio.create_task(self._start_ai())
+        self._current_tasks.append(task)
+
+        def task_done_callback(task: asyncio.Task) -> None:
+            try:
+                self._current_tasks.remove(task)
+
+            except ValueError:
+                self._logger.debug("Task already removed")
+
+        task.add_done_callback(task_done_callback)
+
+        return removed_ids
