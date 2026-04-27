@@ -1,7 +1,7 @@
 """Spine tree widget showing the ancestor folder chain of the topmost visible tree item."""
 
 import os
-from typing import Callable
+from typing import Callable, Union
 
 from PySide6.QtCore import Qt, QMimeData, QModelIndex, QFileInfo, QPersistentModelIndex, QRect, QSize
 from PySide6.QtGui import (
@@ -9,7 +9,7 @@ from PySide6.QtGui import (
     QIcon, QMouseEvent, QPen, QPainter,
     QStandardItem, QStandardItemModel,
 )
-from PySide6.QtWidgets import QFrame, QStyleOptionViewItem, QTreeView, QWidget
+from PySide6.QtWidgets import QFrame, QTreeView, QWidget
 
 from humbug.color_role import ColorRole
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
@@ -18,6 +18,19 @@ from humbug.style_manager import StyleManager
 
 
 _PATH_ROLE = Qt.ItemDataRole.UserRole
+
+
+class _SpineModel(QStandardItemModel):
+    """QStandardItemModel that reports hasChildren as True for all spine items."""
+
+    def hasChildren(self, parent: QModelIndex = QModelIndex()) -> bool:
+        """Return True for any item that has a path — giving it a branch indicator."""
+        if not parent.isValid():
+            # The invisible root always has children if the model is non-empty
+            return self.rowCount() > 0
+
+        # Any item with a path stored is treated as having children
+        return bool(parent.data(_PATH_ROLE))
 
 
 class MindspaceBreadcrumbBar(QTreeView):
@@ -51,14 +64,13 @@ class MindspaceBreadcrumbBar(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.setAcceptDrops(True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.setRootIsDecorated(False)
 
         self._style_manager = StyleManager()
         self._icon_provider = MindspaceTreeIconProvider()
         self._tree_style = MindspaceTreeStyle()
         self.setStyle(self._tree_style)
 
-        self._model = QStandardItemModel(self)
+        self._model = _SpineModel(self)
         self.setModel(self._model)
 
         self._root_path: str = ""
@@ -276,10 +288,10 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         Layout:
           invisibleRoot
-            dot_item          ("." — root row, no chevron via setRootIsDecorated(False))
-              first_real_dir  (child of dot, has chevron from stylesheet)
-                second_real_dir
-                  ...
+            dot_item        ("." — top-level leaf, no chevron)
+            first_real_dir  (top-level, sibling of ".")
+              second_real_dir
+                ...
         """
         self._current_spine = spine
         self._drop_target_index = QModelIndex()
@@ -298,7 +310,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         self._model.invisibleRootItem().appendRow(dot_item)
 
         if len(spine) > 1:
-            parent_item = dot_item
+            parent_item = self._model.invisibleRootItem()
             for path in spine[1:]:
                 item = QStandardItem(os.path.basename(path))
                 item.setData(path, _PATH_ROLE)
@@ -476,6 +488,19 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         event.acceptProposedAction()
 
+    def drawBranches(
+        self,
+        painter: QPainter,
+        rect: QRect,
+        index: Union[QModelIndex, QPersistentModelIndex],
+    ) -> None:
+        """Suppress branch indicator for the '.' row; draw normally for all others."""
+        path = index.data(_PATH_ROLE)
+        if path and self._root_path and os.path.normpath(path) == os.path.normpath(self._root_path):
+            return
+
+        super().drawBranches(painter, rect, index)
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Suppress right-click and branch-area clicks."""
         if event.button() == Qt.MouseButton.RightButton:
@@ -489,3 +514,14 @@ class MindspaceBreadcrumbBar(QTreeView):
                 return
 
         super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        """Suppress branch-area release events that would trigger collapse."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            index = self.indexAt(event.pos())
+            if index.isValid():
+                item_rect = self.visualRect(index)
+                if event.pos().x() < item_rect.left():
+                    return
+
+        super().mouseReleaseEvent(event)
