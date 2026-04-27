@@ -14,6 +14,7 @@ from humbug.mindspace.conversations.mindspace_conversations_tree_delegate import
 from humbug.mindspace.conversations.mindspace_conversations_tree_view import MindspaceConversationsTreeView
 from humbug.mindspace.conversations.mindspace_conversations_dag_model import MindspaceConversationsDAGModel
 from humbug.mindspace.conversations.mindspace_conversations_index import MindspaceConversationsIndex
+from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
 from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -60,6 +61,12 @@ class MindspaceConversationsView(QWidget):
         layout.addWidget(self._header)
 
         # Create tree view
+        # Create breadcrumb bar (before tree view so it appears above it)
+        self._breadcrumb_bar = MindspaceBreadcrumbBar(self)
+        self._breadcrumb_bar.set_drop_handler(self._on_file_dropped)
+        self._breadcrumb_bar.set_scroll_handler(self.reveal_and_select_file)
+        layout.addWidget(self._breadcrumb_bar)
+
         self._tree_view = MindspaceConversationsTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
         self._tree_style = MindspaceTreeStyle()
@@ -67,6 +74,7 @@ class MindspaceConversationsView(QWidget):
         self._tree_view.file_dropped.connect(self._on_file_dropped)
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
+        self._tree_view.visible_top_changed.connect(self._breadcrumb_bar.update_from_path)
 
         # Create icon provider for styling
         self._icon_provider = MindspaceTreeIconProvider()
@@ -1082,6 +1090,7 @@ class MindspaceConversationsView(QWidget):
         if not path:
             # Clear the model when no mindspace is active
             self._conversations_path = None
+            self._breadcrumb_bar.set_root_path("")
             self._conversations_index.set_conversations_dir("")
             # Configure tree view for empty path
             self._tree_view.configure_for_path("")
@@ -1104,6 +1113,10 @@ class MindspaceConversationsView(QWidget):
 
         # Configure tree view with the conversations path
         self._tree_view.configure_for_path(self._conversations_path)
+
+        self._breadcrumb_bar.set_root_label(os.path.basename(path))
+        self._breadcrumb_bar.set_root_path(self._conversations_path)
+        self._breadcrumb_bar.update_from_path(self._conversations_path)
 
         # Start the DAG index for this conversations directory
         self._conversations_index.set_conversations_dir(self._conversations_path)
@@ -1149,6 +1162,7 @@ class MindspaceConversationsView(QWidget):
         # Apply style to header
         self._header.apply_style()
 
+        self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)
         self._icon_provider.update_icons()
         # Invalidate icon cache in model after icon provider refresh
         self._dag_model.beginResetModel()

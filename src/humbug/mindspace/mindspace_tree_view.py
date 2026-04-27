@@ -1,7 +1,7 @@
 """Base tree view implementation for mindspace with drag and drop support and inline editing."""
 
 import os
-from typing import cast, Callable, Union
+from typing import cast, Callable, Optional, Union
 
 from PySide6.QtWidgets import QFrame, QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import (
@@ -17,6 +17,7 @@ class MindspaceTreeView(QTreeView):
 
     file_dropped = Signal(str, str)  # dragged_path, target_path
     drop_target_changed = Signal()
+    visible_top_changed = Signal(str)  # Emitted when the topmost visible path changes
     delete_requested = Signal()  # Emitted when delete key is pressed
 
     def __init__(self, parent: QWidget | None = None):
@@ -59,16 +60,105 @@ class MindspaceTreeView(QTreeView):
         self.setToolTipDuration(10000)
         self.setEditTriggers(QTreeView.EditTrigger.NoEditTriggers)
 
-    def drawBranches(self, painter: QPainter, rect: QRect, index: QModelIndex | QPersistentModelIndex) -> None:
-        """Override to hide branch indicators for current directory entries."""
-        # Check if this is the current directory entry
-        path = self._get_path_from_any_index(index)
-        if path and os.path.basename(path) == ".":
-            # Don't draw branches for "." entries
+        self._last_visible_top_path: Optional[str] = None
+        self._updating_visible_top: bool = False
+        self._last_scroll_value: int = 0
+        self._scroll_direction: int = 0  # positive = scrolling up (content moves up), negative = down
+        self.verticalScrollBar().valueChanged.connect(self._on_scroll_changed)
+
+    def _emit_visible_top_if_changed(self) -> None:
+        """Emit visible_top_changed if the topmost visible path has changed."""
+        if self._updating_visible_top:
             return
 
-        # Draw normal branches for other items
-        super().drawBranches(painter, rect, index)
+        self._updating_visible_top = True
+        path = self._topmost_visible_folder_path()
+        self._updating_visible_top = False
+
+        if path != self._last_visible_top_path:
+            self._last_visible_top_path = path
+            self.visible_top_changed.emit(path or "")
+
+    def _topmost_visible_folder_path(self) -> Optional[str]:
+        """
+        Return the path of the folder that is the current spine context,
+        snapping the scroll position to produce seamless transitions.
+
+        Entering the spine (scrolling up): a folder enters when its row arrives
+        flush at the viewport top (rect.top() == 0).  We snap the scroll down
+        by one row height so it disappears behind the spine bar.
+
+        Leaving the spine (scrolling down, with hysteresis): a folder only
+        leaves the spine once its entire row has scrolled fully back into view.
+        We detect this by checking the item just above the viewport top — if
+        it is a folder whose bottom edge has reached y >= 0, the full row is
+        visible and we snap the scroll up by one row height to restore it.
+
+        Returns:
+            Absolute path of the spine context folder, or None if the topmost
+            item is at root level (no folder has entered the spine yet).
+        """
+        sb = self.verticalScrollBar()
+
+        # Scrolling down: check if the row just above the viewport top has
+        # fully re-entered view and should leave the spine.
+        if self._scroll_direction < 0:
+            above_index = self.indexAt(QPoint(0, -1))
+            if above_index.isValid():
+                above_path = self.get_path_from_index(above_index)
+                if above_path and os.path.isdir(above_path) and self.isExpanded(above_index):
+                    above_rect = self.visualRect(above_index)
+                    # Full row back in view when its bottom edge reaches y >= 0.
+                    # Snap so the folder top sits exactly at y=0.
+                    if above_rect.bottom() >= 0:
+                        sb.setValue(sb.value() + above_rect.top())
+                        parent_index = above_index.parent()
+                        if not parent_index.isValid():
+                            return None
+                        return self.get_path_from_index(parent_index)
+
+        # Examine the topmost visible item.
+        index = self.indexAt(self.viewport().rect().topLeft())
+        if not index.isValid():
+            return None
+
+        path = self.get_path_from_index(index)
+        if not path:
+            return None
+
+        # Scrolling up: if an expanded folder row is at or above the viewport
+        # top, it belongs in the spine.  Snap so its bottom edge sits exactly
+        # at y=0 (the row is fully hidden behind the spine bar).
+        if self._scroll_direction >= 0 and os.path.isdir(path) and self.isExpanded(index):
+            rect = self.visualRect(index)
+            if rect.top() <= 0:
+                sb.setValue(sb.value() + rect.bottom() + 1)
+                return path
+
+        # The parent folder's contents are at the top — return the parent.
+        parent_index = index.parent()
+        if not parent_index.isValid():
+            return None
+
+        return self.get_path_from_index(parent_index)
+
+    def _on_scroll_changed(self, _value: int) -> None:
+        """Handle scroll bar value changes."""
+        scroll_value = self.verticalScrollBar().value()
+        self._scroll_direction = scroll_value - self._last_scroll_value
+        self._last_scroll_value = scroll_value
+        self._emit_visible_top_if_changed()
+
+    def expand(self, index: QModelIndex) -> None:  # type: ignore[override]
+        """Override expand to emit visible_top_changed after expanding."""
+        super().expand(index)
+        self._emit_visible_top_if_changed()
+
+    def collapse(self, index: QModelIndex) -> None:  # type: ignore[override]
+        """Override collapse to emit visible_top_changed after collapsing."""
+        super().collapse(index)
+        self._emit_visible_top_if_changed()
+
 
     def get_root_path(self) -> str:
         """

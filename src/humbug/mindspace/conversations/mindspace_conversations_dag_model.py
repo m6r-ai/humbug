@@ -207,15 +207,7 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
             if len(self._index.get_parent_paths(path)) > 1
         }
 
-        # Build the directory tree first, then attach conversations
-        # Add the root sentinel node displayed as "." as the first top-level
-        # sibling.  Existing drag/drop and branch-drawing logic identifies it
-        # by basename.  Everything else is a sibling, not a child of it.
-        root_sentinel_path = os.path.join(conversations_dir, ".")
-        root_key = self._alloc_key()
-        self._nodes[root_key] = _DirNode(path=root_sentinel_path, parent_key=None)
-        self._children[None] = [root_key]
-
+        # Build the directory tree, then attach conversations
         self._build_dir_subtree(conversations_dir, None, shared_paths)
 
     def _build_dir_subtree(
