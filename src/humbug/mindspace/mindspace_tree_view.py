@@ -63,7 +63,6 @@ class MindspaceTreeView(QTreeView):
         self._last_visible_top_path: Optional[str] = None
         self._updating_visible_top: bool = False
         self._last_scroll_value: int = 0
-        self._scroll_direction: int = 0  # positive = scrolling up (content moves up), negative = down
         self.verticalScrollBar().valueChanged.connect(self._on_scroll_changed)
 
     def _emit_visible_top_if_changed(self) -> None:

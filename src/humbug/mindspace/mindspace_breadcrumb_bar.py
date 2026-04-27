@@ -9,7 +9,7 @@ from PySide6.QtGui import (
     QIcon, QMouseEvent, QPen, QPainter,
     QStandardItem, QStandardItemModel,
 )
-from PySide6.QtWidgets import QFrame, QTreeView, QWidget
+from PySide6.QtWidgets import QFrame, QStyleOptionViewItem, QTreeView, QWidget
 
 from humbug.color_role import ColorRole
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
@@ -18,19 +18,6 @@ from humbug.style_manager import StyleManager
 
 
 _PATH_ROLE = Qt.ItemDataRole.UserRole
-
-
-class _SpineModel(QStandardItemModel):
-    """QStandardItemModel that reports hasChildren as True for all spine items."""
-
-    def hasChildren(self, parent: QModelIndex = QModelIndex()) -> bool:
-        """Return True for any item that has a path — giving it a branch indicator."""
-        if not parent.isValid():
-            # The invisible root always has children if the model is non-empty
-            return self.rowCount() > 0
-
-        # Any item with a path stored is treated as having children
-        return bool(parent.data(_PATH_ROLE))
 
 
 class MindspaceBreadcrumbBar(QTreeView):
@@ -70,7 +57,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         self._tree_style = MindspaceTreeStyle()
         self.setStyle(self._tree_style)
 
-        self._model = _SpineModel(self)
+        self._model = QStandardItemModel(self)
         self.setModel(self._model)
 
         self._root_path: str = ""
@@ -171,7 +158,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         self,
         painter: QPainter,
         option: QStyleOptionViewItem,
-        index: QModelIndex,
+        index: Union[QModelIndex, QPersistentModelIndex],
     ) -> None:
         """Draw the row, adding drop target highlighting when applicable."""
         super().drawRow(painter, option, index)
@@ -251,6 +238,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         """)
 
         self._refresh_icons()
+
         self._update_height()
 
     # ------------------------------------------------------------------ #
@@ -319,7 +307,14 @@ class MindspaceBreadcrumbBar(QTreeView):
                 parent_item.appendRow(item)
                 parent_item = item
 
+            # Add a hidden placeholder child to the leaf so Qt sees it as
+            # having children and draws the ::branch:open:has-children chevron.
+            placeholder = QStandardItem()
+            placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
+            parent_item.appendRow(placeholder)
+
         self._expand_all_items()
+
         self._update_height()
 
     def _expand_all_items(self) -> None:
@@ -340,7 +335,8 @@ class MindspaceBreadcrumbBar(QTreeView):
             nonlocal total
             for row in range(self._model.rowCount(parent)):
                 index = self._model.index(row, 0, parent)
-                total += self.rowHeight(index)
+                if index.data(_PATH_ROLE):
+                    total += self.rowHeight(index)
                 count_recursive(index)
 
         count_recursive(QModelIndex())
