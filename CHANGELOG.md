@@ -6,10 +6,8 @@
 
 New features:
 
-- If an AI generates a diff hunk with `@@` but with no line numbers, the diff applier will try to find with a fuzzy match.
 - Added support for using the C version of the Menai VM for Linux systems.
-- Dramatically improve the performance of the Menai VM.
-- The Menai VM C code is now much cleaner and decoupled from the original Python implementation.
+- Dramatically improved the performance of the Menai VM.
 - Added keyboard scrolling of diff tabs.
 - Double-clicking an ephemeral tab label will now make the tab persistent.
 - Find controls now have history buffers, so up and down arrow will navigate previous searches.
@@ -19,14 +17,15 @@ New features:
 - The mindspace panel can be expanded and collapsed.  Also the panel shows just one view at a time, giving more room to see
   what's there.
 - If you change a file extension when renaming a file, you will now be prompted to confirm that's what you want to do.
-- Adding "thinking" support to the DeepSeek backend.
+- Added "thinking" support to the DeepSeek backend.
 - Updated the DeepSeek models to v4 (flash and pro).
 - Updated the OpenAI models to include GPT-5.5 and updated nano and mini models to GPT-5.4.
 - Updated the Ollama Qwen 3.5 models to 3.6.
 
 Bug fixes:
 
-- Tighten guidance on regexp syntax to AI models.
+- If an AI generates a diff hunk with `@@` but with no line numbers, the diff applier will try to find with a fuzzy match.
+- Tightened guidance on regexp syntax to AI models.
 - Despite instructions, and AI may use the wrong alternation format in regexps.  If we get no results using an escaped form,
   but get results when it's unescaped, the tool will now return the results and warning that it had to remove the escaping.
 - If you highlight text and the open the find control in a diff tab it now uses the selected text as the initial search
@@ -40,6 +39,10 @@ Bug fixes:
 - Fixed bugs in the Menai and Scheme syntax highlighting.
 - Added tests for the Scheme syntax highlighter.
 - Menai now suports `#d` and `#D` numeric literals.
+
+Internal structure changes
+
+- The Menai VM C code is now much cleaner and decoupled from the original Python implementation.
 
 ## v44 (2026-04-19)
 
