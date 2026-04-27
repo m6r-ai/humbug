@@ -75,71 +75,99 @@ class MindspaceTreeView(QTreeView):
         self._updating_visible_top = False
 
         if path != self._last_visible_top_path:
+            old_name = os.path.basename(self._last_visible_top_path) if self._last_visible_top_path else None
+            new_name = os.path.basename(path) if path else None
+            old_depth = self._last_visible_top_path.count(os.sep) if self._last_visible_top_path else 0
+            new_depth = path.count(os.sep) if path else 0
+            if new_depth > old_depth:
+                change_type = "LATCH"
+                # Snap the newly-latched folder's row fully above the viewport.
+                source_model = cast(QSortFilterProxyModel, self.model())
+                file_model = cast(QFileSystemModel, source_model.sourceModel()) if source_model else None
+                if source_model and file_model and path:
+                    source_index = file_model.index(path)
+                    filter_index = source_model.mapFromSource(source_index)
+                    if filter_index.isValid():
+                        latch_rect = self.visualRect(filter_index)
+                        if latch_rect.bottom() >= 0:
+                            sb = self.verticalScrollBar()
+                            new_sb = sb.value() + latch_rect.bottom() + 1
+                            print(f"LATCH SNAP: {new_name!r} latch_rect.bottom={latch_rect.bottom()} snap {sb.value()} -> {new_sb}")
+                            self._updating_visible_top = True
+                            sb.setValue(new_sb)
+                            self._last_scroll_value = new_sb
+                            self._updating_visible_top = False
+            elif new_depth < old_depth:
+                change_type = "UNLATCH"
+                # Show where the newly-topmost item is at the moment of unlatch
+                index = self.indexAt(self.viewport().rect().topLeft())
+                if index.isValid():
+                    top_path = self.get_path_from_index(index)
+                    top_rect = self.visualRect(index)
+                    top_name = os.path.basename(top_path) if top_path else None
+                    print(f"  UNLATCH detail: topmost={top_name!r} rect.top={top_rect.top()} rect.bottom={top_rect.bottom()} sb={self.verticalScrollBar().value()}")
+            else:
+                change_type = "SIBLING"
+            print(f"SPINE CHANGE ({change_type}): {old_name!r} -> {new_name!r}")
             self._last_visible_top_path = path
             self.visible_top_changed.emit(path or "")
 
     def _topmost_visible_folder_path(self) -> Optional[str]:
         """
-        Return the path of the folder that is the current spine context,
-        snapping the scroll position to produce seamless transitions.
+        Return the path of the folder that is the current spine context.  Latch
+        and unlatch are determined purely by position, not scroll direction.
 
-        Entering the spine (scrolling up): a folder enters when its row arrives
-        flush at the viewport top (rect.top() == 0).  We snap the scroll down
-        by one row height so it disappears behind the spine bar.
+        While scrolling through a folder's children the topmost visible item is
+        one of those children, and index.parent() correctly returns the folder as
+        the spine context.
 
-        Leaving the spine (scrolling down, with hysteresis): a folder only
-        leaves the spine once its entire row has scrolled fully back into view.
-        We detect this by checking the item just above the viewport top — if
-        it is a folder whose bottom edge has reached y >= 0, the full row is
-        visible and we snap the scroll up by one row height to restore it.
+        When the topmost item is the expanded folder itself and its row has started
+        to scroll above the viewport top (rect.top() < 0), the folder is in the
+        process of latching — return it directly as the spine context.
+
+        Unlatch happens naturally when index.parent() returns a shallower ancestor.
+        No snapping is needed in either direction.
 
         Returns:
             Absolute path of the spine context folder, or None if the topmost
             item is at root level (no folder has entered the spine yet).
         """
-        sb = self.verticalScrollBar()
-
-        # Scrolling down: check if the row just above the viewport top has
-        # fully re-entered view and should leave the spine.
-        if self._scroll_direction < 0:
-            above_index = self.indexAt(QPoint(0, -1))
-            if above_index.isValid():
-                above_path = self.get_path_from_index(above_index)
-                if above_path and os.path.isdir(above_path) and self.isExpanded(above_index):
-                    above_rect = self.visualRect(above_index)
-                    # Full row back in view when its bottom edge reaches y >= 0.
-                    # Snap so the folder top sits exactly at y=0.
-                    if above_rect.bottom() >= 0:
-                        sb.setValue(sb.value() + above_rect.top())
-                        parent_index = above_index.parent()
-                        if not parent_index.isValid():
-                            return None
-                        return self.get_path_from_index(parent_index)
-
         # Examine the topmost visible item.
         index = self.indexAt(self.viewport().rect().topLeft())
         if not index.isValid():
+            print("TVFP: no index at top")
             return None
 
         path = self.get_path_from_index(index)
         if not path:
+            print("TVFP: no path for index")
             return None
 
-        # Scrolling up: if an expanded folder row is at or above the viewport
-        # top, it belongs in the spine.  Snap so its bottom edge sits exactly
-        # at y=0 (the row is fully hidden behind the spine bar).
-        if self._scroll_direction >= 0 and os.path.isdir(path) and self.isExpanded(index):
-            rect = self.visualRect(index)
-            if rect.top() <= 0:
-                sb.setValue(sb.value() + rect.bottom() + 1)
-                return path
+        rect = self.visualRect(index)
+        is_dir = os.path.isdir(path)
+        is_expanded = self.isExpanded(index)
+        print(f"TVFP: topmost={os.path.basename(path)!r} rect.top={rect.top()} rect.bottom={rect.bottom()} is_dir={is_dir} is_expanded={is_expanded} sb={self.verticalScrollBar().value()}")
 
-        # The parent folder's contents are at the top — return the parent.
+        # Case 1: the topmost item IS an expanded folder, partially or fully above
+        # the viewport top.  This is the sibling-transition case — the folder has
+        # just come into view from below and is now starting to disappear above.
+        # No snap: let it scroll naturally.  The breadcrumb updates to reflect it.
+        if is_dir and is_expanded and rect.top() < 0:
+            print(f"TVFP: SIBLING LATCH {os.path.basename(path)!r} rect.top={rect.top()} rect.bottom={rect.bottom()} (no snap)")
+            return path
+
+        # Case 2: the topmost item is a child (file or unexpanded folder).  The
+        # spine context is its parent folder, which is above the viewport.  Snap
+        # the scroll so the parent's row is fully hidden behind the breadcrumb bar.
         parent_index = index.parent()
         if not parent_index.isValid():
+            print(f"TVFP: no valid parent -> spine=None")
             return None
 
-        return self.get_path_from_index(parent_index)
+        parent_path = self.get_path_from_index(parent_index)
+        parent_name = os.path.basename(parent_path) if parent_path else None
+        print(f"TVFP: spine context = {parent_name!r}")
+        return parent_path
 
     def _on_scroll_changed(self, _value: int) -> None:
         """Handle scroll bar value changes."""
@@ -157,7 +185,6 @@ class MindspaceTreeView(QTreeView):
         """Override collapse to emit visible_top_changed after collapsing."""
         super().collapse(index)
         self._emit_visible_top_if_changed()
-
 
     def get_root_path(self) -> str:
         """

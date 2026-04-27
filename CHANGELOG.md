@@ -6,6 +6,8 @@ New features:
 
 - If a network message fails and the user gets a system error message, there's now a retry button to allow retrying
   everything back to the last user message or tool call response.
+- Added a "breadcrumb" view to the mindspace tree views.  This let's you see which directories/folders are currently expanded for
+  any of the trees.
 
 ## v45 (2026-04-26)
 
