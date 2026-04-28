@@ -17,7 +17,8 @@ class MindspaceTreeView(QTreeView):
 
     file_dropped = Signal(str, str)  # dragged_path, target_path
     drop_target_changed = Signal()
-    visible_top_changed = Signal(str)  # Emitted when the topmost visible path changes
+    visible_top_changed = Signal(str)  # Emitted when the topmost visible spine path changes
+    scroll_position_changed = Signal(str, str, bool, int, int)  # spine_path, topmost_path, topmost_is_expanded, fractional_offset, row_height
     delete_requested = Signal()  # Emitted when delete key is pressed
 
     def __init__(self, parent: QWidget | None = None):
@@ -62,8 +63,20 @@ class MindspaceTreeView(QTreeView):
 
         self._last_visible_top_path: Optional[str] = None
         self._updating_visible_top: bool = False
-        self._last_scroll_value: int = 0
         self.verticalScrollBar().valueChanged.connect(self._on_scroll_changed)
+
+    def suppress_scroll_signals(self, suppress: bool) -> None:
+        """
+        Suppress or restore scroll position emission.
+
+        Called by the breadcrumb container before and after geometry adjustments
+        that would otherwise cause spurious spine-change or scroll-position events.
+
+        Args:
+            suppress: True to suppress, False to restore.
+        """
+        self._updating_visible_top = suppress
+        self.verticalScrollBar().blockSignals(suppress)
 
     def _emit_visible_top_if_changed(self) -> None:
         """Emit visible_top_changed if the topmost visible path has changed."""
@@ -74,43 +87,41 @@ class MindspaceTreeView(QTreeView):
         path = self._topmost_visible_folder_path()
         self._updating_visible_top = False
 
+        self._emit_scroll_position(path)
+
         if path != self._last_visible_top_path:
             old_name = os.path.basename(self._last_visible_top_path) if self._last_visible_top_path else None
             new_name = os.path.basename(path) if path else None
-            old_depth = self._last_visible_top_path.count(os.sep) if self._last_visible_top_path else 0
-            new_depth = path.count(os.sep) if path else 0
-            if new_depth > old_depth:
-                change_type = "LATCH"
-                # Snap the newly-latched folder's row fully above the viewport.
-                source_model = cast(QSortFilterProxyModel, self.model())
-                file_model = cast(QFileSystemModel, source_model.sourceModel()) if source_model else None
-                if source_model and file_model and path:
-                    source_index = file_model.index(path)
-                    filter_index = source_model.mapFromSource(source_index)
-                    if filter_index.isValid():
-                        latch_rect = self.visualRect(filter_index)
-                        if latch_rect.bottom() >= 0:
-                            sb = self.verticalScrollBar()
-                            new_sb = sb.value() + latch_rect.bottom() + 1
-                            print(f"LATCH SNAP: {new_name!r} latch_rect.bottom={latch_rect.bottom()} snap {sb.value()} -> {new_sb}")
-                            self._updating_visible_top = True
-                            sb.setValue(new_sb)
-                            self._last_scroll_value = new_sb
-                            self._updating_visible_top = False
-            elif new_depth < old_depth:
-                change_type = "UNLATCH"
-                # Show where the newly-topmost item is at the moment of unlatch
-                index = self.indexAt(self.viewport().rect().topLeft())
-                if index.isValid():
-                    top_path = self.get_path_from_index(index)
-                    top_rect = self.visualRect(index)
-                    top_name = os.path.basename(top_path) if top_path else None
-                    print(f"  UNLATCH detail: topmost={top_name!r} rect.top={top_rect.top()} rect.bottom={top_rect.bottom()} sb={self.verticalScrollBar().value()}")
-            else:
-                change_type = "SIBLING"
-            print(f"SPINE CHANGE ({change_type}): {old_name!r} -> {new_name!r}")
             self._last_visible_top_path = path
+            print(f"SPINE CHANGE: {old_name!r} -> {new_name!r}")
             self.visible_top_changed.emit(path or "")
+
+    def _emit_scroll_position(self, spine_path: Optional[str]) -> None:
+        """
+        Emit scroll_position_changed with the current topmost item's fractional offset.
+
+        This fires on every scroll tick so the transition widget can update its height
+        continuously, not only when the spine path changes.
+
+        Args:
+            spine_path: The current spine context path (may be None).
+        """
+        index = self.indexAt(self.viewport().rect().topLeft())
+        if not index.isValid():
+            return
+
+        row_height = self.rowHeight(index)
+        if row_height <= 0:
+            return
+
+        rect = self.visualRect(index)
+        # rect.top() is 0 or negative when the item is at/above the viewport top.
+        # fractional_offset is how many pixels it has scrolled above the top edge.
+        fractional_offset = max(0, -rect.top())
+
+        topmost_path = self.get_path_from_index(index) or ""
+        topmost_is_expanded = self.isExpanded(index)
+        self.scroll_position_changed.emit(spine_path or "", topmost_path, topmost_is_expanded, fractional_offset, row_height)
 
     def _topmost_visible_folder_path(self) -> Optional[str]:
         """
@@ -135,45 +146,43 @@ class MindspaceTreeView(QTreeView):
         # Examine the topmost visible item.
         index = self.indexAt(self.viewport().rect().topLeft())
         if not index.isValid():
-            print("TVFP: no index at top")
             return None
 
         path = self.get_path_from_index(index)
         if not path:
-            print("TVFP: no path for index")
             return None
 
         rect = self.visualRect(index)
         is_dir = os.path.isdir(path)
         is_expanded = self.isExpanded(index)
-        print(f"TVFP: topmost={os.path.basename(path)!r} rect.top={rect.top()} rect.bottom={rect.bottom()} is_dir={is_dir} is_expanded={is_expanded} sb={self.verticalScrollBar().value()}")
 
-        # Case 1: the topmost item IS an expanded folder, partially or fully above
-        # the viewport top.  This is the sibling-transition case — the folder has
-        # just come into view from below and is now starting to disappear above.
-        # No snap: let it scroll naturally.  The breadcrumb updates to reflect it.
         if is_dir and is_expanded and rect.top() < 0:
-            print(f"TVFP: SIBLING LATCH {os.path.basename(path)!r} rect.top={rect.top()} rect.bottom={rect.bottom()} (no snap)")
+            # Latching: the folder itself is the spine context.
+            sb = self.verticalScrollBar()
+            content_pos = sb.value() + rect.top()
+            print(f"LATCHED: {os.path.basename(path)!r} sb={sb.value()} rect.top={rect.top()} content_pos={content_pos}")
             return path
 
-        # Case 2: the topmost item is a child (file or unexpanded folder).  The
-        # spine context is its parent folder, which is above the viewport.  Snap
-        # the scroll so the parent's row is fully hidden behind the breadcrumb bar.
         parent_index = index.parent()
         if not parent_index.isValid():
-            print(f"TVFP: no valid parent -> spine=None")
             return None
 
         parent_path = self.get_path_from_index(parent_index)
-        parent_name = os.path.basename(parent_path) if parent_path else None
-        print(f"TVFP: spine context = {parent_name!r}")
+        # The latched folder is the parent — find its content position.
+        source_model = cast(QSortFilterProxyModel, self.model())
+        file_model = cast(QFileSystemModel, source_model.sourceModel()) if source_model else None
+        if source_model and file_model and parent_path:
+            source_index = file_model.index(parent_path)
+            filter_index = source_model.mapFromSource(source_index)
+            if filter_index.isValid():
+                parent_rect = self.visualRect(filter_index)
+                sb = self.verticalScrollBar()
+                content_pos = sb.value() + parent_rect.top()
+                print(f"LATCHED: {os.path.basename(parent_path)!r} sb={sb.value()} rect.top={parent_rect.top()} content_pos={content_pos}")
         return parent_path
 
     def _on_scroll_changed(self, _value: int) -> None:
         """Handle scroll bar value changes."""
-        scroll_value = self.verticalScrollBar().value()
-        self._scroll_direction = scroll_value - self._last_scroll_value
-        self._last_scroll_value = scroll_value
         self._emit_visible_top_if_changed()
 
     def expand(self, index: QModelIndex) -> None:  # type: ignore[override]

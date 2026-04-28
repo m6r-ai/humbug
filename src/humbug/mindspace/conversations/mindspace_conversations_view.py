@@ -18,6 +18,8 @@ from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
 from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_breadcrumb_container import MindspaceBreadcrumbContainer
+from humbug.mindspace.mindspace_breadcrumb_transition import MindspaceBreadcrumbTransition
 from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
 from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
@@ -60,12 +62,12 @@ class MindspaceConversationsView(QWidget):
         )
         layout.addWidget(self._header)
 
-        # Create tree view
-        # Create breadcrumb bar (before tree view so it appears above it)
-        self._breadcrumb_bar = MindspaceBreadcrumbBar(self)
+        # Create the three coordinated widgets and wrap them in the container.
+        self._breadcrumb_bar = MindspaceBreadcrumbBar()
         self._breadcrumb_bar.set_drop_handler(self._on_file_dropped)
         self._breadcrumb_bar.set_scroll_handler(self.reveal_and_select_file)
-        layout.addWidget(self._breadcrumb_bar)
+
+        self._transition = MindspaceBreadcrumbTransition()
 
         self._tree_view = MindspaceConversationsTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
@@ -74,7 +76,11 @@ class MindspaceConversationsView(QWidget):
         self._tree_view.file_dropped.connect(self._on_file_dropped)
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
-        self._tree_view.visible_top_changed.connect(self._breadcrumb_bar.update_from_path)
+        self._tree_view.visible_top_changed.connect(self._on_visible_top_changed)
+        self._tree_view.scroll_position_changed.connect(self._on_scroll_position_changed)
+
+        self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._transition, self._tree_view, self)
+        layout.addWidget(self._bc_container, 1)
 
         # Create icon provider for styling
         self._icon_provider = MindspaceTreeIconProvider()
@@ -100,9 +106,6 @@ class MindspaceConversationsView(QWidget):
         self._tree_view.clicked.connect(self._on_tree_clicked)
         self._tree_view.doubleClicked.connect(self._on_tree_double_clicked)
 
-        # Add to layout
-        layout.addWidget(self._tree_view)
-
         # Hide horizontal scrollbar
         self._tree_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -114,9 +117,78 @@ class MindspaceConversationsView(QWidget):
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
+        self._last_spine_path: str = ""
+        self._last_topmost_child: str = ""
+        self._last_topmost_child_expanded: bool = False
 
         # Auto-scroll state for drag operations
         self._auto_scroll_active = False
+
+    def _on_visible_top_changed(self, path: str) -> None:
+        """
+        Handle a spine change from the tree view.
+
+        When the spine changes we clear any active transition — a depth change means
+        we are latching deeper or unlatching shallower, not transitioning between
+        siblings.  The sibling transition is detected in _on_scroll_position_changed
+        instead, where we can see the topmost item path directly.
+
+        Args:
+            path: New spine context path emitted by the tree view.
+        """
+        if path != self._last_spine_path:
+            self._last_spine_path = path
+            self._last_topmost_child = ""
+            self._last_topmost_child_expanded = False
+            self._transition.clear_item()
+
+        self._breadcrumb_bar.update_from_path(path)
+
+    def _on_scroll_position_changed(self, spine_path: str, topmost_path: str, topmost_is_expanded: bool, fractional_offset: int, row_height: int) -> None:
+        """
+        Update the transition widget height on every scroll tick.
+
+        The sibling transition is detected here rather than in _on_visible_top_changed
+        because the spine does not change during a sibling transition — the spine stays
+        at the parent folder while the topmost visible child changes from one sibling
+        to another.
+
+        Detection: the spine is stable, the topmost item is a direct child of the spine
+        (one level deeper), and it has changed from a previous direct child.
+
+        Args:
+            spine_path: Current spine context path.
+            topmost_path: Absolute path of the topmost visible item in the main tree.
+            topmost_is_expanded: Whether the topmost item is currently expanded.
+            fractional_offset: Pixels the topmost main-tree item has scrolled above the viewport top.
+            row_height: Height in pixels of one tree row.
+        """
+        if self._transition.is_active():
+            self._transition.update_height(fractional_offset, row_height)
+            return
+
+        if not spine_path or not topmost_path:
+            self._last_topmost_child = topmost_path
+            self._last_topmost_child_expanded = False
+            return
+
+        # Only consider direct children of the spine (one level deeper).
+        topmost_parent = os.path.dirname(topmost_path)
+        if topmost_parent != spine_path:
+            self._last_topmost_child = topmost_path
+            self._last_topmost_child_expanded = False
+            return
+
+        # The topmost item is a direct child of the spine.  If it has changed from
+        # a previous expanded direct child folder then we are in a sibling transition.
+        prev = self._last_topmost_child
+        prev_was_expanded = self._last_topmost_child_expanded
+        self._last_topmost_child = topmost_path
+        self._last_topmost_child_expanded = topmost_is_expanded
+
+        if prev and prev_was_expanded and prev != topmost_path and os.path.dirname(prev) == spine_path:
+            self._transition.populate(prev, self._conversations_path or "")
+            self._transition.update_height(fractional_offset, row_height)
 
     def _is_conversation_file(self, file_path: str) -> bool:
         """
@@ -1163,6 +1235,7 @@ class MindspaceConversationsView(QWidget):
         self._header.apply_style()
 
         self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)
+        self._transition.apply_style(base_font_size, zoom_factor)
         self._icon_provider.update_icons()
         # Invalidate icon cache in model after icon provider refresh
         self._dag_model.beginResetModel()

@@ -3,7 +3,7 @@
 import os
 from typing import Callable, Union
 
-from PySide6.QtCore import Qt, QMimeData, QModelIndex, QFileInfo, QPersistentModelIndex, QRect, QSize
+from PySide6.QtCore import Qt, QMimeData, QModelIndex, QFileInfo, QPersistentModelIndex, QRect, QSize, Signal
 from PySide6.QtGui import (
     QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent,
     QIcon, QMouseEvent, QPen, QPainter,
@@ -25,6 +25,9 @@ class MindspaceBreadcrumbBar(QTreeView):
     A compact tree view showing the ancestor chain (spine) of the folder currently
     at the top of the main tree's viewport.
 
+    height_changed is emitted whenever the required height changes so the parent
+    container can coordinate the geometry update with the tree view scroll position.
+
     The "." sentinel is always the first top-level row.  Real ancestor directories
     nest beneath it.  For example, if src/humbug is at the top of the main tree:
 
@@ -36,6 +39,8 @@ class MindspaceBreadcrumbBar(QTreeView):
     exactly.  Each row is a valid drag-and-drop target.  Clicking a row scrolls the
     main tree to that folder.
     """
+
+    height_changed = Signal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the spine tree."""
@@ -66,6 +71,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         self._current_spine: list[str] = []
         self._drop_target_index: QModelIndex = QModelIndex()
 
+        self._required_height: int = 0
         self._drop_handler: Callable[[str, str], None] | None = None
         self._scroll_handler: Callable[[str], None] | None = None
 
@@ -207,7 +213,7 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         self.setStyleSheet(f"""
             MindspaceBreadcrumbBar {{
-                background-color: {tree_bg};
+                background-color: darkred;
                 color: {text};
                 outline: none;
                 margin-left: {tree_margin}px;
@@ -221,7 +227,7 @@ class MindspaceBreadcrumbBar(QTreeView):
                 background-color: {tree_hover};
             }}
             MindspaceBreadcrumbBar::branch {{
-                background-color: {tree_bg};
+                background-color: darkred;
             }}
             MindspaceBreadcrumbBar::branch:has-children:!has-siblings:closed,
             MindspaceBreadcrumbBar::branch:closed:has-children:has-siblings {{
@@ -328,7 +334,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         expand_recursive(QModelIndex())
 
     def _update_height(self) -> None:
-        """Resize the widget height to exactly fit all visible rows."""
+        """Emit height_changed so the container can coordinate the geometry update."""
         total = 0
 
         def count_recursive(parent: QModelIndex) -> None:
@@ -340,7 +346,17 @@ class MindspaceBreadcrumbBar(QTreeView):
                 count_recursive(index)
 
         count_recursive(QModelIndex())
-        self.setFixedHeight(max(total, 0))
+        self._required_height = max(total, 0)
+        self.updateGeometry()
+        self.height_changed.emit(self._required_height)
+
+    def sizeHint(self) -> QSize:
+        """Report the exact height needed to show all spine rows."""
+        return QSize(self.width(), self._required_height)
+
+    def minimumSizeHint(self) -> QSize:
+        """Report the exact height needed to show all spine rows."""
+        return QSize(0, self._required_height)
 
     def _refresh_icons(self) -> None:
         """Refresh folder icons in the model after an icon provider update."""
