@@ -1,6 +1,8 @@
 """Container that coordinates the breadcrumb bar, transition widget, and tree view geometry."""
 
-from PySide6.QtCore import QRect, QSize
+import os
+
+from PySide6.QtCore import QRect, QSize, QTimer
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
@@ -10,24 +12,21 @@ from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
 
 class MindspaceBreadcrumbContainer(QWidget):
     """
-    A container that manually manages the geometry of the breadcrumb bar, transition
-    widget, and tree view as a single coordinated unit.
+    A container that coordinates the breadcrumb bar, transition widget, and tree
+    view as a single unit.
 
-    The three widgets are stacked vertically and fill the container exactly:
+    Responsibilities:
+    - Geometry: manually positions all three widgets so they stack vertically and
+      fill the container exactly.
+    - Scroll compensation: when the breadcrumb bar or transition widget changes
+      height, the tree view's scroll position is adjusted atomically so the visible
+      content does not jump.
+    - Sibling transition: detects when the topmost visible tree item changes from
+      one expanded sibling folder to another, and drives the transition widget to
+      animate the departing folder out of view.
 
-        ┌─────────────────────────┐
-        │   breadcrumb bar        │  breadcrumb_height px  (Fixed, self-reporting)
-        ├─────────────────────────┤
-        │   transition widget     │  transition_height px  (Fixed, self-reporting)
-        ├─────────────────────────┤
-        │   tree view             │  remainder             (Expanding)
-        └─────────────────────────┘
-
-    The breadcrumb bar and transition widget report their required height via
-    sizeHint()/minimumSizeHint() and emit height_changed when it changes.  The
-    container listens to height_changed and performs the geometry update plus
-    scroll compensation atomically with scroll signals suppressed, so no spurious
-    spine-change events are emitted.
+    None of this logic belongs in the individual child widgets, which remain unaware
+    of each other.
     """
 
     def __init__(
@@ -52,6 +51,13 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._transition = transition
         self._tree_view = tree_view
 
+        self._root_path: str = ""
+
+        # Sibling transition tracking.
+        self._last_spine_path: str = ""
+        self._last_topmost_child: str = ""
+        self._last_topmost_child_expanded: bool = False
+
         # Re-parent all three widgets into this container.
         breadcrumb_bar.setParent(self)
         transition.setParent(self)
@@ -61,7 +67,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         breadcrumb_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         transition.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        # Tree view expands to fill remaining space; we manage its geometry directly.
+        # Tree view fills remaining space; geometry managed exclusively via setGeometry.
         tree_view.setMinimumSize(QSize(0, 0))
         tree_view.setMaximumSize(QSize(16777215, 16777215))  # QWIDGETSIZE_MAX
         tree_view.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
@@ -69,11 +75,26 @@ class MindspaceBreadcrumbContainer(QWidget):
         # The transition starts hidden.
         transition.hide()
 
-        # The container itself expands to fill whatever space the parent layout gives it.
+        # The container expands to fill whatever the parent layout gives it.
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         breadcrumb_bar.height_changed.connect(self._on_breadcrumb_height_changed)
         transition.height_changed.connect(self._on_transition_height_changed)
+        tree_view.visible_top_changed.connect(self._on_visible_top_changed)
+        tree_view.scroll_position_changed.connect(self._on_scroll_position_changed)
+
+    # ------------------------------------------------------------------ #
+    # Public API                                                           #
+    # ------------------------------------------------------------------ #
+
+    def set_root_path(self, root_path: str) -> None:
+        """
+        Set the root path used when populating the transition widget.
+
+        Args:
+            root_path: Absolute path of the tree root (mindspace or conversations root).
+        """
+        self._root_path = root_path
 
     # ------------------------------------------------------------------ #
     # Qt overrides                                                         #
@@ -93,16 +114,82 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._apply_geometry()
 
     # ------------------------------------------------------------------ #
-    # Internal                                                             #
+    # Signal handlers                                                      #
     # ------------------------------------------------------------------ #
+
+    def _on_visible_top_changed(self, path: str) -> None:
+        """
+        Handle a spine change from the tree view.
+
+        A spine change means the depth changed — a true latch or unlatch along the
+        same branch.  We clear any active sibling transition and update the breadcrumb
+        bar.
+
+        Args:
+            path: New spine context path.
+        """
+        if path != self._last_spine_path:
+            self._last_spine_path = path
+            self._last_topmost_child = ""
+            self._last_topmost_child_expanded = False
+            self._transition.clear_item()
+
+        self._breadcrumb_bar.update_from_path(path)
+
+    def _on_scroll_position_changed(
+        self,
+        spine_path: str,
+        topmost_path: str,
+        topmost_is_expanded: bool,
+        fractional_offset: int,
+        row_height: int,
+    ) -> None:
+        """
+        Drive the transition widget on every scroll tick.
+
+        Sibling transition detection: the spine is stable, the topmost item is a
+        direct child of the spine, and it has changed from a previous topmost child
+        that was an expanded folder.
+
+        Args:
+            spine_path: Current spine context path.
+            topmost_path: Absolute path of the topmost visible item in the main tree.
+            topmost_is_expanded: Whether the topmost item is currently expanded.
+            fractional_offset: Pixels the topmost item has scrolled above the viewport top.
+            row_height: Height in pixels of one tree row.
+        """
+        # Drive active transition.
+        if self._transition.is_active():
+            self._transition.update_height(fractional_offset, row_height)
+            return
+
+        if not spine_path or not topmost_path:
+            self._last_topmost_child = topmost_path
+            self._last_topmost_child_expanded = False
+            return
+
+        # Only consider direct children of the spine (one level deeper).
+        if os.path.dirname(topmost_path) != spine_path:
+            self._last_topmost_child = topmost_path
+            self._last_topmost_child_expanded = False
+            return
+
+        # Detect sibling transition: topmost child changed from a previous expanded folder.
+        prev = self._last_topmost_child
+        prev_was_expanded = self._last_topmost_child_expanded
+        self._last_topmost_child = topmost_path
+        self._last_topmost_child_expanded = topmost_is_expanded
+
+        if prev and prev_was_expanded and prev != topmost_path and os.path.dirname(prev) == spine_path:
+            self._transition.populate(prev, self._root_path)
+            self._transition.update_height(fractional_offset, row_height)
 
     def _on_breadcrumb_height_changed(self, new_height: int) -> None:
         """
         Handle a breadcrumb bar height change.
 
-        Adjusts all three widget geometries and compensates the tree view scroll
-        position atomically — scroll signals are suppressed during the adjustment
-        so no spurious spine-change events are emitted.
+        Compensates the scroll position by the height delta so visible content
+        stays stable regardless of whether the breadcrumb grew or shrank.
 
         Args:
             new_height: New required height of the breadcrumb bar in pixels.
@@ -121,16 +208,9 @@ class MindspaceBreadcrumbContainer(QWidget):
         """
         Handle a transition widget height change.
 
-        The transition widget grows or shrinks between the breadcrumb bar and the tree
-        view.  When it grows the tree view's viewport shrinks from the top, hiding
-        content — we compensate by scrolling forward by the delta.  When it shrinks
-        the viewport grows from the top, revealing content — we compensate by scrolling
-        back by the delta.
-
-        When the height reaches zero the transition is closing.  At that moment the
-        breadcrumb bar simultaneously gains or loses a row and its own height_changed
-        fires with the compensating delta — so we must not also compensate here or
-        the scroll position will be adjusted twice.
+        Compensates the scroll position for the delta so visible content stays stable.
+        When the transition closes (new_height == 0) no compensation is applied here
+        because the breadcrumb bar's simultaneous height change handles it.
 
         Args:
             new_height: New height in pixels for the transition widget (0 = hidden).
@@ -145,6 +225,10 @@ class MindspaceBreadcrumbContainer(QWidget):
             sb = self._tree_view.verticalScrollBar()
             sb.setValue(sb.value() + delta)
         self._tree_view.suppress_scroll_signals(False)
+
+    # ------------------------------------------------------------------ #
+    # Internal                                                             #
+    # ------------------------------------------------------------------ #
 
     def _apply_geometry(self) -> None:
         """Assign geometry to all three child widgets to exactly fill the container."""

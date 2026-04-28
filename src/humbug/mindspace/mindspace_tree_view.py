@@ -63,6 +63,7 @@ class MindspaceTreeView(QTreeView):
 
         self._last_visible_top_path: Optional[str] = None
         self._updating_visible_top: bool = False
+        self._geometry_suppressed: bool = False
         self.verticalScrollBar().valueChanged.connect(self._on_scroll_changed)
 
     def suppress_scroll_signals(self, suppress: bool) -> None:
@@ -75,12 +76,18 @@ class MindspaceTreeView(QTreeView):
         Args:
             suppress: True to suppress, False to restore.
         """
-        self._updating_visible_top = suppress
+        self._geometry_suppressed = suppress
         self.verticalScrollBar().blockSignals(suppress)
+        if not suppress:
+            # Defer the catch-up to after the current signal chain has fully unwound.
+            # A synchronous call here would re-enter _emit_visible_top_if_changed
+            # from within the signal chain that triggered the suppression, causing
+            # infinite recursion.
+            QTimer.singleShot(0, self._emit_visible_top_if_changed)
 
     def _emit_visible_top_if_changed(self) -> None:
         """Emit visible_top_changed if the topmost visible path has changed."""
-        if self._updating_visible_top:
+        if self._updating_visible_top or self._geometry_suppressed:
             return
 
         self._updating_visible_top = True
@@ -98,10 +105,11 @@ class MindspaceTreeView(QTreeView):
 
     def _emit_scroll_position(self, spine_path: Optional[str]) -> None:
         """
-        Emit scroll_position_changed with the current topmost item's fractional offset.
+        Emit scroll_position_changed on every scroll tick.
 
-        This fires on every scroll tick so the transition widget can update its height
-        continuously, not only when the spine path changes.
+        The fractional offset — how many pixels the topmost row has scrolled above
+        the viewport top — is computed purely from the scrollbar value as
+        sb % row_height.  No viewport-relative geometry is used.
 
         Args:
             spine_path: The current spine context path (may be None).
@@ -114,36 +122,24 @@ class MindspaceTreeView(QTreeView):
         if row_height <= 0:
             return
 
-        rect = self.visualRect(index)
-        # rect.top() is 0 or negative when the item is at/above the viewport top.
-        # fractional_offset is how many pixels it has scrolled above the top edge.
-        fractional_offset = max(0, -rect.top())
-
+        fractional_offset = self.verticalScrollBar().value() % row_height
         topmost_path = self.get_path_from_index(index) or ""
         topmost_is_expanded = self.isExpanded(index)
         self.scroll_position_changed.emit(spine_path or "", topmost_path, topmost_is_expanded, fractional_offset, row_height)
 
     def _topmost_visible_folder_path(self) -> Optional[str]:
         """
-        Return the path of the folder that is the current spine context.  Latch
-        and unlatch are determined purely by position, not scroll direction.
+        Return the path of the folder that is the current spine context.
 
-        While scrolling through a folder's children the topmost visible item is
-        one of those children, and index.parent() correctly returns the folder as
-        the spine context.
-
-        When the topmost item is the expanded folder itself and its row has started
-        to scroll above the viewport top (rect.top() < 0), the folder is in the
-        process of latching — return it directly as the spine context.
-
-        Unlatch happens naturally when index.parent() returns a shallower ancestor.
-        No snapping is needed in either direction.
+        Determined purely from the scrollbar position via indexAt(topLeft()).
+        If the topmost visible item is an expanded folder it is the spine context
+        (latched).  Otherwise the spine context is its parent.  No rect.top() or
+        viewport-relative geometry is used.
 
         Returns:
             Absolute path of the spine context folder, or None if the topmost
             item is at root level (no folder has entered the spine yet).
         """
-        # Examine the topmost visible item.
         index = self.indexAt(self.viewport().rect().topLeft())
         if not index.isValid():
             return None
@@ -152,15 +148,8 @@ class MindspaceTreeView(QTreeView):
         if not path:
             return None
 
-        rect = self.visualRect(index)
-        is_dir = os.path.isdir(path)
-        is_expanded = self.isExpanded(index)
-
-        if is_dir and is_expanded and rect.top() < 0:
-            # Latching: the folder itself is the spine context.
-            sb = self.verticalScrollBar()
-            content_pos = sb.value() + rect.top()
-            print(f"LATCHED: {os.path.basename(path)!r} sb={sb.value()} rect.top={rect.top()} content_pos={content_pos}")
+        if os.path.isdir(path) and self.isExpanded(index):
+            print(f"LATCHED: {os.path.basename(path)!r} sb={self.verticalScrollBar().value()}")
             return path
 
         parent_index = index.parent()
@@ -168,17 +157,7 @@ class MindspaceTreeView(QTreeView):
             return None
 
         parent_path = self.get_path_from_index(parent_index)
-        # The latched folder is the parent — find its content position.
-        source_model = cast(QSortFilterProxyModel, self.model())
-        file_model = cast(QFileSystemModel, source_model.sourceModel()) if source_model else None
-        if source_model and file_model and parent_path:
-            source_index = file_model.index(parent_path)
-            filter_index = source_model.mapFromSource(source_index)
-            if filter_index.isValid():
-                parent_rect = self.visualRect(filter_index)
-                sb = self.verticalScrollBar()
-                content_pos = sb.value() + parent_rect.top()
-                print(f"LATCHED: {os.path.basename(parent_path)!r} sb={sb.value()} rect.top={parent_rect.top()} content_pos={content_pos}")
+        print(f"LATCHED(parent): {os.path.basename(parent_path)!r} sb={self.verticalScrollBar().value()}" if parent_path else "")
         return parent_path
 
     def _on_scroll_changed(self, _value: int) -> None:

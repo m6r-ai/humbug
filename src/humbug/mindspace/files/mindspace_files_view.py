@@ -78,8 +78,6 @@ class MindspaceFilesView(QWidget):
         self._tree_view.file_dropped.connect(self._on_file_dropped)
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
-        self._tree_view.visible_top_changed.connect(self._on_visible_top_changed)
-        self._tree_view.scroll_position_changed.connect(self._on_scroll_position_changed)
 
         self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._transition, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
@@ -116,75 +114,6 @@ class MindspaceFilesView(QWidget):
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
-        self._last_spine_path: str = ""
-        self._last_topmost_child: str = ""
-        self._last_topmost_child_expanded: bool = False
-
-    def _on_visible_top_changed(self, path: str) -> None:
-        """
-        Handle a spine change from the tree view.
-
-        When the spine changes we clear any active transition — a depth change means
-        we are latching deeper or unlatching shallower, not transitioning between
-        siblings.  The sibling transition is detected in _on_scroll_position_changed
-        instead, where we can see the topmost item path directly.
-
-        Args:
-            path: New spine context path emitted by the tree view.
-        """
-        if path != self._last_spine_path:
-            self._last_spine_path = path
-            self._last_topmost_child = ""
-            self._last_topmost_child_expanded = False
-            self._transition.clear_item()
-
-        self._breadcrumb_bar.update_from_path(path)
-
-    def _on_scroll_position_changed(self, spine_path: str, topmost_path: str, topmost_is_expanded: bool, fractional_offset: int, row_height: int) -> None:
-        """
-        Drive the transition widget on every scroll tick.
-
-        The sibling transition is detected here rather than in _on_visible_top_changed
-        because the spine does not change during a sibling transition — the spine stays
-        at the parent folder while the topmost visible child changes from one sibling
-        to another.
-
-        Detection: the spine is stable, the topmost item is a direct child of the spine
-        (one level deeper), and it has changed from a previous direct child.
-
-        Args:
-            spine_path: Current spine context path.
-            topmost_path: Absolute path of the topmost visible item in the main tree.
-            topmost_is_expanded: Whether the topmost item is currently expanded.
-            fractional_offset: Pixels the topmost item has scrolled above the viewport top.
-            row_height: Height in pixels of one tree row.
-        """
-        if self._transition.is_active():
-            self._transition.update_height(fractional_offset, row_height)
-            return
-
-        if not spine_path or not topmost_path:
-            self._last_topmost_child = topmost_path
-            self._last_topmost_child_expanded = False
-            return
-
-        # Only consider direct children of the spine (one level deeper).
-        topmost_parent = os.path.dirname(topmost_path)
-        if topmost_parent != spine_path:
-            self._last_topmost_child = topmost_path
-            self._last_topmost_child_expanded = False
-            return
-
-        # The topmost item is a direct child of the spine.  If it has changed from
-        # a previous expanded direct child folder then we are in a sibling transition.
-        prev = self._last_topmost_child
-        prev_was_expanded = self._last_topmost_child_expanded
-        self._last_topmost_child = topmost_path
-        self._last_topmost_child_expanded = topmost_is_expanded
-
-        if prev and prev_was_expanded and prev != topmost_path and os.path.dirname(prev) == spine_path:
-            self._transition.populate(prev, self._mindspace_path or "")
-            self._transition.update_height(fractional_offset, row_height)
 
     def _on_drop_target_changed(self) -> None:
         """
@@ -1039,6 +968,7 @@ class MindspaceFilesView(QWidget):
             # Clear the model when no mindspace is active
             self._filter_model.set_mindspace_root("")
             self._breadcrumb_bar.set_root_path("")
+            self._bc_container.set_root_path("")
             # Configure tree view for empty path
             self._tree_view.configure_for_path("")
             return
@@ -1050,6 +980,7 @@ class MindspaceFilesView(QWidget):
         self._breadcrumb_bar.set_root_label(os.path.basename(path))
         self._breadcrumb_bar.set_root_path(path)
         self._breadcrumb_bar.update_from_path(path)
+        self._bc_container.set_root_path(path)
 
         # Configure tree view with the mindspace path
         self._tree_view.configure_for_path(path)
