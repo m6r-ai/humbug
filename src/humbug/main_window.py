@@ -172,6 +172,10 @@ class MainWindow(QMainWindow):
         self._find_action.setShortcut(QKeySequence.StandardKey.Find)
         self._find_action.triggered.connect(self._find)
 
+        self._global_search_action = QAction(strings.global_search, self)
+        self._global_search_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
+        self._global_search_action.triggered.connect(self._show_global_search)
+
         self._mindspace_settings_action = QAction(strings.mindspace_settings, self)
         self._mindspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
         self._mindspace_settings_action.triggered.connect(self._on_show_mindspace_settings_dialog)
@@ -276,6 +280,7 @@ class MainWindow(QMainWindow):
         self._edit_menu.addAction(self._paste_action)
         self._edit_menu.addSeparator()
         self._edit_menu.addAction(self._find_action)
+        self._edit_menu.addAction(self._global_search_action)
         self._edit_menu.addSeparator()
         self._edit_menu.addAction(self._mindspace_settings_action)
         self._edit_menu.addAction(self._conv_settings_action)
@@ -476,6 +481,7 @@ class MainWindow(QMainWindow):
         self._copy_action.setEnabled(column_manager.can_copy())
         self._paste_action.setEnabled(column_manager.can_paste())
         self._find_action.setEnabled(column_manager.can_show_find())
+        self._global_search_action.setEnabled(has_mindspace)
         self._submit_message_action.setEnabled(column_manager.can_submit_message())
         self._conv_settings_action.setEnabled(column_manager.can_show_conversation_settings_dialog())
 
@@ -540,6 +546,7 @@ class MainWindow(QMainWindow):
         self._copy_action.setText(strings.copy)
         self._paste_action.setText(strings.paste)
         self._find_action.setText(strings.find)
+        self._global_search_action.setText(strings.global_search)
         self._mindspace_settings_action.setText(strings.mindspace_settings)
         self._conv_settings_action.setText(strings.conversation_settings)
 
@@ -879,6 +886,13 @@ class MainWindow(QMainWindow):
 
     def _find(self) -> None:
         self._column_manager.show_find()
+
+    def _show_global_search(self) -> None:
+        """Open the mindspace global-search pane."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        self._mindspace_view.show_search()
 
     def _on_show_about_dialog(self) -> None:
         """Show the About dialog."""

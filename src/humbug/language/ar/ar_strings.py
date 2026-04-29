@@ -55,6 +55,7 @@ def get_arabic_strings() -> LanguageStrings:
         copy="نسخ",
         paste="لصق",
         find="بحث",
+        global_search="بحث شامل",
         mindspace_settings="إعدادات المساحة الذهنية",
         conversation_settings="إعدادات المحادثة",
 
@@ -161,6 +162,11 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_preview="معاينة",
         mindspace_expand_sidebar="توسيع الشريط الجانبي",
         mindspace_collapse_sidebar="طي الشريط الجانبي",
+        global_search_placeholder="ابحث في المساحة الذهنية الحالية",
+        global_search_empty_state="اكتب للبحث في الملفات والمحادثات",
+        global_search_no_results="لا توجد نتائج",
+        global_search_path_match="مطابقة في المسار",
+        global_search_results="{0} نتيجة في {1} ملف",
 
         # Mindspace folders dialog
         mindspace_folders_title="تكوين مجلدات المساحة الذهنية",

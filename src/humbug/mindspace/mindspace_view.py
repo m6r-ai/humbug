@@ -2,7 +2,7 @@
 
 import os
 
-from PySide6.QtCore import Qt, Signal, QSize, QEvent, QObject
+from PySide6.QtCore import Qt, Signal, QSize, QEvent, QObject, QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -22,6 +22,7 @@ from humbug.mindspace.files.mindspace_files_view import MindspaceFilesView
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.mindspace.preview.mindspace_preview_view import MindspacePreviewView
+from humbug.mindspace.search.mindspace_search_view import MindspaceSearchView
 from humbug.mindspace.vcs.mindspace_vcs_view import MindspaceVCSView
 from humbug.style_manager import StyleManager
 
@@ -50,7 +51,7 @@ class MindspaceView(QWidget):
         self._mindspace_manager = MindspaceManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        self._active_view_type = MindspaceViewType.CONVERSATIONS
+        self._active_view_type = MindspaceViewType.SEARCH
         self._vcs_available = False
         self._sidebar_collapsed = False
         self._expanded_sidebar_width = 320
@@ -81,6 +82,9 @@ class MindspaceView(QWidget):
         self._sidebar_toggle_button.setProperty("icon_name", "expand-right")
         self._sidebar_toggle_button.installEventFilter(self)
         rail_layout.addWidget(self._sidebar_toggle_button)
+
+        self._search_button = self._create_view_button(MindspaceViewType.SEARCH, "search")
+        rail_layout.addWidget(self._search_button)
 
         self._conversations_button = self._create_view_button(MindspaceViewType.CONVERSATIONS, "conversation")
         rail_layout.addWidget(self._conversations_button)
@@ -128,16 +132,19 @@ class MindspaceView(QWidget):
 
         layout.addWidget(self._content_widget, 1)
 
+        self._search_view = MindspaceSearchView()
         self._conversations_view = MindspaceConversationsView()
         self._files_view = MindspaceFilesView()
         self._preview_view = MindspacePreviewView()
         self._vcs_view = MindspaceVCSView()
 
+        self._register_view(MindspaceViewType.SEARCH, self._search_view)
         self._register_view(MindspaceViewType.CONVERSATIONS, self._conversations_view)
         self._register_view(MindspaceViewType.FILES, self._files_view)
         self._register_view(MindspaceViewType.PREVIEW, self._preview_view)
         self._register_view(MindspaceViewType.VCS, self._vcs_view)
 
+        self._search_view.file_clicked.connect(self.file_clicked.emit)
         self._files_view.file_clicked.connect(self.file_clicked.emit)
         self._files_view.file_deleted.connect(self.file_deleted.emit)
         self._files_view.file_renamed.connect(self.file_renamed.emit)
@@ -169,7 +176,7 @@ class MindspaceView(QWidget):
         self._preview_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
 
         self._header_widget.setText(self._language_manager.strings().mindspace_label_none)
-        self._set_active_view(MindspaceViewType.CONVERSATIONS)
+        self._set_active_view(MindspaceViewType.SEARCH)
         self._on_language_changed()
 
     def _create_view_button(self, view_type: MindspaceViewType, icon_name: str) -> QToolButton:
@@ -211,6 +218,9 @@ class MindspaceView(QWidget):
         button = self._view_buttons[view_type]
         if not button.isChecked():
             button.setChecked(True)
+
+        if view_type == MindspaceViewType.SEARCH:
+            QTimer.singleShot(0, self._search_view.focus_search)
 
         self._update_button_styling()
 
@@ -272,6 +282,10 @@ class MindspaceView(QWidget):
             return
 
         match view_type:
+            case MindspaceViewType.SEARCH:
+                self._set_active_view(MindspaceViewType.SEARCH)
+                self._search_view.focus_search()
+
             case MindspaceViewType.CONVERSATIONS:
                 self._conversations_view.reveal_and_select_file(file_path)
 
@@ -302,6 +316,15 @@ class MindspaceView(QWidget):
         self._conversations_view.set_mindspace(path)
         self._vcs_view.set_mindspace(path)
         self._preview_view.set_mindspace(path)
+        self._search_view.set_mindspace(path)
+
+    def show_search(self) -> None:
+        """Activate the global-search pane and focus its input."""
+        self._set_active_view(MindspaceViewType.SEARCH)
+        if self._sidebar_collapsed:
+            self.toggle_requested.emit()
+
+        self._search_view.focus_search()
 
     def _on_settings_button_clicked(self) -> None:
         """Handle settings button click."""
@@ -317,6 +340,7 @@ class MindspaceView(QWidget):
         strings = self._language_manager.strings()
         self._header_widget.setToolTip(strings.mindspace_name_tooltip)
         self._settings_button.setToolTip(strings.mindspace_settings)
+        self._search_button.setToolTip(strings.global_search)
         self._conversations_button.setToolTip(strings.mindspace_conversations)
         self._files_button.setToolTip(strings.mindspace_files)
         self._preview_button.setToolTip(strings.mindspace_preview)
@@ -497,6 +521,7 @@ class MindspaceView(QWidget):
                 color: {disabled_color};
             }}
 
+            QWidget#_content_widget MindspaceSearchView,
             QWidget#_content_widget MindspaceConversationsView,
             QWidget#_content_widget MindspaceFilesView,
             QWidget#_content_widget MindspacePreviewView,
@@ -514,6 +539,7 @@ class MindspaceView(QWidget):
             }}
         """)
 
+        self._search_view.apply_style()
         self._files_view.apply_style()
         self._conversations_view.apply_style()
         self._vcs_view.apply_style()

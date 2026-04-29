@@ -54,6 +54,7 @@ def get_english_strings() -> LanguageStrings:
         copy="Copy",
         paste="Paste",
         find="Find",
+        global_search="Global Search",
         mindspace_settings="Mindspace Settings",
         conversation_settings="Conversation Settings",
 
@@ -160,6 +161,11 @@ def get_english_strings() -> LanguageStrings:
         mindspace_preview="Preview",
         mindspace_expand_sidebar="Expand sidebar",
         mindspace_collapse_sidebar="Collapse sidebar",
+        global_search_placeholder="Search across the current mindspace",
+        global_search_empty_state="Type to search files and conversations",
+        global_search_no_results="No results found",
+        global_search_path_match="Path match",
+        global_search_results="{0} matches in {1} files",
 
         # Mindspace folders dialog
         mindspace_folders_title="Configure Mindspace Folders",

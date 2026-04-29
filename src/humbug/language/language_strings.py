@@ -45,6 +45,7 @@ class LanguageStrings:
     copy: str
     paste: str
     find: str
+    global_search: str
     mindspace_settings: str
     conversation_settings: str
 
@@ -151,6 +152,11 @@ class LanguageStrings:
     mindspace_preview: str
     mindspace_expand_sidebar: str
     mindspace_collapse_sidebar: str
+    global_search_placeholder: str
+    global_search_empty_state: str
+    global_search_no_results: str
+    global_search_path_match: str
+    global_search_results: str
 
     # Mindspace folders dialog
     mindspace_folders_title: str

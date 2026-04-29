@@ -54,6 +54,7 @@ def get_french_strings() -> LanguageStrings:
         copy="Copier",
         paste="Coller",
         find="Rechercher",
+        global_search="Recherche globale",
         mindspace_settings="Paramètres de l'espace mental",
         conversation_settings="Paramètres de conversation",
 
@@ -160,6 +161,11 @@ def get_french_strings() -> LanguageStrings:
         mindspace_preview="Aperçu",
         mindspace_expand_sidebar="Développer la barre latérale",
         mindspace_collapse_sidebar="Réduire la barre latérale",
+        global_search_placeholder="Rechercher dans l'espace mental courant",
+        global_search_empty_state="Saisissez un texte pour rechercher dans les fichiers et conversations",
+        global_search_no_results="Aucun résultat",
+        global_search_path_match="Correspondance dans le chemin",
+        global_search_results="{0} correspondances dans {1} fichiers",
 
         # Mindspace folders dialog
         mindspace_folders_title="Configurer les dossiers de l'espace mental",
