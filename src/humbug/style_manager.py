@@ -1220,6 +1220,15 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            self._write_icon(f'find-whole-word-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="6" y1="12" x2="6" y2="52" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="58" y1="12" x2="58" y2="52" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                    <text x="16" y="46" font-family="sans-serif" font-size="34"
+                        fill="{color}">ab</text>
+                </svg>
+            ''')
+
             # Regexp toggle icon — ".*" pattern
             self._write_icon(f'find-regexp-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">

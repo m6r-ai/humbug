@@ -529,6 +529,7 @@ class MindspaceView(QWidget):
                 background-color: {content_surface};
                 border: none;
                 border-radius: {content_radius}px;
+                margin: {round(4 * zoom_factor)}px;
             }}
 
             QToolTip {{

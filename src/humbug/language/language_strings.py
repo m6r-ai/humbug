@@ -153,6 +153,8 @@ class LanguageStrings:
     mindspace_expand_sidebar: str
     mindspace_collapse_sidebar: str
     global_search_placeholder: str
+    global_search_options: str
+    global_search_whole_word: str
     global_search_empty_state: str
     global_search_no_results: str
     global_search_path_match: str

@@ -162,6 +162,8 @@ def get_english_strings() -> LanguageStrings:
         mindspace_expand_sidebar="Expand sidebar",
         mindspace_collapse_sidebar="Collapse sidebar",
         global_search_placeholder="Search across the current mindspace",
+        global_search_options="Search options",
+        global_search_whole_word="Match whole word",
         global_search_empty_state="Type to search files and conversations",
         global_search_no_results="No results found",
         global_search_path_match="Path match",

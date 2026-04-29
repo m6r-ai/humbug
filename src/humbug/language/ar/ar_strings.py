@@ -163,6 +163,8 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_expand_sidebar="توسيع الشريط الجانبي",
         mindspace_collapse_sidebar="طي الشريط الجانبي",
         global_search_placeholder="ابحث في المساحة الذهنية الحالية",
+        global_search_options="خيارات البحث",
+        global_search_whole_word="مطابقة الكلمة كاملة",
         global_search_empty_state="اكتب للبحث في الملفات والمحادثات",
         global_search_no_results="لا توجد نتائج",
         global_search_path_match="مطابقة في المسار",

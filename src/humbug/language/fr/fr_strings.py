@@ -162,6 +162,8 @@ def get_french_strings() -> LanguageStrings:
         mindspace_expand_sidebar="Développer la barre latérale",
         mindspace_collapse_sidebar="Réduire la barre latérale",
         global_search_placeholder="Rechercher dans l'espace mental courant",
+        global_search_options="Options de recherche",
+        global_search_whole_word="Mot entier",
         global_search_empty_state="Saisissez un texte pour rechercher dans les fichiers et conversations",
         global_search_no_results="Aucun résultat",
         global_search_path_match="Correspondance dans le chemin",
