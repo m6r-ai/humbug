@@ -2,7 +2,7 @@
 
 import os
 
-from PySide6.QtCore import QEvent, QObject, QRect, QSize, Qt
+from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt
 from PySide6.QtWidgets import QApplication, QScrollBar, QSizePolicy, QWidget
 
 from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
@@ -108,7 +108,7 @@ class MindspaceBreadcrumbContainer(QWidget):
 
     def _on_tree_range_changed(self, minimum: int, maximum: int) -> None:
         """
-        Mirror the tree's scroll range onto the external scrollbar.
+        Mirror the tree's scroll range and page step directly onto the external scrollbar.
 
         Args:
             minimum: New minimum value from the tree's internal scrollbar.
@@ -127,17 +127,24 @@ class MindspaceBreadcrumbContainer(QWidget):
         The tree is set to show content starting at value + breadcrumb_height, so the
         rows represented by the breadcrumb bar are never visible inside the tree viewport.
 
+        To determine which item is at virtual position value, we briefly set the tree
+        to value (no breadcrumb offset), read the topmost item, then restore the tree
+        to value + bc_h.  This correctly identifies the item at the virtual position
+        regardless of how tall the breadcrumb bar is.
+
         Args:
             value: New scrollbar position in tree-internal pixel units.
         """
-        bc_h = self._breadcrumb_rows * self._row_height
-        self._tree_view.verticalScrollBar().setValue(value + bc_h)
+        tree_sb = self._tree_view.verticalScrollBar()
 
-        # Determine the spine path from the virtual position.  We use indexAt on the
-        # tree viewport to find what item is at the top — but the tree is already
-        # showing content offset by bc_h, so the top of the viewport corresponds to
-        # virtual position value, which is what we want for breadcrumb calculation.
-        index = self._tree_view.indexAt(self._tree_view.viewport().rect().topLeft())
+        # Briefly position the tree at the virtual position to identify the topmost item.
+        tree_sb.setValue(value)
+        index = self._tree_view.indexAt(QPoint(0, 0))
+
+        # Restore the tree to the offset position.
+        bc_h = self._breadcrumb_rows * self._row_height
+        tree_sb.setValue(value + bc_h)
+
         if not index.isValid():
             return
 
@@ -149,51 +156,19 @@ class MindspaceBreadcrumbContainer(QWidget):
         topmost_path = self._tree_view.get_path_from_index(index) or ""
         topmost_is_expanded = self._tree_view.isExpanded(index)
 
-        spine_path = self._spine_path_for(topmost_path, topmost_is_expanded)
+        if os.path.isdir(topmost_path) and topmost_is_expanded:
+            spine_path = topmost_path
+        else:
+            parent = os.path.dirname(topmost_path)
+            spine_path = parent if parent and parent != topmost_path else ""
+
         if spine_path == self._last_spine_path:
             return
 
         self._last_spine_path = spine_path
         self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(spine_path)
+        self._tree_view.verticalScrollBar().setValue(value + self._breadcrumb_rows * self._row_height)
         self._apply_geometry()
-
-        # Re-apply the tree position with the updated breadcrumb height.
-        bc_h = self._breadcrumb_rows * self._row_height
-        self._tree_view.verticalScrollBar().setValue(value + bc_h)
-
-    def _spine_path_for(self, topmost_path: str, topmost_is_expanded: bool) -> str:
-        """
-        Derive the spine context path from the topmost visible tree item.
-
-        Unlatch takes priority: if topmost_path matches the current spine
-        (_last_spine_path), that folder has scrolled back into view and must be
-        removed — return its parent instead.
-
-        Otherwise, if the topmost item is an expanded folder it becomes the spine
-        context; otherwise its parent does.
-
-        Args:
-            topmost_path: Absolute path of the topmost visible item.
-            topmost_is_expanded: Whether the topmost item is currently expanded.
-
-        Returns:
-            Absolute path of the spine context folder, or empty string if at root level.
-        """
-        if not topmost_path:
-            return ""
-
-        if topmost_path == self._last_spine_path:
-            parent = os.path.dirname(topmost_path)
-            return parent if parent and parent != topmost_path else ""
-
-        if os.path.isdir(topmost_path) and topmost_is_expanded:
-            return topmost_path
-
-        parent = os.path.dirname(topmost_path)
-        if not parent or parent == topmost_path:
-            return ""
-
-        return parent
 
     def _apply_geometry(self) -> None:
         """Assign geometry to all child widgets to exactly fill the container."""
