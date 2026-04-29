@@ -64,9 +64,9 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._transition_ref_value: int = 0
         self._transition_max_height: int = 0
 
-        # Re-entrancy guard: set while we are handling an external scroll event so
-        # that the internal scrollbar's valueChanged (fired by setValue below) does
-        # not recurse back into _on_external_scroll via _on_tree_internal_scroll.
+        # Re-entrancy guard: set for the entire duration of _on_external_scroll so
+        # that any Qt event dispatched synchronously during geometry changes or
+        # tree scrollbar updates cannot re-enter this handler.
         self._handling_scroll: bool = False
 
         # Re-parent all three widgets into this container.
@@ -164,8 +164,8 @@ class MindspaceBreadcrumbContainer(QWidget):
 
         This handles cases where the tree scrolls without going through the external
         scrollbar — for example programmatic scrollTo() calls or keyboard navigation.
-        The _handling_scroll guard prevents this from recursing when we ourselves
-        drive the internal scrollbar from _on_external_scroll.
+        The _handling_scroll guard prevents this from firing while we are inside
+        _on_external_scroll, since we drive the internal scrollbar ourselves there.
 
         Args:
             value: New value of the tree's internal vertical scrollbar.
@@ -178,9 +178,9 @@ class MindspaceBreadcrumbContainer(QWidget):
         Drive the tree view and update breadcrumb state from the external scrollbar.
 
         This is the single entry point for all scroll input (wheel, drag, programmatic).
-        Setting the internal scrollbar value causes Qt to call scrollContentsBy which
-        moves the viewport.  We guard against the resulting valueChanged signal looping
-        back via _on_tree_internal_scroll with _handling_scroll.
+        _handling_scroll is held True for the entire execution of this method so that
+        any Qt event dispatched synchronously (from setGeometry, setValue, etc.) cannot
+        re-enter this handler.
 
         Args:
             value: New scrollbar position in tree-internal pixel units.
@@ -189,86 +189,85 @@ class MindspaceBreadcrumbContainer(QWidget):
             return
 
         self._handling_scroll = True
-        # Drive the tree's internal scrollbar.  We do NOT block its signals because
-        # Qt's internal connection from valueChanged -> scrollContentsBy (which actually
-        # moves the viewport) must fire.  The _handling_scroll guard above prevents
-        # _on_tree_internal_scroll from recursing back into this method.
-        tree_sb = self._tree_view.verticalScrollBar()
-        tree_sb.setValue(value)
-        self._handling_scroll = False
+        try:
+            tree_sb = self._tree_view.verticalScrollBar()
+            tree_sb.setValue(value)
 
-        # Read the topmost visible item now that the tree viewport has updated.
-        index = self._tree_view.indexAt(self._tree_view.viewport().rect().topLeft())
-        if not index.isValid():
-            return
+            # Read the topmost visible item now that the tree viewport has updated.
+            index = self._tree_view.indexAt(self._tree_view.viewport().rect().topLeft())
+            if not index.isValid():
+                return
 
-        row_height = self._tree_view.rowHeight(index)
-        if row_height <= 0:
-            return
+            row_height = self._tree_view.rowHeight(index)
+            if row_height <= 0:
+                return
 
-        self._row_height = row_height
-        topmost_path = self._tree_view.get_path_from_index(index) or ""
-        topmost_is_expanded = self._tree_view.isExpanded(index)
-        visual_top = self._tree_view.visualRect(index).top()
+            self._row_height = row_height
+            topmost_path = self._tree_view.get_path_from_index(index) or ""
+            topmost_is_expanded = self._tree_view.isExpanded(index)
+            visual_top = self._tree_view.visualRect(index).top()
 
-        # Update an active sibling transition: height is a pure function of how far
-        # we have scrolled since the transition began.
-        if self._transition.is_active():
-            delta = value - self._transition_ref_value
-            new_height = max(0, self._transition_max_height - delta)
+            # Update an active sibling transition: height is a pure function of how far
+            # we have scrolled since the transition began.
+            if self._transition.is_active():
+                delta = value - self._transition_ref_value
+                new_height = max(0, self._transition_max_height - delta)
 
-            if new_height <= 0:
-                # Scrolled forward far enough — complete the transition.
-                self._transition.update_height(0)
-                self._transition_height = 0
-                self._transition.setVisible(False)
-                self._apply_geometry()
-            elif new_height >= self._transition_max_height:
-                # Scrolled back past the start — cancel the transition, re-latch departing folder.
-                departing = self._transition.active_path()
-                self._transition.update_height(0)
-                self._transition_height = 0
-                self._transition.setVisible(False)
-                self._last_spine_path = departing
+                if new_height <= 0:
+                    # Scrolled forward far enough — complete the transition.
+                    self._transition.update_height(0)
+                    self._transition_height = 0
+                    self._transition.setVisible(False)
+                    self._apply_geometry()
+                elif new_height >= self._transition_max_height:
+                    # Scrolled back past the start — cancel the transition, re-latch departing folder.
+                    departing = self._transition.active_path()
+                    self._transition.update_height(0)
+                    self._transition_height = 0
+                    self._transition.setVisible(False)
+                    self._last_spine_path = departing
+                    old_breadcrumb_rows = self._breadcrumb_rows
+                    self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(departing)
+                    self._apply_geometry()
+                    self._tree_view.verticalScrollBar().setValue(value + (self._breadcrumb_rows - old_breadcrumb_rows) * self._row_height)
+                else:
+                    self._transition_height = new_height
+                    self._transition.update_height(new_height)
+                    self._transition.setVisible(True)
+                    self._apply_geometry()
+                return
+
+            # Detect sibling transition: topmost item is a sibling of the currently latched folder.
+            if (self._last_spine_path
+                    and os.path.dirname(topmost_path) == os.path.dirname(self._last_spine_path)
+                    and topmost_path != self._last_spine_path):
+                # Capture the initial transition height and reference scrollbar value.
+                initial_height = row_height + visual_top
+                self._transition_max_height = initial_height
+                self._transition.populate(self._last_spine_path, self._root_path)
+                self._transition.update_height(initial_height)
+                self._transition_height = initial_height
+                self._transition.setVisible(initial_height > 0)
+                self._last_spine_path = os.path.dirname(self._last_spine_path)
                 old_breadcrumb_rows = self._breadcrumb_rows
-                self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(departing)
+                self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(self._last_spine_path)
                 self._apply_geometry()
-                self._tree_view.verticalScrollBar().setValue(value + (self._breadcrumb_rows - old_breadcrumb_rows) * self._row_height)
-            else:
-                self._transition_height = new_height
-                self._transition.update_height(new_height)
-                self._transition.setVisible(True)
-                self._apply_geometry()
-            return
+                compensated_value = value + (self._breadcrumb_rows - old_breadcrumb_rows) * self._row_height
+                self._transition_ref_value = compensated_value
+                self._tree_view.verticalScrollBar().setValue(compensated_value)
+                return
 
-        # Detect sibling transition: topmost item is a sibling of the currently latched folder.
-        if (self._last_spine_path
-                and os.path.dirname(topmost_path) == os.path.dirname(self._last_spine_path)
-                and topmost_path != self._last_spine_path):
-            # Capture the initial transition height and reference scrollbar value.
-            initial_height = row_height + visual_top
-            self._transition_max_height = initial_height
-            self._transition_ref_value = value
-            self._transition.populate(self._last_spine_path, self._root_path)
-            self._transition.update_height(initial_height)
-            self._transition_height = initial_height
-            self._transition.setVisible(initial_height > 0)
-            self._last_spine_path = os.path.dirname(self._last_spine_path)
+            spine_path = self._spine_path_for(topmost_path, topmost_is_expanded)
+            if spine_path == self._last_spine_path:
+                return
+
+            self._last_spine_path = spine_path
             old_breadcrumb_rows = self._breadcrumb_rows
-            self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(self._last_spine_path)
+            self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(spine_path)
             self._apply_geometry()
             self._tree_view.verticalScrollBar().setValue(value + (self._breadcrumb_rows - old_breadcrumb_rows) * self._row_height)
-            return
-
-        spine_path = self._spine_path_for(topmost_path, topmost_is_expanded)
-        if spine_path == self._last_spine_path:
-            return
-
-        self._last_spine_path = spine_path
-        old_breadcrumb_rows = self._breadcrumb_rows
-        self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(spine_path)
-        self._apply_geometry()
-        self._tree_view.verticalScrollBar().setValue(value + (self._breadcrumb_rows - old_breadcrumb_rows) * self._row_height)
+        finally:
+            self._handling_scroll = False
 
     def _spine_path_for(self, topmost_path: str, topmost_is_expanded: bool) -> str:
         """

@@ -3,7 +3,7 @@
 import os
 from typing import Callable, Union
 
-from PySide6.QtCore import Qt, QMimeData, QModelIndex, QFileInfo, QPersistentModelIndex, QRect, QSize
+from PySide6.QtCore import Qt, QMimeData, QModelIndex, QFileInfo, QPersistentModelIndex, QRect, QSize, QTimer
 from PySide6.QtGui import (
     QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent,
     QIcon, QMouseEvent, QPen, QPainter,
@@ -66,7 +66,6 @@ class MindspaceBreadcrumbBar(QTreeView):
         self._current_spine: list[str] = []
         self._drop_target_index: QModelIndex = QModelIndex()
 
-        self._required_height: int = 0
         self._drop_handler: Callable[[str, str], None] | None = None
         self._scroll_handler: Callable[[str], None] | None = None
 
@@ -226,7 +225,6 @@ class MindspaceBreadcrumbBar(QTreeView):
         """)
 
         self._refresh_icons()
-        self._update_height()
 
     def _build_spine(self, target_path: str) -> list[str]:
         """
@@ -266,10 +264,12 @@ class MindspaceBreadcrumbBar(QTreeView):
         """
         self._current_spine = spine
         self._drop_target_index = QModelIndex()
+        self._model.blockSignals(True)
         self._model.clear()
 
         if not spine:
-            self._update_height()
+            self._model.blockSignals(False)
+            QTimer.singleShot(0, self.reset)
             return
 
         icon = self._folder_icon()
@@ -296,44 +296,13 @@ class MindspaceBreadcrumbBar(QTreeView):
             placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
             parent_item.appendRow(placeholder)
 
-        self._expand_all_items()
-        self._update_height()
+        self._model.blockSignals(False)
+        QTimer.singleShot(0, self._reset_and_expand)
 
-    def _expand_all_items(self) -> None:
-        """Expand every item in the model so the full spine is always visible."""
-        def expand_recursive(parent: QModelIndex) -> None:
-            for row in range(self._model.rowCount(parent)):
-                index = self._model.index(row, 0, parent)
-                super(MindspaceBreadcrumbBar, self).expand(index)
-                expand_recursive(index)
-
-        expand_recursive(QModelIndex())
-
-    def _update_height(self) -> None:
-        """Emit height_changed so the container can coordinate the geometry update."""
-        total = 0
-
-        def count_recursive(parent: QModelIndex) -> None:
-            nonlocal total
-            for row in range(self._model.rowCount(parent)):
-                index = self._model.index(row, 0, parent)
-                if index.data(_PATH_ROLE):
-                    total += self.rowHeight(index)
-
-                count_recursive(index)
-
-        count_recursive(QModelIndex())
-        self._required_height = max(total, 0)
-        self.updateGeometry()
-
-    def sizeHint(self) -> QSize:
-        """Report the exact height needed to show all spine rows."""
-        return QSize(self.width(), self._required_height)
-
-    def minimumSizeHint(self) -> QSize:
-        """Report the exact height needed to show all spine rows."""
-        return QSize(0, self._required_height)
-
+    def _reset_and_expand(self) -> None:
+        """Reset the view and expand all items after a deferred model rebuild."""
+        self.reset()
+        self.expandAll()
     def _refresh_icons(self) -> None:
         """Refresh folder icons in the model after an icon provider update."""
         icon = self._folder_icon()
