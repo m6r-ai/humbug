@@ -29,8 +29,6 @@ class MindspaceBreadcrumbTransition(QTreeView):
     decorative — no interaction is supported.
     """
 
-    height_changed = Signal(int)
-
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the transition widget."""
         super().__init__(parent)
@@ -120,7 +118,6 @@ class MindspaceBreadcrumbTransition(QTreeView):
         self._model.clear()
         self._required_height = 0
         self.updateGeometry()
-        self.height_changed.emit(0)
 
     def update_height(self, new_height: int) -> None:
         """
@@ -134,7 +131,6 @@ class MindspaceBreadcrumbTransition(QTreeView):
 
         self._required_height = new_height
         self.updateGeometry()
-        self.height_changed.emit(new_height)
 
         if new_height == 0:
             self.clear_item()

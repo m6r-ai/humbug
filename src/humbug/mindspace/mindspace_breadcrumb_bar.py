@@ -3,7 +3,7 @@
 import os
 from typing import Callable, Union
 
-from PySide6.QtCore import Qt, QMimeData, QModelIndex, QFileInfo, QPersistentModelIndex, QRect, QSize, Signal
+from PySide6.QtCore import Qt, QMimeData, QModelIndex, QFileInfo, QPersistentModelIndex, QRect, QSize
 from PySide6.QtGui import (
     QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent,
     QIcon, QMouseEvent, QPen, QPainter,

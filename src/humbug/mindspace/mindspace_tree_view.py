@@ -8,16 +8,14 @@ from PySide6.QtCore import (
     Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer, QDir
 )
 from PySide6.QtGui import (
-    QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent
+    QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent, QWheelEvent
 )
-
 
 class MindspaceTreeView(QTreeView):
     """Base tree view with drag and drop support, auto-scroll, and inline editing."""
 
     file_dropped = Signal(str, str)  # dragged_path, target_path
     drop_target_changed = Signal()
-    scroll_position_changed = Signal(str, bool, int, int)  # topmost_path, topmost_is_expanded, visual_top, row_height
     delete_requested = Signal()  # Emitted when delete key is pressed
 
     def __init__(self, parent: QWidget | None = None):
@@ -60,59 +58,13 @@ class MindspaceTreeView(QTreeView):
         self.setToolTipDuration(10000)
         self.setEditTriggers(QTreeView.EditTrigger.NoEditTriggers)
 
-        self._geometry_suppressed: bool = False
-        self.verticalScrollBar().valueChanged.connect(self._on_scroll_changed)
-
     def suppress_scroll_signals(self, suppress: bool) -> None:
         """
-        Suppress or restore scroll position emission.
-
-        Called by the breadcrumb container before and after geometry adjustments
-        that would otherwise cause spurious spine-change or scroll-position events.
+        Suppress or restore scroll position emission (no-op, retained for API compatibility).
 
         Args:
-            suppress: True to suppress, False to restore.
+            suppress: Unused.
         """
-        self._geometry_suppressed = suppress
-        self.verticalScrollBar().blockSignals(suppress)
-        if not suppress:
-            # Defer the catch-up to after the current signal chain has fully unwound.
-            # A synchronous call here would re-enter _emit_scroll_signals
-            # from within the signal chain that triggered the suppression, causing
-            # infinite recursion.
-            QTimer.singleShot(0, self._emit_scroll_signal)
-
-    def _emit_scroll_signal(self) -> None:
-        """Emit scroll_position_changed unconditionally."""
-        if self._geometry_suppressed:
-            return
-
-        index = self.indexAt(self.viewport().rect().topLeft())
-        if not index.isValid():
-            return
-
-        row_height = self.rowHeight(index)
-        if row_height <= 0:
-            return
-
-        topmost_path = self.get_path_from_index(index) or ""
-        topmost_is_expanded = self.isExpanded(index)
-        visual_top = self.visualRect(index).top()
-        self.scroll_position_changed.emit(topmost_path, topmost_is_expanded, visual_top, row_height)
-
-    def _on_scroll_changed(self, _value: int) -> None:
-        """Handle scroll bar value changes."""
-        self._emit_scroll_signal()
-
-    def expand(self, index: QModelIndex) -> None:  # type: ignore[override]
-        """Override expand to emit scroll_position_changed after expanding."""
-        super().expand(index)
-        self._emit_scroll_signal()
-
-    def collapse(self, index: QModelIndex) -> None:  # type: ignore[override]
-        """Override collapse to emit scroll_position_changed after collapsing."""
-        super().collapse(index)
-        self._emit_scroll_signal()
 
     def get_root_path(self) -> str:
         """
@@ -588,6 +540,10 @@ class MindspaceTreeView(QTreeView):
             self._drag_start_pos = event.pos()
 
         super().mousePressEvent(event)
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        """Ignore wheel events — the breadcrumb container intercepts them via event filter."""
+        event.ignore()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """Handle mouse move events."""
