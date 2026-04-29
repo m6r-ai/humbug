@@ -19,7 +19,6 @@ from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_breadcrumb_container import MindspaceBreadcrumbContainer
-from humbug.mindspace.mindspace_breadcrumb_transition import MindspaceBreadcrumbTransition
 from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
 from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
@@ -67,8 +66,6 @@ class MindspaceConversationsView(QWidget):
         self._breadcrumb_bar.set_drop_handler(self._on_file_dropped)
         self._breadcrumb_bar.set_scroll_handler(self.reveal_and_select_file)
 
-        self._transition = MindspaceBreadcrumbTransition()
-
         self._tree_view = MindspaceConversationsTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
         self._tree_style = MindspaceTreeStyle()
@@ -77,7 +74,7 @@ class MindspaceConversationsView(QWidget):
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
 
-        self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._transition, self._tree_view, self)
+        self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
 
         # Create icon provider for styling
@@ -1165,7 +1162,6 @@ class MindspaceConversationsView(QWidget):
         self._header.apply_style()
 
         self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)
-        self._transition.apply_style(base_font_size, zoom_factor)
         self._icon_provider.update_icons()
         # Invalidate icon cache in model after icon provider refresh
         self._dag_model.beginResetModel()

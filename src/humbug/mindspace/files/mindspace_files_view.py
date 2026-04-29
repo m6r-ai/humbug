@@ -14,7 +14,6 @@ from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.files.mindspace_files_model import MindspaceFilesModel
 from humbug.mindspace.files.mindspace_files_tree_view import MindspaceFilesTreeView
 from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
-from humbug.mindspace.mindspace_breadcrumb_transition import MindspaceBreadcrumbTransition
 from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
 from humbug.mindspace.mindspace_breadcrumb_container import MindspaceBreadcrumbContainer
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
@@ -69,8 +68,6 @@ class MindspaceFilesView(QWidget):
         self._breadcrumb_bar.set_drop_handler(self._on_file_dropped)
         self._breadcrumb_bar.set_scroll_handler(self.reveal_and_select_file)
 
-        self._transition = MindspaceBreadcrumbTransition()
-
         self._tree_view = MindspaceFilesTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
         self._tree_style = MindspaceTreeStyle()
@@ -79,7 +76,7 @@ class MindspaceFilesView(QWidget):
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
 
-        self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._transition, self._tree_view, self)
+        self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
 
         # Create file system model
@@ -1029,7 +1026,6 @@ class MindspaceFilesView(QWidget):
         self._header.apply_style()
 
         self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)
-        self._transition.apply_style(base_font_size, zoom_factor)
         self._icon_provider.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)
         file_icon_size = round(16 * zoom_factor)
