@@ -163,8 +163,12 @@ class MindspaceBreadcrumbContainer(QWidget):
         """
         Derive the spine context path from the topmost visible tree item.
 
-        If the topmost item is an expanded folder it is the spine context;
-        otherwise its parent is.
+        Unlatch takes priority: if topmost_path matches the current spine
+        (_last_spine_path), that folder has scrolled back into view and must be
+        removed — return its parent instead.
+
+        Otherwise, if the topmost item is an expanded folder it becomes the spine
+        context; otherwise its parent does.
 
         Args:
             topmost_path: Absolute path of the topmost visible item.
@@ -175,6 +179,10 @@ class MindspaceBreadcrumbContainer(QWidget):
         """
         if not topmost_path:
             return ""
+
+        if topmost_path == self._last_spine_path:
+            parent = os.path.dirname(topmost_path)
+            return parent if parent and parent != topmost_path else ""
 
         if os.path.isdir(topmost_path) and topmost_is_expanded:
             return topmost_path
