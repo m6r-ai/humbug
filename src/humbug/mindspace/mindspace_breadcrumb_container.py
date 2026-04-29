@@ -68,6 +68,8 @@ class MindspaceBreadcrumbContainer(QWidget):
         tree_view.verticalScrollBar().rangeChanged.connect(self._on_tree_range_changed)
         tree_view.viewport().installEventFilter(self)
 
+        breadcrumb_bar.set_collapse_handler(self._on_breadcrumb_collapse)
+
     def set_root_path(self, root_path: str) -> None:
         """
         Set the root path used when populating the breadcrumb bar.
@@ -194,6 +196,36 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(spine_path)
         self._tree_view.verticalScrollBar().setValue(value + self._breadcrumb_rows * self._row_height)
         self._apply_geometry()
+
+    def _on_breadcrumb_collapse(self, path: str) -> None:
+        """
+        Handle a collapse request from the breadcrumb bar.
+
+        Args:
+            path: Absolute file system path of the folder to collapse in the tree.
+        """
+        index = self._tree_view.collapse_path(path)
+
+        if index.isValid():
+            # Scroll the collapsed item to the top of the tree's internal viewport.
+            # We do this before recalculating the breadcrumb so the tree is in its
+            # final scroll position when we read indexAt(0,0).
+            self._tree_view.scrollTo(index, self._tree_view.ScrollHint.PositionAtTop)
+
+        # Recalculate the breadcrumb from the collapsed item's path directly,
+        # bypassing _on_external_scroll entirely to avoid stale bc_h arithmetic.
+        self._last_spine_path = ""
+        new_rows = self._breadcrumb_bar.update_from_path(os.path.dirname(path))
+        self._breadcrumb_rows = new_rows
+        self._apply_geometry()
+
+        # Now set the tree's internal scrollbar to account for the new breadcrumb
+        # height, and sync the external scrollbar to match.
+        if index.isValid():
+            tree_sb = self._tree_view.verticalScrollBar()
+            bc_h = new_rows * self._row_height
+            self._scrollbar.setValue(max(0, tree_sb.value() - bc_h))
+            self._last_spine_path = os.path.dirname(path)
 
     def _apply_geometry(self) -> None:
         """Assign geometry to all child widgets to exactly fill the container."""

@@ -6,7 +6,7 @@ from typing import Callable, Union
 from PySide6.QtCore import Qt, QMimeData, QModelIndex, QFileInfo, QPersistentModelIndex, QRect, QSize, QTimer
 from PySide6.QtGui import (
     QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent,
-    QIcon, QMouseEvent, QPen, QPainter,
+    QIcon, QMouseEvent, QPen, QPainter, QWheelEvent,
     QStandardItem, QStandardItemModel,
 )
 from PySide6.QtWidgets import QFrame, QStyleOptionViewItem, QTreeView, QWidget
@@ -68,6 +68,7 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         self._drop_handler: Callable[[str, str], None] | None = None
         self._scroll_handler: Callable[[str], None] | None = None
+        self._collapse_handler: Callable[[str], None] | None = None
 
         self.clicked.connect(self._on_item_clicked)
 
@@ -115,6 +116,17 @@ class MindspaceBreadcrumbBar(QTreeView):
         """
         self._scroll_handler = handler
 
+    def set_collapse_handler(self, handler: Callable[[str], None]) -> None:
+        """
+        Set the callable invoked when the user clicks the collapse arrow on a spine row.
+
+        Signature: handler(path) -> None
+
+        Args:
+            handler: Collapse handler callable
+        """
+        self._collapse_handler = handler
+
     def update_from_path(self, visible_path: str) -> int:
         """
         Rebuild the spine to show the ancestor chain of visible_path.
@@ -138,7 +150,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         return self._drop_target_index
 
     def collapse(self, index: QModelIndex) -> None:  # type: ignore[override]
-        """Suppress collapse — the spine is always fully expanded."""
+        """Suppress collapse — the breadcrumb is always fully expanded."""
 
     def setExpanded(self, index: QModelIndex, expanded: bool) -> None:  # type: ignore[override]
         """Only allow expansion, never collapse."""
@@ -290,11 +302,19 @@ class MindspaceBreadcrumbBar(QTreeView):
                 parent_item.appendRow(item)
                 parent_item = item
 
-            # Add a hidden placeholder child to the leaf so Qt sees it as
-            # having children and draws the ::branch:open:has-children chevron.
-            placeholder = QStandardItem()
-            placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
-            parent_item.appendRow(placeholder)
+        def _add_placeholders(parent_item: QStandardItem) -> None:
+            for row in range(parent_item.rowCount()):
+                child = parent_item.child(row)
+                if child and child.flags() != Qt.ItemFlag.NoItemFlags:
+                    child_path = child.data(_PATH_ROLE)
+                    if child_path and os.path.normpath(child_path) == os.path.normpath(self._root_path):
+                        continue
+                    placeholder = QStandardItem()
+                    placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
+                    child.appendRow(placeholder)
+                    _add_placeholders(child)
+
+        _add_placeholders(self._model.invisibleRootItem())
 
         self._model.blockSignals(False)
         QTimer.singleShot(0, self._reset_and_expand)
@@ -302,7 +322,16 @@ class MindspaceBreadcrumbBar(QTreeView):
     def _reset_and_expand(self) -> None:
         """Reset the view and expand all items after a deferred model rebuild."""
         self.reset()
-        self.expandAll()
+        self._expand_real_items(QModelIndex())
+
+    def _expand_real_items(self, parent: QModelIndex) -> None:
+        """Expand only real (non-placeholder) items in the model."""
+        for row in range(self._model.rowCount(parent)):
+            index = self._model.index(row, 0, parent)
+            item = self._model.itemFromIndex(index)
+            if item and item.flags() != Qt.ItemFlag.NoItemFlags:
+                super().setExpanded(index, True)
+                self._expand_real_items(index)
     def _refresh_icons(self) -> None:
         """Refresh folder icons in the model after an icon provider update."""
         icon = self._folder_icon()
@@ -454,8 +483,16 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         super().drawBranches(painter, rect, index)
 
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        """Ignore wheel events — the breadcrumb bar does not scroll."""
+        event.ignore()
+
+    def scrollContentsBy(self, dx: int, dy: int) -> None:
+        """Suppress all internal scrolling — the breadcrumb is always fully visible."""
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        """Suppress right-click and branch-area clicks."""
+        """Suppress right-click and branch-area clicks; fire collapse handler for branch-area left-clicks."""
         if event.button() == Qt.MouseButton.RightButton:
             event.ignore()
             return
@@ -464,17 +501,22 @@ class MindspaceBreadcrumbBar(QTreeView):
         if index.isValid():
             item_rect = self.visualRect(index)
             if event.pos().x() < item_rect.left():
+                path = self._path_for_index(index)
+                if path and self._collapse_handler:
+                    self._collapse_handler(path)
                 return
 
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        """Suppress branch-area release events that would trigger collapse."""
-        if event.button() == Qt.MouseButton.LeftButton:
-            index = self.indexAt(event.pos())
-            if index.isValid():
-                item_rect = self.visualRect(index)
-                if event.pos().x() < item_rect.left():
-                    return
+        """Suppress right-click and branch-area release events."""
+        if event.button() == Qt.MouseButton.RightButton:
+            return
+
+        index = self.indexAt(event.pos())
+        if index.isValid():
+            item_rect = self.visualRect(index)
+            if event.pos().x() < item_rect.left():
+                return
 
         super().mouseReleaseEvent(event)

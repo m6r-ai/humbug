@@ -167,6 +167,33 @@ class MindspaceTreeView(QTreeView):
 
         return QDir.toNativeSeparators(file_model.filePath(source_index))
 
+    def collapse_path(self, path: str) -> QModelIndex:
+        """
+        Collapse the tree node corresponding to the given file system path.
+
+        Args:
+            path: Absolute file system path of the folder to collapse.
+
+        Returns:
+            The filter model index of the collapsed item, or an invalid index if not found.
+        """
+        source_model = cast(QSortFilterProxyModel, self.model())
+        if not source_model:
+            return QModelIndex()
+
+        file_model = cast(QFileSystemModel, source_model.sourceModel())
+        if not file_model:
+            return QModelIndex()
+
+        source_index = file_model.index(path)
+        if not source_index.isValid():
+            return QModelIndex()
+
+        filter_index = source_model.mapFromSource(source_index)
+        if filter_index.isValid():
+            self.collapse(filter_index)
+        return filter_index
+
     def scroll_to_and_ensure_visible(self, file_path: str, callback: Callable) -> None:
         """
         Scroll to the specified index and ensure it's optimally positioned for editing.
