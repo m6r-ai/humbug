@@ -230,8 +230,10 @@ class MindspaceBreadcrumbContainer(QWidget):
                 self._transition_height = 0
                 self._transition.setVisible(False)
                 self._last_spine_path = departing
+                old_breadcrumb_rows = self._breadcrumb_rows
                 self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(departing)
                 self._apply_geometry()
+                self._tree_view.verticalScrollBar().setValue(value + (self._breadcrumb_rows - old_breadcrumb_rows) * self._row_height)
             else:
                 self._transition_height = new_height
                 self._transition.update_height(new_height)
@@ -252,8 +254,10 @@ class MindspaceBreadcrumbContainer(QWidget):
             self._transition_height = initial_height
             self._transition.setVisible(initial_height > 0)
             self._last_spine_path = os.path.dirname(self._last_spine_path)
+            old_breadcrumb_rows = self._breadcrumb_rows
             self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(self._last_spine_path)
             self._apply_geometry()
+            self._tree_view.verticalScrollBar().setValue(value + (self._breadcrumb_rows - old_breadcrumb_rows) * self._row_height)
             return
 
         spine_path = self._spine_path_for(topmost_path, topmost_is_expanded)
@@ -261,8 +265,10 @@ class MindspaceBreadcrumbContainer(QWidget):
             return
 
         self._last_spine_path = spine_path
+        old_breadcrumb_rows = self._breadcrumb_rows
         self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(spine_path)
         self._apply_geometry()
+        self._tree_view.verticalScrollBar().setValue(value + (self._breadcrumb_rows - old_breadcrumb_rows) * self._row_height)
 
     def _spine_path_for(self, topmost_path: str, topmost_is_expanded: bool) -> str:
         """
