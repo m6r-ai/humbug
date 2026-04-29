@@ -1,14 +1,14 @@
 """Base tree view implementation for mindspace with drag and drop support and inline editing."""
 
 import os
-from typing import cast, Callable, Optional, Union
+from typing import cast, Callable, Union
 
 from PySide6.QtWidgets import QFrame, QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import (
-    Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer, QDir, QRect
+    Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer, QDir
 )
 from PySide6.QtGui import (
-    QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent, QPainter
+    QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent
 )
 
 
@@ -17,8 +17,7 @@ class MindspaceTreeView(QTreeView):
 
     file_dropped = Signal(str, str)  # dragged_path, target_path
     drop_target_changed = Signal()
-    visible_top_changed = Signal(str)  # Emitted when the topmost visible spine path changes
-    scroll_position_changed = Signal(str, str, bool, int, int)  # spine_path, topmost_path, topmost_is_expanded, fractional_offset, row_height
+    scroll_position_changed = Signal(str, bool, int, int)  # topmost_path, topmost_is_expanded, fractional_offset, row_height
     delete_requested = Signal()  # Emitted when delete key is pressed
 
     def __init__(self, parent: QWidget | None = None):
@@ -61,8 +60,6 @@ class MindspaceTreeView(QTreeView):
         self.setToolTipDuration(10000)
         self.setEditTriggers(QTreeView.EditTrigger.NoEditTriggers)
 
-        self._last_visible_top_path: Optional[str] = None
-        self._updating_visible_top: bool = False
         self._geometry_suppressed: bool = False
         self.verticalScrollBar().valueChanged.connect(self._on_scroll_changed)
 
@@ -80,40 +77,16 @@ class MindspaceTreeView(QTreeView):
         self.verticalScrollBar().blockSignals(suppress)
         if not suppress:
             # Defer the catch-up to after the current signal chain has fully unwound.
-            # A synchronous call here would re-enter _emit_visible_top_if_changed
+            # A synchronous call here would re-enter _emit_scroll_signals
             # from within the signal chain that triggered the suppression, causing
             # infinite recursion.
-            QTimer.singleShot(0, self._emit_visible_top_if_changed)
+            QTimer.singleShot(0, self._emit_scroll_signal)
 
-    def _emit_visible_top_if_changed(self) -> None:
-        """Emit visible_top_changed if the topmost visible path has changed."""
-        if self._updating_visible_top or self._geometry_suppressed:
+    def _emit_scroll_signal(self) -> None:
+        """Emit scroll_position_changed unconditionally."""
+        if self._geometry_suppressed:
             return
 
-        self._updating_visible_top = True
-        path = self._topmost_visible_folder_path()
-        self._updating_visible_top = False
-
-        self._emit_scroll_position(path)
-
-        if path != self._last_visible_top_path:
-            old_name = os.path.basename(self._last_visible_top_path) if self._last_visible_top_path else None
-            new_name = os.path.basename(path) if path else None
-            self._last_visible_top_path = path
-            print(f"SPINE CHANGE: {old_name!r} -> {new_name!r}")
-            self.visible_top_changed.emit(path or "")
-
-    def _emit_scroll_position(self, spine_path: Optional[str]) -> None:
-        """
-        Emit scroll_position_changed on every scroll tick.
-
-        The fractional offset — how many pixels the topmost row has scrolled above
-        the viewport top — is computed purely from the scrollbar value as
-        sb % row_height.  No viewport-relative geometry is used.
-
-        Args:
-            spine_path: The current spine context path (may be None).
-        """
         index = self.indexAt(self.viewport().rect().topLeft())
         if not index.isValid():
             return
@@ -125,54 +98,21 @@ class MindspaceTreeView(QTreeView):
         fractional_offset = self.verticalScrollBar().value() % row_height
         topmost_path = self.get_path_from_index(index) or ""
         topmost_is_expanded = self.isExpanded(index)
-        self.scroll_position_changed.emit(spine_path or "", topmost_path, topmost_is_expanded, fractional_offset, row_height)
-
-    def _topmost_visible_folder_path(self) -> Optional[str]:
-        """
-        Return the path of the folder that is the current spine context.
-
-        Determined purely from the scrollbar position via indexAt(topLeft()).
-        If the topmost visible item is an expanded folder it is the spine context
-        (latched).  Otherwise the spine context is its parent.  No rect.top() or
-        viewport-relative geometry is used.
-
-        Returns:
-            Absolute path of the spine context folder, or None if the topmost
-            item is at root level (no folder has entered the spine yet).
-        """
-        index = self.indexAt(self.viewport().rect().topLeft())
-        if not index.isValid():
-            return None
-
-        path = self.get_path_from_index(index)
-        if not path:
-            return None
-
-        if os.path.isdir(path) and self.isExpanded(index):
-            print(f"LATCHED: {os.path.basename(path)!r} sb={self.verticalScrollBar().value()}")
-            return path
-
-        parent_index = index.parent()
-        if not parent_index.isValid():
-            return None
-
-        parent_path = self.get_path_from_index(parent_index)
-        print(f"LATCHED(parent): {os.path.basename(parent_path)!r} sb={self.verticalScrollBar().value()}" if parent_path else "")
-        return parent_path
+        self.scroll_position_changed.emit(topmost_path, topmost_is_expanded, fractional_offset, row_height)
 
     def _on_scroll_changed(self, _value: int) -> None:
         """Handle scroll bar value changes."""
-        self._emit_visible_top_if_changed()
+        self._emit_scroll_signal()
 
     def expand(self, index: QModelIndex) -> None:  # type: ignore[override]
-        """Override expand to emit visible_top_changed after expanding."""
+        """Override expand to emit scroll_position_changed after expanding."""
         super().expand(index)
-        self._emit_visible_top_if_changed()
+        self._emit_scroll_signal()
 
     def collapse(self, index: QModelIndex) -> None:  # type: ignore[override]
-        """Override collapse to emit visible_top_changed after collapsing."""
+        """Override collapse to emit scroll_position_changed after collapsing."""
         super().collapse(index)
-        self._emit_visible_top_if_changed()
+        self._emit_scroll_signal()
 
     def get_root_path(self) -> str:
         """

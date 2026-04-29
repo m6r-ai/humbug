@@ -77,10 +77,6 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         self.clicked.connect(self._on_item_clicked)
 
-    # ------------------------------------------------------------------ #
-    # Public API                                                           #
-    # ------------------------------------------------------------------ #
-
     def set_root_path(self, root_path: str) -> None:
         """
         Set the root path for the spine.
@@ -144,10 +140,6 @@ class MindspaceBreadcrumbBar(QTreeView):
         """Return the model index currently acting as drop target, or an invalid index."""
         return self._drop_target_index
 
-    # ------------------------------------------------------------------ #
-    # Collapse prevention                                                  #
-    # ------------------------------------------------------------------ #
-
     def collapse(self, index: QModelIndex) -> None:  # type: ignore[override]
         """Suppress collapse — the spine is always fully expanded."""
 
@@ -155,10 +147,6 @@ class MindspaceBreadcrumbBar(QTreeView):
         """Only allow expansion, never collapse."""
         if expanded:
             super().setExpanded(index, True)
-
-    # ------------------------------------------------------------------ #
-    # Painting                                                             #
-    # ------------------------------------------------------------------ #
 
     def drawRow(
         self,
@@ -179,10 +167,6 @@ class MindspaceBreadcrumbBar(QTreeView):
             painter.setPen(QPen(drop_border, 1, Qt.PenStyle.SolidLine))
             painter.drawRect(rect.adjusted(1, 1, -1, -1))
             painter.restore()
-
-    # ------------------------------------------------------------------ #
-    # Styling                                                              #
-    # ------------------------------------------------------------------ #
 
     def apply_style(self, font_size: float, zoom_factor: float) -> None:
         """
@@ -244,12 +228,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         """)
 
         self._refresh_icons()
-
         self._update_height()
-
-    # ------------------------------------------------------------------ #
-    # Internal model building                                              #
-    # ------------------------------------------------------------------ #
 
     def _build_spine(self, target_path: str) -> list[str]:
         """
@@ -320,7 +299,6 @@ class MindspaceBreadcrumbBar(QTreeView):
             parent_item.appendRow(placeholder)
 
         self._expand_all_items()
-
         self._update_height()
 
     def _expand_all_items(self) -> None:
@@ -343,6 +321,7 @@ class MindspaceBreadcrumbBar(QTreeView):
                 index = self._model.index(row, 0, parent)
                 if index.data(_PATH_ROLE):
                     total += self.rowHeight(index)
+
                 count_recursive(index)
 
         count_recursive(QModelIndex())
@@ -395,10 +374,6 @@ class MindspaceBreadcrumbBar(QTreeView):
         path = self._path_for_index(index)
         if path and self._scroll_handler:
             self._scroll_handler(path)
-
-    # ------------------------------------------------------------------ #
-    # Drag and drop                                                        #
-    # ------------------------------------------------------------------ #
 
     def _get_dragged_path(self, mime_data: QMimeData) -> str:
         """Extract the dragged path from mime data."""
