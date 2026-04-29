@@ -195,7 +195,6 @@ class MindspaceBreadcrumbBar(QTreeView):
         font.setPointSizeF(font_size * zoom_factor)
         self.setFont(font)
 
-        tree_bg = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
         tree_hover = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
         text = self._style_manager.get_color_str(ColorRole.TEXT_HEADING)
         tree_margin = round(6 * zoom_factor)

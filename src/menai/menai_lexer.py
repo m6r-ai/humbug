@@ -361,7 +361,8 @@ class MenaiLexer:
             expected="Valid # literal: #t, #f, #none, #xFF, #b1010, #o755, #d42",
             example="Correct: #t, #f, #none, #xFF, #b1010, #o755, #d42\nIncorrect: #true, #1, 0xFF",
             suggestion=suggestion,
-            context="# must be followed by: 't'/'f' (boolean), 'none', 'x'/'X' (hex), 'b'/'B' (binary), 'o'/'O' (octal), or 'd'/'D' (decimal)"
+            context="# must be followed by: 't'/'f' (boolean), 'none', 'x'/'X' (hex), 'b'/'B' (binary), "
+                "'o'/'O' (octal), or 'd'/'D' (decimal)"
         )
 
     def _handle_number(self) -> None:
