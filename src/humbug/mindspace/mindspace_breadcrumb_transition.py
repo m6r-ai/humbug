@@ -59,10 +59,6 @@ class MindspaceBreadcrumbTransition(QTreeView):
 
         self.hide()
 
-    # ------------------------------------------------------------------ #
-    # Public API                                                           #
-    # ------------------------------------------------------------------ #
-
     def populate(self, path: str, root_path: str) -> None:
         """
         Load the departing folder into the widget and show it at maximum height.
@@ -93,6 +89,7 @@ class MindspaceBreadcrumbTransition(QTreeView):
             parent = os.path.dirname(current)
             if parent == current:
                 break
+
             current = parent
 
         ancestors.reverse()
@@ -125,19 +122,16 @@ class MindspaceBreadcrumbTransition(QTreeView):
         self.updateGeometry()
         self.height_changed.emit(0)
 
-    def update_height(self, fractional_offset: int, row_height: int) -> None:
+    def update_height(self, new_height: int) -> None:
         """
-        Adjust the widget height based on how far the main tree has scrolled.
+        Set the widget height directly.
 
         Args:
-            fractional_offset: Pixels the topmost main-tree item has scrolled
-                above the viewport top (0 = item fully visible, positive = scrolled up).
-            row_height: Height in pixels of one tree row.
+            new_height: New height in pixels for the transition widget.
         """
         if not self._active_path:
             return
 
-        new_height = max(0, row_height - 1 - fractional_offset)
         self._required_height = new_height
         self.updateGeometry()
         self.height_changed.emit(new_height)
@@ -161,10 +155,6 @@ class MindspaceBreadcrumbTransition(QTreeView):
         """Return the path of the departing folder, or empty string if inactive."""
         return self._active_path
 
-    # ------------------------------------------------------------------ #
-    # Collapse prevention                                                  #
-    # ------------------------------------------------------------------ #
-
     def collapse(self, index: QModelIndex) -> None:  # type: ignore[override]
         """Suppress collapse."""
 
@@ -172,10 +162,6 @@ class MindspaceBreadcrumbTransition(QTreeView):
         """Only allow expansion, never collapse."""
         if expanded:
             super().setExpanded(index, True)
-
-    # ------------------------------------------------------------------ #
-    # Styling                                                              #
-    # ------------------------------------------------------------------ #
 
     def apply_style(self, font_size: float, zoom_factor: float) -> None:
         """
@@ -222,10 +208,6 @@ class MindspaceBreadcrumbTransition(QTreeView):
 
         self._refresh_icons()
 
-    # ------------------------------------------------------------------ #
-    # Internal helpers                                                     #
-    # ------------------------------------------------------------------ #
-
     def _folder_icon(self, path: str) -> QIcon:
         """Return the folder icon for the given path."""
         info = QFileInfo(path if path else ".")
@@ -240,6 +222,7 @@ class MindspaceBreadcrumbTransition(QTreeView):
                 if path:
                     icon = self._folder_icon(path)
                     self._model.setData(index, icon, Qt.ItemDataRole.DecorationRole)
+
                 refresh_recursive(index)
 
         refresh_recursive(QModelIndex())

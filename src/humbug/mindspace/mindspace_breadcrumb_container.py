@@ -53,12 +53,14 @@ class MindspaceBreadcrumbContainer(QWidget):
 
         self._root_path: str = ""
 
-        # Sibling transition tracking.
         self._breadcrumb_height: int = 0
+        self._breadcrumb_rows: int = 0
         self._transition_height: int = 0
         self._last_spine_path: str = ""
-        self._last_topmost_child: str = ""
-        self._last_topmost_child_expanded: bool = False
+        self._row_height: int = 0
+        self._transition_active: bool = False
+        self._transition_start_sb: int = 0
+        self._transition_row_height: int = 0
 
         # Re-parent all three widgets into this container.
         breadcrumb_bar.setParent(self)
@@ -80,7 +82,6 @@ class MindspaceBreadcrumbContainer(QWidget):
         # The container expands to fill whatever the parent layout gives it.
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-        breadcrumb_bar.height_changed.connect(self._on_breadcrumb_height_changed)
         transition.height_changed.connect(self._on_transition_height_changed)
         tree_view.scroll_position_changed.connect(self._on_scroll_position_changed)
 
@@ -110,54 +111,70 @@ class MindspaceBreadcrumbContainer(QWidget):
         self,
         topmost_path: str,
         topmost_is_expanded: bool,
-        fractional_offset: int,
+        visual_top: int,
         row_height: int,
     ) -> None:
         """
-        Drive the transition widget on every scroll tick.
-
-        Derives the spine context from topmost_path, updates the breadcrumb bar
-        when the spine changes, and detects sibling transitions.
+        Update the breadcrumb bar and drive the sibling transition when appropriate.
 
         Args:
             topmost_path: Absolute path of the topmost visible item in the main tree.
             topmost_is_expanded: Whether the topmost item is currently expanded.
-            fractional_offset: Pixels the topmost item has scrolled above the viewport top.
+            visual_top: Y coordinate of the topmost item's top edge in viewport space (0 or negative).
             row_height: Height in pixels of one tree row.
         """
-        spine_path = self._spine_path_for(topmost_path, topmost_is_expanded)
-        if spine_path != self._last_spine_path:
-            self._last_spine_path = spine_path
-            self._last_topmost_child = ""
-            self._last_topmost_child_expanded = False
-            self._transition.clear_item()
-            self._breadcrumb_bar.update_from_path(spine_path)
-
-        # Drive active transition.
+        self._row_height = row_height
+        # While the transition is active, update its height and hold the spine steady.
         if self._transition.is_active():
-            self._transition.update_height(fractional_offset, row_height)
+            sb = self._tree_view.verticalScrollBar().value()
+            new_height = self._transition_row_height - (sb - self._transition_start_sb)
+            if new_height <= 0:
+                # Scrolled forward far enough — complete the transition.
+                self._transition.update_height(0)
+                self._transition_active = False
+                print(f"TRANSITION: went inactive after update_height")
+
+            elif new_height >= self._transition_row_height:
+                # Scrolled back — cancel the transition, re-latch A.
+                departing = self._transition.active_path()
+                self._transition.update_height(0)
+                self._transition_active = False
+                self._last_spine_path = departing
+                self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(departing)
+                self._apply_geometry()
+                print(f"TRANSITION: cancelled, re-latching {os.path.basename(departing)!r} - rows: {self._breadcrumb_rows}")
+
+            else:
+                self._transition.update_height(new_height)
+
             return
 
-        if not spine_path or not topmost_path:
-            self._last_topmost_child = topmost_path
-            self._last_topmost_child_expanded = False
+        # Detect sibling transition: topmost item is a sibling of the currently
+        # latched folder, regardless of whether it is expanded or not.
+        print(f"spine path: {self._last_spine_path}, topmost: {topmost_path}")
+        if (self._last_spine_path
+                and os.path.dirname(topmost_path) == os.path.dirname(self._last_spine_path)
+                and topmost_path != self._last_spine_path):
+            self._transition_active = True
+            sb = self._tree_view.verticalScrollBar().value()
+            self._transition_start_sb = sb + visual_top  # row-aligned start position
+            self._transition_row_height = row_height
+            self._transition.populate(self._last_spine_path, self._root_path)
+            self._transition.update_height(row_height)
+            self._last_spine_path = os.path.dirname(self._last_spine_path)
+            self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(self._last_spine_path)
+            self._apply_geometry()
+            print(f"TRANSITION: went active, departing={os.path.basename(self._last_spine_path)!r} - rows: {self._breadcrumb_rows}")
             return
 
-        # Only consider direct children of the spine (one level deeper).
-        if os.path.dirname(topmost_path) != spine_path:
-            self._last_topmost_child = topmost_path
-            self._last_topmost_child_expanded = False
+        spine_path = self._spine_path_for(topmost_path, topmost_is_expanded)
+        if spine_path == self._last_spine_path:
             return
 
-        # Detect sibling transition: topmost child changed from a previous expanded folder.
-        prev = self._last_topmost_child
-        prev_was_expanded = self._last_topmost_child_expanded
-        self._last_topmost_child = topmost_path
-        self._last_topmost_child_expanded = topmost_is_expanded
-
-        if prev and prev_was_expanded and prev != topmost_path and os.path.dirname(prev) == spine_path:
-            self._transition.populate(prev, self._root_path)
-            self._transition.update_height(fractional_offset, row_height)
+        self._last_spine_path = spine_path
+        self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(spine_path)
+        self._apply_geometry()
+        print(f"update: for {spine_path} - rows: {self._breadcrumb_rows}")
 
     def _spine_path_for(self, topmost_path: str, topmost_is_expanded: bool) -> str:
         """
@@ -193,36 +210,12 @@ class MindspaceBreadcrumbContainer(QWidget):
 
         return parent
 
-    def _on_breadcrumb_height_changed(self, new_height: int) -> None:
-        """
-        Handle a breadcrumb bar height change.
-
-        On latch (delta > 0): scroll forward by delta so the content that was
-        below the newly latched row stays at the top of the tree viewport.
-
-        On unlatch (delta < 0): scroll back by abs(delta) - 1 so the reappearing
-        row is visible from its first pixel.
-
-        Args:
-            new_height: New required height of the breadcrumb bar in pixels.
-        """
-        delta = new_height - self._breadcrumb_height
-
-        self._breadcrumb_height = new_height
-        self._tree_view.suppress_scroll_signals(True)
-        self._apply_geometry()
-        if delta != 0:
-            sb = self._tree_view.verticalScrollBar()
-            sb.setValue(sb.value() + delta)
-
-        self._tree_view.suppress_scroll_signals(False)
-
     def _on_transition_height_changed(self, new_height: int) -> None:
         """
         Handle a transition widget height change.
 
-        Applies the new geometry.  No scroll compensation is needed for the same
-        reason as breadcrumb height changes.
+        Applies the new geometry with scroll signals suppressed so the tree
+        position does not jump.
 
         Args:
             new_height: New height in pixels for the transition widget (0 = hidden).
@@ -238,7 +231,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         w = self.width()
         h = self.height()
 
-        bc_h = self._breadcrumb_height
+        bc_h = self._breadcrumb_rows * self._row_height
         tr_h = self._transition_height
         tree_top = bc_h + tr_h
         tree_h = max(0, h - tree_top)

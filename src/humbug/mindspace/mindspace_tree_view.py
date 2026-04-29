@@ -17,7 +17,7 @@ class MindspaceTreeView(QTreeView):
 
     file_dropped = Signal(str, str)  # dragged_path, target_path
     drop_target_changed = Signal()
-    scroll_position_changed = Signal(str, bool, int, int)  # topmost_path, topmost_is_expanded, fractional_offset, row_height
+    scroll_position_changed = Signal(str, bool, int, int)  # topmost_path, topmost_is_expanded, visual_top, row_height
     delete_requested = Signal()  # Emitted when delete key is pressed
 
     def __init__(self, parent: QWidget | None = None):
@@ -95,10 +95,10 @@ class MindspaceTreeView(QTreeView):
         if row_height <= 0:
             return
 
-        fractional_offset = self.verticalScrollBar().value() % row_height
         topmost_path = self.get_path_from_index(index) or ""
         topmost_is_expanded = self.isExpanded(index)
-        self.scroll_position_changed.emit(topmost_path, topmost_is_expanded, fractional_offset, row_height)
+        visual_top = self.visualRect(index).top()
+        self.scroll_position_changed.emit(topmost_path, topmost_is_expanded, visual_top, row_height)
 
     def _on_scroll_changed(self, _value: int) -> None:
         """Handle scroll bar value changes."""

@@ -25,9 +25,6 @@ class MindspaceBreadcrumbBar(QTreeView):
     A compact tree view showing the ancestor chain (spine) of the folder currently
     at the top of the main tree's viewport.
 
-    height_changed is emitted whenever the required height changes so the parent
-    container can coordinate the geometry update with the tree view scroll position.
-
     The "." sentinel is always the first top-level row.  Real ancestor directories
     nest beneath it.  For example, if src/humbug is at the top of the main tree:
 
@@ -39,8 +36,6 @@ class MindspaceBreadcrumbBar(QTreeView):
     exactly.  Each row is a valid drag-and-drop target.  Clicking a row scrolls the
     main tree to that folder.
     """
-
-    height_changed = Signal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the spine tree."""
@@ -121,7 +116,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         """
         self._scroll_handler = handler
 
-    def update_from_path(self, visible_path: str) -> None:
+    def update_from_path(self, visible_path: str) -> int:
         """
         Rebuild the spine to show the ancestor chain of visible_path.
 
@@ -129,12 +124,15 @@ class MindspaceBreadcrumbBar(QTreeView):
             visible_path: Absolute path of the topmost visible folder in the main tree.
         """
         if not visible_path or not self._root_path:
-            self._rebuild([self._dot_path] if self._dot_path else [])
-            return
+            paths = [self._dot_path] if self._dot_path else []
+            self._rebuild(paths)
+            return len(paths)
 
         spine = self._build_spine(visible_path)
         if spine != self._current_spine:
             self._rebuild(spine)
+
+        return len(spine)
 
     def drop_target_index(self) -> QModelIndex:
         """Return the model index currently acting as drop target, or an invalid index."""
@@ -327,7 +325,6 @@ class MindspaceBreadcrumbBar(QTreeView):
         count_recursive(QModelIndex())
         self._required_height = max(total, 0)
         self.updateGeometry()
-        self.height_changed.emit(self._required_height)
 
     def sizeHint(self) -> QSize:
         """Report the exact height needed to show all spine rows."""
