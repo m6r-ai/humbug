@@ -20,10 +20,10 @@ class MindspaceBreadcrumbContainer(QWidget):
       over scroll position.  The tree view's internal scrollbar is hidden and driven
       as a slave.  Wheel events on the tree viewport are intercepted and forwarded to
       the external scrollbar so that all input flows through one path.
-    - Breadcrumb updates: on each scroll tick, reads the item at virtual position
-      `value` in the content and updates the breadcrumb bar to reflect the current
-      ancestor context.  The tree view is always set to `value + breadcrumb_height`
-      so the breadcrumb bar rows are never visible inside the tree viewport.
+    - Breadcrumb updates: on each scroll tick, reads the item at the top of the tree
+      viewport and updates the breadcrumb bar to reflect the current ancestor context.
+      The tree view is always set to `value + breadcrumb_height` so the breadcrumb bar
+      rows are never visible inside the tree viewport.
 
     None of this logic belongs in the individual child widgets, which remain unaware
     of each other.
@@ -108,7 +108,7 @@ class MindspaceBreadcrumbContainer(QWidget):
 
     def _on_tree_range_changed(self, minimum: int, maximum: int) -> None:
         """
-        Mirror the tree's scroll range and page step directly onto the external scrollbar.
+        Mirror the tree's scroll range directly onto the external scrollbar.
 
         Args:
             minimum: New minimum value from the tree's internal scrollbar.
@@ -154,12 +154,9 @@ class MindspaceBreadcrumbContainer(QWidget):
         second_index = self._tree_view.indexAt(QPoint(0, row_height))
         second_path = (self._tree_view.get_path_from_index(second_index) or "") if second_index.isValid() else ""
 
-        print(f"TICK value={value} bc_rows={self._breadcrumb_rows} first={os.path.basename(topmost_path)} second={os.path.basename(second_path) if second_path else ''}")
-
         straddling_sibling_boundary = False
         if second_path and second_path != topmost_path:
             second_parent = os.path.dirname(second_path)
-            # Walk up the ancestor chain of topmost_path looking for a sibling of second_path.
             ancestor = topmost_path
             while ancestor:
                 if os.path.dirname(ancestor) == second_parent and ancestor != second_path:
@@ -169,8 +166,6 @@ class MindspaceBreadcrumbContainer(QWidget):
                 if parent_of_ancestor == ancestor:
                     break
                 ancestor = parent_of_ancestor
-
-        print(f"  straddling={straddling_sibling_boundary} spine_would_be={'(unlatch)' if topmost_path == self._last_spine_path else (topmost_path if os.path.isdir(topmost_path) and topmost_is_expanded else os.path.dirname(topmost_path))!r}")
 
         if straddling_sibling_boundary:
             # Spine is the common parent of the straddled siblings.
@@ -195,17 +190,10 @@ class MindspaceBreadcrumbContainer(QWidget):
         if spine_path == self._last_spine_path:
             return
 
-        old_spine = self._last_spine_path
-        if old_spine and not spine_path.startswith(old_spine):
-            print(f"UNLATCH value={value} row_h={self._row_height} bc_rows={self._breadcrumb_rows}: {os.path.basename(old_spine)} -> {os.path.basename(spine_path) if spine_path else 'root'}")
-        else:
-            print(f"LATCH   value={value} row_h={self._row_height} bc_rows={self._breadcrumb_rows}: {os.path.basename(spine_path) if spine_path else 'root'} (was {os.path.basename(old_spine) if old_spine else 'root'})")
-
         self._last_spine_path = spine_path
         self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(spine_path)
         self._tree_view.verticalScrollBar().setValue(value + self._breadcrumb_rows * self._row_height)
         self._apply_geometry()
-        self._debug_print_visible_items(value)
 
     def _apply_geometry(self) -> None:
         """Assign geometry to all child widgets to exactly fill the container."""
@@ -217,28 +205,11 @@ class MindspaceBreadcrumbContainer(QWidget):
         tree_w = max(0, w - sb_w)
         tree_h = max(0, h - bc_h)
 
+        # Disconnect rangeChanged while adjusting geometry to prevent the tree's
+        # internal range change from causing a spurious external scrollbar value
+        # recalculation during an active drag.
+        self._tree_view.verticalScrollBar().rangeChanged.disconnect(self._on_tree_range_changed)
         self._breadcrumb_bar.setFixedHeight(bc_h)
         self._tree_view.setGeometry(QRect(0, bc_h, tree_w, tree_h))
         self._scrollbar.setGeometry(QRect(tree_w, 0, sb_w, h))
-
-    def _debug_print_visible_items(self, value: int) -> None:
-        """Print the content offset of every visible item in the tree viewport."""
-        tree_sb = self._tree_view.verticalScrollBar()
-        tree_pos = tree_sb.value()
-        viewport_h = self._tree_view.viewport().height()
-        print(f"  tree_sb={tree_pos} viewport_h={viewport_h} bc_h={self._breadcrumb_rows * self._row_height}")
-        print(f"  visible items (content_offset, name):")
-        y = 0
-        seen = set()
-        while y < viewport_h:
-            index = self._tree_view.indexAt(QPoint(0, y))
-            if not index.isValid():
-                break
-            path = self._tree_view.get_path_from_index(index) or ""
-            if path in seen:
-                break
-            seen.add(path)
-            content_offset = tree_pos + y
-            print(f"    y={y:4d} content={content_offset:6d} {os.path.basename(path)!r}")
-            rh = self._tree_view.rowHeight(index)
-            y += rh if rh > 0 else 24
+        self._tree_view.verticalScrollBar().rangeChanged.connect(self._on_tree_range_changed)
