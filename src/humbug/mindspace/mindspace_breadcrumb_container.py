@@ -3,6 +3,7 @@
 import os
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt
+from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QApplication, QScrollBar, QSizePolicy, QWidget
 
 from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
@@ -86,7 +87,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         """Return a zero minimum so the layout is free to size us as needed."""
         return QSize(0, 0)
 
-    def resizeEvent(self, event) -> None:  # type: ignore[override]
+    def resizeEvent(self, event: QResizeEvent) -> None:
         """Redistribute geometry when the container is resized."""
         super().resizeEvent(event)
         self._apply_geometry()
