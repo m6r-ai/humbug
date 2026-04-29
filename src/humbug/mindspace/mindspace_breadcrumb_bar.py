@@ -197,7 +197,7 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         tree_bg = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
         tree_hover = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
-        text = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        text = self._style_manager.get_color_str(ColorRole.TEXT_HEADING)
         tree_margin = round(6 * zoom_factor)
         branch_icon_size = round(12 * zoom_factor)
         layout_dir = self.layoutDirection()
@@ -206,7 +206,7 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         self.setStyleSheet(f"""
             MindspaceBreadcrumbBar {{
-                background-color: darkred;
+                background: transparent;
                 color: {text};
                 outline: none;
                 margin-left: {tree_margin}px;
@@ -218,9 +218,6 @@ class MindspaceBreadcrumbBar(QTreeView):
             }}
             MindspaceBreadcrumbBar::item:hover {{
                 background-color: {tree_hover};
-            }}
-            MindspaceBreadcrumbBar::branch {{
-                background-color: darkred;
             }}
             MindspaceBreadcrumbBar::branch:has-children:!has-siblings:closed,
             MindspaceBreadcrumbBar::branch:closed:has-children:has-siblings {{
