@@ -52,6 +52,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._last_spine_path: str = ""
         self._breadcrumb_rows: int = 0
         self._row_height: int = 0
+        self._scrolling: bool = False
 
         breadcrumb_bar.setParent(self)
         tree_view.setParent(self)
@@ -135,6 +136,17 @@ class MindspaceBreadcrumbContainer(QWidget):
         Args:
             value: New scrollbar position in tree-internal pixel units.
         """
+        if self._scrolling:
+            return
+
+        self._scrolling = True
+        try:
+            self._do_external_scroll(value)
+        finally:
+            self._scrolling = False
+
+    def _do_external_scroll(self, value: int) -> None:
+        """Perform the actual scroll update. Called only when not re-entering."""
         tree_sb = self._tree_view.verticalScrollBar()
         bc_h = self._breadcrumb_rows * self._row_height
         tree_sb.setValue(value + bc_h)
