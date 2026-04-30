@@ -3,7 +3,7 @@
 import os
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt
-from PySide6.QtGui import QResizeEvent
+from PySide6.QtGui import QFont, QResizeEvent
 from PySide6.QtWidgets import QApplication, QScrollBar, QSizePolicy, QWidget
 
 from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
@@ -80,6 +80,40 @@ class MindspaceBreadcrumbContainer(QWidget):
             root_path: Absolute path of the tree root (mindspace or conversations root).
         """
 
+    def refresh_viewport(self) -> None:
+        """
+        Repaint both the tree viewport and the breadcrumb bar viewport.
+
+        Use this instead of calling viewport().update() directly on either child
+        widget, so that both surfaces are always refreshed together.
+        """
+        self._tree_view.viewport().update()
+        self._breadcrumb_bar.viewport().update()
+
+    def apply_tree_style(self, icon_size: int, font: QFont) -> None:
+        """
+        Apply icon size, indentation, and font to the tree view.
+
+        Routing these through the container keeps the view layer from holding
+        direct references to the tree view for styling purposes.
+
+        Args:
+            icon_size: Pixel size for tree icons and indentation.
+            font: QFont to apply to the tree view.
+        """
+        self._tree_view.setIconSize(QSize(icon_size, icon_size))
+        self._tree_view.setIndentation(icon_size)
+        self._tree_view.setFont(font)
+
+    def configure_tree_for_path(self, path: str) -> None:
+        """
+        Forward a path configuration request to the tree view.
+
+        Args:
+            path: Path to configure the tree view for.
+        """
+        self._tree_view.configure_for_path(path)
+
     def sizeHint(self) -> QSize:
         """Return a zero size hint — the parent layout expands us via size policy."""
         return QSize(0, 0)
@@ -114,6 +148,12 @@ class MindspaceBreadcrumbContainer(QWidget):
         """
         Mirror the tree's scroll range directly onto the external scrollbar.
 
+        Also re-syncs the external scrollbar value to match the tree's actual
+        current scroll position.  This is necessary because a model reset
+        (beginResetModel/endResetModel) silently resets the tree's internal
+        scrollbar to 0 without emitting a value-changed signal, leaving the
+        external scrollbar stranded at its previous position.
+
         Args:
             minimum: New minimum value from the tree's internal scrollbar.
             maximum: New maximum value from the tree's internal scrollbar.
@@ -122,6 +162,11 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._scrollbar.setRange(minimum, maximum)
         self._scrollbar.setPageStep(tree_sb.pageStep())
         self._scrollbar.setSingleStep(tree_sb.singleStep())
+
+        bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
+        external_value = max(minimum, tree_sb.value() - bc_h)
+        if self._scrollbar.value() != external_value:
+            self._scrollbar.setValue(external_value)
 
     def _on_external_scroll(self, value: int) -> None:
         """
@@ -148,7 +193,10 @@ class MindspaceBreadcrumbContainer(QWidget):
     def _do_external_scroll(self, value: int) -> None:
         """Perform the actual scroll update. Called only when not re-entering."""
         tree_sb = self._tree_view.verticalScrollBar()
-        bc_h = self._breadcrumb_rows * self._row_height
+        # The "." sentinel row is always present in the breadcrumb bar but does
+        # not represent a scrolled-away tree row.  Only the real directory rows
+        # above it (breadcrumb_rows - 1) contribute to the tree scroll offset.
+        bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
         tree_sb.setValue(value + bc_h)
 
         index = self._tree_view.indexAt(QPoint(0, 0))
@@ -207,7 +255,8 @@ class MindspaceBreadcrumbContainer(QWidget):
 
         self._last_spine_path = spine_path
         self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(spine_path)
-        self._tree_view.verticalScrollBar().setValue(value + self._breadcrumb_rows * self._row_height)
+        bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
+        self._tree_view.verticalScrollBar().setValue(value + bc_h)
         self._apply_geometry()
 
     def _on_breadcrumb_collapse(self, path: str) -> None:
@@ -236,7 +285,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         # height, and sync the external scrollbar to match.
         if index.isValid():
             tree_sb = self._tree_view.verticalScrollBar()
-            bc_h = new_rows * self._row_height
+            bc_h = max(0, new_rows - 1) * self._row_height
             self._scrollbar.setValue(max(0, tree_sb.value() - bc_h))
             self._last_spine_path = os.path.dirname(path)
 

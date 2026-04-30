@@ -4,7 +4,7 @@ import logging
 import os
 import shutil
 
-from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QTimer
+from PySide6.QtCore import Signal, QModelIndex, Qt, QPoint, QTimer
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QMenu
 )
@@ -85,6 +85,7 @@ class MindspaceConversationsView(QWidget):
         self._dag_model = MindspaceConversationsDAGModel(self._conversations_index, self._icon_provider, self)
         self._dag_model.about_to_rebuild.connect(self._save_expanded_state)
         self._dag_model.rebuilt.connect(self._restore_expanded_state)
+        self._conversations_index.changed.connect(self._bc_container.refresh_viewport)
         self._expanded_paths: set[str] = set()
         self._suppress_save_expanded: bool = False
 
@@ -195,9 +196,7 @@ class MindspaceConversationsView(QWidget):
         """
         Handle changes to the drop target in the tree view.
         """
-        # Force a repaint of the entire viewport to ensure proper visual updates
-        # This ensures both the old drop target and new drop target are repainted
-        self._tree_view.viewport().update()
+        self._bc_container.refresh_viewport()
 
     def _create_move_confirmation_message(self, item_name: str, source_path: str, dest_path: str) -> str:
         """Create the confirmation message for file/folder move operations."""
@@ -1091,7 +1090,7 @@ class MindspaceConversationsView(QWidget):
             self._bc_container.set_root_path("")
             self._conversations_index.set_conversations_dir("")
             # Configure tree view for empty path
-            self._tree_view.configure_for_path("")
+            self._bc_container.configure_tree_for_path("")
             return
 
         # Set conversations directory path
@@ -1105,12 +1104,12 @@ class MindspaceConversationsView(QWidget):
             except OSError as e:
                 self._logger.error("Failed to create conversations directory '%s': %s", self._conversations_path, str(e))
                 self._conversations_path = None
-                self._tree_view.configure_for_path("")
+                self._bc_container.configure_tree_for_path("")
                 self._conversations_index.set_conversations_dir("")
                 return
 
         # Configure tree view with the conversations path
-        self._tree_view.configure_for_path(self._conversations_path)
+        self._bc_container.configure_tree_for_path(self._conversations_path)
 
         self._breadcrumb_bar.set_root_label(os.path.basename(path))
         self._breadcrumb_bar.set_root_path(self._conversations_path)
@@ -1121,7 +1120,7 @@ class MindspaceConversationsView(QWidget):
         self._conversations_index.set_conversations_dir(self._conversations_path)
 
         # Schedule a repaint after the event loop processes the index scan and model reset
-        QTimer.singleShot(0, self._tree_view.viewport().update)
+        QTimer.singleShot(0, self._bc_container.refresh_viewport)
 
     def conversations_index(self) -> MindspaceConversationsIndex:
         """
@@ -1167,16 +1166,11 @@ class MindspaceConversationsView(QWidget):
         self._dag_model.beginResetModel()
         self._dag_model.endResetModel()
         file_icon_size = round(16 * zoom_factor)
-        self._tree_view.setIconSize(QSize(file_icon_size, file_icon_size))
-
         # Update font size for tree
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
-        self._tree_view.setFont(font)
-
-        # Adjust tree indentation
-        self._tree_view.setIndentation(file_icon_size)
+        self._bc_container.apply_tree_style(file_icon_size, font)
         self.setStyleSheet(build_tree_pane_stylesheet(
             self._style_manager,
             "MindspaceConversationsView",
