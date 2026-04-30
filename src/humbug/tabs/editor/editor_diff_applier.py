@@ -259,8 +259,12 @@ class EditorDiffApplier(DiffApplier):
                 if not cursor.atEnd():
                     cursor.movePosition(QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.KeepAnchor)
 
-                # If at end but not at start of document, delete the newline before
-                elif location > 1:
+                # If at end of document, delete the preceding newline so the
+                # block itself is removed.  We check the cursor's current block
+                # number rather than the hunk's starting location, because the
+                # hunk may contain multiple deletions and the cursor may have
+                # moved well past the hunk start by the time we reach EOF.
+                elif cursor.blockNumber() > 0:
                     cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
                     cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.KeepAnchor)
                     cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
@@ -270,4 +274,13 @@ class EditorDiffApplier(DiffApplier):
             elif line.type == '+':
                 # Addition - insert this line
                 cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-                cursor.insertText(line.content + '\n')
+
+                # Insert the new line followed by a newline only when the cursor
+                # is not already at the end of the document.  At EOF there is no
+                # trailing newline to push down, so we prepend the newline
+                # before the existing content instead.
+                if cursor.atEnd() and not cursor.atStart():
+                    cursor.insertText('\n' + line.content)
+
+                else:
+                    cursor.insertText(line.content + '\n')
