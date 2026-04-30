@@ -5,7 +5,7 @@ import os
 import shutil
 from typing import cast
 
-from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QDir, QTimer
+from PySide6.QtCore import Signal, QModelIndex, Qt, QPoint, QDir, QTimer
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QVBoxLayout, QMenu
 )
@@ -116,9 +116,7 @@ class MindspaceFilesView(QWidget):
         """
         Handle changes to the drop target in the tree view.
         """
-        # Force a repaint of the entire viewport to ensure proper visual updates
-        # This ensures both the old drop target and new drop target are repainted
-        self._tree_view.viewport().update()
+        self._bc_container.refresh_viewport()
 
     def _create_move_confirmation_message(self, item_name: str, source_path: str, dest_path: str) -> str:
         """Create the confirmation message for file/folder move operations."""
@@ -967,7 +965,7 @@ class MindspaceFilesView(QWidget):
             self._breadcrumb_bar.set_root_path("")
             self._bc_container.set_root_path("")
             # Configure tree view for empty path
-            self._tree_view.configure_for_path("")
+            self._bc_container.configure_tree_for_path("")
             return
 
         parent_path = os.path.dirname(path)
@@ -980,7 +978,7 @@ class MindspaceFilesView(QWidget):
         self._bc_container.set_root_path(path)
 
         # Configure tree view with the mindspace path
-        self._tree_view.configure_for_path(path)
+        self._bc_container.configure_tree_for_path(path)
 
         # Set the root index to the mindspace directory itself
         mindspace_source_index = self._fs_model.index(path)
@@ -1029,16 +1027,11 @@ class MindspaceFilesView(QWidget):
         self._icon_provider.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)
         file_icon_size = round(16 * zoom_factor)
-        self._tree_view.setIconSize(QSize(file_icon_size, file_icon_size))
-
         # Update font size for tree
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
-        self._tree_view.setFont(font)
-
-        # Adjust tree indentation
-        self._tree_view.setIndentation(file_icon_size)
+        self._bc_container.apply_tree_style(file_icon_size, font)
         self.setStyleSheet(build_tree_pane_stylesheet(
             self._style_manager,
             "MindspaceFilesView",

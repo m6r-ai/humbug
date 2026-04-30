@@ -53,6 +53,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._breadcrumb_rows: int = 0
         self._row_height: int = 0
         self._scrolling: bool = False
+        self._root_path: str = ""
 
         breadcrumb_bar.setParent(self)
         tree_view.setParent(self)
@@ -79,6 +80,10 @@ class MindspaceBreadcrumbContainer(QWidget):
         Args:
             root_path: Absolute path of the tree root (mindspace or conversations root).
         """
+        self._root_path = root_path
+        self._breadcrumb_rows = 0
+        self._row_height = 0
+        self._last_spine_path = ""
 
     def refresh_viewport(self) -> None:
         """
@@ -141,6 +146,15 @@ class MindspaceBreadcrumbContainer(QWidget):
         if obj is self._tree_view.viewport() and event.type() == QEvent.Type.Wheel:
             QApplication.sendEvent(self._scrollbar, event)
             return True
+
+        if obj is self._tree_view.viewport() and event.type() == QEvent.Type.Paint:
+            if self._row_height == 0:
+                index = self._tree_view.indexAt(QPoint(0, 0))
+                if index.isValid():
+                    rh = self._tree_view.rowHeight(index)
+                    if rh > 0:
+                        self._row_height = rh
+                        self._on_external_scroll(self._scrollbar.value())
 
         return super().eventFilter(obj, event)
 
@@ -258,6 +272,14 @@ class MindspaceBreadcrumbContainer(QWidget):
         bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
         self._tree_view.verticalScrollBar().setValue(value + bc_h)
         self._apply_geometry()
+
+        # _apply_geometry resizes the tree viewport, which causes the tree's
+        # internal rangeChanged to fire with a new maximum.  Re-read the tree's
+        # actual range now and clamp the external scrollbar to it so the
+        # external bar never exceeds the tree's real scrollable extent.
+        tree_sb = self._tree_view.verticalScrollBar()
+        self._scrollbar.setRange(tree_sb.minimum(), tree_sb.maximum())
+        self._scrollbar.setPageStep(tree_sb.pageStep())
 
     def _on_breadcrumb_collapse(self, path: str) -> None:
         """
