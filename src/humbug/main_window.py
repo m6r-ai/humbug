@@ -31,13 +31,13 @@ from humbug.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
-from humbug.mindspace.mindspace_settings_dialog import MindspaceSettingsDialog
 from humbug.mindspace.mindspace_view import MindspaceView
 from humbug.main_window_splitter import MainWindowSplitter
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.status_message import StatusMessage
 from humbug.system_ai_tool import SystemAITool
+from humbug.settings_dialog import SettingsDialog, SECTION_AI_BACKENDS
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.conversation.conversation_ai_tool import ConversationAITool
@@ -59,7 +59,6 @@ from humbug.tabs.terminal.terminal_ai_tool import TerminalAITool
 from humbug.tabs.preview.preview_tab import PreviewTab
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
-from humbug.user.user_settings_dialog import UserSettingsDialog
 
 
 class MainWindow(QMainWindow):
@@ -80,10 +79,10 @@ class MainWindow(QMainWindow):
         self._about_action.setMenuRole(QAction.MenuRole.AboutRole)
         self._about_action.triggered.connect(self._on_show_about_dialog)
 
-        self._user_settings_action = QAction(strings.user_settings, self)
-        self._user_settings_action.setMenuRole(QAction.MenuRole.PreferencesRole)
-        self._user_settings_action.setShortcut(QKeySequence("Ctrl+,"))
-        self._user_settings_action.triggered.connect(self._on_show_user_settings_dialog)
+        self._settings_action = QAction(strings.settings, self)
+        self._settings_action.setMenuRole(QAction.MenuRole.PreferencesRole)
+        self._settings_action.setShortcut(QKeySequence("Ctrl+,"))
+        self._settings_action.triggered.connect(self._on_show_settings_dialog)
 
         self._quit_action = QAction(strings.quit_humbug, self)
         self._quit_action.setMenuRole(QAction.MenuRole.QuitRole)
@@ -172,10 +171,6 @@ class MainWindow(QMainWindow):
         self._find_action.setShortcut(QKeySequence.StandardKey.Find)
         self._find_action.triggered.connect(self._find)
 
-        self._mindspace_settings_action = QAction(strings.mindspace_settings, self)
-        self._mindspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
-        self._mindspace_settings_action.triggered.connect(self._on_show_mindspace_settings_dialog)
-
         self._conv_settings_action = QAction(strings.conversation_settings, self)
         self._conv_settings_action.setShortcut(QKeySequence("Ctrl+Shift+,"))
         self._conv_settings_action.triggered.connect(self._on_show_conversation_settings_dialog)
@@ -241,7 +236,7 @@ class MainWindow(QMainWindow):
         self._humbug_menu = self._menu_bar.addMenu(strings.humbug_menu)
         self._humbug_menu.addAction(self._about_action)
         self._humbug_menu.addSeparator()
-        self._humbug_menu.addAction(self._user_settings_action)
+        self._humbug_menu.addAction(self._settings_action)
         self._humbug_menu.addSeparator()
         self._humbug_menu.addAction(self._quit_action)
 
@@ -277,7 +272,6 @@ class MainWindow(QMainWindow):
         self._edit_menu.addSeparator()
         self._edit_menu.addAction(self._find_action)
         self._edit_menu.addSeparator()
-        self._edit_menu.addAction(self._mindspace_settings_action)
         self._edit_menu.addAction(self._conv_settings_action)
 
         # View menu
@@ -326,7 +320,7 @@ class MainWindow(QMainWindow):
         self._mindspace_view.file_opened_in_preview.connect(self._on_mindspace_view_file_opened_in_preview)
         self._mindspace_view.file_opened_in_diff.connect(self._on_mindspace_view_file_opened_in_diff)
         self._mindspace_view.open_mindspace_requested.connect(self._on_open_mindspace)
-        self._mindspace_view.settings_requested.connect(self._on_show_mindspace_settings_dialog)
+        self._mindspace_view.settings_requested.connect(self._on_show_settings_dialog)
         self._mindspace_view.new_conversation_requested.connect(self._on_mindspace_view_new_conversation_in_folder)
         self._mindspace_view.toggle_requested.connect(self._splitter.toggle_mindspace)
         self._splitter.addWidget(self._mindspace_view)
@@ -337,7 +331,7 @@ class MainWindow(QMainWindow):
         self._column_manager.fork_from_index_requested.connect(self._on_column_manager_fork_from_index_requested)
         self._column_manager.open_preview_link_requested.connect(self._on_column_manager_open_preview_link_requested)
         self._column_manager.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
-        self._column_manager.user_settings_requested.connect(self._on_show_user_settings_dialog)
+        self._column_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
         self._splitter.addWidget(self._column_manager)
 
         # Set initial mindspace view width
@@ -463,7 +457,6 @@ class MainWindow(QMainWindow):
         self._open_conv_action.setEnabled(has_mindspace)
         self._open_file_action.setEnabled(has_mindspace)
         self._new_terminal_action.setEnabled(has_mindspace)
-        self._mindspace_settings_action.setEnabled(has_mindspace)
 
         # Update tab-specific actions
         column_manager = self._column_manager
@@ -519,7 +512,7 @@ class MainWindow(QMainWindow):
 
         # Update action texts
         self._about_action.setText(strings.about_humbug)
-        self._user_settings_action.setText(strings.user_settings)
+        self._settings_action.setText(strings.settings)
         self._quit_action.setText(strings.quit_humbug)
         self._new_mindspace_action.setText(strings.new_mindspace)
         self._new_conv_action.setText(strings.new_conversation)
@@ -540,7 +533,6 @@ class MainWindow(QMainWindow):
         self._copy_action.setText(strings.copy)
         self._paste_action.setText(strings.paste)
         self._find_action.setText(strings.find)
-        self._mindspace_settings_action.setText(strings.mindspace_settings)
         self._conv_settings_action.setText(strings.conversation_settings)
 
         # Recreate the theme menu with updated language strings
@@ -1367,26 +1359,29 @@ class MainWindow(QMainWindow):
         """Navigate to the previous message in conversation."""
         self._column_manager.navigate_previous_message()
 
-    def _on_show_user_settings_dialog(self) -> None:
-        """Show the user settings dialog."""
-        dialog = UserSettingsDialog(self)
-        dialog.set_settings(self._user_manager.settings())
+    def _on_show_settings_dialog(self, initial_section: str | None = None) -> None:
+        """Show the unified settings dialog."""
+        has_mindspace = self._mindspace_manager.has_mindspace()
+        mindspace_settings = (
+            cast(MindspaceSettings, self._mindspace_manager.settings())
+            if has_mindspace
+            else None
+        )
 
-        def _on_settings_changed(new_settings: UserSettings) -> None:
+        dialog = SettingsDialog(self)
+
+        def _on_user_settings_changed(new_settings: UserSettings) -> None:
             try:
                 self._user_manager.update_settings(new_settings)
                 self._style_manager.set_user_font_size(new_settings.font_size)
                 self._language_manager.set_language(new_settings.language)
 
-                # Update theme from settings if it changed
                 new_theme = new_settings.theme
                 if new_theme != self._style_manager.user_color_mode():
                     self._style_manager.set_color_mode(new_theme)
                     self._update_theme_menu()
 
-                # Update welcome widget with new settings
                 self._column_manager.update_welcome_widget(new_settings)
-
                 self._logger.info("User settings saved successfully")
 
             except UserError as e:
@@ -1399,19 +1394,7 @@ class MainWindow(QMainWindow):
                     strings.error_saving_user_settings.format(str(e))
                 )
 
-        dialog.settings_changed.connect(_on_settings_changed)
-        dialog.exec()
-
-    def _on_show_mindspace_settings_dialog(self) -> None:
-        """Show the mindspace settings dialog."""
-        if not self._mindspace_manager.has_mindspace():
-            return
-
-        settings = cast(MindspaceSettings, self._mindspace_manager.settings())
-        dialog = MindspaceSettingsDialog(self)
-        dialog.set_settings(settings)
-
-        def _on_settings_changed(new_settings: MindspaceSettings) -> None:
+        def _on_mindspace_settings_changed(new_settings: MindspaceSettings) -> None:
             try:
                 self._mindspace_manager.update_settings(new_settings)
 
@@ -1425,8 +1408,14 @@ class MainWindow(QMainWindow):
                     strings.error_saving_mindspace_settings.format(str(e))
                 )
 
-        dialog.settings_changed.connect(_on_settings_changed)
+        dialog.user_settings_changed.connect(_on_user_settings_changed)
+        dialog.mindspace_settings_changed.connect(_on_mindspace_settings_changed)
+        dialog.set_settings(self._user_manager.settings(), mindspace_settings, initial_section)
         dialog.exec()
+
+    def _on_show_settings_dialog_ai_backends(self) -> None:
+        """Show the unified settings dialog opened to the AI Backends section."""
+        self._on_show_settings_dialog(SECTION_AI_BACKENDS)
 
     def _on_show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""

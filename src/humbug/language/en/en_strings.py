@@ -44,7 +44,7 @@ def get_english_strings() -> LanguageStrings:
         save_as="Save As...",
         close_mindspace="Close Mindspace",
         close_tab="Close Tab",
-        user_settings="User Settings",
+        settings="Settings",
 
         # Edit menu items
         submit_message="Submit Message",
@@ -118,7 +118,6 @@ def get_english_strings() -> LanguageStrings:
         no="No",
 
         # User Settings dialog - AI backends section
-        general_settings="General Settings",
         display_settings="Display Settings",
         ai_backend_config="AI Backend Configuration",
         enable_backend="Enable Backend",
@@ -187,6 +186,18 @@ def get_english_strings() -> LanguageStrings:
         terminal_close_on_exit="Close terminal when shell exits",
         tool_settings="AI Tool Settings",
         tools_description="Enable or disable individual tools for this mindspace",
+
+        # Unified settings dialog
+        settings_all_mindspaces="All Mindspaces",
+        settings_this_mindspace="This Mindspace",
+        settings_display="Display",
+        settings_file_access="File Access",
+        settings_ai_backends="AI Backends",
+        settings_ai_model="AI Model",
+        settings_tools="Tools",
+        settings_editor="Editor",
+        settings_backup="Backup",
+        settings_terminal="Terminal",
 
         # Conversation settings
         model_info="Model Information",
