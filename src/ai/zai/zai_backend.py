@@ -144,12 +144,13 @@ class ZaiBackend(AIBackend):
 
         return message
 
-    def _format_messages_for_provider(self, conversation_history: List[AIMessage]) -> List[Dict[str, Any]]:
+    def _format_messages_for_provider(self, conversation_history: List[AIMessage], settings: AIConversationSettings) -> List[Dict[str, Any]]:
         """
         Format conversation history for Zai's API format in a single pass.
 
         Args:
             conversation_history: List of AIMessage objects
+            settings: Current conversation settings
 
         Returns:
             List of messages formatted for Zai API
@@ -219,6 +220,9 @@ class ZaiBackend(AIBackend):
                 if not message.completed or message.error:
                     continue
 
+                if not self._reasoning_model_matches(message, settings):
+                    continue
+
                 last_reasoning_message = message
                 continue
 
@@ -235,7 +239,7 @@ class ZaiBackend(AIBackend):
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for Zai."""
-        messages = self._format_messages_for_provider(conversation_history)
+        messages = self._format_messages_for_provider(conversation_history, settings)
 
         # Prepend system message if configured
         if self._system_prompt:

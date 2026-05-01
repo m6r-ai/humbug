@@ -26,6 +26,16 @@ class VLLMBackend(AIBackend):
         """
         return "http://localhost:8000/v1/chat/completions"
 
+    def _reasoning_model_matches(self, message: AIMessage, settings: AIConversationSettings) -> bool:
+        """
+        Require an exact model key match for reasoning compatibility.
+
+        vLLM hosts many structurally different models under one API, so provider-level
+        matching is insufficient — a reasoning block from one vLLM model is not
+        compatible with a different vLLM model.
+        """
+        return message.model == settings.model
+
     def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
         """
         Convert tool definition to vLLM format (OpenAI-compatible).
