@@ -14,6 +14,8 @@ New features:
 Bug fixes:
 
 - There was a small problem with the AI applying diffs at the end of the file when using the editor tab.
+- When switching reasoning models mid-conversation, only provide reasoning context to the new AI if it can definitely understand
+  it (i.e. the models are compatible).
 
 ## v45 (2026-04-26)
 
