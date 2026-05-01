@@ -17,11 +17,11 @@ def get_arabic_strings() -> LanguageStrings:
         # Welcome widget
         welcome_message=(
             "مرحباً بك في هامبج! يبدو أنه لم يتم تكوين أي ذكاء اصطناعي بعد؟\n\n"
-            "لبدء استخدام ميزات الذكاء الاصطناعي، يرجى فتح \"التفضيلات\" "
+            "لبدء استخدام ميزات الذكاء الاصطناعي، يرجى فتح \"الإعدادات\" "
             "للتطبيق،\nوالتمرير إلى قسم \"تكوين الواجهة الخلفية للذكاء الاصطناعي\" "
             "وإعداد واجهة خلفية واحدة على الأقل للذكاء الاصطناعي."
         ),
-        welcome_button="فتح التفضيلات",
+        welcome_button="فتح الإعدادات",
 
         # Menu names
         humbug_menu="هامبج",
@@ -55,7 +55,6 @@ def get_arabic_strings() -> LanguageStrings:
         copy="نسخ",
         paste="لصق",
         find="بحث",
-        mindspace_settings="إعدادات المساحة الذهنية",
         conversation_settings="إعدادات المحادثة",
 
         # View menu items

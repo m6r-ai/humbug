@@ -45,7 +45,6 @@ class LanguageStrings:
     copy: str
     paste: str
     find: str
-    mindspace_settings: str
     conversation_settings: str
 
     # View menu items

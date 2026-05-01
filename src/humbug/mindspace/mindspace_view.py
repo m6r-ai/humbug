@@ -316,7 +316,7 @@ class MindspaceView(QWidget):
 
         strings = self._language_manager.strings()
         self._header_widget.setToolTip(strings.mindspace_name_tooltip)
-        self._settings_button.setToolTip(strings.mindspace_settings)
+        self._settings_button.setToolTip(strings.settings)
         self._conversations_button.setToolTip(strings.mindspace_conversations)
         self._files_button.setToolTip(strings.mindspace_files)
         self._preview_button.setToolTip(strings.mindspace_preview)

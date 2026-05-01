@@ -82,6 +82,7 @@ class MainWindow(QMainWindow):
         self._settings_action = QAction(strings.settings, self)
         self._settings_action.setMenuRole(QAction.MenuRole.PreferencesRole)
         self._settings_action.setShortcut(QKeySequence("Ctrl+,"))
+        self._settings_action.setText(strings.settings)
         self._settings_action.triggered.connect(self._on_show_settings_dialog)
 
         self._quit_action = QAction(strings.quit_humbug, self)

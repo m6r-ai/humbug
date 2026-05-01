@@ -17,10 +17,10 @@ def get_english_strings() -> LanguageStrings:
         # Welcome widget
         welcome_message=(
             "Welcome to Humbug!  It looks like you don't have any AIs configured yet?\n\n"
-            "To start using AI features, please open the application \"Preferences\", scroll to\nthe "
+            "To start using AI features, please open the application \"Settings\", scroll to\nthe "
             "\"AI Backend Configuration\" section and set up at least one AI backend."
         ),
-        welcome_button="Open Preferences",
+        welcome_button="Open Settings",
 
         # Menu names
         humbug_menu="Humbug",
@@ -54,7 +54,6 @@ def get_english_strings() -> LanguageStrings:
         copy="Copy",
         paste="Paste",
         find="Find",
-        mindspace_settings="Mindspace Settings",
         conversation_settings="Conversation Settings",
 
         # View menu items

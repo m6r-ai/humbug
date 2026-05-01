@@ -17,10 +17,10 @@ def get_french_strings() -> LanguageStrings:
         # Welcome widget
         welcome_message=(
             "Bienvenue dans Humbug ! Il semble que vous n'ayez pas encore configuré d'IA ?\n\n"
-            "Pour commencer à utiliser les fonctionnalités IA, veuillez ouvrir les « Préférences » de l'application,\n"
+            "Pour commencer à utiliser les fonctionnalités IA, veuillez ouvrir les « Paramètres » de l'application,\n"
             "faites défiler jusqu'à la section « Configuration des backends IA » et configurez au moins un backend IA."
         ),
-        welcome_button="Ouvrir les Préférences",
+        welcome_button="Ouvrir les Paramètres",
 
         # Menu names
         humbug_menu="Humbug",
@@ -54,7 +54,6 @@ def get_french_strings() -> LanguageStrings:
         copy="Copier",
         paste="Coller",
         find="Rechercher",
-        mindspace_settings="Paramètres de l'espace mental",
         conversation_settings="Paramètres de conversation",
 
         # View menu items
