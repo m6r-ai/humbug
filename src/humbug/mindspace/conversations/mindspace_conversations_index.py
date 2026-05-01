@@ -95,6 +95,8 @@ class MindspaceConversationsIndex(QObject):
         self._conversations_dir = conversations_dir
 
         if not conversations_dir:
+            self.changed.emit()
+            self.structure_changed.emit()
             return
 
         self._initial_scan()

@@ -104,7 +104,6 @@ class MindspaceView(QWidget):
         self._settings_button.clicked.connect(self._on_settings_button_clicked)
         self._settings_button.setProperty("icon_name", "cog")
         self._settings_button.installEventFilter(self)
-        self._settings_button.hide()
         rail_layout.addWidget(self._settings_button)
 
         layout.addWidget(self._rail_widget)
@@ -293,10 +292,8 @@ class MindspaceView(QWidget):
         """
         if not path:
             self._header_widget.setText(self._language_manager.strings().mindspace_label_none)
-            self._settings_button.hide()
         else:
             self._header_widget.setText(os.path.basename(path.rstrip("\\/")))
-            self._settings_button.show()
 
         self._files_view.set_mindspace(path)
         self._conversations_view.set_mindspace(path)
