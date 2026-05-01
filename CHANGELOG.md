@@ -8,6 +8,12 @@ New features:
   everything back to the last user message or tool call response.
 - Added a "breadcrumb" view to the mindspace tree views.  This let's you see which directories/folders are currently expanded for
   any of the trees.
+- Unified the previous "user" and "mindspace" settings into a single new dialog that can be accessed from the icon rail.
+  The new settings dialog is far easier to navigate and easier to discover.
+
+Bug fixes:
+
+- There was a small problem with the AI applying diffs at the end of the file when using the editor tab.
 
 ## v45 (2026-04-26)
 
