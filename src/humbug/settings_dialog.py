@@ -107,8 +107,7 @@ class SettingsDialog(QDialog):
         self._nav_list = QListWidget()
         self._nav_list.setObjectName("SettingsNavList")
         self._nav_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._nav_list.setMinimumWidth(int(160 * zoom_factor))
-        self._nav_list.setMaximumWidth(int(220 * zoom_factor))
+        self._nav_list.setFixedWidth(int(200 * zoom_factor))
         self._nav_list.currentItemChanged.connect(self._on_nav_item_changed)
 
         # Right stacked content
@@ -118,6 +117,7 @@ class SettingsDialog(QDialog):
         self._splitter.addWidget(self._stack)
         self._splitter.setStretchFactor(0, 0)
         self._splitter.setStretchFactor(1, 1)
+        self._splitter.setSizes([int(200 * zoom_factor), 700])
 
         main_layout.addWidget(self._splitter, 1)
 
@@ -192,6 +192,9 @@ class SettingsDialog(QDialog):
 
     def _make_scroll_page(self, container: SettingsContainer) -> QWidget:
         """Wrap a SettingsContainer in a scroll area page."""
+        spacing = int(self._style_manager.message_bubble_spacing())
+        container.setContentsMargins(spacing, spacing, spacing, spacing)
+
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -945,8 +948,8 @@ class SettingsDialog(QDialog):
                 item.setFont(section_font)
 
         # Update nav list width constraints
-        self._nav_list.setMinimumWidth(int(160 * zoom_factor))
-        self._nav_list.setMaximumWidth(int(220 * zoom_factor))
+        self._nav_list.setFixedWidth(int(200 * zoom_factor))
+        self._splitter.setSizes([int(200 * zoom_factor), self._stack.width()])
 
     def _reset_modified_state(self) -> None:
         """Reset modified tracking on all containers."""
