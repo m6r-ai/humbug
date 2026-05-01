@@ -194,10 +194,10 @@ def get_french_strings() -> LanguageStrings:
         settings_file_access="Accès aux fichiers",
         settings_ai_backends="Backends IA",
         settings_ai_model="Modèle IA",
-        settings_tools="Outils",
+        settings_ai_tools="Outils IA",
         settings_editor="Éditeur",
-        settings_backup="Sauvegarde",
         settings_terminal="Terminal",
+        settings_tabs="Tabulations",
 
         # Conversation settings
         model_info="Informations sur le modèle",

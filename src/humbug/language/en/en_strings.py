@@ -194,10 +194,10 @@ def get_english_strings() -> LanguageStrings:
         settings_file_access="File Access",
         settings_ai_backends="AI Backends",
         settings_ai_model="AI Model",
-        settings_tools="Tools",
+        settings_ai_tools="AI Tools",
         settings_editor="Editor",
-        settings_backup="Backup",
         settings_terminal="Terminal",
+        settings_tabs="Tabs",
 
         # Conversation settings
         model_info="Model Information",

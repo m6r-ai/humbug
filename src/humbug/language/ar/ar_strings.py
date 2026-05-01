@@ -195,10 +195,10 @@ def get_arabic_strings() -> LanguageStrings:
         settings_file_access="الوصول إلى الملفات",
         settings_ai_backends="خلفيات الذكاء الاصطناعي",
         settings_ai_model="نموذج الذكاء الاصطناعي",
-        settings_tools="الأدوات",
+        settings_ai_tools="أدوات الذكاء الاصطناعي",
         settings_editor="المحرر",
-        settings_backup="النسخ الاحتياطي",
         settings_terminal="الطرفية",
+        settings_tabs="علامات التبويب",
 
         # Conversation settings
         model_info="معلومات النموذج",

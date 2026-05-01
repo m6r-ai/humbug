@@ -182,10 +182,10 @@ class LanguageStrings:
     settings_file_access: str
     settings_ai_backends: str
     settings_ai_model: str
-    settings_tools: str
+    settings_ai_tools: str
     settings_editor: str
-    settings_backup: str
     settings_terminal: str
+    settings_tabs: str
 
     # Conversation settings
     model_info: str

@@ -33,13 +33,12 @@ SECTION_DISPLAY = "display"
 SECTION_FILE_ACCESS = "file_access"
 SECTION_AI_BACKENDS = "ai_backends"
 SECTION_AI_MODEL = "ai_model"
-SECTION_TOOLS = "tools"
+SECTION_AI_TOOLS = "ai_tools"
 SECTION_EDITOR = "editor"
-SECTION_BACKUP = "backup"
 SECTION_TERMINAL = "terminal"
 
 _ALL_MINDSPACES_SECTIONS = [SECTION_DISPLAY, SECTION_FILE_ACCESS, SECTION_AI_BACKENDS]
-_THIS_MINDSPACE_SECTIONS = [SECTION_AI_MODEL, SECTION_TOOLS, SECTION_EDITOR, SECTION_BACKUP, SECTION_TERMINAL]
+_THIS_MINDSPACE_SECTIONS = [SECTION_AI_MODEL, SECTION_AI_TOOLS, SECTION_EDITOR, SECTION_TERMINAL]
 
 
 class SettingsDialog(QDialog):
@@ -168,7 +167,6 @@ class SettingsDialog(QDialog):
         self._build_ai_model_page()
         self._build_tools_page()
         self._build_editor_page()
-        self._build_backup_page()
         self._build_terminal_page()
 
     def _add_nav_group(self, label: str) -> QListWidgetItem:
@@ -206,8 +204,8 @@ class SettingsDialog(QDialog):
         strings = self._language_manager.strings()
         container = SettingsContainer()
 
-        section = SettingsFactory.create_section(strings.display_settings)
-        container.add_setting(section)
+        self._display_heading = SettingsFactory.create_page_heading(strings.display_settings)
+        container.add_setting(self._display_heading)
 
         self._language_combo = SettingsFactory.create_combo(strings.select_language)
         container.add_setting(self._language_combo)
@@ -254,8 +252,8 @@ class SettingsDialog(QDialog):
         strings = self._language_manager.strings()
         container = SettingsContainer()
 
-        section = SettingsFactory.create_section(strings.external_file_access)
-        container.add_setting(section)
+        self._file_access_heading = SettingsFactory.create_page_heading(strings.external_file_access)
+        container.add_setting(self._file_access_heading)
 
         self._allow_external_access_checkbox = SettingsFactory.create_checkbox(
             strings.allow_external_file_access
@@ -284,8 +282,8 @@ class SettingsDialog(QDialog):
         strings = self._language_manager.strings()
         container = SettingsContainer()
 
-        section = SettingsFactory.create_section(strings.ai_backend_config)
-        container.add_setting(section)
+        self._ai_backends_heading = SettingsFactory.create_page_heading(strings.ai_backend_config)
+        container.add_setting(self._ai_backends_heading)
 
         ai_backend_mapping = [
             ("anthropic", strings.anthropic_backend),
@@ -341,8 +339,8 @@ class SettingsDialog(QDialog):
         strings = self._language_manager.strings()
         container = SettingsContainer()
 
-        section = SettingsFactory.create_section(strings.model_settings)
-        container.add_setting(section)
+        self._ai_model_heading = SettingsFactory.create_page_heading(strings.model_settings)
+        container.add_setting(self._ai_model_heading)
 
         self._model_combo = SettingsFactory.create_combo(strings.settings_model_label)
         container.add_setting(self._model_combo)
@@ -371,8 +369,8 @@ class SettingsDialog(QDialog):
         strings = self._language_manager.strings()
         container = SettingsContainer()
 
-        section = SettingsFactory.create_section(strings.tool_settings, strings.tools_description)
-        container.add_setting(section)
+        self._tools_heading = SettingsFactory.create_page_heading(strings.tool_settings)
+        container.add_setting(self._tools_heading)
 
         tool_configs = self._tool_manager.get_all_tool_configs()
         for config in tool_configs:
@@ -386,16 +384,20 @@ class SettingsDialog(QDialog):
         self._tools_container = container
         page = self._make_scroll_page(container)
         self._stack.addWidget(page)
-        self._section_pages[SECTION_TOOLS] = page
-        self._add_nav_section(SECTION_TOOLS, strings.settings_tools)
+        self._section_pages[SECTION_AI_TOOLS] = page
+        self._add_nav_section(SECTION_AI_TOOLS, strings.settings_ai_tools)
 
     def _build_editor_page(self) -> None:
         """Build the Editor settings page."""
         strings = self._language_manager.strings()
         container = SettingsContainer()
 
-        section = SettingsFactory.create_section(strings.editor_settings)
-        container.add_setting(section)
+        self._editor_heading = SettingsFactory.create_page_heading(strings.editor_settings)
+        container.add_setting(self._editor_heading)
+
+        tabs_section = SettingsFactory.create_section(strings.settings_tabs)
+        container.add_setting(tabs_section)
+        self._editor_tabs_section = tabs_section
 
         self._soft_tabs_check = SettingsFactory.create_checkbox(strings.use_soft_tabs)
         container.add_setting(self._soft_tabs_check)
@@ -403,22 +405,11 @@ class SettingsDialog(QDialog):
         self._tab_size_spin = SettingsFactory.create_spinbox(strings.tab_size, 1, 8, 1)
         container.add_setting(self._tab_size_spin)
 
-        container.add_stretch()
-        container.value_changed.connect(self._on_value_changed)
+        spacer = SettingsFactory.create_spacer(24)
+        container.add_setting(spacer)
 
-        self._editor_container = container
-        page = self._make_scroll_page(container)
-        self._stack.addWidget(page)
-        self._section_pages[SECTION_EDITOR] = page
-        self._add_nav_section(SECTION_EDITOR, strings.settings_editor)
-
-    def _build_backup_page(self) -> None:
-        """Build the Backup settings page."""
-        strings = self._language_manager.strings()
-        container = SettingsContainer()
-
-        section = SettingsFactory.create_section(strings.backup_settings)
-        container.add_setting(section)
+        backup_section = SettingsFactory.create_section(strings.backup_settings)
+        container.add_setting(backup_section)
 
         self._auto_backup_check = SettingsFactory.create_checkbox(strings.auto_backup)
         container.add_setting(self._auto_backup_check)
@@ -433,21 +424,19 @@ class SettingsDialog(QDialog):
         container.add_stretch()
         container.value_changed.connect(self._on_value_changed)
 
-        self._backup_container = container
+        self._editor_container = container
         page = self._make_scroll_page(container)
         self._stack.addWidget(page)
-        self._section_pages[SECTION_BACKUP] = page
-        self._add_nav_section(SECTION_BACKUP, strings.settings_backup)
+        self._section_pages[SECTION_EDITOR] = page
+        self._add_nav_section(SECTION_EDITOR, strings.settings_editor)
 
     def _build_terminal_page(self) -> None:
         """Build the Terminal settings page."""
         strings = self._language_manager.strings()
         container = SettingsContainer()
 
-        section = SettingsFactory.create_section(
-            strings.terminal_settings, strings.terminal_settings_description
-        )
-        container.add_setting(section)
+        self._terminal_heading = SettingsFactory.create_page_heading(strings.terminal_settings)
+        container.add_setting(self._terminal_heading)
 
         self._terminal_fixed_width_check = SettingsFactory.create_checkbox(
             strings.terminal_fixed_width_enabled
@@ -685,7 +674,6 @@ class SettingsDialog(QDialog):
                 self._ai_model_container,
                 self._tools_container,
                 self._editor_container,
-                self._backup_container,
                 self._terminal_container,
             ]
         )
@@ -795,13 +783,21 @@ class SettingsDialog(QDialog):
             SECTION_FILE_ACCESS: strings.settings_file_access,
             SECTION_AI_BACKENDS: strings.settings_ai_backends,
             SECTION_AI_MODEL: strings.settings_ai_model,
-            SECTION_TOOLS: strings.settings_tools,
+            SECTION_AI_TOOLS: strings.settings_ai_tools,
             SECTION_EDITOR: strings.settings_editor,
-            SECTION_BACKUP: strings.settings_backup,
             SECTION_TERMINAL: strings.settings_terminal,
         }
         for section_id, item in self._section_items.items():
             item.setText("  " + label_map.get(section_id, section_id))
+
+        # Update page headings
+        self._display_heading.set_label(strings.display_settings)
+        self._file_access_heading.set_label(strings.external_file_access)
+        self._ai_backends_heading.set_label(strings.ai_backend_config)
+        self._ai_model_heading.set_label(strings.model_settings)
+        self._tools_heading.set_label(strings.tool_settings)
+        self._editor_heading.set_label(strings.editor_settings)
+        self._terminal_heading.set_label(strings.terminal_settings)
 
         # Update Display page controls
         current_lang = self._language_combo.get_value()
@@ -866,6 +862,7 @@ class SettingsDialog(QDialog):
         # Update Editor page controls
         self._soft_tabs_check.set_label(strings.use_soft_tabs)
         self._tab_size_spin.set_label(strings.tab_size)
+        self._editor_tabs_section.set_label(strings.settings_tabs)
 
         # Update Backup page controls
         self._auto_backup_check.set_label(strings.auto_backup)
@@ -960,7 +957,6 @@ class SettingsDialog(QDialog):
             self._ai_model_container,
             self._tools_container,
             self._editor_container,
-            self._backup_container,
             self._terminal_container,
         ]:
             container.reset_modified_state()

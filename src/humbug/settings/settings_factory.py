@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QWidget
 from humbug.settings.settings_spacer import SettingsSpacer
 from humbug.settings.settings_header import SettingsHeader
 from humbug.settings.settings_section import SettingsSection
+from humbug.settings.settings_page_heading import SettingsPageHeading
 from humbug.settings.settings_checkbox import SettingsCheckbox
 from humbug.settings.settings_combo import SettingsCombo
 from humbug.settings.settings_spinbox import SettingsSpinBox
@@ -37,6 +38,11 @@ class SettingsFactory:
     def create_header(title: str, parent: QWidget | None = None) -> SettingsHeader:
         """Create a header."""
         return SettingsHeader(title, parent)
+
+    @staticmethod
+    def create_page_heading(title: str, parent: QWidget | None = None) -> SettingsPageHeading:
+        """Create a page-level heading, larger than a section but smaller than a header."""
+        return SettingsPageHeading(title, parent)
 
     @staticmethod
     def create_section(title: str, description: str | None = None, parent: QWidget | None = None) -> SettingsSection:

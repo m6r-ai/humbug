@@ -102,8 +102,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#c8c8c8"
             },
             ColorRole.BACKGROUND_DIALOG: {
-                ColorMode.DARK: "#282828",
-                ColorMode.LIGHT: "#d0d0d0"
+                ColorMode.DARK: "#1e1e1e",
+                ColorMode.LIGHT: "#d8d8d8"
             },
 
             # Text colours
