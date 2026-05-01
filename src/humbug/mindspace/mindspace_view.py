@@ -83,9 +83,6 @@ class MindspaceView(QWidget):
         self._sidebar_toggle_button.installEventFilter(self)
         rail_layout.addWidget(self._sidebar_toggle_button)
 
-        self._search_button = self._create_view_button(MindspaceViewType.SEARCH, "search")
-        rail_layout.addWidget(self._search_button)
-
         self._conversations_button = self._create_view_button(MindspaceViewType.CONVERSATIONS, "conversation")
         rail_layout.addWidget(self._conversations_button)
 
@@ -98,6 +95,9 @@ class MindspaceView(QWidget):
 
         self._preview_button = self._create_view_button(MindspaceViewType.PREVIEW, "preview")
         rail_layout.addWidget(self._preview_button)
+
+        self._search_button = self._create_view_button(MindspaceViewType.SEARCH, "search")
+        rail_layout.addWidget(self._search_button)
 
         rail_layout.addStretch()
 
