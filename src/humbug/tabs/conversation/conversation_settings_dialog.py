@@ -42,9 +42,8 @@ class ConversationSettingsDialog(QDialog):
 
         # Main layout
         main_layout = QVBoxLayout()
-        main_layout.setSpacing(spacing)
-        double_spacing = spacing * 2
-        main_layout.setContentsMargins(double_spacing, double_spacing, double_spacing, double_spacing)
+        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(0, 0, 0, 0)
 
         # Create a scroll area
         scroll_area = QScrollArea()
@@ -54,7 +53,12 @@ class ConversationSettingsDialog(QDialog):
         # Create settings container
         self._settings_container = SettingsContainer()
 
-        # Add a section title
+        self._settings_container.setContentsMargins(spacing, spacing, spacing, spacing)
+
+        # Page heading and model subsection
+        page_heading = SettingsFactory.create_page_heading(strings.conversation_settings)
+        self._settings_container.add_setting(page_heading)
+
         model_section = SettingsFactory.create_section(strings.model_settings)
         self._settings_container.add_setting(model_section)
 
@@ -97,11 +101,17 @@ class ConversationSettingsDialog(QDialog):
         # Set the scroll content
         scroll_area.setWidget(self._settings_container)
         main_layout.addWidget(scroll_area)
-        main_layout.addSpacing(20)
+
+        # Separator line above buttons
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setObjectName("SettingsSeparator")
+        main_layout.addWidget(separator)
 
         # Button row with proper spacing and alignment
         button_layout = QHBoxLayout()
         button_layout.setSpacing(spacing)
+        button_layout.setContentsMargins(20, 12, 20, 12)
         button_layout.addStretch()
 
         self.ok_button = QPushButton(strings.ok)

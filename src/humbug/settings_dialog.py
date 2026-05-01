@@ -888,7 +888,6 @@ class SettingsDialog(QDialog):
         nav_selected_bg = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
         nav_hover_bg = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
         splitter_color = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
-        separator_color = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
         font_pt = int(base_font_size * zoom_factor)
 
         self.setStyleSheet(self._style_manager.get_dialog_stylesheet() + f"""
@@ -918,12 +917,6 @@ class SettingsDialog(QDialog):
             QSplitter::handle {{
                 background-color: {splitter_color};
                 width: 1px;
-            }}
-            QFrame#SettingsSeparator {{
-                background-color: {separator_color};
-                border: none;
-                max-height: 1px;
-                min-height: 1px;
             }}
         """)
 

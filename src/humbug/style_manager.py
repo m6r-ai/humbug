@@ -1754,5 +1754,12 @@ class StyleManager(QObject):
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
+            QFrame#SettingsSeparator {{
+                background-color: {self.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+                border: none;
+                max-height: 1px;
+                min-height: 1px;
+            }}
+
             {self.get_scrollbar_stylesheet()}
         """
