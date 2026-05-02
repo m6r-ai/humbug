@@ -51,6 +51,13 @@ class MindspaceTreeView(QTreeView):
 
         self.setHeaderHidden(True)
         self.setAnimated(True)
+
+        # Pixel-based scrolling is required so that the breadcrumb container's
+        # bc_h offset arithmetic (which is in pixels) is in the same units as
+        # the scrollbar range.  The default ScrollPerItem mode uses row counts,
+        # which causes the breadcrumb offset to be wildly out of proportion on
+        # platforms (e.g. Linux) that do not override this default.
+        self.setVerticalScrollMode(QTreeView.ScrollMode.ScrollPerPixel)
         self.header().setSortIndicator(0, Qt.SortOrder.AscendingOrder)
         self.setSortingEnabled(True)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
