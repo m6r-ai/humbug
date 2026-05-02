@@ -251,15 +251,11 @@ class PreviewContent:
             Tuple of (markdown content with directory listing, dependency paths)
         """
         try:
-            # Track dependencies - include the directory itself and all its entries
+            # Track dependencies - the directory itself is sufficient; the file watcher
+            # already monitors dir_contents to detect entries being added or removed.
             dependencies: Set[str] = {os.path.abspath(directory_path)}
 
             entries = os.listdir(directory_path)
-
-            # Add all directory entries as dependencies (for change detection)
-            for entry in entries:
-                entry_path = os.path.join(directory_path, entry)
-                dependencies.add(os.path.abspath(entry_path))
 
             contents: List[Tuple[PreviewContentType, str]] = []
 
