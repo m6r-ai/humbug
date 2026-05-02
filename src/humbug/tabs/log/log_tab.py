@@ -51,6 +51,7 @@ class LogTab(TabBase):
         self._find_widget.hide()
         self._find_widget.set_preferred_width(self.preferred_width)
         self._find_widget.closed.connect(self._close_find)
+        self._find_widget.search_changed.connect(self._on_search_changed)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
         layout.addWidget(self._find_widget)
@@ -257,9 +258,7 @@ class LogTab(TabBase):
 
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
-        text = self._find_widget.get_search_text()
-        case_sensitive = self._find_widget.is_case_sensitive()
-        regexp = self._find_widget.is_regexp()
+        text, case_sensitive, regexp = self._find_widget.current_search_request()
         if regexp:
             if text and not QRegularExpression(text).isValid():
                 self._find_widget.set_invalid_regexp()
@@ -267,6 +266,14 @@ class LogTab(TabBase):
 
         current, total = self._log_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
         self._find_widget.set_match_status(current, total)
+
+    def _on_search_changed(self) -> None:
+        """Clear local highlights when the find query becomes empty."""
+        if self._find_widget.get_search_text():
+            return
+
+        self._log_widget.clear_highlights()
+        self._find_widget.set_match_status(0, 0)
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""

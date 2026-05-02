@@ -330,6 +330,14 @@ class EditorTab(TabBase):
         self._on_search_changed()
         self._find_widget.setFocus()
 
+    def apply_search_highlight(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:
+        """Apply a transient search highlight without altering the local find widget."""
+        self._editor_widget.find_text(text, forward=True, move_cursor=False, case_sensitive=case_sensitive, regexp=regexp)
+
+    def clear_search_highlight(self) -> None:
+        """Clear transient search highlights."""
+        self._editor_widget.clear_highlights()
+
     def _close_find(self) -> None:
         """Close the find widget and clear search state."""
         self._find_widget.hide()
@@ -337,9 +345,7 @@ class EditorTab(TabBase):
 
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
-        text = self._find_widget.get_search_text()
-        case_sensitive = self._find_widget.is_case_sensitive()
-        regexp = self._find_widget.is_regexp()
+        text, case_sensitive, regexp = self._find_widget.current_search_request()
         if regexp:
             if text and not QRegularExpression(text).isValid():
                 self._find_widget.set_invalid_regexp()
@@ -351,9 +357,7 @@ class EditorTab(TabBase):
 
     def _on_search_changed(self) -> None:
         """Handle search text or mode changes - update matches without navigating."""
-        text = self._find_widget.get_search_text()
-        case_sensitive = self._find_widget.is_case_sensitive()
-        regexp = self._find_widget.is_regexp()
+        text, case_sensitive, regexp = self._find_widget.current_search_request()
         if regexp:
             if text and not QRegularExpression(text).isValid():
                 self._find_widget.set_invalid_regexp()

@@ -383,6 +383,14 @@ class TabBase(QFrame):
         """Apply a programmatic find/highlight request when supported."""
         return None
 
+    def apply_search_highlight(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:
+        """Apply a transient search highlight without mutating local find UI state."""
+        return None
+
+    def clear_search_highlight(self) -> None:
+        """Clear any transient search highlight without affecting local find UI state."""
+        return None
+
     def can_submit(self) -> bool:
         """
         Check if submit operation is available.

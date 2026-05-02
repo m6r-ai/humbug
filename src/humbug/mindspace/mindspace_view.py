@@ -42,6 +42,7 @@ class MindspaceView(QWidget):
     new_conversation_requested = Signal(str)
     settings_requested = Signal()
     search_result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool)
+    search_highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the mindspace view widget."""
@@ -146,6 +147,7 @@ class MindspaceView(QWidget):
 
         self._search_view.file_clicked.connect(self.file_clicked.emit)
         self._search_view.result_activated.connect(self.search_result_activated.emit)
+        self._search_view.highlights_cleared.connect(self.search_highlights_cleared.emit)
         self._files_view.file_clicked.connect(self.file_clicked.emit)
         self._files_view.file_deleted.connect(self.file_deleted.emit)
         self._files_view.file_renamed.connect(self.file_renamed.emit)
@@ -316,6 +318,10 @@ class MindspaceView(QWidget):
         self._vcs_view.set_mindspace(path)
         self._preview_view.set_mindspace(path)
         self._search_view.set_mindspace(path)
+
+    def set_search_provider(self, provider) -> None:
+        """Set an optional provider for supplemental global-search results."""
+        self._search_view.set_supplemental_search_provider(provider)
 
     def show_search(self) -> None:
         """Activate the global-search pane and focus its input."""

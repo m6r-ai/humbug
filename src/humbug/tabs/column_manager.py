@@ -173,6 +173,10 @@ class ColumnManager(QWidget):
 
         return None
 
+    def get_open_conversation_tabs(self) -> List[ConversationTab]:
+        """Return all currently open conversation tabs."""
+        return [tab for tab in self._tabs.values() if isinstance(tab, ConversationTab)]
+
     def num_colunns(self) -> int:
         """Get the number of columns currently in use."""
         return len(self._tab_columns)
@@ -277,6 +281,10 @@ class ColumnManager(QWidget):
             return None
 
         return tab
+
+    def get_all_tabs(self) -> List[TabBase]:
+        """Return all currently open tabs."""
+        return list(self._tabs.values())
 
     def list_all_tabs(self) -> List[Dict[str, str | int | bool]]:
         """

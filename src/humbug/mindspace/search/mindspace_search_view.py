@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 import re
+from typing import Callable
 
 from PySide6.QtCore import Qt, QTimer, QSize, Signal
 from PySide6.QtGui import QIcon, QPainter
@@ -106,6 +107,7 @@ class MindspaceSearchView(QWidget):
 
     file_clicked = Signal(MindspaceViewType, str, bool)
     result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool)
+    highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -114,6 +116,7 @@ class MindspaceSearchView(QWidget):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
         self._search_engine = MindspaceSearchEngine()
+        self._supplemental_search_provider: Callable[[str, bool, bool, bool], list[MindspaceSearchMatch]] | None = None
         self._mindspace_path = ""
         self._options_expanded = False
         self._regexp_invalid = False
@@ -153,19 +156,19 @@ class MindspaceSearchView(QWidget):
         self._match_case_button = QToolButton(self._options_panel)
         self._match_case_button.setObjectName("toggleButton")
         self._match_case_button.setCheckable(True)
-        self._match_case_button.toggled.connect(self._schedule_search)
+        self._match_case_button.toggled.connect(self._on_option_toggled)
         options_layout.addWidget(self._match_case_button)
 
         self._whole_word_button = QToolButton(self._options_panel)
         self._whole_word_button.setObjectName("toggleButton")
         self._whole_word_button.setCheckable(True)
-        self._whole_word_button.toggled.connect(self._schedule_search)
+        self._whole_word_button.toggled.connect(self._on_option_toggled)
         options_layout.addWidget(self._whole_word_button)
 
         self._regexp_button = QToolButton(self._options_panel)
         self._regexp_button.setObjectName("toggleButton")
         self._regexp_button.setCheckable(True)
-        self._regexp_button.toggled.connect(self._schedule_search)
+        self._regexp_button.toggled.connect(self._on_option_toggled)
         options_layout.addWidget(self._regexp_button)
 
         self._options_panel.hide()
@@ -198,6 +201,13 @@ class MindspaceSearchView(QWidget):
         self._mindspace_path = path
         self._perform_search()
 
+    def set_supplemental_search_provider(
+        self,
+        provider: Callable[[str, bool, bool, bool], list[MindspaceSearchMatch]] | None,
+    ) -> None:
+        """Set an optional provider for live, in-memory search matches."""
+        self._supplemental_search_provider = provider
+
     def focus_search(self) -> None:
         """Focus the search input."""
         self._search_input.setFocus()
@@ -207,6 +217,11 @@ class MindspaceSearchView(QWidget):
         """Debounce search runs while the user types."""
         self._debounce_timer.start()
 
+    def _on_option_toggled(self, _checked: bool) -> None:
+        """Update results immediately when a search option is toggled."""
+        self._debounce_timer.stop()
+        self._perform_search()
+
     def _perform_search(self) -> None:
         """Run global search against the current mindspace."""
         query = self._search_input.text().strip()
@@ -215,12 +230,14 @@ class MindspaceSearchView(QWidget):
         if not self._mindspace_path:
             self._regexp_invalid = False
             self._status_label.setText("")
+            self.highlights_cleared.emit()
             self.apply_style()
             return
 
         if not query:
             self._regexp_invalid = False
             self._status_label.setText(self._language_manager.strings().global_search_empty_state)
+            self.highlights_cleared.emit()
             self.apply_style()
             return
 
@@ -245,6 +262,15 @@ class MindspaceSearchView(QWidget):
             whole_word=whole_word,
             regexp=regexp_enabled,
         )
+        if self._supplemental_search_provider is not None:
+            matches.extend(self._supplemental_search_provider(
+                query,
+                case_sensitive,
+                whole_word,
+                regexp_enabled,
+            ))
+
+        matches = self._deduplicate_matches(matches)
         if not matches:
             self._status_label.setText(self._language_manager.strings().global_search_no_results)
             self.apply_style()
@@ -287,9 +313,25 @@ class MindspaceSearchView(QWidget):
             return self._language_manager.strings().global_search_path_match
 
         if match.line_number is None:
+            if match.line_text:
+                return match.line_text
             return match.relative_path
 
         return f"L{match.line_number}: {match.line_text}"
+
+    def _deduplicate_matches(self, matches: list[MindspaceSearchMatch]) -> list[MindspaceSearchMatch]:
+        """Remove duplicate search results while preserving order."""
+        unique_matches: list[MindspaceSearchMatch] = []
+        seen: set[tuple[str, int | None, str, bool]] = set()
+        for match in matches:
+            key = (match.path, match.line_number, match.line_text, match.is_path_match)
+            if key in seen:
+                continue
+
+            seen.add(key)
+            unique_matches.append(match)
+
+        return unique_matches
 
     def _highlight_ranges_for_match(self, match: MindspaceSearchMatch, display_text: str) -> list[tuple[int, int]]:
         if match.is_path_match:

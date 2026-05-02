@@ -1,5 +1,6 @@
 """Widget for handling find operations in editor."""
 
+import re
 from typing import Any, Callable, Dict, List
 
 from PySide6.QtWidgets import (
@@ -69,6 +70,12 @@ class FindWidget(QWidget):
         self._match_case_button.setObjectName("toggleButton")
         self._match_case_button.clicked.connect(self._on_mode_changed)
 
+        self._whole_word_button = QToolButton()
+        self._whole_word_button.setCheckable(True)
+        self._whole_word_button.setChecked(False)
+        self._whole_word_button.setObjectName("toggleButton")
+        self._whole_word_button.clicked.connect(self._on_mode_changed)
+
         self._regexp_button = QToolButton()
         self._regexp_button.setCheckable(True)
         self._regexp_button.setChecked(False)
@@ -94,6 +101,7 @@ class FindWidget(QWidget):
         find_controls.addWidget(self._prev_button)
         find_controls.addWidget(self._next_button)
         find_controls.addWidget(self._match_case_button)
+        find_controls.addWidget(self._whole_word_button)
         find_controls.addWidget(self._regexp_button)
         find_controls.addWidget(self._close_button)
         self._grid.addLayout(find_controls, 0, 2)
@@ -169,7 +177,11 @@ class FindWidget(QWidget):
         strings = self._language_manager.strings()
         self._search_input.setPlaceholderText(strings.find_placeholder)
         self._match_case_button.setToolTip(strings.find_match_case)
+        self._whole_word_button.setToolTip(strings.global_search_whole_word)
         self._regexp_button.setToolTip(strings.find_use_regexp)
+        self._match_case_button.setAccessibleName(strings.find_match_case)
+        self._whole_word_button.setAccessibleName(strings.global_search_whole_word)
+        self._regexp_button.setAccessibleName(strings.find_use_regexp)
         self._replace_input.setPlaceholderText(strings.replace_placeholder)
         self._replace_button.setText(strings.replace_button)
         self._replace_all_button.setText(strings.replace_all_button)
@@ -194,6 +206,7 @@ class FindWidget(QWidget):
         self._close_button.setIcon(QIcon(self._style_manager.scale_icon("close", 15)))
 
         self._match_case_button.setIcon(QIcon(self._style_manager.scale_icon("find-match-case", 15)))
+        self._whole_word_button.setIcon(QIcon(self._style_manager.scale_icon("find-whole-word", 15)))
         self._regexp_button.setIcon(QIcon(self._style_manager.scale_icon("find-regexp", 15)))
 
         scaled_size = int(15 * factor)
@@ -202,6 +215,7 @@ class FindWidget(QWidget):
         self._next_button.setIconSize(icon_size)
         self._close_button.setIconSize(icon_size)
         self._match_case_button.setIconSize(icon_size)
+        self._whole_word_button.setIconSize(icon_size)
         self._regexp_button.setIconSize(icon_size)
 
         self._expand_button.setIconSize(icon_size)
@@ -479,13 +493,31 @@ class FindWidget(QWidget):
         """Set regexp mode."""
         self._regexp_button.setChecked(enabled)
 
+    def set_whole_word(self, enabled: bool) -> None:
+        """Set whole-word mode."""
+        self._whole_word_button.setChecked(enabled)
+
     def is_case_sensitive(self) -> bool:
         """Return True if match-case mode is active."""
         return self._match_case_button.isChecked()
 
+    def is_whole_word(self) -> bool:
+        """Return True if whole-word mode is active."""
+        return self._whole_word_button.isChecked()
+
     def is_regexp(self) -> bool:
         """Return True if regular-expression mode is active."""
         return self._regexp_button.isChecked()
+
+    def current_search_request(self) -> tuple[str, bool, bool]:
+        """Return the effective search text and modes for downstream widgets."""
+        text = self.get_search_text()
+        case_sensitive = self.is_case_sensitive()
+        regexp = self.is_regexp()
+        if self.is_whole_word() and text and not regexp:
+            return rf"\b{re.escape(text)}\b", case_sensitive, True
+
+        return text, case_sensitive, regexp
 
     def create_state_metadata(self) -> Dict[str, Any]:
         """
@@ -498,6 +530,7 @@ class FindWidget(QWidget):
             'search_text': self.get_search_text(),
             'is_visible': not self.isHidden(),
             'match_case': self.is_case_sensitive(),
+            'whole_word': self.is_whole_word(),
             'regexp': self.is_regexp(),
             'replace_text': self.get_replace_text(),
             'replace_expanded': self._replace_row_expanded,
@@ -516,6 +549,9 @@ class FindWidget(QWidget):
 
             if 'match_case' in metadata:
                 self._match_case_button.setChecked(bool(metadata['match_case']))
+
+            if 'whole_word' in metadata:
+                self._whole_word_button.setChecked(bool(metadata['whole_word']))
 
             if 'regexp' in metadata:
                 self._regexp_button.setChecked(bool(metadata['regexp']))
