@@ -196,7 +196,9 @@ def main() -> int:
     app = HumbugApplication(sys.argv)
     load_fonts()
     style_manager = StyleManager()
-    app.setFont(QFont(style_manager.proportional_font_families()[0], style_manager.base_font_size()))
+    app_font = QFont(style_manager.proportional_font_families()[0], style_manager.base_font_size())
+    app_font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
+    app.setFont(app_font)
 
     # Create and set event loop
     loop = QEventLoop(app)
