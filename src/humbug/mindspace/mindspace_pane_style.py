@@ -36,7 +36,7 @@ def build_tree_pane_stylesheet(
         }}
         {tree_selector}::item {{
             color: {text};
-            padding: 3px 0px;
+            padding: 0px;
             margin: 0px;
         }}
         {tree_selector}::item:hover {{

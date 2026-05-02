@@ -3,7 +3,7 @@
 import os
 
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget, QAbstractItemDelegate
-from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect, QAbstractItemModel
+from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect, QSize, QAbstractItemModel
 from PySide6.QtGui import QPainter, QPen
 
 from humbug.color_role import ColorRole
@@ -257,6 +257,18 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         Handle when editing is cancelled.
         """
         self.edit_cancelled.emit()
+
+    def sizeHint(
+        self,
+        option: QStyleOptionViewItem,
+        index: QModelIndex | QPersistentModelIndex,
+    ) -> QSize:
+        """Return a consistent, zoom-scaled row height on all platforms."""
+        zoom = self._style_manager.zoom_factor()
+        fm = option.fontMetrics  # type: ignore
+        line_height = fm.height()
+        row_height = max(line_height + round(10 * zoom), round(24 * zoom))
+        return QSize(super().sizeHint(option, index).width(), row_height)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> None:
         """
