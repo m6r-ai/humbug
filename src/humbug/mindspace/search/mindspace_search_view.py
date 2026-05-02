@@ -145,7 +145,7 @@ class MindspaceSearchView(QWidget):
         search_bar = QWidget(self)
         search_bar.setObjectName("_search_bar")
         search_layout = QHBoxLayout(search_bar)
-        search_layout.setContentsMargins(10, 5, 10, 2)
+        search_layout.setContentsMargins(10, 5, 10, 3)
         search_layout.setSpacing(0)
 
         self._search_input = QLineEdit(search_bar)
@@ -158,7 +158,7 @@ class MindspaceSearchView(QWidget):
         self._options_panel = QWidget(self)
         self._options_panel.setObjectName("_options_panel")
         self._options_layout = QHBoxLayout(self._options_panel)
-        self._options_layout.setContentsMargins(10, 2, 10, 5)
+        self._options_layout.setContentsMargins(10, 3, 10, 5)
         self._options_layout.addStretch()
 
         self._match_case_button = QToolButton(self._options_panel)
@@ -442,7 +442,7 @@ class MindspaceSearchView(QWidget):
         status_gap = round(6 * zoom_factor)
         input_field_bg = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)
         input_field_bg_error = self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)
-        self._options_layout.setSpacing(round(4 * zoom_factor))
+        self._options_layout.setSpacing(round(6 * zoom_factor))
         icon_px = round(base_font_size * zoom_factor * 96 / 72)
         option_icon_size = QSize(icon_px, icon_px)
         self._match_case_button.setIcon(QIcon(self._style_manager.scale_icon("find-match-case", icon_px)))
