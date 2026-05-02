@@ -5,9 +5,10 @@ from typing import Dict, cast
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea,
-    QWidget, QFrame, QListWidget, QListWidgetItem, QStackedWidget, QSplitter
+    QWidget, QFrame, QListWidget, QListWidgetItem, QStackedWidget, QSplitter,
+    QStyledItemDelegate, QStyleOptionViewItem
 )
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSize, Signal, Qt
 from PySide6.QtGui import QFont
 
 from ai import AIBackendSettings, AIConversationSettings, AIManager, AIReasoningCapability
@@ -39,6 +40,24 @@ SECTION_TERMINAL = "terminal"
 
 _ALL_MINDSPACES_SECTIONS = [SECTION_DISPLAY, SECTION_FILE_ACCESS, SECTION_AI_BACKENDS]
 _THIS_MINDSPACE_SECTIONS = [SECTION_AI_MODEL, SECTION_AI_TOOLS, SECTION_EDITOR, SECTION_TERMINAL]
+
+
+class _NavItemDelegate(QStyledItemDelegate):
+    """Item delegate for the settings nav list that controls row height cross-platform."""
+
+    def __init__(self, style_manager, parent=None):
+        super().__init__(parent)
+        self._style_manager = style_manager
+
+    def sizeHint(
+        self,
+        option: QStyleOptionViewItem,
+        index: QModelIndex | QPersistentModelIndex,
+    ) -> QSize:
+        zoom = self._style_manager.zoom_factor()
+        fm = option.fontMetrics  # type: ignore
+        row_height = fm.height() + round(12 * zoom)
+        return QSize(super().sizeHint(option, index).width(), row_height)
 
 
 class SettingsDialog(QDialog):
@@ -108,6 +127,7 @@ class SettingsDialog(QDialog):
         self._nav_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._nav_list.setFixedWidth(int(200 * zoom_factor))
         self._nav_list.currentItemChanged.connect(self._on_nav_item_changed)
+        self._nav_list.setItemDelegate(_NavItemDelegate(self._style_manager, self._nav_list))
 
         # Right stacked content
         self._stack = QStackedWidget()
