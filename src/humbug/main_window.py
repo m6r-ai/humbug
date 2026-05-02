@@ -189,7 +189,7 @@ class MainWindow(QMainWindow):
         self._find_action.setShortcut(QKeySequence.StandardKey.Find)
         self._find_action.triggered.connect(self._find)
 
-        self._global_search_action = QAction(strings.global_search, self)
+        self._global_search_action = QAction(strings.mindspace_search, self)
         self._global_search_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
         self._global_search_action.triggered.connect(self._show_global_search)
 
@@ -577,7 +577,7 @@ class MainWindow(QMainWindow):
         self._copy_action.setText(strings.copy)
         self._paste_action.setText(strings.paste)
         self._find_action.setText(strings.find)
-        self._global_search_action.setText(strings.global_search)
+        self._global_search_action.setText(strings.mindspace_search)
         self._mindspace_settings_action.setText(strings.mindspace_settings)
         self._conv_settings_action.setText(strings.conversation_settings)
 

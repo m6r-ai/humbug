@@ -2,6 +2,8 @@
 
 import os
 
+from typing import Callable
+
 from PySide6.QtCore import Qt, Signal, QSize, QEvent, QObject, QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
@@ -23,6 +25,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.mindspace.preview.mindspace_preview_view import MindspacePreviewView
 from humbug.mindspace.search.mindspace_search_view import MindspaceSearchView
+from humbug.mindspace.search.mindspace_search_engine import MindspaceSearchMatch
 from humbug.mindspace.vcs.mindspace_vcs_view import MindspaceVCSView
 from humbug.style_manager import StyleManager
 
@@ -319,7 +322,7 @@ class MindspaceView(QWidget):
         self._preview_view.set_mindspace(path)
         self._search_view.set_mindspace(path)
 
-    def set_search_provider(self, provider) -> None:
+    def set_search_provider(self, provider: Callable[[str, bool, bool, bool], list[MindspaceSearchMatch]] | None) -> None:
         """Set an optional provider for supplemental global-search results."""
         self._search_view.set_supplemental_search_provider(provider)
 
@@ -345,7 +348,7 @@ class MindspaceView(QWidget):
         strings = self._language_manager.strings()
         self._header_widget.setToolTip(strings.mindspace_name_tooltip)
         self._settings_button.setToolTip(strings.mindspace_settings)
-        self._search_button.setToolTip(strings.global_search)
+        self._search_button.setToolTip(strings.mindspace_search)
         self._settings_button.setToolTip(strings.settings)
         self._conversations_button.setToolTip(strings.mindspace_conversations)
         self._files_button.setToolTip(strings.mindspace_files)

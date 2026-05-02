@@ -4,7 +4,7 @@ from collections import OrderedDict
 import re
 from typing import Callable
 
-from PySide6.QtCore import Qt, QTimer, QSize, Signal
+from PySide6.QtCore import Qt, QTimer, QSize, QModelIndex, QPersistentModelIndex, Signal
 from PySide6.QtGui import QIcon, QPainter
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -24,6 +24,7 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
 from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
+from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.mindspace.search.mindspace_search_engine import MindspaceSearchEngine, MindspaceSearchMatch
 from humbug.style_manager import StyleManager
@@ -38,7 +39,19 @@ class _SearchResultDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self._style_manager = style_manager
 
-    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index) -> None:
+    def sizeHint(
+        self,
+        option: QStyleOptionViewItem,
+        index: QModelIndex | QPersistentModelIndex,
+    ) -> QSize:
+        """Return a zoom-scaled row height matching the other mindspace tree views."""
+        zoom = self._style_manager.zoom_factor()
+        fm = option.fontMetrics  # type: ignore
+        line_height = fm.height()
+        row_height = max(line_height + round(10 * zoom), round(24 * zoom))
+        return QSize(super().sizeHint(option, index).width(), row_height)
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> None:
         opt = QStyleOptionViewItem(option)
         self.initStyleOption(opt, index)
         text = opt.text
@@ -70,7 +83,9 @@ class _SearchResultDelegate(QStyledItemDelegate):
 
             clipped_ranges.append((start, min(length, len(display_text) - start)))
 
-        text_color = opt.palette.highlightedText().color() if opt.state & QStyle.StateFlag.State_Selected else opt.palette.text().color()
+        text_color = (opt.palette.highlightedText().color()
+                      if opt.state & QStyle.StateFlag.State_Selected
+                      else opt.palette.text().color())
         highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM)
 
         painter.save()
@@ -118,20 +133,19 @@ class MindspaceSearchView(QWidget):
         self._search_engine = MindspaceSearchEngine()
         self._supplemental_search_provider: Callable[[str, bool, bool, bool], list[MindspaceSearchMatch]] | None = None
         self._mindspace_path = ""
-        self._options_expanded = False
         self._regexp_invalid = False
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self._header = MindspaceSectionHeader(self._language_manager.strings().global_search, self)
+        self._header = MindspaceSectionHeader(self._language_manager.strings().mindspace_search, self)
         layout.addWidget(self._header)
 
         search_bar = QWidget(self)
         search_bar.setObjectName("_search_bar")
         search_layout = QHBoxLayout(search_bar)
-        search_layout.setContentsMargins(10, 5, 10, 5)
+        search_layout.setContentsMargins(10, 5, 10, 2)
         search_layout.setSpacing(0)
 
         self._search_input = QLineEdit(search_bar)
@@ -139,39 +153,32 @@ class MindspaceSearchView(QWidget):
         self._search_input.textChanged.connect(self._schedule_search)
         search_layout.addWidget(self._search_input, 1)
 
-        self._options_button = QToolButton(search_bar)
-        self._options_button.setObjectName("_options_button")
-        self._options_button.clicked.connect(self._toggle_options_panel)
-        search_layout.addWidget(self._options_button)
         layout.addWidget(search_bar)
 
         self._options_panel = QWidget(self)
         self._options_panel.setObjectName("_options_panel")
-        options_layout = QHBoxLayout(self._options_panel)
-        options_layout.setContentsMargins(10, 5, 10, 5)
-        options_layout.setSpacing(round(6))
-        options_layout.addStretch()
-        # options_layout.setSpacing(6)
+        self._options_layout = QHBoxLayout(self._options_panel)
+        self._options_layout.setContentsMargins(10, 2, 10, 5)
+        self._options_layout.addStretch()
 
         self._match_case_button = QToolButton(self._options_panel)
         self._match_case_button.setObjectName("toggleButton")
         self._match_case_button.setCheckable(True)
         self._match_case_button.toggled.connect(self._on_option_toggled)
-        options_layout.addWidget(self._match_case_button)
+        self._options_layout.addWidget(self._match_case_button)
 
         self._whole_word_button = QToolButton(self._options_panel)
         self._whole_word_button.setObjectName("toggleButton")
         self._whole_word_button.setCheckable(True)
         self._whole_word_button.toggled.connect(self._on_option_toggled)
-        options_layout.addWidget(self._whole_word_button)
+        self._options_layout.addWidget(self._whole_word_button)
 
         self._regexp_button = QToolButton(self._options_panel)
         self._regexp_button.setObjectName("toggleButton")
         self._regexp_button.setCheckable(True)
         self._regexp_button.toggled.connect(self._on_option_toggled)
-        options_layout.addWidget(self._regexp_button)
+        self._options_layout.addWidget(self._regexp_button)
 
-        self._options_panel.hide()
         layout.addWidget(self._options_panel)
 
         self._status_label = QLabel(self)
@@ -180,10 +187,11 @@ class MindspaceSearchView(QWidget):
 
         self._results_tree = QTreeWidget(self)
         self._results_tree.setObjectName("MindspaceSearchResultsTree")
+        self._tree_style = MindspaceTreeStyle()
+        self._results_tree.setStyle(self._tree_style)
         self._results_tree.setHeaderHidden(True)
         self._results_tree.setRootIsDecorated(True)
         self._results_tree.setUniformRowHeights(False)
-        self._results_tree.setIndentation(0)
         self._results_tree.setItemDelegate(_SearchResultDelegate(self._style_manager, self._results_tree))
         self._results_tree.itemClicked.connect(lambda item, _column: self._open_item(item, True))
         self._results_tree.itemDoubleClicked.connect(lambda item, _column: self._open_item(item, False))
@@ -236,7 +244,7 @@ class MindspaceSearchView(QWidget):
 
         if not query:
             self._regexp_invalid = False
-            self._status_label.setText(self._language_manager.strings().global_search_empty_state)
+            self._status_label.setText(self._language_manager.strings().mindspace_search_empty_state)
             self.highlights_cleared.emit()
             self.apply_style()
             return
@@ -272,7 +280,7 @@ class MindspaceSearchView(QWidget):
 
         matches = self._deduplicate_matches(matches)
         if not matches:
-            self._status_label.setText(self._language_manager.strings().global_search_no_results)
+            self._status_label.setText(self._language_manager.strings().mindspace_search_no_results)
             self.apply_style()
             return
 
@@ -280,7 +288,7 @@ class MindspaceSearchView(QWidget):
         for match in matches:
             grouped_matches.setdefault(match.path, []).append(match)
 
-        for path, path_matches in grouped_matches.items():
+        for _path, path_matches in grouped_matches.items():
             first_match = path_matches[0]
             top_level = QTreeWidgetItem([first_match.relative_path])
             top_level.setData(0, Qt.ItemDataRole.UserRole, first_match.path)
@@ -302,7 +310,7 @@ class MindspaceSearchView(QWidget):
             self._results_tree.addTopLevelItem(top_level)
 
         strings = self._language_manager.strings()
-        self._status_label.setText(strings.global_search_results.format(
+        self._status_label.setText(strings.mindspace_search_results.format(
             len(matches),
             len(grouped_matches),
         ))
@@ -310,7 +318,7 @@ class MindspaceSearchView(QWidget):
 
     def _describe_match(self, match: MindspaceSearchMatch) -> str:
         if match.is_path_match:
-            return self._language_manager.strings().global_search_path_match
+            return self._language_manager.strings().mindspace_search_path_match
 
         if match.line_number is None:
             if match.line_text:
@@ -398,22 +406,15 @@ class MindspaceSearchView(QWidget):
 
     def _on_language_changed(self) -> None:
         strings = self._language_manager.strings()
-        self._header.set_title(strings.global_search)
-        self._search_input.setPlaceholderText(strings.global_search_placeholder)
-        self._options_button.setToolTip(strings.global_search_options)
+        self._header.set_title(strings.mindspace_search)
+        self._search_input.setPlaceholderText(strings.mindspace_search_placeholder)
         self._match_case_button.setToolTip(strings.find_match_case)
-        self._whole_word_button.setToolTip(strings.global_search_whole_word)
+        self._whole_word_button.setToolTip(strings.mindspace_search_whole_word)
         self._regexp_button.setToolTip(strings.find_use_regexp)
         self._match_case_button.setAccessibleName(strings.find_match_case)
-        self._whole_word_button.setAccessibleName(strings.global_search_whole_word)
+        self._whole_word_button.setAccessibleName(strings.mindspace_search_whole_word)
         self._regexp_button.setAccessibleName(strings.find_use_regexp)
         self._perform_search()
-        self.apply_style()
-
-    def _toggle_options_panel(self) -> None:
-        """Expand or collapse the search options panel."""
-        self._options_expanded = not self._options_expanded
-        self._options_panel.setVisible(self._options_expanded)
         self.apply_style()
 
     def apply_style(self) -> None:
@@ -431,44 +432,24 @@ class MindspaceSearchView(QWidget):
         self._results_tree.setFont(font)
         icon_size = round(16 * zoom_factor)
         self._results_tree.setIconSize(QSize(icon_size, icon_size))
-        self._results_tree.setIndentation(round(14 * zoom_factor))
-        self._options_button.setAutoRaise(True)
-        self._match_case_button.setAutoRaise(True)
-        self._whole_word_button.setAutoRaise(True)
-        self._regexp_button.setAutoRaise(True)
-
+        self._results_tree.setIndentation(icon_size)
         input_bg = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
-        input_border = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
-        input_error = self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)
         text = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
         subtle_text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
         button_hover = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
-        button_pressed = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)
         button_checked = self._style_manager.get_color_str(ColorRole.TEXT_FOUND)
-        gutter = round(10 * zoom_factor)
-        section_gap = round(4 * zoom_factor)
+        button_checked_hover = self._style_manager.get_color_str(ColorRole.TEXT_FOUND_DIM)
         status_gap = round(6 * zoom_factor)
-        input_padding_y = round(7 * zoom_factor)
-        input_padding_x = round(10 * zoom_factor)
-        radius = round(8 * zoom_factor)
-        btn_radius = round(5 * zoom_factor)
-        btn_size = round(24 * zoom_factor)
-        btn_padding = round(3 * zoom_factor)
-        search_border = input_error if self._regexp_invalid else input_border
-
-        options_icon_name = (
-            "arrow-down"
-            if self._options_expanded
-            else ("arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left")
-        )
-        self._options_button.setIcon(QIcon(self._style_manager.scale_icon(options_icon_name, 14)))
-        self._options_button.setIconSize(QSize(round(14 * zoom_factor), round(14 * zoom_factor)))
-        option_icon_size = QSize(round(14 * zoom_factor), round(14 * zoom_factor))
-        self._match_case_button.setIcon(QIcon(self._style_manager.scale_icon("find-match-case", 14)))
+        input_field_bg = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)
+        input_field_bg_error = self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)
+        self._options_layout.setSpacing(round(4 * zoom_factor))
+        icon_px = round(base_font_size * zoom_factor * 96 / 72)
+        option_icon_size = QSize(icon_px, icon_px)
+        self._match_case_button.setIcon(QIcon(self._style_manager.scale_icon("find-match-case", icon_px)))
         self._match_case_button.setIconSize(option_icon_size)
-        self._whole_word_button.setIcon(QIcon(self._style_manager.scale_icon("find-whole-word", 14)))
+        self._whole_word_button.setIcon(QIcon(self._style_manager.scale_icon("find-whole-word", icon_px)))
         self._whole_word_button.setIconSize(option_icon_size)
-        self._regexp_button.setIcon(QIcon(self._style_manager.scale_icon("find-regexp", 14)))
+        self._regexp_button.setIcon(QIcon(self._style_manager.scale_icon("find-regexp", icon_px)))
         self._regexp_button.setIconSize(option_icon_size)
 
         self.setStyleSheet(
@@ -482,89 +463,59 @@ class MindspaceSearchView(QWidget):
             + f"""
             QWidget#_search_bar {{
                 background: transparent;
-                margin: {gutter}px {gutter}px 0px {gutter}px;
+                margin: {round(6 * zoom_factor)}px {round(6 * zoom_factor)}px 0px {round(6 * zoom_factor)}px;
             }}
             QLineEdit#_search_input {{
-                background-color: {input_bg};
+                background-color: {input_field_bg_error if self._regexp_invalid else input_field_bg};
                 color: {text};
-                border: 1px solid {search_border};
-                border-right: none;
-                border-top-left-radius: {radius}px;
-                border-bottom-left-radius: {radius}px;
-                border-top-right-radius: 0px;
-                border-bottom-right-radius: 0px;
-                padding: {input_padding_y}px {input_padding_x}px;
-                min-height: {round(22 * zoom_factor)}px;
-            }}
-            QToolButton#_options_button {{
-                background-color: {input_bg};
-                color: {text};
-                border-top: 1px solid {search_border};
-                border-right: 1px solid {search_border};
-                border-bottom: 1px solid {search_border};
-                border-left: 1px solid {input_border};
-                border-top-right-radius: {radius}px;
-                border-bottom-right-radius: {radius}px;
-                padding: {input_padding_y}px {round(7 * zoom_factor)}px;
-                min-width: {round(24 * zoom_factor)}px;
-                min-height: {round(22 * zoom_factor)}px;
-                max-height: {round(22 * zoom_factor)}px;
-            }}
-            QToolButton#_options_button:hover {{
-                background-color: {button_hover};
-            }}
-            QToolButton#_options_button:pressed {{
-                background-color: {button_pressed};
+                border: none;
+                border-radius: 4px;
+                padding: 4px;
+                font-size: {int(base_font_size * zoom_factor)}pt;
             }}
             QWidget#_options_panel {{
                 background-color: transparent;
                 border: none;
-                margin: {section_gap}px {gutter}px 0px {gutter}px;
+                margin: 0px {round(6 * zoom_factor)}px 0px {round(6 * zoom_factor)}px;
             }}
             QWidget#_options_panel QToolButton#toggleButton {{
                 color: {text};
-                background-color: transparent;
-                border: 1px solid {input_border};
-                border-radius: {btn_radius}px;
-                padding: {btn_padding}px;
-                min-width: {btn_size}px;
-                min-height: {btn_size}px;
-                max-width: {btn_size}px;
-                max-height: {btn_size}px;
+                background-color: {input_field_bg};
+                border: none;
+                border-radius: 4px;
+                padding: 4px;
+                font-size: {int(base_font_size * zoom_factor)}pt;
             }}
             QWidget#_options_panel QToolButton#toggleButton:hover {{
-                background-color: {button_hover};
+                background-color: {button_checked_hover};
             }}
             QWidget#_options_panel QToolButton#toggleButton:pressed {{
-                background-color: {button_pressed};
+                background-color: {button_checked};
             }}
             QWidget#_options_panel QToolButton#toggleButton:checked {{
                 background-color: {button_checked};
-                border-color: {button_checked};
                 color: {text};
             }}
             QWidget#_options_panel QToolButton#toggleButton:checked:hover {{
-                background-color: {button_checked};
+                background-color: {button_checked_hover};
+            }}
+            QWidget#_options_panel QToolButton#toggleButton:checked:pressed {{
+                background-color: {input_field_bg};
             }}
             QLabel#_status_label {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_ERROR) if self._regexp_invalid else subtle_text};
-                padding: {status_gap}px {gutter}px {status_gap}px {gutter}px;
+                padding: {status_gap}px {round(6 * zoom_factor)}px {status_gap}px {round(6 * zoom_factor)}px;
                 min-height: {round(16 * zoom_factor)}px;
             }}
             QTreeWidget#MindspaceSearchResultsTree {{
                 background-color: {input_bg};
                 color: {text};
                 outline: none;
-                border: 1px solid {input_border};
-                border-radius: {radius}px;
-                margin: 0px {gutter}px {gutter}px {gutter}px;
-                padding: {section_gap}px 0px;
+                border: none;
             }}
             QTreeWidget#MindspaceSearchResultsTree::item {{
-                min-height: {round(22 * zoom_factor)}px;
-                padding: {round(5 * zoom_factor)}px {round(8 * zoom_factor)}px;
-                margin: 0px {section_gap}px;
-                border-radius: {btn_radius}px;
+                padding: 0px;
+                margin: 0px;
             }}
             QTreeWidget#MindspaceSearchResultsTree::item:hover {{
                 background-color: {button_hover};

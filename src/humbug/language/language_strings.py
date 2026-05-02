@@ -45,7 +45,7 @@ class LanguageStrings:
     copy: str
     paste: str
     find: str
-    global_search: str
+    mindspace_search: str
     mindspace_settings: str
     conversation_settings: str
 
@@ -86,6 +86,7 @@ class LanguageStrings:
     find_no_matches: str
     find_match_count: str  # Format: "{current} of {total}"
     find_match_case: str
+    find_use_whole_word: str
     find_use_regexp: str
     find_invalid_regexp: str
     replace_placeholder: str
@@ -151,13 +152,13 @@ class LanguageStrings:
     mindspace_preview: str
     mindspace_expand_sidebar: str
     mindspace_collapse_sidebar: str
-    global_search_placeholder: str
-    global_search_options: str
-    global_search_whole_word: str
-    global_search_empty_state: str
-    global_search_no_results: str
-    global_search_path_match: str
-    global_search_results: str
+    mindspace_search_placeholder: str
+    mindspace_search_options: str
+    mindspace_search_whole_word: str
+    mindspace_search_empty_state: str
+    mindspace_search_no_results: str
+    mindspace_search_path_match: str
+    mindspace_search_results: str
 
     # Mindspace folders dialog
     mindspace_folders_title: str
