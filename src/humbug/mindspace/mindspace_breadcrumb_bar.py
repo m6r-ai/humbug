@@ -3,7 +3,7 @@
 import os
 from typing import Callable, Union
 
-from PySide6.QtCore import Qt, QMimeData, QModelIndex, QFileInfo, QPersistentModelIndex, QRect, QSize, QTimer
+from PySide6.QtCore import Qt, QMimeData, QModelIndex, QPersistentModelIndex, QRect, QSize, QTimer
 from PySide6.QtGui import (
     QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent,
     QIcon, QMouseEvent, QPen, QPainter, QWheelEvent,
@@ -330,8 +330,7 @@ class MindspaceBreadcrumbBar(QTreeView):
 
     def _folder_icon(self) -> QIcon:
         """Return the current folder icon from the icon provider."""
-        info = QFileInfo(self._root_path or ".")
-        return self._icon_provider.icon(info)
+        return self._icon_provider.breadcrumb_folder_icon()
 
     def _path_for_index(self, index: QModelIndex) -> str | None:
         """
