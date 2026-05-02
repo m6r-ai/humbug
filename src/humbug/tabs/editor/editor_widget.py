@@ -1192,6 +1192,37 @@ class EditorWidget(QPlainTextEdit):
         # Highlight all matches
         self._highlight_matches()
 
+    def find_text_at_line(
+        self,
+        text: str,
+        line_number: int,
+        case_sensitive: bool = False,
+        regexp: bool = False,
+    ) -> None:
+        """Highlight all matches and scroll to the first match on the given 1-based line number.
+
+        Falls back to the first match in the document if no match is found on that line.
+
+        Args:
+            text: Text to search for
+            line_number: 1-based line number to scroll to
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
+        """
+        self.find_text(text, forward=True, move_cursor=False, case_sensitive=case_sensitive, regexp=regexp)
+        if not self._matches:
+            return
+
+        document = self.document()
+        target = next(
+            (i for i, (start, _end) in enumerate(self._matches)
+             if document.findBlock(start).blockNumber() + 1 == line_number),
+            0,
+        )
+        self._current_match = target
+        self._highlight_matches()
+        self._scroll_to_match(target)
+
     def set_current_match_index(self, index: int) -> None:
         """
         Set the current match index without moving the cursor.

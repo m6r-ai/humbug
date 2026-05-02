@@ -44,7 +44,7 @@ class MindspaceView(QWidget):
     file_opened_in_diff = Signal(str, bool)
     new_conversation_requested = Signal(str)
     settings_requested = Signal()
-    search_result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool)
+    search_result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool, object)
     search_highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:

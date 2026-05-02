@@ -994,12 +994,13 @@ class MainWindow(QMainWindow):
         search_text: str,
         case_sensitive: bool,
         regexp: bool,
+        line_number: int | None,
     ) -> None:
         """Open a search result and apply the same highlight without changing local find UI state."""
         try:
             tab = self._column_manager.open_file_by_mindspace_view_type(source, path, ephemeral)
             if tab is not None:
-                tab.apply_search_highlight(search_text, case_sensitive=case_sensitive, regexp=regexp)
+                tab.navigate_to_search_match(search_text, line_number, case_sensitive=case_sensitive, regexp=regexp)
 
         except ColumnManagerError as e:
             strings = self._language_manager.strings()

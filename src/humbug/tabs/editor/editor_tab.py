@@ -334,6 +334,15 @@ class EditorTab(TabBase):
         """Apply a transient search highlight without altering the local find widget."""
         self._editor_widget.find_text(text, forward=True, move_cursor=False, case_sensitive=case_sensitive, regexp=regexp)
 
+    def navigate_to_search_match(
+        self, text: str, line_number: int | None, case_sensitive: bool = False, regexp: bool = False
+    ) -> None:
+        """Highlight all matches and scroll to the match at line_number, or the first match if line_number is None."""
+        if line_number is not None:
+            self._editor_widget.find_text_at_line(text, line_number, case_sensitive=case_sensitive, regexp=regexp)
+        else:
+            self._editor_widget.find_text(text, forward=True, move_cursor=True, case_sensitive=case_sensitive, regexp=regexp)
+
     def clear_search_highlight(self) -> None:
         """Clear transient search highlights."""
         self._editor_widget.clear_highlights()

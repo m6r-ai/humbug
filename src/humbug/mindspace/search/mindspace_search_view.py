@@ -29,6 +29,7 @@ from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.mindspace.search.mindspace_search_engine import MindspaceSearchEngine, MindspaceSearchMatch
 from humbug.style_manager import StyleManager
 
+_LINE_NUMBER_ROLE = Qt.ItemDataRole.UserRole + 11
 _HIGHLIGHT_RANGES_ROLE = Qt.ItemDataRole.UserRole + 10
 
 
@@ -121,7 +122,7 @@ class MindspaceSearchView(QWidget):
     """Global search pane for searching across the current mindspace."""
 
     file_clicked = Signal(MindspaceViewType, str, bool)
-    result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool)
+    result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool, object)
     highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -302,6 +303,7 @@ class MindspaceSearchView(QWidget):
                 child = QTreeWidgetItem([child_text])
                 child.setData(0, Qt.ItemDataRole.UserRole, match.path)
                 child.setData(0, Qt.ItemDataRole.UserRole + 1, match.view_type)
+                child.setData(0, _LINE_NUMBER_ROLE, match.line_number)
                 child.setData(0, _HIGHLIGHT_RANGES_ROLE, self._highlight_ranges_for_match(match, child_text))
                 child.setToolTip(0, child_text)
                 top_level.addChild(child)
@@ -387,9 +389,10 @@ class MindspaceSearchView(QWidget):
         if not isinstance(path, str) or not isinstance(view_type, MindspaceViewType):
             return
 
+        line_number = item.data(0, _LINE_NUMBER_ROLE)
         query, case_sensitive, regexp = self.current_find_request()
         if query:
-            self.result_activated.emit(view_type, path, ephemeral, query, case_sensitive, regexp)
+            self.result_activated.emit(view_type, path, ephemeral, query, case_sensitive, regexp, line_number)
 
         else:
             self.file_clicked.emit(view_type, path, ephemeral)
