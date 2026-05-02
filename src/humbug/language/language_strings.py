@@ -159,6 +159,8 @@ class LanguageStrings:
     mindspace_search_no_results: str
     mindspace_search_path_match: str
     mindspace_search_results: str
+    mindspace_search_results_limited: str
+    mindspace_search_include_hidden: str
 
     # Mindspace folders dialog
     mindspace_folders_title: str

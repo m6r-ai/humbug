@@ -1253,6 +1253,15 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            # Eye icon — show hidden directories toggle
+            self._write_icon(f'find-hidden-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"
+                        d="M4,32 Q16,12 32,12 Q48,12 60,32 Q48,52 32,52 Q16,52 4,32 Z"/>
+                    <circle cx="32" cy="32" r="9" stroke="{color}" stroke-width="5" fill="none"/>
+                </svg>
+            ''')
+
         # Create the standard application icon for about dialog
         self._write_icon('app-icon.svg', self._create_app_icon_svg('#4040c0', '#ffffff'))
 

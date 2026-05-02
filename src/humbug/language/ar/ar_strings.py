@@ -165,10 +165,12 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_search_placeholder="بحث",
         mindspace_search_options="خيارات البحث",
         mindspace_search_whole_word="مطابقة الكلمة كاملة",
-        mindspace_search_empty_state="اكتب للبحث في الملفات والمحادثات",
+        mindspace_search_empty_state="جاهز للبحث",
         mindspace_search_no_results="لا توجد نتائج",
         mindspace_search_path_match="مطابقة في المسار",
         mindspace_search_results="{0} نتيجة في {1} ملف",
+        mindspace_search_results_limited="النتائج محدودة بـ {0} تطابق",
+        mindspace_search_include_hidden="تضمين المجلدات المخفية",
 
         # Mindspace folders dialog
         mindspace_folders_title="تكوين مجلدات المساحة الذهنية",

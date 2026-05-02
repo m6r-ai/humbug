@@ -47,6 +47,7 @@ class MindspaceSearchEngine:
         case_sensitive: bool = False,
         whole_word: bool = False,
         regexp: bool = False,
+        include_hidden: bool = False,
     ) -> list[MindspaceSearchMatch]:
         """Search the current mindspace for the given query."""
         normalized_query = query.strip()
@@ -69,7 +70,9 @@ class MindspaceSearchEngine:
             dirs[:] = [
                 directory
                 for directory in dirs
-                if directory not in self._IGNORED_DIRS and not directory.startswith(".pytest_cache")
+                if directory not in self._IGNORED_DIRS
+                and not directory.startswith(".pytest_cache")
+                and (include_hidden or not directory.startswith("."))
             ]
 
             for filename in files:

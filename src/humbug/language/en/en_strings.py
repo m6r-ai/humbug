@@ -164,10 +164,12 @@ def get_english_strings() -> LanguageStrings:
         mindspace_search_placeholder="Search",
         mindspace_search_options="Search options",
         mindspace_search_whole_word="Match whole word",
-        mindspace_search_empty_state="Type to search files and conversations",
+        mindspace_search_empty_state="Ready to search",
         mindspace_search_no_results="No results found",
         mindspace_search_path_match="Path match",
         mindspace_search_results="{0} matches in {1} files",
+        mindspace_search_results_limited="Results limited to {0} matches",
+        mindspace_search_include_hidden="Include hidden directories",
 
         # Mindspace folders dialog
         mindspace_folders_title="Configure Mindspace Folders",

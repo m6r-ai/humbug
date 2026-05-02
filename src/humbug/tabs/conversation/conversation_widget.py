@@ -2855,19 +2855,43 @@ class ConversationWidget(QWidget):
         Returns:
             Tuple of (current_match, total_matches)
         """
-        self.find_text(text, forward=True, case_sensitive=case_sensitive, regexp=regexp)
+        self._ensure_matches(text, case_sensitive=case_sensitive, regexp=regexp)
         if not self._matches:
             return 0, 0
 
-        for widget_index, (widget, _matches) in enumerate(self._matches):
+        for widget_index, (widget, widget_matches) in enumerate(self._matches):
             if isinstance(widget, ConversationMessage) and widget.message_id() == message_id:
-                self._current_widget_index = widget_index
-                self._current_match_index = 0
+                if self._current_widget_index == widget_index:
+                    self._current_match_index = (self._current_match_index + 1) % len(widget_matches)
+                else:
+                    self._current_widget_index = widget_index
+                    self._current_match_index = 0
                 self._highlight_matches()
                 self._scroll_to_current_match()
                 return self.get_match_status()
 
         return self.get_match_status()
+
+    def _ensure_matches(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:
+        """Populate _matches for the given search without navigating.
+
+        If the search parameters have changed, clears existing state and re-scans.
+        If they are unchanged and matches are already populated, does nothing.
+        """
+        widgets = self._messages + [self._input]
+
+        if (text, case_sensitive, regexp) != self._last_search:
+            self._clear_highlights()
+            self._matches = []
+            self._current_widget_index = -1
+            self._current_match_index = -1
+            self._last_search = (text, case_sensitive, regexp)
+
+        if not self._matches and text:
+            for widget in widgets:
+                widget_matches = widget.find_text(text, case_sensitive, regexp)
+                if widget_matches:
+                    self._matches.append((widget, widget_matches))
 
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""

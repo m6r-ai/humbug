@@ -179,11 +179,22 @@ class MindspaceSearchView(QWidget):
         self._regexp_button.toggled.connect(self._on_option_toggled)
         self._options_layout.addWidget(self._regexp_button)
 
+        self._hidden_button = QToolButton(self._options_panel)
+        self._hidden_button.setObjectName("toggleButton")
+        self._hidden_button.setCheckable(True)
+        self._hidden_button.toggled.connect(self._on_option_toggled)
+        self._options_layout.addWidget(self._hidden_button)
+
         layout.addWidget(self._options_panel)
 
         self._status_label = QLabel(self)
         self._status_label.setObjectName("_status_label")
         layout.addWidget(self._status_label)
+
+        self._truncated_label = QLabel(self)
+        self._truncated_label.setObjectName("_truncated_label")
+        self._truncated_label.hide()
+        layout.addWidget(self._truncated_label)
 
         self._results_tree = QTreeWidget(self)
         self._results_tree.setObjectName("MindspaceSearchResultsTree")
@@ -227,6 +238,7 @@ class MindspaceSearchView(QWidget):
         """Run global search against the current mindspace."""
         query = self._search_input.text().strip()
         self._results_tree.clear()
+        self._truncated_label.hide()
 
         if not self._mindspace_path:
             self._regexp_invalid = False
@@ -245,6 +257,7 @@ class MindspaceSearchView(QWidget):
         case_sensitive = self._match_case_button.isChecked()
         whole_word = self._whole_word_button.isChecked()
         regexp_enabled = self._regexp_button.isChecked()
+        include_hidden = self._hidden_button.isChecked()
 
         if regexp_enabled:
             try:
@@ -262,10 +275,12 @@ class MindspaceSearchView(QWidget):
             case_sensitive=case_sensitive,
             whole_word=whole_word,
             regexp=regexp_enabled,
+            include_hidden=include_hidden,
         )
         matches = self._deduplicate_matches(matches)
         if not matches:
             self._status_label.setText(self._language_manager.strings().mindspace_search_no_results)
+            self._truncated_label.hide()
             self.apply_style()
             return
 
@@ -301,6 +316,11 @@ class MindspaceSearchView(QWidget):
             len(matches),
             len(grouped_matches),
         ))
+        truncated = len(matches) >= MindspaceSearchEngine._MAX_MATCHES
+        self._truncated_label.setText(
+            strings.mindspace_search_results_limited.format(MindspaceSearchEngine._MAX_MATCHES)
+        )
+        self._truncated_label.setVisible(truncated)
         self.apply_style()
 
     def _describe_match(self, match: MindspaceSearchMatch) -> str:
@@ -400,9 +420,11 @@ class MindspaceSearchView(QWidget):
         self._match_case_button.setToolTip(strings.find_match_case)
         self._whole_word_button.setToolTip(strings.mindspace_search_whole_word)
         self._regexp_button.setToolTip(strings.find_use_regexp)
+        self._hidden_button.setToolTip(strings.mindspace_search_include_hidden)
         self._match_case_button.setAccessibleName(strings.find_match_case)
         self._whole_word_button.setAccessibleName(strings.mindspace_search_whole_word)
         self._regexp_button.setAccessibleName(strings.find_use_regexp)
+        self._hidden_button.setAccessibleName(strings.mindspace_search_include_hidden)
         self._perform_search()
         self.apply_style()
 
@@ -418,6 +440,7 @@ class MindspaceSearchView(QWidget):
         self.setFont(font)
         self._search_input.setFont(font)
         self._status_label.setFont(font)
+        self._truncated_label.setFont(font)
         self._results_tree.setFont(font)
         icon_size = round(16 * zoom_factor)
         self._results_tree.setIconSize(QSize(icon_size, icon_size))
@@ -440,6 +463,8 @@ class MindspaceSearchView(QWidget):
         self._whole_word_button.setIconSize(option_icon_size)
         self._regexp_button.setIcon(QIcon(self._style_manager.scale_icon("find-regexp", icon_px)))
         self._regexp_button.setIconSize(option_icon_size)
+        self._hidden_button.setIcon(QIcon(self._style_manager.scale_icon("find-hidden", icon_px)))
+        self._hidden_button.setIconSize(option_icon_size)
 
         self.setStyleSheet(
             build_tree_pane_stylesheet(
@@ -493,7 +518,12 @@ class MindspaceSearchView(QWidget):
             }}
             QLabel#_status_label {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_ERROR) if self._regexp_invalid else subtle_text};
-                padding: {status_gap}px {round(6 * zoom_factor)}px {status_gap}px {round(6 * zoom_factor)}px;
+                padding: {round(status_gap * 2)}px {round(6 * zoom_factor)}px {status_gap}px {round(6 * zoom_factor)}px;
+                min-height: {round(16 * zoom_factor)}px;
+            }}
+            QLabel#_truncated_label {{
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_ERROR)};
+                padding: 0px {round(6 * zoom_factor)}px {status_gap}px {round(6 * zoom_factor)}px;
                 min-height: {round(16 * zoom_factor)}px;
             }}
             QTreeWidget#MindspaceSearchResultsTree {{

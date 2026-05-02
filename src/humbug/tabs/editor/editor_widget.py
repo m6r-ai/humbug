@@ -1201,7 +1201,9 @@ class EditorWidget(QPlainTextEdit):
     ) -> None:
         """Highlight all matches and scroll to the first match on the given 1-based line number.
 
-        Falls back to the first match in the document if no match is found on that line.
+        If already positioned on a match on this line, advances to the next match on the
+        same line (wrapping within the line). Falls back to the first match in the document
+        if no match is found on that line.
 
         Args:
             text: Text to search for
@@ -1214,11 +1216,20 @@ class EditorWidget(QPlainTextEdit):
             return
 
         document = self.document()
-        target = next(
-            (i for i, (start, _end) in enumerate(self._matches)
-             if document.findBlock(start).blockNumber() + 1 == line_number),
-            0,
-        )
+        line_indices = [
+            i for i, (start, _end) in enumerate(self._matches)
+            if document.findBlock(start).blockNumber() + 1 == line_number
+        ]
+        if not line_indices:
+            target = 0
+
+        elif self._current_match in line_indices:
+            pos = line_indices.index(self._current_match)
+            target = line_indices[(pos + 1) % len(line_indices)]
+
+        else:
+            target = line_indices[0]
+
         self._current_match = target
         self._highlight_matches()
         self._scroll_to_match(target)

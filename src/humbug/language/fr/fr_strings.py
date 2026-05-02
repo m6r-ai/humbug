@@ -164,10 +164,12 @@ def get_french_strings() -> LanguageStrings:
         mindspace_search_placeholder="Rechercher",
         mindspace_search_options="Options de recherche",
         mindspace_search_whole_word="Mot entier",
-        mindspace_search_empty_state="Saisissez un texte pour rechercher dans les fichiers et conversations",
+        mindspace_search_empty_state="Prêt à rechercher",
         mindspace_search_no_results="Aucun résultat",
         mindspace_search_path_match="Correspondance dans le chemin",
         mindspace_search_results="{0} correspondances dans {1} fichiers",
+        mindspace_search_results_limited="Résultats limités à {0} correspondances",
+        mindspace_search_include_hidden="Inclure les dossiers cachés",
 
         # Mindspace folders dialog
         mindspace_folders_title="Configurer les dossiers de l'espace mental",
