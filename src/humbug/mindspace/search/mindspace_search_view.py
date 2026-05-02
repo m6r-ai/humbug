@@ -51,6 +51,7 @@ class MindspaceSearchView(QWidget):
         search_bar = QWidget(self)
         search_bar.setObjectName("_search_bar")
         search_layout = QHBoxLayout(search_bar)
+        search_layout.setContentsMargins(10, 5, 10, 5)
         search_layout.setSpacing(0)
 
         self._search_input = QLineEdit(search_bar)
@@ -67,7 +68,8 @@ class MindspaceSearchView(QWidget):
         self._options_panel = QWidget(self)
         self._options_panel.setObjectName("_options_panel")
         options_layout = QHBoxLayout(self._options_panel)
-        options_layout.setContentsMargins(8, 8, 8, 8)
+        options_layout.setContentsMargins(10, 5, 10, 5)
+        options_layout.setSpacing(round(6))
         options_layout.addStretch()
         # options_layout.setSpacing(6)
 
@@ -270,13 +272,14 @@ class MindspaceSearchView(QWidget):
         button_hover = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
         button_pressed = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)
         button_checked = self._style_manager.get_color_str(ColorRole.TEXT_FOUND)
-        m = round(10 * zoom_factor)
-        m_sm = round(6 * zoom_factor)
+        gutter = round(10 * zoom_factor)
+        section_gap = round(4 * zoom_factor)
+        status_gap = round(6 * zoom_factor)
         input_padding_y = round(7 * zoom_factor)
         input_padding_x = round(10 * zoom_factor)
         radius = round(8 * zoom_factor)
         btn_radius = round(5 * zoom_factor)
-        btn_size = round(22 * zoom_factor)
+        btn_size = round(24 * zoom_factor)
         btn_padding = round(3 * zoom_factor)
         search_border = input_error if self._regexp_invalid else input_border
 
@@ -306,7 +309,7 @@ class MindspaceSearchView(QWidget):
             + f"""
             QWidget#_search_bar {{
                 background: transparent;
-                margin: {m}px {m}px {m_sm}px {m}px;
+                margin: {gutter}px {gutter}px 0px {gutter}px;
             }}
             QLineEdit#_search_input {{
                 background-color: {input_bg};
@@ -343,7 +346,7 @@ class MindspaceSearchView(QWidget):
             QWidget#_options_panel {{
                 background-color: transparent;
                 border: none;
-                margin: {round(2 * zoom_factor)}px {m}px {m_sm}px {m}px;
+                margin: {section_gap}px {gutter}px 0px {gutter}px;
             }}
             QWidget#_options_panel QToolButton#toggleButton {{
                 color: {text};
@@ -372,7 +375,7 @@ class MindspaceSearchView(QWidget):
             }}
             QLabel#_status_label {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_ERROR) if self._regexp_invalid else subtle_text};
-                padding: {m_sm}px {m}px {m_sm}px {m}px;
+                padding: {status_gap}px {gutter}px {status_gap}px {gutter}px;
                 min-height: {round(16 * zoom_factor)}px;
             }}
             QTreeWidget#MindspaceSearchResultsTree {{
@@ -381,13 +384,13 @@ class MindspaceSearchView(QWidget):
                 outline: none;
                 border: 1px solid {input_border};
                 border-radius: {radius}px;
-                margin: 0px {m}px {m}px {m}px;
-                padding: {m_sm}px 0px;
+                margin: 0px {gutter}px {gutter}px {gutter}px;
+                padding: {section_gap}px 0px;
             }}
             QTreeWidget#MindspaceSearchResultsTree::item {{
                 min-height: {round(22 * zoom_factor)}px;
                 padding: {round(5 * zoom_factor)}px {round(8 * zoom_factor)}px;
-                margin: 0px {m_sm}px;
+                margin: 0px {section_gap}px;
                 border-radius: {btn_radius}px;
             }}
             QTreeWidget#MindspaceSearchResultsTree::item:hover {{

@@ -83,8 +83,9 @@ class MindspaceTreeView(QTreeView):
                 change_type = "LATCH"
                 # Snap the newly-latched folder's row fully above the viewport.
                 source_model = cast(QSortFilterProxyModel, self.model())
-                file_model = cast(QFileSystemModel, source_model.sourceModel()) if source_model else None
-                if source_model and file_model and path:
+                has_proxy = source_model is not None and hasattr(source_model, 'sourceModel')
+                file_model = cast(QFileSystemModel, source_model.sourceModel()) if has_proxy else None
+                if has_proxy and file_model and path:
                     source_index = file_model.index(path)
                     filter_index = source_model.mapFromSource(source_index)
                     if filter_index.isValid():

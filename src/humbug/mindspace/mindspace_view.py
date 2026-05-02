@@ -51,7 +51,7 @@ class MindspaceView(QWidget):
         self._mindspace_manager = MindspaceManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        self._active_view_type = MindspaceViewType.SEARCH
+        self._active_view_type = MindspaceViewType.CONVERSATIONS
         self._vcs_available = False
         self._sidebar_collapsed = False
         self._expanded_sidebar_width = 320
@@ -176,7 +176,7 @@ class MindspaceView(QWidget):
         self._preview_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
 
         self._header_widget.setText(self._language_manager.strings().mindspace_label_none)
-        self._set_active_view(MindspaceViewType.SEARCH)
+        self._set_active_view(MindspaceViewType.CONVERSATIONS)
         self._on_language_changed()
 
     def _create_view_button(self, view_type: MindspaceViewType, icon_name: str) -> QToolButton:
