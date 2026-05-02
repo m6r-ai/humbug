@@ -1111,7 +1111,6 @@ class MindspaceConversationsView(QWidget):
         # Configure tree view with the conversations path
         self._bc_container.configure_tree_for_path(self._conversations_path)
 
-        self._breadcrumb_bar.set_root_label(os.path.basename(path))
         self._breadcrumb_bar.set_root_path(self._conversations_path)
         self._breadcrumb_bar.update_from_path(self._conversations_path)
         self._bc_container.set_root_path(self._conversations_path)

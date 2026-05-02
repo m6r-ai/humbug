@@ -62,7 +62,6 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         self._root_path: str = ""
         self._dot_path: str = ""
-        self._root_label: str = ""
         self._current_spine: list[str] = []
         self._drop_target_index: QModelIndex = QModelIndex()
 
@@ -82,17 +81,6 @@ class MindspaceBreadcrumbBar(QTreeView):
         self._root_path = root_path
         self._dot_path = (root_path.rstrip(os.sep) + os.sep + ".") if root_path else ""
         self._rebuild([self._dot_path] if self._dot_path else [])
-
-    def set_root_label(self, label: str) -> None:
-        """
-        Set the display label for the root row.
-
-        Args:
-            label: Text to show for the root row (e.g. the mindspace name)
-        """
-        self._root_label = label
-        if self._dot_path:
-            self._rebuild(self._current_spine if self._current_spine else [self._dot_path])
 
     def set_drop_handler(self, handler: Callable[[str, str], None]) -> None:
         """
@@ -282,7 +270,7 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         icon = self._folder_icon()
 
-        dot_item = QStandardItem(self._root_label or ".")
+        dot_item = QStandardItem(".")
         dot_item.setData(self._root_path, _PATH_ROLE)
         dot_item.setEditable(False)
         dot_item.setIcon(icon)

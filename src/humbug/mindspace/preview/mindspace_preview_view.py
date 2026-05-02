@@ -963,7 +963,6 @@ class MindspacePreviewView(QWidget):
         self._fs_model.setRootPath(parent_path)
         self._filter_model.set_mindspace_root(path)
 
-        self._breadcrumb_bar.set_root_label(os.path.basename(path))
         self._breadcrumb_bar.set_root_path(path)
         self._breadcrumb_bar.update_from_path(path)
         self._bc_container.set_root_path(path)
