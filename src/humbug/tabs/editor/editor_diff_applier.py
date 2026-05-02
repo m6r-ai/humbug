@@ -273,14 +273,17 @@ class EditorDiffApplier(DiffApplier):
 
             elif line.type == '+':
                 # Addition - insert this line
-                cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-
-                # Insert the new line followed by a newline only when the cursor
-                # is not already at the end of the document.  At EOF there is no
-                # trailing newline to push down, so we prepend the newline
-                # before the existing content instead.
-                if cursor.atEnd() and not cursor.atStart():
+                # At EOF there is no trailing newline to push down, so move to
+                # the end of the last block and append after it.  In all other
+                # cases insert at the start of the current block followed by a
+                # newline so the existing content is pushed down.
+                # We also exclude the case where the cursor is on a trailing
+                # empty block (the artifact of a file's trailing newline) - in
+                # that case the normal insertion fills the empty block correctly.
+                if cursor.atEnd() and not cursor.atStart() and cursor.block().text():
+                    cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
                     cursor.insertText('\n' + line.content)
 
                 else:
+                    cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
                     cursor.insertText(line.content + '\n')
