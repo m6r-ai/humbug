@@ -10,6 +10,8 @@ New features:
   any of the trees.
 - Unified the previous "user" and "mindspace" settings into a single new dialog that can be accessed from the icon rail.
   The new settings dialog is far easier to navigate and easier to discover.
+- Added Noto Sans, Noto Sans Arabic, and JetBrain Mono fonts to ensure a consistent user experience across all platforms (and
+  also because they look nicer!)
 
 Bug fixes:
 
