@@ -458,7 +458,12 @@ class MainWindow(QMainWindow):
         if event.type() == QEvent.Type.WindowStateChange:
             self._column_manager.apply_style()
             if self._window_controls is not None:
-                self._window_controls.set_maximised(self.isMaximized())
+                QTimer.singleShot(0, self._update_window_controls_state)
+
+    def _update_window_controls_state(self) -> None:
+        """Update the window controls maximised state after the event loop settles."""
+        if self._window_controls is not None:
+            self._window_controls.set_maximised(self.isMaximized())
 
 
     def _on_exception_occurred(self) -> None:
