@@ -61,6 +61,9 @@ class PreviewWidget(QWidget):
         self._file_watcher = MindspaceFileWatcher()
         self._watched_paths: Set[str] = set()
 
+        # Cache of the last rendered content list for change detection
+        self._last_content_list: List[Tuple[PreviewContentType, str]] = []
+
         # Widget tracking
         self._content_blocks: List[PreviewContentWidget] = []
         self._content_with_selection: PreviewContentWidget | None = None
@@ -187,6 +190,24 @@ class PreviewWidget(QWidget):
     def refresh_content(self) -> None:
         """Refresh content from disk, preserving scroll position and other UI state."""
         try:
+            # Fetch new content first and compare against what is currently rendered.
+            # If nothing has changed (e.g. a transient lock file appeared and disappeared,
+            # or an mtime was touched without the content changing) skip the re-render
+            # entirely so we don't create a feedback loop.
+            try:
+                new_content_list, new_dependencies = self._preview.get_preview_content(self._path)
+            except Exception:
+                # If we can't read the content, fall through to the normal reload path
+                # which will handle the error properly.
+                new_content_list = None
+                new_dependencies = None
+
+            if new_content_list is not None and new_content_list == self._last_content_list:
+                # Content unchanged — update the watcher baseline without re-rendering.
+                self._unregister_file_watching()
+                self._register_file_watching(new_dependencies)
+                return
+
             # Save current state
             saved_scroll_pos = self._scroll_area.verticalScrollBar().value()
             saved_selection = None
@@ -203,7 +224,7 @@ class PreviewWidget(QWidget):
             # Unregister old file watching
             self._unregister_file_watching()
 
-            # Clear down any find state before reloading
+            # Clear find state before reloading
             self.clear_find()
 
             # Reload content
@@ -332,6 +353,9 @@ class PreviewWidget(QWidget):
             # Add content blocks
             for content_type, content in content_list:
                 self._add_content_block(content_type, content)
+
+            # Cache the rendered content list for future change detection
+            self._last_content_list = content_list
 
             # Register file watching for all dependencies
             self._register_file_watching(dependencies)
