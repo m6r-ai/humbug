@@ -3,7 +3,6 @@
 import json
 import logging
 import os
-import re
 import sys
 from pathlib import Path
 from typing import cast, Dict, Tuple
@@ -35,7 +34,6 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.mindspace.mindspace_view import MindspaceView
 from humbug.main_window_splitter import MainWindowSplitter
-from humbug.mindspace.search.mindspace_search_engine import MindspaceSearchMatch
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.status_message import StatusMessage
@@ -357,7 +355,6 @@ class MainWindow(QMainWindow):
         self._mindspace_view.settings_requested.connect(self._on_show_settings_dialog)
         self._mindspace_view.new_conversation_requested.connect(self._on_mindspace_view_new_conversation_in_folder)
         self._mindspace_view.toggle_requested.connect(self._splitter.toggle_mindspace)
-        self._mindspace_view.set_search_provider(self._provide_live_mindspace_search_results)
         self._splitter.addWidget(self._mindspace_view)
 
         # Create tab manager in splitter
@@ -995,12 +992,13 @@ class MainWindow(QMainWindow):
         case_sensitive: bool,
         regexp: bool,
         line_number: int | None,
+        message_id: str | None,
     ) -> None:
         """Open a search result and apply the same highlight without changing local find UI state."""
         try:
             tab = self._column_manager.open_file_by_mindspace_view_type(source, path, ephemeral)
             if tab is not None:
-                tab.navigate_to_search_match(search_text, line_number, case_sensitive=case_sensitive, regexp=regexp)
+                tab.navigate_to_search_match(search_text, line_number, message_id, case_sensitive=case_sensitive, regexp=regexp)
 
         except ColumnManagerError as e:
             strings = self._language_manager.strings()
@@ -1010,56 +1008,6 @@ class MainWindow(QMainWindow):
                 strings.error_opening_file_title,
                 str(e)
             )
-
-    def _provide_live_mindspace_search_results(
-        self,
-        query: str,
-        case_sensitive: bool,
-        whole_word: bool,
-        regexp: bool,
-    ) -> list[MindspaceSearchMatch]:
-        """Search currently open conversation tabs so global search reflects live content."""
-        mindspace_path = self._mindspace_manager.mindspace_path()
-        if not mindspace_path:
-            return []
-
-        effective_query = query
-        effective_regexp = regexp
-        if whole_word and query and not regexp:
-            effective_query = rf"\b{re.escape(query)}\b"
-            effective_regexp = True
-
-        matches: list[MindspaceSearchMatch] = []
-        for tab in self._column_manager.get_open_conversation_tabs():
-            path = tab.path()
-            if not path or not path.startswith(os.path.join(mindspace_path, "conversations")):
-                continue
-
-            search_result = tab.search_messages(
-                effective_query,
-                case_sensitive=case_sensitive,
-                max_results=20,
-                regexp=effective_regexp,
-            )
-            relative_path = os.path.relpath(path, mindspace_path)
-            for message_match in search_result["matches"]:
-                context = (
-                    f"{message_match['context_before']}"
-                    f"{message_match['match_text']}"
-                    f"{message_match['context_after']}"
-                )
-                snippet = " ".join(context.strip().split())
-                if not snippet:
-                    continue
-
-                matches.append(MindspaceSearchMatch(
-                    view_type=MindspaceViewType.CONVERSATIONS,
-                    path=path,
-                    relative_path=relative_path,
-                    line_text=snippet,
-                ))
-
-        return matches
 
     def _clear_global_search_highlights(self) -> None:
         """Clear transient highlights that were applied from global search."""

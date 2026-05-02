@@ -2835,6 +2835,40 @@ class ConversationWidget(QWidget):
         self._scroll_to_current_match()
         return self.get_match_status()
 
+    def find_text_at_message(
+        self,
+        text: str,
+        message_id: str,
+        case_sensitive: bool = False,
+        regexp: bool = False,
+    ) -> Tuple[int, int]:
+        """Highlight all matches and scroll to the first match in the message with the given ID.
+
+        Falls back to the first match in the conversation if the message is not found or has no matches.
+
+        Args:
+            text: Text to search for
+            message_id: ID of the target message widget
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
+
+        Returns:
+            Tuple of (current_match, total_matches)
+        """
+        self.find_text(text, forward=True, case_sensitive=case_sensitive, regexp=regexp)
+        if not self._matches:
+            return 0, 0
+
+        for widget_index, (widget, _matches) in enumerate(self._matches):
+            if isinstance(widget, ConversationMessage) and widget.message_id() == message_id:
+                self._current_widget_index = widget_index
+                self._current_match_index = 0
+                self._highlight_matches()
+                self._scroll_to_current_match()
+                return self.get_match_status()
+
+        return self.get_match_status()
+
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""
         self._clear_highlights()

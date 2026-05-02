@@ -2,8 +2,6 @@
 
 import os
 
-from typing import Callable
-
 from PySide6.QtCore import Qt, Signal, QSize, QEvent, QObject, QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
@@ -25,7 +23,6 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.mindspace.preview.mindspace_preview_view import MindspacePreviewView
 from humbug.mindspace.search.mindspace_search_view import MindspaceSearchView
-from humbug.mindspace.search.mindspace_search_engine import MindspaceSearchMatch
 from humbug.mindspace.vcs.mindspace_vcs_view import MindspaceVCSView
 from humbug.style_manager import StyleManager
 
@@ -44,7 +41,7 @@ class MindspaceView(QWidget):
     file_opened_in_diff = Signal(str, bool)
     new_conversation_requested = Signal(str)
     settings_requested = Signal()
-    search_result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool, object)
+    search_result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool, object, object)
     search_highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -321,10 +318,6 @@ class MindspaceView(QWidget):
         self._vcs_view.set_mindspace(path)
         self._preview_view.set_mindspace(path)
         self._search_view.set_mindspace(path)
-
-    def set_search_provider(self, provider: Callable[[str, bool, bool, bool], list[MindspaceSearchMatch]] | None) -> None:
-        """Set an optional provider for supplemental global-search results."""
-        self._search_view.set_supplemental_search_provider(provider)
 
     def show_search(self) -> None:
         """Activate the global-search pane and focus its input."""

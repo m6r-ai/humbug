@@ -388,7 +388,7 @@ class TabBase(QFrame):
         return None
 
     def navigate_to_search_match(
-        self, text: str, line_number: int | None, case_sensitive: bool = False, regexp: bool = False
+        self, text: str, line_number: int | None, message_id: str | None, case_sensitive: bool = False, regexp: bool = False
     ) -> None:
         """Highlight all matches and scroll to the one at line_number, or the first match if line_number is None."""
         self.apply_search_highlight(text, case_sensitive=case_sensitive, regexp=regexp)

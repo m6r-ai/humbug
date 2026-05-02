@@ -373,6 +373,15 @@ class ConversationTab(TabBase):
         """Apply a transient search highlight without altering the local find widget."""
         self._conversation_widget.find_text(text, True, case_sensitive=case_sensitive, regexp=regexp)
 
+    def navigate_to_search_match(
+        self, text: str, line_number: int | None, message_id: str | None, case_sensitive: bool = False, regexp: bool = False
+    ) -> None:
+        """Highlight all matches and scroll to the match in the message with message_id, or the first match."""
+        if message_id is not None:
+            self._conversation_widget.find_text_at_message(text, message_id, case_sensitive=case_sensitive, regexp=regexp)
+        else:
+            self._conversation_widget.find_text(text, True, case_sensitive=case_sensitive, regexp=regexp)
+
     def clear_search_highlight(self) -> None:
         """Clear transient search highlights."""
         self._conversation_widget.clear_highlights()

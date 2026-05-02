@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import OrderedDict
 import re
-from typing import Callable
 
 from PySide6.QtCore import Qt, QTimer, QSize, QModelIndex, QPersistentModelIndex, Signal
 from PySide6.QtGui import QIcon, QPainter
@@ -30,6 +29,7 @@ from humbug.mindspace.search.mindspace_search_engine import MindspaceSearchEngin
 from humbug.style_manager import StyleManager
 
 _LINE_NUMBER_ROLE = Qt.ItemDataRole.UserRole + 11
+_MESSAGE_ID_ROLE = Qt.ItemDataRole.UserRole + 12
 _HIGHLIGHT_RANGES_ROLE = Qt.ItemDataRole.UserRole + 10
 
 
@@ -122,7 +122,7 @@ class MindspaceSearchView(QWidget):
     """Global search pane for searching across the current mindspace."""
 
     file_clicked = Signal(MindspaceViewType, str, bool)
-    result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool, object)
+    result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool, object, object)
     highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -132,7 +132,6 @@ class MindspaceSearchView(QWidget):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
         self._search_engine = MindspaceSearchEngine()
-        self._supplemental_search_provider: Callable[[str, bool, bool, bool], list[MindspaceSearchMatch]] | None = None
         self._mindspace_path = ""
         self._regexp_invalid = False
 
@@ -210,13 +209,6 @@ class MindspaceSearchView(QWidget):
         self._mindspace_path = path
         self._perform_search()
 
-    def set_supplemental_search_provider(
-        self,
-        provider: Callable[[str, bool, bool, bool], list[MindspaceSearchMatch]] | None,
-    ) -> None:
-        """Set an optional provider for live, in-memory search matches."""
-        self._supplemental_search_provider = provider
-
     def focus_search(self) -> None:
         """Focus the search input."""
         self._search_input.setFocus()
@@ -271,14 +263,6 @@ class MindspaceSearchView(QWidget):
             whole_word=whole_word,
             regexp=regexp_enabled,
         )
-        if self._supplemental_search_provider is not None:
-            matches.extend(self._supplemental_search_provider(
-                query,
-                case_sensitive,
-                whole_word,
-                regexp_enabled,
-            ))
-
         matches = self._deduplicate_matches(matches)
         if not matches:
             self._status_label.setText(self._language_manager.strings().mindspace_search_no_results)
@@ -304,6 +288,7 @@ class MindspaceSearchView(QWidget):
                 child.setData(0, Qt.ItemDataRole.UserRole, match.path)
                 child.setData(0, Qt.ItemDataRole.UserRole + 1, match.view_type)
                 child.setData(0, _LINE_NUMBER_ROLE, match.line_number)
+                child.setData(0, _MESSAGE_ID_ROLE, match.message_id)
                 child.setData(0, _HIGHLIGHT_RANGES_ROLE, self._highlight_ranges_for_match(match, child_text))
                 child.setToolTip(0, child_text)
                 top_level.addChild(child)
@@ -390,9 +375,10 @@ class MindspaceSearchView(QWidget):
             return
 
         line_number = item.data(0, _LINE_NUMBER_ROLE)
+        message_id = item.data(0, _MESSAGE_ID_ROLE)
         query, case_sensitive, regexp = self.current_find_request()
         if query:
-            self.result_activated.emit(view_type, path, ephemeral, query, case_sensitive, regexp, line_number)
+            self.result_activated.emit(view_type, path, ephemeral, query, case_sensitive, regexp, line_number, message_id)
 
         else:
             self.file_clicked.emit(view_type, path, ephemeral)

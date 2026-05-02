@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ class MindspaceSearchMatch:
     line_number: int | None = None
     line_text: str = ""
     is_path_match: bool = False
+    message_id: str | None = None
 
 
 class MindspaceSearchEngine:
@@ -33,8 +35,9 @@ class MindspaceSearchEngine:
         "build",
     }
 
-    _MAX_MATCHES = 200
+    _MAX_MATCHES = 500
     _MAX_MATCHES_PER_FILE = 20
+    _MAX_CONVERSATION_MATCHES_PER_FILE = 50
     _BINARY_SAMPLE_SIZE = 2048
 
     def search(
@@ -87,19 +90,33 @@ class MindspaceSearchEngine:
                     ))
                     file_matches += 1
 
-                if file_matches >= self._MAX_MATCHES_PER_FILE or self._is_binary_file(path):
+                if file_matches >= self._MAX_MATCHES_PER_FILE:
                     continue
 
-                for line_number, line in self._iter_matching_lines(path, lowered_query, pattern, case_sensitive):
+                if view_type == MindspaceViewType.CONVERSATIONS:
+                    content_matches = self._iter_matching_conversation_messages(
+                        path, lowered_query, pattern, case_sensitive
+                    )
+                elif self._is_binary_file(path):
+                    continue
+                else:
+                    content_matches = [
+                        (line_number, line, None)
+                        for line_number, line in self._iter_matching_lines(path, lowered_query, pattern, case_sensitive)
+                    ]
+
+                per_file_cap = self._MAX_CONVERSATION_MATCHES_PER_FILE if view_type == MindspaceViewType.CONVERSATIONS else self._MAX_MATCHES_PER_FILE
+                for line_number, line, message_id in content_matches:
                     matches.append(MindspaceSearchMatch(
                         view_type=view_type,
                         path=path,
                         relative_path=relative_path,
                         line_number=line_number,
                         line_text=line,
+                        message_id=message_id,
                     ))
                     file_matches += 1
-                    if file_matches >= self._MAX_MATCHES_PER_FILE or len(matches) >= self._MAX_MATCHES:
+                    if file_matches >= per_file_cap or len(matches) >= self._MAX_MATCHES:
                         break
 
         return matches
@@ -144,6 +161,92 @@ class MindspaceSearchEngine:
             return []
 
         return results
+
+    def _iter_matching_conversation_messages(
+        self,
+        path: str,
+        lowered_query: str,
+        pattern: re.Pattern[str] | None,
+        case_sensitive: bool,
+    ) -> list[tuple[int | None, str, str | None]]:
+        """Search a conversation JSON file and return matching message snippets.
+
+        Parses the conversation transcript format, searching each message's content
+        field and returning clean context snippets with the message ID.
+
+        Returns:
+            List of (line_number, snippet, message_id) tuples where line_number is
+            always None (conversations navigate by message ID, not line number).
+        """
+        results: list[tuple[int | None, str, str | None]] = []
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return results
+
+        messages = data.get("conversation", [])
+        if not isinstance(messages, list):
+            return results
+
+        for message in messages:
+            if not isinstance(message, dict):
+                continue
+
+            message_id = message.get("id")
+            content = message.get("content", "")
+            if not isinstance(content, str) or not content:
+                continue
+
+            if not self._matches_text(content, lowered_query, pattern, case_sensitive):
+                continue
+
+            snippet = self._extract_match_snippet(content, lowered_query, pattern, case_sensitive)
+            results.append((None, snippet, message_id))
+            if len(results) >= self._MAX_CONVERSATION_MATCHES_PER_FILE:
+                break
+
+        return results
+
+    def _extract_match_snippet(
+        self,
+        content: str,
+        lowered_query: str,
+        pattern: re.Pattern[str] | None,
+        case_sensitive: bool,
+        context_before: int = 30,
+        context_after: int = 80,
+    ) -> str:
+        """Extract a short context snippet around the first match in content."""
+        if pattern is not None:
+            m = pattern.search(content)
+            if m:
+                start = self._word_boundary_start(content, max(0, m.start() - context_before))
+                end = min(len(content), m.end() + context_after)
+                snippet = " ".join(content[start:end].strip().split())
+                return ("..." + snippet) if start > 0 else snippet
+
+            return " ".join(content[:context_before + context_after].strip().split())
+
+        haystack = content if case_sensitive else content.casefold()
+        pos = haystack.find(lowered_query)
+        if pos != -1:
+            start = self._word_boundary_start(content, max(0, pos - context_before))
+            end = min(len(content), pos + len(lowered_query) + context_after)
+            snippet = " ".join(content[start:end].strip().split())
+            return ("..." + snippet) if start > 0 else snippet
+
+        return " ".join(content[:context_before + context_after].strip().split())
+
+    def _word_boundary_start(self, content: str, pos: int) -> int:
+        """Advance pos forward past any partial word so the snippet starts cleanly."""
+        if pos == 0:
+            return 0
+
+        while pos < len(content) and content[pos] not in (' ', '\n', '\t'):
+            pos += 1
+
+        return pos
 
     def _matches_text(
         self,
