@@ -2,6 +2,7 @@
 
 import json
 import logging
+import sys
 import os
 from pathlib import Path
 from typing import cast, Dict, Tuple
@@ -10,8 +11,8 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
     QLabel, QApplication, QDialog, QMenu, QStatusBar
 )
-from PySide6.QtCore import Qt, QTimer, QEvent
-from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
+from PySide6.QtCore import Qt, QTimer, QEvent, QPoint
+from PySide6.QtGui import QKeyEvent, QMouseEvent, QAction, QKeySequence, QActionGroup
 
 from ai_tool import AIToolManager
 from ai_tool.menai.menai_ai_tool import MenaiAITool
@@ -57,6 +58,7 @@ from humbug.tabs.tab_base import TabBase
 from humbug.tabs.diff.diff_tab import DiffTab
 from humbug.tabs.terminal.terminal_ai_tool import TerminalAITool
 from humbug.tabs.preview.preview_tab import PreviewTab
+from humbug.title_bar import MenuBarDragFilter, WindowControlsWidget
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 
@@ -64,11 +66,24 @@ from humbug.user.user_settings import UserSettings
 class MainWindow(QMainWindow):
     """Main window for the Humbug application."""
 
+    _RESIZE_ZONE = 6
+
     def __init__(self) -> None:
         """Initialize the main window."""
         super().__init__()
 
         self._logger = logging.getLogger("MainWindow")
+
+        self._use_custom_title_bar = sys.platform != "darwin"
+        self._window_controls: WindowControlsWidget | None = None
+        self._resize_drag_active = False
+        self._resize_direction: tuple[int, int] = (0, 0)
+        self._resize_start_pos: QPoint | None = None
+        self._resize_start_geometry = self.geometry()
+
+        if self._use_custom_title_bar:
+            self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+            self.setMouseTracking(True)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -301,6 +316,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Humbug")
         self.setMinimumSize(1280, 800)
 
+        if self._use_custom_title_bar:
+            self._window_controls = WindowControlsWidget(self)
+            self._menu_bar.setCornerWidget(self._window_controls)
+            MenuBarDragFilter(self._menu_bar)
+
         # Main widget and layout
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
@@ -434,9 +454,10 @@ class MainWindow(QMainWindow):
 
     def changeEvent(self, event: QEvent) -> None:
         """Handle change events."""
-        # If our window state changes then update the column manager's style
         if event.type() == QEvent.Type.WindowStateChange:
             self._column_manager.apply_style()
+            if self._window_controls is not None:
+                self._window_controls.set_maximised(self.isMaximized())
 
         return super().changeEvent(event)
 
@@ -1079,6 +1100,8 @@ class MainWindow(QMainWindow):
         self._apply_menubar_style()
         self._apply_all_menu_styles()
         self._apply_statusbar_style()
+        if self._window_controls is not None:
+            self._window_controls.apply_style()
         self._apply_splitter_style()
 
         # Apply styles to the mindspace view and column manager
@@ -1430,6 +1453,113 @@ class MainWindow(QMainWindow):
                 return
 
         super().keyPressEvent(event)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        """Begin an edge-resize drag when the cursor is in the resize zone."""
+        if not self._use_custom_title_bar or self.isMaximized():
+            super().mousePressEvent(event)
+            return
+
+        if event.button() == Qt.MouseButton.LeftButton:
+            direction = self._resize_direction_at(event.pos())
+            if direction != (0, 0):
+                self._resize_drag_active = True
+                self._resize_direction = direction
+                self._resize_start_pos = event.globalPosition().toPoint()
+                self._resize_start_geometry = self.geometry()
+                event.accept()
+                return
+
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        """Update cursor shape and perform edge-resize dragging."""
+        if not self._use_custom_title_bar:
+            super().mouseMoveEvent(event)
+            return
+
+        if self._resize_drag_active and self._resize_start_pos is not None:
+            delta = event.globalPosition().toPoint() - self._resize_start_pos
+            geo = self._resize_start_geometry
+            dx, dy = self._resize_direction
+            new_x = geo.x()
+            new_y = geo.y()
+            new_w = geo.width()
+            new_h = geo.height()
+            min_w = self.minimumWidth()
+            min_h = self.minimumHeight()
+
+            if dx < 0:
+                new_w = max(min_w, geo.width() - delta.x())
+                new_x = geo.right() - new_w + 1
+
+            elif dx > 0:
+                new_w = max(min_w, geo.width() + delta.x())
+
+            if dy < 0:
+                new_h = max(min_h, geo.height() - delta.y())
+                new_y = geo.bottom() - new_h + 1
+
+            elif dy > 0:
+                new_h = max(min_h, geo.height() + delta.y())
+
+            self.setGeometry(new_x, new_y, new_w, new_h)
+            event.accept()
+            return
+
+        if not self.isMaximized():
+            self._update_resize_cursor(event.pos())
+
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        """End an edge-resize drag."""
+        if self._resize_drag_active and event.button() == Qt.MouseButton.LeftButton:
+            self._resize_drag_active = False
+            self._resize_start_pos = None
+            event.accept()
+            return
+
+        super().mouseReleaseEvent(event)
+
+    def _resize_direction_at(self, pos: QPoint) -> tuple[int, int]:
+        """
+        Return a (dx, dy) direction tuple for the resize zone at pos.
+
+        Each component is -1 (left/top edge), 0 (no resize on that axis), or
+        +1 (right/bottom edge).  Returns (0, 0) when pos is not in any resize zone.
+
+        Args:
+            pos: Mouse position in window-local coordinates.
+        """
+        zone = self._RESIZE_ZONE
+        w = self.width()
+        h = self.height()
+        x = pos.x()
+        y = pos.y()
+        dx = -1 if x < zone else (1 if x >= w - zone else 0)
+        dy = -1 if y < zone else (1 if y >= h - zone else 0)
+        return (dx, dy)
+
+    def _update_resize_cursor(self, pos: QPoint) -> None:
+        """Set the cursor shape appropriate for the resize zone at pos."""
+        dx, dy = self._resize_direction_at(pos)
+        if (dx, dy) == (0, 0):
+            self.unsetCursor()
+            return
+
+        if dx != 0 and dy != 0:
+            if (dx < 0 and dy < 0) or (dx > 0 and dy > 0):
+                self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+
+            else:
+                self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+
+        elif dx != 0:
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+
+        else:
+            self.setCursor(Qt.CursorShape.SizeVerCursor)
 
     def _handle_zoom(self, factor: float) -> None:
         """Handle zoom in/out requests."""
