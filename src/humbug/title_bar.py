@@ -218,11 +218,16 @@ class WindowControlsWidget(QWidget):
         window = self.window()
         if window:
             state = window.windowState()
+            # When we transition we hide the window to avoid any perceptible glitching
             if state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen):
+                window.hide()
                 window.showNormal()
+                window.show()
 
             else:
+                window.hide()
                 window.showMaximized()
+                window.show()
 
     def _on_close(self) -> None:
         """Close the parent window."""
@@ -321,9 +326,14 @@ class MenuBarDragFilter(QWidget):
 
         state = window.windowState()
         if state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen):
+            # When we transition we hide the window to avoid any perceptible glitching
+            window.hide()
             window.showNormal()
+            window.show()
 
         else:
+            window.hide()
             window.showMaximized()
+            window.show()
 
         return False
