@@ -217,8 +217,10 @@ class WindowControlsWidget(QWidget):
         """Toggle maximise/restore on the parent window."""
         window = self.window()
         if window:
-            if window.isMaximized():
+            state = window.windowState()
+            if state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen):
                 window.showNormal()
+
             else:
                 window.showMaximized()
 
@@ -278,7 +280,8 @@ class MenuBarDragFilter(QWidget):
             return False
 
         window = self._menu_bar.window()
-        if not window or window.isMaximized():
+        state = window.windowState() if window else None
+        if not window or bool(state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen)):
             return False
 
         child = self._menu_bar.childAt(event.pos())
@@ -316,7 +319,8 @@ class MenuBarDragFilter(QWidget):
         if not window:
             return False
 
-        if window.isMaximized():
+        state = window.windowState()
+        if state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen):
             window.showNormal()
 
         else:
