@@ -205,7 +205,7 @@ class PreviewWidget(QWidget):
             if new_content_list is not None and new_content_list == self._last_content_list:
                 # Content unchanged — update the watcher baseline without re-rendering.
                 self._unregister_file_watching()
-                self._register_file_watching(new_dependencies)
+                self._register_file_watching(new_dependencies or set())
                 return
 
             # Save current state

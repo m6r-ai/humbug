@@ -45,7 +45,7 @@ _THIS_MINDSPACE_SECTIONS = [SECTION_AI_MODEL, SECTION_AI_TOOLS, SECTION_EDITOR, 
 class _NavItemDelegate(QStyledItemDelegate):
     """Item delegate for the settings nav list that controls row height cross-platform."""
 
-    def __init__(self, style_manager, parent=None):
+    def __init__(self, style_manager: StyleManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._style_manager = style_manager
 

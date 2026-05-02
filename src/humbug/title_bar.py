@@ -290,8 +290,11 @@ class MenuBarDragFilter(QWidget):
             return False
 
         window = self._menu_bar.window()
-        state = window.windowState() if window else None
-        if not window or bool(state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen)):
+        if not window:
+            return False
+
+        state = window.windowState()
+        if bool(state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen)):
             return False
 
         child = self._menu_bar.childAt(event.pos())
