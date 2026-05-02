@@ -151,7 +151,7 @@ def load_fonts() -> None:
     logger = logging.getLogger(__name__)
 
     if getattr(sys, 'frozen', False):
-        base_path = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+        base_path = Path(getattr(sys, '_MEIPASS'))
     else:
         base_path = Path(__file__).parent.parent.parent
 

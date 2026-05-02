@@ -20,8 +20,13 @@ from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.settings.settings_checkbox import SettingsCheckbox
 from humbug.settings.settings_container import SettingsContainer
+from humbug.settings.settings_combo import SettingsCombo
+from humbug.settings.settings_double_spinbox import SettingsDoubleSpinBox
 from humbug.settings.settings_factory import SettingsFactory
+from humbug.settings.settings_page_heading import SettingsPageHeading
 from humbug.settings.settings_section import SettingsSection
+from humbug.settings.settings_spinbox import SettingsSpinBox
+from humbug.settings.settings_text_area import SettingsTextArea
 from humbug.settings.settings_text_field import SettingsTextField
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.user.user_file_sort_order import UserFileSortOrder
@@ -95,6 +100,47 @@ class SettingsDialog(QDialog):
         # Map section id -> (list item, stack page widget)
         self._section_items: Dict[str, QListWidgetItem] = {}
         self._section_pages: Dict[str, QWidget] = {}
+
+        self._display_heading: SettingsPageHeading | None = None
+        self._language_combo: SettingsCombo | None = None
+        self._font_size_spin: SettingsDoubleSpinBox | None = None
+        self._theme_combo: SettingsCombo | None = None
+        self._file_sort_combo: SettingsCombo | None = None
+        self._display_container: SettingsContainer | None = None
+
+        self._file_access_heading: SettingsPageHeading | None = None
+        self._allow_external_access_checkbox: SettingsCheckbox | None = None
+        self._external_allowlist_area: SettingsTextArea | None = None
+        self._external_denylist_area: SettingsTextArea | None = None
+        self._file_access_container: SettingsContainer | None = None
+
+        self._ai_backends_heading: SettingsPageHeading | None = None
+        self._ai_backends_container: SettingsContainer | None = None
+
+        self._ai_model_heading: SettingsPageHeading | None = None
+        self._model_combo: SettingsCombo | None = None
+        self._temp_spin: SettingsDoubleSpinBox | None = None
+        self._reasoning_combo: SettingsCombo | None = None
+        self._ai_model_container: SettingsContainer | None = None
+
+        self._tools_heading: SettingsPageHeading | None = None
+        self._tools_container: SettingsContainer | None = None
+
+        self._editor_heading: SettingsPageHeading | None = None
+        self._editor_tabs_section: SettingsSection | None = None
+        self._soft_tabs_check: SettingsCheckbox | None = None
+        self._tab_size_spin: SettingsSpinBox | None = None
+        self._auto_backup_check: SettingsCheckbox | None = None
+        self._backup_interval_spin: SettingsSpinBox | None = None
+        self._editor_container: SettingsContainer | None = None
+
+        self._terminal_heading: SettingsPageHeading | None = None
+        self._terminal_fixed_width_check: SettingsCheckbox | None = None
+        self._terminal_fixed_width_spin: SettingsSpinBox | None = None
+        self._terminal_scrollback_check: SettingsCheckbox | None = None
+        self._terminal_scrollback_spin: SettingsSpinBox | None = None
+        self._terminal_close_on_exit_check: SettingsCheckbox | None = None
+        self._terminal_container: SettingsContainer | None = None
 
         strings = self._language_manager.strings()
         self.setWindowTitle(strings.settings)

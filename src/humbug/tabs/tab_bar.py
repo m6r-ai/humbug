@@ -221,7 +221,6 @@ class TabBar(QTabBar):
                 painter.fillRect(left_border_rect, left_border_color)
 
             # Draw top border
-            border_color_role = ColorRole.TAB_SPLITTER
             if is_current:
                 if is_active_column:
                     border_color_role = ColorRole.TAB_BORDER_ACTIVE
@@ -229,9 +228,9 @@ class TabBar(QTabBar):
                 else:
                     border_color_role = ColorRole.SPLITTER
 
-            border_color = self._style_manager.get_color(border_color_role)
-            border_rect = tab_rect.adjusted(0, 0, 0, -tab_rect.height() + border_px)
-            painter.fillRect(border_rect, border_color)
+                border_color = self._style_manager.get_color(border_color_role)
+                border_rect = tab_rect.adjusted(0, 0, 0, -tab_rect.height() + border_px)
+                painter.fillRect(border_rect, border_color)
 
             # Draw bottom border for all tabs
             bottom_border_color = self._style_manager.get_color(ColorRole.SPLITTER)

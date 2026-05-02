@@ -309,7 +309,7 @@ class MenuBarDragFilter(QWidget):
         if self._drag_pos is None:
             return False
 
-        if not (event.buttons() & Qt.MouseButton.LeftButton):
+        if not event.buttons() & Qt.MouseButton.LeftButton:
             self._drag_pos = None
             return False
 
