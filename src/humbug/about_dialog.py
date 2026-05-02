@@ -101,7 +101,7 @@ class AboutDialog(QDialog):
             }}
             QPushButton {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
                 border: none;
                 border-radius: 4px;
                 padding: 6px;
