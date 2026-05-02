@@ -64,7 +64,6 @@ class MindspaceConversationsView(QWidget):
         # Create the three coordinated widgets and wrap them in the container.
         self._breadcrumb_bar = MindspaceBreadcrumbBar()
         self._breadcrumb_bar.set_drop_handler(self._on_file_dropped)
-        self._breadcrumb_bar.set_scroll_handler(self.reveal_and_select_file)
 
         self._tree_view = MindspaceConversationsTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
@@ -76,6 +75,7 @@ class MindspaceConversationsView(QWidget):
 
         self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
+        self._bc_container.set_scroll_handler(self.reveal_and_select_file)
 
         # Create icon provider for styling
         self._icon_provider = MindspaceTreeIconProvider()

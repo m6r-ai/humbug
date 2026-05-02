@@ -1,6 +1,7 @@
 """Container that coordinates the breadcrumb bar and tree view geometry."""
 
 import os
+from typing import Callable
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt
 from PySide6.QtGui import QFont, QResizeEvent
@@ -52,6 +53,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._last_spine_path: str = ""
         self._breadcrumb_rows: int = 0
         self._row_height: int = 0
+        self._outer_scroll_handler: Callable[[str], None] | None = None
         self._scrolling: bool = False
         self._root_path: str = ""
 
@@ -72,6 +74,22 @@ class MindspaceBreadcrumbContainer(QWidget):
         tree_view.viewport().installEventFilter(self)
 
         breadcrumb_bar.set_collapse_handler(self._on_breadcrumb_collapse)
+
+    def set_scroll_handler(self, handler: Callable[[str], None]) -> None:
+        """
+        Set the callable invoked when the user clicks a breadcrumb row.
+
+        The container wraps this handler so that after the outer handler scrolls
+        the tree to the clicked path, the breadcrumb bar is recalculated to
+        reflect the new top-of-viewport context.
+
+        Signature: handler(path) -> None
+
+        Args:
+            handler: Scroll handler callable (e.g. reveal_and_select_file)
+        """
+        self._outer_scroll_handler = handler
+        self._breadcrumb_bar.set_scroll_handler(self._on_breadcrumb_scroll)
 
     def set_root_path(self, root_path: str) -> None:
         """
@@ -280,6 +298,43 @@ class MindspaceBreadcrumbContainer(QWidget):
         tree_sb = self._tree_view.verticalScrollBar()
         self._scrollbar.setRange(tree_sb.minimum(), tree_sb.maximum())
         self._scrollbar.setPageStep(tree_sb.pageStep())
+
+    def _on_breadcrumb_scroll(self, path: str) -> None:
+        """
+        Handle a click on a breadcrumb row.
+
+        Delegates the actual scroll/reveal to the outer handler, then recalculates
+        the breadcrumb to reflect the new top-of-viewport context.  Without this
+        recalculation the breadcrumb would continue to show the stale ancestor
+        chain from before the click.
+
+        Args:
+            path: Absolute file system path of the folder that was clicked.
+        """
+        if self._root_path and os.path.normpath(path) == os.path.normpath(self._root_path):
+            # "." was clicked — jump straight to the top and reset the breadcrumb.
+            self._last_spine_path = ""
+            self._breadcrumb_rows = self._breadcrumb_bar.update_from_path("")
+            self._apply_geometry()
+            self._scrollbar.setValue(0)
+            return
+
+        if self._outer_scroll_handler:
+            self._outer_scroll_handler(path)
+
+        # Recalculate the breadcrumb directly, bypassing _on_external_scroll to
+        # avoid stale bc_h arithmetic (same pattern as _on_breadcrumb_collapse).
+        # The clicked path is now at the top of the viewport; its parent is the
+        # correct spine root to display.
+        self._last_spine_path = ""
+        new_rows = self._breadcrumb_bar.update_from_path(os.path.dirname(path))
+        self._breadcrumb_rows = new_rows
+        self._apply_geometry()
+
+        tree_sb = self._tree_view.verticalScrollBar()
+        bc_h = max(0, new_rows - 1) * self._row_height
+        self._scrollbar.setValue(max(0, tree_sb.value() - bc_h))
+        self._last_spine_path = os.path.dirname(path)
 
     def _on_breadcrumb_collapse(self, path: str) -> None:
         """
