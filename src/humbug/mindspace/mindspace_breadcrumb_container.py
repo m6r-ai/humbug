@@ -3,7 +3,7 @@
 import os
 from typing import Callable
 
-from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt
+from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import QFont, QResizeEvent
 from PySide6.QtWidgets import QApplication, QScrollBar, QSizePolicy, QWidget
 
@@ -56,6 +56,15 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._outer_scroll_handler: Callable[[str], None] | None = None
         self._scrolling: bool = False
         self._root_path: str = ""
+
+        self._ballistic_timer = QTimer(self)
+        self._ballistic_timer.setInterval(16)  # ~60 fps
+        self._ballistic_timer.timeout.connect(self._update_ballistic_scroll)
+        self._ballistic_start: int = 0
+        self._ballistic_target: int = 0
+        self._ballistic_distance: int = 0
+        self._ballistic_time: int = 0
+        self._ballistic_duration: int = 300  # ms
 
         breadcrumb_bar.setParent(self)
         tree_view.setParent(self)
@@ -316,7 +325,7 @@ class MindspaceBreadcrumbContainer(QWidget):
             self._last_spine_path = ""
             self._breadcrumb_rows = self._breadcrumb_bar.update_from_path("")
             self._apply_geometry()
-            self._scrollbar.setValue(0)
+            self._start_ballistic_scroll(0)
             return
 
         if self._outer_scroll_handler:
@@ -333,7 +342,7 @@ class MindspaceBreadcrumbContainer(QWidget):
 
         tree_sb = self._tree_view.verticalScrollBar()
         bc_h = max(0, new_rows - 1) * self._row_height
-        self._scrollbar.setValue(max(0, tree_sb.value() - bc_h))
+        self._start_ballistic_scroll(max(0, tree_sb.value() - bc_h))
         self._last_spine_path = os.path.dirname(path)
 
     def _on_breadcrumb_collapse(self, path: str) -> None:
@@ -363,8 +372,53 @@ class MindspaceBreadcrumbContainer(QWidget):
         if index.isValid():
             tree_sb = self._tree_view.verticalScrollBar()
             bc_h = max(0, new_rows - 1) * self._row_height
-            self._scrollbar.setValue(max(0, tree_sb.value() - bc_h))
+            self._start_ballistic_scroll(max(0, tree_sb.value() - bc_h))
             self._last_spine_path = os.path.dirname(path)
+
+    def _start_ballistic_scroll(self, target: int) -> None:
+        """
+        Begin a ballistic (cubic ease-out) animation of the external scrollbar.
+
+        If an animation is already running it is cancelled and a new one starts
+        from the current scrollbar position so the motion is always continuous.
+
+        Args:
+            target: Destination value for the external scrollbar.
+        """
+        if self._ballistic_timer.isActive():
+            self._ballistic_timer.stop()
+
+        self._ballistic_start = self._scrollbar.value()
+        self._ballistic_target = target
+        self._ballistic_distance = target - self._ballistic_start
+        self._ballistic_time = 0
+
+        if self._ballistic_distance == 0:
+            return
+
+        self._ballistic_timer.start()
+
+    def _update_ballistic_scroll(self) -> None:
+        """Advance the ballistic scroll animation by one timer tick."""
+        self._ballistic_time += self._ballistic_timer.interval()
+        progress = min(1.0, self._ballistic_time / self._ballistic_duration)
+        t = 1 - (1 - progress) ** 3  # cubic ease-out
+
+        if self._ballistic_distance > 0:
+            new_value = min(
+                self._ballistic_target,
+                self._ballistic_start + int(self._ballistic_distance * t + 0.5),
+            )
+
+        else:
+            new_value = max(
+                self._ballistic_target,
+                self._ballistic_start + int(self._ballistic_distance * t - 0.5),
+            )
+
+        self._scrollbar.setValue(new_value)
+        if progress >= 1.0 or new_value == self._ballistic_target:
+            self._ballistic_timer.stop()
 
     def _apply_geometry(self) -> None:
         """Assign geometry to all child widgets to exactly fill the container."""
