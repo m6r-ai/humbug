@@ -154,7 +154,11 @@ class XAIBackend(AIBackend):
 
         return message
 
-    def _format_messages_for_provider(self, conversation_history: List[AIMessage], settings: AIConversationSettings) -> List[Dict[str, Any]]:
+    def _format_messages_for_provider(
+        self,
+        conversation_history: List[AIMessage],
+        settings: AIConversationSettings
+    ) -> List[Dict[str, Any]]:
         """
         Format conversation history for xAI's API format in a single pass.
 

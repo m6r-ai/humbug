@@ -46,6 +46,8 @@ class ColorRole(Enum):
     MINDSPACE_HEADING = auto()          # Mindspace heading
     MINDSPACE_TOOL_RAIL_BACKGROUND = auto()
                                         # Mindspace icon rail background
+    MINDSPACE_FOLDER = auto()           # Mindspace folder icon colour
+    MINDSPACE_FOLDER_BREADCRUMB = auto() # Mindspace breadcrumb folder icon colour
 
     # Tab colours
     TAB_BAR_BACKGROUND = auto()         # Tab bar background

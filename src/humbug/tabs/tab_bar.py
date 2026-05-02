@@ -1,7 +1,7 @@
 from typing import cast
 
 from PySide6.QtCore import QEvent, QObject, QRect, Qt
-from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent, QWheelEvent
+from PySide6.QtGui import QCursor, QPainter, QPaintEvent, QWheelEvent
 from PySide6.QtWidgets import QTabBar, QWidget, QToolButton
 
 from humbug.color_role import ColorRole
@@ -221,7 +221,6 @@ class TabBar(QTabBar):
                 painter.fillRect(left_border_rect, left_border_color)
 
             # Draw top border
-            border_color_role = ColorRole.TAB_SPLITTER
             if is_current:
                 if is_active_column:
                     border_color_role = ColorRole.TAB_BORDER_ACTIVE
@@ -229,9 +228,9 @@ class TabBar(QTabBar):
                 else:
                     border_color_role = ColorRole.SPLITTER
 
-            border_color = self._style_manager.get_color(border_color_role)
-            border_rect = tab_rect.adjusted(0, 0, 0, -tab_rect.height() + border_px)
-            painter.fillRect(border_rect, border_color)
+                border_color = self._style_manager.get_color(border_color_role)
+                border_rect = tab_rect.adjusted(0, 0, 0, -tab_rect.height() + border_px)
+                painter.fillRect(border_rect, border_color)
 
             # Draw bottom border for all tabs
             bottom_border_color = self._style_manager.get_color(ColorRole.SPLITTER)
@@ -301,38 +300,8 @@ class TabBar(QTabBar):
         Returns:
             True if the event was handled, False to pass it along
         """
-        # Handle hover state changes
-        if event.type() == QEvent.Type.HoverMove:
-            pos = cast(QHoverEvent, event).pos()
-            tab_index = self.tabAt(pos)
-
-            # Only emit signal when hovering over a new tab
-            if tab_index != self._current_hovered_tab:
-                old_hovered = self._current_hovered_tab
-                self._current_hovered_tab = tab_index
-
-                # Update TabLabel hover states
-                if old_hovered != -1:
-                    label = self.tabButton(old_hovered, QTabBar.ButtonPosition.LeftSide)
-                    if label:
-                        assert isinstance(label, TabLabel), "Expected TabLabel instance"
-                        label.update_hover_state(False)
-
-                if tab_index != -1:
-                    label = self.tabButton(tab_index, QTabBar.ButtonPosition.LeftSide)
-                    if label:
-                        assert isinstance(label, TabLabel), "Expected TabLabel instance"
-                        label.update_hover_state(True)
-
-                # Trigger repaint for the affected tabs
-                if old_hovered != -1:
-                    self.update(self.tabRect(old_hovered))
-
-                if tab_index != -1:
-                    self.update(self.tabRect(tab_index))
-
         # If the mouse leaves the tab bar, reset the hover state
-        elif event.type() == QEvent.Type.Leave:
+        if event.type() == QEvent.Type.Leave:
             if self._current_hovered_tab != -1:
                 old_hovered = self._current_hovered_tab
 
@@ -366,3 +335,40 @@ class TabBar(QTabBar):
 
         # Pass all other events to the parent class
         return super().eventFilter(watched, event)
+
+    def on_label_hovered(self, label: TabLabel, is_hovered: bool) -> None:
+        """
+        Handle hover state changes signalled directly from a TabLabel.
+
+        This is the primary hover-detection path on all platforms.  Linux does
+        not reliably deliver HoverMove events to a parent widget when a child
+        widget covers it, so we rely on the TabLabel emitting its hovered signal
+        from enterEvent/leaveEvent instead.
+
+        Args:
+            label: The TabLabel that changed hover state
+            is_hovered: True when the mouse entered the label, False when it left
+        """
+        tab_index = -1
+        if is_hovered:
+            for i in range(self.count()):
+                if self.tabButton(i, QTabBar.ButtonPosition.LeftSide) is label:
+                    tab_index = i
+                    break
+
+        old_hovered = self._current_hovered_tab
+        if old_hovered == tab_index:
+            return
+
+        self._current_hovered_tab = tab_index
+        label.update_hover_state(is_hovered)
+
+        if old_hovered != -1:
+            old_label = self.tabButton(old_hovered, QTabBar.ButtonPosition.LeftSide)
+            if old_label and isinstance(old_label, TabLabel):
+                old_label.update_hover_state(False)
+
+            self.update(self.tabRect(old_hovered))
+
+        if tab_index != -1:
+            self.update(self.tabRect(tab_index))

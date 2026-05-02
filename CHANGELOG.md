@@ -14,12 +14,15 @@ New features:
   also because they look nicer!)
 - Humbug now controls the minimize/maximize/close functionality on Windows and Linux to give more vertical real estate to the
   application content.
+- Added full-screen mode for Linux and Windows.  Remove the task bar and put the minimize/maximize/close widgets on the same
+  row as the menu bar to give more screen real estate.
 
 Bug fixes:
 
 - There was a small problem with the AI applying diffs at the end of the file when using the editor tab.
 - When switching reasoning models mid-conversation, only provide reasoning context to the new AI if it can definitely understand
   it (i.e. the models are compatible).
+- Tab hover effects were not working correctly in Linux.
 
 ## v45 (2026-04-26)
 

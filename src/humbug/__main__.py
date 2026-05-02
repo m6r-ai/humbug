@@ -151,7 +151,7 @@ def load_fonts() -> None:
     logger = logging.getLogger(__name__)
 
     if getattr(sys, 'frozen', False):
-        base_path = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+        base_path = Path(getattr(sys, '_MEIPASS'))
     else:
         base_path = Path(__file__).parent.parent.parent
 
@@ -196,7 +196,7 @@ def main() -> int:
     app = HumbugApplication(sys.argv)
     load_fonts()
     style_manager = StyleManager()
-    app_font = QFont(style_manager.proportional_font_families()[0], style_manager.base_font_size())
+    app_font = QFont(style_manager.proportional_font_families()[0], int(style_manager.base_font_size()))
     app_font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
     app.setFont(app_font)
 

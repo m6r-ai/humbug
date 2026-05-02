@@ -20,8 +20,13 @@ from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.settings.settings_checkbox import SettingsCheckbox
 from humbug.settings.settings_container import SettingsContainer
+from humbug.settings.settings_combo import SettingsCombo
+from humbug.settings.settings_double_spinbox import SettingsDoubleSpinBox
 from humbug.settings.settings_factory import SettingsFactory
+from humbug.settings.settings_page_heading import SettingsPageHeading
 from humbug.settings.settings_section import SettingsSection
+from humbug.settings.settings_spinbox import SettingsSpinBox
+from humbug.settings.settings_text_area import SettingsTextArea
 from humbug.settings.settings_text_field import SettingsTextField
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.user.user_file_sort_order import UserFileSortOrder
@@ -45,7 +50,7 @@ _THIS_MINDSPACE_SECTIONS = [SECTION_AI_MODEL, SECTION_AI_TOOLS, SECTION_EDITOR, 
 class _NavItemDelegate(QStyledItemDelegate):
     """Item delegate for the settings nav list that controls row height cross-platform."""
 
-    def __init__(self, style_manager, parent=None):
+    def __init__(self, style_manager: StyleManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._style_manager = style_manager
 
@@ -95,6 +100,47 @@ class SettingsDialog(QDialog):
         # Map section id -> (list item, stack page widget)
         self._section_items: Dict[str, QListWidgetItem] = {}
         self._section_pages: Dict[str, QWidget] = {}
+
+        self._display_heading: SettingsPageHeading
+        self._language_combo: SettingsCombo
+        self._font_size_spin: SettingsDoubleSpinBox
+        self._theme_combo: SettingsCombo
+        self._file_sort_combo: SettingsCombo
+        self._display_container: SettingsContainer
+
+        self._file_access_heading: SettingsPageHeading
+        self._allow_external_access_checkbox: SettingsCheckbox
+        self._external_allowlist_area: SettingsTextArea
+        self._external_denylist_area: SettingsTextArea
+        self._file_access_container: SettingsContainer
+
+        self._ai_backends_heading: SettingsPageHeading
+        self._ai_backends_container: SettingsContainer
+
+        self._ai_model_heading: SettingsPageHeading
+        self._model_combo: SettingsCombo
+        self._temp_spin: SettingsDoubleSpinBox
+        self._reasoning_combo: SettingsCombo
+        self._ai_model_container: SettingsContainer
+
+        self._tools_heading: SettingsPageHeading
+        self._tools_container: SettingsContainer
+
+        self._editor_heading: SettingsPageHeading
+        self._editor_tabs_section: SettingsSection
+        self._soft_tabs_check: SettingsCheckbox
+        self._tab_size_spin: SettingsSpinBox
+        self._auto_backup_check: SettingsCheckbox
+        self._backup_interval_spin: SettingsSpinBox
+        self._editor_container: SettingsContainer
+
+        self._terminal_heading: SettingsPageHeading
+        self._terminal_fixed_width_check: SettingsCheckbox
+        self._terminal_fixed_width_spin: SettingsSpinBox
+        self._terminal_scrollback_check: SettingsCheckbox
+        self._terminal_scrollback_spin: SettingsSpinBox
+        self._terminal_close_on_exit_check: SettingsCheckbox
+        self._terminal_container: SettingsContainer
 
         strings = self._language_manager.strings()
         self.setWindowTitle(strings.settings)

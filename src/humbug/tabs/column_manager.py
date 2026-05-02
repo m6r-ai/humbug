@@ -549,6 +549,9 @@ class ColumnManager(QWidget):
 
         index = column.addTab(tab, "")
         column.tabBar().setTabButton(index, QTabBar.ButtonPosition.LeftSide, label)
+        tab_bar = column.tabBar()
+        assert isinstance(tab_bar, TabBar)
+        label.hovered.connect(lambda hovered, l=label, tb=tab_bar: tb.on_label_hovered(l, hovered))
         column.setCurrentWidget(tab)
 
         # Update MRU order for the new tab

@@ -1,5 +1,7 @@
 """Window control buttons widget for frameless windows on Linux and Windows."""
 
+import sys
+
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QToolButton, QSizePolicy, QApplication
 from PySide6.QtCore import Qt, QSize, QPoint, QEvent
 from PySide6.QtGui import QPainter, QPen, QColor, QMouseEvent, QIcon, QPixmap
@@ -217,10 +219,20 @@ class WindowControlsWidget(QWidget):
         """Toggle maximise/restore on the parent window."""
         window = self.window()
         if window:
-            if window.isMaximized():
+            state = window.windowState()
+            if state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen):
                 window.showNormal()
+
             else:
+                # On Windows, hide the window around showMaximized() to prevent a brief
+                # compositor glitch caused by the window moving to (0, 0) before Qt has
+                # finished repainting the widget hierarchy at the new size.
+                if sys.platform == "win32":
+                    window.hide()
+
                 window.showMaximized()
+                if sys.platform == "win32":
+                    window.show()
 
     def _on_close(self) -> None:
         """Close the parent window."""
@@ -278,7 +290,11 @@ class MenuBarDragFilter(QWidget):
             return False
 
         window = self._menu_bar.window()
-        if not window or window.isMaximized():
+        if not window:
+            return False
+
+        state = window.windowState()
+        if bool(state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen)):
             return False
 
         child = self._menu_bar.childAt(event.pos())
@@ -293,7 +309,7 @@ class MenuBarDragFilter(QWidget):
         if self._drag_pos is None:
             return False
 
-        if not (event.buttons() & Qt.MouseButton.LeftButton):
+        if not event.buttons() & Qt.MouseButton.LeftButton:
             self._drag_pos = None
             return False
 
@@ -316,10 +332,19 @@ class MenuBarDragFilter(QWidget):
         if not window:
             return False
 
-        if window.isMaximized():
+        state = window.windowState()
+        if state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen):
             window.showNormal()
 
         else:
+            # On Windows, hide the window around showMaximized() to prevent a brief
+            # compositor glitch caused by the window moving to (0, 0) before Qt has
+            # finished repainting the widget hierarchy at the new size.
+            if sys.platform == "win32":
+                window.hide()
+
             window.showMaximized()
+            if sys.platform == "win32":
+                window.show()
 
         return False

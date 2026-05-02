@@ -31,7 +31,13 @@ class MindspaceTreeIconProvider(QFileIconProvider):
             "folder": '''
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
                     <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 85 L10 85 L10 25"
-                        fill="#4B89DC" stroke="none"/>
+                        fill="folderColor" stroke="none"/>
+                </svg>
+            ''',
+            "folder_breadcrumb": '''
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 85 L10 85 L10 25"
+                        fill="folderColor" stroke="none"/>
                 </svg>
             ''',
             "file": '''
@@ -119,12 +125,13 @@ class MindspaceTreeIconProvider(QFileIconProvider):
         accent_color = self._style_manager.get_color(ColorRole.BUTTON_BACKGROUND_HOVER)
         return base_color, accent_color
 
-    def _create_svg_icon(self, svg_data: str, accent_color: str = "") -> QIcon:
+    def _create_svg_icon(self, svg_data: str, accent_color: str = "", folder_color: str = "") -> QIcon:
         """Create an icon from SVG data with theme-aware colors.
 
         Args:
             svg_data: SVG markup defining the icon
             accent_color: Optional hex color for language-specific accents
+            folder_color: Optional hex color replacing the folderColor placeholder
 
         Returns:
             QIcon instance with the rendered SVG at multiple sizes
@@ -140,6 +147,8 @@ class MindspaceTreeIconProvider(QFileIconProvider):
         # Replace placeholder colors in SVG
         svg_data = svg_data.replace('currentColor', base_color.name())
         svg_data = svg_data.replace('accentColor', accent.name())
+        if folder_color:
+            svg_data = svg_data.replace('folderColor', folder_color)
 
         # Create renderer from SVG data
         renderer = QSvgRenderer()
@@ -166,6 +175,22 @@ class MindspaceTreeIconProvider(QFileIconProvider):
         """Update icons when theme or zoom changes."""
         self._clear_cache()
 
+    def breadcrumb_folder_icon(self) -> QIcon:
+        """Return the hollow tinted folder icon for use in the breadcrumb bar.
+
+        Returns:
+            QIcon instance with the hollow breadcrumb folder rendered at the current zoom
+        """
+        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
+        cache_key = f"folder_breadcrumb_{theme_suffix}"
+        if cache_key not in self._cached_icons:
+            color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB)
+            self._cached_icons[cache_key] = self._create_svg_icon(
+                self._svg_paths['folder_breadcrumb'], folder_color=color
+            )
+
+        return self._cached_icons[cache_key]
+
     def icon(self, arg: QFileIconProvider.IconType | QFileInfo) -> QIcon:  # type: ignore[override]
         """Get the appropriate icon for a file or standard type.
 
@@ -188,9 +213,13 @@ class MindspaceTreeIconProvider(QFileIconProvider):
 
         # Check if it's a directory first
         if info.isDir():
-            cache_key = 'folder'
+            theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
+            cache_key = f"folder_{theme_suffix}"
             if cache_key not in self._cached_icons:
-                self._cached_icons[cache_key] = self._create_svg_icon(self._svg_paths['folder'])
+                color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER)
+                self._cached_icons[cache_key] = self._create_svg_icon(
+                    self._svg_paths['folder'], folder_color=color
+                )
 
             return self._cached_icons[cache_key]
 

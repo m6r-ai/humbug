@@ -209,6 +209,14 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#181818",
                 ColorMode.LIGHT: "#f0f0f0"
             },
+            ColorRole.MINDSPACE_FOLDER: {
+                ColorMode.DARK: "#4B89DC",
+                ColorMode.LIGHT: "#4B89DC"
+            },
+            ColorRole.MINDSPACE_FOLDER_BREADCRUMB: {
+                ColorMode.DARK: "#F0C0C8",
+                ColorMode.LIGHT: "#C08090"
+            },
 
             # Tab colours
             ColorRole.TAB_BAR_BACKGROUND: {
@@ -220,8 +228,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.TAB_BACKGROUND_INACTIVE: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#d0d0d0"
+                ColorMode.DARK: "#303030",
+                ColorMode.LIGHT: "#d4d4d4"
             },
             ColorRole.TAB_BACKGROUND_HOVER: {
                 ColorMode.DARK: "#242454",

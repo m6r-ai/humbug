@@ -3,8 +3,8 @@
 from PySide6.QtWidgets import (
     QWidget, QLabel, QToolButton, QHBoxLayout, QSizePolicy, QApplication
 )
-from PySide6.QtCore import Signal, QSize, Qt, QMimeData, QPoint
-from PySide6.QtGui import QIcon, QPixmap, QDrag, QMouseEvent, QFontMetricsF
+from PySide6.QtCore import QEvent, Signal, QSize, Qt, QMimeData, QPoint
+from PySide6.QtGui import QEnterEvent, QIcon, QPixmap, QDrag, QMouseEvent, QFontMetricsF
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
@@ -16,6 +16,7 @@ class TabLabel(QWidget):
     close_clicked = Signal()
     drag_started = Signal()
     double_clicked = Signal()
+    hovered = Signal(bool)
 
     def __init__(self, tab_id: str, icon_name: str, text: str, tool_tip: str, parent: QWidget | None = None) -> None:
         """
@@ -217,6 +218,16 @@ class TabLabel(QWidget):
         """Handle mouse release events."""
         self._drag_start_pos = None
         super().mouseReleaseEvent(event)
+
+    def enterEvent(self, event: QEnterEvent) -> None:
+        """Emit hovered signal when the mouse enters the label."""
+        self.hovered.emit(True)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event: QEvent) -> None:
+        """Emit hovered signal when the mouse leaves the label."""
+        self.hovered.emit(False)
+        super().leaveEvent(event)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
         """Handle double-click events to make an ephemeral tab persistent."""

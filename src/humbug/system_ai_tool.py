@@ -755,7 +755,7 @@ class SystemAITool(AITool):
         try:
             # System information
             system_info = {
-                "version": "v40",
+                "version": "v46",
                 "platform": sys.platform,
                 "platform_details": platform.platform(),
                 "architecture": platform.machine()
@@ -788,9 +788,12 @@ class SystemAITool(AITool):
             }
 
             # Shell information
-            shell_env = os.environ.get('SHELL', '/bin/sh')
+            if sys.platform == 'win32':
+                shell_env = os.environ.get('COMSPEC', 'cmd.exe')
 
-            # For shell_path, try to resolve it if it's not absolute
+            else:
+                shell_env = os.environ.get('SHELL', '/bin/sh')
+
             if os.path.isabs(shell_env):
                 shell_path = shell_env
 

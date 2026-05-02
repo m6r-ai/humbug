@@ -7,7 +7,7 @@ import re
 from typing import Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
+    QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
@@ -153,6 +153,7 @@ class ConversationWidget(QWidget):
         self._scroll_area.setObjectName("ConversationScrollArea")
         self._scroll_area.setFrameStyle(0)
         self._scroll_area.setWidgetResizable(True)
+        self._scroll_area.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -265,7 +266,18 @@ class ConversationWidget(QWidget):
         # Find the ConversationMessage that contains this widget
         message_widget = self._find_conversation_message(widget)
         if message_widget is None:
-            # We couldn't find it so active the last spotlighted message or input
+            # We couldn't find a ConversationMessage parent. Only redirect focus if
+            # focus is not already somewhere inside this widget - redirecting while
+            # focus is inside a child (e.g. an approval button mid-click) would
+            # interrupt the in-flight mouse event on Windows.
+            focus_widget = QApplication.focusWidget()
+            current: QObject | None = focus_widget
+            while current is not None:
+                if current is self:
+                    return
+
+                current = current.parent()
+
             if self._spotlighted_message_index != -1:
                 self._messages[self._spotlighted_message_index].set_spotlighted(True)
                 self._messages[self._spotlighted_message_index].setFocus()

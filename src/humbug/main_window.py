@@ -477,7 +477,9 @@ class MainWindow(QMainWindow):
     def _update_window_controls_state(self) -> None:
         """Update the window controls maximised state after the event loop settles."""
         if self._window_controls is not None:
-            self._window_controls.set_maximised(self.isMaximized())
+            state = self.windowState()
+            is_maximised = bool(state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen))
+            self._window_controls.set_maximised(is_maximised)
 
 
     def _on_exception_occurred(self) -> None:
