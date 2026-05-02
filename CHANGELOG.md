@@ -12,6 +12,8 @@ New features:
   The new settings dialog is far easier to navigate and easier to discover.
 - Added Noto Sans, Noto Sans Arabic, and JetBrain Mono fonts to ensure a consistent user experience across all platforms (and
   also because they look nicer!)
+- Humbug now controls the minimize/maximize/close functionality on Windows and Linux to give more vertical real estate to the
+  application content.
 
 Bug fixes:
 

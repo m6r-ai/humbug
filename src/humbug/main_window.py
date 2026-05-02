@@ -454,12 +454,12 @@ class MainWindow(QMainWindow):
 
     def changeEvent(self, event: QEvent) -> None:
         """Handle change events."""
+        super().changeEvent(event)
         if event.type() == QEvent.Type.WindowStateChange:
             self._column_manager.apply_style()
             if self._window_controls is not None:
                 self._window_controls.set_maximised(self.isMaximized())
 
-        return super().changeEvent(event)
 
     def _on_exception_occurred(self) -> None:
         """Handle uncaught exception notification by activating canary."""
@@ -1522,6 +1522,13 @@ class MainWindow(QMainWindow):
 
         super().mouseReleaseEvent(event)
 
+    def leaveEvent(self, event: QEvent) -> None:
+        """Clear any resize cursor when the mouse leaves the window."""
+        if self._use_custom_title_bar:
+            self.unsetCursor()
+
+        super().leaveEvent(event)
+
     def _resize_direction_at(self, pos: QPoint) -> tuple[int, int]:
         """
         Return a (dx, dy) direction tuple for the resize zone at pos.
@@ -1545,6 +1552,11 @@ class MainWindow(QMainWindow):
         """Set the cursor shape appropriate for the resize zone at pos."""
         dx, dy = self._resize_direction_at(pos)
         if (dx, dy) == (0, 0):
+            self.unsetCursor()
+            return
+
+        child = self.childAt(pos)
+        if child is not None and child is not self:
             self.unsetCursor()
             return
 

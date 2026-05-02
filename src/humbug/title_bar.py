@@ -1,7 +1,7 @@
 """Window control buttons widget for frameless windows on Linux and Windows."""
 
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QToolButton, QSizePolicy
-from PySide6.QtCore import Qt, QSize, QPoint
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QToolButton, QSizePolicy, QApplication
+from PySide6.QtCore import Qt, QSize, QPoint, QEvent
 from PySide6.QtGui import QPainter, QPen, QColor, QMouseEvent, QIcon, QPixmap
 
 from humbug.color_role import ColorRole
@@ -42,17 +42,14 @@ class WindowControlsWidget(QWidget):
         layout.setSpacing(0)
 
         self._minimise_button = _WindowControlButton(self)
-        self._minimise_button.setToolTip("Minimise")
         self._minimise_button.clicked.connect(self._on_minimise)
         layout.addWidget(self._minimise_button)
 
         self._maximise_button = _WindowControlButton(self)
-        self._maximise_button.setToolTip("Maximise")
         self._maximise_button.clicked.connect(self._on_maximise_restore)
         layout.addWidget(self._maximise_button)
 
         self._close_button = _WindowControlButton(self)
-        self._close_button.setToolTip("Close")
         self._close_button.clicked.connect(self._on_close)
         layout.addWidget(self._close_button)
 
@@ -128,11 +125,9 @@ class WindowControlsWidget(QWidget):
         self._minimise_button.setIcon(self._make_minimise_icon(icon_px, text_color))
         if self._is_maximised:
             self._maximise_button.setIcon(self._make_restore_icon(icon_px, text_color))
-            self._maximise_button.setToolTip("Restore")
 
         else:
             self._maximise_button.setIcon(self._make_maximise_icon(icon_px, text_color))
-            self._maximise_button.setToolTip("Maximise")
 
         close_pixmap = style_manager.scale_icon("close", 16)
         close_icon = QIcon()
@@ -208,6 +203,9 @@ class WindowControlsWidget(QWidget):
         if maximised != self._is_maximised:
             self._is_maximised = maximised
             self._update_button_icons()
+            if not maximised:
+                self._maximise_button.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
+                QApplication.sendEvent(self._maximise_button, QEvent(QEvent.Type.Leave))
 
     def _on_minimise(self) -> None:
         """Minimise the parent window."""
