@@ -74,7 +74,7 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
         self._logger = logging.getLogger("MindspaceConversationsDAGModel")
         self._index = index
         self._icon_provider = icon_provider
-        self._index.changed.connect(self._on_index_changed)
+        self._index.structure_changed.connect(self._on_index_changed)
         self._user_manager = UserManager()
         self._user_manager.settings_changed.connect(self._rebuild)
         self._timestamp_cache: Dict[str, float] = {}
@@ -97,9 +97,9 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
         Args:
             index: New index to use.
         """
-        self._index.changed.disconnect(self._on_index_changed)
+        self._index.structure_changed.disconnect(self._on_index_changed)
         self._index = index
-        self._index.changed.connect(self._on_index_changed)
+        self._index.structure_changed.connect(self._on_index_changed)
         self._rebuild()
 
     def _alloc_key(self) -> int:

@@ -324,6 +324,16 @@ class PreviewTab(TabBase):
         self._find_widget.show()
         self._find_widget.setFocus()
 
+    def apply_find_search(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:
+        """Apply a programmatic find/highlight request to the preview tab."""
+        self._find_widget.set_case_sensitive(case_sensitive)
+        self._find_widget.set_regexp(regexp)
+        self._find_widget.set_search_text(text)
+        self._find_widget.show()
+        current, total = self._preview_content_widget.find_text(text, True, case_sensitive=case_sensitive, regexp=regexp)
+        self._find_widget.set_match_status(current, total)
+        self._find_widget.setFocus()
+
     def _close_find(self) -> None:
         """Close the find widget and clear search state."""
         self._find_widget.hide()

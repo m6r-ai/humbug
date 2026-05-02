@@ -379,6 +379,10 @@ class TabBase(QFrame):
         """Show the find widget."""
         raise NotImplementedError("Subclasses must implement show_find")
 
+    def apply_find_search(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:
+        """Apply a programmatic find/highlight request when supported."""
+        return None
+
     def can_submit(self) -> bool:
         """
         Check if submit operation is available.

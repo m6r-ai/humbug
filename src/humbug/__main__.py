@@ -6,12 +6,14 @@ import glob
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+from pathlib import Path
 import sys
 import time
 from types import TracebackType
 from typing import List
 
 from PySide6.QtCore import QObject, QEvent
+from PySide6.QtGui import QFont, QFontDatabase
 from PySide6.QtWidgets import QWidget
 from qasync import QEventLoop, QApplication  # type: ignore[import-untyped]
 
@@ -23,6 +25,7 @@ from ai.ai_backend import AIBackend
 
 from humbug.exception_notifier import get_exception_notifier
 from humbug.main_window import MainWindow
+from humbug.style_manager import StyleManager
 from humbug.tabs.tab_base import TabBase
 
 
@@ -142,6 +145,23 @@ class HumbugApplication(QApplication):
 
         return ret
 
+
+def load_fonts() -> None:
+    """Register bundled fonts with Qt's font database."""
+    logger = logging.getLogger(__name__)
+
+    if getattr(sys, 'frozen', False):
+        base_path = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+    else:
+        base_path = Path(__file__).parent.parent.parent
+
+    fonts_dir = base_path / "resources" / "fonts"
+    for font_file in sorted(fonts_dir.glob("*.ttf")):
+        result = QFontDatabase.addApplicationFont(str(font_file))
+        if result == -1:
+            logger.warning("Failed to load font: %s", font_file)
+
+
 def setup_ai_system_prompt() -> None:
     """Configure the global AI system prompt."""
     system_prompt = (
@@ -174,6 +194,11 @@ def main() -> int:
 
     # Create application
     app = HumbugApplication(sys.argv)
+    load_fonts()
+    style_manager = StyleManager()
+    app_font = QFont(style_manager.proportional_font_families()[0], style_manager.base_font_size())
+    app_font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
+    app.setFont(app_font)
 
     # Create and set event loop
     loop = QEventLoop(app)

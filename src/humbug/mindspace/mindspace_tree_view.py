@@ -1,23 +1,21 @@
 """Base tree view implementation for mindspace with drag and drop support and inline editing."""
 
 import os
-from typing import cast, Callable, Optional, Union
+from typing import cast, Callable, Union
 
 from PySide6.QtWidgets import QFrame, QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import (
-    Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer, QDir, QRect
+    Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer, QDir
 )
 from PySide6.QtGui import (
-    QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent, QPainter
+    QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent, QWheelEvent
 )
-
 
 class MindspaceTreeView(QTreeView):
     """Base tree view with drag and drop support, auto-scroll, and inline editing."""
 
     file_dropped = Signal(str, str)  # dragged_path, target_path
     drop_target_changed = Signal()
-    visible_top_changed = Signal(str)  # Emitted when the topmost visible path changes
     delete_requested = Signal()  # Emitted when delete key is pressed
 
     def __init__(self, parent: QWidget | None = None):
@@ -53,6 +51,13 @@ class MindspaceTreeView(QTreeView):
 
         self.setHeaderHidden(True)
         self.setAnimated(True)
+
+        # Pixel-based scrolling is required so that the breadcrumb container's
+        # bc_h offset arithmetic (which is in pixels) is in the same units as
+        # the scrollbar range.  The default ScrollPerItem mode uses row counts,
+        # which causes the breadcrumb offset to be wildly out of proportion on
+        # platforms (e.g. Linux) that do not override this default.
+        self.setVerticalScrollMode(QTreeView.ScrollMode.ScrollPerPixel)
         self.header().setSortIndicator(0, Qt.SortOrder.AscendingOrder)
         self.setSortingEnabled(True)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -60,132 +65,13 @@ class MindspaceTreeView(QTreeView):
         self.setToolTipDuration(10000)
         self.setEditTriggers(QTreeView.EditTrigger.NoEditTriggers)
 
-        self._last_visible_top_path: Optional[str] = None
-        self._updating_visible_top: bool = False
-        self._last_scroll_value: int = 0
-        self.verticalScrollBar().valueChanged.connect(self._on_scroll_changed)
-
-    def _emit_visible_top_if_changed(self) -> None:
-        """Emit visible_top_changed if the topmost visible path has changed."""
-        if self._updating_visible_top:
-            return
-
-        self._updating_visible_top = True
-        path = self._topmost_visible_folder_path()
-        self._updating_visible_top = False
-
-        if path != self._last_visible_top_path:
-            old_name = os.path.basename(self._last_visible_top_path) if self._last_visible_top_path else None
-            new_name = os.path.basename(path) if path else None
-            old_depth = self._last_visible_top_path.count(os.sep) if self._last_visible_top_path else 0
-            new_depth = path.count(os.sep) if path else 0
-            if new_depth > old_depth:
-                change_type = "LATCH"
-                # Snap the newly-latched folder's row fully above the viewport.
-                source_model = cast(QSortFilterProxyModel, self.model())
-                has_proxy = source_model is not None and hasattr(source_model, 'sourceModel')
-                file_model = cast(QFileSystemModel, source_model.sourceModel()) if has_proxy else None
-                if has_proxy and file_model and path:
-                    source_index = file_model.index(path)
-                    filter_index = source_model.mapFromSource(source_index)
-                    if filter_index.isValid():
-                        latch_rect = self.visualRect(filter_index)
-                        if latch_rect.bottom() >= 0:
-                            sb = self.verticalScrollBar()
-                            new_sb = sb.value() + latch_rect.bottom() + 1
-                            print(f"LATCH SNAP: {new_name!r} latch_rect.bottom={latch_rect.bottom()} snap {sb.value()} -> {new_sb}")
-                            self._updating_visible_top = True
-                            sb.setValue(new_sb)
-                            self._last_scroll_value = new_sb
-                            self._updating_visible_top = False
-            elif new_depth < old_depth:
-                change_type = "UNLATCH"
-                # Show where the newly-topmost item is at the moment of unlatch
-                index = self.indexAt(self.viewport().rect().topLeft())
-                if index.isValid():
-                    top_path = self.get_path_from_index(index)
-                    top_rect = self.visualRect(index)
-                    top_name = os.path.basename(top_path) if top_path else None
-                    print(f"  UNLATCH detail: topmost={top_name!r} rect.top={top_rect.top()} rect.bottom={top_rect.bottom()} sb={self.verticalScrollBar().value()}")
-            else:
-                change_type = "SIBLING"
-            print(f"SPINE CHANGE ({change_type}): {old_name!r} -> {new_name!r}")
-            self._last_visible_top_path = path
-            self.visible_top_changed.emit(path or "")
-
-    def _topmost_visible_folder_path(self) -> Optional[str]:
+    def suppress_scroll_signals(self, suppress: bool) -> None:
         """
-        Return the path of the folder that is the current spine context.  Latch
-        and unlatch are determined purely by position, not scroll direction.
+        Suppress or restore scroll position emission (no-op, retained for API compatibility).
 
-        While scrolling through a folder's children the topmost visible item is
-        one of those children, and index.parent() correctly returns the folder as
-        the spine context.
-
-        When the topmost item is the expanded folder itself and its row has started
-        to scroll above the viewport top (rect.top() < 0), the folder is in the
-        process of latching — return it directly as the spine context.
-
-        Unlatch happens naturally when index.parent() returns a shallower ancestor.
-        No snapping is needed in either direction.
-
-        Returns:
-            Absolute path of the spine context folder, or None if the topmost
-            item is at root level (no folder has entered the spine yet).
+        Args:
+            suppress: Unused.
         """
-        # Examine the topmost visible item.
-        index = self.indexAt(self.viewport().rect().topLeft())
-        if not index.isValid():
-            print("TVFP: no index at top")
-            return None
-
-        path = self.get_path_from_index(index)
-        if not path:
-            print("TVFP: no path for index")
-            return None
-
-        rect = self.visualRect(index)
-        is_dir = os.path.isdir(path)
-        is_expanded = self.isExpanded(index)
-        print(f"TVFP: topmost={os.path.basename(path)!r} rect.top={rect.top()} rect.bottom={rect.bottom()} is_dir={is_dir} is_expanded={is_expanded} sb={self.verticalScrollBar().value()}")
-
-        # Case 1: the topmost item IS an expanded folder, partially or fully above
-        # the viewport top.  This is the sibling-transition case — the folder has
-        # just come into view from below and is now starting to disappear above.
-        # No snap: let it scroll naturally.  The breadcrumb updates to reflect it.
-        if is_dir and is_expanded and rect.top() < 0:
-            print(f"TVFP: SIBLING LATCH {os.path.basename(path)!r} rect.top={rect.top()} rect.bottom={rect.bottom()} (no snap)")
-            return path
-
-        # Case 2: the topmost item is a child (file or unexpanded folder).  The
-        # spine context is its parent folder, which is above the viewport.  Snap
-        # the scroll so the parent's row is fully hidden behind the breadcrumb bar.
-        parent_index = index.parent()
-        if not parent_index.isValid():
-            print(f"TVFP: no valid parent -> spine=None")
-            return None
-
-        parent_path = self.get_path_from_index(parent_index)
-        parent_name = os.path.basename(parent_path) if parent_path else None
-        print(f"TVFP: spine context = {parent_name!r}")
-        return parent_path
-
-    def _on_scroll_changed(self, _value: int) -> None:
-        """Handle scroll bar value changes."""
-        scroll_value = self.verticalScrollBar().value()
-        self._scroll_direction = scroll_value - self._last_scroll_value
-        self._last_scroll_value = scroll_value
-        self._emit_visible_top_if_changed()
-
-    def expand(self, index: QModelIndex) -> None:  # type: ignore[override]
-        """Override expand to emit visible_top_changed after expanding."""
-        super().expand(index)
-        self._emit_visible_top_if_changed()
-
-    def collapse(self, index: QModelIndex) -> None:  # type: ignore[override]
-        """Override collapse to emit visible_top_changed after collapsing."""
-        super().collapse(index)
-        self._emit_visible_top_if_changed()
 
     def get_root_path(self) -> str:
         """
@@ -287,6 +173,33 @@ class MindspaceTreeView(QTreeView):
             return None
 
         return QDir.toNativeSeparators(file_model.filePath(source_index))
+
+    def collapse_path(self, path: str) -> QModelIndex:
+        """
+        Collapse the tree node corresponding to the given file system path.
+
+        Args:
+            path: Absolute file system path of the folder to collapse.
+
+        Returns:
+            The filter model index of the collapsed item, or an invalid index if not found.
+        """
+        source_model = cast(QSortFilterProxyModel, self.model())
+        if not source_model:
+            return QModelIndex()
+
+        file_model = cast(QFileSystemModel, source_model.sourceModel())
+        if not file_model:
+            return QModelIndex()
+
+        source_index = file_model.index(path)
+        if not source_index.isValid():
+            return QModelIndex()
+
+        filter_index = source_model.mapFromSource(source_index)
+        if filter_index.isValid():
+            self.collapse(filter_index)
+        return filter_index
 
     def scroll_to_and_ensure_visible(self, file_path: str, callback: Callable) -> None:
         """
@@ -661,6 +574,10 @@ class MindspaceTreeView(QTreeView):
             self._drag_start_pos = event.pos()
 
         super().mousePressEvent(event)
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        """Ignore wheel events — the breadcrumb container intercepts them via event filter."""
+        event.ignore()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """Handle mouse move events."""

@@ -17,10 +17,10 @@ def get_english_strings() -> LanguageStrings:
         # Welcome widget
         welcome_message=(
             "Welcome to Humbug!  It looks like you don't have any AIs configured yet?\n\n"
-            "To start using AI features, please open the application \"Preferences\", scroll to\nthe "
+            "To start using AI features, please open the application \"Settings\", scroll to\nthe "
             "\"AI Backend Configuration\" section and set up at least one AI backend."
         ),
-        welcome_button="Open Preferences",
+        welcome_button="Open Settings",
 
         # Menu names
         humbug_menu="Humbug",
@@ -44,7 +44,7 @@ def get_english_strings() -> LanguageStrings:
         save_as="Save As...",
         close_mindspace="Close Mindspace",
         close_tab="Close Tab",
-        user_settings="User Settings",
+        settings="Settings",
 
         # Edit menu items
         submit_message="Submit Message",
@@ -119,7 +119,6 @@ def get_english_strings() -> LanguageStrings:
         no="No",
 
         # User Settings dialog - AI backends section
-        general_settings="General Settings",
         display_settings="Display Settings",
         ai_backend_config="AI Backend Configuration",
         enable_backend="Enable Backend",
@@ -195,6 +194,18 @@ def get_english_strings() -> LanguageStrings:
         terminal_close_on_exit="Close terminal when shell exits",
         tool_settings="AI Tool Settings",
         tools_description="Enable or disable individual tools for this mindspace",
+
+        # Unified settings dialog
+        settings_all_mindspaces="All Mindspaces",
+        settings_this_mindspace="This Mindspace",
+        settings_display="Display",
+        settings_file_access="File Access",
+        settings_ai_backends="AI Backends",
+        settings_ai_model="AI Model",
+        settings_ai_tools="AI Tools",
+        settings_editor="Editor",
+        settings_terminal="Terminal",
+        settings_tabs="Tabs",
 
         # Conversation settings
         model_info="Model Information",

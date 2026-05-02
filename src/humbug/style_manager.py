@@ -68,7 +68,8 @@ class StyleManager(QObject):
             # Level 2: Cache scaled icons by (path, scaled_size)
             self._scaled_icon_cache: Dict[tuple[str, int], QPixmap] = {}
 
-            self._code_font_families = ["Menlo", "Consolas", "Monaco", "monospace"]
+            self._code_font_families = ["JetBrains Mono", "Menlo", "Consolas", "Monaco", "monospace"]
+            self._proportional_font_families = ["Noto Sans", "Noto Sans Arabic"]
             self._initialize_highlights()
             self._initialize_proportional_highlights()
             self._create_theme_icons()
@@ -102,8 +103,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#c8c8c8"
             },
             ColorRole.BACKGROUND_DIALOG: {
-                ColorMode.DARK: "#282828",
-                ColorMode.LIGHT: "#d0d0d0"
+                ColorMode.DARK: "#1e1e1e",
+                ColorMode.LIGHT: "#d8d8d8"
             },
 
             # Text colours
@@ -1488,6 +1489,10 @@ class StyleManager(QObject):
         """Get the standard monospace font family fallback sequence."""
         return self._code_font_families
 
+    def proportional_font_families(self) -> List[str]:
+        """Get the standard proportional font family fallback sequence."""
+        return self._proportional_font_families
+
     def message_bubble_spacing(self) -> float:
         """Get the number of pixels to use in message bubble spacing."""
         return 10.0
@@ -1768,6 +1773,13 @@ class StyleManager(QObject):
             }}
             QPushButton[recommended="false"]:pressed {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+            }}
+
+            QFrame#SettingsSeparator {{
+                background-color: {self.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+                border: none;
+                max-height: 1px;
+                min-height: 1px;
             }}
 
             {self.get_scrollbar_stylesheet()}

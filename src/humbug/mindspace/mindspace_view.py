@@ -41,6 +41,7 @@ class MindspaceView(QWidget):
     file_opened_in_diff = Signal(str, bool)
     new_conversation_requested = Signal(str)
     settings_requested = Signal()
+    search_result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the mindspace view widget."""
@@ -108,7 +109,6 @@ class MindspaceView(QWidget):
         self._settings_button.clicked.connect(self._on_settings_button_clicked)
         self._settings_button.setProperty("icon_name", "cog")
         self._settings_button.installEventFilter(self)
-        self._settings_button.hide()
         rail_layout.addWidget(self._settings_button)
 
         layout.addWidget(self._rail_widget)
@@ -145,6 +145,7 @@ class MindspaceView(QWidget):
         self._register_view(MindspaceViewType.VCS, self._vcs_view)
 
         self._search_view.file_clicked.connect(self.file_clicked.emit)
+        self._search_view.result_activated.connect(self.search_result_activated.emit)
         self._files_view.file_clicked.connect(self.file_clicked.emit)
         self._files_view.file_deleted.connect(self.file_deleted.emit)
         self._files_view.file_renamed.connect(self.file_renamed.emit)
@@ -307,10 +308,8 @@ class MindspaceView(QWidget):
         """
         if not path:
             self._header_widget.setText(self._language_manager.strings().mindspace_label_none)
-            self._settings_button.hide()
         else:
             self._header_widget.setText(os.path.basename(path.rstrip("\\/")))
-            self._settings_button.show()
 
         self._files_view.set_mindspace(path)
         self._conversations_view.set_mindspace(path)
@@ -341,6 +340,7 @@ class MindspaceView(QWidget):
         self._header_widget.setToolTip(strings.mindspace_name_tooltip)
         self._settings_button.setToolTip(strings.mindspace_settings)
         self._search_button.setToolTip(strings.global_search)
+        self._settings_button.setToolTip(strings.settings)
         self._conversations_button.setToolTip(strings.mindspace_conversations)
         self._files_button.setToolTip(strings.mindspace_files)
         self._preview_button.setToolTip(strings.mindspace_preview)

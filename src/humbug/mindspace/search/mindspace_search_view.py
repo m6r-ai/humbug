@@ -4,11 +4,14 @@ from collections import OrderedDict
 import re
 
 from PySide6.QtCore import Qt, QTimer, QSize, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPainter
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
     QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -24,11 +27,85 @@ from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.mindspace.search.mindspace_search_engine import MindspaceSearchEngine, MindspaceSearchMatch
 from humbug.style_manager import StyleManager
 
+_HIGHLIGHT_RANGES_ROLE = Qt.ItemDataRole.UserRole + 10
+
+
+class _SearchResultDelegate(QStyledItemDelegate):
+    """Paint tree items with inline search-term highlights."""
+
+    def __init__(self, style_manager: StyleManager, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._style_manager = style_manager
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index) -> None:
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        text = opt.text
+        ranges = index.data(_HIGHLIGHT_RANGES_ROLE) or []
+
+        opt.text = ""
+        style = opt.widget.style() if opt.widget else None
+        if style is None:
+            super().paint(painter, option, index)
+            return
+
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
+        if not text:
+            return
+
+        text_rect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemText, opt, opt.widget)
+        if not text_rect.isValid():
+            return
+
+        metrics = opt.fontMetrics
+        display_text = metrics.elidedText(text, opt.textElideMode, text_rect.width())
+        if not display_text:
+            return
+
+        clipped_ranges: list[tuple[int, int]] = []
+        for start, length in ranges:
+            if start >= len(display_text) or length <= 0:
+                continue
+
+            clipped_ranges.append((start, min(length, len(display_text) - start)))
+
+        text_color = opt.palette.highlightedText().color() if opt.state & QStyle.StateFlag.State_Selected else opt.palette.text().color()
+        highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM)
+
+        painter.save()
+        painter.setClipRect(text_rect)
+        x = text_rect.x()
+        baseline = text_rect.y() + (text_rect.height() + metrics.ascent() - metrics.descent()) // 2
+        cursor = 0
+
+        for start, length in clipped_ranges:
+            if start > cursor:
+                segment = display_text[cursor:start]
+                painter.setPen(text_color)
+                painter.drawText(x, baseline, segment)
+                x += metrics.horizontalAdvance(segment)
+
+            segment = display_text[start:start + length]
+            segment_width = metrics.horizontalAdvance(segment)
+            painter.fillRect(x, text_rect.y() + 2, segment_width, text_rect.height() - 4, highlight_color)
+            painter.setPen(text_color)
+            painter.drawText(x, baseline, segment)
+            x += segment_width
+            cursor = start + length
+
+        if cursor < len(display_text):
+            segment = display_text[cursor:]
+            painter.setPen(text_color)
+            painter.drawText(x, baseline, segment)
+
+        painter.restore()
+
 
 class MindspaceSearchView(QWidget):
     """Global search pane for searching across the current mindspace."""
 
     file_clicked = Signal(MindspaceViewType, str, bool)
+    result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -104,6 +181,7 @@ class MindspaceSearchView(QWidget):
         self._results_tree.setRootIsDecorated(True)
         self._results_tree.setUniformRowHeights(False)
         self._results_tree.setIndentation(0)
+        self._results_tree.setItemDelegate(_SearchResultDelegate(self._style_manager, self._results_tree))
         self._results_tree.itemClicked.connect(lambda item, _column: self._open_item(item, True))
         self._results_tree.itemDoubleClicked.connect(lambda item, _column: self._open_item(item, False))
         layout.addWidget(self._results_tree)
@@ -181,6 +259,7 @@ class MindspaceSearchView(QWidget):
             top_level = QTreeWidgetItem([first_match.relative_path])
             top_level.setData(0, Qt.ItemDataRole.UserRole, first_match.path)
             top_level.setData(0, Qt.ItemDataRole.UserRole + 1, first_match.view_type)
+            top_level.setData(0, _HIGHLIGHT_RANGES_ROLE, self._highlight_ranges_for_text(first_match.relative_path))
             top_level.setToolTip(0, first_match.relative_path)
             top_level.setIcon(0, self._icon_for_view_type(first_match.view_type))
 
@@ -189,6 +268,7 @@ class MindspaceSearchView(QWidget):
                 child = QTreeWidgetItem([child_text])
                 child.setData(0, Qt.ItemDataRole.UserRole, match.path)
                 child.setData(0, Qt.ItemDataRole.UserRole + 1, match.view_type)
+                child.setData(0, _HIGHLIGHT_RANGES_ROLE, self._highlight_ranges_for_match(match, child_text))
                 child.setToolTip(0, child_text)
                 top_level.addChild(child)
 
@@ -211,6 +291,42 @@ class MindspaceSearchView(QWidget):
 
         return f"L{match.line_number}: {match.line_text}"
 
+    def _highlight_ranges_for_match(self, match: MindspaceSearchMatch, display_text: str) -> list[tuple[int, int]]:
+        if match.is_path_match:
+            return []
+
+        if match.line_number is None:
+            return self._highlight_ranges_for_text(display_text)
+
+        prefix = f"L{match.line_number}: "
+        ranges = self._highlight_ranges_for_text(match.line_text)
+        return [(start + len(prefix), length) for start, length in ranges]
+
+    def _highlight_ranges_for_text(self, text: str) -> list[tuple[int, int]]:
+        query, case_sensitive, regexp = self.current_find_request()
+        if not query:
+            return []
+
+        if regexp:
+            try:
+                pattern = re.compile(query, 0 if case_sensitive else re.IGNORECASE)
+            except re.error:
+                return []
+
+            return [(match.start(), match.end() - match.start()) for match in pattern.finditer(text)]
+
+        haystack = text if case_sensitive else text.casefold()
+        needle = query if case_sensitive else query.casefold()
+        ranges: list[tuple[int, int]] = []
+        pos = 0
+        while True:
+            pos = haystack.find(needle, pos)
+            if pos == -1:
+                return ranges
+
+            ranges.append((pos, len(query)))
+            pos += max(1, len(query))
+
     def _icon_for_view_type(self, view_type: MindspaceViewType) -> QIcon:
         icon_name = "conversation" if view_type == MindspaceViewType.CONVERSATIONS else "files"
         return QIcon(self._style_manager.scale_icon(icon_name, 16))
@@ -221,7 +337,22 @@ class MindspaceSearchView(QWidget):
         if not isinstance(path, str) or not isinstance(view_type, MindspaceViewType):
             return
 
-        self.file_clicked.emit(view_type, path, ephemeral)
+        query, case_sensitive, regexp = self.current_find_request()
+        if query:
+            self.result_activated.emit(view_type, path, ephemeral, query, case_sensitive, regexp)
+
+        else:
+            self.file_clicked.emit(view_type, path, ephemeral)
+
+    def current_find_request(self) -> tuple[str, bool, bool]:
+        """Return the query and effective find options for reuse in opened tabs."""
+        query = self._search_input.text().strip()
+        case_sensitive = self._match_case_button.isChecked()
+        regexp_enabled = self._regexp_button.isChecked()
+        if self._whole_word_button.isChecked() and query and not regexp_enabled:
+            return rf"\b{re.escape(query)}\b", case_sensitive, True
+
+        return query, case_sensitive, regexp_enabled
 
     def _on_language_changed(self) -> None:
         strings = self._language_manager.strings()

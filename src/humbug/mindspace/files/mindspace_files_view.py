@@ -5,7 +5,7 @@ import os
 import shutil
 from typing import cast
 
-from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QDir, QTimer
+from PySide6.QtCore import Signal, QModelIndex, Qt, QPoint, QDir, QTimer
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QVBoxLayout, QMenu
 )
@@ -15,6 +15,7 @@ from humbug.mindspace.files.mindspace_files_model import MindspaceFilesModel
 from humbug.mindspace.files.mindspace_files_tree_view import MindspaceFilesTreeView
 from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
 from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
+from humbug.mindspace.mindspace_breadcrumb_container import MindspaceBreadcrumbContainer
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
@@ -62,12 +63,10 @@ class MindspaceFilesView(QWidget):
         )
         layout.addWidget(self._header)
 
-        # Create tree view
-        # Create breadcrumb bar (before tree view so it appears above it)
-        self._breadcrumb_bar = MindspaceBreadcrumbBar(self)
+        # Create the three coordinated widgets and wrap them in the container.
+        self._breadcrumb_bar = MindspaceBreadcrumbBar()
         self._breadcrumb_bar.set_drop_handler(self._on_file_dropped)
         self._breadcrumb_bar.set_scroll_handler(self.reveal_and_select_file)
-        layout.addWidget(self._breadcrumb_bar)
 
         self._tree_view = MindspaceFilesTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
@@ -76,7 +75,9 @@ class MindspaceFilesView(QWidget):
         self._tree_view.file_dropped.connect(self._on_file_dropped)
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
-        self._tree_view.visible_top_changed.connect(self._breadcrumb_bar.update_from_path)
+
+        self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
+        layout.addWidget(self._bc_container, 1)
 
         # Create file system model
         self._icon_provider = MindspaceTreeIconProvider()
@@ -101,9 +102,6 @@ class MindspaceFilesView(QWidget):
         self._tree_view.clicked.connect(self._on_tree_clicked)
         self._tree_view.doubleClicked.connect(self._on_tree_double_clicked)
 
-        # Add to layout
-        layout.addWidget(self._tree_view)
-
         # Hide horizontal scrollbar
         self._tree_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -118,9 +116,7 @@ class MindspaceFilesView(QWidget):
         """
         Handle changes to the drop target in the tree view.
         """
-        # Force a repaint of the entire viewport to ensure proper visual updates
-        # This ensures both the old drop target and new drop target are repainted
-        self._tree_view.viewport().update()
+        self._bc_container.refresh_viewport()
 
     def _create_move_confirmation_message(self, item_name: str, source_path: str, dest_path: str) -> str:
         """Create the confirmation message for file/folder move operations."""
@@ -967,20 +963,21 @@ class MindspaceFilesView(QWidget):
             # Clear the model when no mindspace is active
             self._filter_model.set_mindspace_root("")
             self._breadcrumb_bar.set_root_path("")
+            self._bc_container.set_root_path("")
             # Configure tree view for empty path
-            self._tree_view.configure_for_path("")
+            self._bc_container.configure_tree_for_path("")
             return
 
         parent_path = os.path.dirname(path)
         self._fs_model.setRootPath(parent_path)
         self._filter_model.set_mindspace_root(path)
 
-        self._breadcrumb_bar.set_root_label(os.path.basename(path))
         self._breadcrumb_bar.set_root_path(path)
         self._breadcrumb_bar.update_from_path(path)
+        self._bc_container.set_root_path(path)
 
         # Configure tree view with the mindspace path
-        self._tree_view.configure_for_path(path)
+        self._bc_container.configure_tree_for_path(path)
 
         # Set the root index to the mindspace directory itself
         mindspace_source_index = self._fs_model.index(path)
@@ -1029,16 +1026,11 @@ class MindspaceFilesView(QWidget):
         self._icon_provider.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)
         file_icon_size = round(16 * zoom_factor)
-        self._tree_view.setIconSize(QSize(file_icon_size, file_icon_size))
-
         # Update font size for tree
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
-        self._tree_view.setFont(font)
-
-        # Adjust tree indentation
-        self._tree_view.setIndentation(file_icon_size)
+        self._bc_container.apply_tree_style(file_icon_size, font)
         self.setStyleSheet(build_tree_pane_stylesheet(
             self._style_manager,
             "MindspaceFilesView",

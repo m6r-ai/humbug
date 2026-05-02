@@ -17,11 +17,11 @@ def get_arabic_strings() -> LanguageStrings:
         # Welcome widget
         welcome_message=(
             "مرحباً بك في هامبج! يبدو أنه لم يتم تكوين أي ذكاء اصطناعي بعد؟\n\n"
-            "لبدء استخدام ميزات الذكاء الاصطناعي، يرجى فتح \"التفضيلات\" "
+            "لبدء استخدام ميزات الذكاء الاصطناعي، يرجى فتح \"الإعدادات\" "
             "للتطبيق،\nوالتمرير إلى قسم \"تكوين الواجهة الخلفية للذكاء الاصطناعي\" "
             "وإعداد واجهة خلفية واحدة على الأقل للذكاء الاصطناعي."
         ),
-        welcome_button="فتح التفضيلات",
+        welcome_button="فتح الإعدادات",
 
         # Menu names
         humbug_menu="هامبج",
@@ -45,7 +45,7 @@ def get_arabic_strings() -> LanguageStrings:
         save_as="حفظ باسم...",
         close_mindspace="إغلاق المساحة الذهنية",
         close_tab="إغلاق التبويب",
-        user_settings="إعدادات المستخدم",
+        settings="الإعدادات",
 
         # Edit menu items
         submit_message="إرسال الرسالة",
@@ -120,7 +120,6 @@ def get_arabic_strings() -> LanguageStrings:
         no="لا",
 
         # User Settings dialog - AI backends section
-        general_settings="الإعدادات العامة",
         display_settings="إعدادات العرض",
         ai_backend_config="إعدادات خلفيات الذكاء الاصطناعي",
         enable_backend="تفعيل الخلفية",
@@ -196,6 +195,18 @@ def get_arabic_strings() -> LanguageStrings:
         terminal_close_on_exit="إغلاق الطرفية عند خروج الصدفة",
         tool_settings="إعدادات أدوات الذكاء الاصطناعي",
         tools_description="تفعيل أو إلغاء تفعيل الأدوات الفردية لهذا المساحة الذهنية",
+
+        # Unified settings dialog
+        settings_all_mindspaces="جميع المساحات الذهنية",
+        settings_this_mindspace="هذه المساحة الذهنية",
+        settings_display="العرض",
+        settings_file_access="الوصول إلى الملفات",
+        settings_ai_backends="خلفيات الذكاء الاصطناعي",
+        settings_ai_model="نموذج الذكاء الاصطناعي",
+        settings_ai_tools="أدوات الذكاء الاصطناعي",
+        settings_editor="المحرر",
+        settings_terminal="الطرفية",
+        settings_tabs="علامات التبويب",
 
         # Conversation settings
         model_info="معلومات النموذج",

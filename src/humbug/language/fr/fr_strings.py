@@ -17,10 +17,10 @@ def get_french_strings() -> LanguageStrings:
         # Welcome widget
         welcome_message=(
             "Bienvenue dans Humbug ! Il semble que vous n'ayez pas encore configuré d'IA ?\n\n"
-            "Pour commencer à utiliser les fonctionnalités IA, veuillez ouvrir les « Préférences » de l'application,\n"
+            "Pour commencer à utiliser les fonctionnalités IA, veuillez ouvrir les « Paramètres » de l'application,\n"
             "faites défiler jusqu'à la section « Configuration des backends IA » et configurez au moins un backend IA."
         ),
-        welcome_button="Ouvrir les Préférences",
+        welcome_button="Ouvrir les Paramètres",
 
         # Menu names
         humbug_menu="Humbug",
@@ -44,7 +44,7 @@ def get_french_strings() -> LanguageStrings:
         save_as="Enregistrer sous...",
         close_mindspace="Fermer l'espace mental",
         close_tab="Fermer l'onglet",
-        user_settings="Paramètres utilisateur",
+        settings="Paramètres",
 
         # Edit menu items
         submit_message="Envoyer le message",
@@ -119,7 +119,6 @@ def get_french_strings() -> LanguageStrings:
         no="Non",
 
         # User Settings dialog - AI backends section
-        general_settings="Paramètres généraux",
         display_settings="Paramètres d'affichage",
         ai_backend_config="Configuration des backends d'IA",
         enable_backend="Activer le backend",
@@ -195,6 +194,18 @@ def get_french_strings() -> LanguageStrings:
         terminal_close_on_exit="Fermer le terminal à la sortie du shell",
         tool_settings="Paramètres des outils IA",
         tools_description="Activer ou désactiver des outils individuels pour cet espace mental",
+
+        # Unified settings dialog
+        settings_all_mindspaces="Tous les espaces mentaux",
+        settings_this_mindspace="Cet espace mental",
+        settings_display="Affichage",
+        settings_file_access="Accès aux fichiers",
+        settings_ai_backends="Backends IA",
+        settings_ai_model="Modèle IA",
+        settings_ai_tools="Outils IA",
+        settings_editor="Éditeur",
+        settings_terminal="Terminal",
+        settings_tabs="Tabulations",
 
         # Conversation settings
         model_info="Informations sur le modèle",

@@ -71,10 +71,6 @@ class MindspaceFilesModel(QSortFilterProxyModel):
         if not source_model:
             return False
 
-        # Get file names for both indexes
-        left_name = source_model.fileName(source_left)
-        right_name = source_model.fileName(source_right)
-
         # Get file info for both indexes
         left_info = source_model.fileInfo(source_left)
         right_info = source_model.fileInfo(source_right)

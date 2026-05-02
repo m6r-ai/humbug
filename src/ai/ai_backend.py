@@ -94,6 +94,24 @@ class AIBackend(ABC):
     def _create_stream_response_handler(self) -> AIStreamResponse:
         """Abstract method to create a backend-specific stream response handler."""
 
+    def _reasoning_model_matches(self, message: AIMessage, settings: AIConversationSettings) -> bool:
+        """
+        Determine whether a reasoning message from history is compatible with the current model.
+
+        The default implementation matches at the provider level, which is correct for backends
+        that serve a single well-defined API (Anthropic, DeepSeek, xAI, Z.ai).  Backends that
+        host many structurally different models under one API (Ollama, vLLM) should override
+        this method and require an exact model key match instead.
+
+        Args:
+            message: The reasoning message from conversation history
+            settings: Current conversation settings
+
+        Returns:
+            True if the reasoning message is compatible with the current model
+        """
+        return AIConversationSettings.get_provider(message.model or "") == AIConversationSettings.get_provider(settings.model)
+
     def _supports_tools(self, settings: AIConversationSettings) -> bool:
         """
         Check if the current model supports tool calling.

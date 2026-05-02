@@ -34,6 +34,16 @@ class OllamaBackend(AIBackend):
         # Llama doesn't use normal SSE encoding!
         self._uses_data = False
 
+    def _reasoning_model_matches(self, message: AIMessage, settings: AIConversationSettings) -> bool:
+        """
+        Require an exact model key match for reasoning compatibility.
+
+        Ollama hosts many structurally different models under one API, so provider-level
+        matching is insufficient — a reasoning block from one Ollama model is not
+        compatible with a different Ollama model.
+        """
+        return message.model == settings.model
+
     def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
         """
         Convert tool definition to Ollama format.
@@ -154,12 +164,13 @@ class OllamaBackend(AIBackend):
 
         return message
 
-    def _format_messages_for_provider(self, conversation_history: List[AIMessage]) -> List[Dict[str, Any]]:
+    def _format_messages_for_provider(self, conversation_history: List[AIMessage], settings: AIConversationSettings) -> List[Dict[str, Any]]:
         """
         Format conversation history for Ollama's API format in a single pass.
 
         Args:
             conversation_history: List of AIMessage objects
+            settings: Current conversation settings
 
         Returns:
             List of messages formatted for Ollama API
@@ -232,6 +243,9 @@ class OllamaBackend(AIBackend):
                 if not message.completed or message.error:
                     continue
 
+                if not self._reasoning_model_matches(message, settings):
+                    continue
+
                 last_reasoning_message = message
                 continue
 
@@ -249,7 +263,7 @@ class OllamaBackend(AIBackend):
     ) -> RequestConfig:
         """Build complete request configuration for Ollama."""
         # Use the unified message formatting
-        messages = self._format_messages_for_provider(conversation_history)
+        messages = self._format_messages_for_provider(conversation_history, settings)
 
         # Prepend system message if configured
         if self._system_prompt:

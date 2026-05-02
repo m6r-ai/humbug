@@ -17,6 +17,5 @@ class MindspaceTreeStyle(QProxyStyle):
         option: QStyleOption | None = None,
         widget: QWidget | None =None
     ) -> int:
-        # Scale all tree view related metrics
         base_size = super().pixelMetric(metric, option, widget)
         return round(base_size * self._style_manager.zoom_factor())

@@ -1682,7 +1682,7 @@ class FileSystemAITool(AITool):
                 "path", path_arg, tool_call, request_authorization, allow_external=True
             )
         except AIToolAuthorizationDenied:
-            result = {
+            result: dict[str, object] = {
                 "directory": path_arg,
                 "name": self._get_optional_str_value("name", arguments, None),
                 "total_matches": 0,

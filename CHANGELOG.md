@@ -8,6 +8,18 @@ New features:
   everything back to the last user message or tool call response.
 - Added a "breadcrumb" view to the mindspace tree views.  This let's you see which directories/folders are currently expanded for
   any of the trees.
+- Unified the previous "user" and "mindspace" settings into a single new dialog that can be accessed from the icon rail.
+  The new settings dialog is far easier to navigate and easier to discover.
+- Added Noto Sans, Noto Sans Arabic, and JetBrain Mono fonts to ensure a consistent user experience across all platforms (and
+  also because they look nicer!)
+- Humbug now controls the minimize/maximize/close functionality on Windows and Linux to give more vertical real estate to the
+  application content.
+
+Bug fixes:
+
+- There was a small problem with the AI applying diffs at the end of the file when using the editor tab.
+- When switching reasoning models mid-conversation, only provide reasoning context to the new AI if it can definitely understand
+  it (i.e. the models are compatible).
 
 ## v45 (2026-04-26)
 

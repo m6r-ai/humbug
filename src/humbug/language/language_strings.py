@@ -35,7 +35,7 @@ class LanguageStrings:
     save_as: str
     close_mindspace: str
     close_tab: str
-    user_settings: str
+    settings: str
 
     # Edit menu items
     submit_message: str
@@ -110,7 +110,6 @@ class LanguageStrings:
     no: str
 
     # User Settings dialog - AI backends section
-    general_settings: str
     display_settings: str
     ai_backend_config: str
     enable_backend: str
@@ -183,6 +182,18 @@ class LanguageStrings:
     terminal_close_on_exit: str
     tool_settings: str
     tools_description: str
+
+    # Unified settings dialog
+    settings_all_mindspaces: str
+    settings_this_mindspace: str
+    settings_display: str
+    settings_file_access: str
+    settings_ai_backends: str
+    settings_ai_model: str
+    settings_ai_tools: str
+    settings_editor: str
+    settings_terminal: str
+    settings_tabs: str
 
     # Conversation settings
     model_info: str

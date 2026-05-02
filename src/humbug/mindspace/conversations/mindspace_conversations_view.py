@@ -4,7 +4,7 @@ import logging
 import os
 import shutil
 
-from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QTimer
+from PySide6.QtCore import Signal, QModelIndex, Qt, QPoint, QTimer
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QMenu
 )
@@ -18,6 +18,7 @@ from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
 from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_breadcrumb_container import MindspaceBreadcrumbContainer
 from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
 from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
@@ -60,12 +61,10 @@ class MindspaceConversationsView(QWidget):
         )
         layout.addWidget(self._header)
 
-        # Create tree view
-        # Create breadcrumb bar (before tree view so it appears above it)
-        self._breadcrumb_bar = MindspaceBreadcrumbBar(self)
+        # Create the three coordinated widgets and wrap them in the container.
+        self._breadcrumb_bar = MindspaceBreadcrumbBar()
         self._breadcrumb_bar.set_drop_handler(self._on_file_dropped)
         self._breadcrumb_bar.set_scroll_handler(self.reveal_and_select_file)
-        layout.addWidget(self._breadcrumb_bar)
 
         self._tree_view = MindspaceConversationsTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
@@ -74,7 +73,9 @@ class MindspaceConversationsView(QWidget):
         self._tree_view.file_dropped.connect(self._on_file_dropped)
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
-        self._tree_view.visible_top_changed.connect(self._breadcrumb_bar.update_from_path)
+
+        self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
+        layout.addWidget(self._bc_container, 1)
 
         # Create icon provider for styling
         self._icon_provider = MindspaceTreeIconProvider()
@@ -84,6 +85,7 @@ class MindspaceConversationsView(QWidget):
         self._dag_model = MindspaceConversationsDAGModel(self._conversations_index, self._icon_provider, self)
         self._dag_model.about_to_rebuild.connect(self._save_expanded_state)
         self._dag_model.rebuilt.connect(self._restore_expanded_state)
+        self._conversations_index.changed.connect(self._bc_container.refresh_viewport)
         self._expanded_paths: set[str] = set()
         self._suppress_save_expanded: bool = False
 
@@ -100,9 +102,6 @@ class MindspaceConversationsView(QWidget):
         self._tree_view.clicked.connect(self._on_tree_clicked)
         self._tree_view.doubleClicked.connect(self._on_tree_double_clicked)
 
-        # Add to layout
-        layout.addWidget(self._tree_view)
-
         # Hide horizontal scrollbar
         self._tree_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -117,7 +116,6 @@ class MindspaceConversationsView(QWidget):
 
         # Auto-scroll state for drag operations
         self._auto_scroll_active = False
-
     def _is_conversation_file(self, file_path: str) -> bool:
         """
         Check if a file is a conversation file based on its extension.
@@ -198,9 +196,7 @@ class MindspaceConversationsView(QWidget):
         """
         Handle changes to the drop target in the tree view.
         """
-        # Force a repaint of the entire viewport to ensure proper visual updates
-        # This ensures both the old drop target and new drop target are repainted
-        self._tree_view.viewport().update()
+        self._bc_container.refresh_viewport()
 
     def _create_move_confirmation_message(self, item_name: str, source_path: str, dest_path: str) -> str:
         """Create the confirmation message for file/folder move operations."""
@@ -1091,9 +1087,10 @@ class MindspaceConversationsView(QWidget):
             # Clear the model when no mindspace is active
             self._conversations_path = None
             self._breadcrumb_bar.set_root_path("")
+            self._bc_container.set_root_path("")
             self._conversations_index.set_conversations_dir("")
             # Configure tree view for empty path
-            self._tree_view.configure_for_path("")
+            self._bc_container.configure_tree_for_path("")
             return
 
         # Set conversations directory path
@@ -1107,22 +1104,22 @@ class MindspaceConversationsView(QWidget):
             except OSError as e:
                 self._logger.error("Failed to create conversations directory '%s': %s", self._conversations_path, str(e))
                 self._conversations_path = None
-                self._tree_view.configure_for_path("")
+                self._bc_container.configure_tree_for_path("")
                 self._conversations_index.set_conversations_dir("")
                 return
 
         # Configure tree view with the conversations path
-        self._tree_view.configure_for_path(self._conversations_path)
+        self._bc_container.configure_tree_for_path(self._conversations_path)
 
-        self._breadcrumb_bar.set_root_label(os.path.basename(path))
         self._breadcrumb_bar.set_root_path(self._conversations_path)
         self._breadcrumb_bar.update_from_path(self._conversations_path)
+        self._bc_container.set_root_path(self._conversations_path)
 
         # Start the DAG index for this conversations directory
         self._conversations_index.set_conversations_dir(self._conversations_path)
 
         # Schedule a repaint after the event loop processes the index scan and model reset
-        QTimer.singleShot(0, self._tree_view.viewport().update)
+        QTimer.singleShot(0, self._bc_container.refresh_viewport)
 
     def conversations_index(self) -> MindspaceConversationsIndex:
         """
@@ -1168,16 +1165,11 @@ class MindspaceConversationsView(QWidget):
         self._dag_model.beginResetModel()
         self._dag_model.endResetModel()
         file_icon_size = round(16 * zoom_factor)
-        self._tree_view.setIconSize(QSize(file_icon_size, file_icon_size))
-
         # Update font size for tree
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
-        self._tree_view.setFont(font)
-
-        # Adjust tree indentation
-        self._tree_view.setIndentation(file_icon_size)
+        self._bc_container.apply_tree_style(file_icon_size, font)
         self.setStyleSheet(build_tree_pane_stylesheet(
             self._style_manager,
             "MindspaceConversationsView",

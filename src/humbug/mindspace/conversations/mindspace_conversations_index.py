@@ -48,9 +48,15 @@ class MindspaceConversationsIndex(QObject):
     The watcher is registered on the root conversations directory and every
     subdirectory found within it.  When subdirectories are added or removed
     the watched set is updated accordingly.
+
+    Two signals are emitted to allow consumers to distinguish between changes
+    that affect the DAG structure (files added/removed, parent linkage changed)
+    and changes that only affect conversation content (new messages appended to
+    an existing conversation whose parentage is unchanged).
     """
 
     changed = Signal()
+    structure_changed = Signal()
 
     def __init__(self, parent: QObject | None = None) -> None:
         """Initialize the index."""
@@ -89,10 +95,13 @@ class MindspaceConversationsIndex(QObject):
         self._conversations_dir = conversations_dir
 
         if not conversations_dir:
+            self.changed.emit()
+            self.structure_changed.emit()
             return
 
         self._initial_scan()
         self.changed.emit()
+        self.structure_changed.emit()
 
     def conversations_dir(self) -> str:
         """
@@ -339,6 +348,7 @@ class MindspaceConversationsIndex(QObject):
             self._unwatch_all()
             self._clear()
             self.changed.emit()
+            self.structure_changed.emit()
             return
 
         current_paths: Set[str] = set()
@@ -359,7 +369,8 @@ class MindspaceConversationsIndex(QObject):
         removed = indexed_paths - current_paths
         possibly_modified = current_paths & indexed_paths
 
-        changed = bool(added or removed or dirs_changed)
+        structure_changed = bool(added or removed or dirs_changed)
+        content_changed = False
 
         for path in removed:
             self._remove_file(path)
@@ -368,11 +379,17 @@ class MindspaceConversationsIndex(QObject):
             self._add_file(path)
 
         for path in possibly_modified:
-            if self._refresh_file_if_changed(path):
-                changed = True
+            result = self._refresh_file_if_changed(path)
+            if result == "structure":
+                structure_changed = True
+            elif result == "content":
+                content_changed = True
 
-        if changed:
+        if structure_changed:
             self._recompute_fork_edges()
+            self.structure_changed.emit()
+            self.changed.emit()
+        elif content_changed:
             self.changed.emit()
 
     def _read_conv_file(self, path: str) -> tuple[List[str], str | None, str | None] | None:
@@ -473,7 +490,7 @@ class MindspaceConversationsIndex(QObject):
                 if not paths:
                     del self._message_id_index[msg_id]
 
-    def _refresh_file_if_changed(self, path: str) -> bool:
+    def _refresh_file_if_changed(self, path: str) -> str | None:
         """
         Re-index a file if its content has changed.
 
@@ -481,22 +498,32 @@ class MindspaceConversationsIndex(QObject):
             path: Normalised absolute path to the .conv file.
 
         Returns:
-            True if the file was re-indexed, False if unchanged.
+            ``"structure"`` if the parent linkage changed (the DAG topology is
+            different), ``"content"`` if only message IDs changed (new messages
+            were appended but the parentage is the same), or ``None`` if the
+            file is unchanged.
         """
         result = self._read_conv_file(path)
         if result is None:
-            return False
+            return None
 
         message_ids, parent_message_id, parent_tool_call_id = result
         existing = self._nodes.get(path)
-        if existing and existing.message_ids == message_ids \
-                and existing.parent_message_id == parent_message_id \
-                and existing.parent_tool_call_id == parent_tool_call_id:
-            return False
+        if existing is not None:
+            if (existing.parent_message_id == parent_message_id
+                    and existing.parent_tool_call_id == parent_tool_call_id):
+                if existing.message_ids == message_ids:
+                    return None
+
+                # Parent linkage unchanged — only message content grew.  Update
+                # the message ID index without signalling a structural change.
+                self._remove_file(path)
+                self._add_file(path)
+                return "content"
 
         self._remove_file(path)
         self._add_file(path)
-        return True
+        return "structure"
 
     def _recompute_fork_edges(self) -> None:
         """

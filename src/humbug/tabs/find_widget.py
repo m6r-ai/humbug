@@ -471,6 +471,14 @@ class FindWidget(QWidget):
         self._search_input.setText(text)
         self._search_input.selectAll()
 
+    def set_case_sensitive(self, enabled: bool) -> None:
+        """Set match-case mode."""
+        self._match_case_button.setChecked(enabled)
+
+    def set_regexp(self, enabled: bool) -> None:
+        """Set regexp mode."""
+        self._regexp_button.setChecked(enabled)
+
     def is_case_sensitive(self) -> bool:
         """Return True if match-case mode is active."""
         return self._match_case_button.isChecked()

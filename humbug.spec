@@ -28,7 +28,9 @@ a = Analysis(
     ['src/humbug/__main__.py'],
     pathex=['src'],
     binaries=_extra_binaries,
-    datas=certifi_data,
+    datas=certifi_data + [
+        ('resources/fonts', 'resources/fonts'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
