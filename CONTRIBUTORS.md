@@ -16,6 +16,8 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Designed the original file attachment concept for conversations.
 * Designed the original implementation of the hierarchical conversation view.
 * Implemented the mindspace expand/collapse functionality, along with the icon bar.
+* Added "whole word" find feature.
+* Added the mindspace search feature.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 

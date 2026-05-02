@@ -16,6 +16,8 @@ New features:
   application content.
 - Added full-screen mode for Linux and Windows.  Remove the task bar and put the minimize/maximize/close widgets on the same
   row as the menu bar to give more screen real estate.
+- Added "whole word" searching in all find boxes.
+- Added a mindspace global search feature.
 
 Bug fixes:
 
