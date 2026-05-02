@@ -101,46 +101,46 @@ class SettingsDialog(QDialog):
         self._section_items: Dict[str, QListWidgetItem] = {}
         self._section_pages: Dict[str, QWidget] = {}
 
-        self._display_heading: SettingsPageHeading | None = None
-        self._language_combo: SettingsCombo | None = None
-        self._font_size_spin: SettingsDoubleSpinBox | None = None
-        self._theme_combo: SettingsCombo | None = None
-        self._file_sort_combo: SettingsCombo | None = None
-        self._display_container: SettingsContainer | None = None
+        self._display_heading: SettingsPageHeading
+        self._language_combo: SettingsCombo
+        self._font_size_spin: SettingsDoubleSpinBox
+        self._theme_combo: SettingsCombo
+        self._file_sort_combo: SettingsCombo
+        self._display_container: SettingsContainer
 
-        self._file_access_heading: SettingsPageHeading | None = None
-        self._allow_external_access_checkbox: SettingsCheckbox | None = None
-        self._external_allowlist_area: SettingsTextArea | None = None
-        self._external_denylist_area: SettingsTextArea | None = None
-        self._file_access_container: SettingsContainer | None = None
+        self._file_access_heading: SettingsPageHeading
+        self._allow_external_access_checkbox: SettingsCheckbox
+        self._external_allowlist_area: SettingsTextArea
+        self._external_denylist_area: SettingsTextArea
+        self._file_access_container: SettingsContainer
 
-        self._ai_backends_heading: SettingsPageHeading | None = None
-        self._ai_backends_container: SettingsContainer | None = None
+        self._ai_backends_heading: SettingsPageHeading
+        self._ai_backends_container: SettingsContainer
 
-        self._ai_model_heading: SettingsPageHeading | None = None
-        self._model_combo: SettingsCombo | None = None
-        self._temp_spin: SettingsDoubleSpinBox | None = None
-        self._reasoning_combo: SettingsCombo | None = None
-        self._ai_model_container: SettingsContainer | None = None
+        self._ai_model_heading: SettingsPageHeading
+        self._model_combo: SettingsCombo
+        self._temp_spin: SettingsDoubleSpinBox
+        self._reasoning_combo: SettingsCombo
+        self._ai_model_container: SettingsContainer
 
-        self._tools_heading: SettingsPageHeading | None = None
-        self._tools_container: SettingsContainer | None = None
+        self._tools_heading: SettingsPageHeading
+        self._tools_container: SettingsContainer
 
-        self._editor_heading: SettingsPageHeading | None = None
-        self._editor_tabs_section: SettingsSection | None = None
-        self._soft_tabs_check: SettingsCheckbox | None = None
-        self._tab_size_spin: SettingsSpinBox | None = None
-        self._auto_backup_check: SettingsCheckbox | None = None
-        self._backup_interval_spin: SettingsSpinBox | None = None
-        self._editor_container: SettingsContainer | None = None
+        self._editor_heading: SettingsPageHeading
+        self._editor_tabs_section: SettingsSection
+        self._soft_tabs_check: SettingsCheckbox
+        self._tab_size_spin: SettingsSpinBox
+        self._auto_backup_check: SettingsCheckbox
+        self._backup_interval_spin: SettingsSpinBox
+        self._editor_container: SettingsContainer
 
-        self._terminal_heading: SettingsPageHeading | None = None
-        self._terminal_fixed_width_check: SettingsCheckbox | None = None
-        self._terminal_fixed_width_spin: SettingsSpinBox | None = None
-        self._terminal_scrollback_check: SettingsCheckbox | None = None
-        self._terminal_scrollback_spin: SettingsSpinBox | None = None
-        self._terminal_close_on_exit_check: SettingsCheckbox | None = None
-        self._terminal_container: SettingsContainer | None = None
+        self._terminal_heading: SettingsPageHeading
+        self._terminal_fixed_width_check: SettingsCheckbox
+        self._terminal_fixed_width_spin: SettingsSpinBox
+        self._terminal_scrollback_check: SettingsCheckbox
+        self._terminal_scrollback_spin: SettingsSpinBox
+        self._terminal_close_on_exit_check: SettingsCheckbox
+        self._terminal_container: SettingsContainer
 
         strings = self._language_manager.strings()
         self.setWindowTitle(strings.settings)
