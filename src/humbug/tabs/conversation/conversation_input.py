@@ -4,7 +4,7 @@ import sys
 from typing import Dict, List, Tuple, cast
 
 from PySide6.QtCore import Signal, Qt, QRect, QSize, QObject, QEvent
-from PySide6.QtGui import QTextCursor, QTextDocument, QIcon, QKeyEvent
+from PySide6.QtGui import QTextCursor, QTextDocument, QIcon, QKeyEvent, QMouseEvent
 from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel
 
 from ai import AIMessageSource
@@ -328,6 +328,11 @@ class ConversationInput(ConversationMessage):
     def hasFocus(self) -> bool:
         """Check if the input area has focus."""
         return self._text_area.hasFocus()
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        """Redirect clicks on the frame to the text area."""
+        self._text_area.setFocus(Qt.FocusReason.MouseFocusReason)
+        super().mousePressEvent(event)
 
     def document(self) -> QTextDocument:
         """Get the document from the input area."""
