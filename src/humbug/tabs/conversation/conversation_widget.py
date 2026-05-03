@@ -107,6 +107,7 @@ class ConversationWidget(QWidget):
         # Batched message loading state
         self._load_queue: List[AIMessage] = []
         self._load_pending_metadata: Dict[str, Any] | None = None
+        self._load_head_widgets: List[ConversationMessage] = []
         self._load_batch_size: int = 4
         self._load_tail_size: int = 80  # Weirdly we might get 80 message in view!
         self._load_generation: int = 0
@@ -1692,6 +1693,7 @@ class ConversationWidget(QWidget):
         # so messages arrive in the correct top-to-bottom order.
         self._load_head_insert_pos = 1
         self._load_queue = list(head)
+        self._load_head_widgets = []
         self._load_next_batch(self._load_generation)
 
     def _load_next_batch(self, generation: int) -> None:
@@ -1713,13 +1715,8 @@ class ConversationWidget(QWidget):
             message = self._load_queue.pop(0)
             message_widget = self._add_message_core(message, self._load_head_insert_pos)
             self._load_head_insert_pos += 1
-
-            # Filter messages that shouldn't be shown in the UI.
-            if message_widget.message_source() in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
-                message_widget.set_rendered(False)
-
-            else:
-                message_widget.apply_style()
+            message_widget.set_rendered(False)
+            self._load_head_widgets.append(message_widget)
 
         if self._load_queue:
             if self._load_batch_timer_slot is not None:
@@ -1734,6 +1731,13 @@ class ConversationWidget(QWidget):
 
     def _on_load_complete(self) -> None:
         """Finalise a completed batch load."""
+        for widget in self._load_head_widgets:
+            if widget.message_source() not in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
+                widget.apply_style()
+                widget.set_rendered(True)
+
+        self._load_head_widgets = []
+
         # If the last visible message is a SYSTEM error, restore the retry button.
         if self._messages:
             last_widget = self._messages[-1]
