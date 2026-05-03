@@ -104,6 +104,14 @@ class ConversationWidget(QWidget):
         self._message_with_selection: ConversationMessage | None = None
         self._is_streaming = False
 
+        # Batched message loading state
+        self._load_queue: List[AIMessage] = []
+        self._load_pending_metadata: Dict[str, Any] | None = None
+        self._load_batch_size: int = 10
+        self._load_tail_size: int = 50
+        self._load_generation: int = 0
+        self._load_head_insert_pos: int = 0
+
         # Message border animation state (moved from ConversationInput)
         self._animated_message: ConversationMessage | None = None
         self._animation_frame = 0
@@ -389,8 +397,20 @@ class ConversationWidget(QWidget):
 
         return {"success": False, "error": "Conversation ended unexpectedly"}
 
-    def _add_message_core(self, message: AIMessage) -> ConversationMessage:
-        """Core of the _add_message method that avoid unecessary UI updates."""
+    def _add_message_core(
+        self,
+        message: AIMessage,
+        layout_pos: int | None = None
+    ) -> ConversationMessage:
+        """
+        Core of the _add_message method that avoids unnecessary UI updates.
+
+        Args:
+            message: The message to add.
+            layout_pos: If given, insert the widget at this layout position and at
+                the corresponding index in self._messages.  If None (default),
+                append before the input widget at the end of the layout.
+        """
         msg_widget = ConversationMessage(
             message.source,
             message.timestamp,
@@ -414,10 +434,17 @@ class ConversationWidget(QWidget):
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
         msg_widget.retry_requested.connect(self._on_retry_requested)
 
-        self._messages.append(msg_widget)
+        if layout_pos is None:
+            self._messages.append(msg_widget)
+            # Add widget before input and the stretch.
+            self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
 
-        # Add widget before input and the stretch
-        self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
+        else:
+            # Insert at the requested position in both the list and the layout.
+            msg_index = layout_pos - 1  # layout_pos 1 == messages index 0 (after stretch)
+            self._messages.insert(msg_index, msg_widget)
+            self._messages_layout.insertWidget(layout_pos, msg_widget)
+
         return msg_widget
 
     def _add_message(self, message: AIMessage) -> None:
@@ -1579,7 +1606,11 @@ class ConversationWidget(QWidget):
             messages: List of AIMessage objects to load
             reuse_ai_conversation: True if we are reusing an existing AI conversation
         """
-        # Establish a baseline for conversation settings
+        # Cancel any in-progress batch load before starting a new one.
+        self._load_queue.clear()
+        self._load_generation += 1
+
+        # Establish a baseline for conversation settings.
         if not reuse_ai_conversation:
             settings = self._mindspace_manager.settings()
             if settings is None:
@@ -1598,26 +1629,85 @@ class ConversationWidget(QWidget):
 
         self._input.set_model(self._ai_conversation.conversation_settings().model)
 
-        for message in messages:
-            message_widget = self._add_message_core(message)
+        # Split into a tail loaded synchronously (so the visible end of the
+        # conversation appears immediately without glitching) and a head that
+        # is loaded in background batches above the already-visible tail.
+        tail = messages[-self._load_tail_size:]
+        head = messages[:-self._load_tail_size]
 
-            # Filter messages that shouldn't be shown in the UI
+        for message in tail:
+            message_widget = self._add_message_core(message)
             if message_widget.message_source() in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
                 message_widget.set_rendered(False)
 
             else:
                 message_widget.apply_style()
 
-        # If the last visible message is a SYSTEM error, restore the retry button
-        if messages and messages[-1].source == AIMessageSource.SYSTEM and messages[-1].error:
-            self._last_error_message_widget = self._messages[-1]
-            self._messages[-1].show_retry_ui()
-
-        # Ensure we're scrolled to the end
         self._auto_scroll = True
         self._scroll_to_bottom()
 
+        # The head messages will be prepended one batch at a time.  layout_pos 1
+        # is directly after the stretch item; we advance it with each insertion
+        # so messages arrive in the correct top-to-bottom order.
+        self._load_head_insert_pos = 1
+        self._load_queue = list(head)
+        self._load_next_batch(self._load_generation)
+
+    def _load_next_batch(self, generation: int) -> None:
+        """
+        Process the next batch of queued messages and schedule the following batch.
+
+        Args:
+            generation: The load generation this batch belongs to. If the current
+                generation has advanced (due to close_widget or a second
+                _load_message_history call), the batch exits without completing.
+        """
+        if generation != self._load_generation:
+            return
+
+        for _ in range(self._load_batch_size):
+            if not self._load_queue:
+                break
+
+            message = self._load_queue.pop(0)
+            message_widget = self._add_message_core(message, self._load_head_insert_pos)
+            self._load_head_insert_pos += 1
+
+            # Filter messages that shouldn't be shown in the UI.
+            if message_widget.message_source() in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
+                message_widget.set_rendered(False)
+
+            else:
+                message_widget.apply_style()
+
+        if self._load_queue:
+            QTimer.singleShot(0, lambda: self._load_next_batch(generation))
+            return
+
+        self._on_load_complete()
+
+    def _on_load_complete(self) -> None:
+        """Finalise a completed batch load."""
+        # If the last visible message is a SYSTEM error, restore the retry button.
+        if self._messages:
+            last_widget = self._messages[-1]
+            last_msg_source = last_widget.message_source()
+            if last_msg_source == AIMessageSource.SYSTEM:
+                history = self.get_conversation_history()
+                msgs = history.get_messages()
+                if msgs and msgs[-1].error:
+                    self._last_error_message_widget = last_widget
+                    last_widget.show_retry_ui()
+
+        self._auto_scroll = True
+        self._scroll_to_bottom()
         self.status_updated.emit()
+
+        # Apply any metadata that arrived while we were loading.
+        if self._load_pending_metadata is not None:
+            pending = self._load_pending_metadata
+            self._load_pending_metadata = None
+            self.restore_from_metadata(pending)
 
     def _delete_empty_transcript_file(self) -> None:
         """
@@ -1666,6 +1756,11 @@ class ConversationWidget(QWidget):
 
     def close_widget(self) -> None:
         """Close the conversation."""
+        # Advance the generation so any pending timer callbacks from a batch load
+        # recognise they have been superseded and exit without touching the widget.
+        self._load_generation += 1
+        self._load_pending_metadata = None
+
         # If this is a delegated conversation, we need to ensure we notify the parent
         if self._is_delegated_conversation and self._is_streaming:
             result = self._create_completion_result()
@@ -2622,6 +2717,12 @@ class ConversationWidget(QWidget):
             metadata: Dictionary containing state metadata
         """
         if not metadata:
+            return
+
+        # If a batch load is still in progress, defer restoration until it
+        # completes so that self._messages is fully populated when we apply it.
+        if self._load_queue:
+            self._load_pending_metadata = metadata
             return
 
         delegated_conversation = False
