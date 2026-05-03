@@ -3,7 +3,7 @@
 import os
 from typing import Callable, Union
 
-from PySide6.QtCore import Qt, QMimeData, QModelIndex, QPersistentModelIndex, QRect, QSize, QTimer
+from PySide6.QtCore import Qt, QMimeData, QModelIndex, QPersistentModelIndex, QRect, QSize
 from PySide6.QtGui import (
     QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent,
     QIcon, QMouseEvent, QPen, QPainter, QWheelEvent,
@@ -70,16 +70,6 @@ class MindspaceBreadcrumbBar(QTreeView):
         self._collapse_handler: Callable[[str], None] | None = None
 
         self.clicked.connect(self._on_item_clicked)
-
-        self._deferred_reset_timer = QTimer(self)
-        self._deferred_reset_timer.setSingleShot(True)
-        self._deferred_reset_timer.setInterval(0)
-        self._deferred_reset_timer.timeout.connect(self.reset)
-
-        self._deferred_rebuild_timer = QTimer(self)
-        self._deferred_rebuild_timer.setSingleShot(True)
-        self._deferred_rebuild_timer.setInterval(0)
-        self._deferred_rebuild_timer.timeout.connect(self._reset_and_expand)
 
     def set_root_path(self, root_path: str) -> None:
         """
@@ -270,12 +260,11 @@ class MindspaceBreadcrumbBar(QTreeView):
         """
         self._current_spine = spine
         self._drop_target_index = QModelIndex()
-        self._model.blockSignals(True)
-        self._model.clear()
+        self._model.beginResetModel()
+        self._model.removeRows(0, self._model.rowCount())
 
         if not spine:
-            self._model.blockSignals(False)
-            self._deferred_reset_timer.start()
+            self._model.endResetModel()
             return
 
         icon = self._folder_icon()
@@ -310,13 +299,11 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         _add_placeholders(self._model.invisibleRootItem())
 
-        self._model.blockSignals(False)
-        self._deferred_rebuild_timer.start()
+        self._model.endResetModel()
+        self._expand_real_items(QModelIndex())
 
     def _reset_and_expand(self) -> None:
-        """Reset the view and expand all items after a deferred model rebuild."""
-        self.reset()
-        self._expand_real_items(QModelIndex())
+        """No-op: retained for any external callers; expansion now happens in _rebuild."""
 
     def _expand_real_items(self, parent: QModelIndex) -> None:
         """Expand only real (non-placeholder) items in the model."""
