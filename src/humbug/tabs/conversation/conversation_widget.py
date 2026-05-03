@@ -108,7 +108,8 @@ class ConversationWidget(QWidget):
         self._load_queue: List[AIMessage] = []
         self._load_pending_metadata: Dict[str, Any] | None = None
         self._load_head_widgets: List[ConversationMessage] = []
-        self._load_batch_size: int = 4
+        self._load_scroll_offset: int | None = None
+        self._load_batch_size: int = 2
         self._load_tail_size: int = 80  # Weirdly we might get 80 message in view!
         self._load_generation: int = 0
         self._load_head_insert_pos: int = 0
@@ -123,11 +124,10 @@ class ConversationWidget(QWidget):
         self._deferred_scroll_timer.setInterval(0)
         self._deferred_scroll_timer_slot: Callable[..., Any] | None = None
 
-        self._scroll_settle_timer = QTimer(self)
-        self._scroll_settle_timer.setInterval(0)
-        self._scroll_settle_timer.timeout.connect(self._on_scroll_settle)
-        self._scroll_settle_attempts = 0
-        self._scroll_settle_max_attempts = 10
+        self._scroll_range_settle_timer = QTimer(self)
+        self._scroll_range_settle_timer.setSingleShot(True)
+        self._scroll_range_settle_timer.setInterval(20)
+        self._scroll_range_settle_timer.timeout.connect(self._on_scroll_range_settled)
 
         # Message border animation state (moved from ConversationInput)
         self._animated_message: ConversationMessage | None = None
@@ -818,6 +818,7 @@ class ConversationWidget(QWidget):
         for message in reversed(self._messages):
             if message.is_rendered():
                 return message
+
         return None
 
     def _update_border_animation(self) -> None:
@@ -1302,14 +1303,16 @@ class ConversationWidget(QWidget):
 
     def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
         """Handle the scroll range changing."""
-        # If we're set to auto-scroll then do so now
         total_height = self._messages_container.height()
         input_height = self._input.height()
         last_insertion_point = total_height - input_height - 2 * self._messages_layout.spacing()
 
         current_pos = self._scroll_area.verticalScrollBar().value()
 
-        if self._auto_scroll:
+        if self._load_scroll_offset is not None:
+            self._scroll_range_settle_timer.start()
+
+        elif self._auto_scroll:
             self._scroll_to_bottom()
 
         elif current_pos > last_insertion_point:
@@ -1319,30 +1322,19 @@ class ConversationWidget(QWidget):
 
         self._last_scroll_maximum = maximum
 
+    def _on_scroll_range_settled(self) -> None:
+        """Apply the pending load scroll offset once the scroll range has stopped changing."""
+        if self._load_scroll_offset is None:
+            return
+
+        vbar = self._scroll_area.verticalScrollBar()
+        vbar.setValue(vbar.maximum() - self._load_scroll_offset)
+        self._load_scroll_offset = None
+
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
-
-    def _on_scroll_settle(self) -> None:
-        """Re-scroll to the bottom each event-loop cycle until the position has settled.
-
-        Called repeatedly by _scroll_settle_timer after a load completes, to
-        compensate for Qt geometry still propagating after widget insertion.
-        Stops as soon as we confirm we are at the true bottom, or after a
-        maximum number of attempts to avoid running indefinitely.
-        """
-        scrollbar = self._scroll_area.verticalScrollBar()
-        self._scroll_settle_attempts += 1
-        if scrollbar.value() == scrollbar.maximum():
-            # Already at the bottom on entry — geometry has settled.
-            self._scroll_settle_timer.stop()
-            return
-
-        # Not there yet — scroll to current maximum and retry next cycle.
-        scrollbar.setValue(scrollbar.maximum())
-        if self._scroll_settle_attempts >= self._scroll_settle_max_attempts:
-            self._scroll_settle_timer.stop()
 
     def _find_conversation_message(self, widget: QWidget) -> ConversationMessage | None:
         """
@@ -1718,12 +1710,13 @@ class ConversationWidget(QWidget):
             message_widget.set_rendered(False)
             self._load_head_widgets.append(message_widget)
 
-        if self._load_queue:
-            if self._load_batch_timer_slot is not None:
-                self._load_batch_timer.timeout.disconnect(self._load_batch_timer_slot)
+        if self._load_batch_timer_slot is not None:
+            self._load_batch_timer.timeout.disconnect(self._load_batch_timer_slot)
 
+        if self._load_queue:
             self._load_batch_timer_slot = lambda: self._load_next_batch(generation)
             self._load_batch_timer.timeout.connect(self._load_batch_timer_slot)
+            self._load_batch_timer.setInterval(0)
             self._load_batch_timer.start()
             return
 
@@ -1732,6 +1725,9 @@ class ConversationWidget(QWidget):
     def _on_load_complete(self) -> None:
         """Finalise a completed batch load."""
         for widget in self._load_head_widgets:
+            if widget.is_rendered():
+                continue
+
             if widget.message_source() not in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
                 widget.apply_style()
                 widget.set_rendered(True)
@@ -1749,16 +1745,39 @@ class ConversationWidget(QWidget):
                     self._last_error_message_widget = last_widget
                     last_widget.show_retry_ui()
 
-        self._auto_scroll = True
-        self._scroll_to_bottom()
-        self._scroll_settle_attempts = 0
-        self._scroll_settle_timer.start()
         self.status_updated.emit()
 
-        # Apply any metadata that arrived while we were loading.
-        if self._load_pending_metadata is not None:
-            pending = self._load_pending_metadata
-            self._load_pending_metadata = None
+        pending = self._load_pending_metadata
+        self._load_pending_metadata = None
+
+        if not self._auto_scroll:
+            # The user scrolled during loading — record the current offset from
+            # the bottom so _on_scroll_range_changed can restore it once the
+            # range has expanded to accommodate the revealed head widgets.
+            vbar = self._scroll_area.verticalScrollBar()
+            self._load_scroll_offset = vbar.maximum() - vbar.value()
+
+            # Restore non-scroll metadata fields so they don't get lost.
+            if pending is not None:
+                pending.pop("auto_scroll", None)
+                pending.pop("vertical_scroll", None)
+                pending.pop("scroll_maximum", None)
+                self.restore_from_metadata(pending)
+
+        elif pending is not None:
+            # User hasn't scrolled — check whether the saved position was
+            # non-bottom, and if so convert it to an offset for range-change
+            # restoration; otherwise let auto-scroll keep us at the bottom.
+            saved_auto_scroll = pending.get("auto_scroll", True)
+            if not saved_auto_scroll:
+                saved_scroll = pending.get("vertical_scroll", 0)
+                saved_maximum = pending.get("scroll_maximum", saved_scroll)
+                self._load_scroll_offset = saved_maximum - saved_scroll
+
+            # Restore all non-scroll metadata fields.
+            pending.pop("auto_scroll", None)
+            pending.pop("vertical_scroll", None)
+            pending.pop("scroll_maximum", None)
             self.restore_from_metadata(pending)
 
     def _delete_empty_transcript_file(self) -> None:
@@ -2706,6 +2725,7 @@ class ConversationWidget(QWidget):
 
         metadata["auto_scroll"] = self._auto_scroll
         metadata["vertical_scroll"] = self._scroll_area.verticalScrollBar().value()
+        metadata["scroll_maximum"] = self._scroll_area.verticalScrollBar().maximum()
 
         # Store message expansion states
         expansion_states = []
@@ -2800,7 +2820,9 @@ class ConversationWidget(QWidget):
             if self._deferred_scroll_timer_slot is not None:
                 self._deferred_scroll_timer.timeout.disconnect(self._deferred_scroll_timer_slot)
 
-            self._deferred_scroll_timer_slot = lambda v=metadata["vertical_scroll"]: self._scroll_area.verticalScrollBar().setValue(v)
+            self._deferred_scroll_timer_slot = (
+                lambda v=metadata["vertical_scroll"]: self._scroll_area.verticalScrollBar().setValue(v)
+            )
             self._deferred_scroll_timer.timeout.connect(self._deferred_scroll_timer_slot)
             self._deferred_scroll_timer.start()
 
