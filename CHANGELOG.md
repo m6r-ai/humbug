@@ -27,6 +27,7 @@ Bug fixes:
   it (i.e. the models are compatible).
 - Tab hover effects were not working correctly in Linux.
 - Find in terminal tabs did not correctly search across a line wrap.
+- Arabic text no longer results in invalid spacing in the terminal emulator (the Arabic won't necessarily be super-readable).
 
 Internal structure changes
 
