@@ -24,7 +24,8 @@ from humbug.tabs.terminal.terminal_status import TerminalWidgetStatusInfo
 @dataclass
 class TerminalMatch:
     """Represents a match in the terminal buffer."""
-    row: int           # Row in buffer where match was found
+    match_index: int   # Index of the logical match this entry belongs to
+    row: int           # Physical row in buffer where this highlight lives
     start_col: int     # Starting column of match
     end_col: int       # Ending column of match
     is_current: bool   # Whether this is the currently selected match
@@ -123,6 +124,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Find functionality attributes
         self._matches: List[TerminalMatch] = []
+        self._total_logical_matches = 0
         self._current_match = -1
         self._last_search: tuple = ("", True, False)
         self._selection_active = False
@@ -1412,55 +1414,79 @@ class TerminalWidget(QAbstractScrollArea):
         if (text, case_sensitive, regexp) != self._last_search:
             self.clear_search_highlights()
             self._matches = []
+            self._total_logical_matches = 0
             self._current_match = -1
             self._last_search = (text, case_sensitive, regexp)
 
             # Find all matches
             if text:
                 buffer = self._state.current_buffer()
-                rows = buffer.history_lines()
                 cols = buffer.cols()
-
-                # Search through all lines in buffer
                 lines = buffer.lines()
-                for row in range(rows):
-                    line = lines[row]
-                    line_text = ""
+                n = len(lines)
+                logical_match_count = 0
 
-                    # Build text for this line
-                    for col in range(cols):
-                        char, _, _, _ = line.get_character(col)
-                        line_text += char
+                # Walk logical lines (groups of physical lines joined by
+                # continuation flags) so that matches spanning a soft-wrap
+                # boundary are found correctly.
+                i = 0
+                while i < n:
+                    # Collect physical rows belonging to this logical line.
+                    phys_rows: list[int] = []
+                    while i < n:
+                        phys_rows.append(i)
+                        i += 1
+                        if i >= n or not lines[i].continuation:
+                            break
 
-                    # Find all matches in this line
-                    pos = 0
+                    # Build the concatenated logical line text.
+                    logical_text = ""
+                    for row in phys_rows:
+                        for col in range(cols):
+                            char, _, _, _ = lines[row].get_character(col)
+                            logical_text += char
+
+                    # Find all matches within the logical line.
+                    raw_matches: list[tuple[int, int]] = []
                     if regexp:
                         flags = 0 if case_sensitive else re.IGNORECASE
-                        for m in re.finditer(text, line_text, flags):
-                            self._matches.append(TerminalMatch(
-                                row=row,
-                                start_col=m.start(),
-                                end_col=m.end(),
-                                is_current=False
-                            ))
+                        for m in re.finditer(text, logical_text, flags):
+                            raw_matches.append((m.start(), m.end()))
+
                     else:
                         search_text = text if case_sensitive else text.lower()
-                        search_line = line_text if case_sensitive else line_text.lower()
+                        search_logical = logical_text if case_sensitive else logical_text.lower()
+                        pos = 0
                         while True:
-                            pos = search_line.find(search_text, pos)
+                            pos = search_logical.find(search_text, pos)
                             if pos == -1:
                                 break
 
+                            raw_matches.append((pos, pos + len(search_text)))
+                            pos += 1
+
+                    # Map each match back to physical (row, col) entries.
+                    for start_off, end_off in raw_matches:
+                        match_idx = logical_match_count
+                        logical_match_count += 1
+                        # Split the match across physical rows as needed.
+                        for phys_idx, row in enumerate(phys_rows):
+                            row_start = phys_idx * cols
+                            row_end = row_start + cols
+                            if start_off >= row_end or end_off <= row_start:
+                                continue
+
                             self._matches.append(TerminalMatch(
+                                match_index=match_idx,
                                 row=row,
-                                start_col=pos,
-                                end_col=pos + len(text),
+                                start_col=max(0, start_off - row_start),
+                                end_col=min(cols, end_off - row_start),
                                 is_current=False
                             ))
-                            pos += 1
 
                 # Set selection active if we found any matches
                 self._selection_active = bool(self._matches)
+                self._total_logical_matches = logical_match_count
 
         if not self._matches:
             return
@@ -1468,15 +1494,15 @@ class TerminalWidget(QAbstractScrollArea):
         # Move to next/previous match
         if self._current_match == -1:
             # First search - start at beginning or end depending on direction
-            self._current_match = 0 if forward else len(self._matches) - 1
+            self._current_match = 0 if forward else self._total_logical_matches - 1
 
         else:
             # Move to next/previous match
             if forward:
-                self._current_match = (self._current_match + 1) % len(self._matches)
+                self._current_match = (self._current_match + 1) % self._total_logical_matches
 
             else:
-                self._current_match = (self._current_match - 1) if self._current_match > 0 else len(self._matches) - 1
+                self._current_match = (self._current_match - 1) if self._current_match > 0 else self._total_logical_matches - 1
 
         self._update_current_match()
         self._update_highlights()
@@ -1485,7 +1511,7 @@ class TerminalWidget(QAbstractScrollArea):
     def _update_current_match(self) -> None:
         """Update which match is marked as current."""
         for i, match in enumerate(self._matches):
-            match.is_current = bool(i == self._current_match)
+            match.is_current = bool(match.match_index == self._current_match)
 
     def _update_highlights(self) -> None:
         """Update highlight display in terminal."""
@@ -1512,6 +1538,7 @@ class TerminalWidget(QAbstractScrollArea):
     def clear_find(self) -> None:
         """Clear all find state."""
         self._matches = []
+        self._total_logical_matches = 0
         self._current_match = -1
         self._last_search = ("", True, False)
         self._selection_active = False
@@ -1523,8 +1550,10 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _scroll_to_match(self) -> None:
         """Scroll to ensure the current match is visible."""
-        match = self._matches[self._current_match]
-        self.scroll_to_match(match.row)
+        for match in self._matches:
+            if match.match_index == self._current_match:
+                self.scroll_to_match(match.row)
+                break
 
     def get_match_status(self) -> Tuple[int, int]:
         """
@@ -1536,7 +1565,7 @@ class TerminalWidget(QAbstractScrollArea):
         if not self._matches:
             return 0, 0
 
-        return self._current_match + 1, len(self._matches)
+        return self._current_match + 1, self._total_logical_matches
 
     def get_buffer_content(self, max_lines: int | None = None) -> str:
         """

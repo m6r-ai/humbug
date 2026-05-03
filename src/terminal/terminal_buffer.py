@@ -64,6 +64,11 @@ class TabStopState:
             cols: Width of terminal in columns
         """
         self.cols = cols
+
+        # When True, tab navigation uses default stops every DEFAULT_TAB_WIDTH
+        # columns.  Set to False by clear_all_tab_stops(); set back to True
+        # whenever a custom stop is explicitly added.
+        self._use_defaults = True
         self.custom_stops = set()
 
     def copy_tab_stops(self) -> 'TabStopState':
@@ -75,6 +80,7 @@ class TabStopState:
         """
         new_state = TabStopState(cols=self.cols)
         new_state.custom_stops = self.custom_stops.copy()
+        new_state._use_defaults = self._use_defaults
         return new_state
 
     def set_tab_stop(self, col: int) -> None:
@@ -86,6 +92,7 @@ class TabStopState:
         """
         if 0 <= col < self.cols:
             self.custom_stops.add(col)
+            self._use_defaults = False
 
     def clear_tab_stop(self, col: int) -> None:
         """
@@ -99,6 +106,7 @@ class TabStopState:
     def clear_all_tab_stops(self) -> None:
         """Clear all custom tab stops."""
         self.custom_stops.clear()
+        self._use_defaults = False
 
     def get_next_tab_stop(self, current_col: int) -> int | None:
         """
@@ -113,8 +121,8 @@ class TabStopState:
         if current_col >= self.cols - 1:
             return None
 
-        # If using custom tab stops
-        if self.custom_stops:
+        # If there are explicit custom stops, use them
+        if self.custom_stops and not self._use_defaults:
             # Find next custom stop after current position
             next_stops = [col for col in self.custom_stops if col > current_col]
             if next_stops:
@@ -122,12 +130,26 @@ class TabStopState:
 
             return None
 
-        # Using default tab stops every 8 chars
-        next_stop = ((current_col // self.DEFAULT_TAB_WIDTH) + 1) * self.DEFAULT_TAB_WIDTH
-        if next_stop >= self.cols:
+        if self.custom_stops:
+            # Custom stops exist alongside defaults: find the nearest of either
+            next_custom = [col for col in self.custom_stops if col > current_col]
+            default_stop = ((current_col // self.DEFAULT_TAB_WIDTH) + 1) * self.DEFAULT_TAB_WIDTH
+            candidates = next_custom
+            if default_stop < self.cols:
+                candidates = candidates + [default_stop]
+
+            if candidates:
+                return min(candidates)
+
             return None
 
-        return next_stop
+        if not self._use_defaults:
+            # All stops cleared — no tab stops at all
+            return None
+
+        # Pure default tab stops every DEFAULT_TAB_WIDTH columns
+        next_stop = ((current_col // self.DEFAULT_TAB_WIDTH) + 1) * self.DEFAULT_TAB_WIDTH
+        return next_stop if next_stop < self.cols else None
 
     def resize(self, new_cols: int) -> None:
         """
@@ -144,7 +166,7 @@ class TabStopState:
 @dataclass
 class BufferState:
     """Serializable terminal buffer state."""
-    lines: list[list[dict]]  # List of line states
+    lines: list[dict]  # List of line states, each {'continuation': bool, 'cells': list[dict]}
     cursor: dict  # Cursor state
     attributes: dict  # Attribute state
     scroll_region: dict  # Scroll region state
@@ -201,16 +223,16 @@ class TerminalBuffer:
         # Serialize line data
         lines_data = []
         for line in self._lines:
-            line_data = []
+            cells = []
             for col in range(line.width):
                 char, attrs, fg, bg = line.get_character(col)
-                line_data.append({
+                cells.append({
                     'char': char,
                     'attributes': attrs.value,
                     'fg_color': fg,
                     'bg_color': bg
                 })
-            lines_data.append(line_data)
+            lines_data.append({'continuation': line.continuation, 'cells': cells})
 
         return BufferState(
             lines=lines_data,
@@ -266,8 +288,10 @@ class TerminalBuffer:
         # Restore lines
         self._lines = []
         for line_data in state.lines:
-            line = self._get_new_line(len(line_data))
-            for col, char_data in enumerate(line_data):
+            cells: list[dict] = line_data['cells']
+            line = self._get_new_line(len(cells))
+            line.continuation = bool(line_data.get('continuation', False))
+            for col, char_data in enumerate(cells):
                 line.set_character(
                     col,
                     char_data['char'],
@@ -338,78 +362,163 @@ class TerminalBuffer:
         """
         old_rows = self._rows
 
-        # Update buffer dimensions
-        self._rows = new_rows
-        self._cols = new_cols
+        # Remove unvisited blank lines at the bottom of the visible area when
+        # narrowing columns — reflow can expand the physical line count and we
+        # want those blank lines consumed first rather than pushing content into
+        # scrollback.  When widening, reflow only shrinks or maintains the line
+        # count so this is not needed.
+        if new_cols < self._cols:
+            unvisited = max(0, old_rows - (self._max_cursor_row + 1))
+            if unvisited:
+                del self._lines[-unvisited:]
 
-        # If we're shrinking the visible display, look to see if we have any lines at the bottom of
-        # the screen that we've never visited.  If we do then start by removing them!
-        delete_rows = 0
-        if old_rows > new_rows:
-            delete_rows = max(0, old_rows - max(new_rows, self._max_cursor_row + 1))
-            if delete_rows:
-                del self._lines[-delete_rows:]
+        # Locate the cursor in absolute line-list coordinates before reflow so
+        # we can recompute its position afterwards.
+        # Note: computed after unvisited-line deletion so len(self._lines) is correct.
+        cursor_abs = len(self._lines) - min(old_rows, len(self._lines)) + self._cursor.row
+        cursor_col_before = self._cursor.col
+        # If delayed_wrap is set the cursor is logically one past the last column.
+        if self._cursor.delayed_wrap:
+            cursor_col_before = self._cols
 
-        old_line_count = len(self._lines)
-
-        # Create new lines with new width
-        new_lines = []
-
+        # Reflow: group physical lines into logical lines, then re-wrap at new_cols
         default_fg = self._attributes.foreground if self._attributes.current & TerminalCharacterAttributes.CUSTOM_FG else None
         default_bg = self._attributes.background if self._attributes.current & TerminalCharacterAttributes.CUSTOM_BG else None
 
-        # Copy content from old lines
-        for old_line in self._lines:
-            new_line = TerminalLine(max(new_cols, old_line.width))
+        new_lines: list[TerminalLine] = []
+        # Absolute index in new_lines where the cursor lands; resolved below.
+        new_cursor_abs = 0
+        new_cursor_col = 0
+        new_cursor_delayed_wrap = False
+        cursor_resolved = False
 
-            # Copy existing characters
-            for col in range(old_line.width):
-                char, attrs, fg, bg = old_line.get_character(col)
-                new_line.set_character(col, char, attrs, fg, bg)
+        # Walk the existing lines, collecting each logical line (the first
+        # physical line plus all consecutive continuation lines).
+        i = 0
+        physical_lines = self._lines
+        n = len(physical_lines)
 
-            # Pad with spaces if needed
-            for col in range(old_line.width, new_cols):
-                new_line.set_character(col, ' ', self._attributes.current, default_fg, default_bg)
+        while i < n:
+            # Collect all physical lines belonging to this logical line.
+            logical_start = i
+            cells: list[tuple] = []
+            while i < n:
+                phys = physical_lines[i]
+                for col in range(phys.width):
+                    cells.append(phys.get_character(col))
 
-            new_lines.append(new_line)
+                i += 1
+                if i >= n or not physical_lines[i].continuation:
+                    break
 
-        # Add additional empty lines if needed
+            # Strip trailing spaces from the logical line so that re-wrapping
+            # produces clean lines.  We only strip from the very end.
+            while cells and cells[-1][0] == ' ':
+                cells.pop()
+
+            # Check whether the cursor falls inside this logical line.
+            cursor_in_logical = (
+                not cursor_resolved
+                and logical_start <= cursor_abs < logical_start + (i - logical_start)
+            )
+            if cursor_in_logical:
+                # Compute the cursor's offset within the concatenated cells.
+                lines_before_cursor = cursor_abs - logical_start
+
+                # Each old physical line had old_rows columns... no: we need
+                # the actual widths of the physical lines we concatenated.
+                cell_offset = 0
+                for k in range(lines_before_cursor):
+                    cell_offset += physical_lines[logical_start + k].width
+
+                cell_offset += cursor_col_before
+                cell_offset = min(cell_offset, len(cells))
+
+            # Re-wrap the logical line into new_cols-wide physical lines.
+            if not cells:
+                # Blank logical line — emit one empty physical line.
+                new_line = TerminalLine(new_cols)
+                for col in range(new_cols):
+                    new_line.set_character(col, ' ', self._attributes.current, default_fg, default_bg)
+
+                new_line.continuation = physical_lines[logical_start].continuation
+                if cursor_in_logical:
+                    new_cursor_abs = len(new_lines)
+                    new_cursor_col = 0
+                    cursor_resolved = True
+
+                new_lines.append(new_line)
+
+            else:
+                offset = 0
+                first_in_logical = True
+                while offset <= len(cells):
+                    chunk = cells[offset:offset + new_cols]
+                    new_line = TerminalLine(new_cols)
+                    for col, (ch, attrs, fg, bg) in enumerate(chunk):
+                        new_line.set_character(col, ch, attrs, fg, bg)
+
+                    # Pad remainder with spaces
+                    for col in range(len(chunk), new_cols):
+                        new_line.set_character(col, ' ', self._attributes.current, default_fg, default_bg)
+
+                    # First physical line of a logical group inherits the
+                    # original continuation flag; subsequent ones are True.
+                    new_line.continuation = physical_lines[logical_start].continuation if first_in_logical else True
+                    first_in_logical = False
+
+                    if cursor_in_logical and not cursor_resolved:
+                        if offset <= cell_offset < offset + new_cols or (not chunk and cell_offset >= offset):
+                            new_cursor_abs = len(new_lines)
+                            new_cursor_col = min(cell_offset - offset, new_cols - 1)
+                            new_cursor_delayed_wrap = (
+                                cell_offset - offset >= new_cols
+                                or self._cursor.delayed_wrap and cell_offset == len(cells)
+                            )
+                            cursor_resolved = True
+
+                    new_lines.append(new_line)
+                    offset += new_cols
+                    if offset >= len(cells):
+                        break
+
+        # Ensure there are at least new_rows lines total.
         add_rows = max(0, new_rows - len(new_lines))
         for _ in range(add_rows):
-            new_lines.append(self._get_new_line(self._cols))
+            new_lines.append(self._get_new_line(new_cols))
 
-        # If we don't have a history scrollback then clip the line count
-        if not self._history_scrollback and self._rows < len(new_lines):
-            new_lines = new_lines[-self._rows:]
+        # For non-history buffers (alternate screen) clip to new_rows.
+        if not self._history_scrollback and len(new_lines) > new_rows:
+            new_lines = new_lines[-new_rows:]
 
-        # Update buffer contents
+        # Commit.
+        self._rows = new_rows
+        self._cols = new_cols
         self._lines = new_lines
-
-        # Trim to scrollback limit if needed
         self._trim_scrollback()
 
-        # Adjust cursor position
-        if old_line_count + add_rows >= new_rows:
-            self._cursor.row = max(0, self._cursor.row + new_rows - old_rows - add_rows + delete_rows)
+        # Recompute cursor position from the resolved absolute index.
+        if not cursor_resolved:
+            new_cursor_abs = len(self._lines) - new_rows
+            new_cursor_col = 0
 
-        self._cursor.col = min(self._cursor.col, new_cols - 1)
-        self._cursor.row = min(self._cursor.row, new_rows - 1)
+        self._cursor.row = max(0, min(new_cursor_abs - (len(self._lines) - new_rows), new_rows - 1))
+        self._cursor.col = max(0, min(new_cursor_col, new_cols - 1))
+        self._cursor.delayed_wrap = new_cursor_delayed_wrap
 
-        # Our max cursor row position becomes "sticky" once it hits the bottom row of the screen
+        # max_cursor_row: sticky at bottom once it reaches there.
         if self._max_cursor_row >= old_rows - 1:
-            self._max_cursor_row = new_rows - 1 - add_rows
+            self._max_cursor_row = new_rows - 1
 
-        # Adjust scroll region
+        else:
+            self._max_cursor_row = min(self._max_cursor_row, new_rows - 1)
+
+        # Adjust scroll region proportionally.
         self._scroll_region.bottom = min(
             self._scroll_region.bottom + new_rows - old_rows, new_rows
         )
-
-        # Ensure minimum scroll region size of 2 lines
         if self._scroll_region.bottom < self._scroll_region.top + 1:
-            self._scroll_region.bottom = min(
-                self._scroll_region.top + 2,
-                new_rows
-            )
+            self._scroll_region.bottom = min(self._scroll_region.top + 2, new_rows)
 
         self._scroll_region.rows = self._scroll_region.bottom - self._scroll_region.top
 
@@ -817,6 +926,12 @@ class TerminalBuffer:
                 max_rows = self._rows if not self._modes.origin else self._scroll_region.rows
                 self._cursor.row = min(self._cursor.row + 1, max_rows - 1)
                 self._max_cursor_row = max(self._max_cursor_row, self._cursor.row)
+
+            # Mark the line we just wrapped onto as a soft-wrap continuation
+            cursor_row = self._cursor.row if not self._modes.origin else self._cursor.row + self._scroll_region.top
+            line_index = len(self._lines) - self._rows + cursor_row
+            if 0 <= line_index < len(self._lines):
+                self._lines[line_index].continuation = True
 
         # Get effective cursor row considering origin mode
         cursor_row = self._cursor.row if not self._modes.origin else self._cursor.row + self._scroll_region.top

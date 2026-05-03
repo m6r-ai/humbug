@@ -18,6 +18,7 @@ New features:
   row as the menu bar to give more screen real estate.
 - Added "whole word" searching in all find boxes.
 - Added a mindspace global search feature.
+- The terminal now reflows lines better when it resizes.
 
 Bug fixes:
 
@@ -25,6 +26,11 @@ Bug fixes:
 - When switching reasoning models mid-conversation, only provide reasoning context to the new AI if it can definitely understand
   it (i.e. the models are compatible).
 - Tab hover effects were not working correctly in Linux.
+- Find in terminal tabs did not correctly search across a line wrap.
+
+Internal structure changes
+
+- Added a test suite for the core terminal emulator.
 
 ## v45 (2026-04-26)
 

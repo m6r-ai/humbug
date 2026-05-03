@@ -25,6 +25,11 @@ class TerminalLine:
     def __init__(self, width: int) -> None:
         """Initialize empty line with given width."""
         self.width = width
+        # True if this line is a soft-wrap continuation of the previous line.
+        # False for lines that start after a hard newline, an explicit cursor
+        # movement, a scroll operation, or at buffer initialisation.
+        self.continuation = False
+
         # For each character cell we store:
         # - Unicode codepoint (4 bytes)
         # - Attributes flags (4 bytes)

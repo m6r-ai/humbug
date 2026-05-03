@@ -172,10 +172,14 @@ class TerminalState:
                     continue
 
                 if char == '\x1b':
-                    self._logger.warning(
-                        "Unknown escape sequence - discarding: %r", self._escape_seq_buffer
-                    )
-                    self._escape_seq_buffer = ""
+                    # ESC inside an OSC or DCS sequence is the start of the
+                    # ST terminator (ESC \).  Append it and let the
+                    # completeness check handle it.  For any other sequence
+                    # type a bare ESC is malformed — discard and restart.
+                    seq = self._escape_seq_buffer
+                    if not (seq.startswith('\x1b]') or seq.startswith('\x1bP')):
+                        self._logger.warning("Unknown escape sequence - discarding: %r", seq)
+                        self._escape_seq_buffer = ""
 
                 self._escape_seq_buffer += char
 
