@@ -108,7 +108,7 @@ class ConversationWidget(QWidget):
         self._load_queue: List[AIMessage] = []
         self._load_pending_metadata: Dict[str, Any] | None = None
         self._load_batch_size: int = 4
-        self._load_tail_size: int = 50
+        self._load_tail_size: int = 80  # Weirdly we might get 80 message in view!
         self._load_generation: int = 0
         self._load_head_insert_pos: int = 0
 
@@ -121,6 +121,12 @@ class ConversationWidget(QWidget):
         self._deferred_scroll_timer.setSingleShot(True)
         self._deferred_scroll_timer.setInterval(0)
         self._deferred_scroll_timer_slot: Callable[..., Any] | None = None
+
+        self._scroll_settle_timer = QTimer(self)
+        self._scroll_settle_timer.setInterval(0)
+        self._scroll_settle_timer.timeout.connect(self._on_scroll_settle)
+        self._scroll_settle_attempts = 0
+        self._scroll_settle_max_attempts = 10
 
         # Message border animation state (moved from ConversationInput)
         self._animated_message: ConversationMessage | None = None
@@ -1317,6 +1323,26 @@ class ConversationWidget(QWidget):
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
+    def _on_scroll_settle(self) -> None:
+        """Re-scroll to the bottom each event-loop cycle until the position has settled.
+
+        Called repeatedly by _scroll_settle_timer after a load completes, to
+        compensate for Qt geometry still propagating after widget insertion.
+        Stops as soon as we confirm we are at the true bottom, or after a
+        maximum number of attempts to avoid running indefinitely.
+        """
+        scrollbar = self._scroll_area.verticalScrollBar()
+        self._scroll_settle_attempts += 1
+        if scrollbar.value() == scrollbar.maximum():
+            # Already at the bottom on entry — geometry has settled.
+            self._scroll_settle_timer.stop()
+            return
+
+        # Not there yet — scroll to current maximum and retry next cycle.
+        scrollbar.setValue(scrollbar.maximum())
+        if self._scroll_settle_attempts >= self._scroll_settle_max_attempts:
+            self._scroll_settle_timer.stop()
+
     def _find_conversation_message(self, widget: QWidget) -> ConversationMessage | None:
         """
         Find the ConversationMessage that contains the given widget.
@@ -1721,6 +1747,8 @@ class ConversationWidget(QWidget):
 
         self._auto_scroll = True
         self._scroll_to_bottom()
+        self._scroll_settle_attempts = 0
+        self._scroll_settle_timer.start()
         self.status_updated.emit()
 
         # Apply any metadata that arrived while we were loading.
