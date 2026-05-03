@@ -114,6 +114,7 @@ class MindspaceConversationsView(QWidget):
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
+        self._pending_reveal_path: str = ""
 
         # Auto-scroll state for drag operations
         self._auto_scroll_active = False
@@ -686,9 +687,10 @@ class MindspaceConversationsView(QWidget):
         if not os.path.exists(file_path):
             return
 
-        # Expand to the file and select it
         target_index = self._dag_model.index_for_path(file_path)
         if not target_index.isValid():
+            # Model hasn't rebuilt yet — defer until _restore_expanded_state fires.
+            self._pending_reveal_path = file_path
             return
 
         self._tree_view.clearSelection()
@@ -800,6 +802,15 @@ class MindspaceConversationsView(QWidget):
         if self._pending_new_item:
             _parent_path, is_folder, temp_path = self._pending_new_item
             self._ensure_item_visible_and_edit(temp_path, select_extension=is_folder)
+
+        if self._pending_reveal_path:
+            path = self._pending_reveal_path
+            self._pending_reveal_path = ""
+            target_index = self._dag_model.index_for_path(path)
+            if target_index.isValid():
+                self._tree_view.clearSelection()
+                self._tree_view.setCurrentIndex(target_index)
+                self._tree_view.scrollTo(target_index, self._tree_view.ScrollHint.EnsureVisible)
 
     def _is_current_directory_item(self, index: QModelIndex) -> bool:
         """

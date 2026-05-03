@@ -1315,6 +1315,8 @@ class MainWindow(QMainWindow):
             f"User created new conversation in folder '{folder_path}'\ntab ID: {conversation_tab.tab_id()}"
         )
 
+        self._mindspace_view.reveal_and_select_file(MindspaceViewType.CONVERSATIONS, conversation_tab.path())
+
     def _get_canonical_mindspace_path(self, path: str) -> str | None:
         """Get the canonical path of the current mindspace."""
         if not self._mindspace_manager.has_mindspace():
