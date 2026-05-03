@@ -1441,6 +1441,7 @@ class TerminalWidget(QAbstractScrollArea):
                 lines = buffer.lines()
                 n = len(lines)
                 logical_match_count = 0
+                _MAX_MATCHES = 500
 
                 # Walk logical lines (groups of physical lines joined by
                 # continuation flags) so that matches spanning a soft-wrap
@@ -1483,6 +1484,8 @@ class TerminalWidget(QAbstractScrollArea):
 
                     # Map each match back to physical (row, col) entries.
                     for start_off, end_off in raw_matches:
+                        if logical_match_count >= _MAX_MATCHES:
+                            break
                         match_idx = logical_match_count
                         logical_match_count += 1
                         # Split the match across physical rows as needed.
@@ -1571,17 +1574,17 @@ class TerminalWidget(QAbstractScrollArea):
                 self.scroll_to_match(match.row)
                 break
 
-    def get_match_status(self) -> Tuple[int, int]:
+    def get_match_status(self) -> Tuple[int, int, bool]:
         """
         Get the current match status.
 
         Returns:
-            Tuple of (current_match, total_matches)
+            Tuple of (current_match, total_matches, truncated)
         """
         if not self._matches:
-            return 0, 0
+            return 0, 0, False
 
-        return self._current_match + 1, self._total_logical_matches
+        return self._current_match + 1, self._total_logical_matches, self._total_logical_matches == 500
 
     def get_buffer_content(self, max_lines: int | None = None) -> str:
         """

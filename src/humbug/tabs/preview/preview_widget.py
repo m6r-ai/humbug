@@ -280,7 +280,7 @@ class PreviewWidget(QWidget):
             self._last_search = ("", False, False)  # Reset to force re-search
             case_sensitive = last_search[1] if isinstance(last_search, tuple) else False
             regexp = last_search[2] if isinstance(last_search, tuple) else False
-            _current, total = self.find_text(search_text, True, case_sensitive, regexp)
+            _current, total, _truncated = self.find_text(search_text, True, case_sensitive, regexp)
 
             # Try to restore the current match position
             if (find_state['current_widget_index'] >= 0 and
@@ -866,7 +866,7 @@ class PreviewWidget(QWidget):
         """Close the preview widget and clean up resources."""
         self._unregister_file_watching()
 
-    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int]:
+    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int, bool]:
         """
         Find all instances of text and highlight them.
 
@@ -892,13 +892,19 @@ class PreviewWidget(QWidget):
 
         # Find all matches if this is a new search
         if not self._matches and text:
+            total_so_far = 0
             for widget in widgets:
                 widget_matches = widget.find_text(text, case_sensitive, regexp)
                 if widget_matches:
+                    remaining = 500 - total_so_far
+                    widget_matches = widget_matches[:remaining]
                     self._matches.append((widget, widget_matches))
+                    total_so_far += len(widget_matches)
+                    if total_so_far >= 500:
+                        break
 
         if not self._matches:
-            return 0, 0
+            return 0, 0, False
 
         # Move to next/previous match
         if self._current_widget_index == -1:
@@ -1003,21 +1009,21 @@ class PreviewWidget(QWidget):
 
         self._highlighted_widgets.clear()
 
-    def get_match_status(self) -> Tuple[int, int]:
+    def get_match_status(self) -> Tuple[int, int, bool]:
         """
         Get the current match status.
 
         Returns:
-            Tuple of (current_match, total_matches)
+            Tuple of (current_match, total_matches, truncated)
         """
         total_matches = sum(len(matches) for _, matches in self._matches)
         if self._current_widget_index == -1:
-            return 0, total_matches
+            return 0, total_matches, total_matches == 500
 
         current_match = sum(len(matches) for _, matches in self._matches[:self._current_widget_index])
         current_match += self._current_match_index + 1
 
-        return current_match, total_matches
+        return current_match, total_matches, total_matches == 500
 
     def clear_find(self) -> None:
         """Clear all find state."""

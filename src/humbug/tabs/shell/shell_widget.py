@@ -996,7 +996,7 @@ class ShellWidget(QWidget):
         forward: bool = True,
         case_sensitive: bool = False,
         regexp: bool = False,
-    ) -> Tuple[int, int]:
+    ) -> Tuple[int, int, bool]:
         """
         Find all instances of text and highlight them.
 
@@ -1022,13 +1022,19 @@ class ShellWidget(QWidget):
 
         # Find all matches if this is a new search
         if not self._matches and text:
+            total_so_far = 0
             for widget in widgets:
                 widget_matches = widget.find_text(text, case_sensitive, regexp)
                 if widget_matches:
+                    remaining = 500 - total_so_far
+                    widget_matches = widget_matches[:remaining]
                     self._matches.append((widget, widget_matches))
+                    total_so_far += len(widget_matches)
+                    if total_so_far >= 500:
+                        break
 
         if not self._matches:
-            return 0, 0
+            return 0, 0, False
 
         # Move to next/previous match
         if self._current_widget_index == -1:
@@ -1127,20 +1133,20 @@ class ShellWidget(QWidget):
         self._current_match_index = -1
         self._last_search = ("", False, False)
 
-    def get_match_status(self) -> Tuple[int, int]:
+    def get_match_status(self) -> Tuple[int, int, bool]:
         """
         Get current match status.
 
         Returns:
-            Tuple of (current_match, total_matches)
+            Tuple of (current_match, total_matches, truncated)
         """
         # Calculate total matches
         total_matches = sum(len(m[1]) for m in self._matches)
 
         # Calculate current match
         if self._current_widget_index == -1 or self._current_match_index == -1:
-            return 0, total_matches
+            return 0, total_matches, total_matches == 500
 
         current_global_match = sum(len(m[1]) for m in self._matches[:self._current_widget_index]) + self._current_match_index + 1
 
-        return current_global_match, total_matches
+        return current_global_match, total_matches, total_matches == 500

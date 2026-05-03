@@ -32,6 +32,7 @@ Bug fixes:
   focused tab.
 - When rendering very long conversations the UI would stall for significant amounts of time.  Now these are handled incrementally
   so the UI remains responsive.
+- All find operations now cap at 500 search matches, but all also do live matching and don't wait for a user to press enter.
 
 Internal structure changes
 

@@ -383,6 +383,10 @@ class TabBase(QFrame):
         """Apply a programmatic find/highlight request when supported."""
         return None
 
+    def _close_find(self) -> None:
+        """Close the find widget and clear any active find state."""
+        return None
+
     def apply_search_highlight(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:
         """Apply a transient search highlight without mutating local find UI state."""
         return None
@@ -390,7 +394,8 @@ class TabBase(QFrame):
     def navigate_to_search_match(
         self, text: str, line_number: int | None, message_id: str | None, case_sensitive: bool = False, regexp: bool = False
     ) -> None:
-        """Highlight all matches and scroll to the one at line_number, or the first match if line_number is None."""
+        """Close any active find, then highlight all matches and scroll to the one at line_number."""
+        self._close_find()
         self.apply_search_highlight(text, case_sensitive=case_sensitive, regexp=regexp)
 
     def clear_search_highlight(self) -> None:

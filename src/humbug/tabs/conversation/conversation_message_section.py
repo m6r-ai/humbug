@@ -314,6 +314,7 @@ class ConversationMessageSection(QFrame):
         Returns:
             List of (start_position, end_position) tuples for each match
         """
+        _MAX_MATCHES = 500
         document = self._text_area.document()
         matches = []
         cursor = QTextCursor(document)
@@ -322,26 +323,37 @@ class ConversationMessageSection(QFrame):
             flags = QRegularExpression.PatternOption(0)
             if not case_sensitive:
                 flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
+
             pattern = QRegularExpression(text, flags)
             if not pattern.isValid():
                 return []
+
             find_flags = QTextDocument.FindFlag(0)
             if case_sensitive:
                 find_flags |= QTextDocument.FindFlag.FindCaseSensitively
+
             while True:
                 cursor = document.find(pattern, cursor, find_flags)
                 if cursor.isNull():
                     break
+
                 matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+                if len(matches) >= _MAX_MATCHES:
+                    break
+
         else:
             find_flags = QTextDocument.FindFlag(0)
             if case_sensitive:
                 find_flags |= QTextDocument.FindFlag.FindCaseSensitively
+
             while True:
                 cursor = document.find(text, cursor, find_flags)
                 if cursor.isNull():
                     break
+
                 matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+                if len(matches) >= _MAX_MATCHES:
+                    break
 
         return matches
 

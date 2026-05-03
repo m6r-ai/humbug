@@ -422,7 +422,7 @@ class DiffWidget(QWidget):
         self._left_pane.apply_style()
         self._right_pane.apply_style()
 
-    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int]:
+    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int, bool]:
         """
         Search for *text* across both panes and navigate to the next match.
 
@@ -573,13 +573,13 @@ class DiffWidget(QWidget):
         if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
-    def get_match_status(self) -> Tuple[int, int]:
+    def get_match_status(self) -> Tuple[int, int, bool]:
         """Return (current_1based, total) for the find widget status label."""
         total = len(self._find_matches)
         if total == 0:
-            return 0, 0
+            return 0, 0, False
 
-        return self._find_current + 1, total
+        return self._find_current + 1, total, total == 500
 
     def clear_find(self) -> None:
         """Clear all find state and remove highlights from both panes."""

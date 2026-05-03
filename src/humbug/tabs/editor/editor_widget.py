@@ -1130,6 +1130,7 @@ class EditorWidget(QPlainTextEdit):
         rescanned = False
         if not self._matches and text:
             rescanned = True
+            _MAX_MATCHES = 500
             cursor = QTextCursor(document)
             if regexp:
                 flags = QRegularExpression.PatternOption(0)
@@ -1148,6 +1149,8 @@ class EditorWidget(QPlainTextEdit):
                             break
 
                         self._matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+                        if len(self._matches) >= _MAX_MATCHES:
+                            break
 
             else:
                 find_flags = QTextDocument.FindFlag(0)
@@ -1160,6 +1163,8 @@ class EditorWidget(QPlainTextEdit):
                         break
 
                     self._matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+                    if len(self._matches) >= _MAX_MATCHES:
+                        break
 
         if not self._matches:
             return
@@ -1383,14 +1388,15 @@ class EditorWidget(QPlainTextEdit):
         if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
-    def get_match_status(self) -> Tuple[int, int]:
+    def get_match_status(self) -> Tuple[int, int, bool]:
         """
         Get the current match status.
 
         Returns:
-            Tuple of (current_match, total_matches)
+            Tuple of (current_match, total_matches, truncated)
         """
-        return self._current_match + 1, len(self._matches)
+        total = len(self._matches)
+        return self._current_match + 1, total, total == 500
 
     def clear_find(self) -> None:
         """Clear all find state."""

@@ -106,8 +106,8 @@ class EditorTab(TabBase):
 
         self._editor_widget.refresh_find()
 
-        new_current, new_total = self._editor_widget.get_match_status()
-        self._find_widget.set_match_status(new_current, new_total)
+        new_current, new_total, new_truncated = self._editor_widget.get_match_status()
+        self._find_widget.set_match_status(new_current, new_total, new_truncated)
 
     def _on_file_saved(self, path: str) -> None:
         """Handle file being saved."""
@@ -117,8 +117,8 @@ class EditorTab(TabBase):
         """Update language-specific elements."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
-            current, total = self._editor_widget.get_match_status()
-            self._find_widget.set_match_status(current, total)
+            current, total, truncated = self._editor_widget.get_match_status()
+            self._find_widget.set_match_status(current, total, truncated)
 
         # Update status bar with translated terms
         self.update_status()
@@ -337,7 +337,8 @@ class EditorTab(TabBase):
     def navigate_to_search_match(
         self, text: str, line_number: int | None, message_id: str | None, case_sensitive: bool = False, regexp: bool = False
     ) -> None:
-        """Highlight all matches and scroll to the match at line_number, or the first match if line_number is None."""
+        """Close any active find, then highlight all matches and scroll to the match at line_number."""
+        self._close_find()
         if line_number is not None:
             self._editor_widget.find_text_at_line(text, line_number, case_sensitive=case_sensitive, regexp=regexp)
         else:
@@ -361,8 +362,8 @@ class EditorTab(TabBase):
                 return
 
         self._editor_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
-        current, total = self._editor_widget.get_match_status()
-        self._find_widget.set_match_status(current, total)
+        current, total, truncated = self._editor_widget.get_match_status()
+        self._find_widget.set_match_status(current, total, truncated)
 
     def _on_search_changed(self) -> None:
         """Handle search text or mode changes - update matches without navigating."""
@@ -373,15 +374,15 @@ class EditorTab(TabBase):
                 return
 
         self._editor_widget.find_text(text, forward=True, move_cursor=False, case_sensitive=case_sensitive, regexp=regexp)
-        current, total = self._editor_widget.get_match_status()
-        self._find_widget.set_match_status(current, total)
+        current, total, truncated = self._editor_widget.get_match_status()
+        self._find_widget.set_match_status(current, total, truncated)
 
     def _replace_current(self, replace_text: str) -> None:
         """Replace the current match and advance to the next."""
         self._editor_widget.replace_current(replace_text)
         self._search_update_timer.stop()
-        current, total = self._editor_widget.get_match_status()
-        self._find_widget.set_match_status(current, total)
+        current, total, truncated = self._editor_widget.get_match_status()
+        self._find_widget.set_match_status(current, total, truncated)
 
     def _replace_all(self, replace_text: str) -> None:
         """Replace all matches and update the status display."""

@@ -96,8 +96,8 @@ class ShellTab(TabBase):
         """Update language-specific elements when language changes."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
-            current, total = self._shell_widget.get_match_status()
-            self._find_widget.set_match_status(current, total)
+            current, total, truncated = self._shell_widget.get_match_status()
+            self._find_widget.set_match_status(current, total, truncated)
 
         # Update status bar
         self.update_status()
@@ -253,21 +253,24 @@ class ShellTab(TabBase):
                 self._find_widget.set_invalid_regexp()
                 return
 
-        current, total = self._shell_widget.find_text(
+        current, total, truncated = self._shell_widget.find_text(
             text,
             forward,
             case_sensitive=case_sensitive,
             regexp=regexp,
         )
-        self._find_widget.set_match_status(current, total)
+        self._find_widget.set_match_status(current, total, truncated)
 
     def _on_search_changed(self) -> None:
-        """Clear local highlights when the find query becomes empty."""
-        if self._find_widget.get_search_text():
-            return
+        """Handle search text or mode changes - update matches without navigating."""
+        text, case_sensitive, regexp = self._find_widget.current_search_request()
+        if regexp:
+            if text and not QRegularExpression(text).isValid():
+                self._find_widget.set_invalid_regexp()
+                return
 
-        self._shell_widget.clear_highlights()
-        self._find_widget.set_match_status(0, 0)
+        current, total, truncated = self._shell_widget.find_text(text, True, case_sensitive=case_sensitive, regexp=regexp)
+        self._find_widget.set_match_status(current, total, truncated)
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""

@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QWidget, QGridLayout, QHBoxLayout, QLineEdit, QToolButton, QLabel, QPushButton
 )
 from PySide6.QtCore import Signal, Qt, QSize
+from PySide6.QtCore import Signal, Qt, QSize, QTimer
 from PySide6.QtGui import QIcon, QFocusEvent, QKeyEvent, QCloseEvent, QResizeEvent
 
 from humbug.color_role import ColorRole
@@ -30,6 +31,11 @@ class FindWidget(QWidget):
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
         self._preferred_width_fn: Callable[[], int | None] | None = None
+
+        self._search_debounce_timer = QTimer(self)
+        self._search_debounce_timer.setSingleShot(True)
+        self._search_debounce_timer.setInterval(200)
+        self._search_debounce_timer.timeout.connect(self.search_changed)
 
         # Search history for this widget instance
         self._history: List[str] = []
@@ -126,6 +132,7 @@ class FindWidget(QWidget):
         # Track current state
         self._matches = 0
         self._current_match = 0
+        self._truncated = False
 
         self._on_language_changed()
 
@@ -418,7 +425,7 @@ class FindWidget(QWidget):
         if self._matches > 0:
             self._status_label.setText(strings.find_match_count.format(
                 current=self._current_match,
-                total=self._matches
+                total=f"{self._matches}+" if self._truncated else self._matches
             ))
 
         else:
@@ -439,15 +446,17 @@ class FindWidget(QWidget):
         self._replace_button.setEnabled(enabled)
         self._replace_all_button.setEnabled(enabled)
 
-    def set_match_status(self, current: int, total: int) -> None:
+    def set_match_status(self, current: int, total: int, truncated: bool = False) -> None:
         """Set the match status display.
 
         Args:
             current: Current match index (1-based)
             total: Total number of matches
+            truncated: If True, display total with a '+' suffix to indicate the cap was reached
         """
         self._matches = total
         self._current_match = current
+        self._truncated = truncated
         self._update_match_status()
 
     def set_invalid_regexp(self) -> None:
@@ -470,11 +479,11 @@ class FindWidget(QWidget):
 
     def _on_text_changed(self) -> None:
         """Handle changes to search text."""
-        self.search_changed.emit()
+        self._search_debounce_timer.start()
 
     def _on_mode_changed(self) -> None:
         """Handle changes to match-case or regexp toggle."""
-        self.search_changed.emit()
+        self._search_debounce_timer.start()
 
     def get_search_text(self) -> str:
         """Get the current search text."""
