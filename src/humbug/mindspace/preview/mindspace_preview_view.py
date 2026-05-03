@@ -63,6 +63,7 @@ class MindspacePreviewView(QWidget):
         # Create the three coordinated widgets and wrap them in the container.
         self._breadcrumb_bar = MindspaceBreadcrumbBar()
         self._breadcrumb_bar.set_drop_handler(self._on_file_dropped)
+        self._breadcrumb_bar.set_context_menu_handler(self._show_breadcrumb_context_menu)
 
         self._tree_view = MindspacePreviewTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
@@ -636,6 +637,49 @@ class MindspacePreviewView(QWidget):
         file_name = self._fs_model.fileName(source_index)
         return file_name == "."
 
+    def _get_tree_index_for_path(self, path: str) -> QModelIndex:
+        """
+        Return the filter-model index for the given file system path.
+
+        Args:
+            path: Absolute file system path to look up.
+
+        Returns:
+            A valid QModelIndex if the path is in the tree, otherwise an invalid one.
+        """
+        source_index = self._fs_model.index(path)
+        if not source_index.isValid():
+            return QModelIndex()
+
+        return self._filter_model.mapFromSource(source_index)
+
+    def _show_breadcrumb_context_menu(self, path: str, global_pos: QPoint) -> None:
+        """
+        Show a context menu for a breadcrumb item at the given screen position.
+
+        Args:
+            path: Absolute file system path of the breadcrumb item that was right-clicked.
+            global_pos: Screen position at which to show the menu.
+        """
+        if not self._mindspace_path:
+            return
+
+        strings = self._language_manager.strings()
+        is_root = os.path.normpath(path) == os.path.normpath(self._mindspace_path)
+
+        if is_root:
+            menu = self._create_root_context_menu()
+        else:
+            menu = QMenu(self)
+            menu.addAction(strings.preview).triggered.connect(lambda: self._handle_preview_view_file(path))
+            menu.addAction(strings.new_folder).triggered.connect(lambda: self._start_new_folder_creation(path))
+            menu.addAction(strings.new_file).triggered.connect(lambda: self._start_new_file_creation(path))
+            tree_index = self._get_tree_index_for_path(path)
+            menu.addAction(strings.rename).triggered.connect(lambda: self._start_rename(tree_index))
+            menu.addAction(strings.delete).triggered.connect(lambda: self._handle_delete_folder(path))
+
+        menu.exec_(global_pos)
+
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for preview tree items."""
         # Get the index at the clicked position
@@ -665,8 +709,6 @@ class MindspacePreviewView(QWidget):
                 # Directory context menu
                 preview_view_action = menu.addAction(strings.preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
-                edit_action = menu.addAction(strings.edit)
-                edit_action.triggered.connect(lambda: self._handle_edit_file(path))
                 new_folder_action = menu.addAction(strings.new_folder)
                 new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
                 new_file_action = menu.addAction(strings.new_file)

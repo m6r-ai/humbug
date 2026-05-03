@@ -3,9 +3,9 @@
 import os
 from typing import Callable, Union
 
-from PySide6.QtCore import Qt, QMimeData, QModelIndex, QPersistentModelIndex, QRect, QSize
+from PySide6.QtCore import Qt, QMimeData, QModelIndex, QPersistentModelIndex, QPoint, QRect, QSize
 from PySide6.QtGui import (
-    QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent,
+    QContextMenuEvent, QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent,
     QIcon, QMouseEvent, QPen, QPainter, QWheelEvent,
     QStandardItem, QStandardItemModel,
 )
@@ -48,7 +48,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         self.setSelectionMode(QTreeView.SelectionMode.NoSelection)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
         self.setAcceptDrops(True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
@@ -68,6 +68,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         self._drop_handler: Callable[[str, str], None] | None = None
         self._scroll_handler: Callable[[str], None] | None = None
         self._collapse_handler: Callable[[str], None] | None = None
+        self._context_menu_handler: Callable[[str, QPoint], None] | None = None
 
         self.clicked.connect(self._on_item_clicked)
 
@@ -114,6 +115,21 @@ class MindspaceBreadcrumbBar(QTreeView):
             handler: Collapse handler callable
         """
         self._collapse_handler = handler
+
+    def set_context_menu_handler(self, handler: Callable[[str, QPoint], None]) -> None:
+        """
+        Set the callable invoked when the user right-clicks a spine row.
+
+        Signature: handler(path, global_pos) -> None
+
+        The path is the absolute file system path stored on the clicked item
+        (the root path for the "." sentinel).  global_pos is the screen
+        position suitable for passing directly to QMenu.exec_().
+
+        Args:
+            handler: Context menu handler callable
+        """
+        self._context_menu_handler = handler
 
     def update_from_path(self, visible_path: str) -> int:
         """
@@ -472,9 +488,11 @@ class MindspaceBreadcrumbBar(QTreeView):
         """Suppress all internal scrolling — the breadcrumb is always fully visible."""
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        """Suppress right-click and branch-area clicks; fire collapse handler for branch-area left-clicks."""
+        """Suppress branch-area clicks; fire collapse handler for branch-area left-clicks."""
         if event.button() == Qt.MouseButton.RightButton:
-            event.ignore()
+            # Accept the press so the matching release is delivered to us, which
+            # allows contextMenuEvent to fire via the normal Qt mechanism.
+            event.accept()
             return
 
         index = self.indexAt(event.pos())
@@ -489,8 +507,9 @@ class MindspaceBreadcrumbBar(QTreeView):
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        """Suppress right-click and branch-area release events."""
+        """Suppress branch-area release events."""
         if event.button() == Qt.MouseButton.RightButton:
+            event.accept()
             return
 
         index = self.indexAt(event.pos())
@@ -500,3 +519,16 @@ class MindspaceBreadcrumbBar(QTreeView):
                 return
 
         super().mouseReleaseEvent(event)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        """Fire the context menu handler when the user right-clicks a spine row."""
+        if not self._context_menu_handler:
+            return
+
+        index = self.indexAt(event.pos())
+        path = self._path_for_index(index) if index.isValid() else self._root_path
+        if not path:
+            path = self._root_path
+
+        if path:
+            self._context_menu_handler(path, event.globalPos())
