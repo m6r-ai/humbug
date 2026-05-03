@@ -1644,7 +1644,11 @@ class ConversationWidget(QWidget):
                 message_widget.apply_style()
 
         self._auto_scroll = True
-        self._scroll_to_bottom()
+        # Defer the initial scroll so Qt has one event-loop cycle to finish
+        # processing layout geometry from the tail widget insertions.  Without
+        # this, scrollbar.maximum() may not yet reflect the full content height
+        # and the scroll lands short of the true bottom.
+        QTimer.singleShot(0, self._scroll_to_bottom)
 
         # The head messages will be prepended one batch at a time.  layout_pos 1
         # is directly after the stretch item; we advance it with each insertion
