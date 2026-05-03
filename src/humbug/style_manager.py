@@ -69,7 +69,7 @@ class StyleManager(QObject):
             # Level 2: Cache scaled icons by (path, scaled_size)
             self._scaled_icon_cache: Dict[tuple[str, int], QPixmap] = {}
 
-            self._code_font_families = ["JetBrains Mono", "Menlo", "Consolas", "Monaco", "monospace"]
+            self._code_font_families = ["JetBrains Mono", "Noto Sans Arabic"]
             self._proportional_font_families = ["Noto Sans", "Noto Sans Arabic"]
             self._initialize_highlights()
             self._initialize_proportional_highlights()

@@ -1048,7 +1048,15 @@ class TerminalWidget(QAbstractScrollArea):
             # Draw text
             if not (attrs & TerminalCharacterAttributes.BLINK and self._blink_state):
                 painter.setPen(fg)
-                painter.drawText(QPointF(x_start, y + self._char_ascent), text)
+
+                # If we have standard mono-space chars then render in a run.  If we have anything
+                # else we need to do one character at a time.
+                if all(ord(c) <= 0x024F for c in text):
+                    painter.drawText(QPointF(x_start, y + self._char_ascent), text)
+
+                else:
+                    for i, char in enumerate(text):
+                        painter.drawText(QPointF(x_start + i * self._char_width, y + self._char_ascent), char)
 
             return
 
@@ -1097,7 +1105,15 @@ class TerminalWidget(QAbstractScrollArea):
                     if not (attrs & TerminalCharacterAttributes.BLINK and self._blink_state):
                         painter.setPen(fg)
                         batch_text = text[current_batch_start:current_batch_start + current_batch_len]
-                        painter.drawText(QPointF(batch_x, y + self._char_ascent), batch_text)
+
+                        # If we have standard mono-space chars then render in a run.  If we have anything
+                        # else we need to do one character at a time.
+                        if all(ord(c) <= 0x024F for c in batch_text):
+                            painter.drawText(QPointF(batch_x, y + self._char_ascent), batch_text)
+
+                        else:
+                            for i, char in enumerate(batch_text):
+                                painter.drawText(QPointF(batch_x + i * self._char_width, y + self._char_ascent), char)
 
                 # Start a new batch for the current character
                 if i == len(text) - 1 and char_bg != current_highlight_bg:
