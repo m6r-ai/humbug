@@ -4,7 +4,7 @@ import sys
 
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QToolButton, QSizePolicy, QApplication
 from PySide6.QtCore import Qt, QSize, QPoint, QEvent
-from PySide6.QtGui import QPainter, QPen, QColor, QMouseEvent, QIcon, QPixmap
+from PySide6.QtGui import QMouseEvent, QIcon
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
@@ -118,82 +118,27 @@ class WindowControlsWidget(QWidget):
     def _update_button_icons(self) -> None:
         """Redraw the painted icons for minimise, maximise/restore, and close."""
         style_manager = self._style_manager
-        zoom = style_manager.zoom_factor()
-        btn_size = int(28 * zoom)
-        icon_px = max(1, int(btn_size * 0.45))
+        icon_px = 16
+        minimize_pixmap = style_manager.scale_icon("minimize", icon_px)
+        minimize_icon = QIcon()
+        minimize_icon.addPixmap(minimize_pixmap, QIcon.Mode.Normal, QIcon.State.Off)
+        self._minimise_button.setIcon(minimize_icon)
 
-        text_color = QColor(style_manager.get_color_str(ColorRole.TEXT_PRIMARY))
-
-        self._minimise_button.setIcon(self._make_minimise_icon(icon_px, text_color))
         if self._is_maximised:
-            self._maximise_button.setIcon(self._make_restore_icon(icon_px, text_color))
-
+            restore_pixmap = style_manager.scale_icon("restore", icon_px)
+            restore_icon = QIcon()
+            restore_icon.addPixmap(restore_pixmap, QIcon.Mode.Normal, QIcon.State.Off)
+            self._maximise_button.setIcon(restore_icon)
         else:
-            self._maximise_button.setIcon(self._make_maximise_icon(icon_px, text_color))
+            maximize_pixmap = style_manager.scale_icon("maximize", icon_px)
+            maximize_icon = QIcon()
+            maximize_icon.addPixmap(maximize_pixmap, QIcon.Mode.Normal, QIcon.State.Off)
+            self._maximise_button.setIcon(maximize_icon)
 
         close_pixmap = style_manager.scale_icon("close", 16)
         close_icon = QIcon()
         close_icon.addPixmap(close_pixmap, QIcon.Mode.Normal, QIcon.State.Off)
         self._close_button.setIcon(close_icon)
-
-    def _make_minimise_icon(self, size: int, color: QColor) -> QIcon:
-        """Create a minimise icon (horizontal line) of the given pixel size."""
-        pixmap = QPixmap(size, size)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        pen = QPen(color)
-        pen.setWidth(max(1, size // 8))
-        painter.setPen(pen)
-        y = size // 2
-        margin = size // 6
-        painter.drawLine(margin, y, size - margin, y)
-        painter.end()
-        icon = QIcon()
-        icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
-        return icon
-
-    def _make_maximise_icon(self, size: int, color: QColor) -> QIcon:
-        """Create a maximise icon (square outline) of the given pixel size."""
-        pixmap = QPixmap(size, size)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        pen = QPen(color)
-        pen.setWidth(max(1, size // 8))
-        painter.setPen(pen)
-        margin = size // 6
-        painter.drawRect(margin, margin, size - 2 * margin - 1, size - 2 * margin - 1)
-        painter.end()
-        icon = QIcon()
-        icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
-        return icon
-
-    def _make_restore_icon(self, size: int, color: QColor) -> QIcon:
-        """Create a restore icon (two overlapping squares) of the given pixel size."""
-        pixmap = QPixmap(size, size)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        pen = QPen(color)
-        lw = max(1, size // 8)
-        pen.setWidth(lw)
-        painter.setPen(pen)
-
-        bg_color = QColor(self._style_manager.get_color_str(ColorRole.MENU_BACKGROUND))
-        offset = size // 5
-        sq = size - offset - size // 6
-
-        painter.setBrush(bg_color)
-        painter.drawRect(offset, 0, sq, sq)
-
-        painter.setBrush(bg_color)
-        painter.drawRect(0, offset, sq, sq)
-
-        painter.end()
-        icon = QIcon()
-        icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
-        return icon
 
     def set_maximised(self, maximised: bool) -> None:
         """

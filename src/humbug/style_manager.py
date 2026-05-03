@@ -1220,6 +1220,30 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            self._write_icon(f'minimize-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="12" y1="32" x2="52" y2="32"
+                        stroke="{color}" stroke-width="6" stroke-linecap="round"/>
+                </svg>
+            ''')
+
+            self._write_icon(f'maximize-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="12" y="12" width="40" height="40"
+                        stroke="{color}" stroke-width="6" fill="none" stroke-linejoin="round"/>
+                </svg>
+            ''')
+
+            self._write_icon(f'restore-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="20" y="8" width="36" height="36"
+                        stroke="{color}" stroke-width="6" fill="none" stroke-linejoin="round"/>
+                    <path d="M8,24 L8,56 L40,56 L40,44"
+                        stroke="{color}" stroke-width="6" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            ''')
+
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)
             self._create_active_inactive_theme_icons(True, suffix, bright_color, prefix="bright-")
