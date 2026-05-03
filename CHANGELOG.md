@@ -28,6 +28,8 @@ Bug fixes:
 - Tab hover effects were not working correctly in Linux.
 - Find in terminal tabs did not correctly search across a line wrap.
 - Arabic text no longer results in invalid spacing in the terminal emulator (the Arabic won't necessarily be super-readable).
+- When an AI opens a new tab, the focus will no longer automatically shift to the new tab.  It will stay with the current
+  focused tab.
 
 Internal structure changes
 

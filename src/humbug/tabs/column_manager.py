@@ -552,7 +552,10 @@ class ColumnManager(QWidget):
         tab_bar = column.tabBar()
         assert isinstance(tab_bar, TabBar)
         label.hovered.connect(lambda hovered, l=label, tb=tab_bar: tb.on_label_hovered(l, hovered))
+        focus_widget = QApplication.focusWidget()
         column.setCurrentWidget(tab)
+        if focus_widget is not None:
+            focus_widget.setFocus()
 
         # Update MRU order for the new tab
         self._update_mru_order(tab, column)
@@ -1060,12 +1063,13 @@ class ColumnManager(QWidget):
         self._active_column = column
 
         # Update MRU order for the newly selected tab.  Also check if we need to update focus.  We don't
-        # want to change focus if the current tab is ephemeral.
+        # want to change focus if the current tab is ephemeral, or if a tab is protected (meaning an AI
+        # tool is opening a new tab in the background).
         current_tab = self.get_current_tab()
         update_focus = True
         if current_tab:
             self._update_mru_order(current_tab, column)
-            update_focus = not current_tab.is_ephemeral()
+            update_focus = not current_tab.is_ephemeral() and not self._protected_tab_id
 
         self._update_tabs(change_focus=update_focus)
 
