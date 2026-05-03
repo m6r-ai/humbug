@@ -585,8 +585,7 @@ class MindspaceConversationsView(QWidget):
             # Set up pending creation state with the duplicate path
             self._pending_new_item = (parent_path, False, duplicate_path)
 
-            # Ensure the duplicate file is visible and start editing
-            self._ensure_item_visible_and_edit(duplicate_path, select_extension=False)
+            # _restore_expanded_state will trigger editing once the DAG model rebuilds.
 
         except (OSError, shutil.Error) as e:
             self._logger.error("Failed to duplicate file '%s': %s", source_path, str(e))
@@ -798,6 +797,10 @@ class MindspaceConversationsView(QWidget):
             if index.isValid():
                 self._tree_view.setCurrentIndex(index)
 
+        if self._pending_new_item:
+            _parent_path, is_folder, temp_path = self._pending_new_item
+            self._ensure_item_visible_and_edit(temp_path, select_extension=is_folder)
+
     def _is_current_directory_item(self, index: QModelIndex) -> bool:
         """
         Check if the given index represents the root sentinel (".") item.
@@ -925,10 +928,8 @@ class MindspaceConversationsView(QWidget):
             self._logger.info("Created temporary folder: '%s'", temp_folder_path)
 
             # Set up pending creation state with the temporary path
+            # _restore_expanded_state will trigger editing once the DAG model rebuilds.
             self._pending_new_item = (parent_path, True, temp_folder_path)
-
-            # Ensure the new folder is visible and start editing
-            self._ensure_item_visible_and_edit(temp_folder_path, select_extension=True)
 
         except OSError as e:
             self._logger.error("Failed to create temporary folder '%s': %s", temp_folder_path, str(e))
