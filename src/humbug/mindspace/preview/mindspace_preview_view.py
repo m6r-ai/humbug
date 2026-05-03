@@ -75,6 +75,8 @@ class MindspacePreviewView(QWidget):
 
         self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
+        self._bc_container.set_dot_click_handler(self._on_breadcrumb_dot_clicked)
+        self._bc_container.set_dot_double_click_handler(self._on_breadcrumb_dot_double_clicked)
 
         # Create file system model
         self._icon_provider = MindspaceTreeIconProvider()
@@ -503,6 +505,12 @@ class MindspacePreviewView(QWidget):
         if not target_index.isValid():
             return
 
+        # If the target is a directory currently hidden behind the breadcrumb, treat
+        # it as a breadcrumb click so the breadcrumb recalculates correctly.
+        if os.path.isdir(normalized_path) and self._tree_view.visualRect(target_index).top() < 0:
+            self._bc_container.scroll_to_path(normalized_path)
+            return
+
         self._tree_view.clearSelection()
         self._tree_view.setCurrentIndex(target_index)
         self._tree_view.scrollTo(target_index, self._tree_view.ScrollHint.EnsureVisible)
@@ -616,26 +624,6 @@ class MindspacePreviewView(QWidget):
 
         return menu
 
-    def _is_current_directory_item(self, index: QModelIndex) -> bool:
-        """
-        Check if the given index represents the current directory (".") item.
-
-        Args:
-            index: Model index to check
-
-        Returns:
-            True if this is the current directory item
-        """
-        if not index.isValid():
-            return False
-
-        source_index = self._filter_model.mapToSource(index)
-        if not source_index.isValid():
-            return False
-
-        file_name = self._fs_model.fileName(source_index)
-        return file_name == "."
-
     def _get_tree_index_for_path(self, path: str) -> QModelIndex:
         """
         Return the filter-model index for the given file system path.
@@ -691,10 +679,6 @@ class MindspacePreviewView(QWidget):
         # Determine the path and whether it's a file or directory
         if not index.isValid():
             # Clicked on empty space - show root context menu
-            menu = self._create_root_context_menu()
-
-        elif self._is_current_directory_item(index):
-            # Clicked on the current directory (".") item - show root context menu
             menu = self._create_root_context_menu()
 
         else:
@@ -853,10 +837,6 @@ class MindspacePreviewView(QWidget):
         if not index.isValid():
             return
 
-        # Don't allow renaming the current directory item
-        if self._is_current_directory_item(index):
-            return
-
         # Get the delegate and start Qt-based editing (excludes extension from selection)
         delegate = self._tree_view.itemDelegate(index)
         if not isinstance(delegate, MindspaceTreeDelegate):
@@ -872,6 +852,16 @@ class MindspacePreviewView(QWidget):
     def _handle_preview_view_file(self, path: str) -> None:
         """View a file in the preview."""
         self.file_opened_in_preview.emit(path, False)
+
+    def _on_breadcrumb_dot_clicked(self) -> None:
+        """Handle a click on the '.' breadcrumb item — open the mindspace root in preview."""
+        if self._mindspace_path:
+            self.file_clicked.emit(MindspaceViewType.PREVIEW, os.path.normpath(self._mindspace_path), True)
+
+    def _on_breadcrumb_dot_double_clicked(self) -> None:
+        """Handle a double-click on the '.' breadcrumb item — open the mindspace root as persistent."""
+        if self._mindspace_path:
+            self.file_clicked.emit(MindspaceViewType.PREVIEW, os.path.normpath(self._mindspace_path), False)
 
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.
@@ -981,10 +971,6 @@ class MindspacePreviewView(QWidget):
         # Get the currently selected index
         index = self._tree_view.currentIndex()
         if not index.isValid():
-            return
-
-        # Don't allow deleting the current directory item
-        if self._is_current_directory_item(index):
             return
 
         # Map to source model to get actual file path

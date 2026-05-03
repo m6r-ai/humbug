@@ -69,6 +69,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         self._scroll_handler: Callable[[str], None] | None = None
         self._collapse_handler: Callable[[str], None] | None = None
         self._context_menu_handler: Callable[[str, QPoint], None] | None = None
+        self._double_click_handler: Callable[[str], None] | None = None
 
         self.clicked.connect(self._on_item_clicked)
 
@@ -130,6 +131,17 @@ class MindspaceBreadcrumbBar(QTreeView):
             handler: Context menu handler callable
         """
         self._context_menu_handler = handler
+
+    def set_double_click_handler(self, handler: Callable[[str], None]) -> None:
+        """
+        Set the callable invoked when the user double-clicks a spine row.
+
+        Signature: handler(path) -> None
+
+        Args:
+            handler: Double-click handler callable
+        """
+        self._double_click_handler = handler
 
     def update_from_path(self, visible_path: str) -> int:
         """
@@ -505,6 +517,20 @@ class MindspaceBreadcrumbBar(QTreeView):
                 return
 
         super().mousePressEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+        """Fire the double-click handler for the item under the cursor."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            index = self.indexAt(event.pos())
+            if index.isValid():
+                item_rect = self.visualRect(index)
+                if event.pos().x() >= item_rect.left():
+                    path = self._path_for_index(index)
+                    if path and self._double_click_handler:
+                        self._double_click_handler(path)
+                        return
+
+        super().mouseDoubleClickEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         """Suppress branch-area release events."""

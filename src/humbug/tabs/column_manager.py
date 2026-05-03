@@ -1910,7 +1910,19 @@ class ColumnManager(QWidget):
             preview_tab.open_link_requested.connect(self._on_preview_open_link_requested)
             preview_tab.edit_file_requested.connect(self._on_preview_edit_file_requested)
             preview_tab.set_ephemeral(ephemeral)
-            self._add_tab(preview_tab, os.path.basename(path_minus_anchor))
+            norm_path = os.path.normpath(path_minus_anchor)
+            name = os.path.basename(norm_path)
+            is_mindspace_root = (
+                self._mindspace_manager.has_mindspace() and
+                norm_path == os.path.normpath(self._mindspace_manager.mindspace_path())
+            )
+            if is_mindspace_root:
+                title = f"[{name.upper()}]"
+
+            else:
+                title = name
+
+            self._add_tab(preview_tab, title)
 
             # If there's an anchor, scroll to it
             if anchor:

@@ -1,6 +1,7 @@
 """Container that coordinates the breadcrumb bar and tree view geometry."""
 
 import os
+from typing import Callable
 from PySide6.QtCore import QEvent, QModelIndex, QObject, QPoint, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import QFont, QResizeEvent
 from PySide6.QtWidgets import QApplication, QScrollBar, QSizePolicy, QWidget
@@ -54,6 +55,8 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._scrolling: bool = False
         self._root_path: str = ""
         self._pending_expand_path: str = ""
+        self._dot_click_handler: Callable[[], None] | None = None
+        self._dot_double_click_handler: Callable[[], None] | None = None
 
         self._ballistic_timer = QTimer(self)
         self._ballistic_timer.setInterval(16)  # ~60 fps
@@ -88,7 +91,26 @@ class MindspaceBreadcrumbContainer(QWidget):
         tree_view.expanded.connect(self._on_tree_expanded)
 
         breadcrumb_bar.set_collapse_handler(self._on_breadcrumb_collapse)
-        breadcrumb_bar.set_scroll_handler(self._on_breadcrumb_scroll)
+        breadcrumb_bar.set_scroll_handler(self.scroll_to_path)
+        breadcrumb_bar.set_double_click_handler(self._on_breadcrumb_double_clicked)
+
+    def set_dot_click_handler(self, handler: Callable[[], None]) -> None:
+        """
+        Set a callable invoked when the user clicks the \".\" breadcrumb item.
+
+        Args:
+            handler: Callable to invoke with no arguments.
+        """
+        self._dot_click_handler = handler
+
+    def set_dot_double_click_handler(self, handler: Callable[[], None]) -> None:
+        """
+        Set a callable invoked when the user double-clicks the \".\" breadcrumb item.
+
+        Args:
+            handler: Callable to invoke with no arguments.
+        """
+        self._dot_double_click_handler = handler
 
     def set_root_path(self, root_path: str) -> None:
         """
@@ -324,18 +346,21 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._scrollbar.setRange(tree_sb.minimum(), tree_sb.maximum())
         self._scrollbar.setPageStep(tree_sb.pageStep())
 
-    def _on_breadcrumb_scroll(self, path: str) -> None:
+    def scroll_to_path(self, path: str) -> None:
         """
-        Handle a click on a breadcrumb row.
+        Scroll the tree so the given folder's own row is at the top of the viewport.
 
-        Scrolls the tree so the clicked folder's own row is at the top of the
-        viewport, then recalculates the breadcrumb to reflect the new context.
+        Recalculates the breadcrumb to reflect the new context.  This is the same
+        action as clicking a breadcrumb row, and can also be called programmatically.
 
         Args:
             path: Absolute file system path of the folder that was clicked.
         """
         if self._root_path and os.path.normpath(path) == os.path.normpath(self._root_path):
             # "." was clicked — jump straight to the top and reset the breadcrumb.
+            if self._dot_click_handler:
+                self._dot_click_handler()
+
             self._last_spine_path = ""
             self._breadcrumb_rows = self._breadcrumb_bar.update_from_path("")
             self._apply_geometry()
@@ -361,6 +386,16 @@ class MindspaceBreadcrumbContainer(QWidget):
             tree_sb.setValue(external_value + bc_h)
             self._last_spine_path = os.path.dirname(path)
             self._scrollbar.setValue(external_value)
+
+    def _on_breadcrumb_double_clicked(self, path: str) -> None:
+        """Handle a double-click on a breadcrumb row."""
+        if self._root_path and os.path.normpath(path) == os.path.normpath(self._root_path):
+            if self._dot_double_click_handler:
+                self._dot_double_click_handler()
+
+        else:
+            self.scroll_to_path(path)
+
     def _on_breadcrumb_collapse(self, path: str) -> None:
         """
         Handle a collapse request from the breadcrumb bar.
