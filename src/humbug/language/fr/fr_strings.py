@@ -139,6 +139,7 @@ def get_french_strings() -> LanguageStrings:
         select_language="Langue",
         font_size="Taille de police",
         theme_system="Automatique",
+        font_ligatures="Activer les ligatures de police",
         theme_dark="Sombre",
         theme_light="Clair",
         file_sort_order="Ordre de tri des fichiers",

@@ -352,6 +352,8 @@ class MarkdownRenderer(MarkdownASTVisitor):
         code_format = QTextCharFormat(orig_char_format)
         code_format.setFontFamilies(self._style_manager.monospace_font_families())
         code_format.setFontFixedPitch(True)
+        if not self._style_manager.font_ligatures():
+            code_format.setFontStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
 
         # If we are inside a link, then keep the link color, otherwise set the code color
         if not node.parent or not isinstance(node.parent, MarkdownASTLinkNode):
@@ -606,6 +608,8 @@ class MarkdownRenderer(MarkdownASTVisitor):
         code_format = QTextCharFormat(orig_char_format)
         code_format.setFontFamilies(self._style_manager.monospace_font_families())
         code_format.setFontFixedPitch(True)
+        if not self._style_manager.font_ligatures():
+            code_format.setFontStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
 
         # Split content by lines and add each in its own block
         lines = node.content.split('\n')

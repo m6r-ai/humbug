@@ -94,10 +94,7 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
 
     def apply_style(self) -> None:
         """Apply style changes."""
-        font = self.font()
-        font.setFamilies(self._style_manager.monospace_font_families())
-        font.setFixedPitch(True)
-        font.setPointSizeF(self._style_manager.base_font_size() * self._style_manager.zoom_factor())
+        font = self._style_manager.make_monospace_font()
         self.setFont(font)
 
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)

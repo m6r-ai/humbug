@@ -104,6 +104,7 @@ class SettingsDialog(QDialog):
         self._display_heading: SettingsPageHeading
         self._language_combo: SettingsCombo
         self._font_size_spin: SettingsDoubleSpinBox
+        self._font_ligatures_check: SettingsCheckbox
         self._theme_combo: SettingsCombo
         self._file_sort_combo: SettingsCombo
         self._display_container: SettingsContainer
@@ -288,6 +289,9 @@ class SettingsDialog(QDialog):
             strings.font_size, 8.0, 24.0, 0.5, 1
         )
         container.add_setting(self._font_size_spin)
+
+        self._font_ligatures_check = SettingsFactory.create_checkbox(strings.font_ligatures)
+        container.add_setting(self._font_ligatures_check)
 
         self._theme_combo = SettingsFactory.create_combo(strings.display_theme)
         container.add_setting(self._theme_combo)
@@ -593,6 +597,7 @@ class SettingsDialog(QDialog):
             ai_backends=ai_backends,
             language=self._language_combo.get_value(),
             font_size=self._font_size_spin.get_value(),
+            font_ligatures=self._font_ligatures_check.get_value(),
             theme=self._theme_combo.get_value(),
             file_sort_order=self._file_sort_combo.get_value(),
             allow_external_file_access=self._allow_external_access_checkbox.get_value(),
@@ -636,6 +641,7 @@ class SettingsDialog(QDialog):
             else self._style_manager.base_font_size()
         )
         self._theme_combo.set_value(settings.theme)
+        self._font_ligatures_check.set_value(settings.font_ligatures)
         self._file_sort_combo.set_value(settings.file_sort_order)
 
         # File access
@@ -878,6 +884,8 @@ class SettingsDialog(QDialog):
 
         self._font_size_spin.set_label(strings.font_size)
 
+        self._font_ligatures_check.set_label(strings.font_ligatures)
+
         current_theme = self._theme_combo.get_value()
         self._theme_combo.set_label(strings.display_theme)
         self._theme_combo.set_items([
@@ -1030,6 +1038,7 @@ class SettingsDialog(QDialog):
             },
             language=settings.language,
             font_size=settings.font_size,
+            font_ligatures=settings.font_ligatures,
             theme=settings.theme,
             file_sort_order=settings.file_sort_order,
             allow_external_file_access=settings.allow_external_file_access,

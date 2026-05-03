@@ -139,6 +139,7 @@ def get_english_strings() -> LanguageStrings:
         select_language="Language",
         font_size="Font Size",
         theme_system="Automatic",
+        font_ligatures="Enable font ligatures",
         theme_dark="Dark",
         theme_light="Light",
         file_sort_order="File Sort Order",

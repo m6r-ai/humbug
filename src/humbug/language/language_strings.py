@@ -130,6 +130,7 @@ class LanguageStrings:
     select_language: str
     font_size: str
     theme_system: str
+    font_ligatures: str
     theme_dark: str
     theme_light: str
     file_sort_order: str

@@ -68,8 +68,7 @@ class EditorWidget(QPlainTextEdit):
         self._line_number_area = LineNumberArea(
             self, self._line_number_area_width, self._line_number_area_paint_event
         )
-        font = self._line_number_area.font()
-        font.setFamilies(self._style_manager.monospace_font_families())
+        font = self._style_manager.make_monospace_font()
         self.setFont(font)
         self._line_number_area.setFont(font)
 
@@ -1036,10 +1035,7 @@ class EditorWidget(QPlainTextEdit):
     def _on_style_changed(self) -> None:
         """Handle style changes affecting search highlighting."""
         # Update font size
-        zoom_factor = self._style_manager.zoom_factor()
-        font = self.font()
-        base_size = self._style_manager.base_font_size()
-        font.setPointSizeF(base_size * zoom_factor)
+        font = self._style_manager.make_monospace_font()
         self.setFont(font)
 
         # Update tab stops - scale with zoom

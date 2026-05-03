@@ -162,11 +162,7 @@ class TerminalWidget(QAbstractScrollArea):
     def _on_style_changed(self) -> None:
         """Handle style changes."""
         # Update terminal font
-        font = QFont()
-        font.setFamilies(self._style_manager.monospace_font_families())
-        font.setFixedPitch(True)
-        base_size = self._style_manager.base_font_size()
-        font.setPointSizeF(base_size * self._style_manager.zoom_factor())
+        font = self._style_manager.make_monospace_font_no_ligatures()
         self.setFont(font)
 
         fm = QFontMetricsF(self.font())

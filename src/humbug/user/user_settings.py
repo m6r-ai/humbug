@@ -26,6 +26,7 @@ class UserSettings:
     font_size: float| None = None  # None means use the default font size
     theme: ColorMode = ColorMode.SYSTEM  # Default to system mode
     file_sort_order: UserFileSortOrder = UserFileSortOrder.DIRECTORIES_FIRST
+    font_ligatures: bool = True
     allow_external_file_access: bool = True
     external_file_allowlist: List[str] = field(default_factory=list)
     external_file_denylist: List[str] = field(default_factory=list)
@@ -49,6 +50,7 @@ class UserSettings:
             font_size=None,
             theme=ColorMode.SYSTEM,
             file_sort_order=UserFileSortOrder.DIRECTORIES_FIRST,
+            font_ligatures=True,
             allow_external_file_access=True,
             external_file_allowlist=FilesystemAccessSettings.get_default_allowlist(),
             external_file_denylist=FilesystemAccessSettings.get_default_denylist()
@@ -271,6 +273,16 @@ class UserSettings:
                 settings.file_sort_order = UserFileSortOrder.DIRECTORIES_FIRST
 
 
+        # Load font ligatures setting with validation
+        font_ligatures = data.get("fontLigatures", True)
+        if not isinstance(font_ligatures, bool):
+            cls._logger.warning(
+                "Invalid fontLigatures type in %s: expected bool, got %s. Using default.",
+                path, type(font_ligatures).__name__
+            )
+        else:
+            settings.font_ligatures = font_ligatures
+
         # Load external file access settings with validation
         allow_external = data.get("allowExternalFileAccess", True)
         if not isinstance(allow_external, bool):
@@ -426,6 +438,7 @@ class UserSettings:
             "ai_backends": ai_backends_data,
             "language": self.language.name,
             "fontSize": self.font_size,
+            "fontLigatures": self.font_ligatures,
             "theme": self.theme.name,
             "fileSortOrder": self.file_sort_order.name,
             "allowExternalFileAccess": self.allow_external_file_access,

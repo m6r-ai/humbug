@@ -140,6 +140,7 @@ def get_arabic_strings() -> LanguageStrings:
         select_language="اللغة",
         font_size="حجم الخط",
         theme_system="تلقائي",
+        font_ligatures="تفعيل الروابط الخطية",
         theme_dark="داكن",
         theme_light="فاتح",
         file_sort_order="ترتيب الملفات",

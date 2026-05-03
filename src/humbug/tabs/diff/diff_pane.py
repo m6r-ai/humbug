@@ -225,13 +225,7 @@ class DiffPane(QPlainTextEdit):
 
     def apply_style(self) -> None:
         """Reapply colours and font after a theme or zoom change."""
-        zoom = self._style_manager.zoom_factor()
-        base = self._style_manager.base_font_size()
-        families = self._style_manager.monospace_font_families()
-
-        font = self.font()
-        font.setFamilies(families)
-        font.setPointSizeF(base * zoom)
+        font = self._style_manager.make_monospace_font()
         self.setFont(font)
 
         bg = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)

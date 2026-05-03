@@ -57,6 +57,7 @@ class StyleManager(QObject):
             self._base_font_size = self._determine_base_font_size()
             self._user_font_size: float | None = None
             self._initialized = True
+            self._font_ligatures: bool = True
             self._color_mode = ColorMode.SYSTEM  # Default to system mode
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
@@ -777,6 +778,8 @@ class StyleManager(QObject):
     def _create_highlight(self, role: ColorRole) -> QTextCharFormat:
         text_highlight = QTextCharFormat()
         text_highlight.setFontFamilies(self._code_font_families)
+        if not self._font_ligatures:
+            text_highlight.setFontStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
         text_highlight.setFontFixedPitch(True)
         text_highlight.setForeground(QColor(self._colors[role][self._resolve_color_mode()]))
 
@@ -1419,6 +1422,17 @@ class StyleManager(QObject):
             if size:
                 self.style_changed.emit()
 
+    def font_ligatures(self) -> bool:
+        """Get whether font ligatures are enabled for monospace text."""
+        return self._font_ligatures
+
+    def set_font_ligatures(self, enabled: bool) -> None:
+        """Set whether font ligatures are enabled for monospace text."""
+        if enabled != self._font_ligatures:
+            self._font_ligatures = enabled
+            self._initialize_highlights()
+            self.style_changed.emit()
+
     def color_mode(self) -> ColorMode:
         """Get the resolved (effective) color mode, always LIGHT or DARK."""
         return self._resolve_color_mode()
@@ -1497,6 +1511,8 @@ class StyleManager(QObject):
     def get_space_width(self) -> float:
         """Get the width of a space character"""
         font = QFont(self._code_font_families)
+        if not self._font_ligatures:
+            font.setStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
         font.setPointSizeF(self.base_font_size() * self._zoom_factor)
         font_metrics = QFontMetricsF(font)
         space_width = font_metrics.horizontalAdvance('        ') / 8
@@ -1505,6 +1521,35 @@ class StyleManager(QObject):
     def monospace_font_families(self) -> List[str]:
         """Get the standard monospace font family fallback sequence."""
         return self._code_font_families
+
+    def make_monospace_font(self) -> QFont:
+        """
+        Create a monospace QFont configured with current style settings.
+
+        Applies PreferNoShaping when font ligatures are disabled so that all
+        monospace widgets get consistent ligature behaviour from a single place.
+        """
+        font = QFont()
+        font.setFamilies(self._code_font_families)
+        font.setFixedPitch(True)
+        font.setPointSizeF(self.base_font_size() * self._zoom_factor)
+        if not self._font_ligatures:
+            font.setStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
+        return font
+
+    def make_monospace_font_no_ligatures(self) -> QFont:
+        """
+        Create a monospace QFont with ligatures unconditionally disabled.
+
+        Used by the terminal, which is a character-cell renderer where ligatures
+        would break glyph alignment regardless of the user preference.
+        """
+        font = QFont()
+        font.setFamilies(self._code_font_families)
+        font.setFixedPitch(True)
+        font.setPointSizeF(self.base_font_size() * self._zoom_factor)
+        font.setStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
+        return font
 
     def proportional_font_families(self) -> List[str]:
         """Get the standard proportional font family fallback sequence."""
