@@ -1,7 +1,7 @@
 """Container that coordinates the breadcrumb bar and tree view geometry."""
 
 import os
-from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt, QTimer
+from PySide6.QtCore import QEvent, QModelIndex, QObject, QPoint, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import QFont, QResizeEvent
 from PySide6.QtWidgets import QApplication, QScrollBar, QSizePolicy, QWidget
 
@@ -53,6 +53,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._row_height: int = 0
         self._scrolling: bool = False
         self._root_path: str = ""
+        self._pending_expand_path: str = ""
 
         self._ballistic_timer = QTimer(self)
         self._ballistic_timer.setInterval(16)  # ~60 fps
@@ -62,6 +63,11 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._ballistic_distance: int = 0
         self._ballistic_time: int = 0
         self._ballistic_duration: int = 300  # ms
+
+        self._breadcrumb_refresh_timer = QTimer(self)
+        self._breadcrumb_refresh_timer.setSingleShot(True)
+        self._breadcrumb_refresh_timer.setInterval(0)
+        self._breadcrumb_refresh_timer.timeout.connect(self._on_breadcrumb_refresh)
 
         breadcrumb_bar.setParent(self)
         tree_view.setParent(self)
@@ -79,6 +85,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         tree_view.verticalScrollBar().rangeChanged.connect(self._on_tree_range_changed)
         tree_view.viewport().installEventFilter(self)
         breadcrumb_bar.viewport().installEventFilter(self)
+        tree_view.expanded.connect(self._on_tree_expanded)
 
         breadcrumb_bar.set_collapse_handler(self._on_breadcrumb_collapse)
         breadcrumb_bar.set_scroll_handler(self._on_breadcrumb_scroll)
@@ -187,12 +194,35 @@ class MindspaceBreadcrumbContainer(QWidget):
         tree_sb = self._tree_view.verticalScrollBar()
         self._scrollbar.setRange(minimum, maximum)
         self._scrollbar.setPageStep(tree_sb.pageStep())
-        self._scrollbar.setSingleStep(tree_sb.singleStep())
+        single_step = self._row_height if self._row_height > 0 else tree_sb.singleStep()
+        self._scrollbar.setSingleStep(single_step)
 
         bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
         external_value = max(minimum, tree_sb.value() - bc_h)
         if self._scrollbar.value() != external_value:
             self._scrollbar.setValue(external_value)
+        else:
+            self._breadcrumb_refresh_timer.start()
+
+    def _on_breadcrumb_refresh(self) -> None:
+        """Recalculate the breadcrumb after a tree expand/collapse has settled."""
+        self._last_spine_path = ""
+        self._on_external_scroll(self._scrollbar.value())
+
+        if self._pending_expand_path:
+            path = self._pending_expand_path
+            self._pending_expand_path = ""
+            index = self._tree_view.index_for_path(path)
+            if index.isValid() and self._tree_view.model().rowCount(index) > 0:
+                first_child = self._tree_view.model().index(0, 0, index)
+                if first_child.isValid():
+                    self._tree_view.scrollTo(first_child, self._tree_view.ScrollHint.PositionAtTop)
+
+    def _on_tree_expanded(self, index: QModelIndex) -> None:
+        """Record an expansion that happened behind the breadcrumb for deferred scroll."""
+        path = self._tree_view.get_path_from_index(index)
+        if path and self._tree_view.visualRect(index).top() < 0:
+            self._pending_expand_path = path
 
     def _on_external_scroll(self, value: int) -> None:
         """
