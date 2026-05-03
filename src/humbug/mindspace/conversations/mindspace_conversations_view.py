@@ -76,7 +76,6 @@ class MindspaceConversationsView(QWidget):
 
         self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
-        self._bc_container.set_scroll_handler(self.reveal_and_select_file)
 
         # Create icon provider for styling
         self._icon_provider = MindspaceTreeIconProvider()

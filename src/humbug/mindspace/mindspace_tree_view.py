@@ -191,6 +191,21 @@ class MindspaceTreeView(QTreeView):
         Returns:
             The filter model index of the collapsed item, or an invalid index if not found.
         """
+        index = self.index_for_path(path)
+        if index.isValid():
+            self.collapse(index)
+        return index
+
+    def index_for_path(self, path: str) -> QModelIndex:
+        """
+        Return the model index for the given file system path without side effects.
+
+        Args:
+            path: Absolute file system path to look up.
+
+        Returns:
+            The filter model index, or an invalid index if not found.
+        """
         source_model = cast(QSortFilterProxyModel, self.model())
         if not source_model:
             return QModelIndex()
@@ -203,10 +218,7 @@ class MindspaceTreeView(QTreeView):
         if not source_index.isValid():
             return QModelIndex()
 
-        filter_index = source_model.mapFromSource(source_index)
-        if filter_index.isValid():
-            self.collapse(filter_index)
-        return filter_index
+        return source_model.mapFromSource(source_index)
 
     def scroll_to_and_ensure_visible(self, file_path: str, callback: Callable) -> None:
         """

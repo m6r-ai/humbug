@@ -91,25 +91,32 @@ class MindspaceConversationsTreeView(MindspaceTreeView):
         """
         Collapse the tree node corresponding to the given filesystem path.
 
-        Overrides the base class implementation to use the DAG model's own
-        index lookup instead of assuming a QSortFilterProxyModel/QFileSystemModel
-        stack, which is not used by the conversations view.
-
         Args:
             path: Absolute filesystem path of the folder to collapse.
 
         Returns:
             The model index of the collapsed item, or an invalid index if not found.
         """
+        index = self.index_for_path(path)
+        if index.isValid():
+            self.collapse(index)
+        return index
+
+    def index_for_path(self, path: str) -> QModelIndex:
+        """
+        Return the DAG model index for the given file system path without side effects.
+
+        Args:
+            path: Absolute filesystem path to look up.
+
+        Returns:
+            The model index, or an invalid index if not found.
+        """
         dag_model = self.model()
         if not isinstance(dag_model, MindspaceConversationsDAGModel):
             return QModelIndex()
 
-        index = dag_model.index_for_path(path)
-        if index.isValid():
-            self.collapse(index)
-
-        return index
+        return dag_model.index_for_path(path)
 
     def ensure_path_visible_for_editing(self, file_path: str, callback: Callable) -> None:
         """

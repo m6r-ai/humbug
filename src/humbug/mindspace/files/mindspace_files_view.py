@@ -78,7 +78,6 @@ class MindspaceFilesView(QWidget):
 
         self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
-        self._bc_container.set_scroll_handler(self.reveal_and_select_file)
 
         # Create file system model
         self._icon_provider = MindspaceTreeIconProvider()
