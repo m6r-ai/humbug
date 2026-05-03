@@ -122,6 +122,13 @@ class PreviewWidget(QWidget):
         self._smooth_scroll_timer = QTimer(self)
         self._smooth_scroll_timer.setInterval(SMOOTH_SCROLL_INTERVAL_MS)
         self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
+
+        self._deferred_scroll_timer = QTimer(self)
+        self._deferred_scroll_timer.setSingleShot(True)
+        self._deferred_scroll_timer.setInterval(0)
+        self._deferred_scroll_timer.timeout.connect(self._on_deferred_scroll)
+        self._deferred_scroll_position: int = 0
+        self._deferred_restore_args: tuple = ()
         self._smooth_scroll_target: int = 0
         self._smooth_scroll_start: int = 0
         self._smooth_scroll_distance: int = 0
@@ -231,12 +238,20 @@ class PreviewWidget(QWidget):
             self.load_content()
 
             # Restore state
-            QTimer.singleShot(0, lambda: self._restore_ui_state(
-                saved_scroll_pos, saved_selection, saved_find_state
-            ))
+            self._deferred_restore_args = (saved_scroll_pos, saved_selection, saved_find_state)
+            self._deferred_scroll_timer.start()
 
         except Exception as e:
             self._logger.error("Failed to refresh content: %s", str(e))
+
+    def _on_deferred_scroll(self) -> None:
+        """Fire the deferred scroll or UI state restore after layout has settled."""
+        if self._deferred_restore_args:
+            self._restore_ui_state(*self._deferred_restore_args)
+            self._deferred_restore_args = ()
+
+        else:
+            self._scroll_area.verticalScrollBar().setValue(self._deferred_scroll_position)
 
     def _restore_ui_state(self, scroll_pos: int, selection: str | None, find_state: Dict) -> None:
         """
@@ -1044,7 +1059,8 @@ class PreviewWidget(QWidget):
         # Restore scroll position if specified
         if "scroll_position" in metadata:
             # Use a timer to ensure the scroll happens after layout is complete
-            QTimer.singleShot(0, lambda: self._scroll_area.verticalScrollBar().setValue(metadata["scroll_position"]))
+            self._deferred_scroll_position = metadata["scroll_position"]
+            self._deferred_scroll_timer.start()
 
     # AI Tool Support Methods
 

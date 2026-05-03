@@ -109,6 +109,12 @@ class MindspacePreviewView(QWidget):
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
 
+        self._deferred_reveal_timer = QTimer(self)
+        self._deferred_reveal_timer.setSingleShot(True)
+        self._deferred_reveal_timer.setInterval(0)
+        self._deferred_reveal_timer.timeout.connect(self._on_deferred_reveal)
+        self._deferred_reveal_path: str = ""
+
     def _on_drop_target_changed(self) -> None:
         """
         Handle changes to the drop target in the tree view.
@@ -368,7 +374,8 @@ class MindspacePreviewView(QWidget):
             self.file_renamed.emit(current_path, new_path)
 
             self._logger.info("Successfully renamed '%s' to '%s'", current_path, new_path)
-            QTimer.singleShot(0, lambda: self.reveal_and_select_file(new_path))
+            self._deferred_reveal_path = new_path
+            self._deferred_reveal_timer.start()
 
         except OSError as e:
             self._logger.error("Failed to rename '%s' to '%s': %s", current_path, new_path, str(e))
@@ -459,6 +466,12 @@ class MindspacePreviewView(QWidget):
                 return candidate_name
 
             counter += 1
+
+    def _on_deferred_reveal(self) -> None:
+        """Reveal and select the stored file path after layout has settled."""
+        if self._deferred_reveal_path:
+            self.reveal_and_select_file(self._deferred_reveal_path)
+            self._deferred_reveal_path = ""
 
     def reveal_and_select_file(self, file_path: str) -> None:
         """

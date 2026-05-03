@@ -18,6 +18,12 @@ class MindspaceConversationsTreeView(MindspaceTreeView):
         super().__init__(parent)
         self._conversations_path: str = ""
 
+        self._deferred_scroll_timer = QTimer(self)
+        self._deferred_scroll_timer.setSingleShot(True)
+        self._deferred_scroll_timer.timeout.connect(self._on_deferred_scroll)
+        self._deferred_scroll_index: QModelIndex = QModelIndex()
+        self._deferred_scroll_callback: Callable | None = None
+
     def get_root_path(self) -> str:
         """
         Get the root path for this tree view.
@@ -132,7 +138,10 @@ class MindspaceConversationsTreeView(MindspaceTreeView):
             if not self.isExpanded(p):
                 self.expand(p)
 
-        QTimer.singleShot(200, lambda: self._scroll_to_and_edit(index, callback))
+        self._deferred_scroll_index = index
+        self._deferred_scroll_callback = callback
+        self._deferred_scroll_timer.setInterval(200)
+        self._deferred_scroll_timer.start()
 
     def _scroll_to_and_edit(self, index: QModelIndex, callback: Callable) -> None:
         """
@@ -152,7 +161,20 @@ class MindspaceConversationsTreeView(MindspaceTreeView):
         )
         if not is_visible:
             self.scrollTo(index, self.ScrollHint.PositionAtCenter)
-            QTimer.singleShot(100, callback)
+            self._deferred_scroll_callback = callback
+            self._deferred_scroll_timer.setInterval(100)
+            self._deferred_scroll_timer.start()
 
         else:
             callback()
+
+    def _on_deferred_scroll(self) -> None:
+        """Fire the stored deferred scroll callback."""
+        if self._deferred_scroll_callback:
+            if self._deferred_scroll_index.isValid():
+                index = self._deferred_scroll_index
+                self._deferred_scroll_index = QModelIndex()
+                self._scroll_to_and_edit(index, self._deferred_scroll_callback)
+
+            else:
+                self._deferred_scroll_callback()

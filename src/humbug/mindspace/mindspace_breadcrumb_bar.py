@@ -71,6 +71,16 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         self.clicked.connect(self._on_item_clicked)
 
+        self._deferred_reset_timer = QTimer(self)
+        self._deferred_reset_timer.setSingleShot(True)
+        self._deferred_reset_timer.setInterval(0)
+        self._deferred_reset_timer.timeout.connect(self.reset)
+
+        self._deferred_rebuild_timer = QTimer(self)
+        self._deferred_rebuild_timer.setSingleShot(True)
+        self._deferred_rebuild_timer.setInterval(0)
+        self._deferred_rebuild_timer.timeout.connect(self._reset_and_expand)
+
     def set_root_path(self, root_path: str) -> None:
         """
         Set the root path for the spine.
@@ -265,7 +275,7 @@ class MindspaceBreadcrumbBar(QTreeView):
 
         if not spine:
             self._model.blockSignals(False)
-            QTimer.singleShot(0, self.reset)
+            self._deferred_reset_timer.start()
             return
 
         icon = self._folder_icon()
@@ -301,7 +311,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         _add_placeholders(self._model.invisibleRootItem())
 
         self._model.blockSignals(False)
-        QTimer.singleShot(0, self._reset_and_expand)
+        self._deferred_rebuild_timer.start()
 
     def _reset_and_expand(self) -> None:
         """Reset the view and expand all items after a deferred model rebuild."""

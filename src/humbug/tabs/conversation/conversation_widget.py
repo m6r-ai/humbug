@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 import re
-from typing import Dict, List, Tuple, Any, Set, cast
+from typing import Callable, Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
     QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
@@ -107,10 +107,20 @@ class ConversationWidget(QWidget):
         # Batched message loading state
         self._load_queue: List[AIMessage] = []
         self._load_pending_metadata: Dict[str, Any] | None = None
-        self._load_batch_size: int = 10
+        self._load_batch_size: int = 4
         self._load_tail_size: int = 50
         self._load_generation: int = 0
         self._load_head_insert_pos: int = 0
+
+        self._load_batch_timer = QTimer(self)
+        self._load_batch_timer.setSingleShot(True)
+        self._load_batch_timer.setInterval(0)
+        self._load_batch_timer_slot: Callable[..., Any] | None = None
+
+        self._deferred_scroll_timer = QTimer(self)
+        self._deferred_scroll_timer.setSingleShot(True)
+        self._deferred_scroll_timer.setInterval(0)
+        self._deferred_scroll_timer_slot: Callable[..., Any] | None = None
 
         # Message border animation state (moved from ConversationInput)
         self._animated_message: ConversationMessage | None = None
@@ -126,7 +136,7 @@ class ConversationWidget(QWidget):
         self._debounce_interval_ms = int(750 / self._animation_steps)
 
         # Slow timer - always running during animation to provide regular updates
-        self._slow_timer = QTimer()
+        self._slow_timer = QTimer(self)
         self._slow_timer.setInterval(self._slow_interval_ms)
         self._slow_timer.timeout.connect(self._on_slow_timer)
 
@@ -136,7 +146,7 @@ class ConversationWidget(QWidget):
         self._max_no_message_cycles = 16  # Number of cycles before disabling debounce timer
 
         # Debounce timer for message notifications
-        self._debounce_timer = QTimer()
+        self._debounce_timer = QTimer(self)
         self._debounce_timer.setSingleShot(True)
         self._debounce_timer.timeout.connect(self._on_debounce_timeout)
         self._debounce_timer.setInterval(self._debounce_interval_ms)
@@ -1644,11 +1654,12 @@ class ConversationWidget(QWidget):
                 message_widget.apply_style()
 
         self._auto_scroll = True
-        # Defer the initial scroll so Qt has one event-loop cycle to finish
-        # processing layout geometry from the tail widget insertions.  Without
-        # this, scrollbar.maximum() may not yet reflect the full content height
-        # and the scroll lands short of the true bottom.
-        QTimer.singleShot(0, self._scroll_to_bottom)
+        if self._deferred_scroll_timer_slot is not None:
+            self._deferred_scroll_timer.timeout.disconnect(self._deferred_scroll_timer_slot)
+
+        self._deferred_scroll_timer_slot = self._scroll_to_bottom
+        self._deferred_scroll_timer.timeout.connect(self._deferred_scroll_timer_slot)
+        self._deferred_scroll_timer.start()
 
         # The head messages will be prepended one batch at a time.  layout_pos 1
         # is directly after the stretch item; we advance it with each insertion
@@ -1685,7 +1696,12 @@ class ConversationWidget(QWidget):
                 message_widget.apply_style()
 
         if self._load_queue:
-            QTimer.singleShot(0, lambda: self._load_next_batch(generation))
+            if self._load_batch_timer_slot is not None:
+                self._load_batch_timer.timeout.disconnect(self._load_batch_timer_slot)
+
+            self._load_batch_timer_slot = lambda: self._load_next_batch(generation)
+            self._load_batch_timer.timeout.connect(self._load_batch_timer_slot)
+            self._load_batch_timer.start()
             return
 
         self._on_load_complete()
@@ -2747,8 +2763,14 @@ class ConversationWidget(QWidget):
             self._auto_scroll = metadata["auto_scroll"]
 
         if "vertical_scroll" in metadata:
-            # Use a timer to ensure the scroll happens after layout is complete
-            QTimer.singleShot(0, lambda: self._scroll_area.verticalScrollBar().setValue(metadata["vertical_scroll"]))
+            # Defer so Qt has one event-loop cycle to finish layout geometry
+            # before we set the scroll position.
+            if self._deferred_scroll_timer_slot is not None:
+                self._deferred_scroll_timer.timeout.disconnect(self._deferred_scroll_timer_slot)
+
+            self._deferred_scroll_timer_slot = lambda v=metadata["vertical_scroll"]: self._scroll_area.verticalScrollBar().setValue(v)
+            self._deferred_scroll_timer.timeout.connect(self._deferred_scroll_timer_slot)
+            self._deferred_scroll_timer.start()
 
         # Restore message expansion states if specified
         if "message_expansion" in metadata:

@@ -125,6 +125,12 @@ class DiffWidget(QWidget):
         self._smooth_scroll_timer = QTimer(self)
         self._smooth_scroll_timer.setInterval(SMOOTH_SCROLL_INTERVAL_MS)
         self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
+
+        self._deferred_scroll_timer = QTimer(self)
+        self._deferred_scroll_timer.setSingleShot(True)
+        self._deferred_scroll_timer.setInterval(0)
+        self._deferred_scroll_timer.timeout.connect(self._on_deferred_scroll)
+        self._deferred_scroll_target: int = 0
         self._smooth_scroll_target: int = 0
         self._smooth_scroll_start: int = 0
         self._smooth_scroll_distance: int = 0
@@ -221,9 +227,8 @@ class DiffWidget(QWidget):
             start = self._cached_hunks[0][0]
             self._current_hunk_index = 0
             self._set_active_hunk(self._cached_hunks[0][0], self._cached_hunks[0][1])
-            QTimer.singleShot(0, lambda: self._start_smooth_scroll(
-                self._left_pane.target_scroll_for_block(start)
-            ))
+            self._deferred_scroll_target = self._left_pane.target_scroll_for_block(start)
+            self._deferred_scroll_timer.start()
 
         # Re-run the active search against the new document content, if any.
         if self._find_text:
@@ -524,6 +529,10 @@ class DiffWidget(QWidget):
 
         self._left_pane.highlight_matches(left_matches, left_current_local)
         self._right_pane.highlight_matches(right_matches, right_current_local)
+
+    def _on_deferred_scroll(self) -> None:
+        """Fire the deferred smooth scroll to the stored target position."""
+        self._start_smooth_scroll(self._deferred_scroll_target)
 
     def _start_smooth_scroll(self, target_value: int) -> None:
         """

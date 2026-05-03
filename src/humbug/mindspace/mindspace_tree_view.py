@@ -30,7 +30,7 @@ class MindspaceTreeView(QTreeView):
         self._current_drop_target: QModelIndex | None = None
 
         # Auto-expand timer for drag operations
-        self._auto_expand_timer = QTimer()
+        self._auto_expand_timer = QTimer(self)
         self._auto_expand_timer.setSingleShot(True)
         self._auto_expand_timer.timeout.connect(self._on_auto_expand_timeout)
         self._auto_expand_timer.setInterval(500)  # 0.5 seconds
@@ -38,11 +38,18 @@ class MindspaceTreeView(QTreeView):
         self._auto_opened_folders: set[QPersistentModelIndex] = set()
 
         # Auto-scroll timer for drag operations
-        self._auto_scroll_timer = QTimer()
+        self._auto_scroll_timer = QTimer(self)
         self._auto_scroll_timer.timeout.connect(self._on_auto_scroll_timeout)
         self._auto_scroll_timer.setInterval(50)  # 50ms for smooth scrolling
         self._scroll_direction: int = 0  # -1 for up, 1 for down, 0 for no scroll
         self._scroll_speed: int = 0  # Pixels to scroll per timer interval
+
+        # Deferred action timer for post-expand scroll and edit operations
+        self._deferred_action_timer = QTimer(self)
+        self._deferred_action_timer.setSingleShot(True)
+        self._deferred_action_timer.timeout.connect(self._on_deferred_action)
+        self._deferred_action_callback: Callable | None = None
+        self._deferred_action_file_path: str = ""
 
         # Auto-scroll configuration
         self._scroll_zone_size = 25  # Pixels from edge to trigger scrolling
@@ -250,8 +257,11 @@ class MindspaceTreeView(QTreeView):
         # Use PositionAtCenter to ensure good visibility for editing
         self.scrollTo(filter_index, QTreeView.ScrollHint.PositionAtCenter)
 
-        # Scrolling is asynchronous so add a small delay to ensure the UI has time to update
-        QTimer.singleShot(100, callback)
+        # Scrolling is asynchronous so add a small delay to ensure the UI has time to update.
+        self._deferred_action_callback = callback
+        self._deferred_action_file_path = ""
+        self._deferred_action_timer.setInterval(100)
+        self._deferred_action_timer.start()
 
     def ensure_path_visible_for_editing(self, file_path: str, callback: Callable) -> None:
         """
@@ -296,8 +306,22 @@ class MindspaceTreeView(QTreeView):
             if not self.isExpanded(parent):
                 self.expand(parent)
 
-        # Allow time for the UI to update before scrolling.  We may not need it, but it won't hurt.
-        QTimer.singleShot(200, lambda: self.scroll_to_and_ensure_visible(file_path, callback))
+        # Allow time for the UI to update before scrolling.
+        self._deferred_action_callback = callback
+        self._deferred_action_file_path = file_path
+        self._deferred_action_timer.setInterval(200)
+        self._deferred_action_timer.start()
+
+    def _on_deferred_action(self) -> None:
+        """Fire the stored deferred callback, optionally after a scroll."""
+        if self._deferred_action_file_path:
+            file_path = self._deferred_action_file_path
+            self._deferred_action_file_path = ""
+            if self._deferred_action_callback:
+                self.scroll_to_and_ensure_visible(file_path, self._deferred_action_callback)
+
+        elif self._deferred_action_callback:
+            self._deferred_action_callback()
 
     def _is_ancestor_path(self, potential_ancestor: str, path: str) -> bool:
         """

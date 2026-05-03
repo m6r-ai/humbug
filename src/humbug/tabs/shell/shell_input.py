@@ -49,6 +49,11 @@ class ShellInput(ShellMessage):
         self._message_source = ShellEventSource.USER  # Set default source for styling
         self._update_header_text()
 
+        self._deferred_cursor_timer = QTimer(self)
+        self._deferred_cursor_timer.setSingleShot(True)
+        self._deferred_cursor_timer.setInterval(5)
+        self._deferred_cursor_timer.timeout.connect(self._move_cursor_to_end)
+
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """
         Filter events to intercept key presses in the text area.
@@ -171,7 +176,7 @@ class ShellInput(ShellMessage):
             self._text_area.setPlainText(self._command_history[self._history_position])
 
         # Pause for a few event cycles to let layouts settle
-        QTimer.singleShot(5, self._move_cursor_to_end)
+        self._deferred_cursor_timer.start()
 
     def _navigate_history_down(self) -> None:
         """Navigate down through command history."""
@@ -186,7 +191,7 @@ class ShellInput(ShellMessage):
             self._text_area.setPlainText(self._current_command)
 
         # Pause for a few event cycles to let layouts settle
-        QTimer.singleShot(5, self._move_cursor_to_end)
+        self._deferred_cursor_timer.start()
 
     def _add_to_history(self, command: str) -> None:
         """Add command to history, avoiding duplicates at the front."""

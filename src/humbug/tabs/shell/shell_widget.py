@@ -127,6 +127,12 @@ class ShellWidget(QWidget):
         self._smooth_scroll_timer = QTimer(self)
         self._smooth_scroll_timer.setInterval(SMOOTH_SCROLL_INTERVAL_MS)
         self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
+
+        self._deferred_scroll_timer = QTimer(self)
+        self._deferred_scroll_timer.setSingleShot(True)
+        self._deferred_scroll_timer.setInterval(0)
+        self._deferred_scroll_timer.timeout.connect(self._on_deferred_scroll)
+        self._deferred_scroll_position: int = 0
         self._smooth_scroll_target: int = 0
         self._smooth_scroll_start: int = 0
         self._smooth_scroll_distance: int = 0
@@ -474,6 +480,10 @@ class ShellWidget(QWidget):
         """Scroll to the bottom of the content."""
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
+
+    def _on_deferred_scroll(self) -> None:
+        """Restore scroll position after layout has settled."""
+        self._scroll_area.verticalScrollBar().setValue(self._deferred_scroll_position)
 
     def _activate_widget(self, widget: QWidget) -> None:
         """
@@ -930,7 +940,8 @@ class ShellWidget(QWidget):
         # Restore scroll position if specified
         if "scroll_position" in metadata:
             # Use a timer to ensure the scroll happens after layout is complete
-            QTimer.singleShot(0, lambda: self._scroll_area.verticalScrollBar().setValue(metadata["scroll_position"]))
+            self._deferred_scroll_position = metadata["scroll_position"]
+            self._deferred_scroll_timer.start()
 
         # Restore spotlighted message index if specified
         if "spotlighted_message_index" in metadata:
