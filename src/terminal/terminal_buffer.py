@@ -383,12 +383,18 @@ class TerminalBuffer:
         default_fg = self._attributes.foreground if self._attributes.current & TerminalCharacterAttributes.CUSTOM_FG else None
         default_bg = self._attributes.background if self._attributes.current & TerminalCharacterAttributes.CUSTOM_BG else None
 
+        # Locate max_cursor_row in absolute line-list coordinates so it can be
+        # mapped through the reflow, just like the cursor position.
+        max_cursor_abs = len(self._lines) - min(old_rows, len(self._lines)) + self._max_cursor_row
+
         new_lines: list[TerminalLine] = []
         # Absolute index in new_lines where the cursor lands; resolved below.
         new_cursor_abs = 0
         new_cursor_col = 0
         new_cursor_delayed_wrap = False
         cursor_resolved = False
+        new_max_cursor_abs = 0
+        max_cursor_resolved = False
 
         # Walk the existing lines, collecting each logical line (the first
         # physical line plus all consecutive continuation lines).
@@ -419,6 +425,21 @@ class TerminalBuffer:
                 not cursor_resolved
                 and logical_start <= cursor_abs < logical_start + (i - logical_start)
             )
+            # Check whether max_cursor_row falls inside this logical line.
+            max_cursor_in_logical = (
+                not max_cursor_resolved
+                and logical_start <= max_cursor_abs < logical_start + (i - logical_start)
+            )
+            if max_cursor_in_logical:
+                # Compute the cell offset of max_cursor_row within the
+                # concatenated logical line, analogous to cell_offset for the
+                # cursor.  We only need the row boundary (col 0) because
+                # max_cursor_row is a row-level high-water mark, not a column.
+                max_lines_before = max_cursor_abs - logical_start
+                max_cell_offset = 0
+                for k in range(max_lines_before):
+                    max_cell_offset += physical_lines[logical_start + k].width
+
             if cursor_in_logical:
                 # Compute the cursor's offset within the concatenated cells.
                 lines_before_cursor = cursor_abs - logical_start
@@ -444,6 +465,9 @@ class TerminalBuffer:
                     new_cursor_abs = len(new_lines)
                     new_cursor_col = 0
                     cursor_resolved = True
+                if max_cursor_in_logical:
+                    new_max_cursor_abs = len(new_lines)
+                    max_cursor_resolved = True
 
                 new_lines.append(new_line)
 
@@ -476,6 +500,12 @@ class TerminalBuffer:
                             cursor_resolved = True
 
                     new_lines.append(new_line)
+
+                    if max_cursor_in_logical and not max_cursor_resolved:
+                        if offset <= max_cell_offset < offset + new_cols or (not chunk and max_cell_offset >= offset):
+                            new_max_cursor_abs = len(new_lines) - 1
+                            max_cursor_resolved = True
+
                     offset += new_cols
                     if offset >= len(cells):
                         break
@@ -504,12 +534,10 @@ class TerminalBuffer:
         self._cursor.col = max(0, min(new_cursor_col, new_cols - 1))
         self._cursor.delayed_wrap = new_cursor_delayed_wrap
 
-        # max_cursor_row: sticky at bottom once it reaches there.
-        if self._max_cursor_row >= old_rows - 1:
-            self._max_cursor_row = new_rows - 1
-
-        else:
-            self._max_cursor_row = min(self._max_cursor_row, new_rows - 1)
+        # Map max_cursor_row through the reflow to its new screen row.
+        if not max_cursor_resolved:
+            new_max_cursor_abs = len(self._lines) - new_rows
+        self._max_cursor_row = max(0, min(new_max_cursor_abs - (len(self._lines) - new_rows), new_rows - 1))
 
         # Adjust scroll region proportionally.
         self._scroll_region.bottom = min(

@@ -1,15 +1,4 @@
-"""Tests for soft-wrap reflow on resize.
-
-These tests define the *desired* behaviour after the reflow feature is
-implemented. They are marked with pytest.mark.xfail so the suite passes
-cleanly today, but each will be promoted to a normal (non-xfail) test once
-the implementation is in place.
-
-A test should be un-marked (xfail removed) only when the implementation
-actually makes it pass — never patch the implementation to force a pass.
-"""
-
-import pytest
+"""Tests for soft-wrap reflow on resize."""
 
 from terminal.terminal_buffer import TerminalBuffer
 from terminal.terminal_line import TerminalCharacterAttributes

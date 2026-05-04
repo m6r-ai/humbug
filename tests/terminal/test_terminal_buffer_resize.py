@@ -204,3 +204,120 @@ class TestResizeScrollback:
             _write(buf, f'Line{i}\n')
         # Alternate buffer should never grow beyond rows
         assert buf.history_lines() == buf.rows()
+
+
+class TestResizeGrowShrinkScrollbar:
+    """Regression tests for spurious scrollback after grow-then-shrink."""
+
+    def test_grow_then_shrink_no_spurious_scrollback(self, make_buffer):
+        """Growing rows then shrinking back must not create spurious scrollback.
+
+        Bug: max_cursor_row was bumped to new_rows-1 on grow, marking newly-added
+        blank lines as visited.  On subsequent shrink those blank lines were not
+        pruned and became scrollback, causing a spurious scrollbar.
+        """
+        buf = make_buffer(rows=3, cols=10, history_scrollback=True)
+        # Fill to bottom so max_cursor_row == old_rows - 1
+        _write(buf, 'A\r\nB\r\nC')
+        assert buf.cursor().row == 2
+
+        buf.resize(6, 10)   # grow
+        buf.resize(3, 10)   # shrink back
+
+        assert buf.history_lines() == buf.rows()
+
+    def test_grow_then_shrink_with_scrollback_no_extra_lines(self, make_buffer):
+        """Same as above but with pre-existing scrollback."""
+        buf = make_buffer(rows=3, cols=10, history_scrollback=True)
+        # Push some content into scrollback
+        for i in range(5):
+            _write(buf, f'Line{i}\n')
+
+        history_before = buf.history_lines()
+        buf.resize(6, 10)
+        buf.resize(3, 10)
+
+        assert buf.history_lines() == history_before
+
+    def test_repeated_grow_shrink_stable(self, make_buffer):
+        """Multiple grow/shrink cycles must not accumulate scrollback."""
+        buf = make_buffer(rows=3, cols=10, history_scrollback=True)
+        _write(buf, 'A\r\nB\r\nC')
+
+        buf.resize(6, 10)
+        buf.resize(3, 10)
+        history_after_first = buf.history_lines()
+
+        buf.resize(6, 10)
+        buf.resize(3, 10)
+
+        assert buf.history_lines() == history_after_first
+
+    def test_grow_does_not_mark_blank_lines_as_visited(self, make_buffer):
+        """After growing, the newly-added blank rows must remain unvisited.
+
+        Verified by checking that a subsequent shrink back to the original size
+        leaves history_lines() == rows (no scrollback inflation).
+        """
+        buf = make_buffer(rows=5, cols=10, history_scrollback=True)
+        _write(buf, 'Hello\nWorld')
+        # cursor at row 1; rows 2-4 are unvisited
+        assert buf.max_cursor_row() == 1
+
+        buf.resize(10, 10)
+        # max_cursor_row must NOT have jumped to 9
+        assert buf.max_cursor_row() == 1
+
+        buf.resize(5, 10)
+        assert buf.history_lines() == buf.rows()
+
+
+class TestResizeShrinkExpandBlankLines:
+    """Regression tests for blank lines appearing between prompts after shrink+expand."""
+
+    def test_shrink_expand_visible_content_intact(self, make_buffer):
+        """Shrinking then expanding must not push content into scrollback.
+
+        Bug: after expand, max_cursor_row was set to new_rows-1, so a second
+        shrink would not prune the blank lines, leaving the visible screen blank
+        and content stranded in scrollback.
+        """
+        buf = make_buffer(rows=10, cols=80, history_scrollback=True)
+        _write(buf, 'prompt1\r\nprompt2\r\nprompt3')
+        # cursor at row 2; rows 3-9 unvisited
+
+        buf.resize(5, 80)   # shrink
+        buf.resize(10, 80)  # expand back
+
+        # Content should still be on-screen, not in scrollback
+        assert buf.history_lines() == buf.rows()
+        rows = get_screen_text(buf)
+        assert rows[0] == 'prompt1'
+        assert rows[1] == 'prompt2'
+        assert rows[2] == 'prompt3'
+
+    def test_shrink_expand_shrink_no_blank_screen(self, make_buffer):
+        """Shrink → expand → shrink must not produce a blank visible screen."""
+        buf = make_buffer(rows=10, cols=80, history_scrollback=True)
+        _write(buf, 'line1\r\nline2\r\nline3')
+
+        buf.resize(5, 80)
+        buf.resize(10, 80)
+        buf.resize(5, 80)
+
+        rows = get_screen_text(buf)
+        # The first three rows must still contain the written content
+        assert rows[0] == 'line1'
+        assert rows[1] == 'line2'
+        assert rows[2] == 'line3'
+
+    def test_shrink_expand_cursor_row_correct(self, make_buffer):
+        """After shrink+expand the cursor must be on the correct row."""
+        buf = make_buffer(rows=10, cols=80, history_scrollback=True)
+        _write(buf, 'A\r\nB\r\nC')
+        assert buf.cursor().row == 2
+
+        buf.resize(5, 80)
+        buf.resize(10, 80)
+
+        assert buf.cursor().row == 2
