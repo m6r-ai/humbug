@@ -39,21 +39,21 @@ class WindowControlsWidget(QWidget):
 
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 2, 0, 0)
-        layout.setSpacing(10)
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 2, 8, 0)
+        self._layout.setSpacing(10)
 
         self._minimise_button = _WindowControlButton(self)
         self._minimise_button.clicked.connect(self._on_minimise)
-        layout.addWidget(self._minimise_button)
+        self._layout.addWidget(self._minimise_button)
 
         self._maximise_button = _WindowControlButton(self)
         self._maximise_button.clicked.connect(self._on_maximise_restore)
-        layout.addWidget(self._maximise_button)
+        self._layout.addWidget(self._maximise_button)
 
         self._close_button = _WindowControlButton(self)
         self._close_button.clicked.connect(self._on_close)
-        layout.addWidget(self._close_button)
+        self._layout.addWidget(self._close_button)
 
         self._style_manager.style_changed.connect(self.apply_style)
         self.apply_style()
@@ -62,6 +62,11 @@ class WindowControlsWidget(QWidget):
         """Apply current style settings to the buttons."""
         style_manager = self._style_manager
         btn_size = 22
+
+        is_rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
+        left_margin = 8 if is_rtl else 0
+        right_margin = 0 if is_rtl else 8
+        self._layout.setContentsMargins(left_margin, 2, right_margin, 0)
 
         self._minimise_button.setFixedSize(btn_size, btn_size)
         self._maximise_button.setFixedSize(btn_size, btn_size)
@@ -203,6 +208,7 @@ class MenuBarDragFilter(QWidget):
         super().__init__(menu_bar)
         self._menu_bar = menu_bar
         self._drag_pos: QPoint | None = None
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         menu_bar.installEventFilter(self)
 
     def eventFilter(self, watched: object, event: object) -> bool:

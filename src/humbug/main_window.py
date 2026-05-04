@@ -552,7 +552,6 @@ class MainWindow(QMainWindow):
         left_to_right = self._language_manager.left_to_right()
         if left_to_right:
             app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-
         else:
             app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
