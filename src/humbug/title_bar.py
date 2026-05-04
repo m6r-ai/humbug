@@ -40,8 +40,8 @@ class WindowControlsWidget(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setContentsMargins(0, 2, 0, 0)
+        layout.setSpacing(10)
 
         self._minimise_button = _WindowControlButton(self)
         self._minimise_button.clicked.connect(self._on_minimise)
@@ -61,14 +61,13 @@ class WindowControlsWidget(QWidget):
     def apply_style(self) -> None:
         """Apply current style settings to the buttons."""
         style_manager = self._style_manager
-        zoom = style_manager.zoom_factor()
-        btn_size = int(28 * zoom)
+        btn_size = 22
 
         self._minimise_button.setFixedSize(btn_size, btn_size)
         self._maximise_button.setFixedSize(btn_size, btn_size)
         self._close_button.setFixedSize(btn_size, btn_size)
 
-        icon_px = max(1, int(btn_size * 0.45))
+        icon_px = max(1, int(btn_size * 0.7))
         self._minimise_button.setIconSize(QSize(icon_px, icon_px))
         self._maximise_button.setIconSize(QSize(icon_px, icon_px))
         self._close_button.setIconSize(QSize(icon_px, icon_px))
