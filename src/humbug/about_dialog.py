@@ -9,6 +9,7 @@ from PySide6.QtGui import QPixmap
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
+from humbug.url_opener import open_url
 from humbug.version import CURRENT_VERSION
 
 
@@ -62,7 +63,7 @@ class AboutDialog(QDialog):
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc_label.setMinimumHeight(40)
-        desc_label.setOpenExternalLinks(True)
+        desc_label.linkActivated.connect(open_url)
         layout.addWidget(desc_label)
 
         min_button_width = int(90 * zoom_factor)

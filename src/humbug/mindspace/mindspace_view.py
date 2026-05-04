@@ -1,7 +1,6 @@
 """Main mindspace view widget containing files, conversations, and preview views."""
 
 import os
-import webbrowser
 
 from PySide6.QtCore import Qt, Signal, QSize, QEvent, QObject, QTimer
 from PySide6.QtGui import QIcon
@@ -26,6 +25,7 @@ from humbug.mindspace.preview.mindspace_preview_view import MindspacePreviewView
 from humbug.mindspace.search.mindspace_search_view import MindspaceSearchView
 from humbug.mindspace.vcs.mindspace_vcs_view import MindspaceVCSView
 from humbug.style_manager import StyleManager
+from humbug.url_opener import open_url
 
 
 class MindspaceView(QWidget):
@@ -356,7 +356,7 @@ class MindspaceView(QWidget):
     def _on_update_button_clicked(self) -> None:
         """Open the release page in the system browser."""
         if self._update_release_url:
-            webbrowser.open(self._update_release_url)
+            open_url(self._update_release_url)
 
     def _on_settings_button_clicked(self) -> None:
         """Handle settings button click."""

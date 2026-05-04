@@ -1,14 +1,14 @@
 """Dialog for displaying version and update information."""
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QDesktopServices, QPixmap
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QPushButton, QVBoxLayout, QWidget
-from PySide6.QtCore import QUrl
 import os
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
+from humbug.url_opener import open_url
 
 
 class UpdateDialog(QDialog):
@@ -60,7 +60,7 @@ class UpdateDialog(QDialog):
         self._status_label.setObjectName("statusLabel")
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._status_label.setWordWrap(True)
-        self._status_label.setOpenExternalLinks(True)
+        self._status_label.linkActivated.connect(open_url)
         layout.addWidget(self._status_label)
 
         layout.addSpacing(16)
