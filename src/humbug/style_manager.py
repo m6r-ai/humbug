@@ -909,8 +909,8 @@ class StyleManager(QObject):
 
         self._write_icon(f'{prefix}search-{suffix}.svg', f'''
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="11" cy="11" r="6" stroke="{color}" stroke-width="2"/>
-                <path d="M16 16L21 21" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+                <path d="M15 15L21 21" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="{color}" stroke-width="2"/>
             </svg>
         ''')
 
@@ -968,12 +968,14 @@ class StyleManager(QObject):
         # Diff tab icon — two vertical panes with a divider
         self._write_icon(f'{prefix}diff-{suffix}.svg', f'''
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="3" width="8" height="18" rx="1"
-                    stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
-                <rect x="14" y="3" width="8" height="18" rx="1"
-                    stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
-                <line x1="12" y1="3" x2="12" y2="21"
-                    stroke="{color}" stroke-width="1.5" stroke-dasharray="2 2"/>
+                <path d="M3 6C3 7.65685 4.34315 9 6 9C7.65685 9 9 7.65685 9 6C9 4.34315 7.65685 3 6 3C4.34315 3 3 4.34315 3 6Z"
+                    stroke="{color}" stroke-width="2"/>
+                <path d="M3 18C3 19.6569 4.34315 21 6 21C7.65685 21 9 19.6569 9 18C9 16.3431 7.65685 15 6 15C4.34315 15 3 16.3431 3 18Z"
+                    stroke="{color}" stroke-width="2"/>
+                <path d="M15 6C15 7.65685 16.3431 9 18 9C19.6569 9 21 7.65685 21 6C21 4.34315 19.6569 3 18 3C16.3431 3 15 4.34315 15 6Z"
+                    stroke="{color}" stroke-width="2"/>
+                <path d="M6 15V9" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18 9V12.3242C18 16.9982 16.9424 18 12.008 18H9" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
             </svg>
         ''')
 
@@ -1252,10 +1254,14 @@ class StyleManager(QObject):
             # Update available icon — arrow-up inside a circle, drawn in recommended blue
             self._write_icon(f'update-{suffix}.svg', f'''
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="9" stroke="{update_color}" stroke-width="2"/>
-                    <path d="M12 16V8" stroke="{update_color}" stroke-width="2" stroke-linecap="round"/>
-                    <path d="M9 11L12 8L15 11" stroke="{update_color}" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M20.5 15C18.9558 18.0448 15.7622 21 12 21C7.14776 21 3.58529 17.5101 3 13"
+                        stroke="{update_color}" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M3.5 9C4.89106 5.64934 8.0647 3 12 3C16.7819 3 20.4232 6.48993 21 11"
+                        stroke="{update_color}" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M21 21L21 15.6C21 15.2686 20.7314 15 20.4 15V15L15 15"
+                        stroke="{update_color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9 9L3.6 9V9C3.26863 9 3 8.73137 3 8.4L3 3"
+                        stroke="{update_color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             ''')
 
