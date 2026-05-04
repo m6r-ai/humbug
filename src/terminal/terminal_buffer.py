@@ -363,11 +363,9 @@ class TerminalBuffer:
         old_rows = self._rows
 
         # Remove unvisited blank lines at the bottom of the visible area when
-        # narrowing columns — reflow can expand the physical line count and we
-        # want those blank lines consumed first rather than pushing content into
-        # scrollback.  When widening, reflow only shrinks or maintains the line
-        # count so this is not needed.
-        if new_cols < self._cols:
+        # resizing.  This prevents them from being pushed into scrollback history
+        # during reflow or row reduction.
+        if new_cols < self._cols or new_rows < old_rows:
             unvisited = max(0, old_rows - (self._max_cursor_row + 1))
             if unvisited:
                 del self._lines[-unvisited:]
