@@ -8,6 +8,7 @@ from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 from humbug.user.user_settings import UserSettings
+from humbug.version import CURRENT_VERSION
 
 
 class WelcomeWidget(QFrame):
@@ -41,7 +42,7 @@ class WelcomeWidget(QFrame):
         layout.addSpacing(20)  # Space between icon and title
 
         # Application name
-        self._title_label = QLabel("Humbug v46")
+        self._title_label = QLabel(f"Humbug v{CURRENT_VERSION}")
         self._title_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
 
         # Add message and button for AI configuration

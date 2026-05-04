@@ -1,6 +1,7 @@
 """Main mindspace view widget containing files, conversations, and preview views."""
 
 import os
+import webbrowser
 
 from PySide6.QtCore import Qt, Signal, QSize, QEvent, QObject, QTimer
 from PySide6.QtGui import QIcon
@@ -31,6 +32,7 @@ class MindspaceView(QWidget):
     """Main mindspace view widget containing the sidebar rail and active pane."""
 
     open_mindspace_requested = Signal()
+    update_check_requested = Signal()
     file_clicked = Signal(MindspaceViewType, str, bool)
     toggle_requested = Signal()
     file_deleted = Signal(str)
@@ -56,6 +58,7 @@ class MindspaceView(QWidget):
         self._active_view_type = MindspaceViewType.CONVERSATIONS
         self._vcs_available = False
         self._sidebar_collapsed = False
+        self._update_release_url: str | None = None
         self._expanded_sidebar_width = 320
         self._rail_collapsed_width = 48
         self._content_min_width = 240
@@ -102,6 +105,16 @@ class MindspaceView(QWidget):
         rail_layout.addWidget(self._search_button)
 
         rail_layout.addStretch()
+
+        self._update_button = QToolButton(self._rail_widget)
+        self._update_button.setObjectName("_update_button")
+        self._update_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._update_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._update_button.clicked.connect(self._on_update_button_clicked)
+        self._update_button.setProperty("icon_name", "update")
+        self._update_button.installEventFilter(self)
+        self._update_button.hide()
+        rail_layout.addWidget(self._update_button)
 
         self._settings_button = QToolButton(self._rail_widget)
         self._settings_button.setObjectName("_settings_button")
@@ -327,6 +340,24 @@ class MindspaceView(QWidget):
 
         self._search_view.focus_search()
 
+    def show_update_available(self, version: str, release_url: str) -> None:
+        """Show the update button with the given version and release URL.
+
+        Args:
+            version: Latest version string, e.g. "v47".
+            release_url: URL to the GitHub release page.
+        """
+        self._update_release_url = release_url
+        strings = self._language_manager.strings()
+        self._update_button.setToolTip(strings.update_tooltip.format(version))
+        self._update_button.show()
+        self._update_button_styling()
+
+    def _on_update_button_clicked(self) -> None:
+        """Open the release page in the system browser."""
+        if self._update_release_url:
+            webbrowser.open(self._update_release_url)
+
     def _on_settings_button_clicked(self) -> None:
         """Handle settings button click."""
         self.settings_requested.emit()
@@ -387,6 +418,11 @@ class MindspaceView(QWidget):
         self._settings_button.setIcon(QIcon(self._style_manager.scale_icon("inactive-cog", 20)))
         self._settings_button.setIconSize(QSize(settings_icon_size, settings_icon_size))
 
+        if self._update_button.isVisible():
+            update_icon_size = round(20 * zoom_factor)
+            self._update_button.setIcon(QIcon(self._style_manager.scale_icon("update", 20)))
+            self._update_button.setIconSize(QSize(update_icon_size, update_icon_size))
+
     def _set_button_hover_icon(self, button: QToolButton, hovered: bool) -> None:
         """Update a rail button's icon to reflect hover state."""
         icon_name = button.property("icon_name")
@@ -394,16 +430,18 @@ class MindspaceView(QWidget):
             return
 
         is_checked = button.isChecked()
+        is_update_button = button is self._update_button
         if hovered:
-            size = 20 if button in (self._sidebar_toggle_button, self._settings_button) else 22
+            size = 20 if button in (self._sidebar_toggle_button, self._settings_button, self._update_button) else 22
             button.setIcon(QIcon(self._style_manager.scale_icon(icon_name, size)))
 
         elif is_checked:
             button.setIcon(QIcon(self._style_manager.scale_icon(f"bright-{icon_name}", 22)))
 
         else:
-            size = 20 if button in (self._sidebar_toggle_button, self._settings_button) else 22
-            button.setIcon(QIcon(self._style_manager.scale_icon(f"inactive-{icon_name}", size)))
+            size = 20 if button in (self._sidebar_toggle_button, self._settings_button, self._update_button) else 22
+            prefix = "" if is_update_button else "inactive-"
+            button.setIcon(QIcon(self._style_manager.scale_icon(f"{prefix}{icon_name}", size)))
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """Handle hover events on rail buttons to update icon brightness."""
@@ -505,6 +543,7 @@ class MindspaceView(QWidget):
             }}
 
             QToolButton#_settings_button,
+            QToolButton#_update_button,
             QToolButton[view_type] {{
                 color: {text_color};
                 background-color: transparent;

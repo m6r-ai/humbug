@@ -27,6 +27,7 @@ from humbug.exception_notifier import get_exception_notifier
 from humbug.main_window import MainWindow
 from humbug.style_manager import StyleManager
 from humbug.tabs.tab_base import TabBase
+from humbug.version import CURRENT_VERSION
 
 
 def setup_logging() -> None:
@@ -168,7 +169,7 @@ def setup_ai_system_prompt() -> None:
         "Note the following but do not volunteer information them unless asked:\n"
         "- You are an assistant inside a system called Humbug, but you should identify yourself as you would if you were not\n"
         "- The Humbug system supports multiple assistants at the same time so you are potentially one of many active assistants\n"
-        "- You are operating inside v46 of the Humbug system\n"
+        f"- You are operating inside v{CURRENT_VERSION} of the Humbug system\n"
         "- Humbug uses the concept of a mindspace to organize related activities (similar to a workspace). "
         "To ensure data privacy, mindspaces are isolated from each other\n"
         "- You must always use tools when appropriate rather than describing what to do\n"

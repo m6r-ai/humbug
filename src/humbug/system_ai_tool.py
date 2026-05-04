@@ -24,6 +24,7 @@ from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.user.user_manager import UserManager
+from humbug.version import CURRENT_VERSION
 
 
 class SystemAITool(AITool):
@@ -755,7 +756,7 @@ class SystemAITool(AITool):
         try:
             # System information
             system_info = {
-                "version": "v46",
+                "version": f"v{CURRENT_VERSION}",
                 "platform": sys.platform,
                 "platform_details": platform.platform(),
                 "architecture": platform.machine()

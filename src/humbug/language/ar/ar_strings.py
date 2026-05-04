@@ -371,5 +371,15 @@ def get_arabic_strings() -> LanguageStrings:
         approve_tool_call="الموافقة على استدعاء الأداة",
         i_am_unsure_about_tool_call="لست متأكداً من هذا",
         reject_tool_call="رفض استدعاء الأداة",
-        retry_error="إعادة المحاولة"
+        retry_error="إعادة المحاولة",
+
+        # Update checker
+        check_for_updates="التحقق من التحديثات...",
+        update_current_version="الإصدار الحالي: {0}",
+        update_checking="جارٍ التحقق...",
+        update_up_to_date="أنت على أحدث إصدار.",
+        update_available_message="الإصدار {0} متاح — انقر للتنزيل.",
+        update_check_failed="تعذّر التحقق من التحديثات. يرجى التحقق من اتصالك بالشبكة.",
+        update_tooltip="Humbug {0} متاح — انقر لصفحة الإصدار",
+        check_for_updates_setting="التحقق التلقائي من التحديثات"
     )

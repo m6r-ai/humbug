@@ -1,5 +1,6 @@
 """Main window implementation for Humbug application."""
 
+import asyncio
 import json
 import logging
 import os
@@ -25,6 +26,8 @@ from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
 from humbug.delegate_ai_tool import DelegateAITool
 from humbug.exception_notifier import get_exception_notifier
+from humbug.update_checker import UpdateChecker
+from humbug.update_dialog import UpdateDialog
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
@@ -93,6 +96,10 @@ class MainWindow(QMainWindow):
         self._about_action = QAction(strings.about_humbug, self)
         self._about_action.setMenuRole(QAction.MenuRole.AboutRole)
         self._about_action.triggered.connect(self._on_show_about_dialog)
+
+        self._check_for_updates_action = QAction(strings.check_for_updates, self)
+        self._check_for_updates_action.setMenuRole(QAction.MenuRole.ApplicationSpecificRole)
+        self._check_for_updates_action.triggered.connect(self._on_check_for_updates)
 
         self._settings_action = QAction(strings.settings, self)
         self._settings_action.setMenuRole(QAction.MenuRole.PreferencesRole)
@@ -259,6 +266,7 @@ class MainWindow(QMainWindow):
         # Humbug menu
         self._humbug_menu = self._menu_bar.addMenu(strings.humbug_menu)
         self._humbug_menu.addAction(self._about_action)
+        self._humbug_menu.addAction(self._check_for_updates_action)
         self._humbug_menu.addSeparator()
         self._humbug_menu.addAction(self._settings_action)
         self._humbug_menu.addSeparator()
@@ -464,6 +472,10 @@ class MainWindow(QMainWindow):
 
         QTimer.singleShot(0, self._restore_last_mindspace)
 
+        self._update_checker = UpdateChecker(self)
+        self._update_checker.update_available.connect(self._on_update_available)
+        QTimer.singleShot(5000, self._run_startup_update_check)
+
     def changeEvent(self, event: QEvent) -> None:
         """Handle change events."""
         super().changeEvent(event)
@@ -554,6 +566,7 @@ class MainWindow(QMainWindow):
 
         # Update action texts
         self._about_action.setText(strings.about_humbug)
+        self._check_for_updates_action.setText(strings.check_for_updates)
         self._settings_action.setText(strings.settings)
         self._quit_action.setText(strings.quit_humbug)
         self._new_mindspace_action.setText(strings.new_mindspace)
@@ -927,6 +940,33 @@ class MainWindow(QMainWindow):
         """Show the About dialog."""
         dialog = AboutDialog(self)
         dialog.exec()
+
+    def _run_startup_update_check(self) -> None:
+        """Schedule the automatic startup update check if enabled in user settings."""
+        user_settings = self._user_manager.settings()
+        if not user_settings.check_for_updates:
+            return
+
+        asyncio.get_event_loop().create_task(self._update_checker.check(manual=False))
+
+    def _on_update_available(self, version: str, release_url: str) -> None:
+        """Show the update button in the mindspace rail when a new version is found."""
+        self._mindspace_view.show_update_available(version, release_url)
+
+    def _on_check_for_updates(self) -> None:
+        """Handle 'Check for Updates' menu action."""
+        dialog = UpdateDialog(self)
+        dialog.show()
+
+        async def _run() -> None:
+            await self._update_checker.check(manual=True)
+            dialog.set_result(
+                self._update_checker.current_version_str(),
+                self._update_checker.latest_version(),
+                self._update_checker.latest_release_url(),
+            )
+
+        asyncio.get_event_loop().create_task(_run())
 
     def _on_new_terminal(self) -> None:
         """Create a new terminal tab."""

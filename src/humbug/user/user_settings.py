@@ -28,6 +28,7 @@ class UserSettings:
     file_sort_order: UserFileSortOrder = UserFileSortOrder.DIRECTORIES_FIRST
     font_ligatures: bool = True
     allow_external_file_access: bool = True
+    check_for_updates: bool = True
     external_file_allowlist: List[str] = field(default_factory=list)
     external_file_denylist: List[str] = field(default_factory=list)
 
@@ -52,6 +53,7 @@ class UserSettings:
             file_sort_order=UserFileSortOrder.DIRECTORIES_FIRST,
             font_ligatures=True,
             allow_external_file_access=True,
+            check_for_updates=True,
             external_file_allowlist=FilesystemAccessSettings.get_default_allowlist(),
             external_file_denylist=FilesystemAccessSettings.get_default_denylist()
         )
@@ -283,6 +285,17 @@ class UserSettings:
         else:
             settings.font_ligatures = font_ligatures
 
+        # Load check for updates setting with validation
+        check_for_updates = data.get("checkForUpdates", True)
+        if not isinstance(check_for_updates, bool):
+            cls._logger.warning(
+                "Invalid checkForUpdates type in %s: expected bool, got %s. Using default.",
+                path, type(check_for_updates).__name__
+            )
+
+        else:
+            settings.check_for_updates = check_for_updates
+
         # Load external file access settings with validation
         allow_external = data.get("allowExternalFileAccess", True)
         if not isinstance(allow_external, bool):
@@ -441,6 +454,7 @@ class UserSettings:
             "fontLigatures": self.font_ligatures,
             "theme": self.theme.name,
             "fileSortOrder": self.file_sort_order.name,
+            "checkForUpdates": self.check_for_updates,
             "allowExternalFileAccess": self.allow_external_file_access,
             "externalFileAllowlist": self.external_file_allowlist,
             "externalFileDenylist": self.external_file_denylist

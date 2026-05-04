@@ -107,6 +107,7 @@ class SettingsDialog(QDialog):
         self._font_ligatures_check: SettingsCheckbox
         self._theme_combo: SettingsCombo
         self._file_sort_combo: SettingsCombo
+        self._check_for_updates_check: SettingsCheckbox
         self._display_container: SettingsContainer
 
         self._file_access_heading: SettingsPageHeading
@@ -307,6 +308,9 @@ class SettingsDialog(QDialog):
             (strings.sort_directories_first, UserFileSortOrder.DIRECTORIES_FIRST),
             (strings.sort_alphabetical, UserFileSortOrder.ALPHABETICAL),
         ])
+
+        self._check_for_updates_check = SettingsFactory.create_checkbox(strings.check_for_updates_setting)
+        container.add_setting(self._check_for_updates_check)
 
         container.add_stretch()
         container.value_changed.connect(self._on_value_changed)
@@ -603,6 +607,7 @@ class SettingsDialog(QDialog):
             allow_external_file_access=self._allow_external_access_checkbox.get_value(),
             external_file_allowlist=self._external_allowlist_area.get_value(),
             external_file_denylist=self._external_denylist_area.get_value(),
+            check_for_updates=self._check_for_updates_check.get_value(),
         )
 
     def get_mindspace_settings(self) -> MindspaceSettings | None:
@@ -643,6 +648,7 @@ class SettingsDialog(QDialog):
         self._theme_combo.set_value(settings.theme)
         self._font_ligatures_check.set_value(settings.font_ligatures)
         self._file_sort_combo.set_value(settings.file_sort_order)
+        self._check_for_updates_check.set_value(settings.check_for_updates)
 
         # File access
         self._allow_external_access_checkbox.set_value(settings.allow_external_file_access)
@@ -903,6 +909,8 @@ class SettingsDialog(QDialog):
         ])
         self._file_sort_combo.set_value(current_sort)
 
+        self._check_for_updates_check.set_label(strings.check_for_updates_setting)
+
         # Update File Access page controls
         self._allow_external_access_checkbox.set_label(strings.allow_external_file_access)
         self._external_allowlist_area.set_label(strings.external_file_allowlist)
@@ -1044,6 +1052,7 @@ class SettingsDialog(QDialog):
             allow_external_file_access=settings.allow_external_file_access,
             external_file_allowlist=list(settings.external_file_allowlist),
             external_file_denylist=list(settings.external_file_denylist),
+            check_for_updates=settings.check_for_updates,
         )
 
     @staticmethod

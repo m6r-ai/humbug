@@ -9,6 +9,7 @@ from PySide6.QtGui import QPixmap
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
+from humbug.version import CURRENT_VERSION
 
 
 class AboutDialog(QDialog):
@@ -48,7 +49,7 @@ class AboutDialog(QDialog):
         layout.addSpacing(8)  # Space between icon and title
 
         # Title with version
-        title_label = QLabel("Humbug v46")
+        title_label = QLabel(f"Humbug v{CURRENT_VERSION}")
         title_label.setObjectName("titleLabel")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setMinimumHeight(40)

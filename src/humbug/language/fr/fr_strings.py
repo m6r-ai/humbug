@@ -372,5 +372,15 @@ def get_french_strings() -> LanguageStrings:
         approve_tool_call="Approuver les appels d'outils",
         i_am_unsure_about_tool_call="Je ne suis pas sûr à propos",
         reject_tool_call="Rejeter les appels d'outils",
-        retry_error="Réessayer"
+        retry_error="Réessayer",
+
+        # Update checker
+        check_for_updates="Vérifier les mises à jour...",
+        update_current_version="Version actuelle : {0}",
+        update_checking="vérification...",
+        update_up_to_date="Vous êtes à jour.",
+        update_available_message="La version {0} est disponible — cliquez pour télécharger.",
+        update_check_failed="Impossible de vérifier les mises à jour. Vérifiez votre connexion réseau.",
+        update_tooltip="Humbug {0} disponible — cliquez pour la page de version",
+        check_for_updates_setting="Vérifier automatiquement les mises à jour"
     )

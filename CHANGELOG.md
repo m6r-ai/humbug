@@ -19,6 +19,7 @@ New features:
 - Added "whole word" searching in all find boxes.
 - Added a mindspace global search feature.
 - The terminal now reflows lines better when it resizes.
+- Added code to check for the latest version, and to check on startup.
 
 Bug fixes:
 

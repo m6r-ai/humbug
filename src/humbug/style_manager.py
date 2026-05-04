@@ -987,6 +987,7 @@ class StyleManager(QObject):
             color = self._colors[ColorRole.TEXT_PRIMARY][mode]
             inactive_color = self._colors[ColorRole.TEXT_INACTIVE][mode]
             bright_color = self._colors[ColorRole.TEXT_BRIGHT][mode]
+            update_color = self._colors[ColorRole.BUTTON_BACKGROUND_RECOMMENDED][mode]
             suffix = mode.name.lower()
 
             # Right-pointing arrow
@@ -1247,6 +1248,16 @@ class StyleManager(QObject):
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)
             self._create_active_inactive_theme_icons(True, suffix, bright_color, prefix="bright-")
+
+            # Update available icon — arrow-up inside a circle, drawn in recommended blue
+            self._write_icon(f'update-{suffix}.svg', f'''
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="9" stroke="{update_color}" stroke-width="2"/>
+                    <path d="M12 16V8" stroke="{update_color}" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M9 11L12 8L15 11" stroke="{update_color}" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            ''')
 
             # Match-case toggle icon — "Aa" letterform
             self._write_icon(f'find-match-case-{suffix}.svg', f'''

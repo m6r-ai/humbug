@@ -372,5 +372,15 @@ def get_english_strings() -> LanguageStrings:
         approve_tool_call="Approve Tool Call",
         i_am_unsure_about_tool_call="I'm Unsure About This",
         reject_tool_call="Reject Tool Call",
-        retry_error="Retry"
+        retry_error="Retry",
+
+        # Update checker
+        check_for_updates="Check for Updates...",
+        update_current_version="Current version: {0}",
+        update_checking="checking...",
+        update_up_to_date="You are up to date.",
+        update_available_message="Version {0} is available — click to download.",
+        update_check_failed="Could not check for updates. Please check your network connection.",
+        update_tooltip="Humbug {0} available — click for release page",
+        check_for_updates_setting="Automatically check for updates"
     )

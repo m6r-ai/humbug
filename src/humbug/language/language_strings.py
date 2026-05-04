@@ -348,3 +348,13 @@ class LanguageStrings:
     i_am_unsure_about_tool_call: str
     reject_tool_call: str
     retry_error: str
+
+    # Update checker
+    check_for_updates: str
+    update_current_version: str  # Format: "Current version: {0}"
+    update_checking: str
+    update_up_to_date: str
+    update_available_message: str  # Format: "Version {0} is available"
+    update_check_failed: str
+    update_tooltip: str  # Format: "Humbug {0} available"
+    check_for_updates_setting: str
