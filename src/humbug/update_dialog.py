@@ -29,6 +29,7 @@ class UpdateDialog(QDialog):
         self._language_manager = LanguageManager()
         self._style_manager = StyleManager()
         strings = self._language_manager.strings()
+        self._link_color = self._style_manager.get_color_str(ColorRole.TEXT_LINK)
 
         self.setWindowTitle(strings.check_for_updates)
         self.setMinimumWidth(420)
@@ -42,7 +43,7 @@ class UpdateDialog(QDialog):
         icon_path = os.path.expanduser("~/.humbug/icons/app-icon.svg")
         icon_pixmap = QPixmap(icon_path)
         zoom_factor = self._style_manager.zoom_factor()
-        scaled_size = int(80 * zoom_factor)
+        scaled_size = int(160 * zoom_factor)
         icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,
@@ -111,7 +112,7 @@ class UpdateDialog(QDialog):
             is_newer = False
 
         if is_newer:
-            link_text = f"<a href='{release_url}'>{latest}</a>"
+            link_text = f"<a href='{release_url}' style='color: {self._link_color}; text-decoration: none;'>{latest}</a>"
             self._status_label.setText(strings.update_available_message.format(link_text))
 
         else:
@@ -122,7 +123,6 @@ class UpdateDialog(QDialog):
         style_manager = self._style_manager
         base_font_size = style_manager.base_font_size()
         zoom_factor = style_manager.zoom_factor()
-        link_color = style_manager.get_color_str(ColorRole.TEXT_LINK)
 
         self.setStyleSheet(f"""
             QDialog {{
@@ -136,13 +136,6 @@ class UpdateDialog(QDialog):
             QLabel#statusLabel {{
                 font-size: {base_font_size * zoom_factor}pt;
                 margin: 4px 16px;
-            }}
-            QLabel a {{
-                color: {link_color};
-                text-decoration: none;
-            }}
-            QLabel a:hover {{
-                text-decoration: underline;
             }}
             QPushButton {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};

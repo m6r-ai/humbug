@@ -29,6 +29,7 @@ class AboutDialog(QDialog):
         style_manager = StyleManager()
         base_font_size = style_manager.base_font_size()
         zoom_factor = style_manager.zoom_factor()
+        link_color = style_manager.get_color_str(ColorRole.TEXT_LINK)
 
         # Main layout with proper spacing
         layout = QVBoxLayout()
@@ -58,7 +59,7 @@ class AboutDialog(QDialog):
 
         # Description with hyperlink
         desc_label = QLabel(
-            "Visit the <a href='https://github.com/m6r-ai/humbug'>Humbug</a> project to learn more."
+            f"Visit the <a href='https://github.com/m6r-ai/humbug' style='color: {link_color}; text-decoration: none;'>Humbug</a> project to learn more."
         )
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -80,7 +81,6 @@ class AboutDialog(QDialog):
         self.setLayout(layout)
 
         # Apply dialog styling
-        link_color = style_manager.get_color_str(ColorRole.TEXT_LINK)
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
@@ -93,13 +93,6 @@ class AboutDialog(QDialog):
                 font-size: {base_font_size * 1.5}pt;
                 font-weight: bold;
                 margin: 10px;
-            }}
-            QLabel a {{
-                color: {link_color};
-                text-decoration: none;
-            }}
-            QLabel a:hover {{
-                text-decoration: underline;
             }}
             QPushButton {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};

@@ -146,7 +146,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.TEXT_LINK: {
-                ColorMode.DARK: "#80a0ff",
+                ColorMode.DARK: "#5080ff",
                 ColorMode.LIGHT: "#0000ff"
             },
             ColorRole.TEXT_INACTIVE: {
@@ -318,7 +318,7 @@ class StyleManager(QObject):
             },
             ColorRole.MENU_HOVER: {
                 ColorMode.DARK: "#3060d0",
-                ColorMode.LIGHT: "#5090e0"
+                ColorMode.LIGHT: "#70a0f0"
             },
             ColorRole.MENU_BORDER: {
                 ColorMode.DARK: "#606060",
