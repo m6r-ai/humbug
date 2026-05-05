@@ -476,12 +476,13 @@ class MindspaceBreadcrumbContainer(QWidget):
         """Assign geometry to all child widgets to exactly fill the container."""
         w = self.width()
         h = self.height()
+        scrollbar = self._scrollbar
 
-        scrollbar_needed = self._scrollbar.maximum() > self._scrollbar.minimum()
-        self._scrollbar.setVisible(scrollbar_needed)
+        scrollbar_needed = scrollbar.maximum() > scrollbar.minimum()
+        scrollbar.setVisible(scrollbar_needed)
 
         bc_h = self._breadcrumb_rows * self._row_height
-        sb_w = self._scrollbar.sizeHint().width() if scrollbar_needed else 0
+        sb_w = scrollbar.sizeHint().width() if scrollbar_needed else 0
         tree_w = max(0, w - sb_w)
         tree_h = max(0, h - bc_h)
 
