@@ -55,50 +55,11 @@ class FileSystemAITool(AITool):
         Returns:
             Tool definition with parameters and description
         """
-        operations = self.get_operation_definitions()
-        operation_names: List[str] = list(operations.keys())
-
-        # Get current external access status
         settings = self._get_access_settings()
-        external_access_status = "ENABLED" if settings.allow_external_access else "DISABLED"
-
-        # Build description from operations
-        base_description = (
-            f"The filesystem tool lets you (the AI) perform various file and directory operations. "
-            f"Write operations are restricted to the current mindspace and require user authorization. "
-            f"Read and search operations can access files outside the mindspace when "
-            f"external file access is enabled (currently: {external_access_status}). "
-        )
-
-        if settings.allow_external_access:
-            base_description += "External reads are subject to allowlist rules and user approval. "
-
-        else:
-            base_description += "Enable in user settings to access system files. "
-
-        base_description += (
-            f"The denied paths list applies to all file access, including within the mindspace. "
-            f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB."
-        )
-
-        # Generate operations list
-        operation_list = []
-        for name, op_def in operations.items():
-            operation_list.append(f"- {name}: {op_def.description}")
-
-        description = f"{base_description}\nAvailable operations are:\n" + "\n".join(operation_list)
-
-        return AIToolDefinition(
+        return self._build_definition_from_operations(
             name="filesystem",
-            description=description,
-            parameters=[
-                AIToolParameter(
-                    name="operation",
-                    type="string",
-                    description="Filesystem operation to perform",
-                    required=True,
-                    enum=operation_names
-                ),
+            description_prefix=self._build_description_prefix(settings),
+            additional_parameters=[
                 AIToolParameter(
                     name="path",
                     type="string",
@@ -202,6 +163,34 @@ class FileSystemAITool(AITool):
                 )
             ]
         )
+
+    def _build_description_prefix(self, settings: FilesystemAccessSettings) -> str:
+        """
+        Build the dynamic description prefix for the tool definition.
+
+        Args:
+            settings: Current filesystem access settings
+
+        Returns:
+            Description prefix string incorporating current access settings
+        """
+        external_access_status = "ENABLED" if settings.allow_external_access else "DISABLED"
+        prefix = (
+            f"The filesystem tool lets you (the AI) perform various file and directory operations. "
+            f"Write operations are restricted to the current mindspace and require user authorization. "
+            f"Read and search operations can access files outside the mindspace when "
+            f"external file access is enabled (currently: {external_access_status}). "
+        )
+        if settings.allow_external_access:
+            prefix += "External reads are subject to allowlist rules and user approval. "
+        else:
+            prefix += "Enable in user settings to access system files. "
+
+        prefix += (
+            f"The denied paths list applies to all file access, including within the mindspace. "
+            f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB."
+        )
+        return prefix
 
     def get_brief_description(self) -> str:
         """Get brief one-line description for system prompt."""

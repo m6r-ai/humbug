@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Callable, Awaitable
+from typing import Any, Dict, List, Callable, Awaitable, final
 
 from ai_tool.ai_tool_call import AIToolCall
 from ai_tool.ai_tool_definition import AIToolDefinition
@@ -28,6 +28,7 @@ class AITool(ABC):
             AIToolDefinition describing this tool's interface
         """
 
+    @abstractmethod
     def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
         """
         Get operation definitions for this tool.
@@ -35,7 +36,6 @@ class AITool(ABC):
         Returns:
             Dictionary mapping operation names to their definitions.
         """
-        return {}
 
     def extract_context(self, tool_call: AIToolCall) -> str | None:  # pylint: disable=unused-argument
         """
@@ -87,6 +87,7 @@ class AITool(ABC):
         as quickly as possible, but there are no guarantees about timing.
         """
 
+    @final
     async def execute(
         self,
         tool_call: AIToolCall,
@@ -95,9 +96,6 @@ class AITool(ABC):
     ) -> AIToolResult:
         """
         Execute the tool with given arguments.
-
-        Default implementation handles operation-based routing if operations are defined.
-        Tools without operations must override this method.
 
         Args:
             tool_call: Tool call containing arguments and metadata
@@ -113,13 +111,6 @@ class AITool(ABC):
             AIToolTimeoutError: If tool execution times out
         """
         operation_definitions = self.get_operation_definitions()
-
-        # If no operations defined, subclass must override execute()
-        if not operation_definitions:
-            raise NotImplementedError(
-                f"{self.__class__.__name__} must either define operations or override execute()"
-            )
-
         # Extract and validate operation
         arguments = tool_call.arguments
         operation = arguments.get("operation")

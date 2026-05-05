@@ -137,18 +137,6 @@ class DelegateAITool(AITool):
             )
         }
 
-    def _validate_mindspace_access(self) -> None:
-        """
-        Validate that a mindspace is currently open.
-
-        Raises:
-            AIToolExecutionError: If no mindspace is open
-        """
-        if not self._mindspace_manager.has_mindspace():
-            raise AIToolExecutionError(
-                "No mindspace is currently open. AI delegation requires an active mindspace."
-            )
-
     def _validate_and_resolve_session_id(self, session_id: str) -> str:
         """
         Validate session ID and resolve to conversation path.
@@ -200,9 +188,6 @@ class DelegateAITool(AITool):
             AIToolExecutionError: If operation fails
             AIToolAuthorizationDenied: If user denies authorization
         """
-        # Validate mindspace is open
-        self._validate_mindspace_access()
-
         mindspace_settings = self._mindspace_manager.settings()
         assert mindspace_settings is not None, "Mindspace settings should not be None if mindspace is open"
 

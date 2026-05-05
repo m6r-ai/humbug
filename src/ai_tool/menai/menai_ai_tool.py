@@ -37,12 +37,11 @@ class MenaiAITool(AITool):
             name="menai",
             description_prefix=(
                 "The menai tool lets you to compile and execute Menai programs. "
-                "You MUST NOT attempt to guess Menai syntax and MUST read the help before "
-                "attempting to use this tool. "
-                "Menai is a unique pure functional programming language. "
+                "Menai is a fast, pure, functional programming language. "
                 "It is ideal for everything from simple calculations to complex algorithms. "
-                "Menai has no side effects, so it does not require user approvals to use it. "
-                "When annotating Menai code, use triple backticks with `menai`\n\n"
+                "You DO NOT know Menai's syntax, so YOU MUST call the help tool to understand its syntax. "
+                "Menai has no side effects, so it does not require user approvals to use it."
+                "When annotating Menai code, use triple backticks with `menai`"
             ),
             additional_parameters=[
                 AIToolParameter(

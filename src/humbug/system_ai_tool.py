@@ -61,7 +61,7 @@ class SystemAITool(AITool):
             description_prefix=(
             "Tab lifecycle and workspace management operations. Use this tool to create, open, "
             "close, and organize tabs. Returns tab IDs (GUIDs) that can be used with specific tab tools "
-                "(editor, terminal, conversation, log, preview) to work with tab content."
+            "(editor, terminal, conversation, log, preview) to work with tab content."
             ),
             additional_parameters=[
                 AIToolParameter(
@@ -214,18 +214,6 @@ class SystemAITool(AITool):
             ),
         }
 
-    def _validate_mindspace_access(self) -> None:
-        """
-        Validate that a mindspace is currently open.
-
-        Raises:
-            AIToolExecutionError: If no mindspace is open
-        """
-        if not self._mindspace_manager.has_mindspace():
-            raise AIToolExecutionError(
-                "No mindspace is currently open. System operations require an active mindspace."
-            )
-
     def _validate_and_resolve_path(self, path_str: str) -> str:
         """
         Validate path is within mindspace and resolve to absolute path.
@@ -255,34 +243,6 @@ class SystemAITool(AITool):
             raise AIToolExecutionError(f"Path is outside mindspace boundaries: {path_str}")
 
         return abs_path
-
-    async def execute(
-        self,
-        tool_call: AIToolCall,
-        requester_ref: Any,
-        request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """
-        Execute a system operation.
-
-        Validates mindspace access before delegating to base class.
-
-        Args:
-            tool_call: Tool call containing operation name and arguments
-            requester_ref: Reference to the requester
-            request_authorization: Function to call for user authorization
-
-        Returns:
-            AIToolResult containing the execution result
-
-        Raises:
-            AIToolExecutionError: If operation fails
-        """
-        # Validate mindspace is open before any operation
-        self._validate_mindspace_access()
-
-        # Delegate to base class for operation routing
-        return await super().execute(tool_call, requester_ref, request_authorization)
 
     async def _open_editor_tab(
         self,
