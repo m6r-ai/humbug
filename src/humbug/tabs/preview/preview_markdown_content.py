@@ -39,7 +39,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
         self._sections_container.setObjectName("_sections_container")
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
-        self._sections_layout.setSpacing(15)
+        self._sections_layout.setSpacing(self._style_manager.message_spacing())
         self._layout.addWidget(self._sections_container)
 
         # Track sections
@@ -158,6 +158,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
 
     def apply_style(self) -> None:
         """Apply styling to this content widget and all sections."""
+        self._sections_layout.setSpacing(self._style_manager.message_spacing())
         for section in self._sections:
             section.apply_style()
 

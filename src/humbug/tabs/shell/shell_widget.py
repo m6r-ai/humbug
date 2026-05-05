@@ -97,7 +97,7 @@ class ShellWidget(QWidget):
         # Create command processor
         self._command_processor = ShellCommandProcessor()
 
-        spacing = int(self._style_manager.message_bubble_spacing())
+        spacing = self._style_manager.message_spacing()
         self._messages_layout.setSpacing(spacing)
         self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_layout.addStretch()
@@ -662,7 +662,7 @@ class ShellWidget(QWidget):
 
         delta = message_pos.y() - scroll_value
 
-        message_spacing = int(self._style_manager.message_bubble_spacing())
+        message_spacing = self._style_manager.message_spacing()
 
         # Determine if scrolling is needed
         if delta < 0:
@@ -762,7 +762,7 @@ class ShellWidget(QWidget):
     def _build_shell_message_widget_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
-        border_radius = int(self._style_manager.message_bubble_spacing())
+        border_radius = style_manager.message_radius()
 
         return f"""
             #ShellMessage {{
@@ -820,6 +820,9 @@ class ShellWidget(QWidget):
     def _on_style_changed(self) -> None:
         """Handle style changes by updating fonts and stylesheets."""
         zoom_factor = self._style_manager.zoom_factor()
+        spacing = self._style_manager.message_spacing()
+        self._messages_layout.setSpacing(spacing)
+        self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
         font = self.font()
         base_font_size = self._style_manager.base_font_size()

@@ -79,7 +79,7 @@ class LogWidget(QWidget):
         self._messages_layout = QVBoxLayout(self._messages_container)
         self._messages_container.setLayout(self._messages_layout)
 
-        spacing = int(self._style_manager.message_bubble_spacing())
+        spacing = self._style_manager.message_spacing()
         self._messages_layout.setSpacing(spacing)
         self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_layout.addStretch()
@@ -548,7 +548,7 @@ class LogWidget(QWidget):
 
         delta = message_pos.y() - scroll_value
 
-        message_spacing = int(self._style_manager.message_bubble_spacing())
+        message_spacing = self._style_manager.message_spacing()
 
         # Determine if scrolling is needed
         if delta < 0:
@@ -621,7 +621,7 @@ class LogWidget(QWidget):
     def _build_log_message_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
-        border_radius = int(style_manager.message_bubble_spacing())
+        border_radius = style_manager.message_radius()
 
         return f"""
             #LogMessage {{
@@ -678,6 +678,9 @@ class LogWidget(QWidget):
 
     def _on_style_changed(self) -> None:
         zoom_factor = self._style_manager.zoom_factor()
+        spacing = self._style_manager.message_spacing()
+        self._messages_layout.setSpacing(spacing)
+        self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
 
         font = self.font()
@@ -1231,7 +1234,6 @@ class LogWidget(QWidget):
         message_widget = self._messages[message_index]
 
         # Scroll so message is at top of viewport with spacing
-        bubble_spacing = self._style_manager.message_bubble_spacing()
-        self._perform_scroll_to_position(message_widget, int(bubble_spacing))
+        self._perform_scroll_to_position(message_widget, self._style_manager.message_spacing())
 
         return True

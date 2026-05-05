@@ -1479,8 +1479,7 @@ class ConversationWidget(QWidget):
 
         delta = message_pos.y() - scroll_value
 
-        zoom_factor = self._style_manager.zoom_factor()
-        message_spacing = int(self._style_manager.message_bubble_spacing() * zoom_factor)
+        message_spacing = self._style_manager.message_spacing()
 
         # Determine if scrolling is needed
         if delta < 0:
@@ -1884,7 +1883,8 @@ class ConversationWidget(QWidget):
         """Build styles for the main message frame."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
-        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor)
+        border_radius = style_manager.message_radius()
+        section_radius = style_manager.message_section_radius()
         label_font_size = style_manager.base_font_size() * zoom_factor * 0.8
 
         # The -2px padding above is to offset the 2px border so that the content area remains the same size
@@ -2026,7 +2026,7 @@ class ConversationWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
                 margin: 0;
                 padding: 0;
-                border-radius: {border_radius // 2}px;
+                border-radius: {section_radius}px;
                 border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
             }}
 
@@ -2061,7 +2061,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_attachment_widget {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_ATTACHMENT_BACKGROUND)};
                 border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
-                border-radius: 4px;
+                border-radius: {style_manager.radius()}px;
             }}
 
             #ConversationMessage #_attachment_label {{
@@ -2089,8 +2089,9 @@ class ConversationWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
                 border: none;
-                border-radius: 4px;
-                padding: 4px 12px;
+                border-radius: {style_manager.radius()}px;
+                padding: {style_manager.spacing(1)}px {style_manager.spacing(3)}px;
+                min-height: {style_manager.dialog_button_height()}px;
                 font-size: {label_font_size:.1f}pt;
             }}
 
@@ -2106,8 +2107,9 @@ class ConversationWidget(QWidget):
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
                 border: 1px solid {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
-                border-radius: 4px;
-                padding: 4px 12px;
+                border-radius: {style_manager.radius()}px;
+                padding: {style_manager.spacing(1)}px {style_manager.spacing(3)}px;
+                min-height: {style_manager.dialog_button_height()}px;
                 font-size: {label_font_size:.1f}pt;
             }}
 
@@ -2125,33 +2127,15 @@ class ConversationWidget(QWidget):
                 "#ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar"
             )}
 
-            #ConversationMessage #_approval_approve_button[recommended="true"] {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-                border-radius: 4px;
-            }}
-            #ConversationMessage #_approval_approve_button[recommended="true"]:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
-            }}
-            #ConversationMessage #_approval_approve_button[recommended="true"]:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
-            }}
-            #ConversationMessage #_approval_approve_button[recommended="false"] {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-                border-radius: 4px;
-            }}
-            #ConversationMessage #_approval_approve_button[recommended="false"]:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
-            }}
-            #ConversationMessage #_approval_approve_button[recommended="false"]:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
-            }}
+            {style_manager.get_button_stylesheet("#ConversationMessage #_approval_approve_button")}
 
             #ConversationMessage #_approval_i_am_unsure_button {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border-radius: 4px;
+                border: none;
+                border-radius: {style_manager.radius()}px;
+                padding: {style_manager.spacing(1)}px {style_manager.spacing(3)}px;
+                min-height: {style_manager.dialog_button_height()}px;
             }}
             #ConversationMessage #_approval_i_am_unsure_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
@@ -2163,7 +2147,10 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_approval_reject_button {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border-radius: 4px;
+                border: none;
+                border-radius: {style_manager.radius()}px;
+                padding: {style_manager.spacing(1)}px {style_manager.spacing(3)}px;
+                min-height: {style_manager.dialog_button_height()}px;
             }}
             #ConversationMessage #_approval_reject_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
@@ -2175,25 +2162,17 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_retry_widget {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
+            {style_manager.get_button_stylesheet("#ConversationMessage #_retry_button")}
             #ConversationMessage #_retry_button {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-                border-radius: 4px;
-                padding: 4px 48px;
-            }}
-            #ConversationMessage #_retry_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
-            }}
-            #ConversationMessage #_retry_button:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
+                padding-left: {style_manager.spacing(12)}px;
+                padding-right: {style_manager.spacing(12)}px;
             }}
         """
 
     def _build_conversation_message_section_styles(self) -> str:
         """Build styles for message sections."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor / 2)
+        border_radius = style_manager.message_section_radius()
         return f"""
             #ConversationMessage #ConversationMessageSection[section_style="text-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
@@ -2258,7 +2237,10 @@ class ConversationWidget(QWidget):
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                padding: 0px;
+                border-radius: {style_manager.radius()}px;
+                padding: {style_manager.spacing(1)}px;
+                min-width: {style_manager.tool_button_size()}px;
+                min-height: {style_manager.tool_button_size()}px;
             }}
             #ConversationMessage #ConversationMessageSection[section_style="text-system"] QToolButton:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
@@ -2292,7 +2274,7 @@ class ConversationWidget(QWidget):
         """Update styles when the application style changes."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
-        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        spacing = style_manager.message_spacing()
         self._messages_layout.setSpacing(spacing)
         self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_container.setMaximumWidth(int(style_manager.nice_tab_width() * zoom_factor))
@@ -3512,8 +3494,7 @@ class ConversationWidget(QWidget):
         message_widget = self._messages[actual_index]
 
         # Scroll so message header is at top of viewport with spacing
-        bubble_spacing = self._style_manager.message_bubble_spacing()
-        self._perform_scroll_to_position(message_widget, int(bubble_spacing))
+        self._perform_scroll_to_position(message_widget, self._style_manager.message_spacing())
 
         # Get the actual message ID
         history = self.get_conversation_history()

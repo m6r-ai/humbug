@@ -1604,6 +1604,18 @@ class StyleManager(QObject):
         """Get the number of pixels to use in message bubble spacing."""
         return 10.0
 
+    def message_spacing(self) -> int:
+        """Get standard spacing for conversation message surfaces."""
+        return self.scale(self.message_bubble_spacing())
+
+    def message_radius(self) -> int:
+        """Get standard radius for conversation message bubbles."""
+        return self.message_spacing()
+
+    def message_section_radius(self) -> int:
+        """Get standard radius for nested conversation message sections."""
+        return max(1, self.message_radius() // 2)
+
     def nice_tab_width(self) -> float:
         """Get the ideal width for tabs to balance information density and readability."""
         return 1024.0

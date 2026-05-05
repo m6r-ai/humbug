@@ -95,7 +95,7 @@ class PreviewWidget(QWidget):
         self._content_layout = QVBoxLayout(self._content_container)
         self._content_container.setLayout(self._content_layout)
 
-        spacing = int(self._style_manager.message_bubble_spacing())
+        spacing = self._style_manager.message_spacing()
         self._content_layout.setSpacing(spacing)
         self._content_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._content_layout.addStretch()
@@ -661,14 +661,13 @@ class PreviewWidget(QWidget):
     def _build_preview_file_content_style(self) -> str:
         """Build styles for the PreviewFileContent widget."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        bubble_spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        border_radius = style_manager.message_radius()
 
         return f"""
             #PreviewFileContent {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
-                border-radius: {bubble_spacing}px;
+                border-radius: {border_radius}px;
                 border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
             }}
 
@@ -707,8 +706,10 @@ class PreviewWidget(QWidget):
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                border-radius: 0;
-                padding: 0px;
+                border-radius: {style_manager.radius()}px;
+                padding: {style_manager.spacing(1)}px;
+                min-width: {style_manager.tool_button_size()}px;
+                min-height: {style_manager.tool_button_size()}px;
             }}
             #PreviewFileContent #_edit_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
@@ -741,7 +742,7 @@ class PreviewWidget(QWidget):
     def _build_preview_markdown_content_section_styles(self) -> str:
         """Build styles for language headers within sections."""
         style_manager = self._style_manager
-        border_radius = int(style_manager.message_bubble_spacing())
+        border_radius = style_manager.message_section_radius()
 
         return f"""
             /* Default section styling */
@@ -803,14 +804,13 @@ class PreviewWidget(QWidget):
     def _build_preview_markdown_preview_content_style(self) -> str:
         """Build styles for the PreviewMarkdownPreviewContent widget."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        bubble_spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        border_radius = style_manager.message_radius()
 
         return f"""
             QFrame#PreviewMarkdownPreviewContent {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
-                border-radius: {bubble_spacing}px;
+                border-radius: {border_radius}px;
                 border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER )};
             }}
         """
@@ -818,6 +818,9 @@ class PreviewWidget(QWidget):
     def _on_style_changed(self) -> None:
         """Handle style changes."""
         zoom_factor = self._style_manager.zoom_factor()
+        spacing = self._style_manager.message_spacing()
+        self._content_layout.setSpacing(spacing)
+        self._content_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._content_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
 
         # Apply style to all content blocks

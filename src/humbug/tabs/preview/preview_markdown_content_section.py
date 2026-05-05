@@ -52,7 +52,7 @@ class PreviewMarkdownContentSection(QFrame):
 
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
-        spacing = int(self._style_manager.message_bubble_spacing())
+        spacing = self._style_manager.message_spacing()
         self._layout.setSpacing(spacing)
         self._layout.setContentsMargins(0, 0, 0, 0)
 
@@ -79,7 +79,7 @@ class PreviewMarkdownContentSection(QFrame):
             self._header_container = QWidget()
             self._header_layout = QHBoxLayout(self._header_container)
             self._header_layout.setContentsMargins(0, 0, 0, 0)
-            self._header_layout.setSpacing(4)
+            self._header_layout.setSpacing(self._style_manager.spacing(1))
 
             # Add syntax label on the left
             self._syntax_header = QLabel()
@@ -269,11 +269,17 @@ class PreviewMarkdownContentSection(QFrame):
         font = self.font()
         base_font_size = style_manager.base_font_size()
         font.setPointSizeF(base_font_size * factor)
+        spacing = style_manager.message_spacing()
+        self._layout.setSpacing(spacing)
+        if self._syntax is not None:
+            self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         self._text_area.apply_style()
 
         if self._syntax_header:
             self._syntax_header.setFont(font)
+            if self._header_layout:
+                self._header_layout.setSpacing(style_manager.spacing(1))
 
         if self._renderer is not None and self._content_node is not None:
             self._renderer.apply_style()

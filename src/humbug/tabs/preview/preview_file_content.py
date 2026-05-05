@@ -42,7 +42,7 @@ class PreviewFileContent(PreviewContentWidget):
         self._content_container = QWidget(self)
         self._content_container.setObjectName("_content_container")
         self._content_layout = QVBoxLayout(self._content_container)
-        spacing = int(self._style_manager.message_bubble_spacing())
+        spacing = self._style_manager.message_spacing()
         self._content_layout.setSpacing(spacing)
         self._content_layout.setContentsMargins(0, 0, 0, 0)
         self._layout.addWidget(self._content_container)
@@ -54,7 +54,7 @@ class PreviewFileContent(PreviewContentWidget):
         self._header_container.setObjectName("_header_container")
         self._header_layout = QHBoxLayout(self._header_container)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
-        self._header_layout.setSpacing(4)
+        self._header_layout.setSpacing(self._style_manager.spacing(1))
 
         # Add language label
         self._syntax_header = QLabel()
@@ -369,20 +369,25 @@ class PreviewFileContent(PreviewContentWidget):
         """Apply styling to this content widget."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
+        spacing = style_manager.message_spacing()
         font = self.font()
         base_font_size = style_manager.base_font_size()
         font.setPointSizeF(base_font_size * zoom_factor)
 
+        self._layout.setSpacing(spacing)
+        self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
+        self._content_layout.setSpacing(spacing)
+        self._header_layout.setSpacing(style_manager.spacing(1))
+
         # Style text area
-        self._text_area.setFont(font)
+        self._text_area.apply_style()
 
         # Style syntax header
         self._syntax_header.setFont(font)
-
+        button_size = style_manager.tool_button_size()
         icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * zoom_factor)
-        icon_size = QSize(icon_scaled_size, icon_scaled_size)
-
+        icon_size = QSize(style_manager.scale(icon_base_size), style_manager.scale(icon_base_size))
+        self._edit_button.setFixedSize(button_size, button_size)
         self._edit_button.setIcon(QIcon(style_manager.scale_icon("edit", icon_base_size)))
         self._edit_button.setIconSize(icon_size)
 

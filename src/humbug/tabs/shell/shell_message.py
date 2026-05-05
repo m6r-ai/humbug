@@ -59,7 +59,7 @@ class ShellMessage(QFrame):
         # Create layout
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
-        spacing = int(self._style_manager.message_bubble_spacing())
+        spacing = self._style_manager.message_spacing()
         self._layout.setSpacing(spacing)
         self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
@@ -68,7 +68,7 @@ class ShellMessage(QFrame):
         self._header.setObjectName("_header")
         self._header_layout = QHBoxLayout(self._header)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
-        self._header_layout.setSpacing(4)
+        self._header_layout.setSpacing(self._style_manager.spacing(1))
 
         # Create role and timestamp labels
         self._role_label = QLabel(self)
@@ -240,10 +240,15 @@ class ShellMessage(QFrame):
     def apply_style(self) -> None:
         """Apply style changes."""
         factor = self._style_manager.zoom_factor()
+        spacing = self._style_manager.message_spacing()
         font = self.font()
         base_font_size = self._style_manager.base_font_size()
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
+
+        self._layout.setSpacing(spacing)
+        self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
+        self._header_layout.setSpacing(self._style_manager.spacing(1))
 
         # Apply font to components
         self._role_label.setFont(font)

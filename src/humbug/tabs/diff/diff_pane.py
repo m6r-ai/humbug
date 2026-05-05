@@ -236,7 +236,7 @@ class DiffPane(QPlainTextEdit):
                 background-color: {bg};
                 color: {fg};
                 border: none;
-                padding: 0px;
+                padding: 0;
                 selection-background-color: {sel};
                 selection-color: none;
             }}
