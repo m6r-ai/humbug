@@ -8,7 +8,7 @@ import webbrowser
 def _is_wsl() -> bool:
     """Return True if running inside Windows Subsystem for Linux."""
     try:
-        with open("/proc/version") as f:
+        with open("/proc/version", encoding="utf-8") as f:
             return "microsoft" in f.read().lower()
 
     except OSError:
@@ -25,7 +25,8 @@ def open_url(url: str) -> None:
         url: The URL to open.
     """
     if sys.platform == "linux" and _is_wsl():
-        subprocess.Popen(["cmd.exe", "/c", "start", url])
+        with subprocess.Popen(["cmd.exe", "/c", "start", url]):
+            pass
 
     else:
         webbrowser.open(url)

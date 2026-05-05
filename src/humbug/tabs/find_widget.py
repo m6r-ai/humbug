@@ -6,7 +6,6 @@ from typing import Any, Callable, Dict, List
 from PySide6.QtWidgets import (
     QWidget, QGridLayout, QHBoxLayout, QLineEdit, QToolButton, QLabel, QPushButton
 )
-from PySide6.QtCore import Signal, Qt, QSize
 from PySide6.QtCore import Signal, Qt, QSize, QTimer
 from PySide6.QtGui import QIcon, QFocusEvent, QKeyEvent, QCloseEvent, QResizeEvent
 

@@ -356,7 +356,9 @@ class PreviewTab(TabBase):
                 self._find_widget.set_invalid_regexp()
                 return
 
-        current, total, truncated = self._preview_content_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
+        current, total, truncated = self._preview_content_widget.find_text(
+            text, forward, case_sensitive=case_sensitive, regexp=regexp
+        )
         self._find_widget.set_match_status(current, total, truncated)
 
     def _on_search_changed(self) -> None:

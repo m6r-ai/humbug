@@ -59,10 +59,12 @@ class _SearchResultDelegate(QStyledItemDelegate):
         ranges = index.data(_HIGHLIGHT_RANGES_ROLE) or []
 
         opt.text = ""
-        style = opt.widget.style() if opt.widget else None
-        if style is None:
+        widget = opt.widget
+        if widget is None:
             super().paint(painter, option, index)
             return
+
+        style = widget.style()
 
         style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
         if not text:
@@ -316,9 +318,9 @@ class MindspaceSearchView(QWidget):
             len(matches),
             len(grouped_matches),
         ))
-        truncated = len(matches) >= MindspaceSearchEngine._MAX_MATCHES
+        truncated = len(matches) >= MindspaceSearchEngine.MAX_MATCHES
         self._truncated_label.setText(
-            strings.mindspace_search_results_limited.format(MindspaceSearchEngine._MAX_MATCHES)
+            strings.mindspace_search_results_limited.format(MindspaceSearchEngine.MAX_MATCHES)
         )
         self._truncated_label.setVisible(truncated)
         self.apply_style()

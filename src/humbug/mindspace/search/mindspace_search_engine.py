@@ -35,7 +35,7 @@ class MindspaceSearchEngine:
         "build",
     }
 
-    _MAX_MATCHES = 500
+    MAX_MATCHES = 500
     _MAX_MATCHES_PER_FILE = 20
     _MAX_CONVERSATION_MATCHES_PER_FILE = 50
     _BINARY_SAMPLE_SIZE = 2048
@@ -76,7 +76,7 @@ class MindspaceSearchEngine:
             ]
 
             for filename in files:
-                if len(matches) >= self._MAX_MATCHES:
+                if len(matches) >= self.MAX_MATCHES:
                     return matches
 
                 path = os.path.join(root, filename)
@@ -108,7 +108,10 @@ class MindspaceSearchEngine:
                         for line_number, line in self._iter_matching_lines(path, lowered_query, pattern, case_sensitive)
                     ]
 
-                per_file_cap = self._MAX_CONVERSATION_MATCHES_PER_FILE if view_type == MindspaceViewType.CONVERSATIONS else self._MAX_MATCHES_PER_FILE
+                if view_type == MindspaceViewType.CONVERSATIONS:
+                    per_file_cap = self._MAX_CONVERSATION_MATCHES_PER_FILE
+                else:
+                    per_file_cap = self._MAX_MATCHES_PER_FILE
                 for line_number, line, message_id in content_matches:
                     matches.append(MindspaceSearchMatch(
                         view_type=view_type,
@@ -119,7 +122,7 @@ class MindspaceSearchEngine:
                         message_id=message_id,
                     ))
                     file_matches += 1
-                    if file_matches >= per_file_cap or len(matches) >= self._MAX_MATCHES:
+                    if file_matches >= per_file_cap or len(matches) >= self.MAX_MATCHES:
                         break
 
         return matches

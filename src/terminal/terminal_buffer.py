@@ -80,7 +80,7 @@ class TabStopState:
         """
         new_state = TabStopState(cols=self.cols)
         new_state.custom_stops = self.custom_stops.copy()
-        new_state._use_defaults = self._use_defaults
+        new_state._use_defaults = self._use_defaults  # pylint: disable=protected-access
         return new_state
 
     def set_tab_stop(self, col: int) -> None:

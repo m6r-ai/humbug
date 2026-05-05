@@ -379,7 +379,7 @@ class TabBase(QFrame):
         """Show the find widget."""
         raise NotImplementedError("Subclasses must implement show_find")
 
-    def apply_find_search(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:
+    def apply_find_search(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:  # pylint: disable=unused-argument
         """Apply a programmatic find/highlight request when supported."""
         return None
 
@@ -387,12 +387,12 @@ class TabBase(QFrame):
         """Close the find widget and clear any active find state."""
         return None
 
-    def apply_search_highlight(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:
+    def apply_search_highlight(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:  # pylint: disable=unused-argument
         """Apply a transient search highlight without mutating local find UI state."""
         return None
 
     def navigate_to_search_match(
-        self, text: str, line_number: int | None, message_id: str | None, case_sensitive: bool = False, regexp: bool = False
+        self, text: str, line_number: int | None, message_id: str | None, case_sensitive: bool = False, regexp: bool = False  # pylint: disable=unused-argument
     ) -> None:
         """Close any active find, then highlight all matches and scroll to the one at line_number."""
         self._close_find()

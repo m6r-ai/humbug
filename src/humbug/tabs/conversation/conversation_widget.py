@@ -2941,7 +2941,9 @@ class ConversationWidget(QWidget):
 
         return ""
 
-    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int, bool]:
+    def find_text(
+        self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False
+    ) -> Tuple[int, int, bool]:
         """
         Find all instances of text and highlight them.
 

@@ -1,9 +1,10 @@
 """Dialog for displaying version and update information."""
 
+import os
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QPushButton, QVBoxLayout, QWidget
-import os
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -66,7 +67,6 @@ class UpdateDialog(QDialog):
 
         layout.addSpacing(16)
 
-        base_font_size = self._style_manager.base_font_size()
         min_button_width = int(90 * zoom_factor)
 
         self._close_button = QPushButton(strings.close_button)

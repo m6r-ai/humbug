@@ -422,7 +422,9 @@ class DiffWidget(QWidget):
         self._left_pane.apply_style()
         self._right_pane.apply_style()
 
-    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int, bool]:
+    def find_text(
+        self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False
+    ) -> Tuple[int, int, bool]:
         """
         Search for *text* across both panes and navigate to the next match.
 

@@ -262,7 +262,7 @@ class ShellMessage(QFrame):
         Returns:
             List of (start_position, end_position) tuples for each match
         """
-        _MAX_MATCHES = 500
+        max_matches = 500
         document = self._text_area.document()
         matches = []
         cursor = QTextCursor(document)
@@ -285,7 +285,7 @@ class ShellMessage(QFrame):
                     break
 
                 matches.append((cursor.selectionStart(), cursor.selectionEnd()))
-                if len(matches) >= _MAX_MATCHES:
+                if len(matches) >= max_matches:
                     break
 
             return matches
@@ -300,7 +300,7 @@ class ShellMessage(QFrame):
                 break
 
             matches.append((cursor.selectionStart(), cursor.selectionEnd()))
-            if len(matches) >= _MAX_MATCHES:
+            if len(matches) >= max_matches:
                 break
 
         return matches

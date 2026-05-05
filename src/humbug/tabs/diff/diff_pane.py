@@ -400,7 +400,7 @@ class DiffPane(QPlainTextEdit):
         if not text:
             return matches
 
-        _MAX_MATCHES = 500
+        max_matches = 500
         document = self.document()
         cursor = QTextCursor(document)
 
@@ -423,7 +423,7 @@ class DiffPane(QPlainTextEdit):
                     break
 
                 matches.append((cursor.selectionStart(), cursor.selectionEnd()))
-                if len(matches) >= _MAX_MATCHES:
+                if len(matches) >= max_matches:
                     break
 
         else:
@@ -437,7 +437,7 @@ class DiffPane(QPlainTextEdit):
                     break
 
                 matches.append((cursor.selectionStart(), cursor.selectionEnd()))
-                if len(matches) >= _MAX_MATCHES:
+                if len(matches) >= max_matches:
                     break
 
         return matches

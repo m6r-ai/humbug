@@ -1441,7 +1441,7 @@ class TerminalWidget(QAbstractScrollArea):
                 lines = buffer.lines()
                 n = len(lines)
                 logical_match_count = 0
-                _MAX_MATCHES = 500
+                max_matches = 500
 
                 # Walk logical lines (groups of physical lines joined by
                 # continuation flags) so that matches spanning a soft-wrap
@@ -1484,7 +1484,7 @@ class TerminalWidget(QAbstractScrollArea):
 
                     # Map each match back to physical (row, col) entries.
                     for start_off, end_off in raw_matches:
-                        if logical_match_count >= _MAX_MATCHES:
+                        if logical_match_count >= max_matches:
                             break
                         match_idx = logical_match_count
                         logical_match_count += 1
@@ -1529,7 +1529,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _update_current_match(self) -> None:
         """Update which match is marked as current."""
-        for i, match in enumerate(self._matches):
+        for _, match in enumerate(self._matches):
             match.is_current = bool(match.match_index == self._current_match)
 
     def _update_highlights(self) -> None:

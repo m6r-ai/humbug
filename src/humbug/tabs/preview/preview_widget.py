@@ -866,7 +866,9 @@ class PreviewWidget(QWidget):
         """Close the preview widget and clean up resources."""
         self._unregister_file_watching()
 
-    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int, bool]:
+    def find_text(
+        self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False
+    ) -> Tuple[int, int, bool]:
         """
         Find all instances of text and highlight them.
 

@@ -1130,7 +1130,7 @@ class EditorWidget(QPlainTextEdit):
         rescanned = False
         if not self._matches and text:
             rescanned = True
-            _MAX_MATCHES = 500
+            max_matches = 500
             cursor = QTextCursor(document)
             if regexp:
                 flags = QRegularExpression.PatternOption(0)
@@ -1149,7 +1149,7 @@ class EditorWidget(QPlainTextEdit):
                             break
 
                         self._matches.append((cursor.selectionStart(), cursor.selectionEnd()))
-                        if len(self._matches) >= _MAX_MATCHES:
+                        if len(self._matches) >= max_matches:
                             break
 
             else:
@@ -1163,7 +1163,7 @@ class EditorWidget(QPlainTextEdit):
                         break
 
                     self._matches.append((cursor.selectionStart(), cursor.selectionEnd()))
-                    if len(self._matches) >= _MAX_MATCHES:
+                    if len(self._matches) >= max_matches:
                         break
 
         if not self._matches:
