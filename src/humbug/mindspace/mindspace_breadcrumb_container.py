@@ -83,6 +83,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self._scrollbar = QScrollBar(Qt.Orientation.Vertical, self)
+        self._scrollbar.setRange(0, 0)
         self._scrollbar.valueChanged.connect(self._on_external_scroll)
 
         tree_view.verticalScrollBar().rangeChanged.connect(self._on_tree_range_changed)
@@ -476,8 +477,11 @@ class MindspaceBreadcrumbContainer(QWidget):
         w = self.width()
         h = self.height()
 
+        scrollbar_needed = self._scrollbar.maximum() > self._scrollbar.minimum()
+        self._scrollbar.setVisible(scrollbar_needed)
+
         bc_h = self._breadcrumb_rows * self._row_height
-        sb_w = self._scrollbar.sizeHint().width()
+        sb_w = self._scrollbar.sizeHint().width() if scrollbar_needed else 0
         tree_w = max(0, w - sb_w)
         tree_h = max(0, h - bc_h)
 
