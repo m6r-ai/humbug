@@ -25,10 +25,10 @@ class MindspaceBreadcrumbBar(QTreeView):
     A compact tree view showing the ancestor chain (spine) of the folder currently
     at the top of the main tree's viewport.
 
-    The "." sentinel is always the first top-level row.  Real ancestor directories
+    The root sentinel is always the first top-level row. Real ancestor directories
     nest beneath it.  For example, if src/humbug is at the top of the main tree:
 
-        .
+        Root
         └── src
             └── humbug
 
@@ -295,12 +295,13 @@ class MindspaceBreadcrumbBar(QTreeView):
             self._model.endResetModel()
             return
 
+        root_icon = self._root_folder_icon()
         icon = self._folder_icon()
 
-        dot_item = QStandardItem(".")
+        dot_item = QStandardItem("Root")
         dot_item.setData(self._root_path, _PATH_ROLE)
         dot_item.setEditable(False)
-        dot_item.setIcon(icon)
+        dot_item.setIcon(root_icon)
         self._model.invisibleRootItem().appendRow(dot_item)
 
         if len(spine) > 1:
@@ -341,14 +342,21 @@ class MindspaceBreadcrumbBar(QTreeView):
             if item and item.flags() != Qt.ItemFlag.NoItemFlags:
                 super().setExpanded(index, True)
                 self._expand_real_items(index)
+
     def _refresh_icons(self) -> None:
         """Refresh folder icons in the model after an icon provider update."""
+        root_icon = self._root_folder_icon()
         icon = self._folder_icon()
 
         def refresh_recursive(parent: QModelIndex) -> None:
             for row in range(self._model.rowCount(parent)):
                 index = self._model.index(row, 0, parent)
-                self._model.setData(index, icon, Qt.ItemDataRole.DecorationRole)
+                path = index.data(_PATH_ROLE)
+                if path and self._root_path and os.path.normpath(path) == os.path.normpath(self._root_path):
+                    self._model.setData(index, root_icon, Qt.ItemDataRole.DecorationRole)
+                else:
+                    self._model.setData(index, icon, Qt.ItemDataRole.DecorationRole)
+
                 refresh_recursive(index)
 
         refresh_recursive(QModelIndex())
@@ -356,6 +364,10 @@ class MindspaceBreadcrumbBar(QTreeView):
     def _folder_icon(self) -> QIcon:
         """Return the current folder icon from the icon provider."""
         return self._icon_provider.breadcrumb_folder_icon()
+
+    def _root_folder_icon(self) -> QIcon:
+        """Return the current root folder icon from the icon provider."""
+        return self._icon_provider.root_folder_icon()
 
     def _path_for_index(self, index: QModelIndex) -> str | None:
         """

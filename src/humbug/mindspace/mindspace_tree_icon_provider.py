@@ -40,6 +40,22 @@ class MindspaceTreeIconProvider(QFileIconProvider):
                         fill="folderColor" stroke="none"/>
                 </svg>
             ''',
+            "folder_open": '''
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <path d="M10 28 L38 28 C43 28 45 20 50 20 L90 20 L90 82 L10 82 Z"
+                        fill="none" stroke="folderColor" stroke-width="8" stroke-linejoin="round"/>
+                    <path d="M10 82 L28 43 L92 43 L78 82 Z"
+                        fill="none" stroke="folderColor" stroke-width="8" stroke-linejoin="round"/>
+                </svg>
+            ''',
+            "folder_root": '''
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                    <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 85 L10 85 L10 25"
+                        fill="folderColor" stroke="none"/>
+                    <path d="M50 35 L63 50 L56 50 L56 68 L44 68 L44 50 L37 50 Z"
+                        fill="folderColor" stroke="none" opacity="0.55"/>
+                </svg>
+            ''',
             "file": '''
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
                     <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
@@ -187,6 +203,31 @@ class MindspaceTreeIconProvider(QFileIconProvider):
             color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB)
             self._cached_icons[cache_key] = self._create_svg_icon(
                 self._svg_paths['folder_breadcrumb'], folder_color=color
+            )
+
+        return self._cached_icons[cache_key]
+
+    def open_folder_icon(self) -> QIcon:
+        """Return the open folder icon for expanded tree directories."""
+        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
+        cache_key = f"folder_open_{theme_suffix}"
+        if cache_key not in self._cached_icons:
+            color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER)
+            self._cached_icons[cache_key] = self._create_svg_icon(
+                self._svg_paths['folder_open'], folder_color=color
+            )
+
+        return self._cached_icons[cache_key]
+
+    def root_folder_icon(self) -> QIcon:
+        """Return the root folder icon using breadcrumb folder colors."""
+        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
+        cache_key = f"folder_root_{theme_suffix}"
+        if cache_key not in self._cached_icons:
+            folder_color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB)
+            self._cached_icons[cache_key] = self._create_svg_icon(
+                self._svg_paths['folder_root'],
+                folder_color=folder_color
             )
 
         return self._cached_icons[cache_key]
