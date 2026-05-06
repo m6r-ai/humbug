@@ -1212,6 +1212,7 @@ class MindspaceConversationsView(QWidget):
 
         self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)
         self._icon_provider.update_icons()
+        self._delegate.update_icons()
         # Invalidate icon cache in model after icon provider refresh
         self._dag_model.beginResetModel()
         self._dag_model.endResetModel()
