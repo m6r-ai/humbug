@@ -173,11 +173,11 @@ class TabBar(QTabBar):
 
         # Calculate the top border thickness we need.  Annoyingly this has to based on whether we're full screen or
         # not because full screen has no border whereas windows have a 1px border.
-        border_px = 2
+        border_px = max(2, self._style_manager.scale(3))
         parent = self.parentWidget()
         while parent:
             if parent.isFullScreen():
-                border_px = 1
+                border_px = max(1, self._style_manager.scale(2))
                 break
 
             parent = parent.parentWidget()

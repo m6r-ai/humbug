@@ -15,11 +15,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.conversations.mindspace_conversations_view import MindspaceConversationsView
 from humbug.mindspace.files.mindspace_files_view import MindspaceFilesView
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_pane_style import build_mindspace_shell_stylesheet
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.mindspace.preview.mindspace_preview_view import MindspacePreviewView
 from humbug.mindspace.search.mindspace_search_view import MindspaceSearchView
@@ -476,22 +476,6 @@ class MindspaceView(QWidget):
 
         rail_width = self._rail_collapsed_width
         rail_button_height = round(48 * zoom_factor)
-        rail_padding = round(6 * zoom_factor)
-        rail_indicator = 2
-        content_radius = round(8 * zoom_factor)
-        panel_background = style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
-        rail_background = style_manager.get_color_str(ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND)
-        rail_hover = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
-        text_color = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-        disabled_color = style_manager.get_color_str(ColorRole.TEXT_DISABLED)
-        subtle_text = style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
-        border_color = style_manager.get_color_str(ColorRole.MENU_BORDER)
-        accent_color = style_manager.get_color_str(ColorRole.TAB_BORDER_ACTIVE)
-        content_surface = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
-
-        indicator_side = "border-left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "border-right"
-        indicator_padding_side = "padding-left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "padding-right"
-
         self._rail_widget.setFixedWidth(rail_width)
         self.setMinimumWidth(rail_width)
         self._sidebar_toggle_button.setFixedHeight(rail_button_height)
@@ -499,87 +483,7 @@ class MindspaceView(QWidget):
             button.setFixedHeight(rail_button_height)
 
         self._settings_button.setFixedHeight(rail_button_height)
-
-        self.setStyleSheet(f"""
-            {self._style_manager.get_menu_stylesheet()}
-            {self._style_manager.get_scrollbar_stylesheet()}
-
-            MindspaceView {{
-                background-color: {panel_background};
-            }}
-
-            QWidget#_rail_widget {{
-                background-color: {rail_background};
-            }}
-
-            QWidget#_content_widget {{
-                background-color: {panel_background};
-            }}
-
-            QPushButton#_header_widget {{
-                background-color: {panel_background};
-                border: none;
-                color: {subtle_text};
-                padding: 10px 8px 6px 8px;
-                text-align: left;
-                text-transform: uppercase;
-            }}
-
-            QPushButton#_header_widget:hover {{
-                color: {text_color};
-            }}
-
-            QWidget#_pane_stack {{
-                background-color: {panel_background};
-                border: none;
-            }}
-
-            QToolButton#_sidebar_toggle_button {{
-                color: {subtle_text};
-                background-color: transparent;
-                border: none;
-                padding: {rail_padding}px;
-                margin: 2px 0px;
-            }}
-
-            QToolButton#_settings_button,
-            QToolButton#_update_button,
-            QToolButton[view_type] {{
-                color: {text_color};
-                background-color: transparent;
-                border: none;
-                padding: {rail_padding}px;
-                margin: 2px 0px;
-            }}
-
-            QToolButton[view_type]:checked {{
-                {indicator_side}: {rail_indicator}px solid {accent_color};
-                {indicator_padding_side}: {rail_padding - rail_indicator}px;
-            }}
-
-            QToolButton[view_type]:disabled,
-            QToolButton#_settings_button:disabled {{
-                color: {disabled_color};
-            }}
-
-            QWidget#_content_widget MindspaceSearchView,
-            QWidget#_content_widget MindspaceConversationsView,
-            QWidget#_content_widget MindspaceFilesView,
-            QWidget#_content_widget MindspacePreviewView,
-            QWidget#_content_widget MindspaceVCSView {{
-                background-color: {content_surface};
-                border: none;
-                border-radius: {content_radius}px;
-                margin: {round(4 * zoom_factor)}px;
-            }}
-
-            QToolTip {{
-                background-color: {rail_hover};
-                color: {text_color};
-                border: 1px solid {border_color};
-                padding: 2px 4px;
-            }}
-        """)
+        self.setStyleSheet(build_mindspace_shell_stylesheet(style_manager, self.layoutDirection()))
 
         self._search_view.apply_style()
         self._files_view.apply_style()
