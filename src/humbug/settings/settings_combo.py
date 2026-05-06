@@ -7,9 +7,36 @@ setting widget.
 
 from typing import List, Any, Tuple
 
-from PySide6.QtWidgets import QWidget, QComboBox, QListView
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QComboBox,
+    QFrame,
+    QListView,
+    QProxyStyle,
+    QStyle,
+    QStyleHintReturn,
+    QStyleOption,
+    QWidget,
+)
 
 from humbug.settings.settings_field import SettingsField
+
+
+class ComboBoxPopupStyle(QProxyStyle):
+    """Use the Qt item-view combo popup so visible-row limits work on macOS."""
+
+    def styleHint(
+        self,
+        hint: QStyle.StyleHint,
+        option: QStyleOption | None = None,
+        widget: QWidget | None = None,
+        returnData: QStyleHintReturn | None = None,
+    ) -> int:
+        if hint == QStyle.StyleHint.SH_ComboBox_Popup:
+            return 0
+
+        return super().styleHint(hint, option, widget, returnData)
 
 
 class SettingsCombo(SettingsField):
@@ -39,7 +66,21 @@ class SettingsCombo(SettingsField):
         super().__init__(label_text, parent)
 
         self._combo = QComboBox()
-        self._combo.setView(QListView())  # For better styling
+        self._popup_style = ComboBoxPopupStyle()
+        self._combo.setStyle(self._popup_style)
+        self._combo.setMaxVisibleItems(8)
+
+        view = QListView()
+        view.setFrameShape(QFrame.Shape.NoFrame)
+        view.setLineWidth(0)
+        view.setMidLineWidth(0)
+        view.setContentsMargins(0, 0, 0, 0)
+        view.setViewportMargins(0, 0, 0, 0)
+        view.setSpacing(0)
+        view.setUniformItemSizes(True)
+        view.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerItem)
+        view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._combo.setView(view)  # For better styling
         self._combo.currentIndexChanged.connect(self._on_current_index_changed)
 
         # Add items if provided
@@ -111,6 +152,10 @@ class SettingsCombo(SettingsField):
         zoom_factor = self._style_manager.zoom_factor()
         min_height = int(30 * zoom_factor)
         self._combo.setMinimumHeight(min_height)
+
+        row_height = self._style_manager.row_height() + (2 * self._style_manager.spacing(2))
+        popup_padding = 2 * self._style_manager.spacing(1)
+        self._combo.view().setMaximumHeight((8 * row_height) + popup_padding)
 
     def setEnabled(self, arg__1: bool) -> None:
         """Enable or disable the combo box."""
