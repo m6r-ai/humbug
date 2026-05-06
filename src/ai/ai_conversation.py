@@ -179,6 +179,32 @@ class AIConversation:
                         reasoning=reasoning
                     ))
 
+    def load_history(self, history: AIConversationHistory) -> None:
+        """
+        Load a complete conversation history including messages and attachments.
+
+        This is the preferred method when restoring a full AIConversationHistory
+        object, as it preserves the attachment store.  Use load_message_history
+        only when you have a bare message list with no attachments.
+
+        Args:
+            history: Full conversation history to restore
+        """
+        self._conversation.clear()
+        self._conversation.restore_attachments(history.attachments())
+
+        for message in history.get_messages():
+            self._conversation.add_message(message)
+
+            if message.source == AIMessageSource.AI:
+                reasoning = message.reasoning_capability if message.reasoning_capability else AIReasoningCapability.NO_REASONING
+                if message.model:
+                    self.update_conversation_settings(AIConversationSettings(
+                        model=message.model,
+                        temperature=message.temperature,
+                        reasoning=reasoning
+                    ))
+
     async def submit_message(
         self,
         requester: str | None,
@@ -1071,3 +1097,89 @@ class AIConversation:
         task.add_done_callback(task_done_callback)
 
         return removed_ids
+
+    def truncate_to_message(self, message_id: str) -> str | None:
+        """
+        Truncate the conversation history to just before the message with the given ID.
+
+        Only user messages may be truncated to.  The attachment store is pruned so that
+        only attachments referenced by the preserved messages are retained.
+
+        Args:
+            message_id: ID of the user message to truncate from (this message and
+                everything after it will be removed)
+
+        Returns:
+            The content of the truncated message so the caller can restore it to the
+            input box, or None if the message was not found or is not a user message.
+        """
+        messages = self._conversation.get_messages()
+        index = next((i for i, m in enumerate(messages) if m.id == message_id), -1)
+        if index < 0:
+            self._logger.warning("truncate_to_message: message %s not found", message_id)
+            return None
+
+        if messages[index].source != AIMessageSource.USER:
+            self._logger.warning("truncate_to_message: message %s is not a user message", message_id)
+            return None
+
+        truncated_content = messages[index].content
+        preserved = messages[:index]
+
+        # Collect attachment GUIDs referenced by the preserved messages
+        referenced_guids: set[str] = set()
+        for msg in preserved:
+            if msg.attachments:
+                referenced_guids.update(msg.attachments)
+
+        # Rebuild the attachment store keeping only referenced attachments
+        all_attachments = self._conversation.attachments()
+        pruned_attachments = {
+            guid: data for guid, data in all_attachments.items()
+            if guid in referenced_guids
+        }
+
+        # Replace history with the preserved slice and pruned attachments
+        self._conversation.clear()
+        self._conversation.restore_attachments(pruned_attachments)
+        for msg in preserved:
+            self._conversation.add_message(msg)
+
+        return truncated_content
+
+    def fork_history_to_index(self, message_index: int) -> AIConversationHistory:
+        """
+        Return a copy of the conversation history up to (but not including) the given
+        message index, with only the attachments referenced by those messages included.
+
+        This does not modify the current conversation.  The caller is responsible for
+        persisting the returned history.
+
+        Args:
+            message_index: Messages before this index are included in the fork.
+                Pass None or len(messages) to fork the full conversation.
+
+        Returns:
+            A new AIConversationHistory containing the forked messages and attachments.
+        """
+        messages = self._conversation.get_messages()
+        forked_messages = messages[:message_index]
+
+        # Collect attachment GUIDs referenced by the forked messages
+        referenced_guids: set[str] = set()
+        for msg in forked_messages:
+            if msg.attachments:
+                referenced_guids.update(msg.attachments)
+
+        all_attachments = self._conversation.attachments()
+        forked_attachments = {
+            guid: data for guid, data in all_attachments.items()
+            if guid in referenced_guids
+        }
+
+        return AIConversationHistory(
+            messages=forked_messages,
+            version=self._conversation.version(),
+            parent=self._conversation.parent(),
+            attachments=forked_attachments
+        )

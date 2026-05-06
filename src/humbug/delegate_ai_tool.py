@@ -415,8 +415,13 @@ class DelegateAITool(AITool):
             # Load parent history if session_id == "current"
             continuing_session = session_id == "current"
             if continuing_session:
-                history = parent_ai_conversation.get_conversation_history()
-                child_ai_conversation.load_message_history(history.get_messages())
+                # Copy the full history including attachments so the child has coherent
+                # context — GUIDs in messages must resolve in the child's attachment store
+                parent_history = parent_ai_conversation.get_conversation_history()
+                child_ai_conversation.load_message_history(parent_history.get_messages())
+                child_ai_conversation.get_conversation_history().restore_attachments(
+                    parent_history.attachments()
+                )
 
             # Submit the prompt directly to the child AIConversation
             requester = parent_ai_conversation.conversation_settings().model

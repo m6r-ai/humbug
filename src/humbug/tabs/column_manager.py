@@ -8,6 +8,7 @@ from PySide6.QtCore import Signal, QTimer
 from PySide6.QtGui import QResizeEvent
 
 from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
+from ai_transcript_conversation import AITranscriptConversation
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -159,16 +160,18 @@ class ColumnManager(QWidget):
 
     def find_tab_by_ai_conversation(self, ai_conversation: AIConversation) -> TabBase | None:
         """
-        Find a conversation tab by its AIConversation instance.
+        Find a conversation tab by its inner AIConversation instance.
+
+        Compares against the inner AIConversation of each tab's AITranscriptConversation.
 
         Args:
-            ai_conversation: The AIConversation instance to search for
+            ai_conversation: The inner AIConversation instance to search for
 
         Returns:
             The matching ConversationTab, or None if not found
         """
         for tab in self._tabs.values():
-            if isinstance(tab, ConversationTab) and tab.ai_conversation() is ai_conversation:
+            if isinstance(tab, ConversationTab) and tab.ai_conversation().inner_conversation() is ai_conversation:
                 return tab
 
         return None
@@ -1671,7 +1674,7 @@ class ColumnManager(QWidget):
         temperature: float | None = None,
         reasoning: AIReasoningCapability | None = None,
         folder: str | None = None,
-        ai_conversation: AIConversation | None = None
+        ai_conversation: AIConversation | None = None  # inner AIConversation for delegation
     ) -> ConversationTab:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
@@ -1689,8 +1692,16 @@ class ColumnManager(QWidget):
 
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
+        # Wrap the inner AIConversation in a transcript conversation if provided
+        ai_transcript_conversation: AITranscriptConversation | None = None
+        if ai_conversation is not None:
+            ai_transcript_conversation = AITranscriptConversation(full_path, ai_conversation)
+
         try:
-            conversation_tab = ConversationTab("", full_path, self, ai_conversation=ai_conversation)
+            conversation_tab = ConversationTab(
+                "", full_path, self,
+                ai_transcript_conversation=ai_transcript_conversation
+            )
 
         except ConversationError as e:
             self._logger.exception("Failed to create new conversation: %s", str(e))
@@ -1819,16 +1830,9 @@ class ColumnManager(QWidget):
             # Generate new file path using fork naming convention
             new_path = self._get_fork_file_name(conversation_tab.path())
             new_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
-            all_messages = conversation_tab.conversation_history().get_messages()
-            if message_index is None:
-                # Full conversation fork
-                forked_messages = all_messages
 
-            else:
-                # Fork up to specified index (inclusive)
-                forked_messages = all_messages[:message_index]
-
-            new_history = AIConversationHistory(forked_messages)
+            source_index = len(conversation_tab.conversation_history().get_messages()) if message_index is None else message_index
+            new_history = conversation_tab.ai_conversation().fork_history(source_index)
             new_tab.set_conversation_history(new_history)
 
             new_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)

@@ -98,6 +98,19 @@ class AIConversationHistory:
         self._attachments.clear()
         self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
 
+    def restore_attachments(self, attachments: Dict[str, Dict]) -> None:
+        """
+        Replace the attachment store with the given dict.
+
+        Used when rebuilding history after a truncation, where only a subset of
+        the original attachments should be retained.
+
+        Args:
+            attachments: Dict mapping GUID to attachment data (filename, type, content)
+        """
+        self._attachments.clear()
+        self._attachments.update(attachments)
+
     def add_message(self, message: AIMessage) -> None:
         """Add a message to the history."""
         self._messages.append(message)

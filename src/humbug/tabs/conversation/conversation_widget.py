@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 import re
-from typing import Callable, Dict, List, Tuple, Any, Set, cast
+from typing import Callable, Dict, List, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
     QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
@@ -13,11 +13,11 @@ from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
 from ai import (
-    AIConversation, AIConversationEvent, AIConversationHistory,
-    AIConversationSettings, AIReasoningCapability, AIMessage, AIMessageSource
+    AIConversationEvent, AIConversationHistory, AIConversationSettings,
+    AIReasoningCapability, AIMessage, AIMessageSource
 )
-from ai_conversation_transcript import AIConversationTranscriptError, AIConversationTranscriptHandler
 from ai_tool import AIToolCall
+from ai_transcript_conversation import AITranscriptConversation
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
@@ -59,7 +59,7 @@ class ConversationWidget(QWidget):
         self,
         path: str,
         parent: QWidget | None = None,
-        ai_conversation: AIConversation | None = None
+        ai_transcript_conversation: AITranscriptConversation | None = None
     ) -> None:
         """
         Initialize the conversation widget.
@@ -67,7 +67,8 @@ class ConversationWidget(QWidget):
         Args:
             path: Full path to transcript file
             parent: Optional parent widget
-            ai_conversation: An existing AIConversation to adopt, or None to create a new one
+            ai_transcript_conversation: An existing AITranscriptConversation to adopt,
+                or None to create a new one
         """
         super().__init__(parent)
         self._logger = logging.getLogger("ConversationWidget")
@@ -79,13 +80,13 @@ class ConversationWidget(QWidget):
         style_manager = StyleManager()
         self._style_manager = style_manager
 
-        if ai_conversation is not None:
-            self._ai_conversation = ai_conversation
+        if ai_transcript_conversation is not None:
+            self._ai_conversation = ai_transcript_conversation
 
         else:
-            self._ai_conversation = AIConversation()
+            self._ai_conversation = AITranscriptConversation(path)
 
-        # Register callbacks for AIConversation events
+        # Register UI callbacks on the inner AIConversation
         self._register_ai_conversation_callbacks()
 
         self._last_submitted_message: str = ""
@@ -257,15 +258,16 @@ class ConversationWidget(QWidget):
         self._last_search: tuple = ("", False, False)
         self._highlighted_widgets: Set[ConversationMessage] = set()
 
-        # Create transcript handler with provided filename, then load the transcript data
-        self._transcript_handler = AIConversationTranscriptHandler(path)
         try:
-            conversation_history = self._transcript_handler.read()
+            conversation_history = self._ai_conversation.read()
 
-        except AIConversationTranscriptError as e:
+        except Exception as e:
             raise ConversationError(f"Failed to read conversation transcript: {str(e)}") from e
 
-        self._load_message_history(conversation_history.get_messages(), ai_conversation is not None)
+        self._load_message_history(
+            conversation_history.get_messages(), ai_transcript_conversation is not None,
+            attachments=conversation_history.attachments()
+        )
 
         # Restore parent metadata from the transcript onto the ai_conversation history.
         # load_message_history calls clear() which discards it, so we reapply it here.
@@ -273,7 +275,9 @@ class ConversationWidget(QWidget):
         if transcript_parent is not None:
             self._ai_conversation.get_conversation_history().set_parent(transcript_parent)
 
-        self._is_delegated_conversation = os.path.basename(path).startswith("dAI-")
+        self._is_delegated_conversation = os.path.basename(
+            self._ai_conversation.path()
+        ).startswith("dAI-")
 
         # Any active tool approval
         self._pending_tool_call_approval: ConversationMessage | None = None
@@ -383,8 +387,7 @@ class ConversationWidget(QWidget):
         Returns:
             Dictionary containing completion result
         """
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        messages = ai_conversation.get_conversation_history().get_messages()
+        messages = self._ai_conversation.get_conversation_history().get_messages()
 
         if not messages:
             return {"success": False, "error": "No messages in conversation"}
@@ -586,64 +589,62 @@ class ConversationWidget(QWidget):
         self._messages_container.style().polish(self._messages_container)
 
     def _unregister_ai_conversation_callbacks(self) -> None:
-        """Unregister all callbacks from the AIConversation object."""
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        ai_conversation.unregister_callback(
+        """Unregister all UI callbacks from the inner AIConversation."""
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.ERROR, self._on_request_error
         )
-        ai_conversation.unregister_callback(
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.MESSAGE_ADDED, self._on_message_added
         )
-        ai_conversation.unregister_callback(
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.MESSAGE_UPDATED, self._on_message_updated
         )
-        ai_conversation.unregister_callback(
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.MESSAGE_COMPLETED, self._on_message_completed
         )
-        ai_conversation.unregister_callback(
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, self._on_message_added_and_completed
         )
-        ai_conversation.unregister_callback(
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.COMPLETED, self._on_request_completed
         )
-        ai_conversation.unregister_callback(
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
         )
-        ai_conversation.unregister_callback(
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.STREAMING_UPDATE, self._on_streaming_update
         )
-        ai_conversation.unregister_callback(
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.AI_CONNECTED, self._on_ai_connected
         )
 
     def _register_ai_conversation_callbacks(self) -> None:
-        """Register callbacks for AIConversation events."""
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        ai_conversation.register_callback(
+        """Register UI callbacks on the inner AIConversation."""
+        self._ai_conversation.register_callback(
             AIConversationEvent.ERROR, self._on_request_error
         )
-        ai_conversation.register_callback(
+        self._ai_conversation.register_callback(
             AIConversationEvent.MESSAGE_ADDED, self._on_message_added
         )
-        ai_conversation.register_callback(
+        self._ai_conversation.register_callback(
             AIConversationEvent.MESSAGE_UPDATED, self._on_message_updated
         )
-        ai_conversation.register_callback(
+        self._ai_conversation.register_callback(
             AIConversationEvent.MESSAGE_COMPLETED, self._on_message_completed
         )
-        ai_conversation.register_callback(
+        self._ai_conversation.register_callback(
             AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, self._on_message_added_and_completed
         )
-        ai_conversation.register_callback(
+        self._ai_conversation.register_callback(
             AIConversationEvent.COMPLETED, self._on_request_completed
         )
-        ai_conversation.register_callback(
+        self._ai_conversation.register_callback(
             AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
         )
-        ai_conversation.register_callback(
+        self._ai_conversation.register_callback(
             AIConversationEvent.STREAMING_UPDATE, self._on_streaming_update
         )
-        ai_conversation.register_callback(
+        self._ai_conversation.register_callback(
             AIConversationEvent.AI_CONNECTED, self._on_ai_connected
         )
 
@@ -659,12 +660,6 @@ class ConversationWidget(QWidget):
         message.content = strings.ai_thinking
 
         self._add_message(message)
-        try:
-            self._transcript_handler.write(self.get_conversation_history())
-
-        except AIConversationTranscriptError:
-            self._logger.exception("Failed to write to transcript")
-
         # Start animation if not already animating
         if not self._is_animating:
             self._start_message_border_animation()
@@ -854,12 +849,6 @@ class ConversationWidget(QWidget):
             message: The error that occurred
         """
         self._add_message(message)
-        try:
-            self._transcript_handler.write(self.get_conversation_history())
-
-        except AIConversationTranscriptError:
-            self._logger.exception("Failed to write to transcript")
-
         if retries_exhausted:
             self._is_streaming = False
             self._input.set_streaming(False)
@@ -918,9 +907,8 @@ class ConversationWidget(QWidget):
     def _on_tool_call_approved(self, _tool_call: AIToolCall) -> None:
         """Handle user approval of tool calls."""
         self._pending_tool_call_approval = None
-        ai_conversation = cast(AIConversation, self._ai_conversation)
         loop = asyncio.get_event_loop()
-        loop.create_task(ai_conversation.approve_pending_tool_calls())
+        loop.create_task(self._ai_conversation.approve_pending_tool_calls())
 
     def _on_tool_call_i_am_unsure(self) -> None:
         """Handle user indicating uncertainty about tool calls."""
@@ -929,25 +917,21 @@ class ConversationWidget(QWidget):
             self._pending_tool_call_approval.remove_tool_approval_ui()
             self._pending_tool_call_approval = None
 
-        # Get the AI conversation instance
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-
         # Reject the pending tool calls with explanation
         loop = asyncio.get_event_loop()
-        loop.create_task(ai_conversation.reject_pending_tool_calls(
+        loop.create_task(self._ai_conversation.reject_pending_tool_calls(
             "User is unsure about this tool request and wants to discuss"
         ))
 
         # Submit the user's message to continue the conversation
-        loop.create_task(ai_conversation.submit_message(
+        loop.create_task(self._ai_conversation.submit_message(
             None, "I'm not sure about this tool request. Let's discuss."))
 
     def _on_tool_call_rejected(self, reason: str) -> None:
         """Handle user rejection of tool calls."""
         self._pending_tool_call_approval = None
-        ai_conversation = cast(AIConversation, self._ai_conversation)
         loop = asyncio.get_event_loop()
-        loop.create_task(ai_conversation.reject_pending_tool_calls(reason))
+        loop.create_task(self._ai_conversation.reject_pending_tool_calls(reason))
 
     def _remove_last_error_retry_ui(self) -> None:
         """Remove the retry button from the last error message widget, if present."""
@@ -977,9 +961,7 @@ class ConversationWidget(QWidget):
         if self._spotlighted_message_index >= len(self._messages):
             self._spotlighted_message_index = -1
 
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-
-        # Clear the input box — the text was restored there by _on_request_error so the
+        # Clear the input box - the text was restored there by _on_request_error so the
         # user could edit and resubmit manually, but retry resubmits directly from history.
         self._input.clear()
 
@@ -993,7 +975,7 @@ class ConversationWidget(QWidget):
             self._start_message_border_animation()
 
         loop = asyncio.get_event_loop()
-        loop.create_task(ai_conversation.retry_last_request())
+        loop.create_task(self._ai_conversation.retry_last_request())
 
     def _on_message_expand_requested(self, expanded: bool) -> None:
         """
@@ -1108,12 +1090,6 @@ class ConversationWidget(QWidget):
 
         # Update with the completed message immediately
         self._update_last_message(message)
-        try:
-            self._transcript_handler.write(self.get_conversation_history())
-
-        except AIConversationTranscriptError:
-            self._logger.exception("Failed to write to transcript")
-
         self.status_updated.emit()
 
     async def _on_message_added_and_completed(self, message: AIMessage) -> None:
@@ -1261,12 +1237,11 @@ class ConversationWidget(QWidget):
 
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """Update conversation settings and associated backend."""
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        ai_conversation.update_conversation_settings(new_settings)
+        self._ai_conversation.update_conversation_settings(new_settings)
         self.status_updated.emit()
         self._input.set_model(new_settings.model)
 
-    def ai_conversation(self) -> AIConversation:
+    def ai_conversation(self) -> AITranscriptConversation:
         """
         Get the AIConversation instance.
 
@@ -1282,8 +1257,7 @@ class ConversationWidget(QWidget):
         Returns:
             Current conversation settings
         """
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        return ai_conversation.conversation_settings()
+        return self._ai_conversation.conversation_settings()
 
     def _on_scroll_value_changed(self, value: int) -> None:
         """
@@ -1574,7 +1548,7 @@ class ConversationWidget(QWidget):
         Returns:
             str: Full path to the conversation file
         """
-        return self._transcript_handler.get_path()
+        return self._ai_conversation.path()
 
     def set_path(self, new_path: str) -> None:
         """
@@ -1583,7 +1557,7 @@ class ConversationWidget(QWidget):
         Args:
             new_path: New path for the conversation file
         """
-        self._transcript_handler.set_path(new_path)
+        self._ai_conversation.set_path(new_path)
 
     def _on_page_key_scroll_requested(self) -> None:
         """
@@ -1618,22 +1592,23 @@ class ConversationWidget(QWidget):
             history: AIConversationHistory object containing messages
         """
         try:
-            # Write history to new transcript file
-            self._transcript_handler.write(history)
+            self._ai_conversation.set_conversation_history(history)
+            self._load_message_history(history.get_messages(), True)
 
-            # Load messages into the new tab
-            self._load_message_history(history.get_messages(), False)
+        except Exception as e:
+            raise ConversationError(f"Failed to set conversation history: {str(e)}") from e
 
-        except AIConversationTranscriptError as e:
-            raise ConversationError(f"Failed to write transcript for new history: {str(e)}") from e
-
-    def _load_message_history(self, messages: List[AIMessage], reuse_ai_conversation: bool) -> None:
+    def _load_message_history(
+        self, messages: List[AIMessage], reuse_ai_conversation: bool,
+        attachments: Dict[str, Dict] | None = None
+    ) -> None:
         """
         Load existing message history from transcript.
 
         Args:
             messages: List of AIMessage objects to load
             reuse_ai_conversation: True if we are reusing an existing AI conversation
+            attachments: Optional attachment store to restore alongside the messages
         """
         # Cancel any in-progress batch load before starting a new one.
         self._load_queue.clear()
@@ -1652,9 +1627,10 @@ class ConversationWidget(QWidget):
                 reasoning=settings.reasoning
             )
 
-            ai_conversation = cast(AIConversation, self._ai_conversation)
-            ai_conversation.update_conversation_settings(default_settings)
-            ai_conversation.load_message_history(messages)
+            self._ai_conversation.update_conversation_settings(default_settings)
+            self._ai_conversation.load_message_history(messages)
+            if attachments:
+                self._ai_conversation.get_conversation_history().restore_attachments(attachments)
 
         self._input.set_model(self._ai_conversation.conversation_settings().model)
 
@@ -1797,7 +1773,7 @@ class ConversationWidget(QWidget):
             )
 
             # If there are no AI messages and the file exists, delete it
-            path = self._transcript_handler.get_path()
+            path = self._ai_conversation.path()
             if not has_ai_messages and os.path.exists(path):
                 self._logger.info("Deleting empty conversation transcript: %s", path)
                 os.remove(path)
@@ -1838,6 +1814,7 @@ class ConversationWidget(QWidget):
             self.submit_finished.emit(result)
 
         self._unregister_ai_conversation_callbacks()
+        self._ai_conversation.close()
         self._stop_message_border_animation()
         self._delete_empty_transcript_file()
 
@@ -1855,8 +1832,7 @@ class ConversationWidget(QWidget):
             self._pending_tool_call_approval.remove_tool_approval_ui()
             self._pending_tool_call_approval = None
 
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        ai_conversation.cancel_current_tasks(notify)
+        self._ai_conversation.cancel_current_tasks(notify)
 
     def handle_esc_key(self) -> bool:
         """
@@ -2379,9 +2355,6 @@ class ConversationWidget(QWidget):
 
     def _on_message_edit_confirmed(self, new_text: str) -> None:
         """Handle confirmed inline edit: truncate from that message onward and resubmit."""
-        if self._ai_conversation is None:
-            return
-
         sender = self.sender()
         if not isinstance(sender, ConversationMessage):
             return
@@ -2408,21 +2381,16 @@ class ConversationWidget(QWidget):
 
             self.status_updated.emit()
 
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        history = ai_conversation.get_conversation_history()
-        all_messages = history.get_messages()
-
-        # Use message ID to find the correct position in history (independent of widget index)
+        # Truncate history via the wrapper — this also writes the transcript
         message_id = sender.message_id()
-        hist_index = next((i for i, m in enumerate(all_messages) if m.id == message_id), -1)
-        if hist_index < 0 or all_messages[hist_index].source != AIMessageSource.USER:
+        if message_id is None:
             return
 
-        preserved_history_messages = all_messages[:hist_index]
-        ai_conversation.load_message_history(preserved_history_messages)
+        if self._ai_conversation.truncate_to_message(message_id) is None:
+            self._logger.error("Failed to truncate conversation at message %s", message_id)
+            return
 
         preserved_messages = self._messages[:widget_index]
-
         for i in range(len(self._messages) - 1, widget_index - 1, -1):
             message_widget = self._messages[i]
             if self._message_with_selection == message_widget:
@@ -2436,26 +2404,17 @@ class ConversationWidget(QWidget):
 
         self._messages = preserved_messages
 
-        conversation_settings = ai_conversation.conversation_settings()
+        conversation_settings = self._ai_conversation.conversation_settings()
         self._input.set_model(conversation_settings.model)
 
-        preserved_history = AIConversationHistory(preserved_history_messages, history.version(), history.parent())
-        try:
-            self._transcript_handler.write(preserved_history)
+        if self._animated_message and self._animated_message not in preserved_messages:
+            self._stop_message_border_animation()
 
-            if self._animated_message and self._animated_message not in preserved_messages:
-                self._stop_message_border_animation()
-
-            self.status_updated.emit()
-            self._spotlighted_message_index = -1
-            self._auto_scroll = True
-
-            # Put new text in input and immediately submit
-            self._input.set_plain_text(new_text.strip())
-            self.submit()
-
-        except AIConversationTranscriptError as e:
-            self._logger.error("Failed to update transcript after edit: %s", str(e))
+        self.status_updated.emit()
+        self._spotlighted_message_index = -1
+        self._auto_scroll = True
+        self._input.set_plain_text(new_text.strip())
+        self.submit()
 
     def _on_message_delete_requested(self) -> None:
         """Handle request to delete conversation from a message onwards."""
@@ -2484,26 +2443,18 @@ class ConversationWidget(QWidget):
 
             self.status_updated.emit()
 
-        # Update the underlying AI conversation history
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        history = ai_conversation.get_conversation_history()
+        # Truncate history via the wrapper — this also writes the transcript
+        message_id = sender.message_id()
+        if message_id is None:
+            return
 
-        # Get all messages from history
-        all_messages = history.get_messages()
+        prompt = self._ai_conversation.truncate_to_message(message_id)
+        if prompt is None:
+            self._logger.error("Failed to truncate conversation at message %s", message_id)
+            return
 
-        assert all_messages[index].source == AIMessageSource.USER, "Only user messages can be deleted."
-        prompt = all_messages[index].content
-
-        # Keep only the messages up to the specified index
-        preserved_history_messages = all_messages[:index]
-
-        # Update the AI conversation history
-        ai_conversation.load_message_history(preserved_history_messages)
-
-        # Store all messages up to but not including the specified index
+        # Remove message widgets from the layout
         preserved_messages = self._messages[:index]
-
-        # Remove message widgets from the layout and delete them
         for i in range(len(self._messages) - 1, index - 1, -1):
             message_widget = self._messages[i]
             if self._message_with_selection == message_widget:
@@ -2515,44 +2466,21 @@ class ConversationWidget(QWidget):
             self._messages_layout.removeWidget(message_widget)
             message_widget.deleteLater()
 
-        # Update the _messages list to only include preserved messages
         self._messages = preserved_messages
 
-        # Work out what the conversation settings now are - they may have changed
-        conversation_settings = ai_conversation.conversation_settings()
+        conversation_settings = self._ai_conversation.conversation_settings()
         self._input.set_model(conversation_settings.model)
 
-        # Update the transcript file by rewriting it with only the preserved messages
-        preserved_history = AIConversationHistory(preserved_history_messages, history.version(), history.parent())
+        if self._animated_message and self._animated_message not in preserved_messages:
+            self._stop_message_border_animation()
 
-        try:
-            self._transcript_handler.write(preserved_history)
-
-            # Stop any animation on deleted messages
-            if self._animated_message and self._animated_message not in preserved_messages:
-                self._stop_message_border_animation()
-
-            # Emit status update
-            self.status_updated.emit()
-
-            # Put the spotlight back to the input
-            self._spotlighted_message_index = -1
-            self._input.set_content(prompt)
-            self._input.set_spotlighted(True)
-            self._input.setFocus()
-
-            # Scroll to bottom
-            self._auto_scroll = True
-            self._scroll_to_bottom()
-
-        except AIConversationTranscriptError as e:
-            self._logger.error("Failed to update transcript after deletion: %s", str(e))
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                self._language_manager.strings().error_title_rename,
-                f"Failed to update transcript after deletion: {str(e)}"
-            )
+        self.status_updated.emit()
+        self._spotlighted_message_index = -1
+        self._input.set_content(prompt)
+        self._input.set_spotlighted(True)
+        self._input.setFocus()
+        self._auto_scroll = True
+        self._scroll_to_bottom()
 
     def can_cut(self) -> bool:
         """Check if cut operation is available."""
@@ -2611,10 +2539,8 @@ class ConversationWidget(QWidget):
         if not content and not attachments:
             return
 
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-
         # Store each attachment in the conversation history and collect GUIDs
-        history = ai_conversation.get_conversation_history()
+        history = self._ai_conversation.get_conversation_history()
         attachment_guids = []
         for filename, file_content in attachments:
             guid = history.add_attachment(file_content, filename, "file")
@@ -2632,7 +2558,7 @@ class ConversationWidget(QWidget):
                 self._pending_tool_call_approval = None
 
                 loop = asyncio.get_event_loop()
-                loop.create_task(ai_conversation.reject_pending_tool_calls("User interrupted with new message"))
+                loop.create_task(self._ai_conversation.reject_pending_tool_calls("User interrupted with new message"))
 
         else:
             # We're not streaming, so mark that we are now
@@ -2652,7 +2578,7 @@ class ConversationWidget(QWidget):
         if not loop.is_running():
             return
 
-        loop.create_task(ai_conversation.submit_message(
+        loop.create_task(self._ai_conversation.submit_message(
             requester,
             sanitized_content,
             attachment_guids=attachment_guids if attachment_guids else None
@@ -2702,8 +2628,7 @@ class ConversationWidget(QWidget):
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        return ai_conversation.get_conversation_history()
+        return self._ai_conversation.get_conversation_history()
 
     def create_state_metadata(self, temp_state: bool) -> Dict[str, Any]:
         """
@@ -2733,8 +2658,7 @@ class ConversationWidget(QWidget):
         metadata["message_expansion"] = expansion_states
 
         # Store current settings
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        settings = ai_conversation.conversation_settings()
+        settings = self._ai_conversation.conversation_settings()
         metadata["settings"] = {
             "model": settings.model,
             "temperature": settings.temperature,
@@ -2834,8 +2758,7 @@ class ConversationWidget(QWidget):
             # Restore streaming state from a tab move
             self._is_streaming = metadata["is_streaming"]
             self._input.set_streaming(self._is_streaming)
-            ai_conversation = cast(AIConversation, self._ai_conversation)
-            self._input.set_model(ai_conversation.conversation_settings().model)
+            self._input.set_model(self._ai_conversation.conversation_settings().model)
 
             current_unfinished_message = metadata.get("current_unfinished_message")
             if current_unfinished_message:

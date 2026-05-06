@@ -8,7 +8,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import QObject, Signal, QRegularExpression
 
-from ai import AIConversation, AIConversationHistory, AIConversationSettings
+from ai import AIConversationHistory, AIConversationSettings
+from ai_transcript_conversation import AITranscriptConversation
 
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
@@ -32,7 +33,7 @@ class ConversationTab(TabBase):
         tab_id: str,
         path: str,
         parent: QWidget | None = None,
-        ai_conversation: AIConversation | None = None
+        ai_transcript_conversation: AITranscriptConversation | None = None
     ) -> None:
         """
         Initialize the unified conversation tab.
@@ -41,7 +42,7 @@ class ConversationTab(TabBase):
             tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
             path: Full path to transcript file
             parent: Optional parent widget
-            ai_conversation: An existing AIConversation to adopt, or None to create a new one
+            ai_transcript_conversation: An existing AITranscriptConversation to adopt, or None
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("ConversationTab")
@@ -63,7 +64,10 @@ class ConversationTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create conversation widget
-        self._conversation_widget = ConversationWidget(path, self, ai_conversation=ai_conversation)
+        self._conversation_widget = ConversationWidget(
+            path, self,
+            ai_transcript_conversation=ai_transcript_conversation
+        )
         self._conversation_widget.fork_from_index_requested.connect(self.fork_from_index_requested)
         self._conversation_widget.conversation_settings_requested.connect(
             self.show_conversation_settings_dialog
@@ -155,8 +159,8 @@ class ConversationTab(TabBase):
     def restore_from_state(cls, state: TabState, parent: QWidget) -> 'ConversationTab':
         """Create and restore a conversation tab from serialized state."""
 
-        ai_conversation = state.metadata.get('ai_conversation_ref') if state.metadata else None
-        tab = cls(state.tab_id, state.path, parent, ai_conversation=ai_conversation)
+        ai_transcript_conversation = state.metadata.get('ai_conversation_ref') if state.metadata else None
+        tab = cls(state.tab_id, state.path, parent, ai_transcript_conversation=ai_transcript_conversation)
         if state.is_ephemeral:
             tab._is_ephemeral = True
 
@@ -194,8 +198,8 @@ class ConversationTab(TabBase):
 
         self.update_status()
 
-    def ai_conversation(self) -> AIConversation:
-        """Get the AIConversation instance."""
+    def ai_conversation(self) -> AITranscriptConversation:
+        """Get the AITranscriptConversation instance."""
         return self._conversation_widget.ai_conversation()
 
     def conversation_settings(self) -> AIConversationSettings:
