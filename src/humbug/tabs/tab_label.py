@@ -8,6 +8,12 @@ from PySide6.QtGui import QEnterEvent, QIcon, QPixmap, QDrag, QMouseEvent, QFont
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
+from humbug.tabs.tab_style import (
+    build_tab_close_button_stylesheet,
+    build_tab_drag_stylesheet,
+    build_tab_label_text_stylesheet,
+    build_tab_type_icon_stylesheet,
+)
 
 
 class TabLabel(QWidget):
@@ -154,10 +160,7 @@ class TabLabel(QWidget):
         else:
             colour = ColorRole.TEXT_PRIMARY if show_active else ColorRole.TEXT_INACTIVE
 
-        self._label.setStyleSheet(f"""
-            background-color: transparent;
-            color: {self._style_manager.get_color_str(colour)};
-        """)
+        self._label.setStyleSheet(build_tab_label_text_stylesheet(self._style_manager, colour))
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press events for drag initiation."""
@@ -191,11 +194,7 @@ class TabLabel(QWidget):
         original_button_style = self._close_button.styleSheet()
 
         # Set temporary style for drag visual
-        self.setStyleSheet(f"""
-            QWidget {{
-                background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-        """)
+        self.setStyleSheet(build_tab_drag_stylesheet(self._style_manager))
         self.render(pixmap)
 
         # Restore original styles
@@ -262,29 +261,10 @@ class TabLabel(QWidget):
         style_manager = StyleManager()
         base_color = self._get_background_color()
 
-        type_style = f"""
-            QLabel {{
-                border: none;
-                outline: none;
-                padding: 0px;
-                margin: 0px;
-                background: {style_manager.get_color_str(base_color)};
-            }}
-        """
+        type_style = build_tab_type_icon_stylesheet(style_manager, base_color)
 
         if visible:
-            close_style = f"""
-                QToolButton {{
-                    border: none;
-                    outline: none;
-                    padding: 0px;
-                    margin: 0px;
-                    background-color: {style_manager.get_color_str(base_color)};
-                }}
-                QToolButton:hover {{
-                    background-color: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)};
-                }}
-            """
+            close_style = build_tab_close_button_stylesheet(style_manager, base_color, True)
             show_active = self._is_current and self._is_active_column
             type_pixmap = self._type_pixmap if show_active else self._inactive_type_pixmap
             self._type_label.setPixmap(type_pixmap)
@@ -294,15 +274,7 @@ class TabLabel(QWidget):
             self._close_button.setToolTip("Close Tab")
 
         else:
-            close_style = f"""
-                QToolButton {{
-                    border: none;
-                    outline: none;
-                    padding: 0px;
-                    margin: 0px;
-                    background: {style_manager.get_color_str(base_color)};
-                }}
-            """
+            close_style = build_tab_close_button_stylesheet(style_manager, base_color, False)
             self._type_label.setPixmap(self._inactive_type_pixmap)
             self._close_button.setIcon(self._invisible_close_icon)
             self._close_button.setCursor(Qt.CursorShape.ArrowCursor)
