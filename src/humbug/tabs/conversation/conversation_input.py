@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel
 from ai import AIMessageSource
 
 from humbug.tabs.conversation.conversation_message import ConversationMessage
-from humbug.widgets.benchmark_switch import BenchmarkSwitch
+from humbug.widgets.switch import Switch
 
 
 class ConversationInput(ConversationMessage):
@@ -33,7 +33,7 @@ class ConversationInput(ConversationMessage):
         self._stop_button: QToolButton | None = None
         self._settings_button: QToolButton | None = None
         self._attach_button: QToolButton | None = None
-        self._benchmark_toggle: BenchmarkSwitch | None = None
+        self._benchmark_toggle: Switch | None = None
         self._attachments: List[Tuple[str, str]] = []  # (filename, content)
         self._attachments_bar: QWidget | None = None
         self._attachments_layout: QHBoxLayout | None = None
@@ -68,8 +68,9 @@ class ConversationInput(ConversationMessage):
         self._attach_button.clicked.connect(self._on_attach_button_clicked)
         self._banner_layout.insertWidget(0, self._attach_button)
 
-        self._benchmark_toggle = BenchmarkSwitch(self)
+        self._benchmark_toggle = Switch(self)
         self._benchmark_toggle.setObjectName("_benchmark_toggle")
+        self._benchmark_toggle.set_labels("ON", "OFF")
         self._benchmark_toggle.setChecked(True)
         self._benchmark_toggle.toggled.connect(self._on_benchmark_toggled)
         self._banner_layout.insertWidget(1, self._benchmark_toggle)

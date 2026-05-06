@@ -1,4 +1,4 @@
-"""Benchmark switch widget."""
+"""Reusable switch widget."""
 
 from PySide6.QtCore import QEvent, QPoint, QSize, Qt
 from PySide6.QtGui import QColor, QFont, QMouseEvent, QPainter
@@ -8,8 +8,8 @@ from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 
 
-class BenchmarkSwitch(QCheckBox):
-    """Compact switch control for benchmark mode."""
+class Switch(QCheckBox):
+    """Compact pill switch control."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the switch."""
@@ -20,6 +20,8 @@ class BenchmarkSwitch(QCheckBox):
         self._knob_color = QColor("#ffffff")
         self._text_on_color = QColor("#ffffff")
         self._text_off_color = QColor("#d0d0d0")
+        self._on_label = "ON"
+        self._off_label = "OFF"
         self._knob_inset = 3
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -36,6 +38,12 @@ class BenchmarkSwitch(QCheckBox):
         self._text_off_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TEXT_OFF))
         self._knob_inset = style_manager.switch_knob_inset()
         self.setFixedSize(style_manager.switch_width(), style_manager.switch_height())
+        self.update()
+
+    def set_labels(self, on_label: str, off_label: str) -> None:
+        """Set the text shown for on and off states."""
+        self._on_label = on_label
+        self._off_label = off_label
         self.update()
 
     def sizeHint(self) -> QSize:
@@ -83,7 +91,7 @@ class BenchmarkSwitch(QCheckBox):
         painter.setBrush(self._knob_color)
         painter.drawEllipse(knob_x, knob_y, knob_size, knob_size)
 
-        label = "ON" if self.isChecked() else "OFF"
+        label = self._on_label if self.isChecked() else self._off_label
         text_rect = track_rect.adjusted(6, 0, -6, 0)
         if self.isChecked():
             text_rect.setRight(knob_x - 2)
