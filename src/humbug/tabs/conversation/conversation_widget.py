@@ -28,6 +28,7 @@ from humbug.style_manager import StyleManager
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_input import ConversationInput
 from humbug.tabs.conversation.conversation_message import ConversationMessage
+from humbug.tabs.message_style import build_message_tab_stylesheet
 from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
 
@@ -1868,16 +1869,7 @@ class ConversationWidget(QWidget):
 
     def _build_widget_style(self) -> str:
         """Build styles for the conversation widget."""
-        style_manager = self._style_manager
-
-        return f"""
-            QWidget {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            {style_manager.get_menu_stylesheet()}
-            {style_manager.get_scrollbar_stylesheet()}
-        """
+        return build_message_tab_stylesheet(self._style_manager)
 
     def _build_conversation_message_styles(self) -> str:
         """Build styles for the main message frame."""
@@ -1992,6 +1984,12 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_submit_button:disabled {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
                 background-color: transparent;
+            }}
+
+            #ConversationMessage QCheckBox#_benchmark_toggle {{
+                background-color: transparent;
+                padding: 0px;
+                margin: 0px {style_manager.spacing(2)}px 0px 0px;
             }}
 
             #ConversationMessage[message_source="user"] #_copy_button:hover,

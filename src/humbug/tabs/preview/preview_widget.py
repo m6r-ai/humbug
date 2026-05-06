@@ -15,6 +15,7 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
 from humbug.style_manager import StyleManager
+from humbug.tabs.message_style import build_message_tab_stylesheet
 from humbug.tabs.preview.preview_content import PreviewContent, PreviewContentType
 from humbug.tabs.preview.preview_content_widget import PreviewContentWidget
 from humbug.tabs.preview.preview_error import PreviewIOError
@@ -646,17 +647,7 @@ class PreviewWidget(QWidget):
 
     def _build_widget_style(self) -> str:
         """Build styles for the conversation widget."""
-        style_manager = self._style_manager
-
-        return f"""
-            QWidget {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-
-            {style_manager.get_menu_stylesheet()}
-            {style_manager.get_scrollbar_stylesheet()}
-        """
+        return build_message_tab_stylesheet(self._style_manager, include_border=True)
 
     def _build_preview_file_content_style(self) -> str:
         """Build styles for the PreviewFileContent widget."""

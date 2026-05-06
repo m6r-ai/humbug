@@ -265,6 +265,8 @@ class TabBar(QTabBar):
         painter.end()
         super().paintEvent(event)
 
+        self._paint_scroller_reserved_area(event.rect())
+
         # Draw the drop insertion bar on top of everything else.
         if self._drop_index != -1:
             bar_color = self._style_manager.get_color(ColorRole.DROP_TARGET_SEPARATOR_HIGHLIGHT)
@@ -288,6 +290,32 @@ class TabBar(QTabBar):
             bar_rect = QRect(bar_x, 0, bar_width, self.height())
             bar_painter.fillRect(bar_rect, bar_color)
             bar_painter.end()
+
+    def _paint_scroller_reserved_area(self, update_rect: QRect) -> None:
+        """Mask the tab area underneath native scroll buttons."""
+        visible_scrollers = [
+            button for button in self.findChildren(QToolButton)
+            if button.isVisible() and button.geometry().intersects(self.rect())
+        ]
+        if not visible_scrollers:
+            return
+
+        scroller_width = self._style_manager.tab_scroller_width()
+        if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
+            lane_rect = QRect(0, 0, scroller_width, self.height())
+            separator_rect = QRect(scroller_width - 1, 0, 1, self.height())
+
+        else:
+            lane_rect = QRect(self.width() - scroller_width, 0, scroller_width, self.height())
+            separator_rect = QRect(lane_rect.left(), 0, 1, self.height())
+
+        if not lane_rect.intersects(update_rect):
+            return
+
+        painter = QPainter(self)
+        painter.fillRect(lane_rect, self._style_manager.get_color(ColorRole.TAB_BAR_BACKGROUND))
+        painter.fillRect(separator_rect, self._style_manager.get_color(ColorRole.SPLITTER))
+        painter.end()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """
