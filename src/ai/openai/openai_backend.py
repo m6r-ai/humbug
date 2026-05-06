@@ -4,7 +4,8 @@ from typing import Dict, List, Any
 
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
-from ai.ai_message import AIMessage, AIMessageSource
+from ai.ai_message import AIMessageSource
+from ai.ai_conversation_history import AIConversationHistory
 from ai.openai.openai_stream_response import OpenAIStreamResponse
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
@@ -143,7 +144,7 @@ class OpenAIBackend(AIBackend):
 
         return message
 
-    def _format_messages_for_provider(self, conversation_history: List[AIMessage]) -> List[Dict[str, Any]]:
+    def _format_messages_for_provider(self, conversation_history: AIConversationHistory) -> List[Dict[str, Any]]:
         """
         Format conversation history for OpenAI's API format in a single pass.
 
@@ -157,7 +158,7 @@ class OpenAIBackend(AIBackend):
         last_user_message_index = -1
         current_turn_message_index = -1
 
-        for message in conversation_history:
+        for message in conversation_history.get_messages():
             if message.source == AIMessageSource.USER:
                 # If we have tool results this was an auto-generated user message - it doesn't count as a turn
                 if not message.tool_results:
@@ -169,7 +170,7 @@ class OpenAIBackend(AIBackend):
                     current_turn_message_index = len(result)
 
                 user_messages = self._build_user_message(
-                    content=message.content,
+                    content=self._resolve_message_content(message, conversation_history),
                     tool_results=message.tool_results
                 )
                 result.extend(user_messages)
@@ -204,7 +205,7 @@ class OpenAIBackend(AIBackend):
 
     def _build_request_config(
         self,
-        conversation_history: List[AIMessage],
+        conversation_history: AIConversationHistory,
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for OpenAI."""

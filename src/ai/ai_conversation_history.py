@@ -1,7 +1,8 @@
 """AI conversation state management."""
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Tuple
+import uuid
 
 from ai.ai_message import AIMessage
 from ai.ai_usage import AIUsage
@@ -21,12 +22,14 @@ class AIConversationHistory:
         self,
         messages: List[AIMessage] | None = None,
         version: str = "0.1",
-        parent: AIConversationParent | None = None
+        parent: AIConversationParent | None = None,
+        attachments: Dict[str, Dict] | None = None
     ) -> None:
         """Initialize conversation history with optional metadata."""
         self._messages: List[AIMessage] = messages if messages is not None else []
         self._version = version
         self._parent = parent
+        self._attachments: Dict[str, Dict] = attachments if attachments is not None else {}
         self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
 
     def version(self) -> str:
@@ -36,6 +39,50 @@ class AIConversationHistory:
     def parent(self) -> AIConversationParent | None:
         """Get the parent delegation reference."""
         return self._parent
+
+    def add_attachment(self, content: str, filename: str, attachment_type: str) -> str:
+        """
+        Store an attachment and return its GUID.
+
+        The content is frozen at call time. The returned GUID can be stored
+        on an AIMessage to reference this attachment.
+
+        Args:
+            content: Full text content of the attachment
+            filename: Original filename for display and language detection
+            attachment_type: Type identifier e.g. "file" or "blueprint"
+
+        Returns:
+            GUID string identifying this attachment
+        """
+        guid = str(uuid.uuid4())
+        self._attachments[guid] = {
+            "filename": filename,
+            "type": attachment_type,
+            "content": content
+        }
+        return guid
+
+    def get_attachment(self, guid: str) -> Dict | None:
+        """
+        Retrieve an attachment by GUID.
+
+        Args:
+            guid: GUID returned by add_attachment
+
+        Returns:
+            Dict with filename, type, and content keys, or None if not found
+        """
+        return self._attachments.get(guid)
+
+    def attachments(self) -> Dict[str, Dict]:
+        """
+        Return a copy of the full attachments store.
+
+        Returns:
+            Dict mapping GUID to attachment data
+        """
+        return dict(self._attachments)
 
     def set_parent(self, parent: AIConversationParent) -> None:
         """Set the parent delegation reference.
@@ -48,6 +95,7 @@ class AIConversationHistory:
     def clear(self) -> None:
         """Clear the conversation history."""
         self._messages.clear()
+        self._attachments.clear()
         self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
 
     def add_message(self, message: AIMessage) -> None:
@@ -119,3 +167,19 @@ class AIConversationHistory:
     def get_token_counts(self) -> Dict[str, int]:
         """Get token counts from last response."""
         return self._last_response_tokens
+
+    def get_attachment_content_for_request(self, guid: str) -> Tuple[str, str] | None:
+        """
+        Resolve an attachment GUID to (filename, content) for API request construction.
+
+        Args:
+            guid: GUID of the attachment to resolve
+
+        Returns:
+            Tuple of (filename, content) or None if not found
+        """
+        attachment = self._attachments.get(guid)
+        if attachment is None:
+            return None
+
+        return attachment["filename"], attachment["content"]

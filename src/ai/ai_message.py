@@ -35,6 +35,7 @@ class AIMessage:
     signature: str | None = None
     redacted_reasoning: str | None = None
     user_name: str | None = None
+    attachments: List[str] | None = None  # List of attachment GUIDs
 
     # Map between AIMessageSource enum and transcript type strings
     _SOURCE_TYPE_MAP = {
@@ -77,6 +78,7 @@ class AIMessage:
         signature: str | None = None,
         redacted_reasoning: str | None = None,
         user_name: str | None = None,
+        attachments: List[str] | None = None,
     ) -> 'AIMessage':
         """Create a new message with generated ID and current timestamp."""
         if timestamp is None:
@@ -98,7 +100,8 @@ class AIMessage:
             tool_results=tool_results,
             signature=signature,
             redacted_reasoning=redacted_reasoning,
-            user_name=user_name
+            user_name=user_name,
+            attachments=attachments,
         )
 
     def copy(self) -> 'AIMessage':
@@ -119,7 +122,8 @@ class AIMessage:
             tool_results=self.tool_results.copy() if self.tool_results else None,
             signature=self.signature,
             redacted_reasoning=self.redacted_reasoning,
-            user_name=self.user_name
+            user_name=self.user_name,
+            attachments=self.attachments.copy() if self.attachments else None,
         )
 
     def source_str(self) -> str:
@@ -184,6 +188,9 @@ class AIMessage:
                 }
                 for result in self.tool_results
             ]
+
+        if self.attachments:
+            message["attachments"] = self.attachments
 
         return message
 
@@ -299,5 +306,6 @@ class AIMessage:
             tool_results=tool_results,
             signature=data.get("signature", None),
             redacted_reasoning=data.get("redacted_reasoning", None),
-            user_name=data.get("user_name", None)
+            user_name=data.get("user_name", None),
+            attachments=data.get("attachments", None),
         )

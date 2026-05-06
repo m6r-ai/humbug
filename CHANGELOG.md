@@ -1,5 +1,12 @@
 # Change log for Humbug
 
+## v47 (2026-05-xx)
+
+Internal structure changes:
+
+- Attachments have been added as a specific concept inside AI conversations.  This keeps the context cleaner and will allow
+  future innovations.
+
 ## v46 (2026-05-05)
 
 New features:
@@ -35,7 +42,7 @@ Bug fixes:
   so the UI remains responsive.
 - All find operations now cap at 500 search matches, but all also do live matching and don't wait for a user to press enter.
 
-Internal structure changes
+Internal structure changes:
 
 - Added a test suite for the core terminal emulator.
 

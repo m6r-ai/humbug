@@ -3,6 +3,7 @@ from typing import Dict, List, Any
 
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings, AIReasoningCapability
+from ai.ai_conversation_history import AIConversationHistory
 from ai.ai_message import AIMessage, AIMessageSource
 from ai.anthropic.anthropic_stream_response import AnthropicStreamResponse
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
@@ -160,7 +161,7 @@ class AnthropicBackend(AIBackend):
 
     def _format_messages_for_provider(
         self,
-        conversation_history: List[AIMessage],
+        conversation_history: AIConversationHistory,
         settings: AIConversationSettings
     ) -> List[Dict[str, Any]]:
         """
@@ -178,7 +179,7 @@ class AnthropicBackend(AIBackend):
         current_turn_message_index = -1
         last_reasoning_message: AIMessage | None = None
 
-        for message in conversation_history:
+        for message in conversation_history.get_messages():
             if message.source == AIMessageSource.TOOL_CALL:
                 # If we don't have a pending reasoning message, we don't need to do anything
                 if last_reasoning_message is None:
@@ -238,8 +239,9 @@ class AnthropicBackend(AIBackend):
 
                     current_turn_message_index = len(result)
 
+                content = self._resolve_message_content(message, conversation_history)
                 user_msg = self._build_user_message(
-                    content=message.content,
+                    content=content,
                     tool_results=message.tool_results
                 )
                 result.append(user_msg)
@@ -270,7 +272,7 @@ class AnthropicBackend(AIBackend):
 
     def _build_request_config(
         self,
-        conversation_history: List[AIMessage],
+        conversation_history: AIConversationHistory,
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for Anthropic."""

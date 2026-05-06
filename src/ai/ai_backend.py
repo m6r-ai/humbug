@@ -8,7 +8,7 @@ import logging
 import os
 import ssl
 import sys
-from typing import List, AsyncGenerator, Dict, Any
+from typing import AsyncGenerator, Dict, Any
 
 import aiohttp
 from aiohttp import ClientConnectorError, ClientError
@@ -16,9 +16,11 @@ import certifi
 
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessage
+from ai.ai_conversation_history import AIConversationHistory
 from ai.ai_response import AIResponse, AIError
 from ai.ai_stream_response import AIStreamResponse
 from ai_tool import AIToolManager
+from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 @dataclass
@@ -76,14 +78,14 @@ class AIBackend(ABC):
     @abstractmethod
     def _build_request_config(
         self,
-        conversation_history: List[AIMessage],
+        conversation_history: AIConversationHistory,
         settings: AIConversationSettings
     ) -> RequestConfig:
         """
         Build complete request configuration for this backend.
 
         Args:
-            conversation_history: List of conversation messages
+            conversation_history: Conversation history including messages and attachments
             settings: Conversation settings
 
         Returns:
@@ -112,6 +114,40 @@ class AIBackend(ABC):
         """
         return AIConversationSettings.get_provider(message.model or "") == AIConversationSettings.get_provider(settings.model)
 
+    def _resolve_message_content(
+        self,
+        message: AIMessage,
+        conversation_history: AIConversationHistory
+    ) -> str:
+        """
+        Resolve a user message's content, prepending any attachments as fenced code blocks.
+
+        Args:
+            message: The user message whose content to resolve
+            conversation_history: History containing the attachment store
+
+        Returns:
+            Message content with attachment contents prepended
+        """
+        if not message.attachments:
+            return message.content
+
+        parts = []
+        for guid in message.attachments:
+            resolved = conversation_history.get_attachment_content_for_request(guid)
+            if resolved is not None:
+                filename, attachment_content = resolved
+                language = ProgrammingLanguageUtils.get_name(
+                    ProgrammingLanguageUtils.from_file_extension(filename)
+                )
+                parts.append(f"`{filename}`:\n```{language}\n{attachment_content}\n```")
+
+        if not parts:
+            return message.content
+
+        parts.append(message.content)
+        return "\n\n".join(parts)
+
     def _supports_tools(self, settings: AIConversationSettings) -> bool:
         """
         Check if the current model supports tool calling.
@@ -130,7 +166,7 @@ class AIBackend(ABC):
 
     async def stream_message(
         self,
-        conversation_history: List[AIMessage],
+        conversation_history: AIConversationHistory,
         conversation_settings: AIConversationSettings
     ) -> AsyncGenerator[AIResponse, None]:
         """Send a message to the AI backend and stream the response."""

@@ -179,7 +179,12 @@ class AIConversation:
                         reasoning=reasoning
                     ))
 
-    async def submit_message(self, requester: str | None, user_message: str) -> None:
+    async def submit_message(
+        self,
+        requester: str | None,
+        user_message: str,
+        attachment_guids: List[str] | None = None
+    ) -> None:
         """
         Submit a user message to the conversation.
 
@@ -190,6 +195,7 @@ class AIConversation:
         Args:
             requester: Name of the user submitting the message (or None)
             user_message: The user message to submit
+            attachment_guids: Optional list of attachment GUIDs to associate with the message
         """
         settings = self.conversation_settings()
 
@@ -214,7 +220,8 @@ class AIConversation:
             user_name=requester,
             model=settings.model,
             temperature=settings.temperature,
-            reasoning_capability=settings.reasoning
+            reasoning_capability=settings.reasoning,
+            attachments=attachment_guids if attachment_guids else None,
         )
         self._conversation.add_message(message)
         await self._trigger_event(AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, message)
@@ -259,7 +266,7 @@ class AIConversation:
                 self._is_streaming = False
                 return
 
-            stream = backend.stream_message(self._conversation.get_messages(), self._settings)
+            stream = backend.stream_message(self._conversation, self._settings)
             async for response in stream:
                 await self._update_streaming_response(
                     reasoning=response.reasoning,

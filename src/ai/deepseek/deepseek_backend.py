@@ -6,6 +6,7 @@ from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessage, AIMessageSource
 from ai.ai_model import AIReasoningCapability
+from ai.ai_conversation_history import AIConversationHistory
 from ai.deepseek.deepseek_stream_response import DeepseekStreamResponse
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
@@ -156,7 +157,7 @@ class DeepseekBackend(AIBackend):
 
     def _format_messages_for_provider(
         self,
-        conversation_history: List[AIMessage],
+        conversation_history: AIConversationHistory,
         settings: AIConversationSettings
     ) -> List[Dict[str, Any]]:
         """
@@ -174,7 +175,7 @@ class DeepseekBackend(AIBackend):
         current_turn_message_index = -1
         last_reasoning_message: AIMessage | None = None
 
-        for message in conversation_history:
+        for message in conversation_history.get_messages():
             if message.source == AIMessageSource.TOOL_CALL:
                 # If we don't have a pending reasoning message, we don't need to do anything
                 if last_reasoning_message is None:
@@ -204,7 +205,7 @@ class DeepseekBackend(AIBackend):
                     current_turn_message_index = len(result)
 
                 user_messages = self._build_user_message(
-                    content=message.content,
+                    content=self._resolve_message_content(message, conversation_history),
                     tool_results=message.tool_results
                 )
                 result.extend(user_messages)
@@ -249,7 +250,7 @@ class DeepseekBackend(AIBackend):
 
     def _build_request_config(
         self,
-        conversation_history: List[AIMessage],
+        conversation_history: AIConversationHistory,
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for Deepseek."""

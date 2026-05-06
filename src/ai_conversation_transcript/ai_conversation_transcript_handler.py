@@ -140,6 +140,10 @@ class AIConversationTranscriptHandler:
         if "metadata" not in data or "conversation" not in data:
             raise AIConversationTranscriptFormatError("Missing required fields")
 
+        # attachments is optional for backwards compatibility with old transcripts
+        if "attachments" in data and not isinstance(data["attachments"], dict):
+            raise AIConversationTranscriptFormatError("Attachments must be an object")
+
         metadata = data["metadata"]
         if not isinstance(metadata, dict):
             raise AIConversationTranscriptFormatError("Metadata must be object")
@@ -213,10 +217,32 @@ class AIConversationTranscriptHandler:
 
         parent = self._parse_parent(data["metadata"].get("parent"))
 
+        # Load attachments — absent in old transcripts, treat as empty
+        attachments = {}
+        raw_attachments = data.get("attachments", {})
+        for guid, attachment_data in raw_attachments.items():
+            if not isinstance(attachment_data, dict):
+                raise AIConversationTranscriptFormatError(
+                    f"Attachment '{guid}' must be an object"
+                )
+
+            for field in ("filename", "type", "content"):
+                if field not in attachment_data:
+                    raise AIConversationTranscriptFormatError(
+                        f"Attachment '{guid}' missing required field '{field}'"
+                    )
+
+            attachments[guid] = {
+                "filename": attachment_data["filename"],
+                "type": attachment_data["type"],
+                "content": attachment_data["content"],
+            }
+
         return AIConversationHistory(
             messages=messages,
             version=data["metadata"]["version"],
-            parent=parent
+            parent=parent,
+            attachments=attachments,
         )
 
     def write(self, history: AIConversationHistory) -> None:
@@ -249,6 +275,7 @@ class AIConversationTranscriptHandler:
                     "version": history.version(),
                     "parent": parent_data
                 },
+                "attachments": history.attachments(),
                 "conversation": transcript_messages
             }
 

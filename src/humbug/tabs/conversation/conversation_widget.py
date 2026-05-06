@@ -2613,20 +2613,14 @@ class ConversationWidget(QWidget):
 
         ai_conversation = cast(AIConversation, self._ai_conversation)
 
-        # Prepend each attached file as a fenced code block before the message text.
-        parts = []
+        # Store each attachment in the conversation history and collect GUIDs
+        history = ai_conversation.get_conversation_history()
+        attachment_guids = []
         for filename, file_content in attachments:
-            language = ProgrammingLanguageUtils.get_name(
-                ProgrammingLanguageUtils.from_file_extension(filename)
-            )
-            parts.append(f"`{filename}`:\n```{language}\n{file_content}\n```")
+            guid = history.add_attachment(file_content, filename, "file")
+            attachment_guids.append(guid)
 
-        if content:
-            parts.append(content)
-
-        combined = "\n\n".join(parts)
-
-        sanitized_content = self._sanitize_input(combined)
+        sanitized_content = self._sanitize_input(content)
         self._input.clear()
         self._input.clear_attachments()
 
@@ -2658,7 +2652,11 @@ class ConversationWidget(QWidget):
         if not loop.is_running():
             return
 
-        loop.create_task(ai_conversation.submit_message(requester, sanitized_content))
+        loop.create_task(ai_conversation.submit_message(
+            requester,
+            sanitized_content,
+            attachment_guids=attachment_guids if attachment_guids else None
+        ))
 
     def _on_stop_requested(self) -> None:
         """Handle stop request from input widget."""
