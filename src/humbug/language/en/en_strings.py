@@ -107,6 +107,7 @@ def get_english_strings() -> LanguageStrings:
         processing_message="Chat with {model} (Esc to cancel, {key} to submit)",
         input_prompt="Chat with {model}... ({key} to submit)",
         command_prompt="Command... (Enter or {key} to submit)",
+        enable_blueprint="Enable blueprint",
 
         # AI thinking message
         ai_thinking="AI is thinking...",
@@ -328,6 +329,7 @@ def get_english_strings() -> LanguageStrings:
         tooltip_stop_message="Stop current processing",
         tooltip_settings_message="Open conversation settings",
         tooltip_attach_file="Attach a file",
+        tooltip_enable_blueprint="Enable blueprint mode for submitted messages",
         tooltip_expand_message="Expand message",
         tooltip_collapse_message="Collapse message",
         warning_file_too_large=(

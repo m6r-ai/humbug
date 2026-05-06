@@ -107,6 +107,7 @@ def get_french_strings() -> LanguageStrings:
         processing_message="Discuter avec {model}... (Échap pour annuler, {key} pour envoyer)",
         input_prompt="Discuter avec {model}... ({key} pour envoyer)",
         command_prompt="Commande... (Entrée ou {key} pour envoyer)",
+        enable_blueprint="Activer le blueprint",
 
         # AI thinking message
         ai_thinking="L'IA réfléchit...",
@@ -328,6 +329,7 @@ def get_french_strings() -> LanguageStrings:
         tooltip_stop_message="Arrêter le traitement du message",
         tooltip_settings_message="Ouvrir les paramètres de la conversation",
         tooltip_attach_file="Joindre un fichier",
+        tooltip_enable_blueprint="Activer le mode blueprint pour les messages envoyés",
         tooltip_expand_message="Étendre le message",
         tooltip_collapse_message="Réduire le message",
         warning_file_too_large=(
