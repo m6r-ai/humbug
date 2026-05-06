@@ -8,6 +8,12 @@ from PySide6.QtGui import QEnterEvent, QIcon, QPixmap, QDrag, QMouseEvent, QFont
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
+from humbug.tabs.tab_style import (
+    build_tab_close_button_stylesheet,
+    build_tab_drag_stylesheet,
+    build_tab_label_text_stylesheet,
+    build_tab_type_icon_stylesheet,
+)
 
 
 class TabLabel(QWidget):
@@ -51,17 +57,20 @@ class TabLabel(QWidget):
         self._type_label = QLabel()
         self._type_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self._type_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._layout.addWidget(self._type_label)
+        self._layout.addWidget(self._type_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self._label = QLabel(text)
         self._label.setIndent(0)
         self._layout.addWidget(self._label)
 
         self._close_button = QToolButton()
+        self._close_button.setAutoRaise(True)
+        self._close_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._close_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._close_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._close_button.clicked.connect(self.close_clicked)
         self._close_button.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
-        self._layout.addWidget(self._close_button)
+        self._layout.addWidget(self._close_button, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.handle_style_changed()
         self.setMouseTracking(True)
@@ -74,23 +83,22 @@ class TabLabel(QWidget):
         """Create a pixmap for the inactive tab type."""
         return self._style_manager.scale_icon(f"inactive-{self._icon_name}", 16)
 
-    def _create_visible_close_icon(self) -> QIcon:
+    def _create_visible_close_icon(self, icon_base_size: int) -> QIcon:
         icon = QIcon()
-        pixmap = self._style_manager.scale_icon("close", 16)  # 16px base size
+        pixmap = self._style_manager.scale_icon("close", icon_base_size)
         icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
         icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
         return icon
 
-    def _create_visible_inactive_close_icon(self) -> QIcon:
+    def _create_visible_inactive_close_icon(self, icon_base_size: int) -> QIcon:
         icon = QIcon()
-        pixmap = self._style_manager.scale_icon("inactive-close", 16)  # 16px base size
+        pixmap = self._style_manager.scale_icon("inactive-close", icon_base_size)
         icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
         icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
         return icon
 
-    def _create_invisible_close_icon(self) -> QIcon:
+    def _create_invisible_close_icon(self, size: int) -> QIcon:
         """Create a transparent icon for the inactive state."""
-        size = round(16 * self._style_manager.zoom_factor())
         transparent_pixmap = QPixmap(size, size)
         transparent_pixmap.fill(Qt.GlobalColor.transparent)
         return QIcon(transparent_pixmap)
@@ -102,26 +110,26 @@ class TabLabel(QWidget):
         self._update_label()
 
         # Update type label and close button size
-        factor = self._style_manager.zoom_factor()
-        button_size = round(16 * factor)
-        self._type_label.setFixedSize(button_size, button_size)
-        self._close_button.setFixedSize(button_size, button_size)
+        icon_size = self._style_manager.tab_icon_size()
+        close_icon_size = max(1, self._style_manager.scale(12))
+        close_button_size = max(icon_size, self._style_manager.scale(20))
+        self._type_label.setFixedSize(icon_size, icon_size)
+        self._close_button.setFixedSize(close_button_size, close_button_size)
 
         # Update close button icon size
-        icon_size = round(16 * factor)
-        self._close_button.setIconSize(QSize(icon_size, icon_size))
+        self._close_button.setIconSize(QSize(close_icon_size, close_icon_size))
 
         # Recreate pixmaps and icons at new size
         self._type_pixmap = self._create_type_pixmap()
         self._inactive_type_pixmap = self._create_inactive_type_pixmap()
 
-        self._visible_close_icon = self._create_visible_close_icon()
-        self._visible_inactive_close_icon = self._create_visible_inactive_close_icon()
-        self._invisible_close_icon = self._create_invisible_close_icon()
+        self._visible_close_icon = self._create_visible_close_icon(12)
+        self._visible_inactive_close_icon = self._create_visible_inactive_close_icon(12)
+        self._invisible_close_icon = self._create_invisible_close_icon(close_icon_size)
 
         # Update layout margins and spacing
-        self._layout.setSpacing(round(6 * factor))
-        margins = round(8 * factor)
+        self._layout.setSpacing(self._style_manager.tab_spacing())
+        margins = self._style_manager.tab_padding()
         self._layout.setContentsMargins(margins, 0, margins, 0)
 
         self._update_buttons()
@@ -154,10 +162,7 @@ class TabLabel(QWidget):
         else:
             colour = ColorRole.TEXT_PRIMARY if show_active else ColorRole.TEXT_INACTIVE
 
-        self._label.setStyleSheet(f"""
-            background-color: transparent;
-            color: {self._style_manager.get_color_str(colour)};
-        """)
+        self._label.setStyleSheet(build_tab_label_text_stylesheet(self._style_manager, colour))
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press events for drag initiation."""
@@ -191,11 +196,7 @@ class TabLabel(QWidget):
         original_button_style = self._close_button.styleSheet()
 
         # Set temporary style for drag visual
-        self.setStyleSheet(f"""
-            QWidget {{
-                background: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-        """)
+        self.setStyleSheet(build_tab_drag_stylesheet(self._style_manager))
         self.render(pixmap)
 
         # Restore original styles
@@ -259,32 +260,11 @@ class TabLabel(QWidget):
         """Update tab type and close button appearance based on current state."""
         visible = self._is_current or self._is_hovered
 
-        style_manager = StyleManager()
+        style_manager = self._style_manager
         base_color = self._get_background_color()
-
-        type_style = f"""
-            QLabel {{
-                border: none;
-                outline: none;
-                padding: 0px;
-                margin: 0px;
-                background: {style_manager.get_color_str(base_color)};
-            }}
-        """
+        type_style = build_tab_type_icon_stylesheet(style_manager, base_color)
 
         if visible:
-            close_style = f"""
-                QToolButton {{
-                    border: none;
-                    outline: none;
-                    padding: 0px;
-                    margin: 0px;
-                    background-color: {style_manager.get_color_str(base_color)};
-                }}
-                QToolButton:hover {{
-                    background-color: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)};
-                }}
-            """
             show_active = self._is_current and self._is_active_column
             type_pixmap = self._type_pixmap if show_active else self._inactive_type_pixmap
             self._type_label.setPixmap(type_pixmap)
@@ -294,19 +274,12 @@ class TabLabel(QWidget):
             self._close_button.setToolTip("Close Tab")
 
         else:
-            close_style = f"""
-                QToolButton {{
-                    border: none;
-                    outline: none;
-                    padding: 0px;
-                    margin: 0px;
-                    background: {style_manager.get_color_str(base_color)};
-                }}
-            """
             self._type_label.setPixmap(self._inactive_type_pixmap)
             self._close_button.setIcon(self._invisible_close_icon)
             self._close_button.setCursor(Qt.CursorShape.ArrowCursor)
             self._close_button.setToolTip("")
+
+        close_style = build_tab_close_button_stylesheet(style_manager, visible)
 
         self._type_label.setStyleSheet(type_style)
         self._close_button.setStyleSheet(close_style)

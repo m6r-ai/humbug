@@ -1886,21 +1886,22 @@ class ConversationWidget(QWidget):
         border_radius = style_manager.message_radius()
         section_radius = style_manager.message_section_radius()
         label_font_size = style_manager.base_font_size() * zoom_factor * 0.8
+        action_radius = style_manager.radius()
 
-        # The -2px padding above is to offset the 2px border so that the content area remains the same size
+        # The negative padding offsets the painted border so the content area remains the same size.
         return f"""
             #ConversationMessage {{
                 margin: 0;
                 border-radius: {border_radius}px;
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                padding: -2px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                padding: -1px;
             }}
             #ConversationMessage[message_source="user"],
             #ConversationMessage[message_source="user_input"],
             #ConversationMessage[message_source="ai_streaming"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
 
             #ConversationMessage #_banner,
@@ -1958,7 +1959,8 @@ class ConversationWidget(QWidget):
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                padding: 0px;
+                border-radius: {action_radius}px;
+                padding: {style_manager.spacing(1)}px;
                 margin: 0px;
             }}
 
@@ -2132,7 +2134,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_approval_i_am_unsure_button {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
+                border: 1px solid {style_manager.get_color_str(ColorRole.MENU_BORDER)};
                 border-radius: {style_manager.radius()}px;
                 padding: {style_manager.spacing(1)}px {style_manager.spacing(3)}px;
                 min-height: {style_manager.dialog_button_height()}px;
@@ -2145,18 +2147,20 @@ class ConversationWidget(QWidget):
             }}
 
             #ConversationMessage #_approval_reject_button {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
                 border-radius: {style_manager.radius()}px;
                 padding: {style_manager.spacing(1)}px {style_manager.spacing(3)}px;
                 min-height: {style_manager.dialog_button_height()}px;
             }}
             #ConversationMessage #_approval_reject_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
             }}
             #ConversationMessage #_approval_reject_button:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+                border-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
             #ConversationMessage #_retry_widget {{

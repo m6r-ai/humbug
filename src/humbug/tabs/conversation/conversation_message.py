@@ -1,4 +1,3 @@
-import colorsys
 from datetime import datetime
 import logging
 import re
@@ -20,7 +19,7 @@ from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
-from humbug.style_manager import StyleManager, ColorMode
+from humbug.style_manager import StyleManager
 from humbug.tabs.conversation.conversation_message_section import ConversationMessageSection
 
 
@@ -265,29 +264,22 @@ class ConversationMessage(QFrame):
 
     def _get_fade_color(self) -> str:
         """
-        Calculate the current fade color based on animation frame using color palette.
+        Calculate the current fade color based on the primary UI palette.
 
         Returns:
             str: Hex color string for the current animation frame
         """
-        # Animation parameters
-        hue = self._animation_frame / self._animation_steps
-        saturation = 0.7
-        if self._style_manager.color_mode() == ColorMode.DARK:
-            value = 0.5
+        step_count = max(1, self._animation_steps - 1)
+        progress = self._animation_frame / step_count
+        pulse = 1.0 - abs((progress * 2.0) - 1.0)
 
-        else:
-            value = 1.0
+        base = self._style_manager.get_color(ColorRole.MESSAGE_SPOTLIGHTED)
+        accent = self._style_manager.get_color(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
+        r = round(base.red() * (1.0 - pulse) + accent.red() * pulse)
+        g = round(base.green() * (1.0 - pulse) + accent.green() * pulse)
+        b = round(base.blue() * (1.0 - pulse) + accent.blue() * pulse)
 
-        # Convert HSV to RGB
-        r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
-
-        # Convert to 0-255 range and format as hex
-        r_int = int(r * 255)
-        g_int = int(g * 255)
-        b_int = int(b * 255)
-
-        return f"#{r_int:02x}{g_int:02x}{b_int:02x}"
+        return QColor(r, g, b).name()
 
     def _update_border_style(self) -> None:
         """Update the border style with the current animation color."""

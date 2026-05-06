@@ -2181,24 +2181,32 @@ class ColumnManager(QWidget):
                 padding: 7px 0px 7px 0px;
             }}
             QTabBar::scroller {{
-                width: 28px;
+                width: {self._style_manager.scale(36)}px;
             }}
             QTabBar QToolButton {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
+                border: none;
+                border-radius: {self._style_manager.radius()}px;
+                padding: 0px;
+                margin: 0px;
+                min-width: {self._style_manager.scale(18)}px;
+                min-height: {self._style_manager.scale(24)}px;
             }}
             QTabBar QToolButton:hover {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
             }}
+            QTabBar QToolButton:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+            }}
             QTabBar QToolButton::right-arrow {{
-                image: url({self._style_manager.get_icon_path('arrow-right')});
-                width: 12px;
-                height: 12px;
+                image: url("{self._style_manager.get_icon_path('arrow-right')}");
+                width: {self._style_manager.scale(10)}px;
+                height: {self._style_manager.scale(10)}px;
             }}
             QTabBar QToolButton::left-arrow {{
-                image: url({self._style_manager.get_icon_path('arrow-left')});
-                width: 12px;
-                height: 12px;
+                image: url("{self._style_manager.get_icon_path('arrow-left')}");
+                width: {self._style_manager.scale(10)}px;
+                height: {self._style_manager.scale(10)}px;
             }}
         """)
 
