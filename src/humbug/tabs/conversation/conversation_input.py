@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel
 from ai import AIMessageSource
 
 from humbug.tabs.conversation.conversation_message import ConversationMessage
+from humbug.widgets.switch import Switch
 
 
 class ConversationInput(ConversationMessage):
@@ -32,6 +33,7 @@ class ConversationInput(ConversationMessage):
         self._stop_button: QToolButton | None = None
         self._settings_button: QToolButton | None = None
         self._attach_button: QToolButton | None = None
+        self._blueprint_toggle: Switch | None = None
         self._attachments: List[Tuple[str, str]] = []  # (filename, content)
         self._attachments_bar: QWidget | None = None
         self._attachments_layout: QHBoxLayout | None = None
@@ -65,6 +67,13 @@ class ConversationInput(ConversationMessage):
         self._attach_button.setObjectName("_attach_button")
         self._attach_button.clicked.connect(self._on_attach_button_clicked)
         self._banner_layout.insertWidget(0, self._attach_button)
+
+        self._blueprint_toggle = Switch(self)
+        self._blueprint_toggle.setObjectName("_blueprint_toggle")
+        self._blueprint_toggle.set_labels("ON", "OFF")
+        self._blueprint_toggle.setChecked(True)
+        self._blueprint_toggle.toggled.connect(self._on_blueprint_toggled)
+        self._banner_layout.insertWidget(1, self._blueprint_toggle)
 
         # Create stop button (initially hidden)
         self._stop_button = QToolButton(self)
@@ -114,6 +123,10 @@ class ConversationInput(ConversationMessage):
         if self._attach_button:
             self._attach_button.setToolTip(strings.tooltip_attach_file)
 
+        if self._blueprint_toggle:
+            self._blueprint_toggle.setToolTip(strings.tooltip_enable_blueprint)
+            self._blueprint_toggle.setAccessibleName(strings.enable_blueprint)
+
         if self._settings_button:
             self._settings_button.setToolTip(strings.tooltip_settings_message)
 
@@ -147,6 +160,9 @@ class ConversationInput(ConversationMessage):
         if self._attach_button:
             self._attach_button.setIcon(QIcon(self._style_manager.scale_icon("paperclip", icon_base_size)))
             self._attach_button.setIconSize(icon_size)
+
+        if self._blueprint_toggle:
+            self._blueprint_toggle.apply_style(self._style_manager)
 
         if self._submit_button:
             self._submit_button.setIcon(QIcon(self._style_manager.scale_icon("submit", icon_base_size)))
@@ -216,6 +232,22 @@ class ConversationInput(ConversationMessage):
     def _on_attach_button_clicked(self) -> None:
         """Handle attach button click."""
         self.attach_requested.emit()
+
+    def _on_blueprint_toggled(self, checked: bool) -> None:
+        """Handle blueprint toggle changes."""
+        print(f"Enable blueprint: {'on' if checked else 'off'}")
+
+    def is_blueprint_enabled(self) -> bool:
+        """Return whether blueprint mode is enabled for the next submit."""
+        if self._blueprint_toggle is None:
+            return True
+
+        return self._blueprint_toggle.isChecked()
+
+    def set_blueprint_enabled(self, enabled: bool) -> None:
+        """Set whether blueprint mode is enabled."""
+        if self._blueprint_toggle:
+            self._blueprint_toggle.setChecked(enabled)
 
     def add_attachment(self, filename: str, content: str) -> None:
         """Add a file attachment and show it in the attachments bar."""
