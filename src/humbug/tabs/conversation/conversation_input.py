@@ -3,95 +3,14 @@
 import sys
 from typing import Dict, List, Tuple, cast
 
-from PySide6.QtCore import Signal, Qt, QRect, QSize, QObject, QEvent, QPoint
-from PySide6.QtGui import QColor, QFont, QIcon, QKeyEvent, QMouseEvent, QPainter, QTextCursor, QTextDocument
-from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel, QCheckBox
+from PySide6.QtCore import Signal, Qt, QRect, QSize, QObject, QEvent
+from PySide6.QtGui import QIcon, QKeyEvent, QMouseEvent, QTextCursor, QTextDocument
+from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel
 
 from ai import AIMessageSource
 
-from humbug.color_role import ColorRole
 from humbug.tabs.conversation.conversation_message import ConversationMessage
-
-
-class BenchmarkSwitch(QCheckBox):
-    """Compact switch control for benchmark mode."""
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the switch."""
-        super().__init__(parent)
-        self._track_on_color = QColor("#2050c0")
-        self._track_off_color = QColor("#303030")
-        self._track_border_color = QColor("#606060")
-        self._knob_color = QColor("#ffffff")
-        self._text_on_color = QColor("#ffffff")
-        self._text_off_color = QColor("#d0d0d0")
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setMinimumSize(44, 22)
-        self.toggled.connect(lambda _checked: self.update())
-
-    def sizeHint(self) -> QSize:
-        """Return the preferred switch size."""
-        return QSize(44, 22)
-
-    def set_colors(
-        self,
-        track_on: str,
-        track_off: str,
-        track_border: str,
-        knob: str,
-        text_on: str,
-        text_off: str
-    ) -> None:
-        """Set switch colors from the active design palette."""
-        self._track_on_color = QColor(track_on)
-        self._track_off_color = QColor(track_off)
-        self._track_border_color = QColor(track_border)
-        self._knob_color = QColor(knob)
-        self._text_on_color = QColor(text_on)
-        self._text_off_color = QColor(text_off)
-        self.update()
-
-    def hitButton(self, pos: QPoint) -> bool:
-        """Make the whole pill clickable."""
-        return self.rect().contains(pos)
-
-    def paintEvent(self, event: QEvent) -> None:
-        """Paint the switch as a rounded pill."""
-        del event
-
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        track_rect = self.rect().adjusted(1, 1, -1, -1)
-        radius = track_rect.height() / 2
-        track_color = self._track_on_color if self.isChecked() else self._track_off_color
-        text_color = self._text_on_color if self.isChecked() else self._text_off_color
-
-        painter.setPen(self._track_border_color)
-        painter.setBrush(track_color)
-        painter.drawRoundedRect(track_rect, radius, radius)
-
-        knob_size = track_rect.height() - 6
-        knob_y = track_rect.y() + 3
-        knob_x = track_rect.right() - knob_size - 3 if self.isChecked() else track_rect.x() + 3
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(self._knob_color)
-        painter.drawEllipse(knob_x, knob_y, knob_size, knob_size)
-
-        label = "ON" if self.isChecked() else "OFF"
-        text_rect = track_rect.adjusted(8, 0, -8, 0)
-        if self.isChecked():
-            text_rect.setRight(knob_x - 3)
-        else:
-            text_rect.setLeft(knob_x + knob_size + 3)
-
-        font = QFont(painter.font())
-        font.setBold(True)
-        font.setPointSizeF(max(6.0, font.pointSizeF() * 0.7))
-        painter.setFont(font)
-        painter.setPen(text_color)
-        painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, label)
+from humbug.widgets.benchmark_switch import BenchmarkSwitch
 
 
 class ConversationInput(ConversationMessage):
@@ -236,23 +155,12 @@ class ConversationInput(ConversationMessage):
         icon_base_size = 14
         icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
-        control_height = self._style_manager.tool_button_size()
-
         if self._attach_button:
             self._attach_button.setIcon(QIcon(self._style_manager.scale_icon("paperclip", icon_base_size)))
             self._attach_button.setIconSize(icon_size)
 
         if self._benchmark_toggle:
-            switch_height = max(20, round(control_height * 0.72))
-            self._benchmark_toggle.setFixedSize(round(switch_height * 2.1), switch_height)
-            self._benchmark_toggle.set_colors(
-                self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED),
-                self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND),
-                self._style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER),
-                self._style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED),
-                self._style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED),
-                self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-            )
+            self._benchmark_toggle.apply_style(self._style_manager)
 
         if self._submit_button:
             self._submit_button.setIcon(QIcon(self._style_manager.scale_icon("submit", icon_base_size)))
