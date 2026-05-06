@@ -1608,6 +1608,86 @@ class StyleManager(QObject):
         """Get the ideal width for tabs to balance information density and readability."""
         return 1024.0
 
+    def scale(self, value: int | float) -> int:
+        """Scale a UI metric by the current zoom factor."""
+        return round(value * self._zoom_factor)
+
+    def spacing(self, units: int = 1) -> int:
+        """Get a standard spacing value."""
+        return self.scale(4 * units)
+
+    def radius(self, size: str = "control") -> int:
+        """Get a standard border radius."""
+        match size:
+            case "panel":
+                return self.scale(8)
+
+            case "surface":
+                return self.scale(6)
+
+            case _:
+                return self.scale(4)
+
+    def control_height(self) -> int:
+        """Get the standard interactive control height."""
+        return self.scale(32)
+
+    def row_height(self) -> int:
+        """Get the standard list/tree row height."""
+        return self.scale(28)
+
+    def tab_icon_size(self) -> int:
+        """Get the standard tab icon size."""
+        return self.scale(16)
+
+    def tab_padding(self) -> int:
+        """Get the standard horizontal tab padding."""
+        return self.spacing(2)
+
+    def tab_spacing(self) -> int:
+        """Get the standard spacing between tab label elements."""
+        return self.spacing(2)
+
+    def tab_scroller_width(self) -> int:
+        """Get the reserved width for tab scroll controls."""
+        return self.scale(64)
+
+    def tab_scroller_button_size(self) -> int:
+        """Get the tab scroll control button size."""
+        return self.control_height()
+
+    def tool_button_size(self) -> int:
+        """Get the standard square tool button size."""
+        return self.scale(28)
+
+    def switch_height(self) -> int:
+        """Get the compact switch height."""
+        return max(20, self.scale(20))
+
+    def switch_width(self) -> int:
+        """Get the compact switch width."""
+        return round(self.switch_height() * 2.1)
+
+    def switch_knob_inset(self) -> int:
+        """Get the compact switch knob inset."""
+        return max(2, self.scale(3))
+
+    def splitter_width(self) -> int:
+        """Get the standard splitter handle width."""
+        return max(1, self.scale(1))
+
+    def active_indicator_width(self) -> int:
+        """Get the standard active/focus indicator width."""
+        return max(2, self.scale(3))
+
+    def compact_active_indicator_width(self) -> int:
+        """Get the compact active/focus indicator width."""
+        return max(1, self.scale(2))
+
+    def panel_margin(self) -> int:
+        """Get the standard margin around framed panes."""
+        return self.scale(4)
+
     def get_menu_stylesheet(self) -> str:
         """Apply styling to a specific menu."""
         zoom_factor = self.zoom_factor()
