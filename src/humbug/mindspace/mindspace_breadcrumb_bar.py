@@ -25,10 +25,10 @@ class MindspaceBreadcrumbBar(QTreeView):
     A compact tree view showing the ancestor chain (spine) of the folder currently
     at the top of the main tree's viewport.
 
-    The root sentinel is always the first top-level row. Real ancestor directories
+    The "." sentinel is always the first top-level row. Real ancestor directories
     nest beneath it.  For example, if src/humbug is at the top of the main tree:
 
-        Root
+        .
         └── src
             └── humbug
 
@@ -298,7 +298,7 @@ class MindspaceBreadcrumbBar(QTreeView):
         root_icon = self._root_folder_icon()
         icon = self._folder_icon()
 
-        dot_item = QStandardItem("Root")
+        dot_item = QStandardItem(".")
         dot_item.setData(self._root_path, _PATH_ROLE)
         dot_item.setEditable(False)
         dot_item.setIcon(root_icon)
