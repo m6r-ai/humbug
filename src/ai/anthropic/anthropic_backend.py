@@ -288,7 +288,13 @@ class AnthropicBackend(AIBackend):
 
         # Add system prompt if configured
         if self._system_prompt:
-            data["system"] = self._system_prompt
+            data["system"] = [
+                {
+                    "type": "text",
+                    "text": self._system_prompt,
+                    "cache_control": {"type": "ephemeral"}
+                }
+            ]
 
         # Add thinking configuration if VISIBLE_REASONING is enabled.  Set budget at 90% of the maximum token count.
         thinking = False
