@@ -1053,18 +1053,16 @@ class EditorWidget(QPlainTextEdit):
         self._highlight_matches()
 
         self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            {self._style_manager.get_menu_stylesheet()}
-
             QPlainTextEdit {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
+                padding: 0;
                 selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 selection-color: none;
             }}
 
+            {self._style_manager.get_menu_stylesheet()}
             {self._style_manager.get_scrollbar_stylesheet()}
 
             QAbstractScrollArea::corner {{

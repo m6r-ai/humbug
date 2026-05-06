@@ -79,7 +79,7 @@ class DiffWidget(QWidget):
         pane_layout.setSpacing(0)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
-        self._splitter.setHandleWidth(1)
+        self._splitter.setHandleWidth(self._style_manager.splitter_width())
         self._splitter.setChildrenCollapsible(False)
 
         self._left_pane = DiffPane()
@@ -388,6 +388,7 @@ class DiffWidget(QWidget):
         """Keep the shared scrollbar range in sync with the pane content."""
         self._scrollbar.setRange(minimum, maximum)
         self._scrollbar.setPageStep(self._left_pane.verticalScrollBar().pageStep())
+        self._scrollbar.setVisible(maximum > minimum)
 
     def _update_shared_scrollbar(self) -> None:
         """Refresh the shared scrollbar range and page step."""
@@ -395,6 +396,7 @@ class DiffWidget(QWidget):
         self._scrollbar.setRange(vbar.minimum(), vbar.maximum())
         self._scrollbar.setPageStep(vbar.pageStep())
         self._scrollbar.setValue(vbar.value())
+        self._scrollbar.setVisible(vbar.maximum() > vbar.minimum())
 
     def _on_style_changed(self) -> None:
         """Reapply stylesheet when the theme or zoom changes."""
@@ -403,6 +405,7 @@ class DiffWidget(QWidget):
         splitter_color = self._style_manager.get_color_str(ColorRole.SPLITTER)
         base_size = self._style_manager.base_font_size()
         zoom = self._style_manager.zoom_factor()
+        self._splitter.setHandleWidth(self._style_manager.splitter_width())
 
         self.setStyleSheet(f"""
             QWidget {{

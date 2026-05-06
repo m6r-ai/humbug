@@ -31,7 +31,7 @@ class PreviewMarkdownPreviewContent(PreviewContentWidget):
         self._style_manager = StyleManager()
 
         # Create layout
-        spacing = int(self._style_manager.message_bubble_spacing())
+        spacing = self._style_manager.message_spacing()
         self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         # Create the actual markdown content widget
@@ -46,6 +46,8 @@ class PreviewMarkdownPreviewContent(PreviewContentWidget):
 
     def apply_style(self) -> None:
         """Apply styling from the style manager."""
+        spacing = self._style_manager.message_spacing()
+        self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._markdown_content.apply_style()
 
     def set_content(self, text: str, path: str | None) -> None:

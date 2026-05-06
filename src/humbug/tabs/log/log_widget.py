@@ -9,12 +9,12 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_message import MindspaceMessage
 from humbug.style_manager import StyleManager
 from humbug.tabs.log.log_message import LogMessage
+from humbug.tabs.message_style import build_log_message_stylesheet, build_message_tab_stylesheet
 from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
 
@@ -79,7 +79,7 @@ class LogWidget(QWidget):
         self._messages_layout = QVBoxLayout(self._messages_container)
         self._messages_container.setLayout(self._messages_layout)
 
-        spacing = int(self._style_manager.message_bubble_spacing())
+        spacing = self._style_manager.message_spacing()
         self._messages_layout.setSpacing(spacing)
         self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_layout.addStretch()
@@ -548,7 +548,7 @@ class LogWidget(QWidget):
 
         delta = message_pos.y() - scroll_value
 
-        message_spacing = int(self._style_manager.message_bubble_spacing())
+        message_spacing = self._style_manager.message_spacing()
 
         # Determine if scrolling is needed
         if delta < 0:
@@ -608,76 +608,17 @@ class LogWidget(QWidget):
 
     def _build_widget_style(self) -> str:
         """Build styles for the log widget."""
-
-        return f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            {self._style_manager.get_menu_stylesheet()}
-            {self._style_manager.get_scrollbar_stylesheet()}
-        """
+        return build_message_tab_stylesheet(self._style_manager)
 
     def _build_log_message_styles(self) -> str:
         """Build styles for the main message frame."""
-        style_manager = self._style_manager
-        border_radius = int(style_manager.message_bubble_spacing())
-
-        return f"""
-            #LogMessage {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                margin: 0;
-                border-radius: {border_radius}px;
-                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
-            }}
-            #LogMessage[border="spotlighted"] {{
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)};
-            }}
-
-            #LogMessage #_header {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-            }}
-
-            #LogMessage #_level_label {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                margin: 0;
-                padding: 0;
-                border: none;
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-
-            #LogMessage #_level_label[log_level="trace"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_TRACE)};
-            }}
-            #LogMessage #_level_label[log_level="info"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_INFORMATION)};
-            }}
-            #LogMessage #_level_label[log_level="warn"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_WARNING)};
-            }}
-            #LogMessage #_level_label[log_level="error"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_ERROR)};
-            }}
-
-            #LogMessage #_text_area {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-
-            {style_manager.get_scrollbar_stylesheet("#LogMessage #_text_area QScrollBar")}
-        """
+        return build_log_message_stylesheet(self._style_manager)
 
     def _on_style_changed(self) -> None:
         zoom_factor = self._style_manager.zoom_factor()
+        spacing = self._style_manager.message_spacing()
+        self._messages_layout.setSpacing(spacing)
+        self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
 
         font = self.font()
@@ -1231,7 +1172,6 @@ class LogWidget(QWidget):
         message_widget = self._messages[message_index]
 
         # Scroll so message is at top of viewport with spacing
-        bubble_spacing = self._style_manager.message_bubble_spacing()
-        self._perform_scroll_to_position(message_widget, int(bubble_spacing))
+        self._perform_scroll_to_position(message_widget, self._style_manager.message_spacing())
 
         return True

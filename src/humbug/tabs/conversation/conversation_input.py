@@ -4,12 +4,13 @@ import sys
 from typing import Dict, List, Tuple, cast
 
 from PySide6.QtCore import Signal, Qt, QRect, QSize, QObject, QEvent
-from PySide6.QtGui import QTextCursor, QTextDocument, QIcon, QKeyEvent, QMouseEvent
+from PySide6.QtGui import QIcon, QKeyEvent, QMouseEvent, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel
 
 from ai import AIMessageSource
 
 from humbug.tabs.conversation.conversation_message import ConversationMessage
+from humbug.widgets.switch import Switch
 
 
 class ConversationInput(ConversationMessage):
@@ -32,6 +33,7 @@ class ConversationInput(ConversationMessage):
         self._stop_button: QToolButton | None = None
         self._settings_button: QToolButton | None = None
         self._attach_button: QToolButton | None = None
+        self._benchmark_toggle: Switch | None = None
         self._attachments: List[Tuple[str, str]] = []  # (filename, content)
         self._attachments_bar: QWidget | None = None
         self._attachments_layout: QHBoxLayout | None = None
@@ -65,6 +67,13 @@ class ConversationInput(ConversationMessage):
         self._attach_button.setObjectName("_attach_button")
         self._attach_button.clicked.connect(self._on_attach_button_clicked)
         self._banner_layout.insertWidget(0, self._attach_button)
+
+        self._benchmark_toggle = Switch(self)
+        self._benchmark_toggle.setObjectName("_benchmark_toggle")
+        self._benchmark_toggle.set_labels("ON", "OFF")
+        self._benchmark_toggle.setChecked(True)
+        self._benchmark_toggle.toggled.connect(self._on_benchmark_toggled)
+        self._banner_layout.insertWidget(1, self._benchmark_toggle)
 
         # Create stop button (initially hidden)
         self._stop_button = QToolButton(self)
@@ -114,6 +123,10 @@ class ConversationInput(ConversationMessage):
         if self._attach_button:
             self._attach_button.setToolTip(strings.tooltip_attach_file)
 
+        if self._benchmark_toggle:
+            self._benchmark_toggle.setToolTip(strings.tooltip_enable_benchmark)
+            self._benchmark_toggle.setAccessibleName(strings.enable_benchmark)
+
         if self._settings_button:
             self._settings_button.setToolTip(strings.tooltip_settings_message)
 
@@ -143,10 +156,12 @@ class ConversationInput(ConversationMessage):
         icon_base_size = 14
         icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
-
         if self._attach_button:
             self._attach_button.setIcon(QIcon(self._style_manager.scale_icon("paperclip", icon_base_size)))
             self._attach_button.setIconSize(icon_size)
+
+        if self._benchmark_toggle:
+            self._benchmark_toggle.apply_style(self._style_manager)
 
         if self._submit_button:
             self._submit_button.setIcon(QIcon(self._style_manager.scale_icon("submit", icon_base_size)))
@@ -216,6 +231,22 @@ class ConversationInput(ConversationMessage):
     def _on_attach_button_clicked(self) -> None:
         """Handle attach button click."""
         self.attach_requested.emit()
+
+    def _on_benchmark_toggled(self, checked: bool) -> None:
+        """Handle benchmark toggle changes."""
+        print(f"Enable benchmark: {'on' if checked else 'off'}")
+
+    def is_benchmark_enabled(self) -> bool:
+        """Return whether benchmark mode is enabled for the next submit."""
+        if self._benchmark_toggle is None:
+            return True
+
+        return self._benchmark_toggle.isChecked()
+
+    def set_benchmark_enabled(self, enabled: bool) -> None:
+        """Set whether benchmark mode is enabled."""
+        if self._benchmark_toggle:
+            self._benchmark_toggle.setChecked(enabled)
 
     def add_attachment(self, filename: str, content: str) -> None:
         """Add a file attachment and show it in the attachments bar."""

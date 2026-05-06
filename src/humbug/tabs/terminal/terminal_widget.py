@@ -184,14 +184,9 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Apply consistent styling to both the terminal widget and its viewport
         self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            {self._style_manager.get_menu_stylesheet()}
-
             QAbstractScrollArea {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
             }}
             QAbstractScrollArea::viewport {{
@@ -202,6 +197,7 @@ class TerminalWidget(QAbstractScrollArea):
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
 
+            {self._style_manager.get_menu_stylesheet()}
             {self._style_manager.get_scrollbar_stylesheet()}
         """)
 

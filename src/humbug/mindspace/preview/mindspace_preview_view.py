@@ -1056,6 +1056,7 @@ class MindspacePreviewView(QWidget):
         self._header.apply_style()
 
         self._icon_provider.update_icons()
+        self._delegate.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)
         file_icon_size = round(16 * zoom_factor)
         self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)

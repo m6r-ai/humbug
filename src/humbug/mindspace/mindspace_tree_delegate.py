@@ -9,6 +9,7 @@ from PySide6.QtGui import QPainter, QPen
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_tree_inline_editor import MindspaceTreeInlineEditor
+from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
 from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
 from humbug.style_manager import StyleManager
 
@@ -31,11 +32,32 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         self._tree_view = tree_view
         self._style_manager = style_manager
         self._language_manager = LanguageManager()
+        self._icon_provider = MindspaceTreeIconProvider()
 
         self.closeEditor.connect(self._on_close_editor)
 
         # Track editor configuration for the next edit operation
         self._next_edit_select_extension = True
+
+    def update_icons(self) -> None:
+        """Refresh cached delegate icons after theme or zoom changes."""
+        self._icon_provider.update_icons()
+
+    def initStyleOption(
+        self,
+        option: QStyleOptionViewItem,
+        index: QModelIndex | QPersistentModelIndex
+    ) -> None:
+        """Apply expanded-folder decoration before Qt paints the item."""
+        super().initStyleOption(option, index)
+
+        model_index = self._to_model_index(index)
+        if not model_index.isValid() or not self._tree_view.isExpanded(model_index):
+            return
+
+        path = self._tree_view.get_path_from_index(model_index)
+        if path and os.path.isdir(path):
+            option.icon = self._icon_provider.open_folder_icon()
 
     def _on_close_editor(self, editor: QWidget, hint: QAbstractItemDelegate.EndEditHint) -> None:
         """Handle when Qt closes an editor."""

@@ -103,11 +103,13 @@ class ConversationMessageSection(QFrame):
 
             # Add Copy button with icon
             self._copy_button = QToolButton()
+            self._copy_button.setObjectName("_section_copy_button")
             self._copy_button.clicked.connect(self._copy_all_content)
             self._header_layout.addWidget(self._copy_button)
 
             # Add Save As button with icon
             self._save_as_button = QToolButton()
+            self._save_as_button.setObjectName("_section_save_as_button")
             self._save_as_button.clicked.connect(self._save_as)
             self._header_layout.addWidget(self._save_as_button)
 
@@ -433,7 +435,7 @@ class ConversationMessageSection(QFrame):
         """Apply styling to this section."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
-        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        spacing = style_manager.message_spacing()
         self._layout.setSpacing(spacing)
 
         if self._syntax_header:
@@ -448,12 +450,15 @@ class ConversationMessageSection(QFrame):
         icon_base_size = 14
         icon_scaled_size = int(icon_base_size * zoom_factor)
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
+        button_size = style_manager.tool_button_size()
 
         if self._copy_button:
+            self._copy_button.setFixedSize(button_size, button_size)
             self._copy_button.setIcon(QIcon(self._style_manager.scale_icon("copy", icon_base_size)))
             self._copy_button.setIconSize(icon_size)
 
         if self._save_as_button:
+            self._save_as_button.setFixedSize(button_size, button_size)
             self._save_as_button.setIcon(QIcon(self._style_manager.scale_icon("save", icon_base_size)))
             self._save_as_button.setIconSize(icon_size)
 

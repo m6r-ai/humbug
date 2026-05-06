@@ -295,12 +295,13 @@ class MindspaceBreadcrumbBar(QTreeView):
             self._model.endResetModel()
             return
 
-        icon = self._folder_icon()
+        folder_icon = self._folder_icon()
+        root_icon = self._root_icon()
 
         dot_item = QStandardItem(".")
         dot_item.setData(self._root_path, _PATH_ROLE)
         dot_item.setEditable(False)
-        dot_item.setIcon(icon)
+        dot_item.setIcon(root_icon)
         self._model.invisibleRootItem().appendRow(dot_item)
 
         if len(spine) > 1:
@@ -309,7 +310,7 @@ class MindspaceBreadcrumbBar(QTreeView):
                 item = QStandardItem(os.path.basename(path))
                 item.setData(path, _PATH_ROLE)
                 item.setEditable(False)
-                item.setIcon(icon)
+                item.setIcon(folder_icon)
                 parent_item.appendRow(item)
                 parent_item = item
 
@@ -343,11 +344,13 @@ class MindspaceBreadcrumbBar(QTreeView):
                 self._expand_real_items(index)
     def _refresh_icons(self) -> None:
         """Refresh folder icons in the model after an icon provider update."""
-        icon = self._folder_icon()
+        folder_icon = self._folder_icon()
+        root_icon = self._root_icon()
 
         def refresh_recursive(parent: QModelIndex) -> None:
             for row in range(self._model.rowCount(parent)):
                 index = self._model.index(row, 0, parent)
+                icon = root_icon if index.parent() == QModelIndex() and row == 0 else folder_icon
                 self._model.setData(index, icon, Qt.ItemDataRole.DecorationRole)
                 refresh_recursive(index)
 
@@ -356,6 +359,10 @@ class MindspaceBreadcrumbBar(QTreeView):
     def _folder_icon(self) -> QIcon:
         """Return the current folder icon from the icon provider."""
         return self._icon_provider.breadcrumb_folder_icon()
+
+    def _root_icon(self) -> QIcon:
+        """Return the current root folder icon from the icon provider."""
+        return self._icon_provider.root_folder_icon()
 
     def _path_for_index(self, index: QModelIndex) -> str | None:
         """

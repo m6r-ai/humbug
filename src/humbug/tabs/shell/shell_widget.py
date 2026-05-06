@@ -9,10 +9,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.style_manager import StyleManager
+from humbug.tabs.message_style import build_message_tab_stylesheet, build_shell_message_stylesheet
 from humbug.tabs.shell.shell_command_processor import ShellCommandProcessor
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
 from humbug.tabs.shell.shell_event import ShellEvent
@@ -97,7 +97,7 @@ class ShellWidget(QWidget):
         # Create command processor
         self._command_processor = ShellCommandProcessor()
 
-        spacing = int(self._style_manager.message_bubble_spacing())
+        spacing = self._style_manager.message_spacing()
         self._messages_layout.setSpacing(spacing)
         self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_layout.addStretch()
@@ -662,7 +662,7 @@ class ShellWidget(QWidget):
 
         delta = message_pos.y() - scroll_value
 
-        message_spacing = int(self._style_manager.message_bubble_spacing())
+        message_spacing = self._style_manager.message_spacing()
 
         # Determine if scrolling is needed
         if delta < 0:
@@ -748,78 +748,18 @@ class ShellWidget(QWidget):
 
     def _build_widget_style(self) -> str:
         """Build styles for the log widget."""
-
-        return f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            {self._style_manager.get_menu_stylesheet()}
-
-            {self._style_manager.get_scrollbar_stylesheet()}
-        """
+        return build_message_tab_stylesheet(self._style_manager)
 
     def _build_shell_message_widget_styles(self) -> str:
         """Build styles for the main message frame."""
-        style_manager = self._style_manager
-        border_radius = int(self._style_manager.message_bubble_spacing())
-
-        return f"""
-            #ShellMessage {{
-                margin: 0;
-                border-radius: {border_radius}px;
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
-            }}
-            #ShellMessage[message_source="user"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
-                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
-            }}
-            #ShellMessage[border="spotlighted"] {{
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)};
-            }}
-
-            #ShellMessage #_header {{
-                background-color: transparent;
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-            }}
-
-            #ShellMessage #_role_label {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                margin: 0;
-                padding: 0;
-                border: none;
-                background-color: transparent;
-            }}
-            #ShellMessage #_role_label[message_source="user"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
-            }}
-            #ShellMessage #_role_label[message_source="success"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_SUCCESS)};
-            }}
-            #ShellMessage #_role_label[message_source="error"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
-            }}
-
-            #ShellMessage #_text_area {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-                background-color: transparent;
-            }}
-
-            {style_manager.get_scrollbar_stylesheet("#ShellMessage #_text_area QScrollBar")}
-        """
+        return build_shell_message_stylesheet(self._style_manager)
 
     def _on_style_changed(self) -> None:
         """Handle style changes by updating fonts and stylesheets."""
         zoom_factor = self._style_manager.zoom_factor()
+        spacing = self._style_manager.message_spacing()
+        self._messages_layout.setSpacing(spacing)
+        self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
         font = self.font()
         base_font_size = self._style_manager.base_font_size()
