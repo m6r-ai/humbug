@@ -33,6 +33,7 @@ from humbug.tabs.tab_bar import TabBar
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_label import TabLabel
 from humbug.tabs.tab_state import TabState
+from humbug.tabs.tab_style import build_column_manager_stylesheet, build_tab_bar_stylesheet
 from humbug.tabs.tab_type import TabType
 from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.tabs.preview.preview_error import PreviewError
@@ -2127,11 +2128,7 @@ class ColumnManager(QWidget):
 
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""
-        self.setStyleSheet(f"""
-            #ColumnManager QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
-            }}
-        """)
+        self.setStyleSheet(build_column_manager_stylesheet(self._style_manager))
 
         # Apply styles to individual widgets
         self._update_column_splitter()
@@ -2168,39 +2165,7 @@ class ColumnManager(QWidget):
 
     def _apply_tab_bar_style(self, tab_bar: QTabBar) -> None:
         """Apply styling to a specific tab bar."""
-        tab_bar.setStyleSheet(f"""
-            QTabBar {{
-                border: none;
-                margin: 0px;
-                padding: 0px;
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
-            }}
-            QTabBar::tab {{
-                border: none;
-                margin: 0px;
-                padding: 7px 0px 7px 0px;
-            }}
-            QTabBar::scroller {{
-                width: 28px;
-            }}
-            QTabBar QToolButton {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
-            }}
-            QTabBar QToolButton:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
-            }}
-            QTabBar QToolButton::right-arrow {{
-                image: url({self._style_manager.get_icon_path('arrow-right')});
-                width: 12px;
-                height: 12px;
-            }}
-            QTabBar QToolButton::left-arrow {{
-                image: url({self._style_manager.get_icon_path('arrow-left')});
-                width: 12px;
-                height: 12px;
-            }}
-        """)
+        tab_bar.setStyleSheet(build_tab_bar_stylesheet(self._style_manager))
 
     def _apply_all_tab_bar_styles(self) -> None:
         """Apply styling to all tab bars in all columns."""
