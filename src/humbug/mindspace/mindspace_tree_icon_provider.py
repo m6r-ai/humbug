@@ -142,6 +142,39 @@ class MindspaceTreeIconProvider(QFileIconProvider):
 
         return self._cached_icons[cache_key]
 
+    def open_folder_icon(self) -> QIcon:
+        """Return the open folder icon for expanded tree directories."""
+        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
+        cache_key = f"folder_open_{theme_suffix}"
+        if cache_key not in self._cached_icons:
+            color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER)
+            self._cached_icons[cache_key] = self._create_svg_icon(
+                humbug_icon_pack.create_mindspace_tree_icon_svg('folder_open'), folder_color=color
+            )
+
+        return self._cached_icons[cache_key]
+
+    def root_folder_icon(self) -> QIcon:
+        """Return the distinct root folder icon for the breadcrumb sentinel."""
+        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
+        cache_key = f"folder_root_{theme_suffix}"
+        if cache_key not in self._cached_icons:
+            if self._style_manager.color_mode() == ColorMode.DARK:
+                folder_color = "#7dd3fc"
+                accent_color = "#c4b5fd"
+
+            else:
+                folder_color = "#2563eb"
+                accent_color = "#14b8a6"
+
+            self._cached_icons[cache_key] = self._create_svg_icon(
+                humbug_icon_pack.create_mindspace_tree_icon_svg('folder_root'),
+                accent_color=accent_color,
+                folder_color=folder_color
+            )
+
+        return self._cached_icons[cache_key]
+
     def icon(self, arg: QFileIconProvider.IconType | QFileInfo) -> QIcon:  # type: ignore[override]
         """Get the appropriate icon for a file or standard type.
 

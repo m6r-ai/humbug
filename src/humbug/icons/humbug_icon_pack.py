@@ -122,10 +122,27 @@ def _mindspace_tree_icon_svgs() -> Dict[str, str]:
                     fill="folderColor" stroke="none"/>
             </svg>
         ''',
+        "folder_open": '''
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <path d="M12 78 V25 C12 21 15 18 19 18 H36 C42 18 44 28 50 28 H80 C84 28 88 32 88 36 V48"
+                    fill="none" stroke="folderColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 78 L30 45 C32 41 35 39 39 39 H85 C90 39 93 44 91 49 L78 78 C77 81 74 83 70 83 H18 C13 83 10 81 12 78 Z"
+                    fill="none" stroke="folderColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        ''',
         "folder_breadcrumb": '''
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
                 <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 85 L10 85 L10 25"
                     fill="folderColor" stroke="none"/>
+            </svg>
+        ''',
+        "folder_root": '''
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <path d="M10 30 C10 25 14 21 19 21 H37 C43 21 45 14 52 14 H82 C87 14 90 18 90 23 V78 C90 83 86 86 81 86 H19 C14 86 10 82 10 77 Z"
+                    fill="folderColor" stroke="none"/>
+                <path d="M39 22 H81 C84 22 86 24 86 27 V37 H48 C41 37 39 30 33 30 H14 V29 C14 27 16 25 19 25 H36 C42 25 45 18 52 18 H81"
+                    fill="accentColor" stroke="none" opacity="0.9"/>
+                <path d="M25 66 H75" stroke="accentColor" stroke-width="7" stroke-linecap="round" opacity="0.9"/>
             </svg>
         ''',
         "file": '''
