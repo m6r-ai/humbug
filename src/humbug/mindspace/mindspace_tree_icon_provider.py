@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QFileIconProvider
 from PySide6.QtSvg import QSvgRenderer
 
 from humbug.color_role import ColorRole
+from humbug.icons import humbug_icon_pack
 from humbug.style_manager import StyleManager, ColorMode
 
 
@@ -26,56 +27,6 @@ class MindspaceTreeIconProvider(QFileIconProvider):
 
     def _initialize_icons(self) -> None:
         """Create and cache standard icons."""
-        # Create path shapes for each icon type in SVG format
-        self._svg_paths = {
-            "folder": '''
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 85 L10 85 L10 25"
-                        fill="folderColor" stroke="none"/>
-                </svg>
-            ''',
-            "folder_breadcrumb": '''
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 85 L10 85 L10 25"
-                        fill="folderColor" stroke="none"/>
-                </svg>
-            ''',
-            "file": '''
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                        fill="none" stroke="currentColor" stroke-width="5"/>
-                    <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-                </svg>
-            ''',
-            "conversation": '''
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M15 15 C15 15 85 15 85 15 C85 15 85 55 85 55 C85 55 70 55 70 55 L50 80 L50 55 C50 55 15 55 15 55 Z"
-                        fill="none" stroke="currentColor" stroke-width="5"/>
-                </svg>
-            ''',
-            "code": '''
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                        fill="none" stroke="currentColor" stroke-width="5"/>
-                    <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-                    <path d="M30 30 L50 30" stroke="accentColor" stroke-width="5"/>
-                    <path d="M30 50 L70 50" stroke="accentColor" stroke-width="5"/>
-                    <path d="M30 70 L70 70" stroke="accentColor" stroke-width="5"/>
-                </svg>
-            ''',
-            "text": '''
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                        fill="none" stroke="currentColor" stroke-width="5"/>
-                    <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-                    <path d="M30 30 L50 30" stroke="accentColor" stroke-width="5"/>
-                    <path d="M30 50 L70 50" stroke="accentColor" stroke-width="5"/>
-                    <path d="M30 70 L70 70" stroke="accentColor" stroke-width="5"/>
-                </svg>
-            '''
-        }
-
-        # Map file extensions to icon types and accent colors
         self._extension_map = {
             '.c': ('code', '#3572A5'),    # Python blue
             '.cc': ('code', '#f34b7d'),   # C++ pink
@@ -186,7 +137,7 @@ class MindspaceTreeIconProvider(QFileIconProvider):
         if cache_key not in self._cached_icons:
             color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB)
             self._cached_icons[cache_key] = self._create_svg_icon(
-                self._svg_paths['folder_breadcrumb'], folder_color=color
+                humbug_icon_pack.create_mindspace_tree_icon_svg('folder_breadcrumb'), folder_color=color
             )
 
         return self._cached_icons[cache_key]
@@ -218,7 +169,7 @@ class MindspaceTreeIconProvider(QFileIconProvider):
             if cache_key not in self._cached_icons:
                 color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER)
                 self._cached_icons[cache_key] = self._create_svg_icon(
-                    self._svg_paths['folder'], folder_color=color
+                    humbug_icon_pack.create_mindspace_tree_icon_svg('folder'), folder_color=color
                 )
 
             return self._cached_icons[cache_key]
@@ -233,7 +184,7 @@ class MindspaceTreeIconProvider(QFileIconProvider):
 
         # Create icon if not in cache
         if cache_key not in self._cached_icons:
-            svg_data = self._svg_paths[icon_type]
+            svg_data = humbug_icon_pack.create_mindspace_tree_icon_svg(icon_type)
             self._cached_icons[cache_key] = self._create_svg_icon(svg_data, accent_color if accent_color is not None else "")
 
         return self._cached_icons[cache_key]
