@@ -28,6 +28,7 @@ from humbug.settings.settings_section import SettingsSection
 from humbug.settings.settings_spinbox import SettingsSpinBox
 from humbug.settings.settings_text_area import SettingsTextArea
 from humbug.settings.settings_text_field import SettingsTextField
+from humbug.color_picker_dialog import ThemeColorPickerDialog
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.user.user_file_sort_order import UserFileSortOrder
 from humbug.user.user_manager import UserManager
@@ -96,6 +97,7 @@ class SettingsDialog(QDialog):
 
         self._ai_backend_controls: Dict[str, Dict[str, QWidget]] = {}
         self._tool_checkboxes: Dict[str, QWidget] = {}
+        self._pending_custom_colors: Dict[str, Dict[str, str]] = {}
 
         # Map section id -> (list item, stack page widget)
         self._section_items: Dict[str, QListWidgetItem] = {}
@@ -301,6 +303,13 @@ class SettingsDialog(QDialog):
             (strings.theme_light, ColorMode.LIGHT),
             (strings.theme_dark, ColorMode.DARK),
         ])
+
+        self._customize_colors_btn = QPushButton("Customize Colors...")
+        self._customize_colors_btn.setObjectName("CustomizeColorsBtn")
+        self._customize_colors_btn.clicked.connect(self._on_customize_colors)
+        zoom = self._style_manager.zoom_factor()
+        self._customize_colors_btn.setMinimumWidth(int(160 * zoom))
+        container.layout().addWidget(self._customize_colors_btn)  # type: ignore[union-attr]
 
         self._file_sort_combo = SettingsFactory.create_combo(strings.file_sort_order)
         container.add_setting(self._file_sort_combo)
@@ -603,6 +612,7 @@ class SettingsDialog(QDialog):
             font_size=self._font_size_spin.get_value(),
             font_ligatures=self._font_ligatures_check.get_value(),
             theme=self._theme_combo.get_value(),
+            custom_colors=self._pending_custom_colors,
             file_sort_order=self._file_sort_combo.get_value(),
             allow_external_file_access=self._allow_external_access_checkbox.get_value(),
             external_file_allowlist=self._external_allowlist_area.get_value(),
@@ -649,6 +659,7 @@ class SettingsDialog(QDialog):
         self._font_ligatures_check.set_value(settings.font_ligatures)
         self._file_sort_combo.set_value(settings.file_sort_order)
         self._check_for_updates_check.set_value(settings.check_for_updates)
+        self._pending_custom_colors = dict(settings.custom_colors)
 
         # File access
         self._allow_external_access_checkbox.set_value(settings.allow_external_file_access)
@@ -801,6 +812,18 @@ class SettingsDialog(QDialog):
     def _on_terminal_scrollback_changed(self) -> None:
         """Enable or disable scrollback lines spin based on checkbox."""
         self._terminal_scrollback_spin.set_enabled(self._terminal_scrollback_check.get_value())
+
+    def _on_customize_colors(self) -> None:
+        """Open the color picker dialog and apply returned theme settings."""
+        dialog = ThemeColorPickerDialog(self)
+        dialog.theme_settings_changed.connect(self._on_color_picker_applied)
+        dialog.exec()
+
+    def _on_color_picker_applied(self, mode: ColorMode, custom_colors: Dict[str, Dict[str, str]]) -> None:
+        """Receive theme mode + custom colors from the color picker dialog."""
+        self._theme_combo.set_value(mode)
+        self._pending_custom_colors = custom_colors
+        self.apply_button.setEnabled(True)
 
     def _on_apply_clicked(self) -> None:
         """Apply all settings changes to both managers."""

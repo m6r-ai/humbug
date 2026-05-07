@@ -8,7 +8,7 @@ Provides signals for style changes and utilities for scaled size calculations.
 from enum import Enum, auto
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
 from PySide6.QtGui import QTextCharFormat, QFontDatabase, QColor, QFontMetricsF, QFont, QPixmap, QGuiApplication
@@ -60,6 +60,7 @@ class StyleManager(QObject):
             self._font_ligatures: bool = True
             self._color_mode = ColorMode.SYSTEM  # Default to system mode
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
+            self._custom_colors: Dict[ColorRole, Dict[ColorMode, str]] = {}
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
             self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
 
@@ -1379,7 +1380,7 @@ class StyleManager(QObject):
         Raises:
             KeyError: If no color is defined for the role
         """
-        return QColor(self._colors[role][self._resolve_color_mode()])
+        return QColor(self._resolve_color_value(role))
 
     def get_color_str(self, role: ColorRole) -> str:
         """
@@ -1394,7 +1395,17 @@ class StyleManager(QObject):
         Raises:
             KeyError: If no color is defined for the role
         """
-        return self._colors[role][self._resolve_color_mode()]
+        return self._resolve_color_value(role)
+
+    def _resolve_color_value(self, role: ColorRole) -> str:
+        """Return the effective hex color for a role, checking custom overrides first."""
+        resolved_mode = self._resolve_color_mode()
+        custom = self._custom_colors.get(role)
+        if custom:
+            override = custom.get(resolved_mode)
+            if override:
+                return override
+        return self._colors[role][resolved_mode]
 
     def get_highlight(self, token_type: TokenType) -> QTextCharFormat:
         """
@@ -1532,6 +1543,50 @@ class StyleManager(QObject):
             self._icon_cache.clear()
             self._scaled_icon_cache.clear()
             self.style_changed.emit()
+
+    def set_custom_color(self, role: ColorRole, mode: ColorMode, color: str) -> None:
+        """Override a single color role for a specific mode and emit style_changed."""
+        if role not in self._custom_colors:
+            self._custom_colors[role] = {}
+        self._custom_colors[role][mode] = color
+        self.style_changed.emit()
+
+    def clear_section_custom_colors(self, roles: List[ColorRole]) -> None:
+        """Remove custom overrides for the given roles and emit style_changed."""
+        changed = False
+        for role in roles:
+            if role in self._custom_colors:
+                del self._custom_colors[role]
+                changed = True
+        if changed:
+            self.style_changed.emit()
+
+    def apply_custom_colors(self, custom: Dict[str, Dict[str, str]]) -> None:
+        """Replace all custom color overrides from a string-keyed dict (loaded from settings)."""
+        new_customs: Dict[ColorRole, Dict[ColorMode, str]] = {}
+        for role_name, mode_map in custom.items():
+            try:
+                role = ColorRole[role_name]
+            except KeyError:
+                continue
+            mode_colors: Dict[ColorMode, str] = {}
+            for mode_name, color_val in mode_map.items():
+                try:
+                    mode = ColorMode[mode_name]
+                except KeyError:
+                    continue
+                mode_colors[mode] = color_val
+            if mode_colors:
+                new_customs[role] = mode_colors
+        self._custom_colors = new_customs
+        self.style_changed.emit()
+
+    def get_custom_colors(self) -> Dict[str, Dict[str, str]]:
+        """Serialize current custom color overrides to a string-keyed dict for persistence."""
+        result: Dict[str, Dict[str, str]] = {}
+        for role, mode_map in self._custom_colors.items():
+            result[role.name] = {mode.name: color for mode, color in mode_map.items()}
+        return result
 
     def zoom_factor(self) -> float:
         """Current zoom scaling factor."""

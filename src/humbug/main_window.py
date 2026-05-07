@@ -413,6 +413,7 @@ class MainWindow(QMainWindow):
 
         # Set theme from user settings
         self._style_manager.set_color_mode(user_settings.theme)
+        self._style_manager.apply_custom_colors(user_settings.custom_colors)
         self._update_theme_menu()
 
         # Update welcome widget with initial user settings
@@ -1506,6 +1507,8 @@ class MainWindow(QMainWindow):
                 if new_theme != self._style_manager.user_color_mode():
                     self._style_manager.set_color_mode(new_theme)
                     self._update_theme_menu()
+
+                self._style_manager.apply_custom_colors(new_settings.custom_colors)
 
                 self._column_manager.update_welcome_widget(new_settings)
                 self._logger.info("User settings saved successfully")
