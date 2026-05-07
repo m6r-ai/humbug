@@ -24,7 +24,7 @@ class Switch(QCheckBox):
         self._off_label = "\u23fc"
         self._knob_inset = 3
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setMinimumSize(44, 20)
         self.toggled.connect(lambda _checked: self.update())
         self._style_manager = StyleManager()
