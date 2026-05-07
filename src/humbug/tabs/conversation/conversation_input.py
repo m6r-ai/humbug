@@ -33,6 +33,7 @@ class ConversationInput(ConversationMessage):
         self._stop_button: QToolButton | None = None
         self._settings_button: QToolButton | None = None
         self._attach_button: QToolButton | None = None
+        self._blueprint_toggle_container: QWidget | None = None
         self._blueprint_toggle: Switch | None = None
         self._attachments: List[Tuple[str, str]] = []  # (filename, content)
         self._attachments_bar: QWidget | None = None
@@ -68,11 +69,20 @@ class ConversationInput(ConversationMessage):
         self._attach_button.clicked.connect(self._on_attach_button_clicked)
         self._banner_layout.insertWidget(0, self._attach_button)
 
-        self._blueprint_toggle = Switch(self)
+        self._blueprint_toggle_container = QWidget(self)
+        self._blueprint_toggle_container.setObjectName("_blueprint_toggle_container")
+        self._blueprint_toggle_container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        self._blueprint_toggle_container.setStyleSheet("background: transparent; border: none;")
+        blueprint_toggle_layout = QHBoxLayout(self._blueprint_toggle_container)
+        blueprint_toggle_layout.setContentsMargins(0, 0, 0, 0)
+        blueprint_toggle_layout.setSpacing(0)
+
+        self._blueprint_toggle = Switch(self._blueprint_toggle_container)
         self._blueprint_toggle.setObjectName("_blueprint_toggle")
         self._blueprint_toggle.setChecked(True)
         self._blueprint_toggle.toggled.connect(self._on_blueprint_toggled)
-        self._banner_layout.insertWidget(1, self._blueprint_toggle)
+        blueprint_toggle_layout.addWidget(self._blueprint_toggle, 0, Qt.AlignmentFlag.AlignVCenter)
+        self._banner_layout.insertWidget(1, self._blueprint_toggle_container)
 
         # Create stop button (initially hidden)
         self._stop_button = QToolButton(self)
@@ -162,6 +172,12 @@ class ConversationInput(ConversationMessage):
 
         if self._blueprint_toggle:
             self._blueprint_toggle.apply_style(self._style_manager)
+
+        if self._blueprint_toggle_container:
+            self._blueprint_toggle_container.setFixedSize(
+                self._style_manager.switch_width() + self._style_manager.spacing(1),
+                self._style_manager.switch_height()
+            )
 
         if self._submit_button:
             self._submit_button.setIcon(QIcon(self._style_manager.scale_icon("submit", icon_base_size)))
