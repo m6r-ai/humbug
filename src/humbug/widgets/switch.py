@@ -25,6 +25,8 @@ class Switch(QCheckBox):
         self._knob_inset = 3
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setStyleSheet("background: transparent; border: none;")
         self.setMinimumSize(44, 20)
         self.toggled.connect(lambda _checked: self.update())
         self._style_manager = StyleManager()
