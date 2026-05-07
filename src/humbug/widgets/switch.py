@@ -14,22 +14,25 @@ class Switch(QCheckBox):
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the switch."""
         super().__init__(parent)
-        self._track_on_color = QColor("#2050c0")
-        self._track_off_color = QColor("#303030")
-        self._track_border_color = QColor("#606060")
-        self._knob_color = QColor("#ffffff")
-        self._text_on_color = QColor("#ffffff")
-        self._text_off_color = QColor("#d0d0d0")
-        self._on_label = "ON"
-        self._off_label = "OFF"
+        self._track_on_color: QColor
+        self._track_off_color: QColor
+        self._track_border_color: QColor
+        self._knob_color: QColor
+        self._text_on_color: QColor
+        self._text_off_color: QColor
+        self._on_label = "\u23fd"
+        self._off_label = "\u23fc"
         self._knob_inset = 3
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMinimumSize(44, 20)
         self.toggled.connect(lambda _checked: self.update())
+        self._style_manager = StyleManager()
+        self.apply_style(self._style_manager)
 
     def apply_style(self, style_manager: StyleManager) -> None:
         """Apply design-system colors and metrics."""
+        # TODO: Should we make this the default approach everywhere we use apply_style?
         self._track_on_color = QColor(style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED))
         self._track_off_color = QColor(style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND))
         self._track_border_color = QColor(style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER))
