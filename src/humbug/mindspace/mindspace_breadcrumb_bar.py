@@ -354,6 +354,7 @@ class MindspaceBreadcrumbBar(QTreeView):
                 path = index.data(_PATH_ROLE)
                 if path and self._root_path and os.path.normpath(path) == os.path.normpath(self._root_path):
                     self._model.setData(index, root_icon, Qt.ItemDataRole.DecorationRole)
+
                 else:
                     self._model.setData(index, icon, Qt.ItemDataRole.DecorationRole)
 
@@ -362,8 +363,8 @@ class MindspaceBreadcrumbBar(QTreeView):
         refresh_recursive(QModelIndex())
 
     def _folder_icon(self) -> QIcon:
-        """Return the current folder icon from the icon provider."""
-        return self._icon_provider.breadcrumb_folder_icon()
+        """Return the open folder icon in the breadcrumb tint colour."""
+        return self._icon_provider.open_folder_breadcrumb_icon()
 
     def _root_folder_icon(self) -> QIcon:
         """Return the current root folder icon from the icon provider."""

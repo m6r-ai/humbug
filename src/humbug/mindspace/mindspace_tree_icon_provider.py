@@ -207,6 +207,22 @@ class MindspaceTreeIconProvider(QFileIconProvider):
 
         return self._cached_icons[cache_key]
 
+    def open_folder_breadcrumb_icon(self) -> QIcon:
+        """Return the open folder icon in the breadcrumb tint colour.
+
+        Returns:
+            QIcon instance with the open folder rendered in MINDSPACE_FOLDER_BREADCRUMB colour
+        """
+        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
+        cache_key = f"folder_open_breadcrumb_{theme_suffix}"
+        if cache_key not in self._cached_icons:
+            color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB)
+            self._cached_icons[cache_key] = self._create_svg_icon(
+                self._svg_paths['folder_open'], folder_color=color
+            )
+
+        return self._cached_icons[cache_key]
+
     def open_folder_icon(self) -> QIcon:
         """Return the open folder icon for expanded tree directories."""
         theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
