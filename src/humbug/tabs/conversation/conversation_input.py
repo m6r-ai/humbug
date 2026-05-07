@@ -70,7 +70,6 @@ class ConversationInput(ConversationMessage):
 
         self._blueprint_toggle = Switch(self)
         self._blueprint_toggle.setObjectName("_blueprint_toggle")
-        self._blueprint_toggle.set_labels("ON", "OFF")
         self._blueprint_toggle.setChecked(True)
         self._blueprint_toggle.toggled.connect(self._on_blueprint_toggled)
         self._banner_layout.insertWidget(1, self._blueprint_toggle)
