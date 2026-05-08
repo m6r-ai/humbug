@@ -403,17 +403,17 @@ class AIConversationSettings:
         ),
 
         # xAI models
-        "grok-code-fast-1": AIModel(
-            name="grok-code-fast-1",
+        "grok-4.3": AIModel(
+            name="grok-4.3",
             provider="xai",
-            context_window=262144,
-            max_output_tokens=8192,
+            context_window=1000000,
+            max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "grok-4-1-fast-non-reasoning": AIModel(
-            name="grok-4-1-fast-non-reasoning",
+        "grok-4.20-0309-non-reasoning": AIModel(
+            name="grok-4.20-0309-non-reasoning",
             provider="xai",
             context_window=2000000,
             max_output_tokens=32767,
@@ -421,40 +421,13 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "grok-4-1-fast-reasoning": AIModel(
-            name="grok-4-1-fast-reasoning",
+        "grok-4.20-0309-reasoning": AIModel(
+            name="grok-4.20-0309-reasoning",
             provider="xai",
             context_window=2000000,
             max_output_tokens=32767,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "grok-4-fast-non-reasoning": AIModel(
-            name="grok-4-fast-non-reasoning",
-            provider="xai",
-            context_window=2000000,
-            max_output_tokens=32767,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "grok-4-fast-reasoning": AIModel(
-            name="grok-4-fast-reasoning",
-            provider="xai",
-            context_window=2000000,
-            max_output_tokens=32767,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "grok-4-0709": AIModel(
-            name="grok-4-0709",
-            provider="xai",
-            context_window=256000,
-            max_output_tokens=8192,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
 

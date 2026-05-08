@@ -2,6 +2,10 @@
 
 ## v47 (2026-05-xx)
 
+New features:
+
+- Update the grok model catalogue to grok 4.2 and 4.3, removing the soon-to-be-removed 4.0 amd 4.1 models.
+
 Internal structure changes:
 
 - Attachments have been added as a specific concept inside AI conversations.  This keeps the context cleaner and will allow
