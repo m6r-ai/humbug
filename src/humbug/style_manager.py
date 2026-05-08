@@ -1254,6 +1254,277 @@ class StyleManager(QObject):
         """Get the standard margin around framed panes."""
         return self.scale(4)
 
+    def get_button_stylesheet(self, selector: str = "QPushButton") -> str:
+        """Get shared push-button styling."""
+        zoom_factor = self.zoom_factor()
+        base_font_size = self.base_font_size()
+
+        return f"""
+            {selector} {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 4px;
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+            {selector}:hover {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            {selector}:pressed {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+            {selector}:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            {selector}[recommended="true"] {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                color: {self.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+            }}
+            {selector}[recommended="true"]:hover {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
+            }}
+            {selector}[recommended="true"]:pressed {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
+            }}
+            {selector}[recommended="false"] {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                color: {self.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+            }}
+            {selector}[recommended="false"]:hover {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
+            }}
+            {selector}[recommended="false"]:pressed {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+            }}
+        """
+
+    def get_tool_button_stylesheet(self, selector: str = "QToolButton") -> str:
+        """Get shared icon/tool-button styling."""
+        size = self.tool_button_size()
+        radius = self.radius()
+        padding = self.spacing(1)
+
+        return f"""
+            {selector} {{
+                background-color: transparent;
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: {radius}px;
+                padding: {padding}px;
+                min-width: {size}px;
+                min-height: {size}px;
+            }}
+            {selector}:hover {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            {selector}:pressed {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+            {selector}:disabled {{
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: transparent;
+            }}
+            {selector}:checked {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                color: {self.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+            }}
+        """
+
+    def get_toggle_button_stylesheet(self, selector: str = "QToolButton#toggleButton") -> str:
+        """Get shared compact toggle-button styling."""
+        zoom_factor = self.zoom_factor()
+        base_font_size = self.base_font_size()
+        size = self.tool_button_size()
+        radius = self.radius()
+        padding = self.spacing(1)
+
+        return f"""
+            {selector} {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: {radius}px;
+                padding: {padding}px;
+                min-width: {size}px;
+                min-height: {size}px;
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+            {selector}:hover {{
+                background-color: {self.get_color_str(ColorRole.TEXT_FOUND_DIM)};
+            }}
+            {selector}:pressed {{
+                background-color: {self.get_color_str(ColorRole.TEXT_FOUND)};
+            }}
+            {selector}:checked {{
+                background-color: {self.get_color_str(ColorRole.TEXT_FOUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            {selector}:checked:hover {{
+                background-color: {self.get_color_str(ColorRole.TEXT_FOUND_DIM)};
+            }}
+            {selector}:checked:pressed {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+            }}
+            {selector}:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+        """
+
+    def get_text_input_stylesheet(self, selector: str) -> str:
+        """Get shared text input styling."""
+        zoom_factor = self.zoom_factor()
+        base_font_size = self.base_font_size()
+
+        return f"""
+            {selector} {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 4px;
+                font-size: {int(base_font_size * zoom_factor)}pt;
+            }}
+            {selector}:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+        """
+
+    def get_checkbox_stylesheet(self, selector: str = "QCheckBox") -> str:
+        """Get shared checkbox styling."""
+        zoom_factor = self.zoom_factor()
+
+        return f"""
+            {selector} {{
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 0px;
+                margin: 0px;
+            }}
+            {selector}::indicator {{
+                width: {int(18 * zoom_factor)}px;
+                height: {int(18 * zoom_factor)}px;
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+            }}
+            {selector}::indicator:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+            }}
+            {selector}::indicator:checked {{
+                image: url({self.get_icon_path('check')});
+            }}
+            {selector}:disabled {{
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+        """
+
+    def get_combo_box_stylesheet(self, selector: str = "QComboBox") -> str:
+        """Get shared combo-box styling."""
+        zoom_factor = self.zoom_factor()
+        base_font_size = self.base_font_size()
+
+        return f"""
+            {selector} {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 6px;
+                margin: 0px;
+                font-size: {int(base_font_size * zoom_factor)}pt;
+            }}
+            {selector}:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            {selector}::drop-down {{
+                border: none;
+                width: 20px;
+            }}
+            {selector}::down-arrow {{
+                image: url({self.get_icon_path("arrow-down")});
+                width: 12px;
+                height: 12px;
+            }}
+            {selector}::down-arrow:on {{
+                image: url({self.get_icon_path('arrow-up')});
+                width: 12px;
+                height: 12px;
+            }}
+            {selector}::down-arrow:disabled {{
+                image: none;
+            }}
+            {selector} QAbstractItemView::item:selected {{
+                border: none;
+                background-color: {self.get_color_str(ColorRole.TEXT_SELECTED)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            {selector} QListView {{
+                background-color: {self.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+        """
+
+    def get_spin_box_stylesheet(self, selector: str = "QSpinBox, QDoubleSpinBox") -> str:
+        """Get shared spin-box styling."""
+        zoom_factor = self.zoom_factor()
+        base_font_size = self.base_font_size()
+
+        return f"""
+            {selector} {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 4px;
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+            {selector}:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QSpinBox::up-button, QSpinBox::down-button,
+            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
+                border: none;
+                width: 20px;
+            }}
+            QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
+                image: url({self.get_icon_path('arrow-up')});
+                width: 12px;
+                height: 12px;
+            }}
+            QSpinBox::up-arrow:disabled, QSpinBox::up-arrow:off,
+            QDoubleSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:off {{
+                image: none;
+            }}
+            QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
+                image: url({self.get_icon_path('arrow-down')});
+                width: 12px;
+                height: 12px;
+            }}
+            QSpinBox::down-arrow:disabled, QSpinBox::down-arrow:off,
+            QDoubleSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:off {{
+                image: none;
+            }}
+        """
+
+    def get_common_controls_stylesheet(self) -> str:
+        """Get shared styles for common interactive controls."""
+        return "\n".join([
+            self.get_button_stylesheet(),
+            self.get_tool_button_stylesheet(),
+            self.get_toggle_button_stylesheet(),
+            self.get_text_input_stylesheet("QLineEdit"),
+            self.get_text_input_stylesheet("QPlainTextEdit"),
+            self.get_text_input_stylesheet("QTextEdit"),
+            self.get_checkbox_stylesheet(),
+            self.get_combo_box_stylesheet(),
+            self.get_spin_box_stylesheet(),
+        ])
+
     def get_menu_stylesheet(self) -> str:
         """Apply styling to a specific menu."""
         zoom_factor = self.zoom_factor()
@@ -1357,176 +1628,12 @@ class StyleManager(QObject):
                 font-size: {base_font_size * zoom_factor}pt;
             }}
 
-            /* Text inputs */
-            QLineEdit {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 4px;
-                font-size: {int(base_font_size * zoom_factor)}pt;
-            }}
-            QLineEdit:disabled {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-
-            /* Text areas */
-            #SettingsTextArea {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 4px;
-                font-size: {int(base_font_size * zoom_factor)}pt;
-            }}
-            #SettingsTextArea:disabled {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-
-            /* Checkboxes */
-            QCheckBox {{
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 0px;
-                margin: 0px;
-            }}
-            QCheckBox::indicator {{
-                width: {int(18 * zoom_factor)}px;
-                height: {int(18 * zoom_factor)}px;
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-            }}
-            QCheckBox::indicator:disabled {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-            }}
-            QCheckBox::indicator:checked {{
-                image: url({self.get_icon_path('check')});
-            }}
-            QCheckBox:disabled {{
-                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-
-            /* Combo boxes */
-            QComboBox {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 6px;
-                margin: 0px;
-                font-size: {int(base_font_size * zoom_factor)}pt;
-            }}
-            QComboBox:disabled {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-            QComboBox::drop-down {{
-                border: none;
-                width: 20px;
-            }}
-            QComboBox::down-arrow {{
-                image: url({self.get_icon_path("arrow-down")});
-                width: 12px;
-                height: 12px;
-            }}
-            QComboBox::down-arrow:on {{
-                image: url({self.get_icon_path('arrow-up')});
-                width: 12px;
-                height: 12px;
-            }}
-            QComboBox::down-arrow:disabled {{
-                image: none;
-            }}
-            QComboBox QAbstractItemView::item:selected {{
-                border: none;
-                background-color: {self.get_color_str(ColorRole.TEXT_SELECTED)};
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-            }}
-            QComboBox QListView {{
-                background-color: {self.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-            }}
-
-            /* Spin boxes */
-            QSpinBox, QDoubleSpinBox {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 4px;
-                font-size: {base_font_size * zoom_factor}pt;
-            }}
-            QSpinBox:disabled, QDoubleSpinBox:disabled {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-            QSpinBox::up-button, QSpinBox::down-button,
-            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
-                border: none;
-                width: 20px;
-            }}
-            QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
-                image: url({self.get_icon_path('arrow-up')});
-                width: 12px;
-                height: 12px;
-            }}
-            QSpinBox::up-arrow:disabled, QSpinBox::up-arrow:off,
-            QDoubleSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:off {{
-                image: none;
-            }}
-            QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
-                image: url({self.get_icon_path('arrow-down')});
-                width: 12px;
-                height: 12px;
-            }}
-            QSpinBox::down-arrow:disabled, QSpinBox::down-arrow:off,
-            QDoubleSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:off {{
-                image: none;
-            }}
-
-            /* Buttons */
-            QPushButton {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 4px;
-                font-size: {base_font_size * zoom_factor}pt;
-            }}
-            QPushButton:hover {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-            }}
-            QPushButton:pressed {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-            }}
-            QPushButton:disabled {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-
-            /* Recommended (primary) buttons */
-            QPushButton[recommended="true"] {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
-                color: {self.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-            }}
-            QPushButton[recommended="true"]:hover {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
-            }}
-            QPushButton[recommended="true"]:pressed {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
-            }}
-            QPushButton[recommended="false"] {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
-                color: {self.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-            }}
-            QPushButton[recommended="false"]:hover {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
-            }}
-            QPushButton[recommended="false"]:pressed {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
-            }}
+            {self.get_text_input_stylesheet("QLineEdit")}
+            {self.get_text_input_stylesheet("#SettingsTextArea")}
+            {self.get_checkbox_stylesheet()}
+            {self.get_combo_box_stylesheet()}
+            {self.get_spin_box_stylesheet()}
+            {self.get_button_stylesheet()}
 
             QFrame#SettingsSeparator {{
                 background-color: {self.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
