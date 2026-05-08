@@ -10,7 +10,6 @@ from PySide6.QtGui import QResizeEvent
 from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
 from ai_transcript_conversation import AITranscriptConversation
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager

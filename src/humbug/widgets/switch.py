@@ -90,7 +90,7 @@ class Switch(QCheckBox):
 
     def _on_animation_value_changed(self, value: object) -> None:
         """Update the animated knob position."""
-        self._position = float(value)
+        self._position = float(value) if isinstance(value, (int, float)) else self._position
         self.update()
 
     def paintEvent(self, event: QEvent) -> None:
@@ -102,6 +102,7 @@ class Switch(QCheckBox):
 
         track_rect = self.rect().adjusted(1, 1, -1, -1)
         radius = track_rect.height() / 2
+        track_color: QColor | QLinearGradient
         if not self.isEnabled():
             track_color = self._track_disabled_color
 
