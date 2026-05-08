@@ -1,7 +1,7 @@
 """Reusable switch widget."""
 
 from PySide6.QtCore import QEasingCurve, QEvent, QPoint, QSize, Qt, QVariantAnimation
-from PySide6.QtGui import QColor, QFont, QMouseEvent, QPainter
+from PySide6.QtGui import QColor, QFont, QLinearGradient, QMouseEvent, QPainter
 from PySide6.QtWidgets import QCheckBox, QWidget
 
 from humbug.color_role import ColorRole
@@ -15,6 +15,7 @@ class Switch(QCheckBox):
         """Initialize the switch."""
         super().__init__(parent)
         self._track_on_color: QColor
+        self._track_on_end_color: QColor
         self._track_off_color: QColor
         self._track_border_color: QColor
         self._knob_color: QColor
@@ -40,7 +41,8 @@ class Switch(QCheckBox):
     def apply_style(self, style_manager: StyleManager) -> None:
         """Apply design-system colors and metrics."""
         # TODO: Should we make this the default approach everywhere we use apply_style?
-        self._track_on_color = QColor(style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED))
+        self._track_on_color = QColor("#375f8c")
+        self._track_on_end_color = QColor("#5a4f93")
         self._track_off_color = QColor(style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND))
         self._track_border_color = QColor(style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER))
         self._knob_color = QColor(style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED))
@@ -94,7 +96,14 @@ class Switch(QCheckBox):
 
         track_rect = self.rect().adjusted(1, 1, -1, -1)
         radius = track_rect.height() / 2
-        track_color = self._track_on_color if self.isChecked() else self._track_off_color
+        if self.isChecked():
+            track_color = QLinearGradient(track_rect.topLeft(), track_rect.topRight())
+            track_color.setColorAt(0.0, self._track_on_color)
+            track_color.setColorAt(1.0, self._track_on_end_color)
+
+        else:
+            track_color = self._track_off_color
+
         text_color = self._text_on_color if self.isChecked() else self._text_off_color
 
         painter.setPen(self._track_border_color)
