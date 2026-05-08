@@ -44,6 +44,9 @@ class MindspaceFilesView(QWidget):
         super().__init__(parent)
 
         self._style_manager = StyleManager()
+        self._last_color_mode = self._style_manager.color_mode()
+        self._last_zoom = self._style_manager.zoom_factor()
+        self._last_base_font = self._style_manager.base_font_size()
         self._logger = logging.getLogger("MindspaceFilesView")
         self._mindspace_manager = MindspaceManager()
         self._vcs_poller = MindspaceVCSPoller()
@@ -1070,24 +1073,73 @@ class MindspaceFilesView(QWidget):
         self._header.set_title(self._language_manager.strings().mindspace_files)
         self.apply_style()
 
+    def _collect_expanded_file_paths(self) -> list[str]:
+        """Return file paths of all currently expanded nodes."""
+        paths: list[str] = []
+
+        def _collect(filter_parent: QModelIndex) -> None:
+            for row in range(self._filter_model.rowCount(filter_parent)):
+                fi = self._filter_model.index(row, 0, filter_parent)
+                if self._tree_view.isExpanded(fi):
+                    si = self._filter_model.mapToSource(fi)
+                    path = self._fs_model.filePath(si)
+                    if path:
+                        paths.append(path)
+                _collect(fi)
+
+        _collect(QModelIndex())
+        return paths
+
+    def _restore_expanded_file_paths(self, paths: list[str]) -> None:
+        """Re-expand nodes at the given file paths."""
+        for path in paths:
+            si = self._fs_model.index(path)
+            if not si.isValid():
+                continue
+            fi = self._filter_model.mapFromSource(si)
+            if fi.isValid():
+                self._tree_view.expand(fi)
+
     def apply_style(self) -> None:
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
+        current_mode = self._style_manager.color_mode()
 
-        # Apply style to header
         self._header.apply_style()
-
         self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)
-        self._icon_provider.update_icons()
-        self._delegate.update_icons()
-        self._fs_model.setIconProvider(self._icon_provider)
-        file_icon_size = round(16 * zoom_factor)
-        # Update font size for tree
-        font = self.font()
-        font.setPointSizeF(base_font_size * zoom_factor)
-        self.setFont(font)
-        self._bc_container.apply_tree_style(file_icon_size, font)
+
+        mode_changed = current_mode != self._last_color_mode
+        geometry_changed = (
+            zoom_factor != self._last_zoom or base_font_size != self._last_base_font
+        )
+
+        if mode_changed or geometry_changed:
+            self._icon_provider.update_icons()
+            self._delegate.update_icons()
+            self._last_color_mode = current_mode
+            self._last_zoom = zoom_factor
+            self._last_base_font = base_font_size
+
+        if mode_changed:
+            # Color mode flipped (DARK↔LIGHT) — QFileSystemModel caches icons per
+            # mode so we must flush its cache.  setIconProvider triggers a model
+            # reset internally so save and restore expansion with updates suppressed.
+            expanded = self._collect_expanded_file_paths()
+            self.setUpdatesEnabled(False)
+            try:
+                self._fs_model.setIconProvider(self._icon_provider)
+                self._restore_expanded_file_paths(expanded)
+            finally:
+                self.setUpdatesEnabled(True)
+
+        if geometry_changed:
+            file_icon_size = round(16 * zoom_factor)
+            font = self.font()
+            font.setPointSizeF(base_font_size * zoom_factor)
+            self.setFont(font)
+            self._bc_container.apply_tree_style(file_icon_size, font)
+
         self.setStyleSheet(build_tree_pane_stylesheet(
             self._style_manager,
             "MindspaceFilesView",

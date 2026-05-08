@@ -27,6 +27,7 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         self._conversations_root = ""
         self._conversation_sort_mode = self.SortMode.CREATION_TIME  # Default to creation time
         self._user_manager = UserManager()
+        self._file_sort_order = self._user_manager.settings().file_sort_order
         self._user_manager.settings_changed.connect(self._on_user_settings_changed)
 
         # Cache for file creation times: {file_path: (cached_timestamp, file_mtime)}
@@ -34,7 +35,12 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
 
     def _on_user_settings_changed(self) -> None:
         """Handle user settings changes by re-sorting."""
-        self.invalidate()  # This triggers a resort
+        file_sort_order = self._user_manager.settings().file_sort_order
+        if file_sort_order == self._file_sort_order:
+            return
+
+        self._file_sort_order = file_sort_order
+        self.invalidate()
 
     def set_conversations_root(self, path: str) -> None:
         """Set the conversations root path for filtering."""

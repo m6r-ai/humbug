@@ -383,6 +383,7 @@ class MainWindow(QMainWindow):
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._on_style_changed)
+        self._mindspace_thaw_pending = False
 
         # Create a timer that fires every 50ms to keep our menu states correct
         self._menu_timer = QTimer()
@@ -684,6 +685,22 @@ class MainWindow(QMainWindow):
         theme_action_group.addAction(dark_action)
         theme_menu.addAction(dark_action)
         self._theme_actions[ColorMode.DARK] = dark_action
+
+        color_blind_action = QAction(strings.theme_color_blind, self)
+        color_blind_action.setCheckable(True)
+        color_blind_action.setChecked(self._style_manager.user_color_mode() == ColorMode.COLOR_BLIND)
+        color_blind_action.triggered.connect(lambda: self._set_color_mode(ColorMode.COLOR_BLIND))
+        theme_action_group.addAction(color_blind_action)
+        theme_menu.addAction(color_blind_action)
+        self._theme_actions[ColorMode.COLOR_BLIND] = color_blind_action
+
+        custom_action = QAction(strings.theme_custom, self)
+        custom_action.setCheckable(True)
+        custom_action.setChecked(self._style_manager.user_color_mode() == ColorMode.CUSTOM)
+        custom_action.triggered.connect(lambda: self._set_color_mode(ColorMode.CUSTOM))
+        theme_action_group.addAction(custom_action)
+        theme_menu.addAction(custom_action)
+        self._theme_actions[ColorMode.CUSTOM] = custom_action
 
         return theme_menu
 
@@ -1196,17 +1213,31 @@ class MainWindow(QMainWindow):
 
     def _on_style_changed(self) -> None:
         """Handle style changes by updating all styled widgets."""
-        # Apply styles to individual top-level widgets
+        # Freeze the mindspace subtree on the first call.  Multiple style_changed
+        # emissions can fire synchronously in one user action (e.g. settings Apply
+        # triggers set_color_mode + apply_custom_colors, each emitting the signal).
+        # Thawing immediately after each call would let an intermediate repaint
+        # slip through between emissions.  Instead we freeze once here and
+        # schedule a single deferred thaw for the next event-loop tick, so all
+        # synchronous emissions share one freeze window and produce one repaint.
+        if not self._mindspace_thaw_pending:
+            self._mindspace_view.setUpdatesEnabled(False)
+            self._mindspace_thaw_pending = True
+            QTimer.singleShot(0, self._thaw_mindspace)
+
         self._apply_menubar_style()
         self._apply_all_menu_styles()
         self._apply_statusbar_style()
         if self._window_controls is not None:
             self._window_controls.apply_style()
         self._apply_splitter_style()
-
-        # Apply styles to the mindspace view and column manager
         self._mindspace_view.apply_style()
         self._column_manager.apply_style()
+
+    def _thaw_mindspace(self) -> None:
+        """Re-enable mindspace repaints after all synchronous style updates settle."""
+        self._mindspace_thaw_pending = False
+        self._mindspace_view.setUpdatesEnabled(True)
 
     def _apply_menubar_style(self) -> None:
         """Apply styling to menu bar."""

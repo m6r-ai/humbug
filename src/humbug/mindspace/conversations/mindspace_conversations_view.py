@@ -5,6 +5,7 @@ import os
 import shutil
 
 from PySide6.QtCore import Signal, QModelIndex, Qt, QPoint, QTimer
+from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QMenu
 )
@@ -43,6 +44,9 @@ class MindspaceConversationsView(QWidget):
         super().__init__(parent)
 
         self._style_manager = StyleManager()
+        self._last_color_mode = self._style_manager.color_mode()
+        self._last_zoom = self._style_manager.zoom_factor()
+        self._last_base_font = self._style_manager.base_font_size()
         self._logger = logging.getLogger("MindspaceConversationsView")
         self._mindspace_manager = MindspaceManager()
 
@@ -796,7 +800,16 @@ class MindspaceConversationsView(QWidget):
         if self._selected_path:
             index = self._dag_model.index_for_path(self._selected_path)
             if index.isValid():
-                self._tree_view.setCurrentIndex(index)
+                # Use the selection model directly instead of setCurrentIndex().
+                # setCurrentIndex() calls scrollTo() which expands every ancestor
+                # to make the item visible — undoing any folders the user
+                # deliberately collapsed.  Setting via the selection model
+                # updates the current item and selection without any scrolling
+                # or ancestor expansion.
+                self._tree_view.selectionModel().setCurrentIndex(
+                    index,
+                    QItemSelectionModel.SelectionFlag.ClearAndSelect
+                )
 
         if self._pending_new_item:
             _parent_path, is_folder, temp_path = self._pending_new_item
@@ -1206,22 +1219,35 @@ class MindspaceConversationsView(QWidget):
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
+        color_mode = self._style_manager.color_mode()
 
-        # Apply style to header
         self._header.apply_style()
-
         self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)
-        self._icon_provider.update_icons()
-        self._delegate.update_icons()
-        # Invalidate icon cache in model after icon provider refresh
-        self._dag_model.beginResetModel()
-        self._dag_model.endResetModel()
-        file_icon_size = round(16 * zoom_factor)
-        # Update font size for tree
-        font = self.font()
-        font.setPointSizeF(base_font_size * zoom_factor)
-        self.setFont(font)
-        self._bc_container.apply_tree_style(file_icon_size, font)
+
+        mode_changed = color_mode != self._last_color_mode
+        geometry_changed = (
+            zoom_factor != self._last_zoom or base_font_size != self._last_base_font
+        )
+
+        if mode_changed or geometry_changed:
+            self._icon_provider.update_icons()
+            self._delegate.update_icons()
+            self._last_color_mode = color_mode
+            self._last_zoom = zoom_factor
+            self._last_base_font = base_font_size
+
+        if mode_changed:
+            # Icons changed — ask the view to re-query item decoration data.
+            self._dag_model.layoutAboutToBeChanged.emit()
+            self._dag_model.layoutChanged.emit()
+
+        if geometry_changed:
+            file_icon_size = round(16 * zoom_factor)
+            font = self.font()
+            font.setPointSizeF(base_font_size * zoom_factor)
+            self.setFont(font)
+            self._bc_container.apply_tree_style(file_icon_size, font)
+
         self.setStyleSheet(build_tree_pane_stylesheet(
             self._style_manager,
             "MindspaceConversationsView",

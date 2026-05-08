@@ -18,11 +18,17 @@ class MindspaceFilesModel(QSortFilterProxyModel):
         super().__init__(parent)
         self._mindspace_root = ""
         self._user_manager = UserManager()
+        self._file_sort_order = self._user_manager.settings().file_sort_order
         self._user_manager.settings_changed.connect(self._on_user_settings_changed)
 
     def _on_user_settings_changed(self) -> None:
         """Handle user settings changes by re-sorting."""
-        self.invalidate()  # This triggers a resort
+        file_sort_order = self._user_manager.settings().file_sort_order
+        if file_sort_order == self._file_sort_order:
+            return
+
+        self._file_sort_order = file_sort_order
+        self.invalidate()
 
     def set_mindspace_root(self, path: str) -> None:
         """Set the mindspace root path for relative path calculations."""

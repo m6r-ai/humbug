@@ -302,6 +302,8 @@ class SettingsDialog(QDialog):
             (strings.theme_system, ColorMode.SYSTEM),
             (strings.theme_light, ColorMode.LIGHT),
             (strings.theme_dark, ColorMode.DARK),
+            (strings.theme_color_blind, ColorMode.COLOR_BLIND),
+            (strings.theme_custom, ColorMode.CUSTOM),
         ])
 
         self._customize_colors_btn = QPushButton("Customize Colors...")
@@ -751,22 +753,7 @@ class SettingsDialog(QDialog):
 
     def _on_value_changed(self) -> None:
         """Enable Apply when any setting has been modified."""
-        if self._current_user_settings is None:
-            return
-
-        modified = any(
-            c.is_modified()
-            for c in [
-                self._display_container,
-                self._file_access_container,
-                self._ai_backends_container,
-                self._ai_model_container,
-                self._tools_container,
-                self._editor_container,
-                self._terminal_container,
-            ]
-        )
-        self.apply_button.setEnabled(modified)
+        self.apply_button.setEnabled(self._has_modified_settings())
 
     def _handle_external_access_enabled(self) -> None:
         """Enable or disable external file access text areas."""
@@ -815,7 +802,8 @@ class SettingsDialog(QDialog):
 
     def _on_customize_colors(self) -> None:
         """Open the color picker dialog and apply returned theme settings."""
-        dialog = ThemeColorPickerDialog(self)
+        current_mode: ColorMode = self._theme_combo.get_value()
+        dialog = ThemeColorPickerDialog(initial_mode=current_mode, parent=self)
         dialog.theme_settings_changed.connect(self._on_color_picker_applied)
         dialog.exec()
 
@@ -823,16 +811,17 @@ class SettingsDialog(QDialog):
         """Receive theme mode + custom colors from the color picker dialog."""
         self._theme_combo.set_value(mode)
         self._pending_custom_colors = custom_colors
-        self.apply_button.setEnabled(True)
+        self._on_value_changed()
 
     def _on_apply_clicked(self) -> None:
         """Apply all settings changes to both managers."""
         user_settings = self.get_user_settings()
-        self._current_user_settings = user_settings
-        self.user_settings_changed.emit(user_settings)
+        if user_settings != self._current_user_settings:
+            self._current_user_settings = user_settings
+            self.user_settings_changed.emit(user_settings)
 
         mindspace_settings = self.get_mindspace_settings()
-        if mindspace_settings is not None:
+        if mindspace_settings is not None and mindspace_settings != self._current_mindspace_settings:
             self._current_mindspace_settings = mindspace_settings
             self._tool_manager.set_tool_enabled_states(mindspace_settings.enabled_tools)
             self.mindspace_settings_changed.emit(mindspace_settings)
@@ -842,7 +831,8 @@ class SettingsDialog(QDialog):
 
     def _on_ok_clicked(self) -> None:
         """Apply settings then close."""
-        self._on_apply_clicked()
+        if self._has_modified_settings():
+            self._on_apply_clicked()
         self.accept()
 
     def reject(self) -> None:
@@ -921,6 +911,8 @@ class SettingsDialog(QDialog):
             (strings.theme_system, ColorMode.SYSTEM),
             (strings.theme_light, ColorMode.LIGHT),
             (strings.theme_dark, ColorMode.DARK),
+            (strings.theme_color_blind, ColorMode.COLOR_BLIND),
+            (strings.theme_custom, ColorMode.CUSTOM),
         ])
         self._theme_combo.set_value(current_theme)
 
@@ -1059,6 +1051,20 @@ class SettingsDialog(QDialog):
         ]:
             container.reset_modified_state()
 
+    def _has_modified_settings(self) -> bool:
+        """Return whether any user or mindspace setting differs from the applied state."""
+        if self._current_user_settings is None:
+            return False
+
+        if self.get_user_settings() != self._current_user_settings:
+            return True
+
+        mindspace_settings = self.get_mindspace_settings()
+        return (
+            mindspace_settings is not None
+            and mindspace_settings != self._current_mindspace_settings
+        )
+
     @staticmethod
     def _copy_user_settings(settings: UserSettings) -> UserSettings:
         """Return a shallow-enough copy of UserSettings for change detection."""
@@ -1071,6 +1077,7 @@ class SettingsDialog(QDialog):
             font_size=settings.font_size,
             font_ligatures=settings.font_ligatures,
             theme=settings.theme,
+            custom_colors=dict(settings.custom_colors),
             file_sort_order=settings.file_sort_order,
             allow_external_file_access=settings.allow_external_file_access,
             external_file_allowlist=list(settings.external_file_allowlist),
