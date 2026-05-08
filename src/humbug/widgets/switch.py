@@ -18,9 +18,12 @@ class Switch(QCheckBox):
         self._track_on_end_color: QColor
         self._track_off_color: QColor
         self._track_border_color: QColor
+        self._track_disabled_color: QColor
         self._knob_color: QColor
+        self._knob_disabled_color: QColor
         self._text_on_color: QColor
         self._text_off_color: QColor
+        self._text_disabled_color: QColor
         self._on_label = "\u23fd"
         self._off_label = "\u23fc"
         self._knob_inset = 3
@@ -45,9 +48,12 @@ class Switch(QCheckBox):
         self._track_on_end_color = QColor("#5a4f93")
         self._track_off_color = QColor(style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND))
         self._track_border_color = QColor(style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER))
+        self._track_disabled_color = QColor(style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED))
         self._knob_color = QColor(style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED))
+        self._knob_disabled_color = QColor(style_manager.get_color_str(ColorRole.TEXT_DISABLED))
         self._text_on_color = QColor(style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED))
         self._text_off_color = QColor(style_manager.get_color_str(ColorRole.TEXT_PRIMARY))
+        self._text_disabled_color = QColor(style_manager.get_color_str(ColorRole.TEXT_DISABLED))
         self._knob_inset = style_manager.switch_knob_inset()
         self.setFixedSize(style_manager.switch_width(), style_manager.switch_height())
         self.update()
@@ -96,7 +102,10 @@ class Switch(QCheckBox):
 
         track_rect = self.rect().adjusted(1, 1, -1, -1)
         radius = track_rect.height() / 2
-        if self.isChecked():
+        if not self.isEnabled():
+            track_color = self._track_disabled_color
+
+        elif self.isChecked():
             track_color = QLinearGradient(track_rect.topLeft(), track_rect.topRight())
             track_color.setColorAt(0.0, self._track_on_color)
             track_color.setColorAt(1.0, self._track_on_end_color)
@@ -104,7 +113,11 @@ class Switch(QCheckBox):
         else:
             track_color = self._track_off_color
 
-        text_color = self._text_on_color if self.isChecked() else self._text_off_color
+        if not self.isEnabled():
+            text_color = self._text_disabled_color
+
+        else:
+            text_color = self._text_on_color if self.isChecked() else self._text_off_color
 
         painter.setPen(self._track_border_color)
         painter.setBrush(track_color)
@@ -117,7 +130,7 @@ class Switch(QCheckBox):
         knob_x = round(knob_start + ((knob_end - knob_start) * self._position))
 
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(self._knob_color)
+        painter.setBrush(self._knob_disabled_color if not self.isEnabled() else self._knob_color)
         painter.drawEllipse(knob_x, knob_y, knob_size, knob_size)
 
         label = self._on_label if self.isChecked() else self._off_label
