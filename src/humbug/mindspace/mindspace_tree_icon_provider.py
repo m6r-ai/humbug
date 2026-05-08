@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QFileIconProvider
 from PySide6.QtSvg import QSvgRenderer
 
 from humbug.color_role import ColorRole
-from humbug.icons.humbug_icon_pack import HUMBUG_ICON_PACK
+from humbug.icons.icon_pack import MINDSPACE_ICON_PACK
 from humbug.style_manager import StyleManager, ColorMode
 
 
@@ -27,7 +27,7 @@ class MindspaceTreeIconProvider(QFileIconProvider):
 
     def _initialize_icons(self) -> None:
         """Create and cache standard icons."""
-        self._svg_paths = HUMBUG_ICON_PACK
+        self._svg_paths = MINDSPACE_ICON_PACK
 
         # Map file extensions to icon types and accent colors
         self._extension_map = {

@@ -1,6 +1,6 @@
 """Shared SVG icon markup used by the Humbug UI."""
 
-from typing import Final
+from typing import Final, Dict, Tuple
 
 
 def app_icon_svg(bg_color: str, text_color: str) -> str:
@@ -18,7 +18,7 @@ def update_icon_svg(update_color: str) -> str:
     return THEME_ICON_PACK["update"].format(update_color=update_color)
 
 
-def active_inactive_icon_names() -> tuple[str, ...]:
+def active_inactive_icon_names() -> Tuple[str, ...]:
     """Return the themed icons generated for active, inactive, and bright states."""
     return ACTIVE_INACTIVE_THEME_ICONS
 
@@ -39,7 +39,7 @@ APP_ICON_TEMPLATE: Final[str] = '''
 '''
 
 
-ACTIVE_INACTIVE_THEME_ICONS: Final[tuple[str, ...]] = (
+ACTIVE_INACTIVE_THEME_ICONS: Final[Tuple[str, ...]] = (
     "close",
     "conversation",
     "editor",
@@ -53,7 +53,7 @@ ACTIVE_INACTIVE_THEME_ICONS: Final[tuple[str, ...]] = (
 )
 
 
-THEME_ICON_PACK: Final[dict[str, str]] = {
+THEME_ICON_PACK: Final[Dict[str, str]] = {
     "arrow-right": '''
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
             <path stroke="{color}" stroke-width="6" fill="none" d="M24,16 L40,32 L24,48"/>
@@ -353,7 +353,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
 }
 
 
-HUMBUG_ICON_PACK: Final[dict[str, str]] = {
+MINDSPACE_ICON_PACK: Final[dict[str, str]] = {
     "folder": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
             <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 85 L10 85 L10 25"
