@@ -264,6 +264,11 @@ class ConversationInput(ConversationMessage):
         if self._blueprint_toggle:
             self._blueprint_toggle.setChecked(enabled)
 
+    def set_has_messages(self, has_messages: bool) -> None:
+        """Show or hide the blueprint toggle based on whether the conversation has messages."""
+        if self._blueprint_toggle_container:
+            self._blueprint_toggle_container.setVisible(not has_messages)
+
     def add_attachment(self, filename: str, content: str) -> None:
         """Add a file attachment and show it in the attachments bar."""
         self._attachments.append((filename, content))
