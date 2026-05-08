@@ -16,7 +16,7 @@ from PySide6.QtGui import QTextCharFormat, QFontDatabase, QColor, QFontMetricsF,
 from syntax import TokenType
 
 from humbug.color_role import ColorRole
-from humbug.icons.humbug_icon_pack import active_inactive_icon_names, app_icon_svg, theme_icon_svg, update_icon_svg
+from humbug.icons.icon_pack import active_inactive_icon_names, app_icon_svg, theme_icon_svg, update_icon_svg
 
 
 class ColorMode(Enum):
