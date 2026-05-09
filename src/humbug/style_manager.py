@@ -65,7 +65,7 @@ class StyleManager(QObject):
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
             self._color_blind_colors: Dict[ColorRole, str] = self._initialize_color_blind_colors()
             self._custom_colors: Dict[ColorRole, Dict[ColorMode, str]] = {}
-            self._active_preset_name: str | None = "None"
+            self._active_preset_name: str | None = "Default"
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
             self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
             self._highlights_version: int = 0

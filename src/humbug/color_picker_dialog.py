@@ -8,8 +8,8 @@ from PySide6.QtWidgets import (
     QSplitter, QScrollArea, QColorDialog, QSizePolicy, QStyledItemDelegate,
     QStyleOptionViewItem
 )
-from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSize, Signal, Qt, QTimer
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtCore import QEvent, QModelIndex, QPersistentModelIndex, QRectF, QSize, Signal, Qt, QTimer
+from PySide6.QtGui import QColor, QFont, QPainter, QPen
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -18,15 +18,15 @@ from humbug.style_manager import StyleManager, ColorMode
 
 # Preset themes: (name, gradient_start, gradient_end, {role_name: {mode_name: hex}})
 # gradient_start / gradient_end are purely visual hints for the preset button.
-# An empty colors dict means "clear all overrides" (the None/default preset).
+# An empty colors dict means "clear all overrides" (the Default preset).
 _PRESETS: List[Tuple[str, str, str, Dict[str, Dict[str, str]]]] = [
     (
-        "None",
+        "Default",
         "#1c1c1c", "#404040",
         {},   # empty = clear all custom colors, no mode switch
     ),
     (
-        "Ocean Breeze",
+        "Enterprise Dark",
         "#041428", "#00bcd4",
         {
             "BACKGROUND_PRIMARY":              {"DARK": "#041428"},
@@ -55,37 +55,8 @@ _PRESETS: List[Tuple[str, str, str, Dict[str, Dict[str, str]]]] = [
         },
     ),
     (
-        "Sunset Glow",
+        "Secure Green",
         "#1a0828", "#ff6d3a",
-        {
-            "BACKGROUND_PRIMARY":              {"DARK": "#1a0828"},
-            "BACKGROUND_SECONDARY":            {"DARK": "#240c38"},
-            "BACKGROUND_DIALOG":               {"DARK": "#2c1040"},
-            "TAB_BAR_BACKGROUND":              {"DARK": "#12061c"},
-            "TAB_BACKGROUND_ACTIVE":           {"DARK": "#5c1a38"},
-            "TAB_BACKGROUND_INACTIVE":         {"DARK": "#240c38"},
-            "TAB_BORDER_ACTIVE":               {"DARK": "#ff6d3a"},
-            "MINDSPACE_BACKGROUND":            {"DARK": "#0e0418"},
-            "MINDSPACE_TOOL_RAIL_BACKGROUND":  {"DARK": "#0a0312"},
-            "MINDSPACE_HEADING":               {"DARK": "#ff8c5a"},
-            "EDIT_BOX_BACKGROUND":             {"DARK": "#240c38"},
-            "EDIT_BOX_BORDER":                 {"DARK": "#5c1a38"},
-            "BUTTON_BACKGROUND":               {"DARK": "#3c1048"},
-            "BUTTON_BACKGROUND_RECOMMENDED":   {"DARK": "#7c2820"},
-            "BUTTON_BACKGROUND_DESTRUCTIVE":   {"DARK": "#9e1c1c"},
-            "SWITCH_TRACK_ON":                 {"DARK": "#b84a24"},
-            "SWITCH_TRACK_ON_END":             {"DARK": "#ff6d3a"},
-            "SWITCH_TRACK_OFF":                {"DARK": "#3c1048"},
-            "SWITCH_TRACK_BORDER":             {"DARK": "#ff8c5a"},
-            "SWITCH_KNOB":                     {"DARK": "#fff0e4"},
-            "TEXT_PRIMARY":                    {"DARK": "#ffd4b8"},
-            "TEXT_BRIGHT":                     {"DARK": "#fff0e4"},
-            "TEXT_DISABLED":                   {"DARK": "#7a4840"},
-        },
-    ),
-    (
-        "Emerald Forest",
-        "#041408", "#4caf50",
         {
             "BACKGROUND_PRIMARY":              {"DARK": "#041408"},
             "BACKGROUND_SECONDARY":            {"DARK": "#081e10"},
@@ -113,90 +84,90 @@ _PRESETS: List[Tuple[str, str, str, Dict[str, Dict[str, str]]]] = [
         },
     ),
     (
-        "Midnight Violet",
-        "#08061a", "#7c4dff",
+        "Midnight Blue",
+        "#061428", "#4b8fe8",
         {
-            "BACKGROUND_PRIMARY":              {"DARK": "#08061a"},
-            "BACKGROUND_SECONDARY":            {"DARK": "#0e0a28"},
-            "BACKGROUND_DIALOG":               {"DARK": "#120e30"},
-            "TAB_BAR_BACKGROUND":              {"DARK": "#060414"},
-            "TAB_BACKGROUND_ACTIVE":           {"DARK": "#241848"},
-            "TAB_BACKGROUND_INACTIVE":         {"DARK": "#0e0a28"},
-            "TAB_BORDER_ACTIVE":               {"DARK": "#7c4dff"},
-            "MINDSPACE_BACKGROUND":            {"DARK": "#060412"},
-            "MINDSPACE_TOOL_RAIL_BACKGROUND":  {"DARK": "#04030e"},
-            "MINDSPACE_HEADING":               {"DARK": "#9c6dff"},
-            "EDIT_BOX_BACKGROUND":             {"DARK": "#0e0a28"},
-            "EDIT_BOX_BORDER":                 {"DARK": "#241848"},
-            "BUTTON_BACKGROUND":               {"DARK": "#180e40"},
-            "BUTTON_BACKGROUND_RECOMMENDED":   {"DARK": "#3828a0"},
+            "BACKGROUND_PRIMARY":              {"DARK": "#061428"},
+            "BACKGROUND_SECONDARY":            {"DARK": "#0c1f3a"},
+            "BACKGROUND_DIALOG":               {"DARK": "#102642"},
+            "TAB_BAR_BACKGROUND":              {"DARK": "#04101f"},
+            "TAB_BACKGROUND_ACTIVE":           {"DARK": "#113765"},
+            "TAB_BACKGROUND_INACTIVE":         {"DARK": "#0c1f3a"},
+            "TAB_BORDER_ACTIVE":               {"DARK": "#4b8fe8"},
+            "MINDSPACE_BACKGROUND":            {"DARK": "#030b16"},
+            "MINDSPACE_TOOL_RAIL_BACKGROUND":  {"DARK": "#020810"},
+            "MINDSPACE_HEADING":               {"DARK": "#6aa6f8"},
+            "EDIT_BOX_BACKGROUND":             {"DARK": "#0c1f3a"},
+            "EDIT_BOX_BORDER":                 {"DARK": "#113765"},
+            "BUTTON_BACKGROUND":               {"DARK": "#102b4a"},
+            "BUTTON_BACKGROUND_RECOMMENDED":   {"DARK": "#1b5790"},
             "BUTTON_BACKGROUND_DESTRUCTIVE":   {"DARK": "#8b1c1c"},
-            "SWITCH_TRACK_ON":                 {"DARK": "#4d36bd"},
-            "SWITCH_TRACK_ON_END":             {"DARK": "#7c4dff"},
-            "SWITCH_TRACK_OFF":                {"DARK": "#180e40"},
-            "SWITCH_TRACK_BORDER":             {"DARK": "#9c6dff"},
-            "SWITCH_KNOB":                     {"DARK": "#f0eaff"},
-            "TEXT_PRIMARY":                    {"DARK": "#d8c8ff"},
-            "TEXT_BRIGHT":                     {"DARK": "#f0eaff"},
-            "TEXT_DISABLED":                   {"DARK": "#504880"},
+            "SWITCH_TRACK_ON":                 {"DARK": "#2b6db8"},
+            "SWITCH_TRACK_ON_END":             {"DARK": "#4b8fe8"},
+            "SWITCH_TRACK_OFF":                {"DARK": "#102b4a"},
+            "SWITCH_TRACK_BORDER":             {"DARK": "#6aa6f8"},
+            "SWITCH_KNOB":                     {"DARK": "#eef6ff"},
+            "TEXT_PRIMARY":                    {"DARK": "#c4dcf8"},
+            "TEXT_BRIGHT":                     {"DARK": "#eef6ff"},
+            "TEXT_DISABLED":                   {"DARK": "#45627f"},
         },
     ),
     (
-        "Cherry Blossom",
-        "#18060e", "#f06292",
+        "Enterprise Light",
+        "#f7f9fc", "#4b89dc",
         {
-            "BACKGROUND_PRIMARY":              {"DARK": "#18060e"},
-            "BACKGROUND_SECONDARY":            {"DARK": "#240c16"},
-            "BACKGROUND_DIALOG":               {"DARK": "#2c101c"},
-            "TAB_BAR_BACKGROUND":              {"DARK": "#10040a"},
-            "TAB_BACKGROUND_ACTIVE":           {"DARK": "#5c1830"},
-            "TAB_BACKGROUND_INACTIVE":         {"DARK": "#240c16"},
-            "TAB_BORDER_ACTIVE":               {"DARK": "#f06292"},
-            "MINDSPACE_BACKGROUND":            {"DARK": "#0c0408"},
-            "MINDSPACE_TOOL_RAIL_BACKGROUND":  {"DARK": "#0a0306"},
-            "MINDSPACE_HEADING":               {"DARK": "#f48fb1"},
-            "EDIT_BOX_BACKGROUND":             {"DARK": "#240c16"},
-            "EDIT_BOX_BORDER":                 {"DARK": "#5c1830"},
-            "BUTTON_BACKGROUND":               {"DARK": "#3c1024"},
-            "BUTTON_BACKGROUND_RECOMMENDED":   {"DARK": "#7c2048"},
-            "BUTTON_BACKGROUND_DESTRUCTIVE":   {"DARK": "#9e1c1c"},
-            "SWITCH_TRACK_ON":                 {"DARK": "#b83666"},
-            "SWITCH_TRACK_ON_END":             {"DARK": "#f06292"},
-            "SWITCH_TRACK_OFF":                {"DARK": "#3c1024"},
-            "SWITCH_TRACK_BORDER":             {"DARK": "#f48fb1"},
-            "SWITCH_KNOB":                     {"DARK": "#fff0f5"},
-            "TEXT_PRIMARY":                    {"DARK": "#ffd8e8"},
-            "TEXT_BRIGHT":                     {"DARK": "#fff0f5"},
-            "TEXT_DISABLED":                   {"DARK": "#7a4060"},
+            "BACKGROUND_PRIMARY":              {"DARK": "#f7f9fc"},
+            "BACKGROUND_SECONDARY":            {"DARK": "#e7edf5"},
+            "BACKGROUND_DIALOG":               {"DARK": "#ffffff"},
+            "TAB_BAR_BACKGROUND":              {"DARK": "#dbe4f0"},
+            "TAB_BACKGROUND_ACTIVE":           {"DARK": "#ffffff"},
+            "TAB_BACKGROUND_INACTIVE":         {"DARK": "#e7edf5"},
+            "TAB_BORDER_ACTIVE":               {"DARK": "#4b89dc"},
+            "MINDSPACE_BACKGROUND":            {"DARK": "#eef3f9"},
+            "MINDSPACE_TOOL_RAIL_BACKGROUND":  {"DARK": "#dce6f2"},
+            "MINDSPACE_HEADING":               {"DARK": "#204a7a"},
+            "EDIT_BOX_BACKGROUND":             {"DARK": "#ffffff"},
+            "EDIT_BOX_BORDER":                 {"DARK": "#b9c9dc"},
+            "BUTTON_BACKGROUND":               {"DARK": "#e3ebf5"},
+            "BUTTON_BACKGROUND_RECOMMENDED":   {"DARK": "#4b89dc"},
+            "BUTTON_BACKGROUND_DESTRUCTIVE":   {"DARK": "#c94a3a"},
+            "SWITCH_TRACK_ON":                 {"DARK": "#4b89dc"},
+            "SWITCH_TRACK_ON_END":             {"DARK": "#30a46c"},
+            "SWITCH_TRACK_OFF":                {"DARK": "#d7e0eb"},
+            "SWITCH_TRACK_BORDER":             {"DARK": "#9eb2c8"},
+            "SWITCH_KNOB":                     {"DARK": "#ffffff"},
+            "TEXT_PRIMARY":                    {"DARK": "#202a35"},
+            "TEXT_BRIGHT":                     {"DARK": "#0d1720"},
+            "TEXT_DISABLED":                   {"DARK": "#6d7c8b"},
         },
     ),
     (
-        "Arctic Dawn",
-        "#060a12", "#64b5f6",
+        "High Contrast",
+        "#050505", "#f6d400",
         {
-            "BACKGROUND_PRIMARY":              {"DARK": "#060a12"},
-            "BACKGROUND_SECONDARY":            {"DARK": "#0c1420"},
-            "BACKGROUND_DIALOG":               {"DARK": "#101a28"},
-            "TAB_BAR_BACKGROUND":              {"DARK": "#04080e"},
-            "TAB_BACKGROUND_ACTIVE":           {"DARK": "#183048"},
-            "TAB_BACKGROUND_INACTIVE":         {"DARK": "#0c1420"},
-            "TAB_BORDER_ACTIVE":               {"DARK": "#64b5f6"},
-            "MINDSPACE_BACKGROUND":            {"DARK": "#04060c"},
-            "MINDSPACE_TOOL_RAIL_BACKGROUND":  {"DARK": "#030509"},
-            "MINDSPACE_HEADING":               {"DARK": "#82c8f8"},
-            "EDIT_BOX_BACKGROUND":             {"DARK": "#0c1420"},
-            "EDIT_BOX_BORDER":                 {"DARK": "#183048"},
-            "BUTTON_BACKGROUND":               {"DARK": "#102030"},
-            "BUTTON_BACKGROUND_RECOMMENDED":   {"DARK": "#1c4a6c"},
-            "BUTTON_BACKGROUND_DESTRUCTIVE":   {"DARK": "#8b1c1c"},
-            "SWITCH_TRACK_ON":                 {"DARK": "#2c6f9e"},
-            "SWITCH_TRACK_ON_END":             {"DARK": "#64b5f6"},
-            "SWITCH_TRACK_OFF":                {"DARK": "#102030"},
-            "SWITCH_TRACK_BORDER":             {"DARK": "#82c8f8"},
-            "SWITCH_KNOB":                     {"DARK": "#e4f2ff"},
-            "TEXT_PRIMARY":                    {"DARK": "#c0d8f0"},
-            "TEXT_BRIGHT":                     {"DARK": "#e4f2ff"},
-            "TEXT_DISABLED":                   {"DARK": "#3a5068"},
+            "BACKGROUND_PRIMARY":              {"DARK": "#050505"},
+            "BACKGROUND_SECONDARY":            {"DARK": "#101010"},
+            "BACKGROUND_DIALOG":               {"DARK": "#000000"},
+            "TAB_BAR_BACKGROUND":              {"DARK": "#050505"},
+            "TAB_BACKGROUND_ACTIVE":           {"DARK": "#141414"},
+            "TAB_BACKGROUND_INACTIVE":         {"DARK": "#0a0a0a"},
+            "TAB_BORDER_ACTIVE":               {"DARK": "#f6d400"},
+            "MINDSPACE_BACKGROUND":            {"DARK": "#000000"},
+            "MINDSPACE_TOOL_RAIL_BACKGROUND":  {"DARK": "#050505"},
+            "MINDSPACE_HEADING":               {"DARK": "#f6d400"},
+            "EDIT_BOX_BACKGROUND":             {"DARK": "#050505"},
+            "EDIT_BOX_BORDER":                 {"DARK": "#f6d400"},
+            "BUTTON_BACKGROUND":               {"DARK": "#171717"},
+            "BUTTON_BACKGROUND_RECOMMENDED":   {"DARK": "#f6d400"},
+            "BUTTON_BACKGROUND_DESTRUCTIVE":   {"DARK": "#ff6b4a"},
+            "SWITCH_TRACK_ON":                 {"DARK": "#f6d400"},
+            "SWITCH_TRACK_ON_END":             {"DARK": "#ffe866"},
+            "SWITCH_TRACK_OFF":                {"DARK": "#171717"},
+            "SWITCH_TRACK_BORDER":             {"DARK": "#f6d400"},
+            "SWITCH_KNOB":                     {"DARK": "#000000"},
+            "TEXT_PRIMARY":                    {"DARK": "#f7f7f7"},
+            "TEXT_BRIGHT":                     {"DARK": "#ffffff"},
+            "TEXT_DISABLED":                   {"DARK": "#888888"},
         },
     ),
 ]
@@ -469,6 +440,110 @@ class _SectionPage(QWidget):
         return [role for _, role in self._rows]
 
 
+class _PresetPreviewButton(QPushButton):
+    """Theme preset button that paints a compact UI preview."""
+
+    def __init__(
+        self,
+        name: str,
+        grad_start: str,
+        grad_end: str,
+        colors: Dict[str, Dict[str, str]],
+        style_manager: StyleManager,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._name = name
+        self._grad_start = grad_start
+        self._grad_end = grad_end
+        self._colors = colors
+        self._style_manager = style_manager
+        self.setCheckable(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setText("")
+        self.setStyleSheet("border: none; background: transparent;")
+
+    def _role_color(self, role: ColorRole, fallback: str) -> QColor:
+        role_colors = self._colors.get(role.name, {})
+        return QColor(role_colors.get("CUSTOM") or role_colors.get("DARK") or role_colors.get("LIGHT") or fallback)
+
+    def paintEvent(self, event: QEvent) -> None:
+        del event
+
+        zoom = self._style_manager.zoom_factor()
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        outer = QRectF(self.rect()).adjusted(1, 1, -1, -1)
+        bg = self._role_color(ColorRole.BACKGROUND_DIALOG, self._grad_start)
+        panel = self._role_color(ColorRole.BACKGROUND_SECONDARY, self._grad_start)
+        tab = self._role_color(ColorRole.TAB_BACKGROUND_ACTIVE, self._grad_start)
+        border = self._role_color(ColorRole.TAB_BORDER_ACTIVE, self._grad_end)
+        text = self._role_color(ColorRole.TEXT_PRIMARY, "#ffffff")
+        muted = self._role_color(ColorRole.TEXT_DISABLED, "#7a8590")
+        message = self._role_color(ColorRole.MESSAGE_BACKGROUND, self._grad_start)
+        input_bg = self._role_color(ColorRole.EDIT_BOX_BACKGROUND, self._grad_start)
+        switch = self._role_color(ColorRole.SWITCH_TRACK_ON, self._grad_end)
+
+        painter.setPen(QPen(border if self.isChecked() else QColor(96, 112, 128, 90), 2 if self.isChecked() else 1))
+        painter.setBrush(bg)
+        painter.drawRoundedRect(outer, round(8 * zoom), round(8 * zoom))
+
+        title_font = QFont(painter.font())
+        title_font.setBold(True)
+        title_font.setPointSizeF(max(7.0, title_font.pointSizeF() * 0.78))
+        painter.setFont(title_font)
+        painter.setPen(text)
+        painter.drawText(outer.adjusted(8, 6, -8, 0), Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft, self._name)
+
+        preview = outer.adjusted(8, 24, -8, -8)
+        rail_w = preview.width() * 0.23
+        rail = QRectF(preview.left(), preview.top(), rail_w, preview.height())
+        content = QRectF(rail.right() + 5, preview.top(), preview.width() - rail_w - 5, preview.height())
+
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(panel)
+        painter.drawRoundedRect(rail, 5, 5)
+
+        painter.setBrush(border)
+        for i in range(3):
+            y = rail.top() + 9 + (i * 13)
+            painter.drawRoundedRect(QRectF(rail.left() + 6, y, rail.width() - 12, 4), 2, 2)
+        painter.setBrush(muted)
+        painter.drawRoundedRect(QRectF(rail.left() + 6, rail.bottom() - 13, rail.width() - 12, 4), 2, 2)
+
+        tab_rect = QRectF(content.left(), content.top(), content.width() * 0.55, 12)
+        painter.setBrush(tab)
+        painter.drawRoundedRect(tab_rect, 4, 4)
+        painter.setBrush(switch)
+        painter.drawEllipse(QRectF(tab_rect.left() + 5, tab_rect.top() + 3, 6, 6))
+
+        msg_rect = QRectF(content.left(), tab_rect.bottom() + 5, content.width(), 32)
+        painter.setPen(QPen(border, 1))
+        painter.setBrush(message)
+        painter.drawRoundedRect(msg_rect, 5, 5)
+
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(text)
+        painter.drawRoundedRect(QRectF(msg_rect.left() + 7, msg_rect.top() + 8, msg_rect.width() * 0.45, 4), 2, 2)
+        painter.setBrush(muted)
+        painter.drawRoundedRect(QRectF(msg_rect.left() + 7, msg_rect.top() + 18, msg_rect.width() * 0.68, 4), 2, 2)
+
+        input_rect = QRectF(content.left(), content.bottom() - 16, content.width(), 14)
+        painter.setPen(QPen(border, 1))
+        painter.setBrush(input_bg)
+        painter.drawRoundedRect(input_rect, 4, 4)
+
+        if self.isChecked():
+            check_rect = QRectF(outer.right() - 25, outer.bottom() - 25, 17, 17)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(border)
+            painter.drawEllipse(check_rect)
+            painter.setPen(QPen(QColor("#ffffff"), 1.5))
+            painter.drawLine(check_rect.left() + 5, check_rect.center().y(), check_rect.left() + 8, check_rect.bottom() - 5)
+            painter.drawLine(check_rect.left() + 8, check_rect.bottom() - 5, check_rect.right() - 4, check_rect.top() + 5)
+
+
 class ThemeColorPickerDialog(QDialog):
     """
     Modal dialog for customizing application theme colors.
@@ -501,8 +576,8 @@ class ThemeColorPickerDialog(QDialog):
         self._preset_button_map: Dict[str, QPushButton] = {}
 
         self.setWindowTitle("Customize Colors")
-        self.setMinimumWidth(680)
-        self.setMinimumHeight(520)
+        self.setMinimumWidth(980)
+        self.setMinimumHeight(620)
         self.setModal(True)
 
         self._build_ui()
@@ -515,24 +590,50 @@ class ThemeColorPickerDialog(QDialog):
 
     def _build_ui(self) -> None:
         zoom = self._style_manager.zoom_factor()
-        base_fs = self._style_manager.base_font_size()
         main_layout = QVBoxLayout()
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Mode selector row at top
-        mode_row = QHBoxLayout()
-        mode_row.setContentsMargins(16, 12, 16, 12)
-        mode_row.setSpacing(int(10 * zoom))
+        body_layout = QHBoxLayout()
+        body_layout.setContentsMargins(0, 0, 0, 0)
+        body_layout.setSpacing(0)
 
-        mode_label = QLabel("Color Mode:")
-        mode_label.setObjectName("ModeLabel")
+        left_widget = QWidget()
+        left_widget.setObjectName("ThemeCustomizerMain")
+        left_layout = QVBoxLayout()
+        left_layout.setSpacing(0)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_widget.setLayout(left_layout)
+
+        right_panel = QWidget()
+        right_panel.setObjectName("ThemeSettingsPanel")
+        right_panel.setFixedWidth(int(280 * zoom))
+        right_layout = QVBoxLayout()
+        right_layout.setContentsMargins(int(18 * zoom), int(18 * zoom), int(18 * zoom), int(18 * zoom))
+        right_layout.setSpacing(int(12 * zoom))
+        right_panel.setLayout(right_layout)
+
+        panel_title = QLabel("Theme Customizer")
+        panel_title.setObjectName("ThemePanelTitle")
+        right_layout.addWidget(panel_title)
+
+        self._active_theme_label = QLabel(self._active_preset_name or "Custom")
+        self._active_theme_label.setObjectName("ActiveThemeLabel")
+        right_layout.addWidget(self._active_theme_label)
+
+        mode_title = QLabel("Mode")
+        mode_title.setObjectName("ThemePanelSectionLabel")
+        right_layout.addWidget(mode_title)
+
+        mode_row = QVBoxLayout()
+        mode_row.setContentsMargins(0, 0, 0, 0)
+        mode_row.setSpacing(int(8 * zoom))
 
         self._mode_buttons: Dict[ColorMode, QPushButton] = {}
         for mode, label in [
-            (ColorMode.SYSTEM, "System (auto)"),
             (ColorMode.LIGHT, "Light"),
             (ColorMode.DARK, "Dark"),
+            (ColorMode.SYSTEM, "System"),
             (ColorMode.COLOR_BLIND, "Color Blind"),
             (ColorMode.CUSTOM, "Custom"),
         ]:
@@ -543,24 +644,23 @@ class ThemeColorPickerDialog(QDialog):
             self._mode_buttons[mode] = btn
             mode_row.addWidget(btn)
 
-        mode_row.addStretch()
         self._update_mode_buttons(self._style_manager.user_color_mode())
 
         mode_widget = QWidget()
         mode_widget.setObjectName("ModeBar")
         mode_widget.setLayout(mode_row)
-        main_layout.addWidget(mode_widget)
+        right_layout.addWidget(mode_widget)
 
         # Separator
         sep_top = QFrame()
         sep_top.setFrameShape(QFrame.Shape.HLine)
         sep_top.setObjectName("ColorPickerSep")
-        main_layout.addWidget(sep_top)
+        right_layout.addWidget(sep_top)
 
         # Presets bar — always visible; clicking a preset switches to Custom + applies colors
         presets_scroll = QScrollArea()
         presets_scroll.setObjectName("PresetsBar")
-        presets_scroll.setFixedHeight(int(72 * zoom))
+        presets_scroll.setFixedHeight(int(132 * zoom))
         presets_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         presets_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         presets_scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -568,21 +668,18 @@ class ThemeColorPickerDialog(QDialog):
 
         presets_inner = QWidget()
         presets_layout = QHBoxLayout()
-        presets_layout.setContentsMargins(12, 8, 12, 8)
-        presets_layout.setSpacing(int(8 * zoom))
+        presets_layout.setContentsMargins(12, 10, 12, 10)
+        presets_layout.setSpacing(int(10 * zoom))
 
-        btn_w = int(130 * zoom)
-        btn_h = int(52 * zoom)
+        btn_w = int(150 * zoom)
+        btn_h = int(108 * zoom)
         for name, grad_start, grad_end, colors in _PRESETS:
-            btn = QPushButton(name)
+            btn = _PresetPreviewButton(name, grad_start, grad_end, colors, self._style_manager)
             btn.setFixedSize(btn_w, btn_h)
             btn.setProperty("presetName", name)
             btn.setProperty("presetGradStart", grad_start)
             btn.setProperty("presetGradEnd", grad_end)
-            is_active = name == self._active_preset_name
-            btn.setStyleSheet(
-                self._build_preset_btn_stylesheet(grad_start, grad_end, is_active, zoom, base_fs)
-            )
+            btn.setChecked(name == self._active_preset_name)
             btn.clicked.connect(lambda _, n=name, c=colors: self._on_preset_clicked(n, c))
             presets_layout.addWidget(btn)
             self._preset_button_map[name] = btn
@@ -590,12 +687,12 @@ class ThemeColorPickerDialog(QDialog):
         presets_layout.addStretch()
         presets_inner.setLayout(presets_layout)
         presets_scroll.setWidget(presets_inner)
-        main_layout.addWidget(presets_scroll)
+        left_layout.addWidget(presets_scroll)
 
         sep_presets = QFrame()
         sep_presets.setFrameShape(QFrame.Shape.HLine)
         sep_presets.setObjectName("ColorPickerSep")
-        main_layout.addWidget(sep_presets)
+        left_layout.addWidget(sep_presets)
 
         # Splitter: nav list + stacked section pages
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -678,13 +775,13 @@ class ThemeColorPickerDialog(QDialog):
         self._splitter.setStretchFactor(0, 0)
         self._splitter.setStretchFactor(1, 1)
         self._splitter.setSizes([int(160 * zoom), 520])
-        main_layout.addWidget(self._splitter, 1)
+        left_layout.addWidget(self._splitter, 1)
 
         # Placeholder shown when mode is not CUSTOM
         self._placeholder = QLabel("Select \"Custom\" mode to customize individual colors.")
         self._placeholder.setObjectName("ColorPickerPlaceholder")
         self._placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(self._placeholder, 1)
+        left_layout.addWidget(self._placeholder, 1)
 
         # Select first section
         if self._nav_list.count() > 0:
@@ -697,13 +794,9 @@ class ThemeColorPickerDialog(QDialog):
         sep_bot = QFrame()
         sep_bot.setFrameShape(QFrame.Shape.HLine)
         sep_bot.setObjectName("ColorPickerSep")
-        main_layout.addWidget(sep_bot)
+        right_layout.addWidget(sep_bot)
 
         # Footer buttons
-        footer = QHBoxLayout()
-        footer.setContentsMargins(16, 10, 16, 10)
-        footer.setSpacing(int(8 * zoom))
-
         min_w = int(90 * zoom)
         min_h = 36
 
@@ -711,9 +804,8 @@ class ThemeColorPickerDialog(QDialog):
         self._reset_all_btn.setMinimumHeight(min_h)
         self._reset_all_btn.setProperty("destructive", True)
         self._reset_all_btn.clicked.connect(self._on_reset_all)
-        footer.addWidget(self._reset_all_btn)
-
-        footer.addStretch()
+        right_layout.addWidget(self._reset_all_btn)
+        right_layout.addStretch()
 
         self._cancel_btn = QPushButton("Cancel")
         self._cancel_btn.setMinimumWidth(min_w)
@@ -739,10 +831,12 @@ class ThemeColorPickerDialog(QDialog):
         self._ok_btn.setMinimumHeight(min_h)
         self._ok_btn.clicked.connect(self._on_ok)
 
-        for btn in [self._cancel_btn, self._preview_btn, self._apply_btn, self._ok_btn]:
-            footer.addWidget(btn)
+        for btn in [self._preview_btn, self._apply_btn, self._ok_btn, self._cancel_btn]:
+            right_layout.addWidget(btn)
 
-        main_layout.addLayout(footer)
+        body_layout.addWidget(left_widget, 1)
+        body_layout.addWidget(right_panel)
+        main_layout.addLayout(body_layout, 1)
         self.setLayout(main_layout)
 
     # ------------------------------------------------------------------
@@ -784,8 +878,8 @@ class ThemeColorPickerDialog(QDialog):
         self._refresh_all_swatches()
 
     def _on_preset_clicked(self, name: str, colors: Dict[str, Dict[str, str]]) -> None:
-        """Apply a preset palette. 'None' clears overrides; others switch to Custom mode."""
-        if name != "None" and self._style_manager.user_color_mode() != ColorMode.CUSTOM:
+        """Apply a preset palette. 'Default' clears overrides; others switch to Custom mode."""
+        if name != "Default" and self._style_manager.user_color_mode() != ColorMode.CUSTOM:
             self._style_manager.set_color_mode(ColorMode.CUSTOM)
             self._update_mode_buttons(ColorMode.CUSTOM)
             self._update_sections_visibility(ColorMode.CUSTOM)
@@ -795,7 +889,7 @@ class ThemeColorPickerDialog(QDialog):
 
     def _on_reset_all(self) -> None:
         self._style_manager.apply_custom_colors({})
-        self._update_preset_highlight("None")
+        self._update_preset_highlight("Default")
         self._refresh_all_swatches()
 
     def _on_preview(self) -> None:
@@ -836,62 +930,14 @@ class ThemeColorPickerDialog(QDialog):
     # Helpers
     # ------------------------------------------------------------------
 
-    def _build_preset_btn_stylesheet(
-        self, grad_start: str, grad_end: str, is_active: bool, zoom: float, base_fs: float
-    ) -> str:
-        """Generate a smooth 3-stop diagonal gradient stylesheet for a preset button."""
-        # Compute midpoint colour
-        s = grad_start.lstrip("#")
-        e = grad_end.lstrip("#")
-        r = (int(s[0:2], 16) + int(e[0:2], 16)) // 2
-        g = (int(s[2:4], 16) + int(e[2:4], 16)) // 2
-        b = (int(s[4:6], 16) + int(e[4:6], 16)) // 2
-        grad_mid = f"#{r:02x}{g:02x}{b:02x}"
-
-        radius = int(10 * zoom)
-        font_pt = int(base_fs * zoom)
-        if is_active:
-            border = "2.5px solid rgba(255,255,255,0.95)"
-        else:
-            border = "1px solid rgba(255,255,255,0.18)"
-
-        return f"""
-            QPushButton {{
-                background: qlineargradient(
-                    x1:0.1, y1:0, x2:0.9, y2:1,
-                    stop:0.0 {grad_start},
-                    stop:0.45 {grad_mid},
-                    stop:1.0 {grad_end}
-                );
-                color: #ffffff;
-                border: {border};
-                border-radius: {radius}px;
-                font-weight: bold;
-                font-size: {font_pt}pt;
-                padding: 4px 6px;
-            }}
-            QPushButton:hover {{
-                border: 2px solid rgba(255,255,255,0.65);
-            }}
-            QPushButton:pressed {{
-                border: 2px solid rgba(255,255,255,0.9);
-            }}
-        """
-
     def _update_preset_highlight(self, name: str | None) -> None:
         """Highlight the named preset button; deselect all others. Persists to StyleManager."""
         self._active_preset_name = name
         self._style_manager.set_active_preset(name)
-        zoom = self._style_manager.zoom_factor()
-        base_fs = self._style_manager.base_font_size()
+        self._active_theme_label.setText(name or "Custom")
         for btn_name, btn in self._preset_button_map.items():
-            grad_start = btn.property("presetGradStart")
-            grad_end = btn.property("presetGradEnd")
-            btn.setStyleSheet(
-                self._build_preset_btn_stylesheet(
-                    grad_start, grad_end, btn_name == name, zoom, base_fs
-                )
-            )
+            btn.setChecked(btn_name == name)
+            btn.update()
 
     def _update_mode_buttons(self, active_mode: ColorMode) -> None:
         for mode, btn in self._mode_buttons.items():
@@ -930,8 +976,46 @@ class ThemeColorPickerDialog(QDialog):
         btn_dest_pressed = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)
 
         self.setStyleSheet(self._style_manager.get_dialog_stylesheet() + f"""
-            #ModeBar {{
+            #ThemeCustomizerMain {{
+                background-color: {bg_dialog};
+            }}
+            #ThemeSettingsPanel {{
                 background-color: {bg_secondary};
+                border-left: 1px solid {splitter_col};
+            }}
+            QLabel#ThemePanelTitle {{
+                color: {text_primary};
+                font-size: {font_pt * 1.1}pt;
+                font-weight: bold;
+                text-transform: uppercase;
+            }}
+            QLabel#ActiveThemeLabel {{
+                color: {text_primary};
+                background-color: {bg_dialog};
+                border: 1px solid {splitter_col};
+                border-radius: 6px;
+                padding: 8px 10px;
+                font-size: {font_pt}pt;
+                font-weight: bold;
+            }}
+            QLabel#ThemePanelSectionLabel {{
+                color: {text_disabled};
+                font-size: {font_pt * 0.88}pt;
+                font-weight: bold;
+            }}
+            #ModeBar {{
+                background-color: transparent;
+            }}
+            QPushButton[colorMode] {{
+                background-color: {btn_bg};
+                color: {text_primary};
+                border: 1px solid {splitter_col};
+                border-radius: 5px;
+                padding: 6px 8px;
+                min-height: {round(28 * zoom)}px;
+            }}
+            QPushButton[colorMode]:hover {{
+                background-color: {btn_hover};
             }}
             #PresetsBar, #PresetsBar > QWidget > QWidget {{
                 background-color: {bg_dialog};
@@ -983,6 +1067,7 @@ class ThemeColorPickerDialog(QDialog):
             QPushButton[colorMode]:checked {{
                 background-color: {nav_selected};
                 color: {text_primary};
+                border-color: {btn_rec};
             }}
             QPushButton[destructive="true"] {{
                 background-color: {btn_dest};
