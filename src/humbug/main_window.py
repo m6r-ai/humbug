@@ -339,9 +339,10 @@ class MainWindow(QMainWindow):
             MenuBarDragFilter(self._menu_bar)
 
         # Main widget and layout
-        main_widget = QWidget()
-        self.setCentralWidget(main_widget)
-        layout = QVBoxLayout(main_widget)
+        self._main_widget = QWidget()
+        self._main_widget.setObjectName("MainWindowSurface")
+        self.setCentralWidget(self._main_widget)
+        layout = QVBoxLayout(self._main_widget)
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -1228,11 +1229,21 @@ class MainWindow(QMainWindow):
         self._apply_menubar_style()
         self._apply_all_menu_styles()
         self._apply_statusbar_style()
+        self._apply_main_surface_style()
         if self._window_controls is not None:
             self._window_controls.apply_style()
         self._apply_splitter_style()
         self._mindspace_view.apply_style()
         self._column_manager.apply_style()
+
+    def _apply_main_surface_style(self) -> None:
+        """Apply the app-level background surface."""
+        background = self._style_manager.get_background_surface_css()
+        self._main_widget.setStyleSheet(f"""
+            QWidget#MainWindowSurface {{
+                background: {background};
+            }}
+        """)
 
     def _thaw_mindspace(self) -> None:
         """Re-enable mindspace repaints after all synchronous style updates settle."""

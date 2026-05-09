@@ -98,6 +98,14 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#282828",
                 ColorMode.LIGHT: "#e4e4e4"
             },
+            ColorRole.BACKGROUND_GRADIENT_START: {
+                ColorMode.DARK: "#080808",
+                ColorMode.LIGHT: "#f4f4f4"
+            },
+            ColorRole.BACKGROUND_GRADIENT_END: {
+                ColorMode.DARK: "#080808",
+                ColorMode.LIGHT: "#f4f4f4"
+            },
             ColorRole.BACKGROUND_TERTIARY: {
                 ColorMode.DARK: "#060606",
                 ColorMode.LIGHT: "#fefefe"
@@ -1144,6 +1152,27 @@ class StyleManager(QObject):
             KeyError: If no color is defined for the role
         """
         return self._resolve_color_value(role)
+
+    def get_background_surface_css(self) -> str:
+        """Return solid or gradient CSS for the main application surface."""
+        if (
+            ColorRole.BACKGROUND_GRADIENT_START not in self._custom_colors and
+            ColorRole.BACKGROUND_GRADIENT_END not in self._custom_colors
+        ):
+            return self.get_color_str(ColorRole.BACKGROUND_PRIMARY)
+
+        start = self.get_color_str(ColorRole.BACKGROUND_GRADIENT_START)
+        end = self.get_color_str(ColorRole.BACKGROUND_GRADIENT_END)
+        if start == end:
+            return start
+
+        return f"""
+            qlineargradient(
+                x1:0, y1:0, x2:1, y2:1,
+                stop:0 {start},
+                stop:1 {end}
+            )
+        """
 
     def _resolve_color_value(self, role: ColorRole) -> str:
         """Return the effective hex color for a role, checking custom overrides first."""

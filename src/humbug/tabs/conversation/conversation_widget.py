@@ -1877,10 +1877,13 @@ class ConversationWidget(QWidget):
     def _build_widget_style(self) -> str:
         """Build styles for the conversation widget."""
         style_manager = self._style_manager
+        background = style_manager.get_background_surface_css()
 
         return f"""
-            QWidget {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            QWidget#ConversationWidget,
+            QScrollArea#ConversationScrollArea,
+            QScrollArea#ConversationScrollArea > QWidget > QWidget {{
+                background: {background};
             }}
 
             {style_manager.get_menu_stylesheet()}

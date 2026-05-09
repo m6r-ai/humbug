@@ -304,6 +304,11 @@ _SECTIONS: List[Tuple[str, str, List[Tuple[str, ColorRole]]]] = [
     ("background", "Background", [
         ("Primary background", ColorRole.BACKGROUND_PRIMARY),
         ("Secondary background", ColorRole.BACKGROUND_SECONDARY),
+        ("Gradient start", ColorRole.BACKGROUND_GRADIENT_START),
+        ("Gradient end", ColorRole.BACKGROUND_GRADIENT_END),
+        ("Tertiary background", ColorRole.BACKGROUND_TERTIARY),
+        ("Tertiary hover", ColorRole.BACKGROUND_TERTIARY_HOVER),
+        ("Tertiary pressed", ColorRole.BACKGROUND_TERTIARY_PRESSED),
         ("Dialog background", ColorRole.BACKGROUND_DIALOG),
     ]),
     ("tabs", "Tabs", [
@@ -501,6 +506,54 @@ class _SwatchButton(QPushButton):
             self.color_chosen.emit(self._current_color)
 
 
+class _GradientButton(QPushButton):
+    """Button for choosing a two-colour background gradient."""
+
+    gradient_chosen = Signal(str, str)
+
+    def __init__(self, style_manager: StyleManager, parent: QWidget | None = None) -> None:
+        super().__init__("Choose gradient", parent)
+        self._style_manager = style_manager
+        self.clicked.connect(self._on_click)
+        self.refresh()
+
+    def refresh(self) -> None:
+        """Refresh the preview background from current background colours."""
+        start = self._style_manager.get_color_str(ColorRole.BACKGROUND_GRADIENT_START)
+        end = self._style_manager.get_color_str(ColorRole.BACKGROUND_GRADIENT_END)
+        text = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        border = self._style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)
+        zoom = self._style_manager.zoom_factor()
+        self.setMinimumHeight(round(30 * zoom))
+        self.setStyleSheet(f"""
+            QPushButton {{
+                background: qlineargradient(
+                    x1:0, y1:0, x2:1, y2:1,
+                    stop:0 {start},
+                    stop:1 {end}
+                );
+                color: {text};
+                border: 1px solid {border};
+                border-radius: {round(5 * zoom)}px;
+                padding: 6px 10px;
+            }}
+        """)
+
+    def _on_click(self) -> None:
+        start_initial = QColor(self._style_manager.get_color_str(ColorRole.BACKGROUND_GRADIENT_START))
+        start = QColorDialog.getColor(start_initial, self, "Choose Gradient Start")
+        if not start.isValid():
+            return
+
+        end_initial = QColor(self._style_manager.get_color_str(ColorRole.BACKGROUND_GRADIENT_END))
+        end = QColorDialog.getColor(end_initial, self, "Choose Gradient End")
+        if not end.isValid():
+            return
+
+        self.gradient_chosen.emit(start.name(), end.name())
+        self.refresh()
+
+
 class _NavItemDelegate(QStyledItemDelegate):
     """Controls row height for the section nav list."""
 
@@ -534,6 +587,7 @@ class _SectionPage(QWidget):
         self._rows = rows
         self._on_color_changed = on_color_changed
         self._swatches: Dict[ColorRole, _SwatchButton] = {}
+        self._gradient_button: _GradientButton | None = None
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -555,6 +609,13 @@ class _SectionPage(QWidget):
             row.addStretch()
             layout.addLayout(row)
 
+        roles = {role for _, role in rows}
+        if ColorRole.BACKGROUND_GRADIENT_START in roles and ColorRole.BACKGROUND_GRADIENT_END in roles:
+            gradient = _GradientButton(style_manager, self)
+            gradient.gradient_chosen.connect(self._on_gradient_chosen)
+            self._gradient_button = gradient
+            layout.addWidget(gradient)
+
         layout.addStretch()
         self.setLayout(layout)
 
@@ -562,9 +623,16 @@ class _SectionPage(QWidget):
         """Refresh all swatches to reflect current StyleManager colors."""
         for swatch in self._swatches.values():
             swatch.refresh()
+        if self._gradient_button is not None:
+            self._gradient_button.refresh()
 
     def roles(self) -> List[ColorRole]:
         return [role for _, role in self._rows]
+
+    def _on_gradient_chosen(self, start: str, end: str) -> None:
+        """Apply a gradient by updating the optional background gradient roles."""
+        self._on_color_changed(ColorRole.BACKGROUND_GRADIENT_START, start)
+        self._on_color_changed(ColorRole.BACKGROUND_GRADIENT_END, end)
 
 
 class _PresetPreviewButton(QPushButton):
