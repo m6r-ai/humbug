@@ -318,6 +318,28 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#d8d8d8"
             },
 
+            # Switch colours
+            ColorRole.SWITCH_TRACK_ON: {
+                ColorMode.DARK: "#375f8c",
+                ColorMode.LIGHT: "#2f5f96"
+            },
+            ColorRole.SWITCH_TRACK_ON_END: {
+                ColorMode.DARK: "#5a4f93",
+                ColorMode.LIGHT: "#5a4f93"
+            },
+            ColorRole.SWITCH_TRACK_OFF: {
+                ColorMode.DARK: "#303030",
+                ColorMode.LIGHT: "#e8e8e8"
+            },
+            ColorRole.SWITCH_TRACK_BORDER: {
+                ColorMode.DARK: "#505050",
+                ColorMode.LIGHT: "#b0b0b0"
+            },
+            ColorRole.SWITCH_KNOB: {
+                ColorMode.DARK: "#ffffff",
+                ColorMode.LIGHT: "#ffffff"
+            },
+
             # Menu elements
             ColorRole.MENU_BACKGROUND: {
                 ColorMode.DARK: "#2d2d2d",
@@ -750,6 +772,11 @@ class StyleManager(QObject):
             ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED: "#3a3058",
             ColorRole.BUTTON_BACKGROUND_EDIT_HOVER: "#5b4a84",
             ColorRole.BUTTON_BACKGROUND_DISABLED: "#2a3036",
+            ColorRole.SWITCH_TRACK_ON: "#0072b2",
+            ColorRole.SWITCH_TRACK_ON_END: "#009e73",
+            ColorRole.SWITCH_TRACK_OFF: "#28323d",
+            ColorRole.SWITCH_TRACK_BORDER: "#56b4e9",
+            ColorRole.SWITCH_KNOB: "#ffffff",
             ColorRole.MENU_BACKGROUND: "#1f242a",
             ColorRole.MENU_HOVER: "#263242",
             ColorRole.MENU_BORDER: "#3a4856",

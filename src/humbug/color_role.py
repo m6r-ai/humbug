@@ -88,6 +88,13 @@ class ColorRole(Enum):
     BUTTON_BACKGROUND_DISABLED = auto()
                                         # Disabled push button background
 
+    # Switch colours
+    SWITCH_TRACK_ON = auto()            # Enabled switch track start
+    SWITCH_TRACK_ON_END = auto()        # Enabled switch track end
+    SWITCH_TRACK_OFF = auto()           # Disabled/off switch track
+    SWITCH_TRACK_BORDER = auto()        # Switch track border
+    SWITCH_KNOB = auto()                # Switch knob
+
     # Menu elements
     MENU_BACKGROUND = auto()            # Menu background
     MENU_HOVER = auto()                 # Menu item hover
