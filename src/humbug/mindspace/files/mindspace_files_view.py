@@ -23,6 +23,7 @@ from humbug.mindspace.mindspace_tree_delegate import MindspaceTreeDelegate
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
 from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
+from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
@@ -45,6 +46,7 @@ class MindspaceFilesView(QWidget):
 
         self._style_manager = StyleManager()
         self._last_color_mode = self._style_manager.color_mode()
+        self._last_folder_colors = self._current_folder_colors()
         self._last_zoom = self._style_manager.zoom_factor()
         self._last_base_font = self._style_manager.base_font_size()
         self._logger = logging.getLogger("MindspaceFilesView")
@@ -1105,23 +1107,26 @@ class MindspaceFilesView(QWidget):
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
         current_mode = self._style_manager.color_mode()
+        folder_colors = self._current_folder_colors()
 
         self._header.apply_style()
         self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)
 
         mode_changed = current_mode != self._last_color_mode
+        folder_colors_changed = folder_colors != self._last_folder_colors
         geometry_changed = (
             zoom_factor != self._last_zoom or base_font_size != self._last_base_font
         )
 
-        if mode_changed or geometry_changed:
+        if mode_changed or folder_colors_changed or geometry_changed:
             self._icon_provider.update_icons()
             self._delegate.update_icons()
             self._last_color_mode = current_mode
+            self._last_folder_colors = folder_colors
             self._last_zoom = zoom_factor
             self._last_base_font = base_font_size
 
-        if mode_changed:
+        if mode_changed or folder_colors_changed:
             # Color mode flipped (DARK↔LIGHT) — QFileSystemModel caches icons per
             # mode so we must flush its cache.  setIconProvider triggers a model
             # reset internally so save and restore expansion with updates suppressed.
@@ -1147,3 +1152,10 @@ class MindspaceFilesView(QWidget):
             self.layoutDirection(),
             zoom_factor,
         ))
+
+    def _current_folder_colors(self) -> tuple[str, str]:
+        """Return the effective folder icon colours used by this view."""
+        return (
+            self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER),
+            self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB),
+        )
