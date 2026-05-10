@@ -106,7 +106,7 @@ class TabBar(QTabBar):
             is_file_missing=is_file_missing,
         )
         self.setTabData(index, tab_id)
-        self.update()
+        self.adjustSize()
 
     def remove_tab_data(self, tab_id: str) -> None:
         """Remove display data for a tab that has been removed."""
@@ -122,7 +122,7 @@ class TabBar(QTabBar):
         data = self._data_for_index(index)
         if data:
             data.text = text
-            self.update(self.tabRect(index))
+            self.adjustSize()
 
     def set_tab_state(
         self,
