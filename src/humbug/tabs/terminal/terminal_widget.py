@@ -54,6 +54,8 @@ class TerminalWidget(QAbstractScrollArea):
         super().__init__(parent)
         self._logger = logging.getLogger("TerminalWidget")
         self._style_manager = StyleManager()
+        self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        self.viewport().setLayoutDirection(Qt.LayoutDirection.LeftToRight)
 
         self._fixed_width = fixed_width
 
@@ -829,6 +831,7 @@ class TerminalWidget(QAbstractScrollArea):
     def paintEvent(self, event: QPaintEvent) -> None:  # type: ignore[override]
         """Handle paint events efficiently with proper floating-point character metrics."""
         painter = QPainter(self.viewport())
+        painter.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         buffer = self._state.current_buffer()
 
         # Pre-calculate dimensions
