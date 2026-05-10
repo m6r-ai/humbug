@@ -724,6 +724,7 @@ class ColumnManager(QWidget):
 
         tab = self._open_file_by_source_type(source_type, path, False)
         if tab is not None:
+            self._update_tabs()
             return
 
         if new_column.count() == 0 and len(self._tab_columns) > 1:
@@ -738,6 +739,7 @@ class ColumnManager(QWidget):
 
         tab = self._open_file_by_source_type(source_type, path, False)
         if tab is not None:
+            self._update_tabs()
             return
 
         if new_column.count() == 0 and len(self._tab_columns) > 1:
