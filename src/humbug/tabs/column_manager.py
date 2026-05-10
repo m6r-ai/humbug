@@ -349,15 +349,6 @@ class ColumnManager(QWidget):
         # Update active column to target
         self._active_column = target_column
 
-        # If source column is now empty, remove it (unless it's the last column)
-        if source_column.count() == 0 and len(self._tab_columns) > 1:
-            source_column_index = self._tab_columns.index(source_column)
-            self._remove_column_and_resize(source_column_index, source_column)
-
-            # Adjust target column index if we removed a column before it
-            if source_column_index < target_column_index:
-                target_column_index -= 1
-
         # Resize columns to distribute space evenly
         self.show_all_columns()
 
@@ -559,7 +550,8 @@ class ColumnManager(QWidget):
         self,
         tab: TabBase,
         source_column: ColumnWidget,
-        target_column: ColumnWidget
+        target_column: ColumnWidget,
+        remove_if_empty: bool = True
     ) -> None:
         """
         Move a tab from one column to another.
@@ -568,6 +560,7 @@ class ColumnManager(QWidget):
             tab: Tab to move
             source_column: Source column
             target_column: Target column
+            remove_if_empty: Whether to remove the source column if it becomes empty
         """
         # Save tab state before removal
         tab_state = tab.get_state(True)
@@ -595,6 +588,10 @@ class ColumnManager(QWidget):
             return
 
         self._add_tab_to_column(new_tab, tab_title, target_column)
+
+        if remove_if_empty and source_column.count() == 0 and len(self._tab_columns) > 1:
+            source_column_index = self._tab_columns.index(source_column)
+            self._remove_column_and_resize(source_column_index, source_column)
 
     def open_file_by_mindspace_view_type(self, source: MindspaceViewType, path: str, ephemeral: bool) -> TabBase | None:
         """
@@ -722,6 +719,15 @@ class ColumnManager(QWidget):
         self._active_column = new_column
         self._stack.setCurrentWidget(self._columns_widget)
 
+        existing_tab = self._find_existing_tab_by_source_type(source_type, path)
+        if existing_tab:
+            source_column = self._find_column_for_tab(existing_tab)
+            if source_column:
+                self._move_tab_between_columns(existing_tab, source_column, new_column)
+                self.show_all_columns()
+                self._update_tabs()
+                return
+
         tab = self._open_file_by_source_type(source_type, path, False)
         if tab is not None:
             self._update_tabs()
@@ -736,6 +742,15 @@ class ColumnManager(QWidget):
         new_column = self._create_column(new_index)
         self._active_column = new_column
         self._stack.setCurrentWidget(self._columns_widget)
+
+        existing_tab = self._find_existing_tab_by_source_type(source_type, path)
+        if existing_tab:
+            source_column = self._find_column_for_tab(existing_tab)
+            if source_column:
+                self._move_tab_between_columns(existing_tab, source_column, new_column)
+                self.show_all_columns()
+                self._update_tabs()
+                return
 
         tab = self._open_file_by_source_type(source_type, path, False)
         if tab is not None:
@@ -760,11 +775,6 @@ class ColumnManager(QWidget):
 
         self._move_tab_between_columns(tab, source_column, new_column)
 
-        # source_column index has shifted right by 1 due to the new column insertion
-        if source_column.count() == 0 and len(self._tab_columns) > 1:
-            source_column_index = self._tab_columns.index(source_column)
-            self._remove_column_and_resize(source_column_index, source_column)
-
         self.show_all_columns()
         self._update_tabs()
 
@@ -783,10 +793,6 @@ class ColumnManager(QWidget):
         self._active_column = new_column
 
         self._move_tab_between_columns(tab, source_column, new_column)
-
-        if source_column.count() == 0 and len(self._tab_columns) > 1:
-            source_column_index = self._tab_columns.index(source_column)
-            self._remove_column_and_resize(source_column_index, source_column)
 
         self.show_all_columns()
         self._update_tabs()
@@ -812,7 +818,7 @@ class ColumnManager(QWidget):
                     # Move all tabs from source to target
                     while source_column.count() > 0:
                         tab = cast(TabBase, source_column.widget(0))
-                        self._move_tab_between_columns(tab, source_column, target_column)
+                        self._move_tab_between_columns(tab, source_column, target_column, remove_if_empty=False)
 
                     # Remove the empty column
                     self._remove_column_and_resize(i, source_column)
@@ -848,10 +854,6 @@ class ColumnManager(QWidget):
 
         # Set our new active column before we possibly delete the previous one
         self._active_column = target_column
-        if source_column.count() == 0:
-            column_number = self._tab_columns.index(source_column)
-            self._remove_column_and_resize(column_number, source_column)
-
         # Update active states
         self._update_tabs()
 
@@ -874,6 +876,15 @@ class ColumnManager(QWidget):
         # Set the target column as active
         self._active_column = target_column
 
+        existing_tab = self._find_existing_tab_by_source_type(source_type, path)
+        if existing_tab:
+            source_column = self._find_column_for_tab(existing_tab)
+            if source_column and source_column != target_column:
+                self._move_tab_between_columns(existing_tab, source_column, target_column)
+                self.show_all_columns()
+                self._update_tabs()
+                return
+
         tab = self._open_file_by_source_type(source_type, path, False)
         if tab is None:
             return
@@ -882,6 +893,8 @@ class ColumnManager(QWidget):
         current_index = target_column.indexOf(tab)
         if current_index != target_index:
             target_column.tabBar().moveTab(current_index, target_index)
+
+        self._update_tabs()
 
     def _update_tab_bar_for_label_change(self, tab: TabBase) -> None:
         """
@@ -1309,10 +1322,6 @@ class ColumnManager(QWidget):
 
         self._move_tab_between_columns(tab, source_column, self._active_column)
 
-        if source_column.count() == 0 and len(self._tab_columns) > 1:
-            source_column_index = self._tab_columns.index(source_column)
-            self._remove_column_and_resize(source_column_index, source_column)
-
     def _on_tab_modified_state_changed(self, tab_id: str, modified: bool) -> None:
         """
         Update a tab's modified state.
@@ -1420,7 +1429,7 @@ class ColumnManager(QWidget):
         # Move all tabs to target column
         while current_column.count() > 0:
             tab = cast(TabBase, current_column.widget(0))
-            self._move_tab_between_columns(tab, current_column, target_column)
+            self._move_tab_between_columns(tab, current_column, target_column, remove_if_empty=False)
 
         self._active_column = target_column
         column_number = self._tab_columns.index(current_column)
@@ -1519,6 +1528,29 @@ class ColumnManager(QWidget):
             The TabBase instance if found, None otherwise
         """
         return self._tabs.get(tab_id)
+
+    def _find_existing_tab_by_source_type(self, source_type: str, path: str) -> TabBase | None:
+        """Find an already-open tab matching the given source type and path.
+
+        Args:
+            source_type: Source view type string (conversations, files, vcs, preview)
+            path: File path to look up
+
+        Returns:
+            The existing tab if found, None otherwise
+        """
+        if source_type == "conversations":
+            abs_path = self._mindspace_manager.get_absolute_path(path)
+            return self._find_conversation_tab_by_path(abs_path)
+
+        if source_type == "vcs":
+            return self._find_diff_tab_by_path(path)
+
+        if source_type == "preview":
+            return self._find_preview_tab_by_path(path)
+
+        # files view
+        return self._find_editor_tab_by_path(path)
 
     def _find_conversation_tab_by_path(self, path: str) -> ConversationTab | None:
         """
