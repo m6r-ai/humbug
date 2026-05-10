@@ -206,7 +206,8 @@ class TabBar(QTabBar):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         border_px = self._top_border_px()
-        rightmost_right = 0
+        is_ltr = self.layoutDirection() == Qt.LayoutDirection.LeftToRight
+        outermost_edge = 0 if is_ltr else self.width()
         prev_is_current = False
 
         for index in range(self.count()):
@@ -217,7 +218,11 @@ class TabBar(QTabBar):
                 prev_is_current = data.is_current if data else False
                 continue
 
-            rightmost_right = max(rightmost_right, tab_rect.right() + 1)
+            if is_ltr:
+                outermost_edge = max(outermost_edge, tab_rect.right() + 1)
+
+            else:
+                outermost_edge = min(outermost_edge, tab_rect.left())
 
             is_current = data.is_current if data else False
             is_updated = data.is_updated if data else False
@@ -232,7 +237,11 @@ class TabBar(QTabBar):
                 left_border_color = self._style_manager.get_color(
                     ColorRole.SPLITTER if is_current or prev_is_current else ColorRole.TAB_SPLITTER
                 )
-                painter.fillRect(tab_rect.adjusted(0, 0, -tab_rect.width() + 1, 0), left_border_color)
+                if is_ltr:
+                    painter.fillRect(tab_rect.adjusted(0, 0, -tab_rect.width() + 1, 0), left_border_color)
+
+                else:
+                    painter.fillRect(tab_rect.adjusted(tab_rect.width() - 1, 0, 0, 0), left_border_color)
 
             if is_current:
                 border_role = ColorRole.TAB_BORDER_ACTIVE if is_active_column else ColorRole.SPLITTER
@@ -240,6 +249,7 @@ class TabBar(QTabBar):
                     tab_rect.adjusted(0, 0, 0, -tab_rect.height() + border_px),
                     self._style_manager.get_color(border_role),
                 )
+
             else:
                 painter.fillRect(
                     tab_rect.adjusted(0, tab_rect.height() - 1, 0, 0),
@@ -251,7 +261,7 @@ class TabBar(QTabBar):
 
             prev_is_current = is_current
 
-        self._paint_trailing_area(painter, rightmost_right, prev_is_current)
+        self._paint_trailing_area(painter, outermost_edge, is_ltr, prev_is_current)
         painter.end()
 
         self._paint_drop_indicator()
@@ -415,11 +425,18 @@ class TabBar(QTabBar):
         cx = tab_rect.left() + (tab_rect.width() - content_width) // 2
         cy = tab_rect.top() + (tab_rect.height() - icon_size) // 2
 
-        icon_rect = QRect(cx, cy, icon_size, icon_size)
-        text_x = cx + icon_size + spacing
-        text_rect = QRect(text_x, tab_rect.top(), text_width, tab_rect.height())
-        close_x = text_x + text_width + spacing
-        close_rect = QRect(close_x, cy, icon_size, icon_size)
+        if self.layoutDirection() == Qt.LayoutDirection.LeftToRight:
+            icon_rect = QRect(cx, cy, icon_size, icon_size)
+            text_x = cx + icon_size + spacing
+            text_rect = QRect(text_x, tab_rect.top(), text_width, tab_rect.height())
+            close_x = text_x + text_width + spacing
+            close_rect = QRect(close_x, cy, icon_size, icon_size)
+
+        else:
+            close_rect = QRect(cx, cy, icon_size, icon_size)
+            text_x = cx + icon_size + spacing
+            text_rect = QRect(text_x, tab_rect.top(), text_width, tab_rect.height())
+            icon_rect = QRect(text_x + text_width + spacing, cy, icon_size, icon_size)
 
         return _TabGeometry(icon_rect=icon_rect, text_rect=text_rect, close_rect=close_rect)
 
@@ -477,26 +494,44 @@ class TabBar(QTabBar):
             )
             painter.drawPixmap(geom.close_rect.topLeft(), close_pixmap)
 
-    def _paint_trailing_area(self, painter: QPainter, rightmost_right: int, prev_is_current: bool) -> None:
-        """Paint the right edge and bottom border of the empty space after all tabs."""
-        if self.count() == 0 or rightmost_right >= self.width():
+    def _paint_trailing_area(self, painter: QPainter, outermost_edge: int, is_ltr: bool, prev_is_current: bool) -> None:
+        """Paint the outer edge and bottom border of the empty space after all tabs."""
+        if self.count() == 0:
             return
 
         splitter_color = self._style_manager.get_color(
             ColorRole.SPLITTER if prev_is_current else ColorRole.TAB_SPLITTER
         )
 
-        right_edge = self.rect()
-        right_edge.setLeft(rightmost_right)
-        right_edge.setWidth(1)
-        painter.fillRect(right_edge, splitter_color)
+        if is_ltr:
+            if outermost_edge >= self.width():
+                return
 
-        if rightmost_right + 1 < self.width():
-            bottom_strip = self.rect()
-            bottom_strip.setLeft(rightmost_right)
-            bottom_strip.setTop(self.height() - 1)
-            bottom_strip.setHeight(1)
-            painter.fillRect(bottom_strip, self._style_manager.get_color(ColorRole.SPLITTER))
+            edge_rect = self.rect()
+            edge_rect.setLeft(outermost_edge)
+            edge_rect.setWidth(1)
+            painter.fillRect(edge_rect, splitter_color)
+            if outermost_edge + 1 < self.width():
+                bottom_strip = self.rect()
+                bottom_strip.setLeft(outermost_edge)
+                bottom_strip.setTop(self.height() - 1)
+                bottom_strip.setHeight(1)
+                painter.fillRect(bottom_strip, self._style_manager.get_color(ColorRole.SPLITTER))
+
+        else:
+            if outermost_edge <= 0:
+                return
+
+            edge_rect = self.rect()
+            edge_rect.setRight(outermost_edge)
+            edge_rect.setLeft(outermost_edge - 1)
+            painter.fillRect(edge_rect, splitter_color)
+            if outermost_edge - 1 > 0:
+                bottom_strip = self.rect()
+                bottom_strip.setRight(outermost_edge)
+                bottom_strip.setTop(self.height() - 1)
+                bottom_strip.setHeight(1)
+                painter.fillRect(bottom_strip, self._style_manager.get_color(ColorRole.SPLITTER))
 
     def _paint_drop_indicator(self) -> None:
         """Paint the drag-and-drop insertion bar on top of everything else."""
@@ -506,14 +541,26 @@ class TabBar(QTabBar):
         bar_color = self._style_manager.get_color(ColorRole.DROP_TARGET_SEPARATOR_HIGHLIGHT)
         bar_width = 2
 
-        if self._drop_index < self.count():
-            bar_x = self.tabRect(self._drop_index).left()
+        is_ltr = self.layoutDirection() == Qt.LayoutDirection.LeftToRight
+        if is_ltr:
+            if self._drop_index < self.count():
+                bar_x = self.tabRect(self._drop_index).left()
 
-        elif self.count() > 0:
-            bar_x = self.tabRect(self.count() - 1).right() + 1
+            elif self.count() > 0:
+                bar_x = self.tabRect(self.count() - 1).right() + 1
+
+            else:
+                bar_x = 0
 
         else:
-            bar_x = 0
+            if self._drop_index < self.count():
+                bar_x = self.tabRect(self._drop_index).right() - bar_width + 1
+
+            elif self.count() > 0:
+                bar_x = self.tabRect(self.count() - 1).left() - bar_width
+
+            else:
+                bar_x = self.width() - bar_width
 
         painter = QPainter(self)
         painter.fillRect(QRect(bar_x, 0, bar_width, self.height()), bar_color)
