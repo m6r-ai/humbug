@@ -4,7 +4,12 @@
 
 New features:
 
-- Update the grok model catalogue to grok 4.2 and 4.3, removing the soon-to-be-removed 4.0 amd 4.1 models.
+- Updated the grok model catalogue to grok 4.2 and 4.3, removing the soon-to-be-removed 4.0 amd 4.1 models.
+
+Bug fixes:
+
+- Resolved an issue with lazy loading introduced in v46.
+- Improve the tab bar rendering with a custom painter (faster and contents are positioned more accurately).
 
 Internal structure changes:
 

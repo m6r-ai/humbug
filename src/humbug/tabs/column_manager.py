@@ -30,7 +30,6 @@ from humbug.tabs.log.log_tab import LogTab
 from humbug.tabs.shell.shell_tab import ShellTab
 from humbug.tabs.tab_bar import TabBar
 from humbug.tabs.tab_base import TabBase
-from humbug.tabs.tab_label import TabLabel
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_style import build_column_manager_stylesheet, build_tab_bar_stylesheet
 from humbug.tabs.tab_type import TabType
@@ -130,7 +129,6 @@ class ColumnManager(QWidget):
 
         # Track tabs
         self._tabs: Dict[str, TabBase] = {}
-        self._tab_labels: Dict[str, TabLabel] = {}
 
         # Are we protecting the current tab against being ovewrwritten?
         self._protected_tab_id: str | None = None
@@ -204,7 +202,7 @@ class ColumnManager(QWidget):
             - is_ephemeral: Whether the tab is temporary
         """
         tab_id = tab.tab_id()
-        label = self._tab_labels.get(tab_id)
+        tab_index, tab_bar = self._find_tab_bar_and_index(tab)
 
         # Determine tab type
         tab_type = "unknown"
@@ -244,7 +242,7 @@ class ColumnManager(QWidget):
 
         return {
             "tab_id": tab_id,
-            "title": label.text() if label else "",
+            "title": tab_bar.get_tab_text(tab_index) if tab_bar and tab_index != -1 else "",
             "type": tab_type,
             "path": relative_path,
             "column_index": column_index,
@@ -447,7 +445,7 @@ class ColumnManager(QWidget):
         if tab.is_ephemeral():
             self._make_tab_permanent(tab)
 
-    def _on_tab_updated_state_changed(self, tab_id: str, is_updated: bool) -> None:
+    def _on_tab_updated_state_changed(self, _tab_id: str, _is_updated: bool) -> None:
         """
         Update a tab's updated state.
 
@@ -455,10 +453,6 @@ class ColumnManager(QWidget):
             tab_id: ID of the tab to update
             is_updated: Whether the tab has updated content
         """
-        label = self._tab_labels.get(tab_id)
-        if label:
-            label.set_updated(is_updated)
-
         self._update_tabs(change_focus=False)
 
     def _on_tab_file_state_changed(self, tab_id: str, file_exists: bool) -> None:
@@ -469,9 +463,11 @@ class ColumnManager(QWidget):
             tab_id: ID of the tab to update
             file_exists: Whether the tab's file exists
         """
-        label = self._tab_labels.get(tab_id)
-        if label:
-            label.set_file_missing(not file_exists)
+        tab = self._tabs.get(tab_id)
+        if tab:
+            tab_index, tab_bar = self._find_tab_bar_and_index(tab)
+            if tab_bar and tab_index != -1:
+                tab_bar.set_tab_file_missing(tab_index, not file_exists)
 
     def _remove_tab_from_column(self, tab: TabBase, column: ColumnWidget) -> None:
         """
@@ -488,11 +484,13 @@ class ColumnManager(QWidget):
         if tab_id in mru_list:
             mru_list.remove(tab_id)
 
-        tab_label = self._tab_labels.pop(tab_id)
         del self._tabs[tab_id]
         index = column.indexOf(tab)
+        tab_bar = column.tabBar()
+        if isinstance(tab_bar, TabBar):
+            tab_bar.remove_tab_data(tab_id)
+
         column.removeTab(index)
-        tab_label.deleteLater()
         tab.deleteLater()
         QTimer.singleShot(0, self.show_all_columns)
 
@@ -532,9 +530,6 @@ class ColumnManager(QWidget):
             icon = "diff"
 
         tab_id = tab.tab_id()
-        label = TabLabel(tab_id, icon, title, tool_tip)
-        label.close_clicked.connect(lambda: self._on_tab_label_close_clicked(tab_id))
-        label.double_clicked.connect(lambda: self._on_tab_label_double_clicked(tab_id))
         tab.activated.connect(lambda: self._on_tab_activated(tab))
         tab.updated_state_changed.connect(self._on_tab_updated_state_changed)
         tab.modified_state_changed.connect(self._on_tab_modified_state_changed)
@@ -542,19 +537,15 @@ class ColumnManager(QWidget):
         tab.close_requested.connect(lambda: self.close_tab_by_id(tab_id, force_close=True))
 
         self._tabs[tab_id] = tab
-        self._tab_labels[tab_id] = label
-
-        if tab.is_ephemeral():
-            label.set_ephemeral(True)
-
-        if tab.is_path_missing():
-            label.set_file_missing(True)
 
         index = column.addTab(tab, "")
-        column.tabBar().setTabButton(index, QTabBar.ButtonPosition.LeftSide, label)
         tab_bar = column.tabBar()
         assert isinstance(tab_bar, TabBar)
-        label.hovered.connect(lambda hovered, l=label, tb=tab_bar: tb.on_label_hovered(l, hovered))
+        tab_bar.add_tab_data(
+            index, tab_id, icon, title, tool_tip,
+            is_ephemeral=tab.is_ephemeral(),
+            is_file_missing=tab.is_path_missing(),
+        )
         focus_widget = QApplication.focusWidget()
         column.setCurrentWidget(tab)
         if focus_widget is not None:
@@ -585,7 +576,8 @@ class ColumnManager(QWidget):
         tab_state.is_ephemeral = False
 
         tab_id = tab.tab_id()
-        tab_title = self._tab_labels[tab_id].text()
+        src_index, src_tab_bar = self._find_tab_bar_and_index(tab)
+        tab_title = src_tab_bar.get_tab_text(src_index) if src_tab_bar and src_index != -1 else ""
 
         # Remove from source column's MRU order
         source_mru = self._column_mru_order[source_column]
@@ -901,10 +893,11 @@ class ColumnManager(QWidget):
             return
 
         tab_bar = cast(TabBar, column.tabBar())
-        tab_bar.update_tab_size()
+        tab_bar.updateGeometry()
 
     def handle_file_rename(self, old_path: str, new_path: str) -> None:
-        """Handle renaming of files by updating any open tabs.
+        """
+        Handle renaming of files by updating any open tabs.
 
         Args:
             old_path: Original path of renamed file
@@ -924,9 +917,10 @@ class ColumnManager(QWidget):
 
                 # Update tab label text
                 new_title = os.path.splitext(os.path.basename(new_path))[0]
-                tab_id = conversation_tab.tab_id()
-                label = self._tab_labels[tab_id]
-                label.set_text(new_title)
+                tab_index, tab_bar = self._find_tab_bar_and_index(conversation_tab)
+                if tab_bar and tab_index != -1:
+                    tab_bar.set_tab_text(tab_index, new_title)
+
                 self._update_tab_bar_for_label_change(conversation_tab)
 
         # Update any preview tab for this file
@@ -936,9 +930,10 @@ class ColumnManager(QWidget):
 
             # Update tab label text
             new_title = os.path.basename(new_path)
-            tab_id = preview_tab.tab_id()
-            label = self._tab_labels[tab_id]
-            label.set_text(new_title)
+            tab_index, tab_bar = self._find_tab_bar_and_index(preview_tab)
+            if tab_bar and tab_index != -1:
+                tab_bar.set_tab_text(tab_index, new_title)
+
             self._update_tab_bar_for_label_change(preview_tab)
 
     def _create_column(self, index: int) -> ColumnWidget:
@@ -958,6 +953,11 @@ class ColumnManager(QWidget):
         tab_bar = column_widget.tabBar()
         if tab_bar:
             self._apply_tab_bar_style(tab_bar)
+
+        tab_bar = column_widget.tabBar()
+        if isinstance(tab_bar, TabBar):
+            tab_bar.close_clicked.connect(self._on_tab_label_close_clicked)
+            tab_bar.double_clicked.connect(self._on_tab_label_double_clicked)
 
         self.show_all_columns()
         return column_widget
@@ -985,8 +985,7 @@ class ColumnManager(QWidget):
 
     def _update_tabs(self, change_focus: bool=True) -> None:
         """ Update the state of all tabs and their labels. """
-        for tab_id, label in self._tab_labels.items():
-            tab = self._tabs[tab_id]
+        for tab in self._tabs.values():
             column = self._find_column_for_tab(tab)
             if column is None:
                 continue
@@ -1002,9 +1001,6 @@ class ColumnManager(QWidget):
                 tab.set_updated(False)
                 is_updated = False
 
-            label.set_current(is_current, is_active_column, is_updated)
-
-            # Update the tab bar state for background painting
             tab_index = column.indexOf(tab)
             if tab_index != -1 and isinstance(column.tabBar(), TabBar):
                 tab_bar = cast(TabBar, column.tabBar())
@@ -1239,6 +1235,22 @@ class ColumnManager(QWidget):
 
         return None
 
+    def _find_tab_bar_and_index(self, tab: TabBase) -> tuple[int, TabBar | None]:
+        """Find the TabBar and index for the given tab.
+
+        Returns:
+            Tuple of (index, TabBar) or (-1, None) if not found.
+        """
+        column = self._find_column_for_tab(tab)
+        if column is None:
+            return -1, None
+
+        tab_bar = column.tabBar()
+        if not isinstance(tab_bar, TabBar):
+            return -1, None
+
+        return column.indexOf(tab), tab_bar
+
     def get_current_tab(self) -> TabBase | None:
         """
         Get the currently active tab.
@@ -1276,9 +1288,9 @@ class ColumnManager(QWidget):
     def _make_tab_permanent(self, tab: TabBase) -> None:
         """Convert an ephemeral tab to permanent."""
         tab.set_ephemeral(False)
-        label = self._tab_labels.get(tab.tab_id())
-        if label:
-            label.set_ephemeral(False)
+        tab_index, tab_bar = self._find_tab_bar_and_index(tab)
+        if tab_bar and tab_index != -1:
+            tab_bar.set_tab_ephemeral(tab_index, False)
 
     def _move_tab_to_active_column(self, tab: TabBase) -> None:
         """
@@ -1321,16 +1333,15 @@ class ColumnManager(QWidget):
             if modified:
                 self._make_tab_permanent(tab)
 
-            label = self._tab_labels.get(tab_id)
-            if label:
-                current_text = label.text()
+            tab_index, tab_bar = self._find_tab_bar_and_index(tab)
+            if tab_bar and tab_index != -1:
+                current_text = tab_bar.get_tab_text(tab_index)
                 if modified and not current_text.endswith('*'):
-                    label.set_text(f"{current_text}*")
-
+                    tab_bar.set_tab_text(tab_index, f"{current_text}*")
                 elif not modified and current_text.endswith('*'):
-                    label.set_text(current_text[:-1])
+                    tab_bar.set_tab_text(tab_index, current_text[:-1])
 
-                self._update_tab_bar_for_label_change(tab)
+            self._update_tab_bar_for_label_change(tab)
 
     def current_tab_path(self) -> str:
         """
@@ -2133,20 +2144,11 @@ class ColumnManager(QWidget):
         self._update_column_splitter()
         self._apply_all_tab_bar_styles()
 
-        # Update all tab labels, setting active state only for the current active tab.
-        for tab_id, label in self._tab_labels.items():
-            tab = self._tabs[tab_id]
-            tab_column = self._find_column_for_tab(tab)
-            if tab_column is None:
-                continue
-
-            label.handle_style_changed()
-
-        # Trigger repaint of the tab bar to show updated colors
+        # Notify all tab bars of style change
         for column in self._tab_columns:
             tab_bar = column.tabBar()
             if isinstance(tab_bar, TabBar):
-                tab_bar.update_tab_size()
+                tab_bar.handle_style_changed()
 
     def update_welcome_widget(self, user_settings: UserSettings) -> None:
         """
@@ -2376,9 +2378,10 @@ class ColumnManager(QWidget):
         if tab.is_modified():
             title += "*"
 
-        tab_id = tab.tab_id()
-        label = self._tab_labels[tab_id]
-        label.set_text(title)
+        tab_index, tab_bar = self._find_tab_bar_and_index(tab)
+        if tab_bar and tab_index != -1:
+            tab_bar.set_tab_text(tab_index, title)
+
         self._update_tab_bar_for_label_change(tab)
 
     def can_show_all_columns(self) -> bool:

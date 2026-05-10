@@ -12,6 +12,8 @@ from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
 from PySide6.QtGui import QTextCharFormat, QFontDatabase, QColor, QFontMetricsF, QFont, QPixmap, QGuiApplication
+from PySide6.QtGui import QPainter
+from PySide6.QtSvg import QSvgRenderer
 
 from syntax import TokenType
 
@@ -64,10 +66,7 @@ class StyleManager(QObject):
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
             self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
 
-            # Two-level icon cache for performance.  Level 1: Cache original loaded icons by path
-            self._icon_cache: Dict[str, QPixmap] = {}
-
-            # Level 2: Cache scaled icons by (path, scaled_size)
+            # Cache SVG-rendered icons by (name, scaled_size)
             self._scaled_icon_cache: Dict[tuple[str, int], QPixmap] = {}
 
             self._code_font_families = ["JetBrains Mono", "Noto Sans Arabic"]
@@ -913,24 +912,19 @@ class StyleManager(QObject):
         scaled_size = int(target_size * self._zoom_factor)
         cache_key = (icon_name, scaled_size)
 
-        # Check if we already have this scaled icon cached
         if cache_key in self._scaled_icon_cache:
             return self._scaled_icon_cache[cache_key]
 
-        # Load original icon (with caching)
-        if icon_name not in self._icon_cache:
-            self._icon_cache[icon_name] = QPixmap(self.get_icon_path(icon_name))
+        renderer = QSvgRenderer(self.get_icon_path(icon_name))
+        pixmap = QPixmap(scaled_size, scaled_size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        renderer.render(painter)
+        painter.end()
 
-        # Scale the icon and cache the result
-        scaled_pixmap = self._icon_cache[icon_name].scaled(
-            scaled_size,
-            scaled_size,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation
-        )
-
-        self._scaled_icon_cache[cache_key] = scaled_pixmap
-        return scaled_pixmap
+        self._scaled_icon_cache[cache_key] = pixmap
+        return pixmap
 
     def get_color(self, role: ColorRole) -> QColor:
         """
@@ -1072,7 +1066,6 @@ class StyleManager(QObject):
         if self._color_mode == ColorMode.SYSTEM:
             self._initialize_highlights()
             self._initialize_proportional_highlights()
-            self._icon_cache.clear()
             self._scaled_icon_cache.clear()
             self.style_changed.emit()
 
@@ -1094,8 +1087,7 @@ class StyleManager(QObject):
             self._color_mode = mode
             self._initialize_highlights()
             self._initialize_proportional_highlights()
-            # Clear both caches since icon paths change with theme
-            self._icon_cache.clear()
+            # Clear scaled cache since icon paths change with theme
             self._scaled_icon_cache.clear()
             self.style_changed.emit()
 
@@ -1107,8 +1099,8 @@ class StyleManager(QObject):
         """
         Set new zoom factor and update application styles.
 
-        Clears the scaled icon cache since all icons need to be rescaled
-        at the new zoom level. The original icon cache is preserved.
+        Clears the scaled icon cache since all icons need to be re-rendered
+        at the new zoom level.
 
         Args:
             factor: New zoom factor to apply (clamped between 0.5 and 2.0)
