@@ -155,6 +155,7 @@ class ConversationMessage(QFrame):
         style = self._message_source
         self._attachments_button: QToolButton | None = None
         self._attachments_container: QWidget | None = None
+        self._chips_bar: QWidget | None = None
         self._attachment_sections: list[ConversationMessageSection] = []
         self._attachments_expanded: bool = False
 
@@ -230,15 +231,37 @@ class ConversationMessage(QFrame):
                 self._attachment_sections.append(section)
                 attachments_layout.addWidget(section)
 
+            # Chips bar — read-only filename pills, visible when attachments are collapsed
+            self._chips_bar = QWidget(self)
+            self._chips_bar.setObjectName("_chips_bar")
+            chips_layout = QHBoxLayout(self._chips_bar)
+            chips_layout.setContentsMargins(0, 0, 0, 0)
+            chips_layout.setSpacing(4)
+            for filename, _ in self._attachments:
+                chip = QWidget()
+                chip.setObjectName("_attachment_widget")
+                chip.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+                chip_layout = QHBoxLayout(chip)
+                chip_layout.setContentsMargins(8, 4, 8, 4)
+                chip_layout.setSpacing(0)
+                label = QLabel(filename)
+                label.setObjectName("_attachment_label")
+                chip_layout.addWidget(label)
+                chips_layout.addWidget(chip)
+
+            chips_layout.addStretch()
+
         # Create layout
         self._layout = QVBoxLayout(self)
 
         if not is_input:
             self._layout.addWidget(self._banner)
+            self._layout.addWidget(self._sections_container)
             if self._attachments_container is not None:
                 self._layout.addWidget(self._attachments_container)
 
-            self._layout.addWidget(self._sections_container)
+            if self._chips_bar is not None:
+                self._layout.addWidget(self._chips_bar)
 
         else:
             # Add a couple of pixels because the other non-input boxes push their text down slightly because of the buttons
@@ -468,6 +491,10 @@ class ConversationMessage(QFrame):
             else:
                 self._attachments_container.hide()
 
+        if self._chips_bar is not None:
+            self._chips_bar.setVisible(not self._attachments_expanded)
+
+        self.expand_requested.emit(self._attachments_expanded)
         self._update_attachments_button()
 
     def _update_attachments_button(self) -> None:
@@ -1198,6 +1225,19 @@ class ConversationMessage(QFrame):
 
         for section in self._attachment_sections:
             section.apply_style()
+
+        if self._chips_bar is not None:
+            chip_font = self.font()
+            chip_font.setPointSizeF(style_manager.base_font_size() * zoom_factor * 0.8)
+            chips_layout = self._chips_bar.layout()
+            if chips_layout is not None:
+                for i in range(chips_layout.count()):
+                    item = chips_layout.itemAt(i)
+                    chip = item.widget() if item else None
+                    if chip is not None:
+                        label = chip.findChild(QLabel, "_attachment_label")
+                        if label is not None:
+                            label.setFont(chip_font)
 
         # Re-apply style to the inline edit text area if currently open
         if self._edit_text_edit is not None:

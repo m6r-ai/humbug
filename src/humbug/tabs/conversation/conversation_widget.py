@@ -2026,6 +2026,11 @@ class ConversationWidget(QWidget):
                 border: none;
             }}
 
+            #ConversationMessage #_chips_bar {{
+                background-color: transparent;
+                border: none;
+            }}
+
             #ConversationMessage #_approval_widget {{
                 background-color: transparent;
                 border: none;
