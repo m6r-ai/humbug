@@ -1,5 +1,7 @@
 """Tab label management for the Humbug application."""
 
+import math
+
 from PySide6.QtWidgets import (
     QWidget, QLabel, QToolButton, QHBoxLayout, QSizePolicy, QApplication
 )
@@ -20,7 +22,6 @@ class TabLabel(QWidget):
     """Custom widget for tab labels with close button and drag support."""
 
     close_clicked = Signal()
-    drag_started = Signal()
     double_clicked = Signal()
     hovered = Signal(bool)
 
@@ -53,14 +54,15 @@ class TabLabel(QWidget):
 
         self._layout = QHBoxLayout(self)
         self.setLayout(self._layout)
+        self._layout.setSpacing(0)
 
         self._type_label = QLabel()
         self._type_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
-        self._type_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(self._type_label)
 
         self._label = QLabel(text)
         self._label.setIndent(0)
+        self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._layout.addWidget(self._label)
 
         self._close_button = QToolButton()
@@ -125,8 +127,7 @@ class TabLabel(QWidget):
         self._visible_inactive_close_icon = self._create_visible_inactive_close_icon()
         self._invisible_close_icon = self._create_invisible_close_icon()
 
-        # Update layout margins and spacing
-        self._layout.setSpacing(round(6 * factor))
+        # Update margins
         margins = round(8 * factor)
         self._layout.setContentsMargins(margins, 0, margins, 0)
 
@@ -145,10 +146,9 @@ class TabLabel(QWidget):
 
         # Make allowance for the width of italicized text
         font_metrics = QFontMetricsF(font)
-        space_width = round(font_metrics.horizontalAdvance(' '))
-        text_width = round(font_metrics.horizontalAdvance(self._label.text()))
-        self._label.setContentsMargins(space_width, 0, space_width, 0)
-        self._label.setMinimumWidth(text_width + 2 * space_width)
+        space_width = math.ceil(font_metrics.horizontalAdvance(' '))
+        text_width = math.ceil(font_metrics.horizontalAdvance(self._label.text()))
+        self._label.setMinimumWidth(text_width + 6 * space_width)
 
         show_active = self._is_current and self._is_active_column
         if self._file_missing:
@@ -207,9 +207,6 @@ class TabLabel(QWidget):
         # Clear drag tracking
         self._drag_start_pos = None
 
-        # Emit signal before starting drag
-        self.drag_started.emit()
-
         # Execute drag operation
         drag.exec_(Qt.DropAction.MoveAction)
 
@@ -258,13 +255,13 @@ class TabLabel(QWidget):
         """Update tab type and close button appearance based on current state."""
         visible = self._is_current or self._is_hovered
 
-        style_manager = StyleManager()
+        style_manager = self._style_manager
         base_color = self._get_background_color()
 
         type_style = build_tab_type_icon_stylesheet(style_manager, base_color)
+        close_style = build_tab_close_button_stylesheet(style_manager, base_color)
 
         if visible:
-            close_style = build_tab_close_button_stylesheet(style_manager, base_color, True)
             show_active = self._is_current and self._is_active_column
             type_pixmap = self._type_pixmap if show_active else self._inactive_type_pixmap
             self._type_label.setPixmap(type_pixmap)
@@ -274,7 +271,6 @@ class TabLabel(QWidget):
             self._close_button.setToolTip("Close Tab")
 
         else:
-            close_style = build_tab_close_button_stylesheet(style_manager, base_color, False)
             self._type_label.setPixmap(self._inactive_type_pixmap)
             self._close_button.setIcon(self._invisible_close_icon)
             self._close_button.setCursor(Qt.CursorShape.ArrowCursor)

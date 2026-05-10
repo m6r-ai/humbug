@@ -80,19 +80,8 @@ def build_tab_type_icon_stylesheet(style_manager: StyleManager, base_color: Colo
     """
 
 
-def build_tab_close_button_stylesheet(style_manager: StyleManager, base_color: ColorRole, visible: bool) -> str:
+def build_tab_close_button_stylesheet(style_manager: StyleManager, base_color: ColorRole) -> str:
     """Build stylesheet for the tab close button."""
-    if not visible:
-        return f"""
-            QToolButton {{
-                border: none;
-                outline: none;
-                padding: 0px;
-                margin: 0px;
-                background: {style_manager.get_color_str(base_color)};
-            }}
-        """
-
     return f"""
         QToolButton {{
             border: none;
