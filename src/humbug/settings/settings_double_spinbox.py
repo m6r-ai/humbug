@@ -81,7 +81,6 @@ class SettingsDoubleSpinBox(SettingsField):
         zoom_factor = self._style_manager.zoom_factor()
         min_height = int(30 * zoom_factor)
         self._spin.setMinimumHeight(min_height)
-        self._spin.setStyleSheet(self._style_manager.get_double_spin_box_stylesheet())
 
     def set_enabled(self, enabled: bool) -> None:
         """Enable or disable the double spin box."""

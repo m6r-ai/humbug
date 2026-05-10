@@ -73,7 +73,6 @@ class SettingsTextField(SettingsField):
         zoom_factor = self._style_manager.zoom_factor()
         min_height = int(30 * zoom_factor)
         self._text_field.setMinimumHeight(min_height)
-        self._text_field.setStyleSheet(self._style_manager.get_text_input_stylesheet("QLineEdit"))
 
     def set_enabled(self, enabled: bool) -> None:
         """Enable or disable the text field."""
