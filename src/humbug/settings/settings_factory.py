@@ -8,17 +8,17 @@ various types of settings items with default styling and behavior.
 from typing import List, Any, Tuple
 from PySide6.QtWidgets import QWidget
 
-from humbug.settings.settings_spacer import SettingsSpacer
-from humbug.settings.settings_header import SettingsHeader
-from humbug.settings.settings_section import SettingsSection
-from humbug.settings.settings_page_heading import SettingsPageHeading
-from humbug.settings.settings_checkbox import SettingsCheckbox
 from humbug.settings.settings_combo import SettingsCombo
-from humbug.settings.settings_spinbox import SettingsSpinBox
+from humbug.settings.settings_display import SettingsDisplay
 from humbug.settings.settings_double_spinbox import SettingsDoubleSpinBox
+from humbug.settings.settings_header import SettingsHeader
+from humbug.settings.settings_page_heading import SettingsPageHeading
+from humbug.settings.settings_section import SettingsSection
+from humbug.settings.settings_spacer import SettingsSpacer
+from humbug.settings.settings_spinbox import SettingsSpinBox
+from humbug.settings.settings_switch import SettingsSwitch
 from humbug.settings.settings_text_field import SettingsTextField
 from humbug.settings.settings_text_area import SettingsTextArea
-from humbug.settings.settings_display import SettingsDisplay
 
 
 class SettingsFactory:
@@ -50,9 +50,9 @@ class SettingsFactory:
         return SettingsSection(title, description, parent)
 
     @staticmethod
-    def create_checkbox(text: str, parent: QWidget | None = None) -> SettingsCheckbox:
-        """Create a checkbox setting."""
-        return SettingsCheckbox(text, parent)
+    def create_switch(text: str, parent: QWidget | None = None) -> SettingsSwitch:
+        """Create a switch setting."""
+        return SettingsSwitch(text, parent)
 
     @staticmethod
     def create_combo(

@@ -24,8 +24,8 @@ class Switch(QCheckBox):
         self._text_on_color: QColor
         self._text_off_color: QColor
         self._text_disabled_color: QColor
-        self._on_label = "\u23fd"
-        self._off_label = "\u23fc"
+        self._on_label = ""
+        self._off_label = ""
         self._knob_inset = 3
         self._position = 1.0 if self.isChecked() else 0.0
         self._animation = QVariantAnimation(self)
@@ -44,6 +44,7 @@ class Switch(QCheckBox):
     def apply_style(self, style_manager: StyleManager) -> None:
         """Apply design-system colors and metrics."""
         # TODO: Should we make this the default approach everywhere we use apply_style?
+        # TODO: We don't allow direct colours!
         self._track_on_color = QColor("#375f8c")
         self._track_on_end_color = QColor("#5a4f93")
         self._track_off_color = QColor(style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND))

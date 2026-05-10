@@ -6,7 +6,7 @@ from humbug.settings.settings_field import SettingsField
 from humbug.widgets.switch import Switch
 
 
-class SettingsCheckbox(SettingsField):
+class SettingsSwitch(SettingsField):
     """Switch setting with label for boolean options."""
 
     def __init__(self, label_text: str, parent: QWidget | None = None) -> None:
@@ -19,32 +19,32 @@ class SettingsCheckbox(SettingsField):
         """
         super().__init__(label_text, parent)
 
-        self._checkbox = Switch()
-        self._checkbox.toggled.connect(self._on_state_changed)
+        self._switch = Switch()
+        self._switch.toggled.connect(self._on_state_changed)
 
-        self._layout.addWidget(self._checkbox)
+        self._layout.addWidget(self._switch)
         self._initial_value = False
         self._on_style_changed()
 
     def _on_state_changed(self) -> None:
-        """Handle checkbox state changes."""
+        """Handle switch state changes."""
         self.value_changed.emit()
 
     def is_modified(self) -> bool:
-        """Check if checkbox state has changed."""
-        return self._checkbox.isChecked() != self._initial_value
+        """Check if switch state has changed."""
+        return self._switch.isChecked() != self._initial_value
 
     def reset_modified_state(self) -> None:
         """Reset the initial value to current value."""
-        self._initial_value = self._checkbox.isChecked()
+        self._initial_value = self._switch.isChecked()
 
     def get_value(self) -> bool:
-        """Get the current checkbox state."""
-        return self._checkbox.isChecked()
+        """Get the current switch state."""
+        return self._switch.isChecked()
 
     def set_value(self, value: bool) -> None:
-        """Set the checkbox state."""
-        self._checkbox.setChecked(value)
+        """Set the switch state."""
+        self._switch.setChecked(value)
         self._initial_value = value
 
     def set_label(self, text: str) -> None:
@@ -53,4 +53,4 @@ class SettingsCheckbox(SettingsField):
 
     def _on_style_changed(self) -> None:
         """Update switch styling."""
-        self._checkbox.apply_style(self._style_manager)
+        self._switch.apply_style(self._style_manager)

@@ -55,13 +55,13 @@ class MindspaceFoldersDialog(QDialog):
         self._settings_container.add_setting(self._path_display)
 
         # Conversations folder option (required)
-        self._conversations_check = SettingsFactory.create_checkbox(strings.conversations_folder)
+        self._conversations_check = SettingsFactory.create_switch(strings.conversations_folder)
         self._conversations_check.set_value(True)
         self._conversations_check.setEnabled(False)  # Always required
         self._settings_container.add_setting(self._conversations_check)
 
         # Source folder option
-        self._src_check = SettingsFactory.create_checkbox(strings.src_folder)
+        self._src_check = SettingsFactory.create_switch(strings.src_folder)
         self._src_check.set_value(False)
         self._settings_container.add_setting(self._src_check)
 

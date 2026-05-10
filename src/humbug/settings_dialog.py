@@ -18,7 +18,6 @@ from humbug.language.language_code import LanguageCode
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
-from humbug.settings.settings_checkbox import SettingsCheckbox
 from humbug.settings.settings_container import SettingsContainer
 from humbug.settings.settings_combo import SettingsCombo
 from humbug.settings.settings_double_spinbox import SettingsDoubleSpinBox
@@ -26,6 +25,7 @@ from humbug.settings.settings_factory import SettingsFactory
 from humbug.settings.settings_page_heading import SettingsPageHeading
 from humbug.settings.settings_section import SettingsSection
 from humbug.settings.settings_spinbox import SettingsSpinBox
+from humbug.settings.settings_switch import SettingsSwitch
 from humbug.settings.settings_text_area import SettingsTextArea
 from humbug.settings.settings_text_field import SettingsTextField
 from humbug.style_manager import StyleManager, ColorMode
@@ -95,7 +95,7 @@ class SettingsDialog(QDialog):
         self._has_mindspace = False
 
         self._ai_backend_controls: Dict[str, Dict[str, QWidget]] = {}
-        self._tool_checkboxes: Dict[str, QWidget] = {}
+        self._tool_switches: Dict[str, QWidget] = {}
 
         # Map section id -> (list item, stack page widget)
         self._section_items: Dict[str, QListWidgetItem] = {}
@@ -104,14 +104,14 @@ class SettingsDialog(QDialog):
         self._display_heading: SettingsPageHeading
         self._language_combo: SettingsCombo
         self._font_size_spin: SettingsDoubleSpinBox
-        self._font_ligatures_check: SettingsCheckbox
+        self._font_ligatures_check: SettingsSwitch
         self._theme_combo: SettingsCombo
         self._file_sort_combo: SettingsCombo
-        self._check_for_updates_check: SettingsCheckbox
+        self._check_for_updates_check: SettingsSwitch
         self._display_container: SettingsContainer
 
         self._file_access_heading: SettingsPageHeading
-        self._allow_external_access_checkbox: SettingsCheckbox
+        self._allow_external_access_switch: SettingsSwitch
         self._external_allowlist_area: SettingsTextArea
         self._external_denylist_area: SettingsTextArea
         self._file_access_container: SettingsContainer
@@ -130,18 +130,18 @@ class SettingsDialog(QDialog):
 
         self._editor_heading: SettingsPageHeading
         self._editor_tabs_section: SettingsSection
-        self._soft_tabs_check: SettingsCheckbox
+        self._soft_tabs_check: SettingsSwitch
         self._tab_size_spin: SettingsSpinBox
-        self._auto_backup_check: SettingsCheckbox
+        self._auto_backup_check: SettingsSwitch
         self._backup_interval_spin: SettingsSpinBox
         self._editor_container: SettingsContainer
 
         self._terminal_heading: SettingsPageHeading
-        self._terminal_fixed_width_check: SettingsCheckbox
+        self._terminal_fixed_width_check: SettingsSwitch
         self._terminal_fixed_width_spin: SettingsSpinBox
-        self._terminal_scrollback_check: SettingsCheckbox
+        self._terminal_scrollback_check: SettingsSwitch
         self._terminal_scrollback_spin: SettingsSpinBox
-        self._terminal_close_on_exit_check: SettingsCheckbox
+        self._terminal_close_on_exit_check: SettingsSwitch
         self._terminal_container: SettingsContainer
 
         strings = self._language_manager.strings()
@@ -291,7 +291,7 @@ class SettingsDialog(QDialog):
         )
         container.add_setting(self._font_size_spin)
 
-        self._font_ligatures_check = SettingsFactory.create_checkbox(strings.font_ligatures)
+        self._font_ligatures_check = SettingsFactory.create_switch(strings.font_ligatures)
         container.add_setting(self._font_ligatures_check)
 
         self._theme_combo = SettingsFactory.create_combo(strings.display_theme)
@@ -309,7 +309,7 @@ class SettingsDialog(QDialog):
             (strings.sort_alphabetical, UserFileSortOrder.ALPHABETICAL),
         ])
 
-        self._check_for_updates_check = SettingsFactory.create_checkbox(strings.check_for_updates_setting)
+        self._check_for_updates_check = SettingsFactory.create_switch(strings.check_for_updates_setting)
         container.add_setting(self._check_for_updates_check)
 
         container.add_stretch()
@@ -329,10 +329,10 @@ class SettingsDialog(QDialog):
         self._file_access_heading = SettingsFactory.create_page_heading(strings.external_file_access)
         container.add_setting(self._file_access_heading)
 
-        self._allow_external_access_checkbox = SettingsFactory.create_checkbox(
+        self._allow_external_access_switch = SettingsFactory.create_switch(
             strings.allow_external_file_access
         )
-        container.add_setting(self._allow_external_access_checkbox)
+        container.add_setting(self._allow_external_access_switch)
 
         self._external_allowlist_area = SettingsFactory.create_text_area(strings.external_file_allowlist)
         container.add_setting(self._external_allowlist_area)
@@ -340,7 +340,7 @@ class SettingsDialog(QDialog):
         self._external_denylist_area = SettingsFactory.create_text_area(strings.external_file_denylist)
         container.add_setting(self._external_denylist_area)
 
-        self._allow_external_access_checkbox.value_changed.connect(self._handle_external_access_enabled)
+        self._allow_external_access_switch.value_changed.connect(self._handle_external_access_enabled)
 
         container.add_stretch()
         container.value_changed.connect(self._on_value_changed)
@@ -375,8 +375,8 @@ class SettingsDialog(QDialog):
             backend_title = SettingsFactory.create_section(backend_name)
             container.add_setting(backend_title)
 
-            enable_checkbox = SettingsFactory.create_checkbox(strings.enable_backend)
-            container.add_setting(enable_checkbox)
+            enable_switch = SettingsFactory.create_switch(strings.enable_backend)
+            container.add_setting(enable_switch)
 
             api_key_field = SettingsFactory.create_text_field(strings.api_key)
             container.add_setting(api_key_field)
@@ -386,13 +386,13 @@ class SettingsDialog(QDialog):
             container.add_setting(url_field)
 
             self._ai_backend_controls[backend_id] = {
-                "enable": enable_checkbox,
+                "enable": enable_switch,
                 "key": api_key_field,
                 "url": url_field,
                 "title": backend_title,
             }
 
-            enable_checkbox.value_changed.connect(
+            enable_switch.value_changed.connect(
                 lambda _checked=None, bid=backend_id: self._handle_backend_enabled(bid)
             )
 
@@ -448,9 +448,9 @@ class SettingsDialog(QDialog):
 
         tool_configs = self._tool_manager.get_all_tool_configs()
         for config in tool_configs:
-            checkbox = SettingsFactory.create_checkbox(config.display_name)
-            self._tool_checkboxes[config.name] = checkbox
-            container.add_setting(checkbox)
+            switch = SettingsFactory.create_switch(config.display_name)
+            self._tool_switches[config.name] = switch
+            container.add_setting(switch)
 
         container.add_stretch()
         container.value_changed.connect(self._on_value_changed)
@@ -473,7 +473,7 @@ class SettingsDialog(QDialog):
         container.add_setting(tabs_section)
         self._editor_tabs_section = tabs_section
 
-        self._soft_tabs_check = SettingsFactory.create_checkbox(strings.use_soft_tabs)
+        self._soft_tabs_check = SettingsFactory.create_switch(strings.use_soft_tabs)
         container.add_setting(self._soft_tabs_check)
 
         self._tab_size_spin = SettingsFactory.create_spinbox(strings.tab_size, 1, 8, 1)
@@ -485,7 +485,7 @@ class SettingsDialog(QDialog):
         backup_section = SettingsFactory.create_section(strings.backup_settings)
         container.add_setting(backup_section)
 
-        self._auto_backup_check = SettingsFactory.create_checkbox(strings.auto_backup)
+        self._auto_backup_check = SettingsFactory.create_switch(strings.auto_backup)
         container.add_setting(self._auto_backup_check)
 
         self._backup_interval_spin = SettingsFactory.create_spinbox(
@@ -512,7 +512,7 @@ class SettingsDialog(QDialog):
         self._terminal_heading = SettingsFactory.create_page_heading(strings.terminal_settings)
         container.add_setting(self._terminal_heading)
 
-        self._terminal_fixed_width_check = SettingsFactory.create_checkbox(
+        self._terminal_fixed_width_check = SettingsFactory.create_switch(
             strings.terminal_fixed_width_enabled
         )
         container.add_setting(self._terminal_fixed_width_check)
@@ -522,7 +522,7 @@ class SettingsDialog(QDialog):
         )
         container.add_setting(self._terminal_fixed_width_spin)
 
-        self._terminal_scrollback_check = SettingsFactory.create_checkbox(
+        self._terminal_scrollback_check = SettingsFactory.create_switch(
             strings.terminal_scrollback_enabled
         )
         container.add_setting(self._terminal_scrollback_check)
@@ -532,7 +532,7 @@ class SettingsDialog(QDialog):
         )
         container.add_setting(self._terminal_scrollback_spin)
 
-        self._terminal_close_on_exit_check = SettingsFactory.create_checkbox(
+        self._terminal_close_on_exit_check = SettingsFactory.create_switch(
             strings.terminal_close_on_exit
         )
         container.add_setting(self._terminal_close_on_exit_check)
@@ -590,7 +590,7 @@ class SettingsDialog(QDialog):
         """Read current user settings from the dialog controls."""
         ai_backends = {}
         for backend_id, controls in self._ai_backend_controls.items():
-            enabled = cast(SettingsCheckbox, controls["enable"]).get_value()
+            enabled = cast(SettingsSwitch, controls["enable"]).get_value()
             api_key = cast(SettingsTextField, controls["key"]).get_value()
             url = cast(SettingsTextField, controls["url"]).get_value()
             ai_backends[backend_id] = AIBackendSettings(
@@ -604,7 +604,7 @@ class SettingsDialog(QDialog):
             font_ligatures=self._font_ligatures_check.get_value(),
             theme=self._theme_combo.get_value(),
             file_sort_order=self._file_sort_combo.get_value(),
-            allow_external_file_access=self._allow_external_access_checkbox.get_value(),
+            allow_external_file_access=self._allow_external_access_switch.get_value(),
             external_file_allowlist=self._external_allowlist_area.get_value(),
             external_file_denylist=self._external_denylist_area.get_value(),
             check_for_updates=self._check_for_updates_check.get_value(),
@@ -616,8 +616,8 @@ class SettingsDialog(QDialog):
             return None
 
         enabled_tools = {
-            name: cast(SettingsCheckbox, cb).get_value()
-            for name, cb in self._tool_checkboxes.items()
+            name: cast(SettingsSwitch, cb).get_value()
+            for name, cb in self._tool_switches.items()
         }
 
         return MindspaceSettings(
@@ -651,7 +651,7 @@ class SettingsDialog(QDialog):
         self._check_for_updates_check.set_value(settings.check_for_updates)
 
         # File access
-        self._allow_external_access_checkbox.set_value(settings.allow_external_file_access)
+        self._allow_external_access_switch.set_value(settings.allow_external_file_access)
         self._external_allowlist_area.set_value(settings.external_file_allowlist)
         self._external_denylist_area.set_value(settings.external_file_denylist)
         self._external_allowlist_area.set_enabled(settings.allow_external_file_access)
@@ -659,7 +659,7 @@ class SettingsDialog(QDialog):
         # AI backends
         for backend_id, controls in self._ai_backend_controls.items():
             backend = settings.ai_backends.get(backend_id, AIBackendSettings())
-            cast(SettingsCheckbox, controls["enable"]).set_value(backend.enabled)
+            cast(SettingsSwitch, controls["enable"]).set_value(backend.enabled)
             cast(SettingsTextField, controls["key"]).set_value(backend.api_key)
             cast(SettingsTextField, controls["url"]).set_value(backend.url)
             cast(SettingsTextField, controls["key"]).set_enabled(backend.enabled)
@@ -680,9 +680,9 @@ class SettingsDialog(QDialog):
         self._reasoning_combo.set_value(settings.reasoning)
 
         # Tools
-        for tool_name, checkbox in self._tool_checkboxes.items():
+        for tool_name, switch in self._tool_switches.items():
             enabled = settings.enabled_tools.get(tool_name, True)
-            cast(SettingsCheckbox, checkbox).set_value(enabled)
+            cast(SettingsSwitch, switch).set_value(enabled)
 
         # Editor
         self._soft_tabs_check.set_value(settings.use_soft_tabs)
@@ -759,13 +759,13 @@ class SettingsDialog(QDialog):
 
     def _handle_external_access_enabled(self) -> None:
         """Enable or disable external file access text areas."""
-        enabled = self._allow_external_access_checkbox.get_value()
+        enabled = self._allow_external_access_switch.get_value()
         self._external_allowlist_area.set_enabled(enabled)
 
     def _handle_backend_enabled(self, backend_id: str) -> None:
         """Enable or disable key/URL fields for a backend."""
         controls = self._ai_backend_controls[backend_id]
-        enabled = cast(SettingsCheckbox, controls["enable"]).get_value()
+        enabled = cast(SettingsSwitch, controls["enable"]).get_value()
         cast(SettingsTextField, controls["key"]).set_enabled(enabled)
         cast(SettingsTextField, controls["url"]).set_enabled(enabled)
 
@@ -791,15 +791,15 @@ class SettingsDialog(QDialog):
         self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model))
 
     def _on_auto_backup_changed(self) -> None:
-        """Enable or disable backup interval spin based on auto backup checkbox."""
+        """Enable or disable backup interval spin based on auto backup switch."""
         self._backup_interval_spin.set_enabled(self._auto_backup_check.get_value())
 
     def _on_terminal_fixed_width_changed(self) -> None:
-        """Enable or disable fixed width spin based on checkbox."""
+        """Enable or disable fixed width spin based on switch."""
         self._terminal_fixed_width_spin.set_enabled(self._terminal_fixed_width_check.get_value())
 
     def _on_terminal_scrollback_changed(self) -> None:
-        """Enable or disable scrollback lines spin based on checkbox."""
+        """Enable or disable scrollback lines spin based on switch."""
         self._terminal_scrollback_spin.set_enabled(self._terminal_scrollback_check.get_value())
 
     def _on_apply_clicked(self) -> None:
@@ -912,7 +912,7 @@ class SettingsDialog(QDialog):
         self._check_for_updates_check.set_label(strings.check_for_updates_setting)
 
         # Update File Access page controls
-        self._allow_external_access_checkbox.set_label(strings.allow_external_file_access)
+        self._allow_external_access_switch.set_label(strings.allow_external_file_access)
         self._external_allowlist_area.set_label(strings.external_file_allowlist)
         self._external_denylist_area.set_label(strings.external_file_denylist)
 
@@ -930,7 +930,7 @@ class SettingsDialog(QDialog):
         }
         for backend_id, controls in self._ai_backend_controls.items():
             cast(SettingsSection, controls["title"]).set_label(backend_name_map[backend_id])
-            cast(SettingsCheckbox, controls["enable"]).set_label(strings.enable_backend)
+            cast(SettingsSwitch, controls["enable"]).set_label(strings.enable_backend)
             cast(SettingsTextField, controls["key"]).set_label(strings.api_key)
             cast(SettingsTextField, controls["url"]).set_label(strings.api_url)
 
