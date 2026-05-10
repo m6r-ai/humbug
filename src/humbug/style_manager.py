@@ -1460,13 +1460,13 @@ class StyleManager(QObject):
             }}
         """
 
-    def get_spin_box_stylesheet(self, selector: str = "QSpinBox, QDoubleSpinBox") -> str:
-        """Get shared spin-box styling."""
+    def get_spin_box_stylesheet(self) -> str:
+        """Get shared integer spin-box styling."""
         zoom_factor = self.zoom_factor()
         base_font_size = self.base_font_size()
 
         return f"""
-            {selector} {{
+            QSpinBox {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
@@ -1474,30 +1474,67 @@ class StyleManager(QObject):
                 padding: 4px;
                 font-size: {base_font_size * zoom_factor}pt;
             }}
-            {selector}:disabled {{
+            QSpinBox:disabled {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
                 color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
-            QSpinBox::up-button, QSpinBox::down-button,
-            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
+            QSpinBox::up-button, QSpinBox::down-button {{
                 border: none;
                 width: 20px;
             }}
-            QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
+            QSpinBox::up-arrow {{
                 image: url({self.get_icon_path('arrow-up')});
                 width: 12px;
                 height: 12px;
             }}
-            QSpinBox::up-arrow:disabled, QSpinBox::up-arrow:off,
-            QDoubleSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:off {{
+            QSpinBox::up-arrow:disabled, QSpinBox::up-arrow:off {{
                 image: none;
             }}
-            QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
+            QSpinBox::down-arrow {{
                 image: url({self.get_icon_path('arrow-down')});
                 width: 12px;
                 height: 12px;
             }}
-            QSpinBox::down-arrow:disabled, QSpinBox::down-arrow:off,
+            QSpinBox::down-arrow:disabled, QSpinBox::down-arrow:off {{
+                image: none;
+            }}
+        """
+
+    def get_double_spin_box_stylesheet(self) -> str:
+        """Get shared double spin-box styling."""
+        zoom_factor = self.zoom_factor()
+        base_font_size = self.base_font_size()
+
+        return f"""
+            QDoubleSpinBox {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 4px;
+                font-size: {base_font_size * zoom_factor}pt;
+            }}
+            QDoubleSpinBox:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
+                border: none;
+                width: 20px;
+            }}
+            QDoubleSpinBox::up-arrow {{
+                image: url({self.get_icon_path('arrow-up')});
+                width: 12px;
+                height: 12px;
+            }}
+            QDoubleSpinBox::up-arrow:disabled, QDoubleSpinBox::up-arrow:off {{
+                image: none;
+            }}
+            QDoubleSpinBox::down-arrow {{
+                image: url({self.get_icon_path('arrow-down')});
+                width: 12px;
+                height: 12px;
+            }}
             QDoubleSpinBox::down-arrow:disabled, QDoubleSpinBox::down-arrow:off {{
                 image: none;
             }}
@@ -1515,6 +1552,7 @@ class StyleManager(QObject):
             self.get_checkbox_stylesheet(),
             self.get_combo_box_stylesheet(),
             self.get_spin_box_stylesheet(),
+            self.get_double_spin_box_stylesheet(),
         ])
 
     def get_menu_stylesheet(self) -> str:
@@ -1625,6 +1663,7 @@ class StyleManager(QObject):
             {self.get_checkbox_stylesheet()}
             {self.get_combo_box_stylesheet()}
             {self.get_spin_box_stylesheet()}
+            {self.get_double_spin_box_stylesheet()}
             {self.get_button_stylesheet()}
 
             QFrame#SettingsSeparator {{

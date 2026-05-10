@@ -111,6 +111,7 @@ class SettingsCombo(SettingsField):
         zoom_factor = self._style_manager.zoom_factor()
         min_height = int(30 * zoom_factor)
         self._combo.setMinimumHeight(min_height)
+        self._combo.setStyleSheet(self._style_manager.get_combo_box_stylesheet())
 
     def setEnabled(self, arg__1: bool) -> None:
         """Enable or disable the combo box."""
