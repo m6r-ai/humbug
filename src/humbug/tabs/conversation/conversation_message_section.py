@@ -60,6 +60,7 @@ class ConversationMessageSection(QFrame):
         # Create syntax header if needed
         self._syntax = syntax
         self._syntax_header = None
+        self._filename_label: str | None = None
         self._header_container = None
         self._copy_button: QToolButton | None = None
         self._save_as_button: QToolButton | None = None
@@ -135,6 +136,17 @@ class ConversationMessageSection(QFrame):
         self._layout.addWidget(self._text_area)
         self.setLayout(self._layout)
 
+    def set_filename_label(self, filename: str) -> None:
+        """
+        Override the section header label with a plain filename.
+
+        Args:
+            filename: The filename to display instead of the language name
+        """
+        self._filename_label = filename
+        if self._syntax_header is not None:
+            self._syntax_header.setText(filename)
+
     def text_area(self) -> MarkdownTextEdit | CodeBlockTextEdit:
         """Get the text area widget."""
         return self._text_area
@@ -156,20 +168,28 @@ class ConversationMessageSection(QFrame):
 
         if self._syntax_header:
             strings = self._language_manager.strings()
-            syntax_header = strings.highlighting.format(
-                syntax=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._syntax))
-            )
-            self._syntax_header.setText(syntax_header)
+            if self._filename_label is not None:
+                self._syntax_header.setText(self._filename_label)
+
+            else:
+                syntax_header = strings.highlighting.format(
+                    syntax=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._syntax))
+                )
+                self._syntax_header.setText(syntax_header)
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""
         strings = self._language_manager.strings()
 
         if self._syntax_header:
-            syntax_header = strings.highlighting.format(
-                syntax=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._syntax))
-            )
-            self._syntax_header.setText(syntax_header)
+            if self._filename_label is not None:
+                self._syntax_header.setText(self._filename_label)
+
+            else:
+                syntax_header = strings.highlighting.format(
+                    syntax=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._syntax))
+                )
+                self._syntax_header.setText(syntax_header)
 
         if self._copy_button:
             self._copy_button.setToolTip(strings.tooltip_copy_contents)

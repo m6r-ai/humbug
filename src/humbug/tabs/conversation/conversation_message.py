@@ -14,11 +14,13 @@ from ai import AIMessageSource
 from ai_tool import AIToolCall
 from dmarkdown import MarkdownASTTextNode, MarkdownConverter
 from syntax import ProgrammingLanguage
+from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
+from humbug.tabs.code_block_text_edit import CodeBlockTextEdit
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.tabs.conversation.conversation_message_section import ConversationMessageSection
@@ -49,7 +51,8 @@ class ConversationMessage(QFrame):
         content: str | None = None,
         context: str | None = None,
         parent: QWidget | None = None,
-        is_input: bool = False
+        is_input: bool = False,
+        attachments: list[tuple[str, str]] | None = None
     ) -> None:
         """
         Initialize the message widget.
@@ -84,6 +87,7 @@ class ConversationMessage(QFrame):
         self._message_user_name = user_name
 
         style_manager = StyleManager()
+        self._attachments: list[tuple[str, str]] = attachments if attachments is not None else []
         self._style_manager = style_manager
 
         # Border animation state
@@ -149,8 +153,19 @@ class ConversationMessage(QFrame):
         self._delete_message_button: QToolButton | None = None
 
         style = self._message_source
+        self._attachments_button: QToolButton | None = None
+        self._attachments_container: QWidget | None = None
+        self._attachment_sections: list[ConversationMessageSection] = []
+        self._attachments_expanded: bool = False
+
         # Add fork and delete buttons only for user messages
         if style == AIMessageSource.USER and not self._is_input:
+            if self._attachments:
+                self._attachments_button = QToolButton()
+                self._attachments_button.setObjectName("_attachments_button")
+                self._attachments_button.clicked.connect(self._toggle_attachments)
+                self._banner_layout.addWidget(self._attachments_button)
+
             self._fork_message_button = QToolButton()
             self._fork_message_button.setObjectName("_fork_button")
             self._fork_message_button.clicked.connect(self._fork_message)
@@ -194,11 +209,35 @@ class ConversationMessage(QFrame):
         if not default_expanded:
             self._sections_container.hide()
 
+        # Attachments container (above sections, collapsed by default)
+        if not is_input and self._attachments:
+            self._attachments_container = QWidget(self)
+            self._attachments_container.setObjectName("_attachments_container")
+            attachments_layout = QVBoxLayout(self._attachments_container)
+            attachments_layout.setContentsMargins(0, 0, 0, 0)
+            attachments_layout.setSpacing(0)
+            self._attachments_container.hide()
+
+            for filename, file_content in self._attachments:
+                syntax = ProgrammingLanguageUtils.from_file_extension(filename)
+                section = self._create_section_widget(syntax)
+                section.set_filename_label(filename)
+                text_area = section.text_area()
+                if isinstance(text_area, CodeBlockTextEdit):
+                    text_area.set_text_with_highlighting(file_content, [], [])
+
+                section.apply_style()
+                self._attachment_sections.append(section)
+                attachments_layout.addWidget(section)
+
         # Create layout
         self._layout = QVBoxLayout(self)
 
         if not is_input:
             self._layout.addWidget(self._banner)
+            if self._attachments_container is not None:
+                self._layout.addWidget(self._attachments_container)
+
             self._layout.addWidget(self._sections_container)
 
         else:
@@ -419,6 +458,30 @@ class ConversationMessage(QFrame):
         self.set_expanded(not self._is_expanded)
         self.expand_requested.emit(self._is_expanded)
 
+    def _toggle_attachments(self) -> None:
+        """Toggle the visibility of the attachments container."""
+        self._attachments_expanded = not self._attachments_expanded
+        if self._attachments_container is not None:
+            if self._attachments_expanded:
+                self._attachments_container.show()
+
+            else:
+                self._attachments_container.hide()
+
+        self._update_attachments_button()
+
+    def _update_attachments_button(self) -> None:
+        """Update the attachments button tooltip to reflect current state."""
+        if self._attachments_button is None:
+            return
+
+        strings = self._language_manager.strings()
+        if self._attachments_expanded:
+            self._attachments_button.setToolTip(strings.tooltip_hide_attachments)
+
+        else:
+            self._attachments_button.setToolTip(strings.tooltip_show_attachments)
+
     def _on_language_changed(self) -> None:
         """Update text when language changes."""
         if self._is_input:
@@ -483,6 +546,9 @@ class ConversationMessage(QFrame):
 
         if self._delete_message_button:
             self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
+
+        if self._attachments_button:
+            self._update_attachments_button()
 
         if self._approval_approve_button:
             self._approval_approve_button.setText(strings.approve_tool_call)
@@ -1093,6 +1159,10 @@ class ConversationMessage(QFrame):
             self._delete_message_button.setIcon(QIcon(style_manager.scale_icon("delete", icon_base_size)))
             self._delete_message_button.setIconSize(icon_size)
 
+        if self._attachments_button:
+            self._attachments_button.setIcon(QIcon(style_manager.scale_icon("paperclip", icon_base_size)))
+            self._attachments_button.setIconSize(icon_size)
+
         if self._expand_button:
             if self._is_expanded:
                 icon_name = "expand-down"
@@ -1124,6 +1194,9 @@ class ConversationMessage(QFrame):
 
         # Apply styling to all sections
         for section in self._sections:
+            section.apply_style()
+
+        for section in self._attachment_sections:
             section.apply_style()
 
         # Re-apply style to the inline edit text area if currently open

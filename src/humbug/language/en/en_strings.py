@@ -336,6 +336,8 @@ def get_english_strings() -> LanguageStrings:
             "'{filename}' is {size_kb}KB, which exceeds the recommended 100KB limit. "
             "Large files may use a lot of context window. Attach anyway?"
         ),
+        tooltip_show_attachments="Show attachments",
+        tooltip_hide_attachments="Hide attachments",
 
         delete_from_here_title="Delete Messages",
         delete_from_here_message=(

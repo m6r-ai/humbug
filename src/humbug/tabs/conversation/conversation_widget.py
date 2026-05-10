@@ -108,7 +108,6 @@ class ConversationWidget(QWidget):
         # Batched message loading state
         self._load_queue: List[AIMessage] = []
         self._load_pending_metadata: Dict[str, Any] | None = None
-        self._load_head_widgets: List[ConversationMessage] = []
         self._load_scroll_offset: int | None = None
         self._load_batch_size: int = 2
         self._load_tail_size: int = 80  # Weirdly we might get 80 message in view!
@@ -275,9 +274,7 @@ class ConversationWidget(QWidget):
         if transcript_parent is not None:
             self._ai_conversation.get_conversation_history().set_parent(transcript_parent)
 
-        self._is_delegated_conversation = os.path.basename(
-            self._ai_conversation.path()
-        ).startswith("dAI-")
+        self._is_delegated_conversation = os.path.basename(self._ai_conversation.path()).startswith("dAI-")
 
         # Any active tool approval
         self._pending_tool_call_approval: ConversationMessage | None = None
@@ -431,6 +428,18 @@ class ConversationWidget(QWidget):
                 the corresponding index in self._messages.  If None (default),
                 append before the input widget at the end of the layout.
         """
+        resolved_attachments: list[tuple[str, str]] | None = None
+        if message.attachments:
+            history = self._ai_conversation.get_conversation_history()
+            resolved = []
+            for guid in message.attachments:
+                attachment = history.get_attachment(guid)
+                if attachment is not None:
+                    resolved.append((attachment["filename"], attachment["content"]))
+
+            if resolved:
+                resolved_attachments = resolved
+
         msg_widget = ConversationMessage(
             message.source,
             message.timestamp,
@@ -438,7 +447,8 @@ class ConversationWidget(QWidget):
             message.id,
             message.user_name,
             message.content,
-            message.tool_call_context
+            message.tool_call_context,
+            attachments=resolved_attachments
         )
         msg_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(msg_widget, has_selection)
@@ -456,13 +466,13 @@ class ConversationWidget(QWidget):
 
         if layout_pos is None:
             self._messages.append(msg_widget)
+
             # Add widget before input and the stretch.
             self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
 
         else:
             # Insert at the requested position in both the list and the layout.
-            msg_index = layout_pos - 1  # layout_pos 1 == messages index 0 (after stretch)
-            self._messages.insert(msg_index, msg_widget)
+            self._messages.insert(layout_pos, msg_widget)
             self._messages_layout.insertWidget(layout_pos, msg_widget)
 
         self._update_blueprint_toggle_visibility()
@@ -1663,12 +1673,9 @@ class ConversationWidget(QWidget):
         self._deferred_scroll_timer.timeout.connect(self._deferred_scroll_timer_slot)
         self._deferred_scroll_timer.start()
 
-        # The head messages will be prepended one batch at a time.  layout_pos 1
-        # is directly after the stretch item; we advance it with each insertion
-        # so messages arrive in the correct top-to-bottom order.
-        self._load_head_insert_pos = 1
+        # The head messages will be prepended one batch at a time.
+        self._load_head_insert_pos = 0
         self._load_queue = list(head)
-        self._load_head_widgets = []
         self._load_next_batch(self._load_generation)
 
     def _load_next_batch(self, generation: int) -> None:
@@ -1689,9 +1696,13 @@ class ConversationWidget(QWidget):
 
             message = self._load_queue.pop(0)
             message_widget = self._add_message_core(message, self._load_head_insert_pos)
+            if message_widget.message_source() in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
+                message_widget.set_rendered(False)
+
+            else:
+                message_widget.apply_style()
+
             self._load_head_insert_pos += 1
-            message_widget.set_rendered(False)
-            self._load_head_widgets.append(message_widget)
 
         if self._load_batch_timer_slot is not None:
             self._load_batch_timer.timeout.disconnect(self._load_batch_timer_slot)
@@ -1707,16 +1718,6 @@ class ConversationWidget(QWidget):
 
     def _on_load_complete(self) -> None:
         """Finalise a completed batch load."""
-        for widget in self._load_head_widgets:
-            if widget.is_rendered():
-                continue
-
-            if widget.message_source() not in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
-                widget.apply_style()
-                widget.set_rendered(True)
-
-        self._load_head_widgets = []
-
         # If the last visible message is a SYSTEM error, restore the retry button.
         if self._messages:
             last_widget = self._messages[-1]
@@ -1961,7 +1962,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_stop_button,
             #ConversationMessage #_submit_button,
             #ConversationMessage #_settings_button,
-            #ConversationMessage #_attach_button {{
+            #ConversationMessage #_attach_button,
+            #ConversationMessage #_attachments_button {{
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
@@ -1977,7 +1979,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_stop_button:hover,
             #ConversationMessage #_submit_button:hover,
             #ConversationMessage #_settings_button:hover,
-            #ConversationMessage #_attach_button:hover {{
+            #ConversationMessage #_attach_button:hover,
+            #ConversationMessage #_attachments_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
             }}
 
@@ -1989,7 +1992,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_stop_button:pressed,
             #ConversationMessage #_submit_button:pressed,
             #ConversationMessage #_settings_button:pressed,
-            #ConversationMessage #_attach_button:pressed {{
+            #ConversationMessage #_attach_button:pressed,
+            #ConversationMessage #_attachments_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
             }}
 
@@ -2003,7 +2007,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage[message_source="user"] #_save_button:hover,
             #ConversationMessage[message_source="user"] #_fork_button:hover,
             #ConversationMessage[message_source="user"] #_edit_button:hover,
-            #ConversationMessage[message_source="user"] #_delete_button:hover {{
+            #ConversationMessage[message_source="user"] #_delete_button:hover,
+            #ConversationMessage[message_source="user"] #_attachments_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
             }}
 
@@ -2011,8 +2016,14 @@ class ConversationWidget(QWidget):
             #ConversationMessage[message_source="user"] #_save_button:pressed,
             #ConversationMessage[message_source="user"] #_fork_button:pressed,
             #ConversationMessage[message_source="user"] #_edit_button:pressed,
-            #ConversationMessage[message_source="user"] #_delete_button:pressed {{
+            #ConversationMessage[message_source="user"] #_delete_button:pressed,
+            #ConversationMessage[message_source="user"] #_attachments_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
+            }}
+
+            #ConversationMessage #_attachments_container {{
+                background-color: transparent;
+                border: none;
             }}
 
             #ConversationMessage #_approval_widget {{

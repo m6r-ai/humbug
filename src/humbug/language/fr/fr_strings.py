@@ -336,6 +336,8 @@ def get_french_strings() -> LanguageStrings:
             "'{filename}' fait {size_kb}Ko, ce qui dépasse la limite recommandée de 100Ko. "
             "Les fichiers volumineux peuvent utiliser beaucoup de fenêtre de contexte. Joindre quand même ?"
         ),
+        tooltip_show_attachments="Afficher les pièces jointes",
+        tooltip_hide_attachments="Masquer les pièces jointes",
 
         delete_from_here_title="Supprimer les messages",
         delete_from_here_message=(

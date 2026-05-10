@@ -314,6 +314,8 @@ class LanguageStrings:
     tooltip_expand_message: str
     tooltip_collapse_message: str
     warning_file_too_large: str
+    tooltip_show_attachments: str
+    tooltip_hide_attachments: str
 
     delete_from_here_title: str
     delete_from_here_message: str

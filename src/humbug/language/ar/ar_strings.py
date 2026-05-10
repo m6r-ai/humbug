@@ -337,6 +337,8 @@ def get_arabic_strings() -> LanguageStrings:
             "'{filename}' حجمه {size_kb}كيلوبايت، وهو يتجاوز الحد الموصى به البالغ 100 كيلوبايت. قد تستهلك "
             "الملفات الكبيرة جزءاً كبيراً من نافذة السياق. هل تريد الإرفاق على أي حال؟"
         ),
+        tooltip_show_attachments="عرض المرفقات",
+        tooltip_hide_attachments="إخفاء المرفقات",
 
         delete_from_here_title="حذف الرسائل",
         delete_from_here_message="هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا الإجراء.",
