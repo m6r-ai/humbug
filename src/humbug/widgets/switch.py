@@ -44,11 +44,10 @@ class Switch(QCheckBox):
     def apply_style(self, style_manager: StyleManager) -> None:
         """Apply design-system colors and metrics."""
         # TODO: Should we make this the default approach everywhere we use apply_style?
-        # TODO: We don't allow direct colours!
-        self._track_on_color = QColor("#375f8c")
-        self._track_on_end_color = QColor("#5a4f93")
-        self._track_off_color = QColor(style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND))
-        self._track_border_color = QColor(style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER))
+        self._track_on_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_ON))
+        self._track_on_end_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_ON_END))
+        self._track_off_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_OFF))
+        self._track_border_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_BORDER))
         self._track_disabled_color = QColor(style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED))
         self._knob_color = QColor(style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED))
         self._knob_disabled_color = QColor(style_manager.get_color_str(ColorRole.TEXT_DISABLED))

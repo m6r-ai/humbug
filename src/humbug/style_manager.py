@@ -311,6 +311,28 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#d8d8d8"
             },
 
+            # Switch colours
+            ColorRole.SWITCH_TRACK_ON: {
+                ColorMode.DARK: "#375f8c",
+                ColorMode.LIGHT: "#2f5f96"
+            },
+            ColorRole.SWITCH_TRACK_ON_END: {
+                ColorMode.DARK: "#5a4f93",
+                ColorMode.LIGHT: "#5a4f93"
+            },
+            ColorRole.SWITCH_TRACK_OFF: {
+                ColorMode.DARK: "#303030",
+                ColorMode.LIGHT: "#e8e8e8"
+            },
+            ColorRole.SWITCH_TRACK_BORDER: {
+                ColorMode.DARK: "#505050",
+                ColorMode.LIGHT: "#b0b0b0"
+            },
+            ColorRole.SWITCH_KNOB: {
+                ColorMode.DARK: "#ffffff",
+                ColorMode.LIGHT: "#ffffff"
+            },
+
             # Menu elements
             ColorRole.MENU_BACKGROUND: {
                 ColorMode.DARK: "#2d2d2d",
