@@ -6,6 +6,7 @@ New features:
 
 - Updated the grok model catalogue to grok 4.2 and 4.3, removing the soon-to-be-removed 4.0 amd 4.1 models.
 - Added the ability to view files that were attached to a message in a conversation.
+- Introduced the idea of `blueprint.md` files, allowing both AIs and human users to understand the intent of a mindspace.
 
 Bug fixes:
 
