@@ -1,7 +1,7 @@
 """Reusable switch widget."""
 
 from PySide6.QtCore import QEasingCurve, QEvent, QPoint, QSize, Qt, QVariantAnimation
-from PySide6.QtGui import QColor, QFont, QLinearGradient, QMouseEvent, QPainter
+from PySide6.QtGui import QColor, QFont, QMouseEvent, QPainter
 from PySide6.QtWidgets import QCheckBox, QWidget
 
 from humbug.color_role import ColorRole
@@ -15,8 +15,8 @@ class Switch(QCheckBox):
         """Initialize the switch."""
         super().__init__(parent)
         self._track_on_color: QColor
-        self._track_on_end_color: QColor
         self._track_off_color: QColor
+        self._track_disabled_on_color: QColor
         self._track_border_color: QColor
         self._track_disabled_color: QColor
         self._knob_color: QColor
@@ -45,12 +45,12 @@ class Switch(QCheckBox):
         """Apply design-system colors and metrics."""
         # TODO: Should we make this the default approach everywhere we use apply_style?
         self._track_on_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_ON))
-        self._track_on_end_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_ON_END))
         self._track_off_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_OFF))
+        self._track_disabled_on_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_DISABLED_ON))
         self._track_border_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_BORDER))
         self._track_disabled_color = QColor(style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED))
-        self._knob_color = QColor(style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED))
-        self._knob_disabled_color = QColor(style_manager.get_color_str(ColorRole.TEXT_DISABLED))
+        self._knob_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_KNOB))
+        self._knob_disabled_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_KNOB_DISABLED))
         self._text_on_color = QColor(style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED))
         self._text_off_color = QColor(style_manager.get_color_str(ColorRole.TEXT_PRIMARY))
         self._text_disabled_color = QColor(style_manager.get_color_str(ColorRole.TEXT_DISABLED))
@@ -102,23 +102,14 @@ class Switch(QCheckBox):
 
         track_rect = self.rect().adjusted(1, 1, -1, -1)
         radius = track_rect.height() / 2
-        track_color: QColor | QLinearGradient
-        if not self.isEnabled():
-            track_color = self._track_disabled_color
-
-        elif self.isChecked():
-            track_color = QLinearGradient(track_rect.topLeft(), track_rect.topRight())
-            track_color.setColorAt(0.0, self._track_on_color)
-            track_color.setColorAt(1.0, self._track_on_end_color)
-
-        else:
-            track_color = self._track_off_color
-
-        if not self.isEnabled():
-            text_color = self._text_disabled_color
-
-        else:
+        track_color: QColor
+        if self.isEnabled():
+            track_color = self._track_on_color if self.isChecked() else self._track_off_color
             text_color = self._text_on_color if self.isChecked() else self._text_off_color
+
+        else:
+            track_color = self._track_disabled_on_color if self.isChecked() else self.track_disabled_color
+            text_color = self._text_disabled_color
 
         painter.setPen(self._track_border_color)
         painter.setBrush(track_color)
