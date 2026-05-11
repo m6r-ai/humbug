@@ -88,6 +88,10 @@ class ColorRole(Enum):
     BUTTON_BACKGROUND_DISABLED = auto()
                                         # Disabled push button background
 
+    # Blueprint colours
+    BLUEPRINT_BACKGROUND_ON = auto()    # Blueprint enabled
+    BLUEPRINT_BACKGROUND_HOVER = auto() # Hover state blueprint background
+
     # Switch colours
     SWITCH_TRACK_ON = auto()            # Enabled switch track start
     SWITCH_TRACK_OFF = auto()           # Disabled/off switch track

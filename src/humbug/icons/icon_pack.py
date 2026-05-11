@@ -350,6 +350,16 @@ THEME_ICON_PACK: Final[Dict[str, str]] = {
             <circle cx="32" cy="32" r="9" stroke="{color}" stroke-width="5" fill="none"/>
         </svg>
     ''',
+    "blueprint": '''
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <line x1="32" y1="4" x2="32" y2="60" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+            <line x1="4" y1="32" x2="60" y2="32" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+            <line x1="16" y1="16" x2="48" y2="16" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+            <line x1="16" y1="48" x2="48" y2="48" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+            <line x1="16" y1="16" x2="16" y2="48" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+            <line x1="48" y1="16" x2="48" y2="48" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+    ''',
 }
 
 
