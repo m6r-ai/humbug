@@ -271,9 +271,6 @@ class FindWidget(QWidget):
             QToolButton#toggleButton:checked {{
                 background-color: {button_checked};
             }}
-            QToolButton#toggleButton:checked:hover {{
-                background-color: {button_checked_hover};
-            }}
             QToolButton#toggleButton:checked:pressed {{
                 background-color: {button_bg};
             }}
