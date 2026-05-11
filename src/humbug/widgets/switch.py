@@ -108,7 +108,7 @@ class Switch(QCheckBox):
             text_color = self._text_on_color if self.isChecked() else self._text_off_color
 
         else:
-            track_color = self._track_disabled_on_color if self.isChecked() else self.track_disabled_color
+            track_color = self._track_disabled_on_color if self.isChecked() else self._track_disabled_color
             text_color = self._text_disabled_color
 
         painter.setPen(self._track_border_color)
