@@ -22,6 +22,8 @@ from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
 from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
 from ai_tool.help.help_ai_tool import HelpAITool
 
+from ai.ai_conversation_settings import AIConversationSettings
+
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
 from humbug.delegate_ai_tool import DelegateAITool
@@ -471,6 +473,7 @@ class MainWindow(QMainWindow):
         )
 
         QTimer.singleShot(0, self._restore_last_mindspace)
+        QTimer.singleShot(0, self._load_user_ai_config)
 
         self._update_checker = UpdateChecker(self)
         self._update_checker.update_available.connect(self._on_update_available)
@@ -751,6 +754,19 @@ class MainWindow(QMainWindow):
 
         except (FileNotFoundError, json.JSONDecodeError):
             pass
+
+    def _load_user_ai_config(self) -> None:
+        """Load user-defined AI model config from ~/.humbug/user-ai-config.json."""
+        path = os.path.expanduser("~/.humbug/user-ai-config.json")
+        errors = AIConversationSettings.load_user_config(path)
+        if errors:
+            detail = "\n".join(f"• {e}" for e in errors)
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                "User AI Config Error",
+                f"Failed to load user AI configuration:\n\n{detail}"
+            )
 
     def _on_new_mindspace(self) -> None:
         """Show folder selection dialog and create new mindspace."""

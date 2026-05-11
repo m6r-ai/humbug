@@ -1,0 +1,24 @@
+{
+  "models": [
+    {
+      "display_name": "deepseek-v4-flash (Ollama)",
+      "name": "deepseek-v4-flash:cloud",
+      "provider": "ollama",
+      "context_window": 1000000,
+      "max_output_tokens": 32768,
+      "supports_temperature": true,
+      "reasoning_capabilities": "NO_REASONING",
+      "tool_capabilities": "FUNCTION_CALLING"
+    },
+    {
+      "display_name": "deepseek-v4-flash (thinking) (Ollama)",
+      "name": "deepseek-v4-flash:cloud",
+      "provider": "ollama",
+      "context_window": 1000000,
+      "max_output_tokens": 32768,
+      "supports_temperature": true,
+      "reasoning_capabilities": "VISIBLE_REASONING",
+      "tool_capabilities": "FUNCTION_CALLING"
+    }
+  ]
+}

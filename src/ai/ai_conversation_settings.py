@@ -1,5 +1,7 @@
 """Enhanced class to handle conversation settings with tool support."""
 
+import json
+import os
 from typing import Dict, List, Any, Generator
 
 from ai.ai_model import AIModel, AIReasoningCapability, ToolCapability
@@ -713,3 +715,155 @@ class AIConversationSettings:
 
         # Shouldn't happen as we require at least one backend
         return "gemini-2.5-flash"
+
+    @classmethod
+    def load_user_config(cls, path: str) -> List[str]:
+        """
+        Load user-defined AI model entries from a JSON config file and register them.
+
+        The file is optional — if it does not exist the method returns an empty list.
+        Each entry in the file's "models" array is validated before being added to
+        MODELS.  All errors found across all entries are collected and returned so the
+        caller can surface them to the user in a single message.
+
+        Collision policy: a display_name that already exists in MODELS (whether built-in
+        or previously registered by this method) is treated as an error.
+
+        Args:
+            path: Absolute path to the JSON config file.
+
+        Returns:
+            A list of human-readable error strings.  Empty on full success.
+        """
+        if not os.path.exists(path):
+            return []
+
+        try:
+            with open(path, encoding="utf-8") as f:
+                raw = json.load(f)
+
+        except json.JSONDecodeError as exc:
+            return [f"user-ai-config.json: invalid JSON — {exc}"]
+
+        except OSError as exc:
+            return [f"user-ai-config.json: could not read file — {exc}"]
+
+        if not isinstance(raw, dict):
+            return ["user-ai-config.json: top-level value must be a JSON object"]
+
+        models_raw = raw.get("models")
+        if models_raw is None:
+            return ['user-ai-config.json: missing required key "models"']
+
+        if not isinstance(models_raw, list):
+            return ['user-ai-config.json: "models" must be a JSON array']
+
+        valid_providers = {
+            "anthropic", "deepseek", "google", "mistral",
+            "ollama", "openai", "vllm", "xai", "zai",
+        }
+        reasoning_map: Dict[str, AIReasoningCapability] = {
+            "NO_REASONING": AIReasoningCapability.NO_REASONING,
+            "HIDDEN_REASONING": AIReasoningCapability.HIDDEN_REASONING,
+            "VISIBLE_REASONING": AIReasoningCapability.VISIBLE_REASONING,
+        }
+        tool_map: Dict[str, ToolCapability] = {
+            "NO_TOOLS": ToolCapability.NO_TOOLS,
+            "FUNCTION_CALLING": ToolCapability.FUNCTION_CALLING,
+            "PARALLEL_TOOLS": ToolCapability.PARALLEL_TOOLS,
+        }
+
+        errors: List[str] = []
+        pending: List[tuple[str, AIModel]] = []
+        seen_display_names: set[str] = set()
+
+        required_str_fields = ("display_name", "name", "provider")
+        required_int_fields = ("context_window", "max_output_tokens")
+
+        for idx, entry in enumerate(models_raw):
+            prefix = f"user-ai-config.json models[{idx}]"
+
+            if not isinstance(entry, dict):
+                errors.append(f"{prefix}: each entry must be a JSON object")
+                continue
+
+            entry_errors: List[str] = []
+
+            for field in required_str_fields:
+                if field not in entry:
+                    entry_errors.append(f'missing required field "{field}"')
+
+                elif not isinstance(entry[field], str) or not entry[field].strip():
+                    entry_errors.append(f'"{field}" must be a non-empty string')
+
+            for field in required_int_fields:
+                if field not in entry:
+                    entry_errors.append(f'missing required field "{field}"')
+
+                elif not isinstance(entry[field], int) or entry[field] <= 0:
+                    entry_errors.append(f'"{field}" must be a positive integer')
+
+            if "supports_temperature" not in entry:
+                entry_errors.append('missing required field "supports_temperature"')
+
+            elif not isinstance(entry["supports_temperature"], bool):
+                entry_errors.append('"supports_temperature" must be a boolean')
+
+            rc_raw = entry.get("reasoning_capabilities", "")
+            if rc_raw not in reasoning_map:
+                entry_errors.append(
+                    f'"reasoning_capabilities" must be one of: {", ".join(sorted(reasoning_map))}'
+                )
+
+            tc_raw = entry.get("tool_capabilities", "")
+            if tc_raw not in tool_map:
+                entry_errors.append(
+                    f'"tool_capabilities" must be one of: {", ".join(sorted(tool_map))}'
+                )
+
+            if entry_errors:
+                errors.append(f"{prefix}: " + "; ".join(entry_errors))
+                continue
+
+            display_name: str = entry["display_name"]
+
+            if display_name in cls.MODELS:
+                errors.append(
+                    f'{prefix}: display_name "{display_name}" conflicts with an existing model'
+                )
+                continue
+
+            if display_name in seen_display_names:
+                errors.append(
+                    f'{prefix}: display_name "{display_name}" is duplicated within the config file'
+                )
+                continue
+
+            provider: str = entry["provider"]
+            if provider not in valid_providers:
+                errors.append(
+                    f'{prefix}: "provider" must be one of: {", ".join(sorted(valid_providers))}'
+                )
+                continue
+
+            seen_display_names.add(display_name)
+            pending.append((
+                display_name,
+                AIModel(
+                    name=entry["name"],
+                    provider=provider,
+                    context_window=entry["context_window"],
+                    max_output_tokens=entry["max_output_tokens"],
+                    supports_temperature=entry["supports_temperature"],
+                    reasoning_capabilities=reasoning_map[rc_raw],
+                    tool_capabilities=tool_map[tc_raw],
+                ),
+            ))
+
+        if errors:
+            return errors
+
+        for display_name, model in pending:
+            cls.MODELS[display_name] = model
+
+        return []
