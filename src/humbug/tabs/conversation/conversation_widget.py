@@ -1696,10 +1696,8 @@ class ConversationWidget(QWidget):
 
             message = self._load_queue.pop(0)
             message_widget = self._add_message_core(message, self._load_head_insert_pos)
-            if message_widget.message_source() in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
-                message_widget.set_rendered(False)
-
-            else:
+            message_widget.set_rendered(False)
+            if message_widget.message_source() not in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
                 message_widget.apply_style()
 
             self._load_head_insert_pos += 1
@@ -1718,6 +1716,11 @@ class ConversationWidget(QWidget):
 
     def _on_load_complete(self) -> None:
         """Finalise a completed batch load."""
+        # Run through all the messages and ensure any that should be visible are now visible.
+        for message in self._messages:
+            if message.message_source() not in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
+                message.set_rendered(True)
+
         # If the last visible message is a SYSTEM error, restore the retry button.
         if self._messages:
             last_widget = self._messages[-1]
@@ -3374,8 +3377,10 @@ class ConversationWidget(QWidget):
             flags = 0 if case_sensitive else re.IGNORECASE
             try:
                 pattern = re.compile(search_text, flags)
+
             except re.error as e:
                 raise ValueError(f"Invalid regular expression: {e}") from e
+
         else:
             pattern = None
 

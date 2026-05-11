@@ -159,7 +159,7 @@ class ConversationMessage(QFrame):
         self._attachment_sections: list[ConversationMessageSection] = []
         self._attachments_expanded: bool = False
 
-        # Add fork and delete buttons only for user messages
+        # Add fork, delete, edit, and attachment buttons only for user messages
         if style == AIMessageSource.USER and not self._is_input:
             if self._attachments:
                 self._attachments_button = QToolButton()
@@ -172,8 +172,6 @@ class ConversationMessage(QFrame):
             self._fork_message_button.clicked.connect(self._fork_message)
             self._banner_layout.addWidget(self._fork_message_button)
 
-        # Add edit and delete buttons only for user messages
-        if style == AIMessageSource.USER and not self._is_input:
             self._edit_message_button = QToolButton()
             self._edit_message_button.setObjectName("_edit_button")
             self._edit_message_button.clicked.connect(self._edit_message)
@@ -412,6 +410,10 @@ class ConversationMessage(QFrame):
 
     def set_rendered(self, rendered: bool) -> None:
         """Set the rendered state of this message."""
+        # If this is a user message with no content we never render at all.
+        if not self._is_input and not self._message_content:
+            rendered = False
+
         self._message_rendered = rendered
         if not rendered:
             self.hide()
@@ -1002,6 +1004,7 @@ class ConversationMessage(QFrame):
         ):
             if btn is not None:
                 btn.hide()
+
         if self._expand_button is not None:
             self._expand_button.setEnabled(False)
 
