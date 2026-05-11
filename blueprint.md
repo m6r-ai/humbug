@@ -60,6 +60,14 @@ The codebase is held to strict standards: mypy type checking, pylint linting, an
 dependency rules system that prevents unwanted coupling between modules.
 This discipline is what makes it possible for AIs to reliably modify and extend the code.
 
+The dependency rules enforce a strict separation between top-level modules.
+The dependency graph must be acyclic — no module may depend on another that depends (directly
+or transitively) on it.
+This ensures each module can be reasoned about, tested, and evolved independently.
+It also prevents the kind of gradual coupling that is especially risky when LLMs are
+contributing code, since an AI might otherwise introduce a convenience import that silently
+creates a circular dependency between modules.
+
 ## What Humbug is NOT
 
 - **Not a replacement for the OS.** Humbug runs on top of Windows, macOS, and Linux
