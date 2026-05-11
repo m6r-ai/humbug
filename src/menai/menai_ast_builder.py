@@ -91,6 +91,12 @@ class MenaiASTBuilder:
         self.expression = expression
         self.source_file = source_file
 
+        # Reset inter-call state so stale positions from a previous build() never
+        # leak into error messages for this expression.
+        self.last_closed_frame = None
+        self.last_close_line = 1
+        self.last_close_column = 1
+
         if self.current_token is None:
             raise MenaiASTBuildError(
                 message="Empty expression",
