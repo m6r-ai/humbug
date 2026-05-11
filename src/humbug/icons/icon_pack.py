@@ -350,16 +350,6 @@ THEME_ICON_PACK: Final[Dict[str, str]] = {
             <circle cx="32" cy="32" r="9" stroke="{color}" stroke-width="5" fill="none"/>
         </svg>
     ''',
-    "blueprint": '''
-        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-            <line x1="32" y1="4" x2="32" y2="60" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
-            <line x1="4" y1="32" x2="60" y2="32" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
-            <line x1="16" y1="16" x2="48" y2="16" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
-            <line x1="16" y1="48" x2="48" y2="48" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
-            <line x1="16" y1="16" x2="16" y2="48" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
-            <line x1="48" y1="16" x2="48" y2="48" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
-        </svg>
-    ''',
 }
 
 
@@ -423,6 +413,15 @@ MINDSPACE_ICON_PACK: Final[dict[str, str]] = {
             <path d="M30 30 L50 30" stroke="accentColor" stroke-width="5"/>
             <path d="M30 50 L70 50" stroke="accentColor" stroke-width="5"/>
             <path d="M30 70 L70 70" stroke="accentColor" stroke-width="5"/>
+        </svg>
+    ''',
+    "blueprint": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <line x1="20" y1="50" x2="80" y2="50" stroke="currentColor" stroke-width="4"/>
+            <line x1="50" y1="10" x2="50" y2="90" stroke="currentColor" stroke-width="4"/>
         </svg>
     '''
 }

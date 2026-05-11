@@ -311,16 +311,6 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#e0e0e0"
             },
 
-            # Blueprint colours
-            ColorRole.BLUEPRINT_BACKGROUND_ON: {
-                ColorMode.DARK: "#6060ff",
-                ColorMode.LIGHT: "#a0a0ff"
-            },
-            ColorRole.BLUEPRINT_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#383880",
-                ColorMode.LIGHT: "#7070c0"
-            },
-
             # Switch colours
             ColorRole.SWITCH_TRACK_ON: {
                 ColorMode.DARK: "#5a6893",
@@ -911,9 +901,6 @@ class StyleManager(QObject):
             for icon_name in ("find-match-case", "find-whole-word", "find-regexp", "find-hidden"):
                 self._write_icon(f'{icon_name}-{suffix}.svg', theme_icon_svg(icon_name, color))
 
-            self._write_icon(f'blueprint-{suffix}.svg', theme_icon_svg("blueprint", color))
-            self._write_icon(f'blueprint-checked-{suffix}.svg', theme_icon_svg("blueprint", bright_color))
-
         # Create the standard application icon for about dialog
         self._write_icon('app-icon.svg', app_icon_svg('#4040c0', '#ffffff'))
 
@@ -1401,32 +1388,6 @@ class StyleManager(QObject):
             {selector}:disabled {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
                 color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-        """
-
-    def get_blueprint_button_stylesheet(self, selector: str = "QToolButton#blueprintButton") -> str:
-        """Get styling for the blueprint toggle button."""
-        return f"""
-            {selector} {{
-                background-color: transparent;
-                border: none;
-                padding: 0px;
-                margin: 0px;
-            }}
-            {selector}:hover {{
-                background-color: {self.get_color_str(ColorRole.BLUEPRINT_BACKGROUND_HOVER)};
-            }}
-            {selector}:pressed {{
-                background-color: {self.get_color_str(ColorRole.BLUEPRINT_BACKGROUND_ON)};
-            }}
-            {selector}:checked {{
-                background-color: {self.get_color_str(ColorRole.BLUEPRINT_BACKGROUND_ON)};
-            }}
-            {selector}:checked:pressed {{
-                background-color: transparent;
-            }}
-            {selector}:disabled {{
-                background-color: transparent;
             }}
         """
 

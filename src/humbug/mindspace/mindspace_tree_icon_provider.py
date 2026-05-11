@@ -30,6 +30,12 @@ class MindspaceTreeIconProvider(QFileIconProvider):
         self._svg_paths = MINDSPACE_ICON_PACK
 
         # Map file extensions to icon types and accent colors
+        # Map specific filenames to icon types (checked before extension map)
+        self._filename_map = {
+            'blueprint.md': ('blueprint', None),
+        }
+
+        # Map file extensions to icon types and accent colors
         self._extension_map = {
             '.c': ('code', '#3572A5'),    # Python blue
             '.cc': ('code', '#f34b7d'),   # C++ pink
@@ -220,7 +226,13 @@ class MindspaceTreeIconProvider(QFileIconProvider):
 
         # Get file extension and map to icon type
         ext = os.path.splitext(info.fileName())[1].lower()
-        icon_type, accent_color = self._extension_map.get(ext, ('file', None))
+
+        # Check filename map first, then fall back to extension map
+        filename = info.fileName().lower()
+        icon_type, accent_color = self._filename_map.get(
+            filename,
+            self._extension_map.get(ext, ('file', None))
+        )
 
         # Create cache key from type, accent color, and theme mode
         theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'

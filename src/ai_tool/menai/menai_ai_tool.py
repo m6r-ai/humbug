@@ -36,12 +36,11 @@ class MenaiAITool(AITool):
         return self._build_definition_from_operations(
             name="menai",
             description_prefix=(
-                "The menai tool lets you to compile and execute Menai programs. "
+                "The menai tool lets you to compile and execute programs written in Menai. "
                 "Menai is a fast, pure, functional programming language. "
                 "It is ideal for everything from simple calculations to complex algorithms. "
-                "You DO NOT know Menai's syntax, so YOU MUST call the help tool to understand its syntax. "
                 "Menai has no side effects, so it does not require user approvals to use it."
-                "When annotating Menai code, use triple backticks with `menai`"
+                "Never use this tool without first calling `help` with `get_help` for Menai"
             ),
             additional_parameters=[
                 AIToolParameter(

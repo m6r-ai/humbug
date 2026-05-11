@@ -177,12 +177,18 @@ def setup_ai_system_prompt() -> None:
         "- You must consider security implications of any tool operations you perform\n"
         "- You must explain your reasoning when making significant changes\n"
         "- You must ask for clarification when something is unclear or ambiguous\n"
-        "- You must always use the language annotation when writing code blocks. "
-        "If there is no specific language then use 'text'.  For Menai you must use 'menai'\n"
+        "- You must always use the language annotation when writing markdown code blocks. "
+        "If there is no specific language then use 'text'. For Menai you must use 'menai'\n"
         "- You must follow best practices and include appropriate error handling when writing code\n"
-        "- Always check for a file AGENTS.md in the current mindspace. If it exists, read it it contains information "
-        "that will help you understand the system and how to operate within it.  AGENTS.md files may also exist in "
-        "subdirectories, and if so they contain information about specific tools or resources relevant to that subdirectory. "
+        "- Always check for a file AGENTS.md in the current mindspace. This will tell you how to operate within the "
+        "mindspace. AGENTS.md files may also exist in subdirectories, and if so they contain information about specific "
+        "tools or resources relevant to that subdirectory\n"
+        "- If you update the structure of the mindspace then update any AGENTS.md file that has become stale."
+        "- Always check for a file blueprint.md in the current mindspace. This will tell you the purpose and intent of the "
+        "mindspace. blueprint.md files may also exist in subdirectories, and if so they contain information about the purpose "
+        "and intent of that subdirectory\n"
+        "- If your discussions with the user lead you to see new purpose and intent for the mindspace then update any "
+        "relevant blueprint.md file"
     )
 
     AIBackend.set_system_prompt(system_prompt)

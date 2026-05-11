@@ -475,7 +475,6 @@ class ConversationWidget(QWidget):
             self._messages.insert(layout_pos, msg_widget)
             self._messages_layout.insertWidget(layout_pos, msg_widget)
 
-        self._update_blueprint_toggle_visibility()
         return msg_widget
 
     def _add_message(self, message: AIMessage) -> None:
@@ -573,7 +572,6 @@ class ConversationWidget(QWidget):
             # Remove from list
             del self._messages[i]
 
-        self._update_blueprint_toggle_visibility()
     def _change_message_expansion(self, message_index: int, expanded: bool) -> None:
         """
         Change the expansion state of a message.
@@ -973,7 +971,6 @@ class ConversationWidget(QWidget):
         if self._spotlighted_message_index >= len(self._messages):
             self._spotlighted_message_index = -1
 
-        self._update_blueprint_toggle_visibility()
         # Clear the input box - the text was restored there by _on_request_error so the
         # user could edit and resubmit manually, but retry resubmits directly from history.
         self._input.clear()
@@ -1610,10 +1607,6 @@ class ConversationWidget(QWidget):
 
         except Exception as e:
             raise ConversationError(f"Failed to set conversation history: {str(e)}") from e
-
-    def _update_blueprint_toggle_visibility(self) -> None:
-        """Update the blueprint toggle visibility based on whether there are any messages."""
-        self._input.set_has_messages(bool(self._messages))
 
     def _load_message_history(
         self, messages: List[AIMessage], reuse_ai_conversation: bool,
@@ -2429,7 +2422,6 @@ class ConversationWidget(QWidget):
             message_widget.deleteLater()
 
         self._messages = preserved_messages
-        self._update_blueprint_toggle_visibility()
 
         conversation_settings = self._ai_conversation.conversation_settings()
         self._input.set_model(conversation_settings.model)
@@ -2494,7 +2486,6 @@ class ConversationWidget(QWidget):
             message_widget.deleteLater()
 
         self._messages = preserved_messages
-        self._update_blueprint_toggle_visibility()
 
         conversation_settings = self._ai_conversation.conversation_settings()
         self._input.set_model(conversation_settings.model)

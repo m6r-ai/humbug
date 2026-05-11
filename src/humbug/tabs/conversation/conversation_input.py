@@ -32,7 +32,6 @@ class ConversationInput(ConversationMessage):
         self._stop_button: QToolButton | None = None
         self._settings_button: QToolButton | None = None
         self._attach_button: QToolButton | None = None
-        self._blueprint_button: QToolButton | None = None
         self._attachments: List[Tuple[str, str]] = []  # (filename, content)
         self._attachments_bar: QWidget | None = None
         self._attachments_layout: QHBoxLayout | None = None
@@ -61,17 +60,10 @@ class ConversationInput(ConversationMessage):
         banner_index = self._layout.indexOf(self._banner)
         self._layout.insertWidget(banner_index, self._attachments_bar)
 
-        self._blueprint_button = QToolButton(self)
-        self._blueprint_button.setObjectName("blueprintButton")
-        self._blueprint_button.setCheckable(True)
-        self._blueprint_button.setChecked(True)
-        self._blueprint_button.toggled.connect(self._on_blueprint_toggled)
-        self._banner_layout.insertWidget(0, self._blueprint_button)
-
         self._attach_button = QToolButton(self)
         self._attach_button.setObjectName("_attach_button")
         self._attach_button.clicked.connect(self._on_attach_button_clicked)
-        self._banner_layout.insertWidget(1, self._attach_button)
+        self._banner_layout.insertWidget(0, self._attach_button)
 
         # Create stop button (initially hidden)
         self._stop_button = QToolButton(self)
@@ -121,10 +113,6 @@ class ConversationInput(ConversationMessage):
         if self._attach_button:
             self._attach_button.setToolTip(strings.tooltip_attach_file)
 
-        if self._blueprint_button:
-            self._blueprint_button.setToolTip(strings.tooltip_enable_blueprint)
-            self._blueprint_button.setAccessibleName(strings.enable_blueprint)
-
         if self._settings_button:
             self._settings_button.setToolTip(strings.tooltip_settings_message)
 
@@ -158,12 +146,6 @@ class ConversationInput(ConversationMessage):
         if self._attach_button:
             self._attach_button.setIcon(QIcon(self._style_manager.scale_icon("paperclip", icon_base_size)))
             self._attach_button.setIconSize(icon_size)
-
-        if self._blueprint_button:
-            icon_name = "blueprint-checked" if self._blueprint_button.isChecked() else "blueprint"
-            self._blueprint_button.setIcon(QIcon(self._style_manager.scale_icon(icon_name, icon_base_size)))
-            self._blueprint_button.setIconSize(icon_size)
-            self._blueprint_button.setStyleSheet(self._style_manager.get_blueprint_button_stylesheet())
 
         if self._submit_button:
             self._submit_button.setIcon(QIcon(self._style_manager.scale_icon("submit", icon_base_size)))
@@ -233,32 +215,6 @@ class ConversationInput(ConversationMessage):
     def _on_attach_button_clicked(self) -> None:
         """Handle attach button click."""
         self.attach_requested.emit()
-
-    def _on_blueprint_toggled(self, checked: bool) -> None:
-        """Handle blueprint toggle changes."""
-        if self._blueprint_button:
-            icon_base_size = 14
-            icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
-            icon_name = "blueprint-checked" if checked else "blueprint"
-            self._blueprint_button.setIcon(QIcon(self._style_manager.scale_icon(icon_name, icon_base_size)))
-            self._blueprint_button.setIconSize(QSize(icon_scaled_size, icon_scaled_size))
-
-    def is_blueprint_enabled(self) -> bool:
-        """Return whether blueprint mode is enabled for the next submit."""
-        if self._blueprint_button is None:
-            return True
-
-        return self._blueprint_button.isChecked()
-
-    def set_blueprint_enabled(self, enabled: bool) -> None:
-        """Set whether blueprint mode is enabled."""
-        if self._blueprint_button:
-            self._blueprint_button.setChecked(enabled)
-
-    def set_has_messages(self, has_messages: bool) -> None:
-        """Show or hide the blueprint toggle based on whether the conversation has messages."""
-        if self._blueprint_button:
-            self._blueprint_button.setVisible(not has_messages)
 
     def add_attachment(self, filename: str, content: str) -> None:
         """Add a file attachment and show it in the attachments bar."""
