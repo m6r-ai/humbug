@@ -478,19 +478,36 @@ class MindspaceBreadcrumbContainer(QWidget):
         h = self.height()
         scrollbar = self._scrollbar
 
-        scrollbar_needed = scrollbar.maximum() > scrollbar.minimum()
-        scrollbar.setVisible(scrollbar_needed)
-
         bc_h = self._breadcrumb_rows * self._row_height
-        sb_w = scrollbar.sizeHint().width() if scrollbar_needed else 0
-        tree_w = max(0, w - sb_w)
-        tree_h = max(0, h - bc_h)
 
         # Disconnect rangeChanged while adjusting geometry to prevent the tree's
         # internal range change from causing a spurious external scrollbar value
         # recalculation during an active drag.
         self._tree_view.verticalScrollBar().rangeChanged.disconnect(self._on_tree_range_changed)
+
+        # First pass: lay out with the current scrollbar visibility so the tree
+        # gets its new height and can recalculate its internal scroll range.
+        scrollbar_needed = scrollbar.maximum() > scrollbar.minimum()
+        sb_w = scrollbar.sizeHint().width() if scrollbar_needed else 0
+        tree_w = max(0, w - sb_w)
+        tree_h = max(0, h - bc_h)
         self._breadcrumb_bar.setFixedHeight(bc_h)
         self._tree_view.setGeometry(QRect(0, bc_h, tree_w, tree_h))
+
+        # After the tree has been resized, re-read its actual internal range.
+        # The range may have changed because the viewport height changed (e.g.
+        # going in/out of full screen), but rangeChanged was disconnected so we
+        # never received the update.  Sync the external scrollbar now so that
+        # scrollbar_needed reflects reality.
+        tree_sb = self._tree_view.verticalScrollBar()
+        self._scrollbar.setRange(tree_sb.minimum(), tree_sb.maximum())
+        self._scrollbar.setPageStep(tree_sb.pageStep())
+
+        scrollbar_needed = scrollbar.maximum() > scrollbar.minimum()
+        scrollbar.setVisible(scrollbar_needed)
+        sb_w = scrollbar.sizeHint().width() if scrollbar_needed else 0
+        tree_w = max(0, w - sb_w)
+        self._tree_view.setGeometry(QRect(0, bc_h, tree_w, tree_h))
         self._scrollbar.setGeometry(QRect(tree_w, 0, sb_w, h))
+
         self._tree_view.verticalScrollBar().rangeChanged.connect(self._on_tree_range_changed)
