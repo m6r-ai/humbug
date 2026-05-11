@@ -144,14 +144,16 @@ class TabBar(QTabBar):
         data = self._data_for_index(index)
         if data:
             data.is_ephemeral = is_ephemeral
-            self.update(self.tabRect(index))
+            self.adjustSize()
+            self.updateGeometry()
 
     def set_tab_file_missing(self, index: int, is_file_missing: bool) -> None:
         """Update the file-missing state for a tab."""
         data = self._data_for_index(index)
         if data:
             data.is_file_missing = is_file_missing
-            self.update(self.tabRect(index))
+            self.adjustSize()
+            self.updateGeometry()
 
     def index_for_tab_id(self, tab_id: str) -> int:
         """Return the tab index for the given tab_id, or -1 if not found."""
@@ -176,8 +178,8 @@ class TabBar(QTabBar):
     def handle_style_changed(self) -> None:
         """Rebuild cached resources and repaint when the style changes."""
         self._rebuild_resources()
+        self.adjustSize()
         self.updateGeometry()
-        self.update()
 
     def tabSizeHint(self, index: int) -> QSize:
         """Return a size based on painted content rather than Qt's default layout."""
@@ -189,7 +191,12 @@ class TabBar(QTabBar):
         spacing = sm.tab_spacing()
         padding = sm.tab_padding()
 
-        fm = QFontMetricsF(self._resources.font)
+        font = QFont(self._resources.font)
+        if data is not None:
+            font.setItalic(data.is_ephemeral)
+            font.setStrikeOut(data.is_file_missing)
+
+        fm = QFontMetricsF(font)
         text_width = math.ceil(fm.horizontalAdvance(text))
 
         content_width = icon_size + spacing + text_width + spacing + icon_size
@@ -418,7 +425,12 @@ class TabBar(QTabBar):
         data = self._data_for_index(index)
         text = data.text if data else ""
 
-        fm = QFontMetricsF(self._resources.font)
+        font = QFont(self._resources.font)
+        if data is not None:
+            font.setItalic(data.is_ephemeral)
+            font.setStrikeOut(data.is_file_missing)
+
+        fm = QFontMetricsF(font)
         text_width = math.ceil(fm.horizontalAdvance(text))
 
         content_width = icon_size + spacing + text_width + spacing + icon_size
