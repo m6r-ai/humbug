@@ -1,0 +1,1 @@
+# PDF text extraction tool

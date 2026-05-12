@@ -1,0 +1,129 @@
+"""Shared fixtures and helpers for pdf module tests."""
+
+import zlib
+from typing import Any
+
+
+def make_pdf(pages: list[str]) -> bytes:
+    """Build a minimal but valid PDF containing the given page text strings.
+
+    Each string in `pages` becomes one page. Text is embedded as uncompressed
+    literal content streams so tests are easy to reason about.
+    """
+    objects: list[tuple[int, bytes]] = []
+    obj_num = 1
+
+    def next_num() -> int:
+        nonlocal obj_num
+        n = obj_num
+        obj_num += 1
+        return n
+
+    catalog_num = next_num()   # 1
+    pages_num = next_num()     # 2
+
+    page_nums: list[int] = []
+    content_nums: list[int] = []
+
+    for text in pages:
+        content_num = next_num()
+        page_num = next_num()
+        content_nums.append(content_num)
+        page_nums.append(page_num)
+
+    # Build content streams
+    content_streams: list[tuple[int, bytes]] = []
+    for i, text in enumerate(pages):
+        stream_body = (
+            f"BT /F1 12 Tf ({_escape_pdf_string(text)}) Tj ET"
+        ).encode("latin-1")
+        content_streams.append((content_nums[i], stream_body))
+
+    # Assemble all objects in order
+    all_objects: list[tuple[int, bytes]] = []
+
+    # Catalog
+    kids_refs = " ".join(f"{n} 0 R" for n in page_nums)
+    all_objects.append((catalog_num, f"<< /Type /Catalog /Pages {pages_num} 0 R >>".encode()))
+    all_objects.append((pages_num, f"<< /Type /Pages /Kids [{kids_refs}] /Count {len(pages)} >>".encode()))
+
+    for i, text in enumerate(pages):
+        stream_body = content_streams[i][1]
+        stream_obj = (
+            f"<< /Length {len(stream_body)} >>\nstream\n".encode() +
+            stream_body +
+            b"\nendstream"
+        )
+        all_objects.append((content_nums[i], stream_obj))
+
+        font_dict = "<< /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> >>"
+        page_obj = (
+            f"<< /Type /Page /Parent {pages_num} 0 R "
+            f"/Contents {content_nums[i]} 0 R "
+            f"/Resources << /Font {font_dict} >> >>"
+        ).encode()
+        all_objects.append((page_nums[i], page_obj))
+
+    # Build the PDF binary
+    body = b"%PDF-1.4\n"
+    offsets: dict[int, int] = {}
+
+    for num, obj_body in all_objects:
+        offsets[num] = len(body)
+        body += f"{num} 0 obj\n".encode() + obj_body + b"\nendobj\n"
+
+    xref_offset = len(body)
+    max_obj = max(offsets.keys())
+    xref = f"xref\n0 {max_obj + 1}\n"
+    xref += "0000000000 65535 f \n"
+    for i in range(1, max_obj + 1):
+        off = offsets.get(i, 0)
+        in_use = "n" if i in offsets else "f"
+        xref += f"{off:010d} 00000 {in_use} \n"
+
+    trailer = f"trailer\n<< /Size {max_obj + 1} /Root {catalog_num} 0 R >>\n"
+    tail = f"startxref\n{xref_offset}\n%%EOF\n"
+
+    return body + xref.encode() + trailer.encode() + tail.encode()
+
+
+def make_compressed_pdf(text: str) -> bytes:
+    """Build a minimal PDF with a FlateDecode-compressed content stream."""
+    stream_body = f"BT /F1 12 Tf ({_escape_pdf_string(text)}) Tj ET".encode("latin-1")
+    compressed = zlib.compress(stream_body)
+
+    body = b"%PDF-1.4\n"
+    offsets: dict[int, int] = {}
+
+    objects: list[tuple[int, bytes]] = [
+        (1, b"<< /Type /Catalog /Pages 2 0 R >>"),
+        (2, b"<< /Type /Pages /Kids [4 0 R] /Count 1 >>"),
+        (3, (
+            f"<< /Length {len(compressed)} /Filter /FlateDecode >>\nstream\n".encode() +
+            compressed +
+            b"\nendstream"
+        )),
+        (4, (
+            b"<< /Type /Page /Parent 2 0 R /Contents 3 0 R "
+            b"/Resources << /Font << /F1 << /Type /Font /Subtype /Type1 "
+            b"/BaseFont /Helvetica /Encoding /WinAnsiEncoding >> >> >> >>"
+        )),
+    ]
+
+    for num, obj_body in objects:
+        offsets[num] = len(body)
+        body += f"{num} 0 obj\n".encode() + obj_body + b"\nendobj\n"
+
+    xref_offset = len(body)
+    xref = "xref\n0 5\n"
+    xref += "0000000000 65535 f \n"
+    for i in range(1, 5):
+        xref += f"{offsets[i]:010d} 00000 n \n"
+
+    trailer = f"trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
+    return body + xref.encode() + trailer.encode()
+
+
+def _escape_pdf_string(text: str) -> str:
+    """Escape special characters for use inside a PDF literal string."""
+    return text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")

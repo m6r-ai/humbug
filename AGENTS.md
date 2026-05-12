@@ -87,6 +87,11 @@ Lightweight, GUI-free tools for git operations.
 ### `src/dmarkdown/`
 Advanced markdown parsing to AST.
 
+### `src/pdf/`
+Pure-Python PDF text extraction (stdlib only). Parses PDF structure, decodes streams
+(FlateDecode, ASCII85Decode, ASCIIHexDecode), and extracts text from content streams.
+Public API: `parse(data: bytes) -> PDFDocument` and `extract_text(doc: PDFDocument) -> str`.
+
 ### `src/syntax/`
 Language-specific syntax highlighting system.
 
