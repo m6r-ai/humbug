@@ -336,6 +336,12 @@ def get_english_strings() -> LanguageStrings:
         ),
         tooltip_show_attachments="Show attachments",
         tooltip_hide_attachments="Hide attachments",
+        error_pdf_unsupported=(
+            "'{filename}' could not be attached. {reason}"
+        ),
+        error_pdf_extraction_failed=(
+            "'{filename}' could not be attached: text extraction failed. {reason}"
+        ),
 
         delete_from_here_title="Delete Messages",
         delete_from_here_message=(

@@ -1,11 +1,15 @@
-from __future__ import annotations
-
 from typing import Any
 
 from pdf.pdf_errors import PDFParseError, PDFUnsupportedError
 from pdf.pdf_filters import decode_stream_filters
 from pdf.pdf_tokenizer import PDFTokenizer, TokenType
 from pdf.pdf_types import PDFDocument, PDFObjectRef, PDFStream, PDFXRefEntry
+
+
+def _int_value(value: object) -> int:
+    """Extract an int from a token value that mypy types as object."""
+    assert isinstance(value, int)
+    return value
 
 
 def parse(data: bytes) -> PDFDocument:
@@ -49,7 +53,7 @@ def _find_xref_offset(data: bytes) -> int:
     if token.type != TokenType.INTEGER:
         raise PDFParseError("'startxref' not followed by an integer offset")
 
-    return int(token.value)  # type: ignore[arg-type]
+    return _int_value(token.value)
 
 
 def _load_xref(tokenizer: PDFTokenizer, doc: PDFDocument, offset: int) -> None:
@@ -106,11 +110,12 @@ def _parse_xref_table(tokenizer: PDFTokenizer, doc: PDFDocument) -> None:
             tokenizer.pos = saved
             return
 
-        first_obj = int(token.value)  # type: ignore[arg-type]
+        first_obj = _int_value(token.value)
         count_token = tokenizer.next_token()
         if count_token.type != TokenType.INTEGER:
             raise PDFParseError("Invalid xref subsection header")
-        count = int(count_token.value)  # type: ignore[arg-type]
+
+        count = _int_value(count_token.value)
 
         # Consume the rest of the subsection header line before reading entries
         tokenizer.read_line()
@@ -120,10 +125,12 @@ def _parse_xref_table(tokenizer: PDFTokenizer, doc: PDFDocument) -> None:
             parts = line.split()
             if len(parts) < 3:
                 continue
+
             try:
                 entry_offset = int(parts[0])
                 gen_num = int(parts[1])
                 in_use = parts[2] == b"n"
+
             except (ValueError, IndexError):
                 continue
 
@@ -263,6 +270,7 @@ def _parse_object_body(tokenizer: PDFTokenizer) -> Any:
     if token.type == TokenType.STREAM_KW:
         if not isinstance(value, dict):
             raise PDFParseError("'stream' keyword without preceding dictionary")
+
         stream_data = _read_stream_data(tokenizer, value)
         return PDFStream(data=stream_data, attrs=value)
 
@@ -279,6 +287,7 @@ def _read_stream_data(tokenizer: PDFTokenizer, attrs: dict[str, Any]) -> bytes:
     # Consume the line ending after 'stream'
     if pos < len(data) and data[pos] == ord("\r"):
         pos += 1
+
     if pos < len(data) and data[pos] == ord("\n"):
         pos += 1
 
@@ -290,10 +299,12 @@ def _read_stream_data(tokenizer: PDFTokenizer, attrs: dict[str, Any]) -> bytes:
     if isinstance(length, int) and length >= 0:
         raw = data[pos:pos + length]
         tokenizer.pos = pos + length
+
     else:
         end = tokenizer.find(b"endstream", pos)
         if end == -1:
             raise PDFParseError("Cannot find 'endstream' marker")
+
         raw = data[pos:end]
         tokenizer.pos = end
 
@@ -307,12 +318,15 @@ def _read_stream_data(tokenizer: PDFTokenizer, attrs: dict[str, Any]) -> bytes:
     if isinstance(filters_raw, str):
         filters = [filters_raw]
         parms_list: list[dict[str, Any] | None] = [parms_raw if isinstance(parms_raw, dict) else None]
+
     elif isinstance(filters_raw, list):
         filters = [str(f) for f in filters_raw]
         if isinstance(parms_raw, list):
             parms_list = [p if isinstance(p, dict) else None for p in parms_raw]
+
         else:
             parms_list = [None] * len(filters)
+
     else:
         return raw
 
@@ -351,7 +365,7 @@ def _load_object_streams(tokenizer: PDFTokenizer, doc: PDFDocument) -> None:
             num_tok = header_tokenizer.next_token()
             off_tok = header_tokenizer.next_token()
             if num_tok.type == TokenType.INTEGER and off_tok.type == TokenType.INTEGER:
-                offsets.append((int(num_tok.value), int(off_tok.value)))  # type: ignore[arg-type]
+                offsets.append((_int_value(num_tok.value), _int_value(off_tok.value)))
 
         body_data = stm_data[first:]
         body_tokenizer = PDFTokenizer(body_data)
@@ -359,10 +373,12 @@ def _load_object_streams(tokenizer: PDFTokenizer, doc: PDFDocument) -> None:
         for embedded_obj_num, offset in offsets:
             if embedded_obj_num in doc.objects:
                 continue
+
             body_tokenizer.pos = offset
             try:
                 value = _parse_value(body_tokenizer)
                 doc.objects[embedded_obj_num] = value
+
             except Exception:  # pylint: disable=broad-except
                 pass
 
@@ -385,10 +401,12 @@ def _parse_value(tokenizer: PDFTokenizer) -> Any:
         if gen_token.type == TokenType.INTEGER:
             ref_token = tokenizer.next_token()
             if ref_token.type == TokenType.REF_KW:
-                return PDFObjectRef(obj_num=int(token.value), gen_num=int(gen_token.value))  # type: ignore[arg-type]
+                return PDFObjectRef(obj_num=_int_value(token.value), gen_num=_int_value(gen_token.value))
             tokenizer.pos = saved
+
         else:
             tokenizer.pos = saved
+
         return token.value
 
     if token.type == TokenType.REAL:

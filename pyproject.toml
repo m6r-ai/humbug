@@ -18,6 +18,7 @@ dev = [
     "mypy",
     "types-PySide6",
     "pylint",
+    "pyyaml",
     "pyinstaller",
     "pytest",
     "pytest-cov",

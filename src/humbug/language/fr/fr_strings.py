@@ -336,6 +336,12 @@ def get_french_strings() -> LanguageStrings:
         ),
         tooltip_show_attachments="Afficher les pièces jointes",
         tooltip_hide_attachments="Masquer les pièces jointes",
+        error_pdf_unsupported=(
+            "Impossible de joindre '{filename}'. {reason}"
+        ),
+        error_pdf_extraction_failed=(
+            "Impossible de joindre '{filename}' : l'extraction du texte a échoué. {reason}"
+        ),
 
         delete_from_here_title="Supprimer les messages",
         delete_from_here_message=(

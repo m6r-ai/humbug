@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from enum import Enum, auto
 from typing import NamedTuple
 
@@ -62,6 +60,7 @@ class PDFTokenizer:
         """Return the byte at the current position without advancing."""
         if self._pos >= len(self._data):
             return None
+
         return self._data[self._pos]
 
     def skip_whitespace_and_comments(self) -> None:
@@ -74,9 +73,11 @@ class PDFTokenizer:
             b = data[pos]
             if b in _WHITESPACE:
                 pos += 1
+
             elif b == ord("%"):
                 while pos < length and data[pos] not in (ord("\n"), ord("\r")):
                     pos += 1
+
             else:
                 break
 
@@ -101,12 +102,14 @@ class PDFTokenizer:
             if self._pos + 1 < len(self._data) and self._data[self._pos + 1] == ord("<"):
                 self._pos += 2
                 return Token(TokenType.DICT_START, None)
+
             return self._scan_hex_string()
 
         if b == ord(">"):
             if self._pos + 1 < len(self._data) and self._data[self._pos + 1] == ord(">"):
                 self._pos += 2
                 return Token(TokenType.DICT_END, None)
+
             # Lone '>' is malformed but we skip it gracefully
             self._pos += 1
             return self.next_token()
@@ -138,6 +141,7 @@ class PDFTokenizer:
         # Consume the line ending (handle \r\n)
         if self._pos < length and data[self._pos] == ord("\r"):
             self._pos += 1
+
         if self._pos < length and data[self._pos] == ord("\n"):
             self._pos += 1
 
@@ -186,16 +190,22 @@ class PDFTokenizer:
                 self._pos += 1
                 if esc == ord("n"):
                     result.append(ord("\n"))
+
                 elif esc == ord("r"):
                     result.append(ord("\r"))
+
                 elif esc == ord("t"):
                     result.append(ord("\t"))
+
                 elif esc == ord("b"):
                     result.append(ord("\b"))
+
                 elif esc == ord("f"):
                     result.append(ord("\f"))
+
                 elif esc in (ord("("), ord(")"), ord("\\")):
                     result.append(esc)
+
                 elif ord("0") <= esc <= ord("7"):
                     # Octal escape — up to 3 digits
                     octal = bytes([esc])
@@ -203,13 +213,17 @@ class PDFTokenizer:
                         if self._pos < length and ord("0") <= data[self._pos] <= ord("7"):
                             octal += bytes([data[self._pos]])
                             self._pos += 1
+
                         else:
                             break
+
                     result.append(int(octal, 8) & 0xFF)
+
                 elif esc in (ord("\n"), ord("\r")):
                     # Line continuation — consume \r\n if present
                     if esc == ord("\r") and self._pos < length and data[self._pos] == ord("\n"):
                         self._pos += 1
+
                 else:
                     result.append(esc)
 
@@ -240,6 +254,7 @@ class PDFTokenizer:
             b = data[self._pos]
             if b not in _WHITESPACE:
                 hex_chars.append(b)
+
             self._pos += 1
 
         if self._pos < length:
@@ -251,6 +266,7 @@ class PDFTokenizer:
 
         try:
             value = bytes.fromhex(hex_chars.decode("ascii"))
+
         except (ValueError, UnicodeDecodeError):
             value = b""
 
@@ -278,7 +294,9 @@ class PDFTokenizer:
         try:
             if is_real:
                 return Token(TokenType.REAL, float(raw))
+
             return Token(TokenType.INTEGER, int(raw))
+
         except ValueError:
             return Token(TokenType.KEYWORD, raw)
 
@@ -294,18 +312,25 @@ class PDFTokenizer:
 
         if word == "true":
             return Token(TokenType.BOOLEAN, True)
+
         if word == "false":
             return Token(TokenType.BOOLEAN, False)
+
         if word == "null":
             return Token(TokenType.NULL, None)
+
         if word == "obj":
             return Token(TokenType.OBJ_KW, None)
+
         if word == "endobj":
             return Token(TokenType.ENDOBJ_KW, None)
+
         if word == "stream":
             return Token(TokenType.STREAM_KW, None)
+
         if word == "endstream":
             return Token(TokenType.ENDSTREAM_KW, None)
+
         if word == "R":
             return Token(TokenType.REF_KW, None)
 
@@ -325,8 +350,10 @@ def _unescape_name(raw: str) -> str:
                 result.append(chr(int(raw[i + 1:i + 3], 16)))
                 i += 3
                 continue
+
             except ValueError:
                 pass
+
         result.append(raw[i])
         i += 1
 

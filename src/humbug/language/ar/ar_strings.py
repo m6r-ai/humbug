@@ -337,6 +337,12 @@ def get_arabic_strings() -> LanguageStrings:
         ),
         tooltip_show_attachments="عرض المرفقات",
         tooltip_hide_attachments="إخفاء المرفقات",
+        error_pdf_unsupported=(
+            "تعذّر إرفاق '{filename}'. {reason}"
+        ),
+        error_pdf_extraction_failed=(
+            "تعذّر إرفاق '{filename}': فشل استخراج النص. {reason}"
+        ),
 
         delete_from_here_title="حذف الرسائل",
         delete_from_here_message="هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا الإجراء.",

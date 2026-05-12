@@ -314,6 +314,8 @@ class LanguageStrings:
     warning_file_too_large: str
     tooltip_show_attachments: str
     tooltip_hide_attachments: str
+    error_pdf_unsupported: str
+    error_pdf_extraction_failed: str
 
     delete_from_here_title: str
     delete_from_here_message: str

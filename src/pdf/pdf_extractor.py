@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import re
 from typing import Any
 
@@ -112,6 +110,7 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
 
     # Current font info
     current_font_name: str = ""
+    current_font_size: float = 12.0
     font_cache: dict[str, dict[str, Any]] = {}
 
     while True:
@@ -180,6 +179,10 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
             # Tf: fontname size
             if len(operand_stack) >= 1:
                 current_font_name = str(operand_stack[-2]) if len(operand_stack) >= 2 else ""
+                try:
+                    current_font_size = float(operand_stack[-1])
+                except (TypeError, ValueError):
+                    pass
                 font_cache_key = current_font_name
                 if font_cache_key not in font_cache:
                     font_cache[font_cache_key] = _resolve_font(doc, resources, current_font_name)
@@ -216,8 +219,13 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
             continue
 
         if op == "Td":
-            # Move to next line — emit a space to separate words across positions
-            text_parts.append(" ")
+            # Td moves the text position by (tx, ty). Only emit a space for horizontal
+            # moves large enough to represent a word gap (> half the current font size).
+            # Small values are kerning/tracking adjustments and should be ignored.
+            if len(operand_stack) >= 2:
+                tx = float(operand_stack[-2])
+                if abs(tx) > current_font_size * 0.5:
+                    text_parts.append(" ")
             operand_stack.clear()
             continue
 
