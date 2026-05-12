@@ -28,6 +28,7 @@ modules:
     internal_dependencies:
       - menai
       - diff
+      - pdf
       - syntax
     external_dependencies:
       - "standard_library"

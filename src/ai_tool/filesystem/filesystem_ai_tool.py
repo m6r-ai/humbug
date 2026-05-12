@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Callable, Tuple, cast
 
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
+from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from ai_tool import (
@@ -188,7 +189,8 @@ class FileSystemAITool(AITool):
 
         prefix += (
             f"The denied paths list applies to all file access, including within the mindspace. "
-            f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB."
+            f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB. "
+            f"PDF files are supported: text is extracted automatically on read."
         )
         return prefix
 
@@ -214,7 +216,8 @@ class FileSystemAITool(AITool):
                 extract_context=None,
                 allowed_parameters={"path", "encoding"},
                 required_parameters={"path"},
-                description="Read file contents"
+                description="Read file contents. PDF files (.pdf) are supported: text is extracted automatically. "
+                    "Encrypted PDFs will return an error."
             ),
             "read_file_lines": AIToolOperationDefinition(
                 name="read_file_lines",
@@ -640,6 +643,24 @@ class FileSystemAITool(AITool):
             size_mb = file_size / (1024 * 1024)
             max_mb = self._max_file_size_bytes / (1024 * 1024)
             raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
+
+        if path.suffix.lower() == ".pdf":
+            try:
+                with open(path, "rb") as f:
+                    data = f.read()
+                doc = parse_pdf(data)
+                content = extract_text(doc)
+
+            except PDFUnsupportedError as e:
+                raise AIToolExecutionError(f"PDF not supported: {e}") from e
+
+            except PDFError as e:
+                raise AIToolExecutionError(f"Failed to extract PDF text: {e}") from e
+
+            except OSError as e:
+                raise AIToolExecutionError(f"Failed to read file: {e}") from e
+
+            return AIToolResult(id=tool_call.id, name="filesystem", content=content, context="PDF")
 
         encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
 
