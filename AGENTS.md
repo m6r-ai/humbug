@@ -75,9 +75,6 @@ Framework for AI tools and capabilities.
 ### `src/menai/`
 Pure functional programming language designed for AI use. Includes lexer, parser, compiler, and virtual machine.
 
-### `src/ai_conversation_transcript/`
-Handles saving and loading AI conversation history.
-
 ### `src/diff/`
 Unified diff parsing and application with fuzzy matching.
 

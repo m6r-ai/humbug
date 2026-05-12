@@ -7,8 +7,11 @@ from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
     AIConversationSettings, AIMessage
 )
-from ai_conversation_transcript import (
-    AIConversationTranscriptError, AIConversationTranscriptHandler
+from ai_transcript_conversation.ai_conversation_transcript_error import (
+    AIConversationTranscriptError
+)
+from ai_transcript_conversation.ai_conversation_transcript_handler import (
+    AIConversationTranscriptHandler
 )
 
 

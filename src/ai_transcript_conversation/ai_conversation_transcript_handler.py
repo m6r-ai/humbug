@@ -9,7 +9,7 @@ from typing import Dict, Any
 from ai import AIConversationHistory, AIConversationParent
 from ai.ai_message import AIMessage
 
-from ai_conversation_transcript.ai_conversation_transcript_error import (
+from ai_transcript_conversation.ai_conversation_transcript_error import (
     AIConversationTranscriptFormatError, AIConversationTranscriptIOError
 )
 

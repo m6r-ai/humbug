@@ -8,7 +8,7 @@ import pytest
 
 from ai import AIConversationHistory
 from ai.ai_message import AIMessage, AIMessageSource
-from ai_conversation_transcript import (
+from ai_transcript_conversation import (
     AIConversationTranscriptHandler,
     AIConversationTranscriptFormatError
 )

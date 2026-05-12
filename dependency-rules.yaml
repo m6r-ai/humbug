@@ -11,16 +11,9 @@ modules:
       - "aiohttp"
       - "certifi"
 
-  ai_conversation_transcript:
-    internal_dependencies:
-      - ai
-    external_dependencies:
-      - "standard_library"
-
   ai_transcript_conversation:
     internal_dependencies:
       - ai
-      - ai_conversation_transcript
     external_dependencies:
       - "standard_library"
 
@@ -52,7 +45,6 @@ modules:
   humbug:
     internal_dependencies:
       - ai
-      - ai_conversation_transcript
       - ai_tool
       - ai_transcript_conversation
       - diff
