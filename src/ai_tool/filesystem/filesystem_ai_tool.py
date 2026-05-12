@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Callable, Tuple, cast
 
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
+from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -190,7 +191,7 @@ class FileSystemAITool(AITool):
         prefix += (
             f"The denied paths list applies to all file access, including within the mindspace. "
             f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB. "
-            f"PDF files are supported: text is extracted automatically on read."
+            f"PDF and DOCX files are supported: text is extracted automatically on read."
         )
         return prefix
 
@@ -217,7 +218,9 @@ class FileSystemAITool(AITool):
                 allowed_parameters={"path", "encoding"},
                 required_parameters={"path"},
                 description="Read file contents. PDF files (.pdf) are supported: text is extracted automatically. "
-                    "Encrypted PDFs will return an error."
+                    "Encrypted PDFs will return an error. "
+                    "DOCX files (.docx) are supported: text is extracted automatically. "
+                    "Encrypted DOCX files will return an error."
             ),
             "read_file_lines": AIToolOperationDefinition(
                 name="read_file_lines",
@@ -661,6 +664,23 @@ class FileSystemAITool(AITool):
                 raise AIToolExecutionError(f"Failed to read file: {e}") from e
 
             return AIToolResult(id=tool_call.id, name="filesystem", content=content, context="PDF")
+
+        if path.suffix.lower() == ".docx":
+            try:
+                with open(path, "rb") as f:
+                    data = f.read()
+                content = extract_docx_text(data)
+
+            except DocxUnsupportedError as e:
+                raise AIToolExecutionError(f"DOCX not supported: {e}") from e
+
+            except DocxError as e:
+                raise AIToolExecutionError(f"Failed to extract DOCX text: {e}") from e
+
+            except OSError as e:
+                raise AIToolExecutionError(f"Failed to read file: {e}") from e
+
+            return AIToolResult(id=tool_call.id, name="filesystem", content=content, context="DOCX")
 
         encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
 

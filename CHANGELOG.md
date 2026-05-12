@@ -8,7 +8,7 @@ New features:
 - Added the ability to view files that were attached to a message in a conversation.
 - Introduced the idea of `blueprint.md` files, allowing both AIs and human users to understand the intent of a mindspace.
 - Allow a `~/.humbug/user-ai-config.json` file to be used to define models not directly supported by Humbug.
-- Added support for reading the text in PDF files when attaching files to a conversation or when reading files via the
+- Added support for reading the text in PDF and DOCX files when attaching files to a conversation or when reading files via the
   filesystem AI tool.
 
 Bug fixes:

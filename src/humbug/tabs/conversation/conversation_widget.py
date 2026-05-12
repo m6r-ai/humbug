@@ -18,9 +18,9 @@ from ai import (
 )
 from ai_tool import AIToolCall
 from ai_transcript_conversation import AITranscriptConversation
-from syntax.programming_language_utils import ProgrammingLanguageUtils
-
+from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from pdf import PDFUnsupportedError, PDFError, extract_text, parse as parse_pdf
+from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -2618,7 +2618,7 @@ class ConversationWidget(QWidget):
         strings = self._language_manager.strings()
         extensions = ProgrammingLanguageUtils.get_supported_file_extensions()
         ext_pattern = " ".join(f"*{ext}" for ext in sorted(extensions))
-        file_filter = f"Text and code files ({ext_pattern} *.pdf);;All files (*)"
+        file_filter = f"Text and code files ({ext_pattern} *.docx *.pdf);;All files (*)"
         path, _ = QFileDialog.getOpenFileName(self, strings.file_dialog_attach_file, "", file_filter)
         if not path:
             return
@@ -2629,6 +2629,25 @@ class ConversationWidget(QWidget):
             content = self._extract_pdf_text(path)
             if content is None:
                 return
+
+            size_kb = len(content) // 1024
+            if len(content) > 100 * 1024:
+                result = MessageBox.show_message(
+                    self,
+                    MessageBoxType.WARNING,
+                    strings.file_error_title,
+                    strings.warning_file_too_large.format(filename=filename, size_kb=size_kb),
+                    [MessageBoxButton.YES, MessageBoxButton.NO]
+                )
+
+                if result != MessageBoxButton.YES:
+                    return
+
+        elif path.lower().endswith(".docx"):
+            content = self._extract_docx_text(path)
+            if content is None:
+                return
+
             size_kb = len(content) // 1024
             if len(content) > 100 * 1024:
                 result = MessageBox.show_message(
@@ -2640,6 +2659,7 @@ class ConversationWidget(QWidget):
                 )
                 if result != MessageBoxButton.YES:
                     return
+
         else:
             file_size = os.path.getsize(path)
             size_kb = file_size // 1024
@@ -2653,9 +2673,11 @@ class ConversationWidget(QWidget):
                 )
                 if result != MessageBoxButton.YES:
                     return
+
             try:
                 with open(path, encoding='utf-8', errors='replace') as f:
                     content = f.read()
+
             except Exception as e:
                 self._logger.warning("Failed to read attachment %s: %s", path, str(e))
                 return
@@ -2672,8 +2694,10 @@ class ConversationWidget(QWidget):
         try:
             with open(path, "rb") as f:
                 data = f.read()
+
             doc = parse_pdf(data)
             return extract_text(doc)
+
         except PDFUnsupportedError as e:
             MessageBox.show_message(
                 self, MessageBoxType.WARNING, strings.file_error_title,
@@ -2681,6 +2705,7 @@ class ConversationWidget(QWidget):
             )
             self._logger.warning("PDF not supported %s: %s", path, str(e))
             return None
+
         except PDFError as e:
             MessageBox.show_message(
                 self, MessageBoxType.WARNING, strings.file_error_title,
@@ -2688,12 +2713,49 @@ class ConversationWidget(QWidget):
             )
             self._logger.warning("PDF extraction failed %s: %s", path, str(e))
             return None
+
         except Exception as e:
             MessageBox.show_message(
                 self, MessageBoxType.WARNING, strings.file_error_title,
                 strings.error_pdf_extraction_failed.format(filename=filename, reason=str(e))
             )
             self._logger.warning("Failed to read PDF %s: %s", path, str(e))
+            return None
+
+    def _extract_docx_text(self, path: str) -> str | None:
+        """Extract text from a DOCX file, showing an error dialog on failure.
+
+        Returns the extracted text, or None if extraction failed or was unsupported.
+        """
+        strings = self._language_manager.strings()
+        filename = os.path.basename(path)
+        try:
+            with open(path, "rb") as f:
+                data = f.read()
+            return extract_docx_text(data)
+
+        except DocxUnsupportedError as e:
+            MessageBox.show_message(
+                self, MessageBoxType.WARNING, strings.file_error_title,
+                strings.error_docx_unsupported.format(filename=filename, reason=str(e))
+            )
+            self._logger.warning("DOCX not supported %s: %s", path, str(e))
+            return None
+
+        except DocxError as e:
+            MessageBox.show_message(
+                self, MessageBoxType.WARNING, strings.file_error_title,
+                strings.error_docx_extraction_failed.format(filename=filename, reason=str(e))
+            )
+            self._logger.warning("DOCX extraction failed %s: %s", path, str(e))
+            return None
+
+        except Exception as e:
+            MessageBox.show_message(
+                self, MessageBoxType.WARNING, strings.file_error_title,
+                strings.error_docx_extraction_failed.format(filename=filename, reason=str(e))
+            )
+            self._logger.warning("Failed to read DOCX %s: %s", path, str(e))
             return None
 
     def get_conversation_history(self) -> AIConversationHistory:

@@ -21,6 +21,7 @@ modules:
     internal_dependencies:
       - menai
       - diff
+      - docx
       - pdf
       - syntax
     external_dependencies:
@@ -34,6 +35,11 @@ modules:
   dmarkdown:
     internal_dependencies:
       - syntax
+    external_dependencies:
+      - "standard_library"
+
+  docx:
+    internal_dependencies: []
     external_dependencies:
       - "standard_library"
 
@@ -51,6 +57,7 @@ modules:
       - dmarkdown
       - git
       - pdf
+      - docx
       - syntax
       - terminal
     external_dependencies:

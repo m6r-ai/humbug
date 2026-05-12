@@ -316,6 +316,8 @@ class LanguageStrings:
     tooltip_hide_attachments: str
     error_pdf_unsupported: str
     error_pdf_extraction_failed: str
+    error_docx_unsupported: str
+    error_docx_extraction_failed: str
 
     delete_from_here_title: str
     delete_from_here_message: str

@@ -343,6 +343,12 @@ def get_arabic_strings() -> LanguageStrings:
         error_pdf_extraction_failed=(
             "تعذّر إرفاق '{filename}': فشل استخراج النص. {reason}"
         ),
+        error_docx_unsupported=(
+            "تعذّر إرفاق '{filename}'. {reason}"
+        ),
+        error_docx_extraction_failed=(
+            "تعذّر إرفاق '{filename}': فشل استخراج النص. {reason}"
+        ),
 
         delete_from_here_title="حذف الرسائل",
         delete_from_here_message="هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا الإجراء.",

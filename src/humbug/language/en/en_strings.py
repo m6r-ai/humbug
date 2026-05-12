@@ -342,6 +342,12 @@ def get_english_strings() -> LanguageStrings:
         error_pdf_extraction_failed=(
             "'{filename}' could not be attached: text extraction failed. {reason}"
         ),
+        error_docx_unsupported=(
+            "'{filename}' could not be attached. {reason}"
+        ),
+        error_docx_extraction_failed=(
+            "'{filename}' could not be attached: text extraction failed. {reason}"
+        ),
 
         delete_from_here_title="Delete Messages",
         delete_from_here_message=(
