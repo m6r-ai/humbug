@@ -354,7 +354,7 @@ class AIConversation:
                 try:
                     await stream.aclose()
 
-                except Exception as e:
+                except BaseException as e:
                     # Log but don't propagate generator cleanup errors
                     self._logger.debug("Error during generator cleanup: %s", e)
 

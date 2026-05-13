@@ -176,18 +176,18 @@ class AIBackend(ABC):
         self._logger.debug(config.data)
 
         attempt = 0
-        while attempt < self._max_retries:
-            try:
-                post_timeout = aiohttp.ClientTimeout(
-                    total=None,
-                    sock_connect=20,
-                    sock_read=300
-                )
+        post_timeout = aiohttp.ClientTimeout(
+            total=None,
+            sock_connect=20,
+            sock_read=300
+        )
 
-                # Use explicit IPv4 for local connections as localhost can cause SSL issues!
-                url = config.url.replace("localhost", "127.0.0.1")
+        # Use explicit IPv4 for local connections as localhost can cause SSL issues!
+        url = config.url.replace("localhost", "127.0.0.1")
 
-                async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self._ssl_context)) as session:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self._ssl_context)) as session:
+            while attempt < self._max_retries:
+                try:
                     async with session.post(
                         url,
                         headers=config.headers,
@@ -312,49 +312,49 @@ class AIBackend(ABC):
                         # Successfully processed response, exit retry loop
                         break
 
-            except (ClientConnectorError, ClientError, asyncio.TimeoutError) as e:
-                # Handle network-related errors that should be retried
-                self._logger.warning("Network error (attempt %d/%d): %s", attempt + 1, self._max_retries, str(e))
-                delay = self._base_delay * (2 ** attempt)
+                except (ClientConnectorError, ClientError, asyncio.TimeoutError, OSError) as e:
+                    # Handle network-related errors that should be retried
+                    self._logger.warning("Network error (attempt %d/%d): %s", attempt + 1, self._max_retries, str(e))
+                    delay = self._base_delay * (2 ** attempt)
 
-                if attempt < self._max_retries - 1:
+                    if attempt < self._max_retries - 1:
+                        yield AIResponse(
+                            reasoning="",
+                            content="",
+                            error=AIError(
+                                code="network_error",
+                                message=f"Network error: {str(e)}. Retrying in {delay} seconds...",
+                                retries_exhausted=False,
+                                details={"type": type(e).__name__, "attempt": attempt + 1}
+                            )
+                        )
+                        await asyncio.sleep(delay)
+                        attempt += 1
+                        continue
+
                     yield AIResponse(
                         reasoning="",
                         content="",
                         error=AIError(
                             code="network_error",
-                            message=f"Network error: {str(e)}. Retrying in {delay} seconds...",
-                            retries_exhausted=False,
-                            details={"type": type(e).__name__, "attempt": attempt + 1}
+                            message=f"Network error: {str(e)}",
+                            retries_exhausted=True,
+                            details={"type": type(e).__name__}
                         )
                     )
-                    await asyncio.sleep(delay)
-                    attempt += 1
-                    continue
+                    return
 
-                yield AIResponse(
-                    reasoning="",
-                    content="",
-                    error=AIError(
-                        code="network_error",
-                        message=f"Network error: {str(e)}",
-                        retries_exhausted=True,
-                        details={"type": type(e).__name__}
+                except Exception as e:
+                    # Handle non-retryable errors
+                    self._logger.exception("Error processing AI response: %s", str(e))
+                    yield AIResponse(
+                        reasoning="",
+                        content="",
+                        error=AIError(
+                            code="error",
+                            message=f"Error: {str(e)}",
+                            retries_exhausted=True,
+                            details={"type": type(e).__name__}
+                        )
                     )
-                )
-                return
-
-            except Exception as e:
-                # Handle non-retryable errors
-                self._logger.exception("Error processing AI response: %s", str(e))
-                yield AIResponse(
-                    reasoning="",
-                    content="",
-                    error=AIError(
-                        code="error",
-                        message=f"Error: {str(e)}",
-                        retries_exhausted=True,
-                        details={"type": type(e).__name__}
-                    )
-                )
-                return
+                    return
