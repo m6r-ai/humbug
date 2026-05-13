@@ -237,6 +237,7 @@ class VLLMBackend(AIBackend):
         data = {
             "model": AIConversationSettings.get_name(settings.model),
             "messages": messages,
+            "chat_id": "",  # This is a specific workaround for a broken VLLM backend server!
             "stream": True,
             "stream_options": {"include_usage": True}
         }
