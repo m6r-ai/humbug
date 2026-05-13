@@ -7,9 +7,9 @@ import re
 from typing import Callable, Dict, List, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
-    QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
+    QWidget, QApplication, QHBoxLayout, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
+from PySide6.QtCore import QEvent, QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
 from ai import (
@@ -196,8 +196,7 @@ class ConversationWidget(QWidget):
         self._messages_container.setLayout(self._messages_layout)
 
         # Set up the input box
-        self._input = ConversationInput(AIMessageSource.USER, self._messages_container)
-        self._input.cursor_position_changed.connect(self._ensure_cursor_visible)
+        self._input = ConversationInput(AIMessageSource.USER, self)
         self._input.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(self._input, has_selection)
         )
@@ -211,17 +210,41 @@ class ConversationWidget(QWidget):
         self._input.attach_requested.connect(self._on_attach_requested)
         self._input.modified.connect(self.conversation_modified)
 
+        # Centering wrapper for the sticky input — mirrors how the scroll area centres
+        # _messages_container so the input aligns perfectly with the message column.
+        # A right margin equal to the scrollbar width is applied dynamically so the
+        # input edge stays flush with the message column when the scrollbar is visible.
+        self._input_row = QWidget()
+        self._input_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._input_row_layout = QVBoxLayout(self._input_row)
+        self._input_row_layout.setContentsMargins(0, 0, 0, 0)  # updated in _on_style_changed
+        self._input_row_layout.setSpacing(0)
+        self._input.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._input_row_layout.addWidget(self._input)
+
+        self._input_centering = QWidget()
+        self._input_centering.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._input_centering_layout = QHBoxLayout(self._input_centering)
+        self._input_centering_layout.setContentsMargins(0, 0, 0, 0)
+        self._input_centering_layout.setSpacing(0)
+        self._input_centering_layout.addStretch()
+        self._input_centering_layout.addWidget(self._input_row, 1)
+        self._input_centering_layout.addStretch()
+
+        # Track scrollbar show/hide so the input stays aligned with the message column
+        self._scroll_area.verticalScrollBar().installEventFilter(self)
+
         style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
 
         self._messages_layout.addStretch()
-        self._messages_layout.addWidget(self._input)
 
         self._messages_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self._scroll_area.setWidget(self._messages_container)
 
-        # Add the scroll area to the main layout
+        # Scroll area grows to fill available height; sticky input sits below it
         conversation_layout.addWidget(self._scroll_area)
+        conversation_layout.addWidget(self._input_centering)
 
         # Setup signals for search highlights
         self._search_highlights: Dict[ConversationMessage, List[Tuple[int, int, int]]] = {}
@@ -469,8 +492,8 @@ class ConversationWidget(QWidget):
         if layout_pos is None:
             self._messages.append(msg_widget)
 
-            # Add widget before input and the stretch.
-            self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
+            # Add widget before the trailing stretch.
+            self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
 
         else:
             # Insert at the requested position in both the list and the layout.
@@ -1271,6 +1294,15 @@ class ConversationWidget(QWidget):
         """
         return self._ai_conversation.conversation_settings()
 
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        """Keep input right-margin in sync with scrollbar visibility."""
+        vbar = self._scroll_area.verticalScrollBar()
+        if obj is vbar and event.type() in (QEvent.Type.Show, QEvent.Type.Hide):
+            right_margin = vbar.width() if event.type() == QEvent.Type.Show else 0
+            self._input_centering_layout.setContentsMargins(0, 0, right_margin, 0)
+
+        return super().eventFilter(obj, event)
+
     def _on_scroll_value_changed(self, value: int) -> None:
         """
         Handle scroll value changes to detect user scrolling.
@@ -1289,22 +1321,11 @@ class ConversationWidget(QWidget):
 
     def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
         """Handle the scroll range changing."""
-        total_height = self._messages_container.height()
-        input_height = self._input.height()
-        last_insertion_point = total_height - input_height - 2 * self._messages_layout.spacing()
-
-        current_pos = self._scroll_area.verticalScrollBar().value()
-
         if self._load_scroll_offset is not None:
             self._scroll_range_settle_timer.start()
 
         elif self._auto_scroll:
             self._scroll_to_bottom()
-
-        elif current_pos > last_insertion_point:
-            if self._last_scroll_maximum != maximum:
-                max_diff = maximum - self._last_scroll_maximum
-                self._scroll_area.verticalScrollBar().setValue(current_pos + max_diff)
 
         self._last_scroll_maximum = maximum
 
@@ -1318,9 +1339,16 @@ class ConversationWidget(QWidget):
         self._load_scroll_offset = None
 
     def _scroll_to_bottom(self) -> None:
-        """Scroll to the bottom of the content."""
+        """Scroll to the bottom, animating when far away and snapping when already close."""
         scrollbar = self._scroll_area.verticalScrollBar()
-        scrollbar.setValue(scrollbar.maximum())
+        target = scrollbar.maximum()
+        distance = target - scrollbar.value()
+
+        if distance > self._scroll_area.viewport().height():
+            self._start_smooth_scroll(target)
+        else:
+            self._smooth_scroll_timer.stop()
+            scrollbar.setValue(target)
 
     def _find_conversation_message(self, widget: QWidget) -> ConversationMessage | None:
         """
@@ -1579,17 +1607,7 @@ class ConversationWidget(QWidget):
         self._ensure_cursor_visible()
 
     def _ensure_cursor_visible(self) -> None:
-        """Ensure the cursor remains visible when it moves."""
-        total_height = sum(msg.sizeHint().height() + self._messages_layout.spacing() for msg in self._messages)
-        input_cursor = self._input.cursor_rect()
-
-        # Use scroll area's ensureVisible method which handles visibility calculations for us
-        self._scroll_area.ensureVisible(
-            input_cursor.x(),
-            total_height + input_cursor.y(),
-            1,
-            50
-        )
+        """No-op: input is sticky outside the scroll area and always fully visible."""
 
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
@@ -2316,7 +2334,10 @@ class ConversationWidget(QWidget):
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
         self._messages_layout.setSpacing(spacing)
         self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
-        self._messages_container.setMaximumWidth(int(style_manager.nice_tab_width() * zoom_factor))
+        max_width = int(style_manager.nice_tab_width() * zoom_factor)
+        self._messages_container.setMaximumWidth(max_width)
+        self._input_row.setMaximumWidth(max_width)
+        self._input_row_layout.setContentsMargins(spacing, 0, spacing, spacing)
 
         font = self.font()
         base_font_size = style_manager.base_font_size()
