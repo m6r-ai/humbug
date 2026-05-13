@@ -327,7 +327,7 @@ def _parse_to_unicode_cmap(data: bytes) -> dict[bytes, str]:
 
     # Parse bfchar blocks only — avoid matching across block boundaries
     for block in re.finditer(r"beginbfchar\s*(.*?)\s*endbfchar", text, re.DOTALL):
-        for match in re.finditer(r"<([0-9A-Fa-f]+)>\s+<([0-9A-Fa-f]+)>", block.group(1)):
+        for match in re.finditer(r"<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>", block.group(1)):
             try:
                 src = bytes.fromhex(match.group(1))
                 cmap[src] = _hex_to_unicode_str(match.group(2))
@@ -336,7 +336,7 @@ def _parse_to_unicode_cmap(data: bytes) -> dict[bytes, str]:
 
     # Parse bfrange blocks only
     for block in re.finditer(r"beginbfrange\s*(.*?)\s*endbfrange", text, re.DOTALL):
-        for match in re.finditer(r"<([0-9A-Fa-f]+)>\s+<([0-9A-Fa-f]+)>\s+<([0-9A-Fa-f]+)>", block.group(1)):
+        for match in re.finditer(r"<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>", block.group(1)):
             try:
                 start = int(match.group(1), 16)
                 end = int(match.group(2), 16)
