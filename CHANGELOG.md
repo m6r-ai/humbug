@@ -17,6 +17,7 @@ Bug fixes:
 - Improve the tab bar rendering with a custom painter (faster and contents are positioned more accurately).
 - Dragging a file from the mindspace tree that is already open in a column will now correctly open the tab in the correct
   location.
+- Scroll wheel operations on the Windows terminal now work correctly.
 
 Internal structure changes:
 
