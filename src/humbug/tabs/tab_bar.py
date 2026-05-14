@@ -613,6 +613,8 @@ class TabBar(QTabBar):
         if not data:
             return
 
+        drag_start_pos = self._drag_start_pos
+
         self._drag_start_pos = None
         self._drag_tab_index = -1
 
@@ -623,7 +625,14 @@ class TabBar(QTabBar):
 
         pixmap = self._render_tab_pixmap(index)
         drag.setPixmap(pixmap)
-        drag.setHotSpot(self.tabRect(index).center())
+        tab_rect = self.tabRect(index)
+        if drag_start_pos is not None:
+            hot_spot = drag_start_pos - tab_rect.topLeft()
+
+        else:
+            hot_spot = tab_rect.center() - tab_rect.topLeft()
+
+        drag.setHotSpot(hot_spot)
 
         drag.exec_(Qt.DropAction.MoveAction)
 
