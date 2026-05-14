@@ -237,6 +237,7 @@ class ConversationWidget(QWidget):
         input_text_area.size_hint_changed.connect(self._on_input_size_hint_changed)
         self._update_input_chrome_height()
         self._scroll_area.viewport().installEventFilter(self)
+        self._messages_container.installEventFilter(self)
         self._input.raise_()
 
         # Setup signals for search highlights
@@ -1594,8 +1595,10 @@ class ConversationWidget(QWidget):
         pass
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        """Reposition the floating input when the scroll area viewport is resized."""
-        if obj is self._scroll_area.viewport() and event.type() == QEvent.Type.Resize:
+        """Reposition the floating input when the viewport or messages container is resized."""
+        if event.type() == QEvent.Type.Resize and obj in (
+            self._scroll_area.viewport(), self._messages_container
+        ):
             self._on_input_size_hint_changed()
 
         return super().eventFilter(obj, event)
@@ -1625,12 +1628,8 @@ class ConversationWidget(QWidget):
 
     def _update_input_width(self) -> None:
         """Set the floating input's width to match the viewport content width."""
-        style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
-        max_content_width = int(style_manager.nice_tab_width() * zoom_factor)
-        viewport_width = self._scroll_area.viewport().width()
-        input_width = min(viewport_width - 2 * spacing, max_content_width)
+        assert self._input_spacer is not None
+        input_width = self._input_spacer.width()
         self._input.resize(input_width, self._input.height())
 
     def _update_input_position(self, input_height: int | None = None) -> None:
