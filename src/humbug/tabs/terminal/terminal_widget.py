@@ -1302,6 +1302,20 @@ class TerminalWidget(QAbstractScrollArea):
         """Get current terminal dimensions."""
         return self._state.get_terminal_size()
 
+    def has_scrollback(self) -> bool:
+        """Return True if there are scrollback history lines above the visible screen."""
+        return self._state.terminal_history_lines() > self._state.terminal_rows()
+
+    def append_lines_to_visible(self, count: int) -> None:
+        """Append blank lines to the end of the visible screen area."""
+        self._state.append_lines_to_visible(count)
+        self._update_scrollbar()
+
+    def remove_lines_from_visible(self, count: int) -> None:
+        """Remove blank lines from the end of the visible screen area."""
+        self._state.remove_lines_from_visible(count)
+        self._update_scrollbar()
+
     def preferred_pixel_width(self) -> int | None:
         """
         Return the preferred pixel width for this terminal widget, or None if no fixed width is set.

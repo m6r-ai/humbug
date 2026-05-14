@@ -107,6 +107,24 @@ class TerminalState:
         if self._alternate_buffer:
             self._alternate_buffer.resize(new_rows, new_cols)
 
+    def append_lines_to_visible(self, count: int) -> None:
+        """
+        Append blank lines to the end of the visible screen area.
+
+        Args:
+            count: Number of blank lines to insert
+        """
+        self._main_buffer.append_lines_to_visible(count)
+
+    def remove_lines_from_visible(self, count: int) -> None:
+        """
+        Remove blank lines from the end of the visible screen area.
+
+        Args:
+            count: Number of blank lines to remove
+        """
+        self._main_buffer.remove_lines_from_visible(count)
+
     def _xterm_to_rgb(self, color_index: int) -> int:
         """
         Convert xterm-256 color index to RGB value.

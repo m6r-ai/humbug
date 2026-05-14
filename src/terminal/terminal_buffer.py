@@ -559,6 +559,28 @@ class TerminalBuffer:
         self._scroll_region = ScrollRegion(bottom=self._rows, rows=self._rows)
         self._max_cursor_row = 0
 
+    def append_lines_to_visible(self, count: int) -> None:
+        """
+        Append blank lines to the end of the visible screen area.
+
+        Args:
+            count: Number of blank lines to insert
+        """
+        for _ in range(count):
+            self._lines.append(self._get_new_line(self._cols))
+
+        self._trim_scrollback()
+
+    def remove_lines_from_visible(self, count: int) -> None:
+        """
+        Remove blank lines from the end of the visible screen area.
+
+        Args:
+            count: Number of blank lines to remove
+        """
+        if count > 0:
+            del self._lines[-count:]
+
     def scroll_up(self, count: int) -> None:
         """
         Scroll up within current scroll region.

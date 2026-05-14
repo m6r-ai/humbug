@@ -1,6 +1,7 @@
 """Terminal tab implementation."""
 
 import asyncio
+import sys
 import logging
 from typing import Any, Coroutine, Dict, Set
 
@@ -129,6 +130,9 @@ class TerminalTab(TabBase):
         # Initialize process and task tracking
         self._terminal_process: TerminalBase = create_terminal(self._mindspace_manager.mindspace_path())
         self._tasks: Set[asyncio.Task] = set()
+        self._prev_rows = 0
+        self._prev_cols = 0
+        self._win_padding_lines = 0
         self._running = True
         self._transferring = False
 
@@ -167,7 +171,27 @@ class TerminalTab(TabBase):
     def _on_terminal_size_changed(self) -> None:
         """Handle terminal window resize events."""
         rows, cols = self._terminal_widget.get_terminal_size()
-        self._terminal_process.update_window_size(rows, cols)
+        if rows != self._prev_rows or cols != self._prev_cols:
+            # On Windows we have to fight ConPTY because it thinks it owns the whole
+            # terminal output.  This approach isn't perfect but it gets us functional
+            # scrollbacks that work well in most scenarios.
+            if sys.platform == 'win32':
+                if rows > self._prev_rows and self._prev_rows > 0:
+                        delta = rows - self._prev_rows
+                        if self._terminal_widget.has_scrollback():
+                            self._terminal_widget.append_lines_to_visible(delta)
+                            self._win_padding_lines += delta
+
+                elif rows < self._prev_rows:
+                        to_remove = min(self._win_padding_lines, self._prev_rows - rows)
+                        if to_remove > 0:
+                            self._terminal_widget.remove_lines_from_visible(to_remove)
+                            self._win_padding_lines -= to_remove
+
+            self._prev_rows = rows
+            self._prev_cols = cols
+            self._terminal_process.update_window_size(rows, cols)
+
         self.update_status()
 
     def _create_tracked_task(self, coro: Coroutine[Any, Any, None]) -> asyncio.Task:
