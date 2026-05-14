@@ -3,12 +3,14 @@
 from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy, QWidget
 )
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QTextOption, QTextCursor, QWheelEvent
 
 
 class MinHeightTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height."""
+
+    size_hint_changed = Signal()
 
     def __init__(
         self,
@@ -42,6 +44,7 @@ class MinHeightTextEdit(QTextEdit):
     def _on_content_resized(self) -> None:
         """Handle resizing this widget based on the document content."""
         self.updateGeometry()
+        self.size_hint_changed.emit()
 
     def wheelEvent(self, e: QWheelEvent) -> None:
         """Handle wheel events for horizontal scrolling."""
