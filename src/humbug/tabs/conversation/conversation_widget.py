@@ -1648,8 +1648,7 @@ class ConversationWidget(QWidget):
 
         delta = message_pos.y() - scroll_value
 
-        zoom_factor = self._style_manager.zoom_factor()
-        message_spacing = int(self._style_manager.message_bubble_spacing() * zoom_factor)
+        message_spacing = int(self._style_manager.message_bubble_spacing())
 
         # Determine if scrolling is needed
         if delta < 0:
@@ -1774,26 +1773,27 @@ class ConversationWidget(QWidget):
 
     def _update_input_width(self) -> None:
         """Set the floating input's width to match the viewport content width."""
-        assert self._input_spacer is not None
-        input_width = self._input_spacer.width()
+        style_manager = self._style_manager
+        spacing = int(style_manager.message_bubble_spacing())
+        max_content_width = int(style_manager.nice_tab_width())
+        input_width = min(self._scroll_area.viewport().width(), max_content_width) - 2 * spacing - 4
         self._input.resize(input_width, self._input.height())
 
     def _update_input_position(self, input_height: int | None = None) -> None:
         """Position the floating input at the bottom of the visible viewport."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
-
+        spacing = int(style_manager.message_bubble_spacing())
+        max_content_width = int(style_manager.nice_tab_width())
         viewport_width = self._scroll_area.viewport().width()
-        input_width = self._input.width()
-        input_x = (viewport_width - input_width) // 2
+        container_width = min(viewport_width, max_content_width)
+        container_offset = (viewport_width - container_width) // 2
+        input_x = container_offset + spacing + 2
 
         if input_height is None:
             assert self._input_spacer is not None
             input_height = self._input_spacer.height()
 
-        viewport_height = self._scroll_area.viewport().height()
-        input_y = self.height() - input_height - spacing
+        input_y = self.height() - input_height - spacing - 2
 
         self._input.setFixedHeight(input_height)
         self._input.move(input_x, input_y)
@@ -2100,9 +2100,8 @@ class ConversationWidget(QWidget):
     def _build_conversation_message_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor)
-        label_font_size = style_manager.base_font_size() * zoom_factor * 0.8
+        border_radius = int(style_manager.message_bubble_spacing())
+        label_font_size = style_manager.base_font_size() * style_manager.zoom_factor() * 0.8
 
         # The -2px padding above is to offset the 2px border so that the content area remains the same size
         return f"""
@@ -2424,8 +2423,7 @@ class ConversationWidget(QWidget):
     def _build_conversation_message_section_styles(self) -> str:
         """Build styles for message sections."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor / 2)
+        border_radius = int(style_manager.message_bubble_spacing() / 2)
         return f"""
             #ConversationMessage #ConversationMessageSection[section_style="text-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
@@ -2523,14 +2521,13 @@ class ConversationWidget(QWidget):
     def _on_style_changed(self) -> None:
         """Update styles when the application style changes."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        spacing = int(style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
-        self._messages_container.setMaximumWidth(int(style_manager.nice_tab_width() * zoom_factor))
+        self._messages_container.setMaximumWidth(int(style_manager.nice_tab_width()))
 
         font = self.font()
         base_font_size = style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * zoom_factor)
+        font.setPointSizeF(base_font_size * style_manager.zoom_factor())
         self.setFont(font)
 
         stylesheet_parts = [
