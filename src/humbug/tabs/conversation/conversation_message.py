@@ -367,8 +367,7 @@ class ConversationMessage(QFrame):
         super().paintEvent(arg__1)
 
         painter = QPainter(self)
-        zoom_factor = self._style_manager.zoom_factor()
-        border_radius = int(self._style_manager.message_bubble_spacing() * zoom_factor)
+        border_radius = int(self._style_manager.message_bubble_spacing())
 
         if self._is_border_animated:
             border_color = self._get_fade_color()
@@ -667,11 +666,10 @@ class ConversationMessage(QFrame):
         self._pending_tool_destructive = destructive
 
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        spacing = int(style_manager.message_bubble_spacing())
         font = self.font()
         base_font_size = style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * zoom_factor)
+        font.setPointSizeF(base_font_size * style_manager.zoom_factor())
 
         self._approval_widget = QWidget()
         self._approval_widget.setObjectName("_approval_widget")
@@ -707,7 +705,7 @@ class ConversationMessage(QFrame):
         button_layout.addStretch()
 
         min_button_height = 40
-        min_button_width = int(220 * zoom_factor)
+        min_button_width = int(220 * style_manager.zoom_factor())
 
         self._approval_approve_button = QPushButton(strings.approve_tool_call)
         self._approval_approve_button.setObjectName("_approval_approve_button")
@@ -806,10 +804,9 @@ class ConversationMessage(QFrame):
         assert self._retry_widget is None, "Retry widget already exists"
 
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        spacing = int(style_manager.message_bubble_spacing())
         font = self.font()
-        font.setPointSizeF(style_manager.base_font_size() * zoom_factor)
+        font.setPointSizeF(style_manager.base_font_size() * style_manager.zoom_factor())
 
         self._retry_widget = QWidget()
         self._retry_widget.setObjectName("_retry_widget")
@@ -1010,10 +1007,9 @@ class ConversationMessage(QFrame):
 
         # Build the edit area using the same MarkdownTextEdit approach as the input box,
         # so code block syntax highlighting and other input behaviours work correctly.
-        zoom_factor = self._style_manager.zoom_factor()
-        spacing = int(self._style_manager.message_bubble_spacing() * zoom_factor)
+        spacing = int(self._style_manager.message_bubble_spacing())
         font = self.font()
-        font.setPointSizeF(self._style_manager.base_font_size() * zoom_factor)
+        font.setPointSizeF(self._style_manager.base_font_size() * self._style_manager.zoom_factor())
         self._edit_area = QWidget(self)
         self._edit_area.setObjectName("_edit_area")
         edit_layout = QVBoxLayout(self._edit_area)
@@ -1153,20 +1149,19 @@ class ConversationMessage(QFrame):
         """Apply style changes."""
         style_manager = self._style_manager
 
-        zoom_factor = style_manager.zoom_factor()
-        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        spacing = int(style_manager.message_bubble_spacing())
         self._layout.setSpacing(spacing)
         self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._sections_layout.setSpacing(spacing)
 
         font = self.font()
         base_font_size = style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * zoom_factor)
+        font.setPointSizeF(base_font_size * style_manager.zoom_factor())
         self._role_label.setFont(font)
 
         # Set icons and sizes for buttons
         icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * zoom_factor)
+        icon_scaled_size = int(icon_base_size * style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
         if self._copy_message_button:
@@ -1231,7 +1226,7 @@ class ConversationMessage(QFrame):
 
         if self._chips_bar is not None:
             chip_font = self.font()
-            chip_font.setPointSizeF(style_manager.base_font_size() * zoom_factor * 0.8)
+            chip_font.setPointSizeF(style_manager.base_font_size() * style_manager.zoom_factor() * 0.8)
             chips_layout = self._chips_bar.layout()
             if chips_layout is not None:
                 for i in range(chips_layout.count()):
