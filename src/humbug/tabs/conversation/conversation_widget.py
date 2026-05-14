@@ -4,12 +4,12 @@ import asyncio
 import logging
 import os
 import re
-from typing import Callable, Dict, List, Tuple, Any, Set
+from typing import Callable, cast, Dict, List, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
     QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
+from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QEvent
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
 from ai import (
@@ -31,6 +31,7 @@ from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_input import ConversationInput
 from humbug.tabs.conversation.conversation_message import ConversationMessage
 from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
+from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 
 
 class ConversationWidget(QWidget):
@@ -163,6 +164,8 @@ class ConversationWidget(QWidget):
         # Initialize tracking variables
         self._auto_scroll = True
         self._last_scroll_maximum = 0
+        self._input_chrome_height = 0
+        self._input_spacer: QWidget | None = None
 
         # Timer for debouncing container visibility to eliminate jitter
         self._container_show_timer = QTimer(self)
@@ -183,7 +186,7 @@ class ConversationWidget(QWidget):
         self._scroll_area.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
-        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Connect to the vertical scrollbar's change signals
@@ -195,9 +198,9 @@ class ConversationWidget(QWidget):
         self._messages_layout = QVBoxLayout(self._messages_container)
         self._messages_container.setLayout(self._messages_layout)
 
-        # Set up the input box
-        self._input = ConversationInput(AIMessageSource.USER, self._messages_container)
-        self._input.cursor_position_changed.connect(self._ensure_cursor_visible)
+        # Set up the input box as a floating overlay, parented to this widget
+        self._input = ConversationInput(AIMessageSource.USER, self)
+        self._input.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._input.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(self._input, has_selection)
         )
@@ -214,14 +217,27 @@ class ConversationWidget(QWidget):
         style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
 
+        # Invisible spacer that reserves the same height as the floating input
+        # at the bottom of the scroll area so scrolling to the end doesn't hide
+        # content behind the input overlay.
+        self._input_spacer = QWidget(self._messages_container)
+        self._input_spacer.setStyleSheet("background: transparent;")
+        self._input_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
         self._messages_layout.addStretch()
-        self._messages_layout.addWidget(self._input)
+        self._messages_layout.addWidget(self._input_spacer)
 
         self._messages_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self._scroll_area.setWidget(self._messages_container)
 
         # Add the scroll area to the main layout
         conversation_layout.addWidget(self._scroll_area)
+
+        input_text_area = cast(MarkdownTextEdit, self._input._text_area)
+        input_text_area.size_hint_changed.connect(self._on_input_size_hint_changed)
+        self._update_input_chrome_height()
+        self._scroll_area.viewport().installEventFilter(self)
+        self._input.raise_()
 
         # Setup signals for search highlights
         self._search_highlights: Dict[ConversationMessage, List[Tuple[int, int, int]]] = {}
@@ -1290,7 +1306,7 @@ class ConversationWidget(QWidget):
     def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
         """Handle the scroll range changing."""
         total_height = self._messages_container.height()
-        input_height = self._input.height()
+        input_height = self._input_spacer.height() if self._input_spacer is not None else 0
         last_insertion_point = total_height - input_height - 2 * self._messages_layout.spacing()
 
         current_pos = self._scroll_area.verticalScrollBar().value()
@@ -1575,21 +1591,68 @@ class ConversationWidget(QWidget):
         """
         Handle page up/down scroll requests.
         """
-        # Input cursor has already moved - just ensure it's visible
-        self._ensure_cursor_visible()
+        pass
 
-    def _ensure_cursor_visible(self) -> None:
-        """Ensure the cursor remains visible when it moves."""
-        total_height = sum(msg.sizeHint().height() + self._messages_layout.spacing() for msg in self._messages)
-        input_cursor = self._input.cursor_rect()
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        """Reposition the floating input when the scroll area viewport is resized."""
+        if obj is self._scroll_area.viewport() and event.type() == QEvent.Type.Resize:
+            self._on_input_size_hint_changed()
 
-        # Use scroll area's ensureVisible method which handles visibility calculations for us
-        self._scroll_area.ensureVisible(
-            input_cursor.x(),
-            total_height + input_cursor.y(),
-            1,
-            50
-        )
+        return super().eventFilter(obj, event)
+
+    def _update_input_chrome_height(self) -> None:
+        """Cache the fixed chrome height of the floating input.
+
+        Computed from layout metrics after apply_style() has run so it is
+        always correct regardless of the current widget geometry.
+        """
+        layout = self._input.layout()
+        assert layout is not None
+        margins = layout.contentsMargins()
+        chrome = margins.top() + margins.bottom() + layout.spacing()
+        chrome += self._input._banner.sizeHint().height()
+        chrome += 2
+        self._input_chrome_height = chrome
+
+    def _on_input_size_hint_changed(self) -> None:
+        """Update the spacer and floating input height when the input content changes."""
+        text_area = self._input._text_area
+        new_height = text_area.sizeHint().height() + self._input_chrome_height
+        assert self._input_spacer is not None
+        self._input_spacer.setFixedHeight(new_height)
+        self._update_input_width()
+        self._update_input_position(new_height)
+
+    def _update_input_width(self) -> None:
+        """Set the floating input's width to match the viewport content width."""
+        style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
+        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        max_content_width = int(style_manager.nice_tab_width() * zoom_factor)
+        viewport_width = self._scroll_area.viewport().width()
+        input_width = min(viewport_width - 2 * spacing, max_content_width)
+        self._input.resize(input_width, self._input.height())
+
+    def _update_input_position(self, input_height: int | None = None) -> None:
+        """Position the floating input at the bottom of the visible viewport."""
+        style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
+        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+
+        viewport_width = self._scroll_area.viewport().width()
+        input_width = self._input.width()
+        input_x = (viewport_width - input_width) // 2
+
+        if input_height is None:
+            assert self._input_spacer is not None
+            input_height = self._input_spacer.height()
+
+        viewport_height = self._scroll_area.viewport().height()
+        input_y = self.height() - input_height - spacing
+
+        self._input.setFixedHeight(input_height)
+        self._input.move(input_x, input_y)
+        self._input.raise_()
 
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
@@ -1827,6 +1890,9 @@ class ConversationWidget(QWidget):
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events to detect layout stabilization and trigger lazy updating."""
         super().resizeEvent(event)
+        if self._input_spacer is None:
+            return
+        self._update_input_position()
 
         if self._auto_scroll:
             self._scroll_to_bottom()
@@ -2315,7 +2381,6 @@ class ConversationWidget(QWidget):
         zoom_factor = style_manager.zoom_factor()
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
         self._messages_layout.setSpacing(spacing)
-        self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_container.setMaximumWidth(int(style_manager.nice_tab_width() * zoom_factor))
 
         font = self.font()
@@ -2337,6 +2402,11 @@ class ConversationWidget(QWidget):
                 message.apply_style()
 
         self._input.apply_style()
+        self._update_input_chrome_height()
+        if self._input_spacer is not None:
+            self._update_input_width()
+            self._on_input_size_hint_changed()
+            self._update_input_position()
 
     def _show_conversation_context_menu(self, pos: QPoint) -> None:
         """
