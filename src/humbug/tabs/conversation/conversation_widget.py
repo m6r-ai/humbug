@@ -235,6 +235,7 @@ class ConversationWidget(QWidget):
 
         input_text_area = cast(MarkdownTextEdit, self._input._text_area)
         input_text_area.size_hint_changed.connect(self._on_input_size_hint_changed)
+        input_text_area.set_allow_vertical_scroll(True)
         self._update_input_chrome_height()
         self._scroll_area.viewport().installEventFilter(self)
         self._messages_container.installEventFilter(self)
@@ -1620,7 +1621,13 @@ class ConversationWidget(QWidget):
     def _on_input_size_hint_changed(self) -> None:
         """Update the spacer and floating input height when the input content changes."""
         text_area = self._input._text_area
-        new_height = text_area.sizeHint().height() + self._input_chrome_height
+        max_height = self._scroll_area.viewport().height() // 2
+        uncapped_height = text_area.sizeHint().height() + self._input_chrome_height
+        capped = uncapped_height > max_height
+        new_height = max_height if capped else uncapped_height
+        text_area.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded if capped else Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         assert self._input_spacer is not None
         self._input_spacer.setFixedHeight(new_height)
         self._update_input_width()

@@ -40,14 +40,24 @@ class MinHeightTextEdit(QTextEdit):
         self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
 
         self._current_text = ""
+        self._allow_vertical_scroll = False
 
     def _on_content_resized(self) -> None:
         """Handle resizing this widget based on the document content."""
         self.updateGeometry()
         self.size_hint_changed.emit()
 
+    def set_allow_vertical_scroll(self, allow: bool) -> None:
+        """Enable or disable vertical wheel scrolling when content exceeds widget height."""
+        self._allow_vertical_scroll = allow
+
     def wheelEvent(self, e: QWheelEvent) -> None:
         """Handle wheel events for horizontal scrolling."""
+        if self._allow_vertical_scroll and e.angleDelta().y() != 0:
+            if self.verticalScrollBar().maximum() > 0:
+                super().wheelEvent(e)
+                return
+
         # Handle horizontal scrolling for compatible mice
         if e.angleDelta().x() != 0:
             # Get the horizontal scrollbar
