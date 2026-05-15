@@ -175,11 +175,6 @@ class ConversationWidget(QWidget):
         self._input_chrome_height = 0
         self._input_spacer: QWidget | None = None
 
-        # Timer for debouncing container visibility to eliminate jitter
-        self._container_show_timer = QTimer(self)
-        self._container_show_timer.setSingleShot(True)
-        self._container_show_timer.timeout.connect(self._enable_messages_container_updates)
-
         # Create layout
         conversation_layout = QVBoxLayout(self)
         self.setLayout(conversation_layout)
