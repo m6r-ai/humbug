@@ -382,10 +382,14 @@ class ConversationMessage(QFrame):
             border_width = 2
 
         else:
-            current_style = self._message_source or AIMessageSource.USER
-            border_color = self._style_manager.get_color_str(
-                ColorRole.MESSAGE_USER_BORDER if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BORDER
-            )
+            color_role = ColorRole.MESSAGE_BORDER
+            if self._is_input:
+                color_role = ColorRole.MESSAGE_INPUT_BORDER
+
+            elif not self._message_source or self._message_source == AIMessageSource.USER:
+                color_role = ColorRole.MESSAGE_USER_BORDER
+
+            border_color = self._style_manager.get_color_str(color_role)
             border_width = 1
 
         # Enable antialiasing for smooth curves

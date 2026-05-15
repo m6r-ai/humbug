@@ -369,6 +369,7 @@ class ConversationWidget(QWidget):
             if source in (AIMessageSource.USER, AIMessageSource.USER_QUEUED):
                 self._spotlighted_message_index = self._messages.index(message_widget)
                 message_widget.set_spotlighted(True)
+                message_widget.setFocus(Qt.FocusReason.MouseFocusReason)
 
             else:
                 self._spotlighted_message_index = -1
@@ -2186,11 +2187,14 @@ class ConversationWidget(QWidget):
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 padding: -2px;
             }}
-            #ConversationMessage[message_source="user"],
-            #ConversationMessage[message_source="user_input"],
-            #ConversationMessage[message_source="ai_streaming"] {{
+            #ConversationMessage[message_source="user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+            }}
+            #ConversationMessage[message_source="user_input"],
+            #ConversationMessage[message_source="ai_streaming"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
             }}
 
             #ConversationMessage #_banner,
@@ -2500,13 +2504,13 @@ class ConversationWidget(QWidget):
         border_radius = int(style_manager.message_bubble_spacing() / 2)
         return f"""
             #ConversationMessage #ConversationMessageSection[section_style="text-system"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                background-color: transparent;
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
             #ConversationMessage #ConversationMessageSection[section_style="text-user"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                background-color: transparent;
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
