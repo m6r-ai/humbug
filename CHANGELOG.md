@@ -1,16 +1,21 @@
 # Change log for Humbug
 
-## v47 (2026-05-xx)
+## v48 (2026-05-xx)
+
+## v47 (2026-05-15)
 
 New features:
 
-- Updated the grok model catalogue to grok 4.2 and 4.3, removing the soon-to-be-removed 4.0 amd 4.1 models.
+- Updated the grok model catalogue to grok 4.3, removing the now-obsolete 4.0 amd 4.1 models.
 - Added the ability to view files that were attached to a message in a conversation.
 - Introduced the idea of `blueprint.md` files, allowing both AIs and human users to understand the intent of a mindspace.
 - Allow a `~/.humbug/user-ai-config.json` file to be used to define models not directly supported by Humbug.
 - Added support for reading the text in PDF and DOCX files when attaching files to a conversation or when reading files via the
   filesystem AI tool.
-- The message input box now floats above historical messages when scrolling.
+- The message input box now floats above historical messages when scrolling, making is easier to read earlier parts of a
+  conversation while typing.
+- The alt+up/alt+down keyboard shortcuts in the conversation tabs now scroll between user messages, skipping all other types
+  of message.  This lets you scroll to the important events more quickly.
 
 Bug fixes:
 
