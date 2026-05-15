@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple, cast
 
 from PySide6.QtCore import Signal, Qt, QRect, QSize, QObject, QEvent
 from PySide6.QtGui import QTextCursor, QTextDocument, QIcon, QKeyEvent, QMouseEvent
-from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel
+from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel, QSizePolicy
 
 from ai import AIMessageSource
 
@@ -138,6 +138,13 @@ class ConversationInput(ConversationMessage):
     def apply_style(self) -> None:
         """Apply style changes."""
         super().apply_style()
+
+        # Fix the banner height so it cannot expand to absorb slack space when
+        # the outer frame is resized during a text reflow. The sections_container
+        # gets Expanding policy so it absorbs all vertical slack instead.
+        banner_height = self._banner.sizeHint().height()
+        self._banner.setFixedHeight(banner_height)
+        self._sections_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         icon_base_size = 14
         icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())

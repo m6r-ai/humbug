@@ -1702,6 +1702,9 @@ class ConversationWidget(QWidget):
         text_area.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAsNeeded if capped else Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
+        if capped:
+            text_area.setFixedHeight(max_height - self._input_chrome_height)
+
         assert self._input_spacer is not None
         self._input_spacer.setFixedHeight(new_height)
         self._update_input_width()

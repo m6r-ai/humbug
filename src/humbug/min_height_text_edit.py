@@ -34,7 +34,7 @@ class MinHeightTextEdit(QTextEdit):
         self.setFrameStyle(QFrame.Shape.NoFrame)
 
         # Force the widget to always use the width of its container
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         # Set word wrap mode
         self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
@@ -44,7 +44,7 @@ class MinHeightTextEdit(QTextEdit):
 
     def _on_content_resized(self) -> None:
         """Handle resizing this widget based on the document content."""
-        self.updateGeometry()
+        self.setFixedHeight(self._size_hint_height())
         self.size_hint_changed.emit()
 
     def set_allow_vertical_scroll(self, allow: bool) -> None:
