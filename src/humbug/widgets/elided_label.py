@@ -1,4 +1,4 @@
-from PySide6.QtCore import QEvent, Qt
+from PySide6.QtCore import QEvent, QSize, Qt
 from PySide6.QtGui import QFontMetrics, QResizeEvent
 from PySide6.QtWidgets import QLabel, QSizePolicy, QWidget
 
@@ -20,6 +20,16 @@ class ElidedLabel(QLabel):
     def text(self) -> str:
         """Return the full (non-elided) text."""
         return self._full_text
+
+    def minimumSizeHint(self) -> QSize:
+        """Return a minimal size so the label can shrink to show just an ellipsis."""
+        fm = QFontMetrics(self.font())
+        return QSize(fm.horizontalAdvance("…"), super().minimumSizeHint().height())
+
+    def sizeHint(self) -> QSize:
+        """Return the full text width as the preferred size."""
+        fm = QFontMetrics(self.font())
+        return QSize(fm.horizontalAdvance(self._full_text), super().sizeHint().height())
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)

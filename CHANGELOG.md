@@ -19,6 +19,8 @@ Bug fixes:
 - Dragging a file from the mindspace tree that is already open in a column will now correctly open the tab in the correct
   location.
 - Scroll wheel operations on the Windows terminal now work correctly.
+- When shrinking a conversation tab's width, the message label will now elide (replace text with `...`) so the message
+  does not end up too wide.
 
 Internal structure changes:
 

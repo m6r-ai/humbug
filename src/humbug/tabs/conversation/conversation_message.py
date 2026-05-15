@@ -5,7 +5,7 @@ import re
 from typing import Dict, List, Tuple, Any, cast
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
+    QFrame, QSizePolicy, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
 )
 from PySide6.QtCore import Signal, QPoint, QSize, Qt, QEvent, QObject
 from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QKeyEvent
@@ -71,6 +71,9 @@ class ConversationMessage(QFrame):
         """
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
+
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.setMinimumWidth(0)
 
         self.setObjectName("ConversationMessage")
 
