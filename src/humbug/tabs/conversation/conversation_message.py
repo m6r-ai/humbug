@@ -24,6 +24,7 @@ from humbug.tabs.code_block_text_edit import CodeBlockTextEdit
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.tabs.conversation.conversation_message_section import ConversationMessageSection
+from humbug.widgets.elided_label import ElidedLabel
 
 
 class ConversationMessage(QFrame):
@@ -125,11 +126,10 @@ class ConversationMessage(QFrame):
         self._pending_context: str | None = None
 
         # Create role and timestamp labels
-        self._role_label = QLabel(self._banner)
+        self._role_label = ElidedLabel(self._banner)
         self._role_label.setObjectName("_role_label")
         self._role_label.setIndent(0)
         self._banner_layout.addWidget(self._role_label)
-        self._banner_layout.addStretch()
 
         role_sources = {
             AIMessageSource.USER: "user",

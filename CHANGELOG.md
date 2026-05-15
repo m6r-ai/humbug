@@ -10,6 +10,7 @@ New features:
 - Allow a `~/.humbug/user-ai-config.json` file to be used to define models not directly supported by Humbug.
 - Added support for reading the text in PDF and DOCX files when attaching files to a conversation or when reading files via the
   filesystem AI tool.
+- The message input box now floats above historical messages when scrolling.
 
 Bug fixes:
 
