@@ -175,11 +175,6 @@ class ConversationWidget(QWidget):
         self._input_chrome_height = 0
         self._input_spacer: QWidget | None = None
 
-        # Timer for debouncing container visibility to eliminate jitter
-        self._container_show_timer = QTimer(self)
-        self._container_show_timer.setSingleShot(True)
-        self._container_show_timer.timeout.connect(self._enable_messages_container_updates)
-
         # Create layout
         conversation_layout = QVBoxLayout(self)
         self.setLayout(conversation_layout)
@@ -528,19 +523,8 @@ class ConversationWidget(QWidget):
         if message.source == AIMessageSource.USER:
             self._delete_user_queued_messages()
 
-        # If we're not auto-scrolling we want to disable updates during insertion to prevent jitter
-        if not self._auto_scroll:
-            # Cancel any pending show timer and hide container during insertion
-            if self._container_show_timer.isActive():
-                self._container_show_timer.stop()
-
-            self._messages_container.setUpdatesEnabled(False)
-
         msg_widget = self._add_message_core(message)
         msg_widget.apply_style()
-
-        if not self._auto_scroll:
-            self._container_show_timer.start(5)
 
         # If we're not animating then we've done everything we need to.
         if not self._is_animating:
@@ -627,14 +611,6 @@ class ConversationWidget(QWidget):
         # If we're animating and the animated message visibility changed, update animation
         if self._is_animating:
             self._update_animated_message()
-
-    def _enable_messages_container_updates(self) -> None:
-        """Re-enable updates for the messages container after layout has settled."""
-        self._messages_container.setUpdatesEnabled(True)
-
-        # Only unpolish/polish the specific widget that changed, not the entire container
-        self._messages_container.style().unpolish(self._messages_container)
-        self._messages_container.style().polish(self._messages_container)
 
     def _unregister_ai_conversation_callbacks(self) -> None:
         """Unregister all UI callbacks from the inner AIConversation."""
@@ -1080,25 +1056,12 @@ class ConversationWidget(QWidget):
         if message.source not in (AIMessageSource.AI, AIMessageSource.REASONING):
             return
 
-        # If we're not auto-scrolling we want to disable updates during insertion to prevent jitter
-        if not self._auto_scroll:
-            # Cancel any pending show timer and hide container during content update
-            if self._container_show_timer.isActive():
-                self._container_show_timer.stop()
-
-            self._messages_container.setUpdatesEnabled(False)
-
         for i in range(len(self._messages) - 1, -1, -1):
             if self._messages[i].message_id() == message.id:
                 self._queue_response_reveal(self._messages[i], message, completed=message.completed)
                 break
 
-        if not self._auto_scroll:
-            # Defer re-enabling updates until layout settles (after all resize events)
-            self._container_show_timer.start(5)
-
-        else:
-            # Scroll to bottom if auto-scrolling is enabled
+        if self._auto_scroll:
             self._scroll_to_bottom()
 
     def _queue_response_reveal(self, widget: ConversationMessage, message: AIMessage, completed: bool = False) -> None:
@@ -1127,12 +1090,6 @@ class ConversationWidget(QWidget):
         if not self._response_reveal_targets:
             self._response_reveal_timer.stop()
             return
-
-        if not self._auto_scroll:
-            if self._container_show_timer.isActive():
-                self._container_show_timer.stop()
-
-            self._messages_container.setUpdatesEnabled(False)
 
         caught_up_ids: list[str] = []
         final_render_ids: list[str] = []
@@ -1189,12 +1146,8 @@ class ConversationWidget(QWidget):
                 self._response_reveal_widgets.pop(message_id, None)
                 self._response_reveal_completed.discard(message_id)
 
-        if did_render:
-            if self._auto_scroll:
-                self._scroll_to_bottom()
-
-            else:
-                self._container_show_timer.start(5)
+        if did_render and self._auto_scroll:
+            self._scroll_to_bottom()
 
         if not self._response_reveal_targets:
             self._response_reveal_timer.stop()

@@ -355,8 +355,7 @@ class ConversationMessage(QFrame):
 
     def _update_border_style(self) -> None:
         """Update the border style with the current animation color."""
-        self.style().unpolish(self)
-        self.style().polish(self)
+        self.update()
 
     def _has_focus_in_hierarchy(self) -> bool:
         """Check if this widget or any of its descendants has focus."""
@@ -1017,17 +1016,26 @@ class ConversationMessage(QFrame):
             self._sections[0].set_content(MarkdownASTTextNode(text))
             return
 
-        self._clear_sections()
         if not self._is_expanded:
+            self._clear_sections()
             self._pending_content = text
             self._pending_context = self._context
             if text and not self._message_rendered:
                 self._message_rendered = True
-                self.show()
-
             return
 
-        self._render_content(text, self._context)
+        # Update every section in place — avoids the clear→shrink→rebuild→grow
+        # layout cycle that fires two scroll-range changes and causes a visible flash.
+        self.setUpdatesEnabled(False)
+        try:
+            self._render_content(text, self._context, update_all=True)
+        finally:
+            self.setUpdatesEnabled(True)
+            self.update()
+
+        if text and not self._message_rendered:
+            self._message_rendered = True
+            self.show()
 
     def _clear_sections(self) -> None:
         """Remove all rendered content sections."""
@@ -1036,13 +1044,15 @@ class ConversationMessage(QFrame):
             self._sections_layout.removeWidget(section)
             section.deleteLater()
 
-    def _render_content(self, text: str, context: str | None) -> None:
+    def _render_content(self, text: str, context: str | None, update_all: bool = False) -> None:
         """
         Actually render the content into sections.
 
         Args:
             text: The message text content
             context: Optional context to append to the message
+            update_all: When True, update every existing section (used for final render).
+                        When False (default), only the last section is updated (streaming).
         """
         # If we were given context, append it to the message for section extraction
         if context:
@@ -1062,9 +1072,8 @@ class ConversationMessage(QFrame):
                 self._sections_layout.addWidget(section)
                 continue
 
-            if i == len(self._sections) - 1:
-                # Update the last section with new content
-                section = self._sections[-1]
+            if update_all or i == len(self._sections) - 1:
+                section = self._sections[i]
                 section.set_syntax(syntax)
                 section.set_content(node)
 
