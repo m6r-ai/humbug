@@ -329,9 +329,9 @@ class ConversationWidget(QWidget):
                 self._messages[self._spotlighted_message_index].setFocus()
                 return
 
-            # If our input box is hidden then spotlight the last message.
+            # If our input box is hidden then spotlight the last user message.
             if self._input.isHidden():
-                last_visible_index = self._find_last_visible_message()
+                last_visible_index = self._find_last_visible_user_message()
                 if last_visible_index == -1:
                     return
 
@@ -354,10 +354,18 @@ class ConversationWidget(QWidget):
         else:
             self._input.set_spotlighted(False)
 
-        # Set spotlight on the new message
+        # Only spotlight user and user_queued messages; clicking other message
+        # types clears any existing spotlight but does not set a new one.
         if message_widget in self._messages:
-            self._spotlighted_message_index = self._messages.index(message_widget)
-            message_widget.set_spotlighted(True)
+            source = message_widget.message_source()
+            if source in (AIMessageSource.USER, AIMessageSource.USER_QUEUED):
+                self._spotlighted_message_index = self._messages.index(message_widget)
+                message_widget.set_spotlighted(True)
+
+            else:
+                self._spotlighted_message_index = -1
+                self._input.set_spotlighted(True)
+
             return
 
         self._spotlighted_message_index = -1
@@ -1359,6 +1367,64 @@ class ConversationWidget(QWidget):
 
         return None
 
+    def _is_user_message(self, index: int) -> bool:
+        """
+        Return True if the message at index has a user or user_queued source.
+
+        Args:
+            index: Index into self._messages
+
+        Returns:
+            True if the message is a user or user_queued message
+        """
+        source = self._messages[index].message_source()
+        return source in (AIMessageSource.USER, AIMessageSource.USER_QUEUED)
+
+    def _find_next_visible_user_message(self, start_index: int) -> int:
+        """
+        Find the next visible user/user_queued message starting from start_index + 1.
+
+        Args:
+            start_index: Index to start searching from (exclusive)
+
+        Returns:
+            Index of next visible user message, or -1 if none found
+        """
+        for i in range(start_index + 1, len(self._messages)):
+            if self._messages[i].is_rendered() and self._is_user_message(i):
+                return i
+
+        return -1
+
+    def _find_previous_visible_user_message(self, start_index: int) -> int:
+        """
+        Find the previous visible user/user_queued message starting from start_index - 1.
+
+        Args:
+            start_index: Index to start searching from (exclusive)
+
+        Returns:
+            Index of previous visible user message, or -1 if none found
+        """
+        for i in range(start_index - 1, -1, -1):
+            if self._messages[i].is_rendered() and self._is_user_message(i):
+                return i
+
+        return -1
+
+    def _find_last_visible_user_message(self) -> int:
+        """
+        Find the index of the last visible user/user_queued message.
+
+        Returns:
+            Index of last visible user message, or -1 if none found
+        """
+        for i in range(len(self._messages) - 1, -1, -1):
+            if self._messages[i].is_rendered() and self._is_user_message(i):
+                return i
+
+        return -1
+
     def _find_next_visible_message(self, start_index: int) -> int:
         """
         Find the next visible message starting from start_index + 1.
@@ -1423,8 +1489,8 @@ class ConversationWidget(QWidget):
         if self._spotlighted_message_index == -1:
             return False
 
-        # Find the next visible message
-        next_visible_index = self._find_next_visible_message(self._spotlighted_message_index)
+        # Find the next visible user message
+        next_visible_index = self._find_next_visible_user_message(self._spotlighted_message_index)
         if next_visible_index != -1:
             # Move to next visible message
             self._messages[self._spotlighted_message_index].set_spotlighted(False)
@@ -1446,7 +1512,7 @@ class ConversationWidget(QWidget):
         """Navigate to the previous visible message if possible."""
         # If input box is spotlighted, move to the last visible message
         if self._spotlighted_message_index == -1:
-            last_visible_index = self._find_last_visible_message()
+            last_visible_index = self._find_last_visible_user_message()
             if last_visible_index != -1:
                 self._input.set_spotlighted(False)
                 self._spotlighted_message_index = last_visible_index
@@ -1455,8 +1521,8 @@ class ConversationWidget(QWidget):
 
             return False
 
-        # Find the previous visible message
-        prev_visible_index = self._find_previous_visible_message(self._spotlighted_message_index)
+        # Find the previous visible user message
+        prev_visible_index = self._find_previous_visible_user_message(self._spotlighted_message_index)
         if prev_visible_index != -1:
             # Move to previous visible message
             self._messages[self._spotlighted_message_index].set_spotlighted(False)
@@ -1467,17 +1533,25 @@ class ConversationWidget(QWidget):
         return False
 
     def _spotlight_message(self) -> None:
-        """Spotlight the specified message."""
+        """Spotlight the specified message, or the input box if index is -1."""
         index = self._spotlighted_message_index
         if 0 <= index < len(self._messages):
             self._messages[index].set_spotlighted(True)
             self._messages[index].setFocus()
-            self._scroll_to_message(self._messages[index])
+
+            # Always position the spotlighted message at the top of the viewport
+            # so it is never obscured by the floating input box.
+            message_spacing = int(self._style_manager.message_bubble_spacing())
+            self._perform_scroll_to_position(self._messages[index], message_spacing)
             return
 
         self._input.set_spotlighted(True)
         self._input.setFocus()
-        self._scroll_to_message(self._input)
+
+        # Scroll unconditionally to the end of the conversation so the full
+        # context before the input box is visible.
+        scrollbar = self._scroll_area.verticalScrollBar()
+        self._start_smooth_scroll(scrollbar.maximum())
 
     def _perform_scroll_to_position(self, message: ConversationMessage, y_offset: int) -> None:
         """
@@ -1535,17 +1609,17 @@ class ConversationWidget(QWidget):
 
         # If on a message, check if there are visible messages after current position
         # or if input is visible (can move to input)
-        next_visible_index = self._find_next_visible_message(self._spotlighted_message_index)
+        next_visible_index = self._find_next_visible_user_message(self._spotlighted_message_index)
         return next_visible_index != -1 or self._input.isVisible()
 
     def can_navigate_previous_message(self) -> bool:
         """Check if navigation to previous visible message is possible."""
         # If input is spotlighted, check if there are any visible messages to go back to
         if self._spotlighted_message_index == -1:
-            return self._find_last_visible_message() != -1
+            return self._find_last_visible_user_message() != -1
 
         # If on a message, check if there are visible messages before current position
-        return self._find_previous_visible_message(self._spotlighted_message_index) != -1
+        return self._find_previous_visible_user_message(self._spotlighted_message_index) != -1
 
     def _on_selection_changed(self, message_widget: ConversationMessage, has_selection: bool) -> None:
         """Handle selection changes in message widgets."""
