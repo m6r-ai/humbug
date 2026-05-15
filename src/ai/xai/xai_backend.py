@@ -4,9 +4,9 @@ import json
 from typing import Dict, List, Any
 
 from ai.ai_backend import AIBackend, RequestConfig
-from ai.ai_conversation_settings import AIConversationSettings
-from ai.ai_message import AIMessage, AIMessageSource
 from ai.ai_conversation_history import AIConversationHistory
+from ai.ai_conversation_settings import AIConversationSettings
+from ai.ai_message import AIMessage, AIMessageSource, AIReasoningCapability
 from ai.xai.xai_stream_response import XAIStreamResponse
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
@@ -274,6 +274,10 @@ class XAIBackend(AIBackend):
         # Only include temperature if supported by model
         if AIConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
+
+        # Add thinking flag if reasoning is enabled
+        thinking: bool = (settings.reasoning & AIReasoningCapability.VISIBLE_REASONING) == AIReasoningCapability.VISIBLE_REASONING
+        data["reasoning_effort"] = "low" if thinking else "none"
 
         # Add tools if supported
         if self._supports_tools(settings):

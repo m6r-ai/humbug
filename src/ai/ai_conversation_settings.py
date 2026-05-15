@@ -154,8 +154,8 @@ class AIConversationSettings:
         ),
 
         # Mistral models
-        "devstral-small-2505": AIModel(
-            name="devstral-small-2505",
+        "devstral-small-latest": AIModel(
+            name="devstral-small-latest",
             provider="mistral",
             context_window=131072,
             max_output_tokens=65536,
@@ -405,6 +405,15 @@ class AIConversationSettings:
         ),
 
         # xAI models
+        "grok-4.3 (non-reasoning)": AIModel(
+            name="grok-4.3",
+            provider="xai",
+            context_window=1000000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "grok-4.3": AIModel(
             name="grok-4.3",
             provider="xai",
@@ -412,24 +421,6 @@ class AIConversationSettings:
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "grok-4.20-0309-non-reasoning": AIModel(
-            name="grok-4.20-0309-non-reasoning",
-            provider="xai",
-            context_window=2000000,
-            max_output_tokens=32767,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "grok-4.20-0309-reasoning": AIModel(
-            name="grok-4.20-0309-reasoning",
-            provider="xai",
-            context_window=2000000,
-            max_output_tokens=32767,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
 
