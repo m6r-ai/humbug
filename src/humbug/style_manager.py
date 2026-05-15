@@ -412,6 +412,12 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#606060",
                 ColorMode.LIGHT: "#a0a0a0"
             },
+
+            # The input background has an alpha channel so it allows a small amount of what's underneath it to show through.
+            ColorRole.MESSAGE_INPUT_BACKGROUND: {
+                ColorMode.DARK: "#ea383838",
+                ColorMode.LIGHT: "#ead0d0d0"
+            },
             ColorRole.MESSAGE_ATTACHMENT_BACKGROUND: {
                 ColorMode.DARK: "#383838",
                 ColorMode.LIGHT: "#f0f0f0"
@@ -424,9 +430,13 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#404040",
                 ColorMode.LIGHT: "#d0d0d0"
             },
+            ColorRole.MESSAGE_INPUT_BORDER: {
+                ColorMode.DARK: "#707070",
+                ColorMode.LIGHT: "#909090"
+            },
             ColorRole.MESSAGE_SPOTLIGHTED: {
-                ColorMode.DARK: "#586878",
-                ColorMode.LIGHT: "#98a8b8"
+                ColorMode.DARK: "#788ca0",
+                ColorMode.LIGHT: "#607488"
             },
             ColorRole.MESSAGE_USER: {
                 ColorMode.DARK: "#7090e0",
@@ -449,8 +459,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#808080"
             },
             ColorRole.MESSAGE_USER_QUEUED: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#808080"
+                ColorMode.DARK: "#a0a0a0",
+                ColorMode.LIGHT: "#606060"
             },
             ColorRole.MESSAGE_SYSTEM_ERROR: {
                 ColorMode.DARK: "#c08080",
