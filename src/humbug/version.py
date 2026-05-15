@@ -1,3 +1,3 @@
 """Current application version."""
 
-CURRENT_VERSION = 47
+CURRENT_VERSION = 48
