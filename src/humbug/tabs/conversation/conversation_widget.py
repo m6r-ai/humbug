@@ -98,11 +98,6 @@ class ConversationWidget(QWidget):
         # it completes.  If we move a conversation to a new tab, we need to ensure it doesn't get lost.
         self._current_unfinished_message: AIMessage | None = None
 
-        self._update_timer = QTimer(self)  # Timer for throttled updates
-        self._update_timer.setSingleShot(True)
-        self._update_timer.timeout.connect(self._process_pending_update)
-        self._pending_messages: Dict[str, AIMessage] = {}  # Store pending messages by message ID
-
         self._response_reveal_timer = QTimer(self)
         self._response_reveal_timer.setInterval(24)
         self._response_reveal_timer.timeout.connect(self._advance_response_reveal)
@@ -1172,31 +1167,16 @@ class ConversationWidget(QWidget):
         if not self._response_reveal_targets:
             self._response_reveal_timer.stop()
 
-    def _process_pending_update(self) -> None:
-        """Process all pending message updates."""
-        if not self._pending_messages:
-            return
-
-        for message in self._pending_messages.values():
-            self._update_last_message(message)
-
-        self._pending_messages.clear()
-
     async def _on_message_updated(self, message: AIMessage) -> None:
         """
         Handle a message being updated with throttling.
 
-        Updates are batched and processed together every 20ms to avoid
-        excessive UI updates while supporting multiple concurrent messages.
+        Updates are passed directly to the reveal system which handles rate-limiting.
 
         Args:
             message: The message that was updated
         """
-        # Store the message update (will overwrite if same message updates multiple times)
-        self._pending_messages[message.id] = message.copy()
-
-        if not self._update_timer.isActive():
-            self._update_timer.start(20)
+        self._update_last_message(message)
 
     async def _on_message_completed(self, message: AIMessage) -> None:
         """
@@ -1209,14 +1189,6 @@ class ConversationWidget(QWidget):
             message: The message that was completed
         """
         self._current_unfinished_message = None
-
-        # Remove this message from pending updates if present
-        self._pending_messages.pop(message.id, None)
-
-        # Stop timer if no more pending messages
-        if self._update_timer.isActive():
-            if not self._pending_messages:
-                self._update_timer.stop()
 
         # Update with the completed message immediately
         self._update_last_message(message)
@@ -1242,9 +1214,6 @@ class ConversationWidget(QWidget):
         self._stop_message_border_animation()
 
         # Reset message update throttling state
-        self._pending_messages.clear()
-        if self._update_timer.isActive():
-            self._update_timer.stop()
 
         self.status_updated.emit()
 
@@ -2628,9 +2597,6 @@ class ConversationWidget(QWidget):
             self._is_streaming = False
             self._input.set_streaming(False)
             self._stop_message_border_animation()
-            self._pending_messages.clear()
-            if self._update_timer.isActive():
-                self._update_timer.stop()
 
             self.status_updated.emit()
 
@@ -2691,9 +2657,6 @@ class ConversationWidget(QWidget):
             self._stop_message_border_animation()
 
             # Clear any pending message updates
-            self._pending_messages.clear()
-            if self._update_timer.isActive():
-                self._update_timer.stop()
 
             self.status_updated.emit()
 
