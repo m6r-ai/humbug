@@ -131,6 +131,13 @@ class DiffWidget(QWidget):
         self._deferred_scroll_timer.setInterval(0)
         self._deferred_scroll_timer.timeout.connect(self._on_deferred_scroll)
         self._deferred_scroll_target: int = 0
+
+        self._restore_scroll_timer = QTimer(self)
+        self._restore_scroll_timer.setSingleShot(True)
+        self._restore_scroll_timer.setInterval(0)
+        self._restore_scroll_timer.timeout.connect(self._on_restore_scroll)
+        self._restore_scroll_value: int = 0
+
         self._smooth_scroll_target: int = 0
         self._smooth_scroll_start: int = 0
         self._smooth_scroll_distance: int = 0
@@ -191,6 +198,12 @@ class DiffWidget(QWidget):
         Args:
             initial_load: If True, scroll to the first hunk after loading.
         """
+        # Capture the current scroll position before rebuilding the document so
+        # we can restore it afterwards on a refresh (i.e. when initial_load is
+        # False).  The value is meaningless on a true initial load (it will be 0)
+        # but we read it unconditionally to keep the code simple.
+        saved_scroll = self._scrollbar.value()
+
         result = self._fetch_content()
         if result is None:
             return
@@ -222,6 +235,13 @@ class DiffWidget(QWidget):
         self._cached_hunks = self._hunks()
         self._current_hunk_index = -1
         self._update_active_hunk()
+
+        if not initial_load:
+            # Restore the scroll position we had before the reload.  Use the
+            # deferred timer so the target is clamped against the updated
+            # scrollbar range (which Qt finalises after the document layout pass).
+            self._restore_scroll_value = saved_scroll
+            self._restore_scroll_timer.start()
 
         if initial_load and self._cached_hunks:
             start = self._cached_hunks[0][0]
@@ -535,6 +555,10 @@ class DiffWidget(QWidget):
     def _on_deferred_scroll(self) -> None:
         """Fire the deferred smooth scroll to the stored target position."""
         self._start_smooth_scroll(self._deferred_scroll_target)
+
+    def _on_restore_scroll(self) -> None:
+        """Restore the scroll position saved before a diff reload."""
+        self._scrollbar.setValue(max(self._scrollbar.minimum(), min(self._scrollbar.maximum(), self._restore_scroll_value)))
 
     def _start_smooth_scroll(self, target_value: int) -> None:
         """

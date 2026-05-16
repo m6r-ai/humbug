@@ -12,6 +12,7 @@ Bug fixes:
 - Correctly resolved an earlier problem with streaming text and rendering, where the user is looking at an earlier part of the
   conversation.
 - Resolved problems in the Java syntax highlighter.
+- If a file open in a diff view is saved then the scroll position within the diff view is now preserved.
 
 Internal structure changes:
 
