@@ -103,6 +103,14 @@ class ConversationWidget(QWidget):
         self._update_timer.timeout.connect(self._process_pending_update)
         self._pending_messages: Dict[str, AIMessage] = {}  # Store pending messages by message ID
 
+        self._response_reveal_timer = QTimer(self)
+        self._response_reveal_timer.setInterval(24)
+        self._response_reveal_timer.timeout.connect(self._advance_response_reveal)
+        self._response_reveal_targets: Dict[str, str] = {}
+        self._response_reveal_rendered: Dict[str, str] = {}
+        self._response_reveal_widgets: Dict[str, ConversationMessage] = {}
+        self._response_reveal_completed: Set[str] = set()
+
         # Widget tracking
         self._messages: List[ConversationMessage] = []
         self._message_with_selection: ConversationMessage | None = None
@@ -163,14 +171,8 @@ class ConversationWidget(QWidget):
 
         # Initialize tracking variables
         self._auto_scroll = True
-        self._last_scroll_maximum = 0
         self._input_chrome_height = 0
         self._input_spacer: QWidget | None = None
-
-        # Timer for debouncing container visibility to eliminate jitter
-        self._container_show_timer = QTimer(self)
-        self._container_show_timer.setSingleShot(True)
-        self._container_show_timer.timeout.connect(self._enable_messages_container_updates)
 
         # Create layout
         conversation_layout = QVBoxLayout(self)
@@ -520,19 +522,8 @@ class ConversationWidget(QWidget):
         if message.source == AIMessageSource.USER:
             self._delete_user_queued_messages()
 
-        # If we're not auto-scrolling we want to disable updates during insertion to prevent jitter
-        if not self._auto_scroll:
-            # Cancel any pending show timer and hide container during insertion
-            if self._container_show_timer.isActive():
-                self._container_show_timer.stop()
-
-            self._messages_container.setUpdatesEnabled(False)
-
         msg_widget = self._add_message_core(message)
         msg_widget.apply_style()
-
-        if not self._auto_scroll:
-            self._container_show_timer.start(5)
 
         # If we're not animating then we've done everything we need to.
         if not self._is_animating:
@@ -593,6 +584,7 @@ class ConversationWidget(QWidget):
                 self._message_with_selection = None
 
             # Remove from layout
+            self._remove_response_reveal(message_widget)
             self._messages_layout.removeWidget(message_widget)
 
             # Delete the widget
@@ -618,14 +610,6 @@ class ConversationWidget(QWidget):
         # If we're animating and the animated message visibility changed, update animation
         if self._is_animating:
             self._update_animated_message()
-
-    def _enable_messages_container_updates(self) -> None:
-        """Re-enable updates for the messages container after layout has settled."""
-        self._messages_container.setUpdatesEnabled(True)
-
-        # Only unpolish/polish the specific widget that changed, not the entire container
-        self._messages_container.style().unpolish(self._messages_container)
-        self._messages_container.style().polish(self._messages_container)
 
     def _unregister_ai_conversation_callbacks(self) -> None:
         """Unregister all UI callbacks from the inner AIConversation."""
@@ -993,6 +977,7 @@ class ConversationWidget(QWidget):
             if self._animated_message == widget:
                 self._animated_message = None
 
+            self._remove_response_reveal(widget)
             self._messages_layout.removeWidget(widget)
             widget.deleteLater()
 
@@ -1037,7 +1022,17 @@ class ConversationWidget(QWidget):
             message: The message that was added
         """
         self._current_unfinished_message = message
-        self._add_message(message)
+
+        display_message = message
+        should_reveal_from_empty = message.source in (AIMessageSource.AI, AIMessageSource.REASONING) and bool(message.content)
+        if should_reveal_from_empty:
+            display_message = message.copy()
+            display_message.content = ""
+
+        self._add_message(display_message)
+
+        if should_reveal_from_empty:
+            self._update_last_message(message)
 
         # Start animation if not already animating
         if not self._is_animating:
@@ -1060,26 +1055,122 @@ class ConversationWidget(QWidget):
         if message.source not in (AIMessageSource.AI, AIMessageSource.REASONING):
             return
 
-        # If we're not auto-scrolling we want to disable updates during insertion to prevent jitter
-        if not self._auto_scroll:
-            # Cancel any pending show timer and hide container during content update
-            if self._container_show_timer.isActive():
-                self._container_show_timer.stop()
-
-            self._messages_container.setUpdatesEnabled(False)
-
         for i in range(len(self._messages) - 1, -1, -1):
             if self._messages[i].message_id() == message.id:
-                self._messages[i].set_content(message.content)
+                self._queue_response_reveal(self._messages[i], message, completed=message.completed)
                 break
 
-        if not self._auto_scroll:
-            # Defer re-enabling updates until layout settles (after all resize events)
-            self._container_show_timer.start(5)
-
-        else:
-            # Scroll to bottom if auto-scrolling is enabled
+        if self._auto_scroll:
             self._scroll_to_bottom()
+
+    def _queue_response_reveal(self, widget: ConversationMessage, message: AIMessage, completed: bool = False) -> None:
+        """Queue streamed response text for smooth incremental rendering."""
+        message_id = message.id
+        target = message.content
+        rendered = self._response_reveal_rendered.get(message_id)
+
+        if rendered is None or not target.startswith(rendered):
+            rendered = ""
+            self._response_reveal_rendered[message_id] = rendered
+            if target:
+                widget.set_streaming_content("")
+
+        self._response_reveal_targets[message_id] = target
+        self._response_reveal_widgets[message_id] = widget
+
+        if completed:
+            self._response_reveal_completed.add(message_id)
+
+        if not self._response_reveal_timer.isActive():
+            self._response_reveal_timer.start()
+
+    def _advance_response_reveal(self) -> None:
+        """Reveal queued response text in small chunks for smoother streaming."""
+        if not self._response_reveal_targets:
+            self._response_reveal_timer.stop()
+            return
+
+        caught_up_ids: list[str] = []
+        final_render_ids: list[str] = []
+        did_render = False
+        for message_id, target in list(self._response_reveal_targets.items()):
+            widget = self._response_reveal_widgets.get(message_id)
+            if widget is None:
+                caught_up_ids.append(message_id)
+                continue
+
+            rendered = self._response_reveal_rendered.get(message_id, "")
+            if rendered == target:
+                if message_id in self._response_reveal_completed:
+                    final_render_ids.append(message_id)
+
+                caught_up_ids.append(message_id)
+                continue
+
+            remaining = len(target) - len(rendered)
+            if remaining <= 0 or not target.startswith(rendered):
+                next_text = target
+
+            else:
+                chunk_size = self._response_reveal_chunk_size(remaining, message_id in self._response_reveal_completed)
+                next_text = target[:len(rendered) + chunk_size]
+
+                # Snap the cut point back to the nearest word boundary so we
+                # never expose a lone block marker like "# " or "* " at the
+                # trailing edge of the revealed text.
+                if next_text != target:
+                    new_portion = next_text[len(rendered):]
+                    last_break = max(new_portion.rfind('\n'), new_portion.rfind(' '))
+                    if last_break > 0:
+                        next_text = rendered + new_portion[:last_break + 1]
+
+            widget.set_streaming_content(next_text)
+            self._response_reveal_rendered[message_id] = next_text
+            did_render = True
+
+            if next_text == target and message_id in self._response_reveal_completed:
+                final_render_ids.append(message_id)
+                caught_up_ids.append(message_id)
+
+        for message_id in final_render_ids:
+            widget = self._response_reveal_widgets.get(message_id)
+            target = self._response_reveal_targets.get(message_id)
+            if widget is not None and target is not None:
+                widget.set_final_content(target)
+
+        for message_id in caught_up_ids:
+            self._response_reveal_targets.pop(message_id, None)
+            if message_id in self._response_reveal_completed:
+                self._response_reveal_rendered.pop(message_id, None)
+                self._response_reveal_widgets.pop(message_id, None)
+                self._response_reveal_completed.discard(message_id)
+
+        if did_render and self._auto_scroll:
+            self._scroll_to_bottom()
+
+        if not self._response_reveal_targets:
+            self._response_reveal_timer.stop()
+
+    def _response_reveal_chunk_size(self, remaining: int, completed: bool) -> int:
+        """Choose a reveal chunk size that stays smooth but catches up quickly."""
+        if completed:
+            return min(200, max(20, remaining // 5))
+
+        return min(20, max(2, remaining // 18))
+
+    def _remove_response_reveal(self, widget: ConversationMessage) -> None:
+        """Remove pending reveal state for a widget that is leaving the layout."""
+        message_id = widget.message_id()
+        if message_id is None:
+            return
+
+        self._response_reveal_targets.pop(message_id, None)
+        self._response_reveal_rendered.pop(message_id, None)
+        self._response_reveal_widgets.pop(message_id, None)
+        self._response_reveal_completed.discard(message_id)
+
+        if not self._response_reveal_targets:
+            self._response_reveal_timer.stop()
 
     def _process_pending_update(self) -> None:
         """Process all pending message updates."""
@@ -1316,24 +1407,11 @@ class ConversationWidget(QWidget):
 
     def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
         """Handle the scroll range changing."""
-        total_height = self._messages_container.height()
-        input_height = self._input_spacer.height() if self._input_spacer is not None else 0
-        last_insertion_point = total_height - input_height - 2 * self._messages_layout.spacing()
-
-        current_pos = self._scroll_area.verticalScrollBar().value()
-
         if self._load_scroll_offset is not None:
             self._scroll_range_settle_timer.start()
 
         elif self._auto_scroll:
             self._scroll_to_bottom()
-
-        elif current_pos > last_insertion_point:
-            if self._last_scroll_maximum != maximum:
-                max_diff = maximum - self._last_scroll_maximum
-                self._scroll_area.verticalScrollBar().setValue(current_pos + max_diff)
-
-        self._last_scroll_maximum = maximum
 
     def _on_scroll_range_settled(self) -> None:
         """Apply the pending load scroll offset once the scroll range has stopped changing."""
@@ -2574,6 +2652,7 @@ class ConversationWidget(QWidget):
             if self._last_error_message_widget == message_widget:
                 self._last_error_message_widget = None
 
+            self._remove_response_reveal(message_widget)
             self._messages_layout.removeWidget(message_widget)
             message_widget.deleteLater()
 
@@ -2638,6 +2717,7 @@ class ConversationWidget(QWidget):
             if self._last_error_message_widget == message_widget:
                 self._last_error_message_widget = None
 
+            self._remove_response_reveal(message_widget)
             self._messages_layout.removeWidget(message_widget)
             message_widget.deleteLater()
 

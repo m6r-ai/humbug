@@ -89,6 +89,7 @@ class ConversationMessage(QFrame):
         self._message_model = model
         self._message_id = message_id
         self._message_user_name = user_name
+        self._last_streaming_render_text = ""
 
         style_manager = StyleManager()
         self._attachments: list[tuple[str, str]] = attachments if attachments is not None else []
@@ -354,8 +355,7 @@ class ConversationMessage(QFrame):
 
     def _update_border_style(self) -> None:
         """Update the border style with the current animation color."""
-        self.style().unpolish(self)
-        self.style().polish(self)
+        self.update()
 
     def _has_focus_in_hierarchy(self) -> bool:
         """Check if this widget or any of its descendants has focus."""
@@ -899,13 +899,160 @@ class ConversationMessage(QFrame):
         # Expanded - render immediately
         self._render_content(text, self._context)
 
-    def _render_content(self, text: str, context: str | None) -> None:
+    def set_streaming_content(self, text: str) -> None:
+        """Render response text while a message is still streaming."""
+        self._message_content = text
+        render_text = self._streaming_safe_markdown_text(text)
+
+        if render_text == self._last_streaming_render_text:
+            return
+
+        self._last_streaming_render_text = render_text
+
+        if self._is_input:
+            self._sections[0].set_content(MarkdownASTTextNode(render_text))
+            return
+
+        if not self._is_expanded:
+            self._pending_content = render_text
+            self._pending_context = self._context
+            if render_text and not self._message_rendered:
+                self._message_rendered = True
+                self.show()
+
+            return
+
+        self._sections_container.setUpdatesEnabled(False)
+        try:
+            self._render_content(render_text, self._context)
+
+        finally:
+            self._sections_container.setUpdatesEnabled(True)
+            self._sections_container.update()
+
+        if render_text and not self._message_rendered:
+            self._message_rendered = True
+            self.show()
+
+    # A trailing line that *starts* with a block-level marker must be hidden
+    # until it ends with \n, because markdown parsers need the full line to
+    # recognise headings, list items, blockquotes, and fenced code blocks.
+    # Matches: "# …", "> …", "* …", "- …", "+ …", "1. …", "```…"
+    _BLOCK_LINE_START_RE = re.compile(
+        r'^(#{1,6}[ \t]|>|[-*+][ \t]|\d+[.)]\s|```)'
+    )
+
+    def _streaming_safe_markdown_text(self, text: str) -> str:
+        """Hide incomplete inline markdown spans and block-level lines while streaming."""
+        cutoff = len(text)
+        for marker in ("**", "__", "*", "_", "`"):
+            open_pos = self._last_unclosed_inline_marker(text[:cutoff], marker)
+            if open_pos is not None:
+                cutoff = min(cutoff, open_pos)
+
+        # If the trailing (incomplete) line starts with a block-level marker,
+        # hide the whole line until it is terminated with \n.  Without the
+        # newline most markdown parsers emit raw text, showing "#" or "*".
+        last_nl = text.rfind('\n', 0, cutoff)
+        trailing_start = last_nl + 1
+        trailing = text[trailing_start:cutoff].lstrip()
+        if trailing and self._BLOCK_LINE_START_RE.match(trailing):
+            cutoff = trailing_start
+
+        return text[:cutoff]
+
+    def _last_unclosed_inline_marker(self, text: str, marker: str) -> int | None:
+        """Find the last unmatched inline marker that should be hidden while streaming."""
+        stack: list[int] = []
+        i = 0
+        marker_len = len(marker)
+        while i <= len(text) - marker_len:
+            if text[i] == "\\":
+                i += 2
+                continue
+
+            if not text.startswith(marker, i):
+                i += 1
+                continue
+
+            if not self._is_inline_marker_candidate(text, i, marker):
+                i += marker_len
+                continue
+
+            if stack:
+                stack.pop()
+
+            else:
+                stack.append(i)
+
+            i += marker_len
+
+        return stack[-1] if stack else None
+
+    def _is_inline_marker_candidate(self, text: str, pos: int, marker: str) -> bool:
+        """Avoid treating list bullets and ordinary spaced punctuation as inline formatting."""
+        before = text[pos - 1] if pos > 0 else ""
+        after_pos = pos + len(marker)
+        after = text[after_pos] if after_pos < len(text) else ""
+
+        if marker in ("*", "_"):
+            line_start = text.rfind("\n", 0, pos) + 1
+            if text[line_start:pos].strip() == "" and after.isspace():
+                return False
+
+        if after == "":
+            return True
+
+        return not after.isspace() and not before.isalnum()
+
+    def set_final_content(self, text: str) -> None:
+        """Render completed response text with full markdown/code formatting."""
+        self._message_content = text
+        self._last_streaming_render_text = ""
+        self._pending_content = None
+        self._pending_context = None
+
+        if self._is_input:
+            self._sections[0].set_content(MarkdownASTTextNode(text))
+            return
+
+        if not self._is_expanded:
+            self._clear_sections()
+            self._pending_content = text
+            self._pending_context = self._context
+            if text and not self._message_rendered:
+                self._message_rendered = True
+            return
+
+        # Update every section in place — avoids the clear→shrink→rebuild→grow
+        # layout cycle that fires two scroll-range changes and causes a visible flash.
+        self.setUpdatesEnabled(False)
+        try:
+            self._render_content(text, self._context, update_all=True)
+        finally:
+            self.setUpdatesEnabled(True)
+            self.update()
+
+        if text and not self._message_rendered:
+            self._message_rendered = True
+            self.show()
+
+    def _clear_sections(self) -> None:
+        """Remove all rendered content sections."""
+        while self._sections:
+            section = self._sections.pop()
+            self._sections_layout.removeWidget(section)
+            section.deleteLater()
+
+    def _render_content(self, text: str, context: str | None, update_all: bool = False) -> None:
         """
         Actually render the content into sections.
 
         Args:
             text: The message text content
             context: Optional context to append to the message
+            update_all: When True, update every existing section (used for final render).
+                        When False (default), only the last section is updated (streaming).
         """
         # If we were given context, append it to the message for section extraction
         if context:
@@ -925,9 +1072,8 @@ class ConversationMessage(QFrame):
                 self._sections_layout.addWidget(section)
                 continue
 
-            if i == len(self._sections) - 1:
-                # Update the last section with new content
-                section = self._sections[-1]
+            if update_all or i == len(self._sections) - 1:
+                section = self._sections[i]
                 section.set_syntax(syntax)
                 section.set_content(node)
 
