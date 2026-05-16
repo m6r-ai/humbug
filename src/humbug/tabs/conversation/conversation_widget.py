@@ -1088,6 +1088,7 @@ class ConversationWidget(QWidget):
         caught_up_ids: list[str] = []
         final_render_ids: list[str] = []
         did_render = False
+        newly_visible_widget: ConversationMessage | None = None
         for message_id, target in list(self._response_reveal_targets.items()):
             widget = self._response_reveal_widgets.get(message_id)
             if widget is None:
@@ -1120,6 +1121,9 @@ class ConversationWidget(QWidget):
                         next_text = rendered + new_portion[:last_break + 1]
 
             widget.set_streaming_content(next_text)
+            if next_text and not rendered and widget.is_rendered():
+                newly_visible_widget = widget
+
             self._response_reveal_rendered[message_id] = next_text
             did_render = True
 
@@ -1129,9 +1133,9 @@ class ConversationWidget(QWidget):
 
         for message_id in final_render_ids:
             widget = self._response_reveal_widgets.get(message_id)
-            target = self._response_reveal_targets.get(message_id)
-            if widget is not None and target is not None:
-                widget.set_final_content(target)
+            final_target = self._response_reveal_targets.get(message_id)
+            if widget is not None and final_target is not None:
+                widget.set_final_content(final_target)
 
         for message_id in caught_up_ids:
             self._response_reveal_targets.pop(message_id, None)
@@ -1142,6 +1146,12 @@ class ConversationWidget(QWidget):
 
         if did_render and self._auto_scroll:
             self._scroll_to_bottom()
+
+        if newly_visible_widget is not None and self._is_animating and newly_visible_widget != self._animated_message:
+            self._transfer_animation_to_message(newly_visible_widget)
+
+        if did_render:
+            self.trigger_message_animation()
 
         if not self._response_reveal_targets:
             self._response_reveal_timer.stop()
