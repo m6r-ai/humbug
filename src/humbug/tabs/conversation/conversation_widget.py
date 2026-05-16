@@ -104,7 +104,7 @@ class ConversationWidget(QWidget):
         self._pending_messages: Dict[str, AIMessage] = {}  # Store pending messages by message ID
 
         self._response_reveal_timer = QTimer(self)
-        self._response_reveal_timer.setInterval(10)
+        self._response_reveal_timer.setInterval(24)
         self._response_reveal_timer.timeout.connect(self._advance_response_reveal)
         self._response_reveal_targets: Dict[str, str] = {}
         self._response_reveal_rendered: Dict[str, str] = {}
@@ -171,7 +171,6 @@ class ConversationWidget(QWidget):
 
         # Initialize tracking variables
         self._auto_scroll = True
-        self._last_scroll_maximum = 0
         self._input_chrome_height = 0
         self._input_spacer: QWidget | None = None
 
@@ -1155,9 +1154,9 @@ class ConversationWidget(QWidget):
     def _response_reveal_chunk_size(self, remaining: int, completed: bool) -> int:
         """Choose a reveal chunk size that stays smooth but catches up quickly."""
         if completed:
-            return min(240, max(24, remaining // 6))
+            return min(200, max(20, remaining // 5))
 
-        return min(96, max(4, remaining // 12))
+        return min(20, max(2, remaining // 18))
 
     def _remove_response_reveal(self, widget: ConversationMessage) -> None:
         """Remove pending reveal state for a widget that is leaving the layout."""
@@ -1408,24 +1407,11 @@ class ConversationWidget(QWidget):
 
     def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
         """Handle the scroll range changing."""
-        total_height = self._messages_container.height()
-        input_height = self._input_spacer.height() if self._input_spacer is not None else 0
-        last_insertion_point = total_height - input_height - 2 * self._messages_layout.spacing()
-
-        current_pos = self._scroll_area.verticalScrollBar().value()
-
         if self._load_scroll_offset is not None:
             self._scroll_range_settle_timer.start()
 
         elif self._auto_scroll:
             self._scroll_to_bottom()
-
-        elif current_pos > last_insertion_point:
-            if self._last_scroll_maximum != maximum:
-                max_diff = maximum - self._last_scroll_maximum
-                self._scroll_area.verticalScrollBar().setValue(current_pos + max_diff)
-
-        self._last_scroll_maximum = maximum
 
     def _on_scroll_range_settled(self) -> None:
         """Apply the pending load scroll offset once the scroll range has stopped changing."""
