@@ -2,6 +2,16 @@
 
 ## v48 (2026-05-xx)
 
+New features:
+
+- New text being streamed by an AI is now presented in a much more smooth way, eliminating the "jumpiness" of text chunks
+  delivered via the API endpoint.
+
+Bug fixes:
+
+- Correctly resolved an earlier problem with streaming text and rendering, where the user is looking at an earlier part of the
+  conversation.
+
 ## v47 (2026-05-15)
 
 New features:
