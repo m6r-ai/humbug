@@ -147,7 +147,8 @@ class EditorWidget(QPlainTextEdit):
 
         This method reads the current file from disk and replaces the editor content.
         If the file is unreadable, the editor will be left empty.
-        The cursor position will be reset to the beginning and any selection will be cleared.
+        The scroll position is preserved; the cursor is moved to the start only when the
+        file no longer exists.
         """
         if not self._path:
             self._logger.debug("No path set, cannot refresh content")
@@ -155,24 +156,31 @@ class EditorWidget(QPlainTextEdit):
 
         try:
             if os.path.exists(self._path):
+                saved_vscroll = self.verticalScrollBar().value()
+                saved_hscroll = self.horizontalScrollBar().value()
+
                 with open(self._path, 'r', encoding='utf-8') as f:
                     content = f.read()
 
                 self._logger.debug("Refreshing content from file: %s", self._path)
                 self.setPlainText(content)
                 self._last_save_content = content
+                self._set_modified(False)
+
+                # Restore scroll position.  setPlainText resets both scrollbars to
+                # 0, so we put them back immediately; the range is valid at this point.
+                self.verticalScrollBar().setValue(saved_vscroll)
+                self.horizontalScrollBar().setValue(saved_hscroll)
 
             else:
                 self._logger.debug("File no longer exists, clearing content: %s", self._path)
                 self.setPlainText("")
                 self._last_save_content = ""
+                self._set_modified(False)
 
-            self._set_modified(False)
-
-            # Reset cursor to beginning and clear selection
-            cursor = QTextCursor(self.document())
-            cursor.movePosition(QTextCursor.MoveOperation.Start)
-            self.setTextCursor(cursor)
+                cursor = QTextCursor(self.document())
+                cursor.movePosition(QTextCursor.MoveOperation.Start)
+                self.setTextCursor(cursor)
 
         except Exception as e:
             self._logger.error("Failed to refresh content from file '%s': %s", self._path, str(e))
