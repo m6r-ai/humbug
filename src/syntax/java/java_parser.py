@@ -80,7 +80,7 @@ class JavaParser(Parser):
                 if token_value == '<':
                     # Look back at previous token and forward to help determine context
                     prev_token = self._get_last_token()
-                    next_token = lexer.peek_next_token()
+                    next_token = lexer.peek_next_token(offset=0)
 
                     is_generic = False
                     if prev_token and next_token:
@@ -93,14 +93,26 @@ class JavaParser(Parser):
                             next_token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD) or
                             (next_token.type == TokenType.OPERATOR and next_token.value == '?')
                         ):
+                            is_generic = self._is_plausible_generic(lexer)
+
+                        elif prev_token.type in (TokenType.GENERIC_TYPE, TokenType.GENERIC_METHOD) and (
+                            next_token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD) or
+                            (next_token.type == TokenType.OPERATOR and next_token.value == '?')
+                        ):
                             is_generic = True
-                        elif (prev_token.type == TokenType.OPERATOR and
-                              prev_token.value == ',' and
+
+                        elif (prev_token.type == TokenType.OPERATOR and prev_token.value == ',' and
                               next_token.type in (TokenType.IDENTIFIER, TokenType.OPERATOR)):
                             is_generic = True
+
                         elif (prev_token.type == TokenType.OPERATOR and
                               prev_token.value == '>' and
                               next_token.type == TokenType.IDENTIFIER):
+                            is_generic = True
+
+                    elif next_token and not prev_token:
+                        # < at start of line/input — generic type parameter list like <T extends Foo>
+                        if next_token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD):
                             is_generic = True
 
                     if is_generic:
@@ -117,7 +129,21 @@ class JavaParser(Parser):
                         if generic_depth == 0:
                             in_generic = False
 
-                        # Emit a specialized token for the generic operator
+                        token.type = TokenType.GENERIC_END
+
+                    self._tokens.append(token)
+                    continue
+
+                # Handle >> and >>> as closing multiple generic levels
+                if token_value in ('>>', '>>>'):
+                    levels_to_close = 2 if token_value == '>>' else 3
+                    if in_generic:
+                        for _ in range(min(levels_to_close, generic_depth)):
+                            generic_depth -= 1
+                            if generic_depth == 0:
+                                in_generic = False
+                                break
+
                         token.type = TokenType.GENERIC_END
 
                     self._tokens.append(token)
@@ -126,6 +152,7 @@ class JavaParser(Parser):
                 # Handle method references
                 if token_value == '::':
                     # Change the token type for the operator itself
+                    in_element = False
                     token.type = TokenType.METHOD_REFERENCE_OPERATOR
                     self._tokens.append(token)
                     continue
@@ -160,6 +187,7 @@ class JavaParser(Parser):
                 continue
 
             self._handle_identifier(token, lexer, in_element)
+            in_element = False
 
         parser_state = JavaParserState()
         parser_state.continuation_state = (
@@ -186,6 +214,9 @@ class JavaParser(Parser):
         next_token = lexer.peek_next_token()
 
         if not next_token:
+            if in_element:
+                token.type = TokenType.ELEMENT
+
             self._tokens.append(token)
             return
 
@@ -215,6 +246,80 @@ class JavaParser(Parser):
 
         # Regular identifier
         self._tokens.append(token)
+
+    def _is_plausible_generic(self, lexer: 'JavaLexer') -> bool:
+        """
+        Determine whether a < is plausibly the start of a generic type argument list
+        rather than a less-than comparison operator.
+
+        This uses lookahead to find a matching > and verify the token after it is
+        consistent with a generic context (e.g. an identifier, (, or end of input).
+        A < followed only by identifiers/keywords/commas/? and then a matching >
+        that is itself followed by (, ), ,, ;, =, [ or end of input is treated as generic.
+
+        Args:
+            lexer: The lexer instance for lookahead
+
+        Returns:
+            True if the < is likely a generic start, False otherwise
+        """
+        depth = 1
+        offset = 0
+        saw_comma = False
+
+        while True:
+            token = lexer.peek_next_token(offset=offset)
+            if not token:
+                # Ran out of tokens without finding a close on this line.
+                # Assume it's an open generic that will close on a later line.
+                # Only do so if we've seen a comma (multi-param generic) or the content
+                # so far looks unambiguously like a type argument list.
+                return saw_comma
+
+            offset += 1
+
+            if token.type == TokenType.OPERATOR:
+                if token.value == '<':
+                    depth += 1
+
+                elif token.value in ('>', '>>', '>>>'):
+                    close_count = 1 if token.value == '>' else (2 if token.value == '>>' else 3)
+                    depth -= close_count
+                    if depth <= 0:
+                        # Found the matching close — check what follows
+                        after = lexer.peek_next_token(offset=offset)
+                        if not after:
+                            return True
+
+                        if after.type == TokenType.OPERATOR and after.value in (
+                            '(', ')', ',', ';', '=', '[', '{'
+                        ):
+                            return True
+
+                        if after.type in (TokenType.IDENTIFIER, TokenType.KEYWORD):
+                            # e.g. List<String> myVar
+                            return True
+
+                        return False
+
+                elif token.value in ('+', '-', '*', '/', '%', '&&', '||', '!',
+                                     '==', '!=', '<=', '>=', '&', '|', '^'):
+                    # Arithmetic/logical operators can't appear inside generic type args
+                    return False
+
+                elif token.value == ',':
+                    saw_comma = True
+
+                elif token.value not in ('?', '(', ')', '[', ']', '.', '@'):
+                    # Any other operator that isn't valid in a type argument list
+                    return False
+
+            elif token.type not in (
+                TokenType.IDENTIFIER, TokenType.KEYWORD, TokenType.ANNOTATION,
+                TokenType.GENERIC_TYPE, TokenType.GENERIC_METHOD
+            ):
+                # Unexpected token type inside what would be a generic arg list
+                return False
 
     def _get_last_token(self) -> Token | None:
         """

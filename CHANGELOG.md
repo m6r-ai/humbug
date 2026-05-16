@@ -11,6 +11,11 @@ Bug fixes:
 
 - Correctly resolved an earlier problem with streaming text and rendering, where the user is looking at an earlier part of the
   conversation.
+- Resolved problems in the Java syntax highlighter.
+
+Internal structure changes:
+
+- Added pytest tests for the Java syntax highlighter.
 
 ## v47 (2026-05-15)
 
