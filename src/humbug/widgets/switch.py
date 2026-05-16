@@ -43,7 +43,6 @@ class Switch(QCheckBox):
 
     def apply_style(self, style_manager: StyleManager) -> None:
         """Apply design-system colors and metrics."""
-        # TODO: Should we make this the default approach everywhere we use apply_style?
         self._track_on_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_ON))
         self._track_off_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_OFF))
         self._track_disabled_on_color = QColor(style_manager.get_color_str(ColorRole.SWITCH_TRACK_DISABLED_ON))

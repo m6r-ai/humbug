@@ -48,7 +48,6 @@ def _find_xref_offset(data: bytes) -> int:
     tokenizer.pos = idx + len(b"startxref")
     tokenizer.skip_whitespace_and_comments()
 
-    from pdf.pdf_tokenizer import Token
     token = tokenizer.next_token()
     if token.type != TokenType.INTEGER:
         raise PDFParseError("'startxref' not followed by an integer offset")
@@ -70,7 +69,6 @@ def _load_xref(tokenizer: PDFTokenizer, doc: PDFDocument, offset: int) -> None:
 
         # Peek at the first token to decide between traditional xref and xref stream
         saved_pos = tokenizer.pos
-        from pdf.pdf_tokenizer import Token
         token = tokenizer.next_token()
 
         if token.type == TokenType.KEYWORD and token.value == "xref":
@@ -242,14 +240,14 @@ def _load_objects(tokenizer: PDFTokenizer, doc: PDFDocument) -> None:
             pass
 
     # Second pass: resolve object streams (type 2 xref entries)
-    _load_object_streams(tokenizer, doc)
+    _load_object_streams(doc)
 
 
 def _parse_indirect_object(tokenizer: PDFTokenizer, doc: PDFDocument, expected_obj_num: int) -> None:
     """Parse one indirect object at the current tokenizer position."""
     tokenizer.skip_whitespace_and_comments()
     obj_num_token = tokenizer.next_token()
-    gen_token = tokenizer.next_token()
+    _ = tokenizer.next_token()
     obj_kw = tokenizer.next_token()
 
     if obj_num_token.type != TokenType.INTEGER or obj_kw.type != TokenType.OBJ_KW:
@@ -333,7 +331,7 @@ def _read_stream_data(tokenizer: PDFTokenizer, attrs: dict[str, Any]) -> bytes:
     return decode_stream_filters(raw, filters, parms_list)
 
 
-def _load_object_streams(tokenizer: PDFTokenizer, doc: PDFDocument) -> None:
+def _load_object_streams(doc: PDFDocument) -> None:
     """Resolve type-2 xref entries by parsing object streams."""
     # Collect which objects live in which object stream
     stream_map: dict[int, list[tuple[int, int]]] = {}  # stream_obj_num -> [(obj_num, index)]
@@ -345,7 +343,7 @@ def _load_object_streams(tokenizer: PDFTokenizer, doc: PDFDocument) -> None:
             index_in_stream = packed % 65536
             stream_map.setdefault(stream_obj_num, []).append((obj_num, index_in_stream))
 
-    for stream_obj_num, obj_list in stream_map.items():
+    for stream_obj_num, _ in stream_map.items():
         stream_obj = doc.objects.get(stream_obj_num)
         if not isinstance(stream_obj, PDFStream):
             continue
@@ -451,7 +449,6 @@ def _parse_dict(tokenizer: PDFTokenizer) -> dict[str, Any]:
 
     while True:
         tokenizer.skip_whitespace_and_comments()
-        saved = tokenizer.pos
         token = tokenizer.next_token()
 
         if token.type in (TokenType.DICT_END, TokenType.EOF):

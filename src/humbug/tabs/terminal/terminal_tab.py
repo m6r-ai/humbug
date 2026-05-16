@@ -177,16 +177,16 @@ class TerminalTab(TabBase):
             # scrollbacks that work well in most scenarios.
             if sys.platform == 'win32':
                 if rows > self._prev_rows and self._prev_rows > 0:
-                        delta = rows - self._prev_rows
-                        if self._terminal_widget.has_scrollback():
-                            self._terminal_widget.append_lines_to_visible(delta)
-                            self._win_padding_lines += delta
+                    delta = rows - self._prev_rows
+                    if self._terminal_widget.has_scrollback():
+                        self._terminal_widget.append_lines_to_visible(delta)
+                        self._win_padding_lines += delta
 
                 elif rows < self._prev_rows:
-                        to_remove = min(self._win_padding_lines, self._prev_rows - rows)
-                        if to_remove > 0:
-                            self._terminal_widget.remove_lines_from_visible(to_remove)
-                            self._win_padding_lines -= to_remove
+                    to_remove = min(self._win_padding_lines, self._prev_rows - rows)
+                    if to_remove > 0:
+                        self._terminal_widget.remove_lines_from_visible(to_remove)
+                        self._win_padding_lines -= to_remove
 
             self._prev_rows = rows
             self._prev_cols = cols

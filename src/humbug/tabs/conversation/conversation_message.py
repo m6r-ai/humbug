@@ -1219,6 +1219,10 @@ class ConversationMessage(QFrame):
             self._section_with_selection.clear_selection()
             self._section_with_selection = None
 
+    def banner(self) -> QWidget:
+        """Return the banner widget."""
+        return self._banner
+
     def apply_style(self) -> None:
         """Apply style changes."""
         style_manager = self._style_manager

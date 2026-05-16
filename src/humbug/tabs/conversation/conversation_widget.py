@@ -1384,7 +1384,7 @@ class ConversationWidget(QWidget):
 
         self.has_seen_latest_update_changed.emit(at_bottom)
 
-    def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
+    def _on_scroll_range_changed(self, _minimum: int, _maximum: int) -> None:
         """Handle the scroll range changing."""
         if self._load_scroll_offset is not None:
             self._scroll_range_settle_timer.start()
@@ -1724,7 +1724,6 @@ class ConversationWidget(QWidget):
         """
         Handle page up/down scroll requests.
         """
-        pass
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """Reposition the floating input when the viewport or messages container is resized."""
@@ -1745,13 +1744,13 @@ class ConversationWidget(QWidget):
         assert layout is not None
         margins = layout.contentsMargins()
         chrome = margins.top() + margins.bottom() + layout.spacing()
-        chrome += self._input._banner.sizeHint().height()
+        chrome += self._input.banner().sizeHint().height()
         chrome += 2
         self._input_chrome_height = chrome
 
     def _on_input_size_hint_changed(self) -> None:
         """Update the spacer and floating input height when the input content changes."""
-        text_area = self._input._text_area
+        text_area = self._input.text_area()
         max_height = self._scroll_area.viewport().height() // 2
         uncapped_height = text_area.sizeHint().height() + self._input_chrome_height
         capped = uncapped_height > max_height

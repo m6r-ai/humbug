@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel, QSizePo
 
 from ai import AIMessageSource
 
+from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 from humbug.tabs.conversation.conversation_message import ConversationMessage
 
 
@@ -39,7 +40,7 @@ class ConversationInput(ConversationMessage):
         super().__init__(style, parent=parent, is_input=True)
 
         # Connect text cursor signals
-        self._text_area = self._sections[0].text_area()
+        self._text_area: MarkdownTextEdit = self._sections[0].text_area()  # type: ignore[assignment]
 
         self._text_area.cursorPositionChanged.connect(self.cursor_position_changed)
         self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
@@ -303,6 +304,10 @@ class ConversationInput(ConversationMessage):
             if remove_button is not None:
                 remove_button.setIcon(close_icon)
                 remove_button.setIconSize(icon_size)
+
+    def text_area(self) -> MarkdownTextEdit:
+        """Return the input text area widget."""
+        return self._text_area
 
     def clear(self) -> None:
         """Clear the input area."""
