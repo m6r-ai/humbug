@@ -6,7 +6,7 @@ from typing import Dict, List, Any
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_history import AIConversationHistory
 from ai.ai_conversation_settings import AIConversationSettings
-from ai.ai_message import AIMessage, AIMessageSource, AIReasoningCapability
+from ai.ai_message import AIMessage, AIMessageSource
 from ai.xai.xai_stream_response import XAIStreamResponse
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
@@ -275,9 +275,10 @@ class XAIBackend(AIBackend):
         if AIConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
 
-        # Add thinking flag if reasoning is enabled
-        thinking: bool = (settings.reasoning & AIReasoningCapability.VISIBLE_REASONING) == AIReasoningCapability.VISIBLE_REASONING
-        data["reasoning_effort"] = "low" if thinking else "none"
+        # Add reasoning effort if the model supports variable effort levels
+        efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model)
+        if efforts and settings.reasoning_effort is not None:
+            data["reasoning_effort"] = settings.reasoning_effort
 
         # Add tools if supported
         if self._supports_tools(settings):

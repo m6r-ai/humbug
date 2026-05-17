@@ -5,7 +5,7 @@ from typing import Dict, List, Any
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessage, AIMessageSource
-from ai.ai_model import AIReasoningCapability
+from ai.ai_model import AIReasoningEffort
 from ai.ai_conversation_history import AIConversationHistory
 from ai.deepseek.deepseek_stream_response import DeepseekStreamResponse
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
@@ -191,9 +191,6 @@ class DeepseekBackend(AIBackend):
                 last_reasoning_message = None
                 continue
 
-            # Clear any pending reasoning message when we encounter other message types
-            last_reasoning_message = None
-
             if message.source == AIMessageSource.USER:
                 # If we have tool results this was an auto-generated user message - it doesn't count as a turn
                 if not message.tool_results:
@@ -216,13 +213,16 @@ class DeepseekBackend(AIBackend):
             if message.source == AIMessageSource.AI:
                 # Only include completed AI messages without errors
                 if not message.completed or message.error:
+                    last_reasoning_message = None
                     continue
 
                 assistant_msg = self._build_assistant_message(
-                    content=message.content if message.content else "...",  # Never send empty content,
-                    tool_calls=message.tool_calls
+                    content=message.content if message.content else "...",  # Never send empty content
+                    tool_calls=message.tool_calls,
+                    reasoning_content=last_reasoning_message.content if last_reasoning_message else "",
                 )
                 result.append(assistant_msg)
+                last_reasoning_message = None
 
                 # If we have an AI message that has no tool calls then we've finished this turn
                 if not message.tool_calls:
@@ -230,6 +230,9 @@ class DeepseekBackend(AIBackend):
                     last_user_message_index = -1
 
                 continue
+
+            # Clear any pending reasoning message when we encounter other message types
+            last_reasoning_message = None
 
             if message.source == AIMessageSource.REASONING:
                 if not message.completed or message.error:
@@ -275,8 +278,8 @@ class DeepseekBackend(AIBackend):
         if AIConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
 
-        # Add thinking flag if reasoning is enabled
-        thinking: bool = (settings.reasoning & AIReasoningCapability.VISIBLE_REASONING) == AIReasoningCapability.VISIBLE_REASONING
+        # Add thinking flag if reasoning effort is active
+        thinking: bool = settings.reasoning_effort not in (None, AIReasoningEffort.NONE)
         data["thinking"] = {"type": "enabled"} if thinking else {"type": "disabled"}
 
         # Add tools if supported

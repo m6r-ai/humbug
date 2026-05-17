@@ -222,6 +222,13 @@ def get_english_strings() -> LanguageStrings:
         settings_no_reasoning="No Reasoning",
         settings_hidden_reasoning="Hidden Reasoning",
         settings_visible_reasoning="Visible Reasoning",
+        settings_reasoning_effort_label="Reasoning Effort",
+        settings_effort_none="None",
+        settings_effort_minimal="Minimal",
+        settings_effort_low="Low",
+        settings_effort_medium="Medium",
+        settings_effort_high="High",
+        settings_effort_xhigh="Maximum",
 
         # File dialog titles
         file_dialog_open_conversation="Open Conversation",

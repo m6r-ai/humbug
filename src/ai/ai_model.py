@@ -1,6 +1,35 @@
 """Enhanced AI model with tool calling capabilities."""
 
 from enum import Flag, auto
+from typing import List, Set
+
+
+class AIReasoningEffort:
+    """
+    Reasoning effort level constants for models that support variable reasoning intensity.
+
+    Values map directly to API parameter strings.  The ordering from lowest to highest
+    is: NONE, MINIMAL, LOW, MEDIUM, HIGH, XHIGH.
+    """
+
+    NONE = "none"
+    MINIMAL = "minimal"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    XHIGH = "xhigh"
+
+    _VALUES = [NONE, MINIMAL, LOW, MEDIUM, HIGH, XHIGH]
+
+    @classmethod
+    def values(cls) -> List[str]:
+        """Return all valid effort level strings in ascending order."""
+        return list(cls._VALUES)
+
+    @classmethod
+    def is_valid(cls, value: str) -> bool:
+        """Return True if value is a recognised effort level."""
+        return value in cls._VALUES
 
 
 class AIReasoningCapability(Flag):
@@ -30,7 +59,9 @@ class AIModel:
         max_output_tokens: int,
         supports_temperature: bool,
         reasoning_capabilities: AIReasoningCapability,
-        tool_capabilities: ToolCapability = ToolCapability.NO_TOOLS
+        tool_capabilities: ToolCapability = ToolCapability.NO_TOOLS,
+        supported_reasoning_efforts: List[str] | None = None,
+        temperature_incompatible_efforts: Set[str] | None = None,
     ):
         """
         Initialize an AI model configuration.
@@ -43,6 +74,11 @@ class AIModel:
             supports_temperature: Whether the model supports temperature settings
             reasoning_capabilities: Bitmap of reasoning capabilities supported by the model
             tool_capabilities: Bitmap of tool calling capabilities supported by the model
+            supported_reasoning_efforts: Ordered list of effort levels this model accepts.
+                Empty list means the model does not support variable reasoning effort.
+                By convention the first entry is the default (lowest/off) level.
+            temperature_incompatible_efforts: Set of effort levels that disable temperature
+                support (e.g. Anthropic thinking mode disables temperature).
         """
         self.name = name
         self.provider = provider
@@ -51,6 +87,8 @@ class AIModel:
         self.supports_temperature = supports_temperature
         self.reasoning_capabilities = reasoning_capabilities
         self.tool_capabilities = tool_capabilities
+        self.supported_reasoning_efforts: List[str] = supported_reasoning_efforts or []
+        self.temperature_incompatible_efforts: Set[str] = temperature_incompatible_efforts or set()
 
     def supports_tools(self) -> bool:
         """Check if this model supports any tool calling capabilities."""
@@ -59,3 +97,38 @@ class AIModel:
     def supports_parallel_tools(self) -> bool:
         """Check if this model supports parallel tool calling."""
         return (self.tool_capabilities & ToolCapability.PARALLEL_TOOLS) == ToolCapability.PARALLEL_TOOLS
+
+    def supports_reasoning_effort(self) -> bool:
+        """Check if this model supports variable reasoning effort levels."""
+        return len(self.supported_reasoning_efforts) > 0
+
+    def default_reasoning_effort(self) -> str | None:
+        """
+        Return the default (lowest) reasoning effort for this model.
+
+        Returns the first entry in supported_reasoning_efforts, which by
+        convention is the lowest/off level.  Returns None if the model does
+        not support variable effort.
+        """
+        if not self.supported_reasoning_efforts:
+            return None
+
+        return self.supported_reasoning_efforts[0]
+
+    def supports_temperature_for_effort(self, effort: str | None) -> bool:
+        """
+        Check whether temperature is supported for a given reasoning effort level.
+
+        For most models this simply returns supports_temperature.  Models such as
+        Anthropic thinking variants disable temperature when reasoning is active.
+
+        Args:
+            effort: The selected reasoning effort level, or None.
+
+        Returns:
+            True if temperature is supported at this effort level.
+        """
+        if effort and effort in self.temperature_incompatible_efforts:
+            return False
+
+        return self.supports_temperature

@@ -136,7 +136,8 @@ class AIConversation:
         return AIConversationSettings(
             model=self._settings.model,
             temperature=self._settings.temperature,
-            reasoning=self._settings.reasoning
+            reasoning=self._settings.reasoning,
+            reasoning_effort=self._settings.reasoning_effort,
         )
 
     def get_conversation_history(self) -> AIConversationHistory:
@@ -176,7 +177,8 @@ class AIConversation:
                     self.update_conversation_settings(AIConversationSettings(
                         model=message.model,
                         temperature=message.temperature,
-                        reasoning=reasoning
+                        reasoning=reasoning,
+                        reasoning_effort=message.reasoning_effort,
                     ))
 
     def load_history(self, history: AIConversationHistory) -> None:
@@ -202,7 +204,8 @@ class AIConversation:
                     self.update_conversation_settings(AIConversationSettings(
                         model=message.model,
                         temperature=message.temperature,
-                        reasoning=reasoning
+                        reasoning=reasoning,
+                        reasoning_effort=message.reasoning_effort,
                     ))
 
     async def submit_message(
@@ -233,7 +236,8 @@ class AIConversation:
                 user_message,
                 model=settings.model,
                 temperature=settings.temperature,
-                reasoning_capability=settings.reasoning
+                reasoning_capability=settings.reasoning,
+                reasoning_effort=settings.reasoning_effort,
             )
             self._pending_user_messages.append(message)
             await self._trigger_event(AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, message)
@@ -247,6 +251,7 @@ class AIConversation:
             model=settings.model,
             temperature=settings.temperature,
             reasoning_capability=settings.reasoning,
+            reasoning_effort=settings.reasoning_effort,
             attachments=attachment_guids if attachment_guids else None,
         )
         self._conversation.add_message(message)
@@ -782,6 +787,7 @@ class AIConversation:
             model=settings.model,
             temperature=settings.temperature,
             reasoning_capability=settings.reasoning,
+            reasoning_effort=settings.reasoning_effort,
             completed=True
         )
 
@@ -834,6 +840,7 @@ class AIConversation:
             model=settings.model,
             temperature=settings.temperature,
             reasoning_capability=settings.reasoning,
+            reasoning_effort=settings.reasoning_effort,
             completed=(usage is not None),
             tool_calls=tool_calls,
             redacted_reasoning=redacted_reasoning
@@ -890,6 +897,7 @@ class AIConversation:
             model=settings.model,
             temperature=settings.temperature,
             reasoning_capability=settings.reasoning,
+            reasoning_effort=settings.reasoning_effort,
             completed=(usage is not None),
             tool_calls=tool_calls,
             signature=signature,
@@ -921,6 +929,7 @@ class AIConversation:
                 model=settings.model,
                 temperature=settings.temperature,
                 reasoning_capability=settings.reasoning,
+                reasoning_effort=settings.reasoning_effort,
                 completed=True,
                 tool_calls=tool_calls,
                 redacted_reasoning=redacted_reasoning

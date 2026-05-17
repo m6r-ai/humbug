@@ -3,6 +3,7 @@ from typing import Dict, List, Any
 
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
+from ai.ai_model import AIReasoningEffort
 from ai.ai_message import AIMessageSource
 from ai.ai_conversation_history import AIConversationHistory
 from ai.google.google_stream_response import GoogleStreamResponse
@@ -258,7 +259,7 @@ class GoogleBackend(AIBackend):
         messages = self._format_messages_for_provider(conversation_history)
 
         # Build generation config
-        generation_config = {
+        generation_config: Dict[str, Any] = {
             "topP": 0.8,
             "topK": 10
         }
@@ -266,6 +267,19 @@ class GoogleBackend(AIBackend):
         # Only include temperature if supported by model
         if AIConversationSettings.supports_temperature(settings.model):
             generation_config["temperature"] = settings.temperature
+
+        # Add thinking config if the model supports variable effort levels
+        efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model)
+        if efforts and settings.reasoning_effort is not None:
+            thinking_budget_map = {
+                AIReasoningEffort.NONE: 0,
+                AIReasoningEffort.LOW: 1024,
+                AIReasoningEffort.MEDIUM: 8192,
+                AIReasoningEffort.HIGH: 24576,
+            }
+            budget = thinking_budget_map.get(settings.reasoning_effort)
+            if budget is not None:
+                generation_config["thinkingConfig"] = {"thinkingBudget": budget}
 
         # Build request data
         data = {

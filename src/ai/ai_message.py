@@ -6,7 +6,7 @@ from typing import Dict, List
 import uuid
 
 from ai.ai_message_source import AIMessageSource
-from ai.ai_model import AIReasoningCapability
+from ai.ai_model import AIReasoningCapability, AIReasoningEffort
 from ai.ai_usage import AIUsage
 from ai_tool import AIToolCall, AIToolResult
 
@@ -28,6 +28,7 @@ class AIMessage:
     model: str | None = None
     temperature: float | None = None
     reasoning_capability: AIReasoningCapability | None = None
+    reasoning_effort: str | None = None
     completed: bool = True
     tool_calls: List[AIToolCall] | None = None
     tool_call_context: str | None = None
@@ -70,6 +71,7 @@ class AIMessage:
         model: str | None = None,
         temperature: float | None = None,
         reasoning_capability: AIReasoningCapability | None = None,
+        reasoning_effort: str | None = None,
         completed: bool = True,
         timestamp: datetime | None = None,
         tool_calls: List[AIToolCall] | None = None,
@@ -94,6 +96,7 @@ class AIMessage:
             model=model,
             temperature=temperature,
             reasoning_capability=reasoning_capability,
+            reasoning_effort=reasoning_effort,
             completed=completed,
             tool_calls=tool_calls,
             tool_call_context=tool_call_context,
@@ -116,6 +119,7 @@ class AIMessage:
             model=self.model,
             temperature=self.temperature,
             reasoning_capability=self.reasoning_capability,
+            reasoning_effort=self.reasoning_effort,
             completed=self.completed,
             tool_calls=self.tool_calls.copy() if self.tool_calls else None,
             tool_call_context=self.tool_call_context,
@@ -154,6 +158,9 @@ class AIMessage:
 
         if self.reasoning_capability:
             message["reasoning_capability"] = self.reasoning_capability.value
+
+        if self.reasoning_effort is not None:
+            message["reasoning_effort"] = self.reasoning_effort
 
         if self.temperature is not None:
             message["temperature"] = self.temperature
@@ -237,6 +244,15 @@ class AIMessage:
             except ValueError as e:
                 raise ValueError(f"Invalid reasoning capability: {data['reasoning_capability']}") from e
 
+        # Parse reasoning effort if present
+        reasoning_effort = None
+        if data.get("reasoning_effort") is not None:
+            reasoning_effort_raw = data["reasoning_effort"]
+            if not isinstance(reasoning_effort_raw, str) or not AIReasoningEffort.is_valid(reasoning_effort_raw):
+                raise ValueError(f"Invalid reasoning effort: {data['reasoning_effort']}")
+
+            reasoning_effort = reasoning_effort_raw
+
         # Parse usage data if present
         usage = None
         if data.get("usage"):
@@ -300,6 +316,7 @@ class AIMessage:
             model=data.get("model", None),
             temperature=data.get("temperature", None),
             reasoning_capability=reasoning_capability,
+            reasoning_effort=reasoning_effort,
             completed=data.get("completed", True),
             tool_calls=tool_calls,
             tool_call_context=tool_call_context,

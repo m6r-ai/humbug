@@ -406,7 +406,7 @@ class DelegateAITool(AITool):
             child_settings = AIConversationSettings(
                 model=model,
                 temperature=temperature if AIConversationSettings.supports_temperature(model) else None,
-                reasoning=reasoning_capability
+                reasoning=reasoning_capability,
             )
 
             # Create the child AIConversation and configure it

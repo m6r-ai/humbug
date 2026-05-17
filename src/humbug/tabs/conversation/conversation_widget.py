@@ -1839,7 +1839,8 @@ class ConversationWidget(QWidget):
             default_settings = AIConversationSettings(
                 model=settings.model,
                 temperature=settings.temperature,
-                reasoning=settings.reasoning
+                reasoning=settings.reasoning,
+                reasoning_effort=settings.reasoning_effort,
             )
 
             self._ai_conversation.update_conversation_settings(default_settings)
@@ -3000,7 +3001,8 @@ class ConversationWidget(QWidget):
         metadata["settings"] = {
             "model": settings.model,
             "temperature": settings.temperature,
-            "reasoning": settings.reasoning.value
+            "reasoning": settings.reasoning.value,
+            "reasoning_effort": settings.reasoning_effort,
         }
 
         # If we've been asked for temporary state it means we're going to move this
@@ -3110,10 +3112,14 @@ class ConversationWidget(QWidget):
         else:
             # Restore settings
             if "settings" in metadata:
+                reasoning_options = AIReasoningCapability(
+                    metadata["settings"].get("reasoning", AIReasoningCapability.NO_REASONING.value)
+                )
                 settings = AIConversationSettings(
                     model=metadata["settings"].get("model"),
                     temperature=metadata["settings"].get("temperature"),
-                    reasoning=AIReasoningCapability(metadata["settings"].get("reasoning", AIReasoningCapability.NO_REASONING.value))
+                    reasoning=reasoning_options,
+                    reasoning_effort=metadata["settings"].get("reasoning_effort"),
                 )
                 self.update_conversation_settings(settings)
 

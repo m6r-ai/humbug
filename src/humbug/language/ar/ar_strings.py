@@ -223,6 +223,13 @@ def get_arabic_strings() -> LanguageStrings:
         settings_no_reasoning="بدون تفكير",
         settings_hidden_reasoning="تفكير مخفي",
         settings_visible_reasoning="تفكير مرئي",
+        settings_reasoning_effort_label="جهد التفكير",
+        settings_effort_none="لا شيء",
+        settings_effort_minimal="الحد الأدنى",
+        settings_effort_low="منخفض",
+        settings_effort_medium="متوسط",
+        settings_effort_high="عالٍ",
+        settings_effort_xhigh="الحد الأقصى",
 
         # File dialog titles
         file_dialog_open_conversation="فتح محادثة",

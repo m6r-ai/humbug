@@ -4,7 +4,7 @@ import json
 import os
 from typing import Dict, List, Any, Generator
 
-from ai.ai_model import AIModel, AIReasoningCapability, ToolCapability
+from ai.ai_model import AIModel, AIReasoningCapability, AIReasoningEffort, ToolCapability
 
 
 class AIConversationSettings:
@@ -19,17 +19,9 @@ class AIConversationSettings:
             context_window=200000,
             max_output_tokens=32000,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-haiku-4-5 (thinking)": AIModel(
-            name="claude-haiku-4-5",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=32000,
-            supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
         "claude-sonnet-4-6": AIModel(
             name="claude-sonnet-4-6",
@@ -37,17 +29,10 @@ class AIConversationSettings:
             context_window=1000000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-sonnet-4-6 (thinking)": AIModel(
-            name="claude-sonnet-4-6",
-            provider="anthropic",
-            context_window=1000000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
-            supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            temperature_incompatible_efforts={AIReasoningEffort.HIGH},
         ),
         "claude-opus-4-7": AIModel(
             name="claude-opus-4-7",
@@ -55,17 +40,9 @@ class AIConversationSettings:
             context_window=1000000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-opus-4-7 (thinking)": AIModel(
-            name="claude-opus-4-7",
-            provider="anthropic",
-            context_window=1000000,
-            max_output_tokens=32000,  # This is actuall 64000 but that's too much
-            supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
         "claude-opus-4-6": AIModel(
             name="claude-opus-4-6",
@@ -73,17 +50,10 @@ class AIConversationSettings:
             context_window=1000000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-opus-4-6 (thinking)": AIModel(
-            name="claude-opus-4-6",
-            provider="anthropic",
-            context_window=1000000,
-            max_output_tokens=32000,  # This is actuall 64000 but that's too much
-            supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            temperature_incompatible_efforts={AIReasoningEffort.HIGH},
         ),
 
         # Deepseek models
@@ -93,17 +63,9 @@ class AIConversationSettings:
             context_window=1000000,
             max_output_tokens=384000,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "deepseek-v4-flash (thinking)": AIModel(
-            name="deepseek-v4-flash",
-            provider="deepseek",
-            context_window=1000000,
-            max_output_tokens=384000,
-            supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
         "deepseek-v4-pro": AIModel(
             name="deepseek-v4-pro",
@@ -111,17 +73,9 @@ class AIConversationSettings:
             context_window=1000000,
             max_output_tokens=384000,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "deepseek-v4-pro (thinking)": AIModel(
-            name="deepseek-v4-pro",
-            provider="deepseek",
-            context_window=1000000,
-            max_output_tokens=384000,
-            supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
 
         # Google models
@@ -132,7 +86,13 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ]
         ),
         "gemini-3.1-pro-preview (Google)": AIModel(
             name="gemini-3.1-pro-preview",
@@ -141,7 +101,13 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ]
         ),
         "gemini-2.5-pro": AIModel(
             name="gemini-2.5-pro",
@@ -150,7 +116,13 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ]
         ),
 
         # Mistral models
@@ -198,17 +170,9 @@ class AIConversationSettings:
             context_window=256000,
             max_output_tokens=32768,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gemma4:31b-cloud (thinking) (Ollama)": AIModel(
-            name="gemma4:31b-cloud",
-            provider="ollama",
-            context_window=256000,
-            max_output_tokens=32768,
-            supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
         "glm-5.1 (Ollama)": AIModel(
             name="glm-5.1:cloud",
@@ -216,17 +180,9 @@ class AIConversationSettings:
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "glm-5.1 (thinking) (Ollama)": AIModel(
-            name="glm-5.1:cloud",
-            provider="ollama",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
         "glm-4.7 (Ollama)": AIModel(
             name="glm-4.7:cloud",
@@ -234,17 +190,9 @@ class AIConversationSettings:
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "glm-4.7 (thinking) (Ollama)": AIModel(
-            name="glm-4.7:cloud",
-            provider="ollama",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
         "gpt-oss:20b": AIModel(
             name="gpt-oss:20b",
@@ -253,7 +201,8 @@ class AIConversationSettings:
             max_output_tokens=32768,  # This is actually 131072 but that's too much
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
         ),
         "gpt-oss:120b": AIModel(
             name="gpt-oss:120b",
@@ -262,7 +211,8 @@ class AIConversationSettings:
             max_output_tokens=32768,  # This is actually 131072 but that's too much
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
         ),
         "llama3.2": AIModel(
             name="llama3.2",
@@ -279,35 +229,29 @@ class AIConversationSettings:
             context_window=262144,
             max_output_tokens=32768,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "kimi-k2.6 (thinking)": AIModel(
-            name="kimi-k2.6:cloud",
-            provider="ollama",
-            context_window=262144,
-            max_output_tokens=32768,
-            supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "minimax-m2.7 (thinking)": AIModel(
+        "minimax-m2.7": AIModel(
             name="minimax-m2.7:cloud",
             provider="ollama",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.HIGH],
         ),
-        "minimax-m2.5 (thinking)": AIModel(
+        "minimax-m2.5": AIModel(
             name="minimax-m2.5:cloud",
             provider="ollama",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.HIGH],
         ),
         "mistral-large-3 (Ollama)": AIModel(
             name="mistral-large-3:675b-cloud",
@@ -324,17 +268,19 @@ class AIConversationSettings:
             context_window=256000,
             max_output_tokens=2048,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "qwen3.6 (thinking)": AIModel(
-            name="qwen3.6:35b",
+        "qwen3.5": AIModel(
+            name="qwen3.5:cloud",
             provider="ollama",
             context_window=256000,
             max_output_tokens=2048,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
 
         # OpenAI models
@@ -345,7 +291,10 @@ class AIConversationSettings:
             max_output_tokens=128000,
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.MEDIUM,
+            ]
         ),
         "gpt-5.4-mini": AIModel(
             name="gpt-5.4-mini",
@@ -354,16 +303,10 @@ class AIConversationSettings:
             max_output_tokens=128000,
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-5.5 (non-reasoning)": AIModel(
-            name="gpt-5.5",
-            provider="openai",
-            context_window=1000000,
-            max_output_tokens=128000,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.MEDIUM,
+            ]
         ),
         "gpt-5.5": AIModel(
             name="gpt-5.5",
@@ -372,16 +315,10 @@ class AIConversationSettings:
             max_output_tokens=128000,
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-5.4 (non-reasoning)": AIModel(
-            name="gpt-5.4",
-            provider="openai",
-            context_window=1000000,
-            max_output_tokens=128000,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.MEDIUM,
+            ]
         ),
         "gpt-5.4": AIModel(
             name="gpt-5.4",
@@ -390,7 +327,11 @@ class AIConversationSettings:
             max_output_tokens=128000,
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.MEDIUM,
+            ]
         ),
 
         # vLLM models
@@ -405,15 +346,6 @@ class AIConversationSettings:
         ),
 
         # xAI models
-        "grok-4.3 (non-reasoning)": AIModel(
-            name="grok-4.3",
-            provider="xai",
-            context_window=1000000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
         "grok-4.3": AIModel(
             name="grok-4.3",
             provider="xai",
@@ -421,7 +353,13 @@ class AIConversationSettings:
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ]
         ),
 
         # Z.ai models
@@ -431,17 +369,9 @@ class AIConversationSettings:
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "glm-5.1 (thinking) (Z.ai)": AIModel(
-            name="glm-5.1",
-            provider="zai",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
         "glm-4.7 (Z.ai)": AIModel(
             name="glm-4.7",
@@ -449,17 +379,9 @@ class AIConversationSettings:
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "glm-4.7 (thinking) (Z.ai)": AIModel(
-            name="glm-4.7",
-            provider="zai",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
         "glm-4.5-X": AIModel(
             name="glm-4.5-x",
@@ -468,7 +390,8 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
         "glm-4.5-air": AIModel(
             name="glm-4.5-air",
@@ -477,7 +400,8 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
         "glm-4.5-airx": AIModel(
             name="glm-4.5-airx",
@@ -486,8 +410,9 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        )
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+        ),
     }
 
     # Default fallback values for unknown models
@@ -499,7 +424,8 @@ class AIConversationSettings:
     def __init__(
         self, model: str = "gemini-1.5-flash",
         temperature: float | None = 0.7,
-        reasoning: AIReasoningCapability = AIReasoningCapability.NO_REASONING
+        reasoning: AIReasoningCapability = AIReasoningCapability.NO_REASONING,
+        reasoning_effort: str | None = None,
     ):
         """
         Initialize conversation settings with defaults.
@@ -508,6 +434,7 @@ class AIConversationSettings:
             model: Optional model name. If None, must be set later based on available backends
             temperature: Temperature setting (0.0-1.0)
             reasoning: Reasoning capability
+            reasoning_effort: Selected reasoning effort level, or None for the model default.
 
         Raises:
             ValueError: If temperature is out of valid range (0.0-1.0)
@@ -521,11 +448,16 @@ class AIConversationSettings:
         self.model = model
         self.temperature = temperature
         self.reasoning = reasoning
+        self.reasoning_effort = reasoning_effort
 
         model_config = self.MODELS.get(model)
         if model_config:
             self.context_window = model_config.context_window
             self.max_output_tokens = model_config.max_output_tokens
+
+            # If no effort was specified, use the model's default
+            if self.reasoning_effort is None:
+                self.reasoning_effort = model_config.default_reasoning_effort()
 
         else:
             # Fallback for unknown models
@@ -577,19 +509,20 @@ class AIConversationSettings:
         return "unknown"
 
     @classmethod
-    def supports_temperature(cls, model: str) -> bool:
+    def supports_temperature(cls, model: str, reasoning_effort: str | None = None) -> bool:
         """
-        Check if model supports temperature setting.
+        Check if model supports temperature setting at the given reasoning effort level.
 
         Args:
             model: Name of the model
+            reasoning_effort: The currently selected effort level, or None.
 
         Returns:
-            True if the model supports temperature, False otherwise
+            True if the model supports temperature at that effort level, False otherwise
         """
         model_config = cls.MODELS.get(model)
         if model_config:
-            return model_config.supports_temperature
+            return model_config.supports_temperature_for_effort(reasoning_effort)
 
         return False
 
@@ -644,15 +577,30 @@ class AIConversationSettings:
 
         Returns:
             AIReasoningCapability bitmap of supported reasoning capabilities
-
-        Raises:
-            KeyError: If the model is not found
         """
         model_config = cls.MODELS.get(model)
         if model_config:
             return model_config.reasoning_capabilities
 
         return cls.DEFAULT_REASONING_CAPABILITY
+
+    @classmethod
+    def get_supported_reasoning_efforts(cls, model: str) -> List[str]:
+        """
+        Get the ordered list of reasoning effort levels supported by a model.
+
+        Args:
+            model: Name of the model
+
+        Returns:
+            List of effort level strings in ascending order, or empty list if
+            the model does not support variable reasoning effort.
+        """
+        model_config = cls.MODELS.get(model)
+        if model_config:
+            return list(model_config.supported_reasoning_efforts)
+
+        return []
 
     @classmethod
     def iter_models_by_backends(cls, ai_backends: Dict[str, Any]) -> Generator[str, None, None]:
@@ -812,6 +760,42 @@ class AIConversationSettings:
                     f'"tool_capabilities" must be one of: {", ".join(sorted(tool_map))}'
                 )
 
+            # Validate optional supported_reasoning_efforts list
+            supported_efforts: List[str] = []
+            if "supported_reasoning_efforts" in entry:
+                efforts_raw = entry["supported_reasoning_efforts"]
+                if not isinstance(efforts_raw, list):
+                    entry_errors.append('"supported_reasoning_efforts" must be a JSON array')
+
+                else:
+                    for effort in efforts_raw:
+                        if not isinstance(effort, str) or not AIReasoningEffort.is_valid(effort):
+                            entry_errors.append(
+                                f'"supported_reasoning_efforts" contains invalid value "{effort}"; '
+                                f'must be one of: {", ".join(AIReasoningEffort.values())}'
+                            )
+                            break
+
+                        supported_efforts.append(effort)
+
+            # Validate optional temperature_incompatible_efforts set
+            temperature_incompatible: set[str] = set()
+            if "temperature_incompatible_efforts" in entry:
+                incompatible_raw = entry["temperature_incompatible_efforts"]
+                if not isinstance(incompatible_raw, list):
+                    entry_errors.append('"temperature_incompatible_efforts" must be a JSON array')
+
+                else:
+                    for effort in incompatible_raw:
+                        if not isinstance(effort, str) or not AIReasoningEffort.is_valid(effort):
+                            entry_errors.append(
+                                f'"temperature_incompatible_efforts" contains invalid value "{effort}"; '
+                                f'must be one of: {", ".join(AIReasoningEffort.values())}'
+                            )
+                            break
+
+                        temperature_incompatible.add(effort)
+
             if entry_errors:
                 errors.append(f"{prefix}: " + "; ".join(entry_errors))
                 continue
@@ -848,6 +832,8 @@ class AIConversationSettings:
                     supports_temperature=entry["supports_temperature"],
                     reasoning_capabilities=reasoning_map[rc_raw],
                     tool_capabilities=tool_map[tc_raw],
+                    supported_reasoning_efforts=supported_efforts if supported_efforts else None,
+                    temperature_incompatible_efforts=temperature_incompatible if temperature_incompatible else None,
                 ),
             ))
 

@@ -4,6 +4,7 @@ import logging
 from typing import Dict
 
 from ai import AIConversationSettings, AIReasoningCapability
+from ai.ai_model import AIReasoningEffort
 from ai_tool import AIToolManager
 
 
@@ -20,6 +21,7 @@ class MindspaceSettings:
     model: str = AIConversationSettings.get_default_model({})  # Will be overridden with actual backends
     temperature: float = 0.7  # Default temperature
     reasoning: AIReasoningCapability = AIReasoningCapability.NO_REASONING
+    reasoning_effort: str | None = None
     use_soft_tabs: bool = True
     tab_size: int = 4
     auto_backup: bool = False  # Default to off
@@ -172,6 +174,25 @@ class MindspaceSettings:
                 reasoning = default_reasoning
 
         # Handle enabled tools - start with defaults and override with saved values
+        # Load reasoning effort with validation
+        reasoning_effort_raw = conversation.get("reasoning_effort", None)
+        reasoning_effort: str | None = None
+        if reasoning_effort_raw is not None:
+            if not isinstance(reasoning_effort_raw, str):
+                cls._logger.warning(
+                    "Invalid reasoning_effort type in %s: expected str, got %s. Using default.",
+                    path, type(reasoning_effort_raw).__name__
+                )
+
+            elif not AIReasoningEffort.is_valid(reasoning_effort_raw):
+                cls._logger.warning(
+                    "Invalid reasoning_effort value in %s: %s. Using default.",
+                    path, reasoning_effort_raw
+                )
+
+            else:
+                reasoning_effort = reasoning_effort_raw
+
         tool_manager = AIToolManager()
         enabled_tools = tool_manager.get_default_enabled_tools()
         saved_enabled_tools = tools.get("enabled", {})
@@ -299,6 +320,7 @@ class MindspaceSettings:
             model=model,
             temperature=temperature,
             reasoning=reasoning,
+            reasoning_effort=reasoning_effort,
             use_soft_tabs=use_soft_tabs,
             tab_size=tab_size,
             auto_backup=auto_backup,
@@ -318,6 +340,7 @@ class MindspaceSettings:
                 "model": self.model,
                 "temperature": self.temperature,
                 "reasoning": self.reasoning.value,  # Use .value to get the integer value of the enum
+                "reasoning_effort": self.reasoning_effort,
             },
             "editor": {
                 "useSoftTabs": self.use_soft_tabs,

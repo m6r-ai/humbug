@@ -210,6 +210,13 @@ class LanguageStrings:
     settings_no_reasoning: str
     settings_hidden_reasoning: str
     settings_visible_reasoning: str
+    settings_reasoning_effort_label: str
+    settings_effort_none: str
+    settings_effort_minimal: str
+    settings_effort_low: str
+    settings_effort_medium: str
+    settings_effort_high: str
+    settings_effort_xhigh: str
 
     # File dialog titles
     file_dialog_open_conversation: str

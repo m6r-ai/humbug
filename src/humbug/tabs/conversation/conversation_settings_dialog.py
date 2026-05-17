@@ -1,6 +1,4 @@
-"""
-Dialog for configuring conversation-specific settings using the settings framework.
-"""
+"""Dialog for configuring conversation-specific settings using the settings framework."""
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea, QWidget, QFrame
@@ -8,6 +6,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from ai import AIConversationSettings, AIReasoningCapability
+from ai.ai_model import AIReasoningEffort
 
 from humbug.language.language_manager import LanguageManager
 from humbug.settings.settings_container import SettingsContainer
@@ -29,6 +28,7 @@ class ConversationSettingsDialog(QDialog):
 
         self.setWindowTitle(strings.conversation_settings)
         self.setMinimumWidth(800)
+        self.setMinimumHeight(600)
         self.setModal(True)
 
         self._user_manager = UserManager()
@@ -66,15 +66,19 @@ class ConversationSettingsDialog(QDialog):
         self._model_combo = SettingsFactory.create_combo(strings.settings_model_label)
         self._settings_container.add_setting(self._model_combo)
 
+        # Create reasoning capabilities
+        self._reasoning_combo = SettingsFactory.create_combo(strings.settings_reasoning_label)
+        self._settings_container.add_setting(self._reasoning_combo)
+
+        # Create reasoning effort selection
+        self._effort_combo = SettingsFactory.create_combo(strings.settings_reasoning_effort_label)
+        self._settings_container.add_setting(self._effort_combo)
+
         # Create temperature setting
         self._temp_spin = SettingsFactory.create_double_spinbox(
             strings.settings_temp_label, 0.0, 1.0, 0.1, 1
         )
         self._settings_container.add_setting(self._temp_spin)
-
-        # Create reasoning capabilities
-        self._reasoning_combo = SettingsFactory.create_combo(strings.settings_reasoning_label)
-        self._settings_container.add_setting(self._reasoning_combo)
 
         spacer = SettingsFactory.create_spacer(24)
         self._settings_container.add_setting(spacer)
@@ -96,6 +100,7 @@ class ConversationSettingsDialog(QDialog):
 
         # Connect change handlers
         self._model_combo.value_changed.connect(self._on_model_value_changed)
+        self._effort_combo.value_changed.connect(self._on_effort_value_changed)
         self._settings_container.value_changed.connect(self._on_settings_value_changed)
 
         # Set the scroll content
@@ -146,32 +151,59 @@ class ConversationSettingsDialog(QDialog):
         current_model = self._model_combo.get_text()
         self._update_model_displays(current_model)
 
+    def _on_effort_value_changed(self) -> None:
+        """Handle reasoning effort changes — temperature support may change."""
+        model = self._model_combo.get_text()
+        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
+        supports_temp = AIConversationSettings.supports_temperature(model, effort)
+        self._temp_spin.set_enabled(supports_temp)
+
+    def _get_effort_label(self, effort: str) -> str:
+        """Map an AIReasoningEffort constant to its localised display label."""
+        strings = self._language_manager.strings()
+        effort_labels = {
+            AIReasoningEffort.NONE: strings.settings_effort_none,
+            AIReasoningEffort.MINIMAL: strings.settings_effort_minimal,
+            AIReasoningEffort.LOW: strings.settings_effort_low,
+            AIReasoningEffort.MEDIUM: strings.settings_effort_medium,
+            AIReasoningEffort.HIGH: strings.settings_effort_high,
+            AIReasoningEffort.XHIGH: strings.settings_effort_xhigh,
+        }
+        return effort_labels.get(effort, effort)
+
     def _update_reasoning_combo(self, model: str) -> None:
         """Update the reasoning combo box based on the current model's capabilities."""
-        # Get model's reasoning capabilities
         capabilities = AIConversationSettings.get_reasoning_capability(model)
         strings = self._language_manager.strings()
 
-        # Create items for the combo box
         items = []
 
-        # Add NO_REASONING if supported
         if capabilities & AIReasoningCapability.NO_REASONING:
             items.append((strings.settings_no_reasoning, AIReasoningCapability.NO_REASONING))
 
-        # Add HIDDEN_REASONING if supported
         if capabilities & AIReasoningCapability.HIDDEN_REASONING:
             items.append((strings.settings_hidden_reasoning, AIReasoningCapability.HIDDEN_REASONING))
 
-        # Add VISIBLE_REASONING if supported
         if capabilities & AIReasoningCapability.VISIBLE_REASONING:
             items.append((strings.settings_visible_reasoning, AIReasoningCapability.VISIBLE_REASONING))
 
-        # Update the combo box items
         self._reasoning_combo.set_items(items)
-
-        # Disable combo box if only one option
         self._reasoning_combo.setEnabled(len(items) > 1)
+
+    def _update_effort_combo(self, model: str) -> None:
+        """Update the reasoning effort combo box based on the current model's supported efforts."""
+        efforts = AIConversationSettings.get_supported_reasoning_efforts(model)
+
+        if not efforts:
+            self._effort_combo.set_items([])
+            self._effort_combo.setEnabled(False)
+            self._effort_combo.setVisible(False)
+            return
+
+        items = [(self._get_effort_label(e), e) for e in efforts]
+        self._effort_combo.set_items(items)
+        self._effort_combo.setEnabled(len(items) > 1)
+        self._effort_combo.setVisible(True)
 
     def _update_model_displays(self, model: str) -> None:
         """Update the model-specific displays with proper localization."""
@@ -181,8 +213,12 @@ class ConversationSettingsDialog(QDialog):
         # Update reasoning capabilities dropdown
         self._update_reasoning_combo(model)
 
-        # Update temperature setting
-        supports_temp = AIConversationSettings.supports_temperature(model)
+        # Update reasoning effort dropdown
+        self._update_effort_combo(model)
+
+        # Update temperature setting — effort level may affect temperature support
+        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
+        supports_temp = AIConversationSettings.supports_temperature(model, effort)
         self._temp_spin.set_enabled(supports_temp)
 
         # Update context window display
@@ -207,10 +243,12 @@ class ConversationSettingsDialog(QDialog):
         model = self._model_combo.get_text()
         temperature = self._temp_spin.get_value()
         reasoning = self._reasoning_combo.get_value()
+        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
         return AIConversationSettings(
             model=model,
             temperature=temperature,
-            reasoning=reasoning
+            reasoning=reasoning,
+            reasoning_effort=effort,
         )
 
     def set_settings(self, settings: AIConversationSettings) -> None:
@@ -218,12 +256,14 @@ class ConversationSettingsDialog(QDialog):
         self._initial_settings = AIConversationSettings(
             model=settings.model,
             temperature=settings.temperature,
-            reasoning=settings.reasoning
+            reasoning=settings.reasoning,
+            reasoning_effort=settings.reasoning_effort,
         )
         self._current_settings = AIConversationSettings(
             model=settings.model,
             temperature=settings.temperature,
-            reasoning=settings.reasoning
+            reasoning=settings.reasoning,
+            reasoning_effort=settings.reasoning_effort,
         )
 
         # Populate model combo
@@ -237,8 +277,14 @@ class ConversationSettingsDialog(QDialog):
         # Set temperature
         self._temp_spin.set_value(settings.temperature)
 
-        # Set reasoning and update model displays
+        # Update model displays (populates both combos with correct items)
         self._update_model_displays(settings.model)
+
+        # Restore saved effort selection (must happen after _update_effort_combo populates items)
+        if settings.reasoning_effort is not None:
+            self._effort_combo.set_value(settings.reasoning_effort)
+
+        # Set reasoning capability
         self._reasoning_combo.set_value(settings.reasoning)
 
         # Reset modified state

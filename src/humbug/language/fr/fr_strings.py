@@ -222,6 +222,13 @@ def get_french_strings() -> LanguageStrings:
         settings_no_reasoning="Sans raisonnement",
         settings_hidden_reasoning="Raisonnement caché",
         settings_visible_reasoning="Raisonnement visible",
+        settings_reasoning_effort_label="Effort de raisonnement",
+        settings_effort_none="Aucun",
+        settings_effort_minimal="Minimal",
+        settings_effort_low="Faible",
+        settings_effort_medium="Moyen",
+        settings_effort_high="Élevé",
+        settings_effort_xhigh="Maximum",
 
         # File dialog titles
         file_dialog_open_conversation="Ouvrir une conversation",

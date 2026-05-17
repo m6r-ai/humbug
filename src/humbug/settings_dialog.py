@@ -12,6 +12,7 @@ from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSize, Signal, Qt
 from PySide6.QtGui import QFont
 
 from ai import AIBackendSettings, AIConversationSettings, AIManager, AIReasoningCapability
+from ai.ai_model import AIReasoningEffort
 from ai_tool import AIToolManager
 
 from humbug.language.language_code import LanguageCode
@@ -123,6 +124,7 @@ class SettingsDialog(QDialog):
         self._model_combo: SettingsCombo
         self._temp_spin: SettingsDoubleSpinBox
         self._reasoning_combo: SettingsCombo
+        self._effort_combo: SettingsCombo
         self._ai_model_container: SettingsContainer
 
         self._tools_heading: SettingsPageHeading
@@ -419,15 +421,19 @@ class SettingsDialog(QDialog):
         self._model_combo = SettingsFactory.create_combo(strings.settings_model_label)
         container.add_setting(self._model_combo)
 
+        self._reasoning_combo = SettingsFactory.create_combo(strings.settings_reasoning_label)
+        container.add_setting(self._reasoning_combo)
+
+        self._effort_combo = SettingsFactory.create_combo(strings.settings_reasoning_effort_label)
+        container.add_setting(self._effort_combo)
+
         self._temp_spin = SettingsFactory.create_double_spinbox(
             strings.settings_temp_label, 0.0, 1.0, 0.1, 1
         )
         container.add_setting(self._temp_spin)
 
-        self._reasoning_combo = SettingsFactory.create_combo(strings.settings_reasoning_label)
-        container.add_setting(self._reasoning_combo)
-
         self._model_combo.value_changed.connect(self._on_model_value_changed)
+        self._effort_combo.value_changed.connect(self._on_effort_value_changed)
 
         container.add_stretch()
         container.value_changed.connect(self._on_value_changed)
@@ -620,6 +626,7 @@ class SettingsDialog(QDialog):
             for name, cb in self._tool_switches.items()
         }
 
+        reasoning_options = AIConversationSettings.get_supported_reasoning_efforts(self._model_combo.get_text())
         return MindspaceSettings(
             use_soft_tabs=self._soft_tabs_check.get_value(),
             tab_size=self._tab_size_spin.get_value(),
@@ -633,6 +640,7 @@ class SettingsDialog(QDialog):
             model=self._model_combo.get_text(),
             temperature=self._temp_spin.get_value(),
             reasoning=self._reasoning_combo.get_value(),
+            reasoning_effort=self._effort_combo.get_value() if reasoning_options else None,
             enabled_tools=enabled_tools,
         )
 
@@ -677,6 +685,8 @@ class SettingsDialog(QDialog):
         self._model_combo.set_value(settings.model)
         self._temp_spin.set_value(settings.temperature)
         self._update_model_capabilities(settings.model)
+        if settings.reasoning_effort is not None:
+            self._effort_combo.set_value(settings.reasoning_effort)
         self._reasoning_combo.set_value(settings.reasoning)
 
         # Tools
@@ -773,6 +783,12 @@ class SettingsDialog(QDialog):
         """Update capability controls when the model selection changes."""
         self._update_model_capabilities(self._model_combo.get_text())
 
+    def _on_effort_value_changed(self) -> None:
+        """Update temperature enable state when reasoning effort changes."""
+        model = self._model_combo.get_text()
+        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
+        self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model, effort))
+
     def _update_model_capabilities(self, model: str) -> None:
         """Refresh reasoning combo and temperature enable state for a model."""
         strings = self._language_manager.strings()
@@ -788,7 +804,28 @@ class SettingsDialog(QDialog):
 
         self._reasoning_combo.set_items(items)
         self._reasoning_combo.setEnabled(len(items) > 1)
-        self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model))
+
+        effort_labels = {
+            AIReasoningEffort.NONE: strings.settings_effort_none,
+            AIReasoningEffort.MINIMAL: strings.settings_effort_minimal,
+            AIReasoningEffort.LOW: strings.settings_effort_low,
+            AIReasoningEffort.MEDIUM: strings.settings_effort_medium,
+            AIReasoningEffort.HIGH: strings.settings_effort_high,
+            AIReasoningEffort.XHIGH: strings.settings_effort_xhigh,
+        }
+        efforts = AIConversationSettings.get_supported_reasoning_efforts(model)
+        if efforts:
+            effort_items = [(effort_labels.get(e, e), e) for e in efforts]
+            self._effort_combo.set_items(effort_items)
+            self._effort_combo.setEnabled(len(effort_items) > 1)
+            self._effort_combo.setVisible(True)
+        else:
+            self._effort_combo.set_items([])
+            self._effort_combo.setEnabled(False)
+            self._effort_combo.setVisible(False)
+
+        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
+        self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model, effort))
 
     def _on_auto_backup_changed(self) -> None:
         """Enable or disable backup interval spin based on auto backup switch."""
@@ -940,6 +977,7 @@ class SettingsDialog(QDialog):
         current_model = self._model_combo.get_text()
         self._update_model_capabilities(current_model)
         self._reasoning_combo.set_label(strings.settings_reasoning_label)
+        self._effort_combo.set_label(strings.settings_reasoning_effort_label)
 
         # Update Editor page controls
         self._soft_tabs_check.set_label(strings.use_soft_tabs)
