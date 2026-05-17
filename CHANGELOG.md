@@ -6,6 +6,8 @@ New features:
 
 - New text being streamed by an AI is now presented in a much more smooth way, eliminating the "jumpiness" of text chunks
   delivered via the API endpoint.
+- Added support for reasoning levels against models that support reasoning levels.  This simplifies the model catalogue
+  as it shrinks dramatically.
 
 Bug fixes:
 
