@@ -4,6 +4,7 @@ import logging
 from typing import List, Dict, cast
 
 from ai import AIConversationSettings, AIReasoningCapability
+from ai.ai_model import AIReasoningEffort
 from syntax import Token, TokenType
 
 from humbug.mindspace.mindspace_error import MindspaceError
@@ -48,6 +49,7 @@ class ShellCommandConversation(ShellCommand):
         options = super().get_options_help()
         options["-m, --model"] = "AI model to use"
         options["-t, --temperature"] = "Temperature for the model (0.0 to 1.0)"
+        options["-r, --reasoning-effort"] = f"Reasoning effort level ({', '.join(AIReasoningEffort.values())})"
         return options
 
     def get_option_value_count(self, option_name: str) -> int:
@@ -62,6 +64,9 @@ class ShellCommandConversation(ShellCommand):
             return 1  # Takes exactly one value
 
         if option_name in ("-t", "--temperature"):
+            return 1  # Takes exactly one value
+
+        if option_name in ("-r", "--reasoning-effort"):
             return 1  # Takes exactly one value
 
         # Default for unknown options
@@ -107,6 +112,31 @@ class ShellCommandConversation(ShellCommand):
                 return False
 
         reasoning: AIReasoningCapability | None = None
+        reasoning_effort: str | None = None
+
+        # Get reasoning effort if specified
+        effort_values = options.get("--reasoning-effort", []) or options.get("-r", [])
+        if effort_values:
+            effort_str = effort_values[0]
+            if not AIReasoningEffort.is_valid(effort_str):
+                self._history_manager.add_message(
+                    ShellEventSource.ERROR,
+                    f"Reasoning effort must be one of: {', '.join(AIReasoningEffort.values())}"
+                )
+                return False
+
+            if model:
+                supported = AIConversationSettings.get_supported_reasoning_efforts(model)
+                if supported and effort_str not in supported:
+                    self._history_manager.add_message(
+                        ShellEventSource.ERROR,
+                        f"Model '{model}' does not support reasoning effort '{effort_str}'. "
+                        f"Supported: {', '.join(supported)}"
+                    )
+                    return False
+
+            reasoning_effort = effort_str
+
         if model:
             model_config = AIConversationSettings.MODELS.get(model)
             if model_config:
@@ -118,7 +148,7 @@ class ShellCommandConversation(ShellCommand):
 
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
-            conversation_tab = self._column_manager.new_conversation(False, None, model, temperature_val, reasoning)
+            conversation_tab = self._column_manager.new_conversation(False, None, model, temperature_val, reasoning, reasoning_effort)
 
         except (MindspaceError, ColumnManagerError) as e:
             self._history_manager.add_message(ShellEventSource.ERROR, f"Failed to create conversation: {str(e)}")
@@ -159,6 +189,18 @@ class ShellCommandConversation(ShellCommand):
 
         return models
 
+    def _complete_reasoning_efforts(self, partial_value: str) -> List[str]:
+        """
+        Complete reasoning effort values for -r/--reasoning-effort option.
+
+        Args:
+            partial_value: Partial effort string
+
+        Returns:
+            List of matching effort level strings
+        """
+        return [e for e in AIReasoningEffort.values() if not partial_value or e.startswith(partial_value)]
+
     def get_token_completions(
         self,
         current_token: Token,
@@ -194,6 +236,10 @@ class ShellCommandConversation(ShellCommand):
                 if option_name in ["-t", "--temperature"]:
                     # Temperature should be a float between 0.0 and 1.0
                     return [str(i / 10) for i in range(11) if str(i / 10).startswith(current_token.value)]
+
+                # Check if we're completing a reasoning effort for -r/--reasoning-effort option
+                if option_name in ["-r", "--reasoning-effort"]:
+                    return self._complete_reasoning_efforts(current_token.value)
 
         # No completions for other arguments
         return []

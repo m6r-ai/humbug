@@ -6,6 +6,7 @@ import sys
 from typing import Any, Dict, List, cast
 
 from ai import AIConversationSettings
+from ai.ai_model import AIReasoningEffort
 from ai_tool import (
     AITool,
     AIToolAuthorizationCallback,
@@ -96,6 +97,14 @@ class SystemAITool(AITool):
                     description="Temperature setting 0.0-1.0 (for new_conversation_tab operation)",
                     required=False
                 ),
+                AIToolParameter(
+                    name="reasoning_effort",
+                    type="string",
+                    description="Reasoning effort level for models that support it "
+                        f"(for new_conversation_tab operation). "
+                        f"One of: {', '.join(AIReasoningEffort.values())}.",
+                    required=False
+                ),
             ]
         )
 
@@ -145,7 +154,7 @@ class SystemAITool(AITool):
                 name="new_conversation_tab",
                 handler=self._new_conversation_tab,
                 extract_context=None,
-                allowed_parameters={"model", "temperature"},
+                allowed_parameters={"model", "temperature", "reasoning_effort"},
                 required_parameters=set(),
                 description="Create a new AI conversation tab, with optional model/temperature. "
                     "Returns the tab GUID for use with the conversation tool"
@@ -379,6 +388,7 @@ class SystemAITool(AITool):
         arguments = tool_call.arguments
         model = self._get_optional_str_value("model", arguments)
         temperature = arguments.get("temperature")
+        reasoning_effort_arg = self._get_optional_str_value("reasoning_effort", arguments)
 
         # Validate temperature if provided
         if temperature is not None:
@@ -390,6 +400,7 @@ class SystemAITool(AITool):
 
         # Validate model exists if provided
         reasoning = None
+        reasoning_effort: str | None = None
         if model:
             ai_backends = self._user_manager.get_ai_backends()
             available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
@@ -404,6 +415,24 @@ class SystemAITool(AITool):
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
+        # Validate reasoning_effort if provided
+        if reasoning_effort_arg is not None:
+            if not AIReasoningEffort.is_valid(reasoning_effort_arg):
+                raise AIToolExecutionError(
+                    f"'reasoning_effort' must be one of: {', '.join(AIReasoningEffort.values())}"
+                )
+
+            # Check the effort is supported by the chosen model (if model is known)
+            if model:
+                supported = AIConversationSettings.get_supported_reasoning_efforts(model)
+                if supported and reasoning_effort_arg not in supported:
+                    raise AIToolExecutionError(
+                        f"Model '{model}' does not support reasoning_effort '{reasoning_effort_arg}'. "
+                        f"Supported efforts: {', '.join(supported)}"
+                    )
+
+            reasoning_effort = reasoning_effort_arg
+
         try:
             requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
             self._column_manager.protect_tab(requester_tab.tab_id())
@@ -411,7 +440,7 @@ class SystemAITool(AITool):
             # Create conversation
             try:
                 self._mindspace_manager.ensure_mindspace_dir("conversations")
-                conversation_tab = self._column_manager.new_conversation(False, None, model, temperature, reasoning)
+                conversation_tab = self._column_manager.new_conversation(False, None, model, temperature, reasoning, reasoning_effort)
 
             finally:
                 self._column_manager.unprotect_tab(requester_tab.tab_id())
@@ -427,6 +456,9 @@ class SystemAITool(AITool):
 
             if temperature is not None:
                 result_parts.append(f"temperature: {temperature}")
+
+            if reasoning_effort:
+                result_parts.append(f"reasoning_effort: {reasoning_effort}")
 
             return AIToolResult(
                 id=tool_call.id,

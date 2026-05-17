@@ -7,6 +7,7 @@ from ai import (
         AIConversation, AIConversationEvent, AIConversationParent,
         AIConversationSettings, AIManager, AIMessageSource, AIReasoningCapability
 )
+from ai.ai_model import AIReasoningEffort
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback,
@@ -112,6 +113,14 @@ class DelegateAITool(AITool):
                     type="number",
                     description="Temperature setting 0.0-1.0 for creativity vs precision",
                     required=False
+                ),
+                AIToolParameter(
+                    name="reasoning_effort",
+                    type="string",
+                    description="Reasoning effort level for models that support it. "
+                        f"One of: {', '.join(AIReasoningEffort.values())}. "
+                        "Only valid for models with variable reasoning effort support.",
+                    required=False
                 )
             ]
         )
@@ -132,7 +141,7 @@ class DelegateAITool(AITool):
                 name="delegate",
                 handler=self._delegate,
                 extract_context=None,
-                allowed_parameters={"task_prompt", "session_id", "model", "temperature"},
+                allowed_parameters={"task_prompt", "session_id", "model", "temperature", "reasoning_effort"},
                 required_parameters={"task_prompt"},
                 description="Delegate a task to a specialized child AI instance"
             )
@@ -199,6 +208,7 @@ class DelegateAITool(AITool):
         session_id_arg = self._get_optional_str_value("session_id", arguments)
         model = self._get_optional_str_value("model", arguments)
         temperature = arguments.get("temperature")
+        reasoning_effort_arg = self._get_optional_str_value("reasoning_effort", arguments)
 
         # Validate session_id if provided
         session_id = None
@@ -222,6 +232,7 @@ class DelegateAITool(AITool):
 
         # Validate model exists if provided
         reasoning = AIReasoningCapability.NO_REASONING
+        reasoning_effort: str | None = None
         if model:
             ai_backends = self._ai_manager.get_backends()
             available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
@@ -236,6 +247,28 @@ class DelegateAITool(AITool):
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
+        # Validate reasoning_effort if provided
+        if reasoning_effort_arg is not None:
+            if not AIReasoningEffort.is_valid(reasoning_effort_arg):
+                raise AIToolExecutionError(
+                    f"'reasoning_effort' must be one of: {', '.join(AIReasoningEffort.values())}"
+                )
+
+            # Check the effort is supported by the chosen model (if model is known)
+            effective_model = model or (
+                requester_ref.conversation_settings().model
+                if hasattr(requester_ref, "conversation_settings") else None
+            )
+            if effective_model:
+                supported = AIConversationSettings.get_supported_reasoning_efforts(effective_model)
+                if supported and reasoning_effort_arg not in supported:
+                    raise AIToolExecutionError(
+                        f"Model '{effective_model}' does not support reasoning_effort '{reasoning_effort_arg}'. "
+                        f"Supported efforts: {', '.join(supported)}"
+                    )
+
+            reasoning_effort = reasoning_effort_arg
+
         self._logger.debug("AI delegation requested with task: %s", task_prompt[:100])
 
         # Request user authorization before delegating
@@ -244,9 +277,10 @@ class DelegateAITool(AITool):
         model_info = f" using model '{model}'" if model else " using the default model"
         temp_info = f" with temperature {temperature}" if temperature is not None else ""
 
+        effort_info = f" with reasoning effort '{reasoning_effort}'" if reasoning_effort else ""
         context = (
             f"The AI wants to delegate a task to a child AI instance.\n\n"
-            f"Session: {session_info}{model_info}{temp_info}\n\n"
+            f"Session: {session_info}{model_info}{temp_info}{effort_info}\n\n"
             f"Task prompt:\n{task_prompt[:500]}{'...' if len(task_prompt) > 500 else ''}"
         )
 
@@ -260,7 +294,7 @@ class DelegateAITool(AITool):
 
         try:
             return await self._delegate_task(
-                tool_call, ai_conversation, task_prompt, session_id, model, temperature, reasoning
+                tool_call, ai_conversation, task_prompt, session_id, model, temperature, reasoning, reasoning_effort
             )
 
         except (AIToolExecutionError, AIToolAuthorizationDenied):
@@ -379,7 +413,8 @@ class DelegateAITool(AITool):
         session_id: str | None,
         model: str,
         temperature: float | None,
-        reasoning_capability: AIReasoningCapability
+        reasoning_capability: AIReasoningCapability,
+        reasoning_effort: str | None
     ) -> AIToolResult:
         """
         Delegate a task to an AI instance.
@@ -392,6 +427,7 @@ class DelegateAITool(AITool):
             model: AI model to use
             temperature: Temperature setting (None for default)
             reasoning_capability: Reasoning capability setting
+            reasoning_effort: Reasoning effort level (None for model default)
 
         Returns:
             AIToolResult with continuation for waiting on completion
@@ -405,8 +441,9 @@ class DelegateAITool(AITool):
 
             child_settings = AIConversationSettings(
                 model=model,
-                temperature=temperature if AIConversationSettings.supports_temperature(model) else None,
+                temperature=temperature if AIConversationSettings.supports_temperature(model, reasoning_effort) else None,
                 reasoning=reasoning_capability,
+                reasoning_effort=reasoning_effort,
             )
 
             # Create the child AIConversation and configure it
