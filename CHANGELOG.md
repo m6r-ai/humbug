@@ -8,12 +8,13 @@ New features:
   delivered via the API endpoint.
 - Added support for reasoning levels against models that support reasoning levels.  This simplifies the model catalogue
   as it shrinks dramatically.
+- Removed Gemini 2.5 support and added more Gemini 3 models.
 
 Bug fixes:
 
 - Correctly resolved an earlier problem with streaming text and rendering, where the user is looking at an earlier part of the
   conversation.
-- Resolved problems in the Java syntax highlighter.
+- Resolved problems in the Java syntax highlighter (around handling of generics).
 - If a file open in a diff view is saved then the scroll position within the diff view is now preserved.
 - If a file open in an editor view is saved externally then the scroll position within the editor tab is now preserved.
 

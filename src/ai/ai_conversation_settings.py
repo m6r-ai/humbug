@@ -79,8 +79,8 @@ class AIConversationSettings:
         ),
 
         # Google models
-        "gemini-2.5-flash": AIModel(
-            name="gemini-2.5-flash",
+        "gemini-3.1-flash-lite": AIModel(
+            name="gemini-3.1-flash-lite",
             provider="google",
             context_window=1048576,
             max_output_tokens=65536,
@@ -88,13 +88,28 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
+                AIReasoningEffort.MINIMAL,
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
             ]
         ),
-        "gemini-3.1-pro-preview (Google)": AIModel(
+        "gemini-3-flash-preview": AIModel(
+            name="gemini-3-flash-preview",
+            provider="google",
+            context_window=1048576,
+            max_output_tokens=65536,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.MINIMAL,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ]
+        ),
+        "gemini-3.1-pro-preview": AIModel(
             name="gemini-3.1-pro-preview",
             provider="google",
             context_window=1048576,
@@ -103,22 +118,6 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.LOW,
-                AIReasoningEffort.MEDIUM,
-                AIReasoningEffort.HIGH,
-            ]
-        ),
-        "gemini-2.5-pro": AIModel(
-            name="gemini-2.5-pro",
-            provider="google",
-            context_window=1048576,
-            max_output_tokens=65536,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,

@@ -271,15 +271,15 @@ class GoogleBackend(AIBackend):
         # Add thinking config if the model supports variable effort levels
         efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model)
         if efforts and settings.reasoning_effort is not None:
-            thinking_budget_map = {
-                AIReasoningEffort.NONE: 0,
-                AIReasoningEffort.LOW: 1024,
-                AIReasoningEffort.MEDIUM: 8192,
-                AIReasoningEffort.HIGH: 24576,
+            thinking_level_map = {
+                AIReasoningEffort.MINIMAL: "minimal",
+                AIReasoningEffort.LOW: "low",
+                AIReasoningEffort.MEDIUM: "medium",
+                AIReasoningEffort.HIGH: "high",
             }
-            budget = thinking_budget_map.get(settings.reasoning_effort)
-            if budget is not None:
-                generation_config["thinkingConfig"] = {"thinkingBudget": budget}
+            level = thinking_level_map.get(settings.reasoning_effort)
+            if level is not None:
+                generation_config["thinkingConfig"] = {"thinkingLevel": level}
 
         # Build request data
         data = {
