@@ -6,8 +6,6 @@ from urllib.parse import urlsplit, urlunsplit
 
 import aiohttp
 
-import aiohttp
-
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessage, AIMessageSource
@@ -105,16 +103,6 @@ class OllamaBackend(AIBackend):
                         raise ValueError(obj["error"])
                     if "status" in obj:
                         on_progress(obj["status"])
-
-    async def fetch_models(self) -> List[str]:
-        """Fetch installed model names from the Ollama API."""
-        url = self._api_url.replace("/api/chat", "/api/tags")
-        headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                response.raise_for_status()
-                data = await response.json()
-                return [m["name"] for m in data.get("models", [])]
 
     def __init__(self, api_key: str, api_url: str | None = None) -> None:
         """Initialize the Ollama backend.

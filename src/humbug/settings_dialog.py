@@ -430,16 +430,6 @@ class SettingsDialog(QDialog):
                 pull_name_field = None
                 pull_row = None
 
-            fetch_row = SettingsActionRow("Update Models")
-            container.add_setting(fetch_row)
-            fetch_row.setVisible(backend_id != "ollama")
-            fetch_row.button.setEnabled(False)
-
-            manage_row = SettingsActionRow("Remove Fetched Models…")
-            container.add_setting(manage_row)
-            manage_row.setVisible(backend_id != "ollama")
-            manage_row.button.setEnabled(False)
-
             self._ai_backend_controls[backend_id] = {
                 "enable": enable_switch,
                 "key": api_key_field,
