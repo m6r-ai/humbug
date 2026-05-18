@@ -440,7 +440,9 @@ class SystemAITool(AITool):
             # Create conversation
             try:
                 self._mindspace_manager.ensure_mindspace_dir("conversations")
-                conversation_tab = self._column_manager.new_conversation(False, None, model, temperature, reasoning, reasoning_effort)
+                conversation_tab = self._column_manager.new_conversation(
+                    False, None, model, temperature, reasoning, reasoning_effort
+                )
 
             finally:
                 self._column_manager.unprotect_tab(requester_tab.tab_id())
