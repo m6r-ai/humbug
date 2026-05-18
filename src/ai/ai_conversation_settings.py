@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Dict, List, Any, Generator
+from typing import Dict, List, Any, Generator, Tuple
 
 from ai.ai_model import AIModel, AIReasoningCapability, AIReasoningEffort, ToolCapability
 
@@ -414,6 +414,9 @@ class AIConversationSettings:
         ),
     }
 
+    # Snapshot of keys that are built-in (set once at class definition time).
+    _BUILTIN_MODEL_KEYS: frozenset = frozenset(MODELS.keys())
+
     # Default fallback values for unknown models
     DEFAULT_CONTEXT_WINDOW = 8192
     DEFAULT_MAX_OUTPUT_TOKENS = 2048
@@ -653,6 +656,175 @@ class AIConversationSettings:
 
         # Shouldn't happen as we require at least one backend
         return "gemini-2.5-flash"
+
+    # Provider-level defaults for models fetched from an API (capabilities unknown).
+    _PROVIDER_FETCH_DEFAULTS: Dict[str, Dict[str, Any]] = {
+        "anthropic": {
+            "context_window": 200000, "max_output_tokens": 32000,
+            "supports_temperature": True,
+            "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
+            "tool_capabilities": ToolCapability.FUNCTION_CALLING,
+        },
+        "openai": {
+            "context_window": 128000, "max_output_tokens": 16384,
+            "supports_temperature": True,
+            "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
+            "tool_capabilities": ToolCapability.FUNCTION_CALLING,
+        },
+        "google": {
+            "context_window": 1048576, "max_output_tokens": 65536,
+            "supports_temperature": True,
+            "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
+            "tool_capabilities": ToolCapability.FUNCTION_CALLING,
+        },
+        "deepseek": {
+            "context_window": 64000, "max_output_tokens": 8192,
+            "supports_temperature": True,
+            "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
+            "tool_capabilities": ToolCapability.FUNCTION_CALLING,
+        },
+        "mistral": {
+            "context_window": 128000, "max_output_tokens": 8192,
+            "supports_temperature": True,
+            "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
+            "tool_capabilities": ToolCapability.FUNCTION_CALLING,
+        },
+        "ollama": {
+            "context_window": 128000, "max_output_tokens": 8192,
+            "supports_temperature": True,
+            "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
+            "tool_capabilities": ToolCapability.FUNCTION_CALLING,
+        },
+        "xai": {
+            "context_window": 131072, "max_output_tokens": 16384,
+            "supports_temperature": True,
+            "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
+            "tool_capabilities": ToolCapability.FUNCTION_CALLING,
+        },
+        "zai": {
+            "context_window": 128000, "max_output_tokens": 8192,
+            "supports_temperature": True,
+            "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
+            "tool_capabilities": ToolCapability.FUNCTION_CALLING,
+        },
+        "vllm": {
+            "context_window": 128000, "max_output_tokens": 8192,
+            "supports_temperature": True,
+            "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
+            "tool_capabilities": ToolCapability.FUNCTION_CALLING,
+        },
+    }
+
+    @classmethod
+    def get_fetched_models_by_provider(cls, provider: str) -> List[str]:
+        """Return model IDs that were fetched (not built-in) for the given provider."""
+        return [
+            model_id for model_id, model in cls.MODELS.items()
+            if model.provider == provider and model_id not in cls._BUILTIN_MODEL_KEYS
+        ]
+
+    @classmethod
+    def remove_fetched_model(cls, model_id: str) -> bool:
+        """
+        Remove a fetched model from the registry.
+
+        Built-in models (those present at class-definition time) cannot be removed.
+
+        Returns:
+            True if the model was found and removed, False otherwise.
+        """
+        if model_id in cls._BUILTIN_MODEL_KEYS or model_id not in cls.MODELS:
+            return False
+        del cls.MODELS[model_id]
+        return True
+
+    @classmethod
+    def register_fetched_models(
+        cls, model_ids: List[str], provider: str
+    ) -> Tuple[List[str], List[str]]:
+        """
+        Register models fetched from a provider API using provider-level defaults.
+
+        Args:
+            model_ids: List of model ID strings from the provider's list endpoint.
+            provider: Provider name (e.g. "anthropic", "openai").
+
+        Returns:
+            Tuple of (newly_added, already_present) model ID lists.
+        """
+        defaults = cls._PROVIDER_FETCH_DEFAULTS.get(provider, {
+            "context_window": cls.DEFAULT_CONTEXT_WINDOW,
+            "max_output_tokens": cls.DEFAULT_MAX_OUTPUT_TOKENS,
+            "supports_temperature": True,
+            "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
+            "tool_capabilities": ToolCapability.NO_TOOLS,
+        })
+        newly_added: List[str] = []
+        already_present: List[str] = []
+        for model_id in model_ids:
+            if model_id in cls.MODELS:
+                already_present.append(model_id)
+            else:
+                cls.MODELS[model_id] = AIModel(
+                    name=model_id,
+                    provider=provider,
+                    context_window=defaults["context_window"],
+                    max_output_tokens=defaults["max_output_tokens"],
+                    supports_temperature=defaults["supports_temperature"],
+                    reasoning_capabilities=defaults["reasoning_capabilities"],
+                    tool_capabilities=defaults["tool_capabilities"],
+                )
+                newly_added.append(model_id)
+        return newly_added, already_present
+
+    @classmethod
+    def save_fetched_models_cache(cls, path: str) -> None:
+        """
+        Persist fetched (non-built-in) model IDs to a JSON cache file.
+
+        The cache stores {provider: [model_id, ...]} for all models that were
+        added via register_fetched_models() (i.e. models whose name matches
+        their display key in MODELS, coming from provider fetch).
+
+        Args:
+            path: Absolute path for the cache JSON file.
+        """
+        cache: Dict[str, List[str]] = {}
+        for model_id, model in cls.MODELS.items():
+            if model_id not in cls._BUILTIN_MODEL_KEYS and model.provider in cls._PROVIDER_FETCH_DEFAULTS:
+                cache.setdefault(model.provider, []).append(model_id)
+
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(cache, f, indent=2)
+        except OSError:
+            pass
+
+    @classmethod
+    def load_fetched_models_cache(cls, path: str) -> None:
+        """
+        Load and register models from a previously saved fetch cache.
+
+        Models already present in MODELS are skipped silently.
+
+        Args:
+            path: Absolute path to the cache JSON file.
+        """
+        if not os.path.exists(path):
+            return
+        try:
+            with open(path, encoding="utf-8") as f:
+                cache = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return
+        if not isinstance(cache, dict):
+            return
+        for provider, model_ids in cache.items():
+            if isinstance(model_ids, list):
+                cls.register_fetched_models(
+                    [m for m in model_ids if isinstance(m, str)], provider
+                )
 
     @classmethod
     def load_user_config(cls, path: str) -> List[str]:

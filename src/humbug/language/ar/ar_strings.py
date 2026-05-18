@@ -408,5 +408,15 @@ def get_arabic_strings() -> LanguageStrings:
         update_available_message="الإصدار {0} متاح — انقر للتنزيل.",
         update_check_failed="تعذّر التحقق من التحديثات. يرجى التحقق من اتصالك بالشبكة.",
         update_tooltip="Humbug {0} متاح — انقر لصفحة الإصدار",
-        check_for_updates_setting="التحقق التلقائي من التحديثات"
+        check_for_updates_setting="التحقق التلقائي من التحديثات",
+
+        # Fetch-models errors
+        fetch_error_invalid_key="مفتاح API غير صالح — يرجى التحقق من مفتاحك والمحاولة مجدداً.",
+        fetch_error_access_denied="تم رفض الوصول ({0}) — قد لا يملك مفتاحك صلاحية عرض قائمة النماذج.",
+        fetch_error_not_found="نقطة نهاية النماذج غير موجودة ({0}) — تحقق من عنوان URL للواجهة البرمجية.",
+        fetch_error_rate_limited="تم تجاوز حد الطلبات ({0}) — انتظر لحظة ثم أعد المحاولة.",
+        fetch_error_server_error="خطأ في خادم المزود ({0}) — حاول مجدداً لاحقاً.",
+        fetch_error_connection="تعذّر الاتصال — تحقق من عنوان URL وشبكتك.",
+        fetch_error_timeout="انتهت مهلة الطلب — استغرق المزود وقتاً طويلاً للاستجابة.",
+        fetch_error_generic="فشل: {0}"
     )

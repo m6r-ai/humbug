@@ -409,5 +409,15 @@ def get_english_strings() -> LanguageStrings:
         update_available_message="Version {0} is available — click to download.",
         update_check_failed="Could not check for updates. Please check your network connection.",
         update_tooltip="Humbug {0} available — click for release page",
-        check_for_updates_setting="Automatically check for updates"
+        check_for_updates_setting="Automatically check for updates",
+
+        # Fetch-models errors
+        fetch_error_invalid_key="Invalid API key — please check your key and try again.",
+        fetch_error_access_denied="Access denied ({0}) — your key may not have model-list permission.",
+        fetch_error_not_found="Models endpoint not found ({0}) — check the API URL.",
+        fetch_error_rate_limited="Rate limited ({0}) — wait a moment then try again.",
+        fetch_error_server_error="Provider server error ({0}) — try again later.",
+        fetch_error_connection="Could not connect — check the URL and your network.",
+        fetch_error_timeout="Request timed out — the provider took too long to respond.",
+        fetch_error_generic="Failed: {0}"
     )
