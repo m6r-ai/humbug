@@ -55,6 +55,8 @@ def get_arabic_strings() -> LanguageStrings:
         copy="نسخ",
         paste="لصق",
         find="بحث",
+        find_replace="بحث واستبدال",
+        goto_line="الانتقال إلى السطر",
         mindspace_search="بحث شامل",
         mindspace_settings="إعدادات المساحة الذهنية",
         conversation_settings="إعدادات المحادثة",
@@ -103,6 +105,10 @@ def get_arabic_strings() -> LanguageStrings:
         replace_button="استبدال",
         replace_all_button="استبدال الكل",
         replace_count="{count} تم استبداله",
+
+        # Go to line dialog
+        goto_line_title="الانتقال إلى السطر",
+        goto_line_label="رقم السطر:",
 
         # Input widget
         processing_message="محادثة مع {model} (Esc للإلغاء، {key} للإرسال)",

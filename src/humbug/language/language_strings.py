@@ -45,6 +45,8 @@ class LanguageStrings:
     copy: str
     paste: str
     find: str
+    find_replace: str
+    goto_line: str
     mindspace_search: str
     mindspace_settings: str
     conversation_settings: str
@@ -93,6 +95,10 @@ class LanguageStrings:
     replace_button: str
     replace_all_button: str
     replace_count: str  # Format: "{count} replaced"
+
+    # Go to line dialog
+    goto_line_title: str
+    goto_line_label: str
 
     # Input widget
     processing_message: str

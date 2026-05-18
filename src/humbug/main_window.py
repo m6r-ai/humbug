@@ -196,6 +196,16 @@ class MainWindow(QMainWindow):
         self._find_action.setShortcut(QKeySequence.StandardKey.Find)
         self._find_action.triggered.connect(self._find)
 
+        self._find_replace_action = QAction(strings.find_replace, self)
+        find_replace_shortcut = "Ctrl+Alt+F" if sys.platform == "darwin" else "Ctrl+H"
+        self._find_replace_action.setShortcut(QKeySequence(find_replace_shortcut))
+        self._find_replace_action.triggered.connect(self._find_replace)
+
+        self._goto_line_action = QAction(strings.goto_line, self)
+        goto_line_shortcut = "Meta+G" if sys.platform == "darwin" else "Ctrl+G"
+        self._goto_line_action.setShortcut(QKeySequence(goto_line_shortcut))
+        self._goto_line_action.triggered.connect(self._goto_line)
+
         self._global_search_action = QAction(strings.mindspace_search, self)
         self._global_search_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
         self._global_search_action.triggered.connect(self._show_global_search)
@@ -305,6 +315,8 @@ class MainWindow(QMainWindow):
         self._edit_menu.addAction(self._paste_action)
         self._edit_menu.addSeparator()
         self._edit_menu.addAction(self._find_action)
+        self._edit_menu.addAction(self._find_replace_action)
+        self._edit_menu.addAction(self._goto_line_action)
         self._edit_menu.addAction(self._global_search_action)
         self._edit_menu.addSeparator()
         self._edit_menu.addAction(self._conv_settings_action)
@@ -525,6 +537,8 @@ class MainWindow(QMainWindow):
         self._copy_action.setEnabled(column_manager.can_copy())
         self._paste_action.setEnabled(column_manager.can_paste())
         self._find_action.setEnabled(column_manager.can_show_find())
+        self._find_replace_action.setEnabled(column_manager.can_show_find_replace())
+        self._goto_line_action.setEnabled(column_manager.can_show_goto_line())
         self._global_search_action.setEnabled(has_mindspace)
         self._submit_message_action.setEnabled(column_manager.can_submit_message())
         self._conv_settings_action.setEnabled(column_manager.can_show_conversation_settings_dialog())
@@ -590,6 +604,8 @@ class MainWindow(QMainWindow):
         self._copy_action.setText(strings.copy)
         self._paste_action.setText(strings.paste)
         self._find_action.setText(strings.find)
+        self._find_replace_action.setText(strings.find_replace)
+        self._goto_line_action.setText(strings.goto_line)
         self._global_search_action.setText(strings.mindspace_search)
         self._mindspace_settings_action.setText(strings.mindspace_settings)
         self._conv_settings_action.setText(strings.conversation_settings)
@@ -943,6 +959,12 @@ class MainWindow(QMainWindow):
 
     def _find(self) -> None:
         self._column_manager.show_find()
+
+    def _find_replace(self) -> None:
+        self._column_manager.show_find_replace()
+
+    def _goto_line(self) -> None:
+        self._column_manager.show_goto_line()
 
     def _show_global_search(self) -> None:
         """Open the mindspace global-search pane."""

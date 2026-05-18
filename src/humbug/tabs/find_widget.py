@@ -161,6 +161,34 @@ class FindWidget(QWidget):
         if self._replace_row_expanded:
             self._replace_input.setFocus()
 
+    def show_replace(self) -> None:
+        """Show the widget with the replace row expanded, focusing the search input.
+
+        If the replace row is not yet expanded, expands it.  Idempotent if already expanded.
+        """
+        if not self._replace_row_expanded:
+            self._replace_row_expanded = True
+            self._replace_input.setVisible(True)
+            self._replace_controls_widget.setVisible(True)
+            self._update_expand_icon()
+
+        self.show()
+        self.setFocus()
+
+    def show_find(self) -> None:
+        """Show the widget in find-only mode, collapsing the replace row if expanded.
+
+        Idempotent if the replace row is already collapsed.
+        """
+        if self._replace_row_expanded:
+            self._replace_row_expanded = False
+            self._replace_input.setVisible(False)
+            self._replace_controls_widget.setVisible(False)
+            self._update_expand_icon()
+
+        self.show()
+        self.setFocus()
+
     def _update_expand_icon(self) -> None:
         """Update the expand button icon to reflect current expanded state."""
         if self._replace_row_expanded:

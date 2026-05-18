@@ -379,6 +379,20 @@ class TabBase(QFrame):
         """Show the find widget."""
         raise NotImplementedError("Subclasses must implement show_find")
 
+    def can_show_find_replace(self) -> bool:
+        """Return True if this tab supports find-and-replace."""
+        return False
+
+    def show_find_replace(self) -> None:
+        """Show the find widget with the replace row expanded."""
+
+    def can_show_goto_line(self) -> bool:
+        """Return True if this tab supports go-to-line."""
+        return False
+
+    def show_goto_line(self) -> None:
+        """Show the go-to-line dialog."""
+
     def apply_find_search(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:  # pylint: disable=unused-argument
         """Apply a programmatic find/highlight request when supported."""
         return None

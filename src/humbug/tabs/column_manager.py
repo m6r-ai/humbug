@@ -2292,6 +2292,28 @@ class ColumnManager(QWidget):
 
         tab.show_find()
 
+    def can_show_find_replace(self) -> bool:
+        """Check if the current tab supports find-and-replace."""
+        tab = self.get_current_tab()
+        return tab is not None and tab.can_show_find_replace()
+
+    def show_find_replace(self) -> None:
+        """Show find-and-replace for the current tab."""
+        tab = self.get_current_tab()
+        if tab is not None:
+            tab.show_find_replace()
+
+    def can_show_goto_line(self) -> bool:
+        """Check if the current tab supports go-to-line."""
+        tab = self.get_current_tab()
+        return tab is not None and tab.can_show_goto_line()
+
+    def show_goto_line(self) -> None:
+        """Show the go-to-line dialog for the current tab."""
+        tab = self.get_current_tab()
+        if tab is not None:
+            tab.show_goto_line()
+
     def close_deleted_file(self, path: str) -> None:
         """
         Close any open tabs related to a file being deleted.

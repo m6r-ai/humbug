@@ -54,6 +54,8 @@ def get_english_strings() -> LanguageStrings:
         copy="Copy",
         paste="Paste",
         find="Find",
+        find_replace="Find and Replace",
+        goto_line="Go to Line",
         mindspace_search="Mindspace Search",
         mindspace_settings="Mindspace Settings",
         conversation_settings="Conversation Settings",
@@ -102,6 +104,10 @@ def get_english_strings() -> LanguageStrings:
         replace_button="Replace",
         replace_all_button="Replace All",
         replace_count="{count} replaced",
+
+        # Go to line dialog
+        goto_line_title="Go to Line",
+        goto_line_label="Line number:",
 
         # Input widget
         processing_message="Chat with {model} (Esc to cancel, {key} to submit)",

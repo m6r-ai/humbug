@@ -9,6 +9,8 @@ New features:
 - Added support for reasoning levels against models that support reasoning levels.  This simplifies the model catalogue
   as it shrinks dramatically.
 - Removed Gemini 2.5 support and added more Gemini 3 models.
+- In an editor tab, Ctrl+G (on all platforms) will navigate you to a specific line.
+- In an editor tab, Cmd+Opt+F (MacOS) or Ctrl+H (other platforms) will open the "find and replace" control.
 
 Bug fixes:
 

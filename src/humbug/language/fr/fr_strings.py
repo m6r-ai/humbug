@@ -54,6 +54,8 @@ def get_french_strings() -> LanguageStrings:
         copy="Copier",
         paste="Coller",
         find="Rechercher",
+        find_replace="Rechercher et remplacer",
+        goto_line="Aller à la ligne",
         mindspace_search="Recherche globale",
         mindspace_settings="Paramètres de l'espace mental",
         conversation_settings="Paramètres de conversation",
@@ -102,6 +104,10 @@ def get_french_strings() -> LanguageStrings:
         replace_button="Remplacer",
         replace_all_button="Remplacer tout",
         replace_count="{count} remplacé(s)",
+
+        # Go to line dialog
+        goto_line_title="Aller à la ligne",
+        goto_line_label="Numéro de ligne :",
 
         # Input widget
         processing_message="Discuter avec {model}... (Échap pour annuler, {key} pour envoyer)",

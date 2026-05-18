@@ -18,10 +18,10 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Implemented the mindspace expand/collapse functionality, along with the icon bar.
 * Added "whole word" find feature.
 * Added the mindspace search feature.
+* Smoothed AI response streaming.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 
 * Additional pop-up menus for creating new files, renaming files, and deleting files.
 * Support swapping columns left and right.
 * Auto-merge columns when the column splitter is moved to nothing.
-

@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import QTimer, QRegularExpression
 
+from humbug.tabs.editor.editor_goto_line_dialog import EditorGotoLineDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
 from humbug.tabs.editor.editor_widget import EditorWidget
@@ -318,8 +319,38 @@ class EditorTab(TabBase):
             else:
                 self._find_widget.set_search_text("")
 
-        self._find_widget.show()
-        self._find_widget.setFocus()
+        self._find_widget.show_find()
+
+    def can_show_find_replace(self) -> bool:
+        """Return True since editor tabs support find-and-replace."""
+        return True
+
+    def show_find_replace(self) -> None:
+        """Show the find widget with the replace row expanded."""
+        cursor = self._editor_widget.textCursor()
+        if cursor.hasSelection():
+            text = cursor.selectedText()
+            if '\u2029' not in text:
+                self._find_widget.set_search_text(text)
+
+            else:
+                self._find_widget.set_search_text("")
+
+        self._find_widget.show_replace()
+
+    def can_show_goto_line(self) -> bool:
+        """Return True since editor tabs support go-to-line."""
+        return True
+
+    def show_goto_line(self) -> None:
+        """Show the go-to-line dialog and navigate if accepted."""
+        cursor_info = self._editor_widget.get_cursor_info()
+        current_line = cursor_info.get('line', 1)
+        editor_info = self._editor_widget.get_editor_info()
+        max_line = editor_info.get('line_count', 1)
+        dialog = EditorGotoLineDialog(max_line, current_line, self)
+        if dialog.exec() == EditorGotoLineDialog.DialogCode.Accepted:
+            self._editor_widget.goto_line(dialog.line_number())
 
     def apply_find_search(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:
         """Apply a programmatic find/highlight request to the editor."""
