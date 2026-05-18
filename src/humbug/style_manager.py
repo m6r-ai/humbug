@@ -169,6 +169,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#e06050",
                 ColorMode.LIGHT: "#f07060"
             },
+            ColorRole.TEXT_SUCCESS: {
+                ColorMode.DARK: "#4ade80",
+                ColorMode.LIGHT: "#16a34a"
+            },
 
             # Edit box colours
             ColorRole.EDIT_BOX_BORDER: {

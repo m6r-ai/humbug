@@ -50,6 +50,12 @@ class SettingsActionRow(SettingsItem):
         self._status_label.setStyleSheet(f"color: {color};")
         self._status_label.setText(text)
 
+    def set_success(self, text: str) -> None:
+        """Show a status message in the theme success (green) colour."""
+        color = self._style_manager.get_color_str(ColorRole.TEXT_SUCCESS)
+        self._status_label.setStyleSheet(f"color: {color};")
+        self._status_label.setText(text)
+
     def _on_style_changed(self) -> None:
         zoom = self._style_manager.zoom_factor()
         self._button.setMinimumHeight(int(30 * zoom))

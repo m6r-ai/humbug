@@ -30,6 +30,7 @@ class ColorRole(Enum):
     TEXT_EPHEMERAL_INACTIVE = auto()    # Inactive ephemeral text color
     TEXT_ERROR = auto()                 # Error text color
     TEXT_ERROR_INACTIVE = auto()        # Inactive error text color
+    TEXT_SUCCESS = auto()               # Success text color
 
     # Edit box colours
     EDIT_BOX_BORDER = auto()            # Edit box border

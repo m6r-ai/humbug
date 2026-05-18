@@ -131,6 +131,7 @@ def get_french_strings() -> LanguageStrings:
         enable_backend="Activer le backend",
         api_key="Clé API",
         api_url="URL API (optionnel)",
+        ollama_host_url="URL hôte Ollama",
         anthropic_backend="Anthropic",
         deepseek_backend="DeepSeek",
         google_backend="Google",
@@ -410,6 +411,17 @@ def get_french_strings() -> LanguageStrings:
         update_check_failed="Impossible de vérifier les mises à jour. Vérifiez votre connexion réseau.",
         update_tooltip="Humbug {0} disponible — cliquez pour la page de version",
         check_for_updates_setting="Vérifier automatiquement les mises à jour",
+
+        # Ollama pull
+        ollama_pull_label="Télécharger un modèle",
+        ollama_pull_placeholder="Nom du modèle (ex. llama3.2)",
+        ollama_pull_button="Télécharger",
+        ollama_pull_pulling="Téléchargement de {0}…",
+        ollama_pull_success="« {0} » installé avec succès.",
+        ollama_pull_model_not_found="Modèle introuvable — vérifiez le nom sur ollama.com/library.",
+        ollama_pull_not_running="Impossible de se connecter à Ollama — est-il en cours d'exécution ?",
+        ollama_pull_error="Échec du téléchargement : {0}",
+        ollama_update_local_models="Mettre à jour les modèles locaux",
 
         # Fetch-models errors
         fetch_error_invalid_key="Clé API invalide — veuillez vérifier votre clé et réessayer.",

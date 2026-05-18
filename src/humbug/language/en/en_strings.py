@@ -131,6 +131,7 @@ def get_english_strings() -> LanguageStrings:
         enable_backend="Enable Backend",
         api_key="API Key",
         api_url="API URL (optional)",
+        ollama_host_url="Ollama Host URL",
         anthropic_backend="Anthropic",
         deepseek_backend="DeepSeek",
         google_backend="Google",
@@ -410,6 +411,17 @@ def get_english_strings() -> LanguageStrings:
         update_check_failed="Could not check for updates. Please check your network connection.",
         update_tooltip="Humbug {0} available — click for release page",
         check_for_updates_setting="Automatically check for updates",
+
+        # Ollama pull
+        ollama_pull_label="Pull Model",
+        ollama_pull_placeholder="Model name (e.g. llama3.2)",
+        ollama_pull_button="Pull",
+        ollama_pull_pulling="Pulling {0}…",
+        ollama_pull_success="'{0}' installed successfully.",
+        ollama_pull_model_not_found="Model not found — check the name at ollama.com/library.",
+        ollama_pull_not_running="Could not connect to Ollama — is it running?",
+        ollama_pull_error="Pull failed: {0}",
+        ollama_update_local_models="Update Local Models",
 
         # Fetch-models errors
         fetch_error_invalid_key="Invalid API key — please check your key and try again.",
