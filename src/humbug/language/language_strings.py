@@ -377,3 +377,13 @@ class LanguageStrings:
     update_check_failed: str
     update_tooltip: str  # Format: "Humbug {0} available"
     check_for_updates_setting: str
+
+    # Fetch-models error messages ({0} = HTTP status code or error text)
+    fetch_error_invalid_key: str
+    fetch_error_access_denied: str
+    fetch_error_not_found: str
+    fetch_error_rate_limited: str
+    fetch_error_server_error: str
+    fetch_error_connection: str
+    fetch_error_timeout: str
+    fetch_error_generic: str

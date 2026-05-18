@@ -1,4 +1,5 @@
 """Anthropic backend implementation."""
+import aiohttp
 from typing import Dict, List, Any
 
 from ai.ai_backend import AIBackend, RequestConfig
@@ -22,6 +23,19 @@ class AnthropicBackend(AIBackend):
             The default URL
         """
         return "https://api.anthropic.com/v1/messages"
+
+    async def fetch_models(self) -> List[str]:
+        """Fetch available model IDs from the Anthropic API."""
+        url = self._api_url.replace("/messages", "/models")
+        headers = {
+            "x-api-key": self._api_key,
+            "anthropic-version": "2023-06-01",
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, ssl=self._ssl_context) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return [m["id"] for m in data.get("data", [])]
 
     def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
         """

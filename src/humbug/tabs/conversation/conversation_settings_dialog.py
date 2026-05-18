@@ -1,5 +1,7 @@
 """Dialog for configuring conversation-specific settings using the settings framework."""
 
+from typing import Dict, List
+
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea, QWidget, QFrame
 )
@@ -9,6 +11,7 @@ from ai import AIConversationSettings, AIReasoningCapability
 from ai.ai_model import AIReasoningEffort
 
 from humbug.language.language_manager import LanguageManager
+from humbug.settings.settings_combo import SettingsCombo
 from humbug.settings.settings_container import SettingsContainer
 from humbug.settings.settings_factory import SettingsFactory
 from humbug.style_manager import StyleManager
@@ -62,8 +65,13 @@ class ConversationSettingsDialog(QDialog):
         model_section = SettingsFactory.create_section(strings.model_settings)
         self._settings_container.add_setting(model_section)
 
-        # Create model selection
+        # Provider filter
+        self._model_filter_combo = SettingsFactory.create_combo("Provider")
+        self._settings_container.add_setting(self._model_filter_combo)
+
+        # Create model selection (searchable, grouped by provider)
         self._model_combo = SettingsFactory.create_combo(strings.settings_model_label)
+        self._model_combo.set_searchable(True)
         self._settings_container.add_setting(self._model_combo)
 
         # Create reasoning capabilities
@@ -99,6 +107,7 @@ class ConversationSettingsDialog(QDialog):
         self._settings_container.add_stretch()
 
         # Connect change handlers
+        self._model_filter_combo.value_changed.connect(self._on_model_filter_changed)
         self._model_combo.value_changed.connect(self._on_model_value_changed)
         self._effort_combo.value_changed.connect(self._on_effort_value_changed)
         self._settings_container.value_changed.connect(self._on_settings_value_changed)
@@ -146,14 +155,56 @@ class ConversationSettingsDialog(QDialog):
         # Apply consistent dialog styling
         self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
+    # ------------------------------------------------------------------ #
+    #  Provider grouping helpers                                           #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _provider_display_names() -> Dict[str, str]:
+        return {
+            "anthropic": "Anthropic", "deepseek": "DeepSeek", "google": "Google",
+            "mistral": "Mistral", "ollama": "Ollama", "openai": "OpenAI",
+            "vllm": "vLLM", "xai": "xAI", "zai": "Z.ai",
+        }
+
+    def _populate_model_filter_combo(self) -> None:
+        provider_names = self._provider_display_names()
+        seen: set = set()
+        items: List[tuple] = [("All Providers", None)]
+        for m in AIConversationSettings.iter_models_by_backends(self._ai_backends):
+            p = AIConversationSettings.get_provider(m)
+            if p not in seen:
+                seen.add(p)
+                items.append((provider_names.get(p, p), p))
+        self._model_filter_combo.set_items(items)
+
+    def _populate_model_combo(self, filter_provider: str | None) -> None:
+        provider_names = self._provider_display_names()
+        grouped: Dict[str, List[str]] = {}
+        for m in AIConversationSettings.iter_models_by_backends(self._ai_backends):
+            p = AIConversationSettings.get_provider(m)
+            if filter_provider and p != filter_provider:
+                continue
+            grouped.setdefault(p, []).append(m)
+        groups = [
+            (provider_names.get(p, p), [(m, m) for m in models])
+            for p, models in grouped.items()
+        ]
+        self._model_combo.set_grouped_items(groups)
+
+    def _on_model_filter_changed(self) -> None:
+        self._populate_model_combo(self._model_filter_combo.get_value())
+
+    # ------------------------------------------------------------------ #
+
     def _on_model_value_changed(self) -> None:
         """Handle model selection changes."""
-        current_model = self._model_combo.get_text()
+        current_model = str(self._model_combo.get_value() or "")
         self._update_model_displays(current_model)
 
     def _on_effort_value_changed(self) -> None:
         """Handle reasoning effort changes — temperature support may change."""
-        model = self._model_combo.get_text()
+        model = str(self._model_combo.get_value() or "")
         effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
         supports_temp = AIConversationSettings.supports_temperature(model, effort)
         self._temp_spin.set_enabled(supports_temp)
@@ -221,7 +272,7 @@ class ConversationSettingsDialog(QDialog):
         supports_temp = AIConversationSettings.supports_temperature(model, effort)
         self._temp_spin.set_enabled(supports_temp)
 
-        # Update context window display
+        # Update context window display (model is already a str from get_value)
         self._context_display.set_value(
             f"{limits['context_window']:,} {strings.settings_tokens_label}"
         )
@@ -240,7 +291,7 @@ class ConversationSettingsDialog(QDialog):
 
     def get_settings(self) -> AIConversationSettings:
         """Get the current settings from the dialog."""
-        model = self._model_combo.get_text()
+        model = str(self._model_combo.get_value() or "")
         temperature = self._temp_spin.get_value()
         reasoning = self._reasoning_combo.get_value()
         effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
@@ -266,12 +317,9 @@ class ConversationSettingsDialog(QDialog):
             reasoning_effort=settings.reasoning_effort,
         )
 
-        # Populate model combo
-        models = []
-        for model in AIConversationSettings.iter_models_by_backends(self._ai_backends):
-            models.append((model, model))  # (display_text, data_value)
-
-        self._model_combo.set_items(models)
+        # Populate filter then model combo (grouped by provider)
+        self._populate_model_filter_combo()
+        self._populate_model_combo(filter_provider=None)
         self._model_combo.set_value(settings.model)
 
         # Set temperature

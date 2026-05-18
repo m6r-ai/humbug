@@ -1,6 +1,8 @@
 """Google Google backend implementation."""
 from typing import Dict, List, Any
 
+import aiohttp
+
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_model import AIReasoningEffort
@@ -22,6 +24,20 @@ class GoogleBackend(AIBackend):
             The default URL
         """
         return "https://generativelanguage.googleapis.com/v1beta/models"
+
+    async def fetch_models(self) -> List[str]:
+        """Fetch available model IDs from the Google Gemini API."""
+        base_url = self._api_url.split("?")[0]
+        url = f"{base_url}?key={self._api_key}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, ssl=self._ssl_context) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return [
+                    m["name"].removeprefix("models/")
+                    for m in data.get("models", [])
+                    if "generateContent" in m.get("supportedGenerationMethods", [])
+                ]
 
     def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
         """
