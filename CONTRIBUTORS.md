@@ -19,6 +19,8 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Added "whole word" find feature.
 * Added the mindspace search feature.
 * Smoothed AI response streaming.
+* Implemented a new AI provider and model selection UI.
+* Implemented support for dynamically fetching the model lists from the AI providers.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 
