@@ -2,10 +2,10 @@
 Combo box setting for selecting from a list of options.
 """
 
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, cast
 
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
-from PySide6.QtGui import QColor, QIcon, QKeyEvent, QPainter
+from PySide6.QtGui import QColor, QIcon, QKeyEvent, QPainter, QPaintEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
@@ -40,7 +40,7 @@ class _SettingsComboButton(QPushButton):
         self._show_dropdown_icon = visible
         self.update()
 
-    def paintEvent(self, event) -> None:
+    def paintEvent(self, event: QPaintEvent) -> None:
         super().paintEvent(event)
         if not self._show_dropdown_icon or self._dropdown_icon.isNull():
             return
@@ -216,8 +216,9 @@ class _SettingsComboPopup(QFrame):
 
         search_height = self._search.sizeHint().height() if self._searchable else 0
         self._list.setFixedHeight(list_height)
-        margins = self.layout().contentsMargins()
-        spacing = self.layout().spacing() if self._searchable else 0
+        popup_layout = cast(QVBoxLayout, self.layout())
+        margins = popup_layout.contentsMargins()
+        spacing = popup_layout.spacing() if self._searchable else 0
         self.setFixedHeight(
             margins.top() + search_height + spacing + list_height + margins.bottom()
         )

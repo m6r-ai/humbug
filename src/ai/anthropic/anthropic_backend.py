@@ -1,6 +1,7 @@
 """Anthropic backend implementation."""
-import aiohttp
 from typing import Dict, List, Any
+
+import aiohttp
 
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings

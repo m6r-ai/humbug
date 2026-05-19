@@ -11,7 +11,6 @@ from ai import AIConversationSettings, AIReasoningCapability
 from ai.ai_model import AIReasoningEffort
 
 from humbug.language.language_manager import LanguageManager
-from humbug.settings.settings_combo import SettingsCombo
 from humbug.settings.settings_container import SettingsContainer
 from humbug.settings.settings_factory import SettingsFactory
 from humbug.style_manager import StyleManager

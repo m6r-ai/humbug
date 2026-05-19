@@ -8,18 +8,20 @@ from typing import Dict, List, cast
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea,
     QWidget, QFrame, QListWidget, QListWidgetItem, QStackedWidget, QSplitter,
-    QStyledItemDelegate, QStyleOptionViewItem, QLabel,
-    QDialogButtonBox,
+    QStyledItemDelegate, QStyleOptionViewItem, QLabel
 )
 from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSize, Signal, Qt
 from PySide6.QtGui import QFont
 
 from ai import AIBackendSettings, AIConversationSettings, AIManager, AIReasoningCapability
 from ai.ai_model import AIReasoningEffort
+from ai.ollama.ollama_backend import OllamaBackend
 from ai_tool import AIToolManager
 
 from humbug.language.language_code import LanguageCode
 from humbug.color_role import ColorRole
+from humbug.fetch_error import fetch_error_message as _fetch_error_message
+from humbug.fetch_error import pull_error_message as _pull_error_message
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.settings.settings_accordion import SettingsAccordion
@@ -41,9 +43,6 @@ from humbug.user.user_settings import UserSettings
 
 _FETCHED_MODELS_CACHE = os.path.join(os.path.expanduser("~"), ".humbug", "fetched-models.json")
 
-
-from humbug.fetch_error import fetch_error_message as _fetch_error_message
-from humbug.fetch_error import pull_error_message as _pull_error_message
 
 # Section identifier constants
 SECTION_DISPLAY = "display"
@@ -105,7 +104,7 @@ class SettingsDialog(QDialog):
         self._current_mindspace_settings: MindspaceSettings | None = None
         self._has_mindspace = False
 
-        self._ai_backend_controls: Dict[str, Dict[str, QWidget]] = {}
+        self._ai_backend_controls: Dict[str, Dict[str, QWidget | None]] = {}
         self._tool_switches: Dict[str, QWidget] = {}
         self._fetched_models_cache_path = _FETCHED_MODELS_CACHE
 
@@ -1010,7 +1009,7 @@ class SettingsDialog(QDialog):
                 def on_progress(status: str) -> None:
                     pull_row.set_status(status)
 
-                await backend.pull_model(model_name, on_progress)
+                await cast(OllamaBackend, backend).pull_model(model_name, on_progress)
                 AIConversationSettings.register_fetched_models([model_name], backend_id)
                 AIConversationSettings.save_fetched_models_cache(
                     self._fetched_models_cache_path
