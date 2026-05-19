@@ -13,9 +13,16 @@ Open conversation settings from:
 
 ### Model
 
-The AI model to use. Only models whose backends are currently enabled in your user settings
-appear in this list. You can switch models at any point in the conversation — the new model
-receives the full conversation history as context.
+Two controls work together to let you find and select a model:
+
+- **Provider** — filters the list to a specific provider, or shows all enabled providers at
+  once. Useful when you know which provider you want and the full list is long.
+- **Model** — the model to use. The list is searchable: type any part of the model name to
+  filter it. When **All Providers** is selected, models are grouped by provider. Only models
+  whose backends are configured in your user settings appear here.
+
+You can switch models at any point in the conversation — the new model receives the full
+conversation history as context.
 
 ### Reasoning
 

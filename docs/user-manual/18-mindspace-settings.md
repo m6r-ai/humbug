@@ -10,7 +10,9 @@ in the mindspace panel header, or with **Ctrl+Alt+,**.
 These settings are used as the starting values for every new conversation opened in this
 mindspace. You can override them per-conversation at any time.
 
-- **Model** — the default AI model for new conversations
+- **Provider** — filters the model list to a specific provider, or leave it as **All Providers**
+  to see all available models grouped by provider
+- **Model** — the default AI model for new conversations. The list is searchable — type to filter by name
 - **Reasoning** — whether reasoning is enabled by default and, if so, whether it is visible
   or hidden
 - **Reasoning effort** — the default effort level for models that support variable reasoning
