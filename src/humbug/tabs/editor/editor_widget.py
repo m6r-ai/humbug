@@ -710,13 +710,14 @@ class EditorWidget(QPlainTextEdit):
                 number = str(block_number + 1)
                 text_color = self._style_manager.get_color(ColorRole.LINE_NUMBER)
                 painter.setPen(text_color)
+                block_height = int(self.blockBoundingRect(block).height())
                 text_rect = QRect(
                     0,
                     int(top),
                     self._line_number_area.width() - padding,
-                    self.fontMetrics().height()
+                    block_height
                 )
-                painter.drawText(text_rect, alignment, number)
+                painter.drawText(text_rect, alignment | Qt.AlignmentFlag.AlignVCenter, number)
 
             block = block.next()
             top = bottom

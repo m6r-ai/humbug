@@ -318,12 +318,13 @@ class DiffPane(QPlainTextEdit):
                     painter.setPen(self._style_manager.get_color(
                         ColorRole.DIFF_HUNK_LINE_NUMBER if in_active_hunk else ColorRole.LINE_NUMBER
                     ))
+                    block_height = int(self.blockBoundingRect(block).height())
                     painter.drawText(
                         QRect(
                             0,
                             top,
                             self._gutter.width() - right_margin,
-                            self.fontMetrics().height(),
+                            block_height,
                         ),
                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
                         str(data.line_no),
