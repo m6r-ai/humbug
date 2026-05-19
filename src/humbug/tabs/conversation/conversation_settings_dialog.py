@@ -182,11 +182,15 @@ class ConversationSettingsDialog(QDialog):
             if filter_provider and p != filter_provider:
                 continue
             grouped.setdefault(p, []).append(m)
-        groups = [
-            (provider_names.get(p, p), [(m, m) for m in models])
-            for p, models in grouped.items()
-        ]
-        self._model_combo.set_grouped_items(groups)
+        if filter_provider:
+            items = [(m, m) for models in grouped.values() for m in models]
+            self._model_combo.set_items(items)
+        else:
+            groups = [
+                (provider_names.get(p, p), [(m, m) for m in models])
+                for p, models in grouped.items()
+            ]
+            self._model_combo.set_grouped_items(groups)
 
     def _on_model_filter_changed(self) -> None:
         self._populate_model_combo(self._model_filter_combo.get_value())

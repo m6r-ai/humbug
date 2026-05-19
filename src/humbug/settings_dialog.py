@@ -930,7 +930,6 @@ class SettingsDialog(QDialog):
     def _populate_model_combo(self, ai_backends: Dict, filter_provider: str | None) -> None:
         """Populate the model combo grouped by provider, optionally filtered."""
         provider_names = self._get_provider_display_names()
-        # Build {provider: [model_name, ...]}
         grouped: Dict[str, List[str]] = {}
         for model_name in AIConversationSettings.iter_models_by_backends(ai_backends):
             provider = AIConversationSettings.get_provider(model_name)
@@ -938,11 +937,15 @@ class SettingsDialog(QDialog):
                 continue
             grouped.setdefault(provider, []).append(model_name)
 
-        groups = [
-            (provider_names.get(provider, provider), [(m, m) for m in models])
-            for provider, models in grouped.items()
-        ]
-        self._model_combo.set_grouped_items(groups)
+        if filter_provider:
+            items = [(m, m) for models in grouped.values() for m in models]
+            self._model_combo.set_items(items)
+        else:
+            groups = [
+                (provider_names.get(provider, provider), [(m, m) for m in models])
+                for provider, models in grouped.items()
+            ]
+            self._model_combo.set_grouped_items(groups)
 
     def _refresh_model_combo(self) -> None:
         """Re-populate the model combo after new models have been registered."""
