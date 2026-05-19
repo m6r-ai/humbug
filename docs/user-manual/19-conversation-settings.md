@@ -64,5 +64,4 @@ the conversation grows.
 
 ---
 
-*Previous: [Mindspace Settings](18-mindspace-settings.md)*
-*Next: [Keyboard Shortcuts](20-keyboard-shortcuts.md)*
+*[Index](index.md) · Previous: [Mindspace Settings](18-mindspace-settings.md) · Next: [Keyboard Shortcuts](20-keyboard-shortcuts.md)*

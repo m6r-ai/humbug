@@ -5,6 +5,8 @@ Think of it as an operating system for human-AI collaboration.
 
 ![Humbug in action](docs/screenshots/v44-demo.gif)
 
+Humbug now has a full [user manual](./docs/user-manual/index.md).
+
 ## What are the core ideas?
 
 - **Human–AI collaboration at the heart of the design**  
@@ -99,6 +101,7 @@ The `conversations` directory in the Humbug git repository includes a lot of dis
 
 ## Learn more
 
+- **User manual:** [User manual](./docs/user-manual/index.md)
 - **What's new:** [Latest updates](./CHANGELOG.md)
 - **Download:** [Download Humbug](https://github.com/m6r-ai/humbug/releases)
 - **Blog posts:** [Dave's blog posts about Humbug and Menai](https://davehudson.io/blog)

@@ -134,5 +134,4 @@ so you can see them side by side without the conversation being hidden.
 
 ---
 
-*Previous: [Mindspaces](04-mindspaces.md)*
-*Next: [Conversations](06-conversations.md)*
+*[Index](index.md) · Previous: [Mindspaces](04-mindspaces.md) · Next: [Conversations](06-conversations.md)*

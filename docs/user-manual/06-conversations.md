@@ -173,5 +173,4 @@ automatically deleted when you close the tab to avoid cluttering the conversatio
 
 ---
 
-*Previous: [Tabs & Columns](05-tabs-and-columns.md)*
-*Next: [AI Models & Backends](07-ai-models-and-backends.md)*
+*[Index](index.md) · Previous: [Tabs & Columns](05-tabs-and-columns.md) · Next: [AI Models & Backends](07-ai-models-and-backends.md)*

@@ -154,5 +154,4 @@ user settings.
 
 ---
 
-*Previous: [Your First Conversation with an AI](03-first-conversation.md)*
-*Next: [Tabs & Columns](05-tabs-and-columns.md)*
+*[Index](index.md) · Previous: [Your First Conversation with an AI](03-first-conversation.md) · Next: [Tabs & Columns](05-tabs-and-columns.md)*

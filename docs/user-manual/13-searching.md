@@ -80,5 +80,4 @@ Binary files are also skipped automatically.
 
 ---
 
-*Previous: [Viewing Git Diffs](12-git-diffs.md)*
-*Next: [Attaching Files to Conversations](14-attachments.md)*
+*[Index](index.md) · Previous: [Viewing Git Diffs](12-git-diffs.md) · Next: [Attaching Files to Conversations](14-attachments.md)*

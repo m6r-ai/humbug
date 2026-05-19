@@ -122,4 +122,4 @@
 
 ---
 
-*Previous: [Conversation Settings](19-conversation-settings.md)*
+*[Index](index.md) · Previous: [Conversation Settings](19-conversation-settings.md)*

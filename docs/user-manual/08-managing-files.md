@@ -120,5 +120,4 @@ content if needed.
 
 ---
 
-*Previous: [AI Models & Backends](07-ai-models-and-backends.md)*
-*Next: [Editing Files](09-editing-files.md)*
+*[Index](index.md) · Previous: [AI Models & Backends](07-ai-models-and-backends.md) · Next: [Editing Files](09-editing-files.md)*

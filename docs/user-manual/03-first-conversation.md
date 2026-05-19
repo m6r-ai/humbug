@@ -152,5 +152,4 @@ as you left it.
 
 ---
 
-*Previous: [Installation & First Launch](02-installation.md)*
-*Next: [Mindspaces](04-mindspaces.md)*
+*[Index](index.md) · Previous: [Installation & First Launch](02-installation.md) · Next: [Mindspaces](04-mindspaces.md)*

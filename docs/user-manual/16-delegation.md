@@ -61,5 +61,4 @@ happened — both the parent's reasoning and the child's work — even after the
 
 ---
 
-*Previous: [Forking & Managing Conversations](15-forking-conversations.md)*
-*Next: [User Settings](17-user-settings.md)*
+*[Index](index.md) · Previous: [Forking & Managing Conversations](15-forking-conversations.md) · Next: [User Settings](17-user-settings.md)*

@@ -71,5 +71,4 @@ startup and notifies you if one is available. You can also check manually from t
 
 ---
 
-*Previous: [Delegating Tasks Between AIs](16-delegation.md)*
-*Next: [Mindspace Settings](18-mindspace-settings.md)*
+*[Index](index.md) · Previous: [Delegating Tasks Between AIs](16-delegation.md) · Next: [Mindspace Settings](18-mindspace-settings.md)*

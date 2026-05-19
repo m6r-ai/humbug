@@ -112,5 +112,4 @@ distinct colour to let you know something has happened.
 
 ---
 
-*Previous: [Managing Files & Folders](08-managing-files.md)*
-*Next: [Using the Terminal](10-terminal.md)*
+*[Index](index.md) · Previous: [Managing Files & Folders](08-managing-files.md) · Next: [Using the Terminal](10-terminal.md)*

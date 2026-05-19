@@ -201,5 +201,4 @@ Any errors in the file are reported when Humbug starts, and the offending entrie
 
 ---
 
-*Previous: [Conversations](06-conversations.md)*
-*Next: [Managing Files & Folders](08-managing-files.md)*
+*[Index](index.md) · Previous: [Conversations](06-conversations.md) · Next: [Managing Files & Folders](08-managing-files.md)*

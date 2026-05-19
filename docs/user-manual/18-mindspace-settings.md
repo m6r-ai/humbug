@@ -11,11 +11,11 @@ These settings are used as the starting values for every new conversation opened
 mindspace. You can override them per-conversation at any time.
 
 - **Model** — the default AI model for new conversations
-- **Temperature** — the default temperature setting (where supported by the model)
 - **Reasoning** — whether reasoning is enabled by default and, if so, whether it is visible
   or hidden
 - **Reasoning effort** — the default effort level for models that support variable reasoning
   depth
+- **Temperature** — the default temperature setting (where supported by the model)
 
 ---
 
@@ -67,5 +67,4 @@ unwanted side effects.
 
 ---
 
-*Previous: [User Settings](17-user-settings.md)*
-*Next: [Conversation Settings](19-conversation-settings.md)*
+*[Index](index.md) · Previous: [User Settings](17-user-settings.md) · Next: [Conversation Settings](19-conversation-settings.md)*
