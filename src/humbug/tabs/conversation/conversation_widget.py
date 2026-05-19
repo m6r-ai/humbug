@@ -1745,7 +1745,6 @@ class ConversationWidget(QWidget):
         margins = layout.contentsMargins()
         chrome = margins.top() + margins.bottom() + layout.spacing()
         chrome += self._input.banner().sizeHint().height()
-        chrome += 2
         self._input_chrome_height = chrome
 
     def _on_input_size_hint_changed(self) -> None:
@@ -1771,7 +1770,7 @@ class ConversationWidget(QWidget):
         style_manager = self._style_manager
         spacing = int(style_manager.message_bubble_spacing())
         max_content_width = int(style_manager.nice_tab_width())
-        input_width = min(self._scroll_area.viewport().width(), max_content_width) - 2 * spacing - 4
+        input_width = min(self._scroll_area.viewport().width(), max_content_width) - 2 * spacing + 2
         self._input.resize(input_width, self._input.height())
 
     def _update_input_position(self, input_height: int | None = None) -> None:
@@ -1780,15 +1779,15 @@ class ConversationWidget(QWidget):
         spacing = int(style_manager.message_bubble_spacing())
         max_content_width = int(style_manager.nice_tab_width())
         viewport_width = self._scroll_area.viewport().width()
-        container_width = min(viewport_width, max_content_width)
+        container_width = min(viewport_width, max_content_width) + 2
         container_offset = (viewport_width - container_width) // 2
-        input_x = container_offset + spacing + 2
+        input_x = container_offset + spacing
 
         if input_height is None:
             assert self._input_spacer is not None
             input_height = self._input_spacer.height()
 
-        input_y = self.height() - input_height - spacing - 2
+        input_y = self.height() - input_height - spacing + 1
 
         self._input.setFixedHeight(input_height)
         self._input.move(input_x, input_y)
