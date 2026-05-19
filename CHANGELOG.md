@@ -19,6 +19,7 @@ Bug fixes:
 - Resolved problems in the Java syntax highlighter (around handling of generics).
 - If a file open in a diff view is saved then the scroll position within the diff view is now preserved.
 - If a file open in an editor view is saved externally then the scroll position within the editor tab is now preserved.
+- Arabic text line numbers now line up with the text.
 
 Internal structure changes:
 
