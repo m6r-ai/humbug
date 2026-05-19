@@ -61,7 +61,7 @@ class SettingsAccordion(SettingsItem):
         self._content_widget.setProperty("AccordionContent", True)
         self._content_layout = QVBoxLayout(self._content_widget)
         self._content_layout.setSpacing(0)
-        self._content_layout.setContentsMargins(28, 8, 14, 14)
+        self._content_layout.setContentsMargins(14, 8, 14, 14)
 
         # Start collapsed: zero max-height acts as invisible without setVisible.
         self._content_widget.setMinimumHeight(0)
