@@ -630,32 +630,19 @@ class AIConversationSettings:
         Returns:
             The name of the default model to use
         """
-        if "google" in ai_backends:
-            return "gemini-2.5-flash"
+        provider_preference = [
+            "google", "anthropic", "deepseek", "mistral",
+            "openai", "xai", "zai", "ollama", "vllm",
+        ]
+        for provider in provider_preference:
+            if provider not in ai_backends:
+                continue
 
-        if "anthropic" in ai_backends:
-            return "claude-haiku-4-5"
+            for model_name, model in cls.MODELS.items():
+                if model.provider == provider:
+                    return model_name
 
-        if "deepseek" in ai_backends:
-            return "deepseek-chat"
-
-        if "mistral" in ai_backends:
-            return "mistral-large-latest"
-
-        if "ollama" in ai_backends:
-            return "qwen3.5"
-
-        if "openai" in ai_backends:
-            return "gpt-5-mini"
-
-        if "xai" in ai_backends:
-            return "grok-4-0709"
-
-        if "zai" in ai_backends:
-            return "glm-4.7 (Z.ai)"
-
-        # Shouldn't happen as we require at least one backend
-        return "gemini-2.5-flash"
+        return next(iter(cls.MODELS))
 
     # Provider-level defaults for models fetched from an API (capabilities unknown).
     _PROVIDER_FETCH_DEFAULTS: Dict[str, Dict[str, Any]] = {
@@ -735,6 +722,7 @@ class AIConversationSettings:
         """
         if model_id in cls._BUILTIN_MODEL_KEYS or model_id not in cls.MODELS:
             return False
+
         del cls.MODELS[model_id]
         return True
 
@@ -764,6 +752,7 @@ class AIConversationSettings:
         for model_id in model_ids:
             if model_id in cls.MODELS:
                 already_present.append(model_id)
+
             else:
                 cls.MODELS[model_id] = AIModel(
                     name=model_id,
@@ -775,6 +764,7 @@ class AIConversationSettings:
                     tool_capabilities=defaults["tool_capabilities"],
                 )
                 newly_added.append(model_id)
+
         return newly_added, already_present
 
     @classmethod
@@ -798,6 +788,7 @@ class AIConversationSettings:
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(cache, f, indent=2)
+
         except OSError:
             pass
 
