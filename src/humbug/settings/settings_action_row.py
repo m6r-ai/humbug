@@ -29,13 +29,16 @@ class SettingsActionRow(SettingsItem):
 
     @property
     def button(self) -> QPushButton:
+        """Return the action button."""
         return self._button
 
     @property
     def status_label(self) -> QLabel:
+        """Return the status label."""
         return self._status_label
 
     def set_button_text(self, text: str) -> None:
+        """Set the button label text."""
         self._button.setText(text)
 
     def set_status(self, text: str) -> None:

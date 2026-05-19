@@ -999,7 +999,7 @@ class SettingsDialog(QDialog):
         pull_row.set_status(strings.ollama_pull_pulling.format(model_name))
 
         url = cast(SettingsTextField, controls["url"]).get_value().strip()
-        backend_class = self._ai_manager._BACKEND_CLASSES.get(backend_id)
+        backend_class = self._ai_manager.get_backend_class(backend_id)
         if backend_class is None:
             return
         backend = backend_class(api_key="", api_url=url or None)
@@ -1035,7 +1035,7 @@ class SettingsDialog(QDialog):
         api_key = cast(SettingsTextField, controls["key"]).get_value().strip()
         url = cast(SettingsTextField, controls["url"]).get_value().strip()
 
-        backend_class = self._ai_manager._BACKEND_CLASSES.get(backend_id)
+        backend_class = self._ai_manager.get_backend_class(backend_id)
         if backend_class is None:
             fetch_row.set_status("Unknown provider.")
             return

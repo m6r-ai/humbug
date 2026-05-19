@@ -115,12 +115,14 @@ class _SettingsComboPopup(QFrame):
         self.setGraphicsEffect(shadow)
 
     def set_searchable(self, searchable: bool) -> None:
+        """Show or hide the search field and clear it when hiding."""
         self._searchable = searchable
         self._search.setVisible(searchable)
         if not searchable:
             self._search.clear()
 
     def set_items(self, rows: List[Tuple[str, Any, bool]]) -> None:
+        """Repopulate the list from rows of (text, data, enabled) tuples."""
         current_data = self._owner.get_value()
         self._list.clear()
 
@@ -131,12 +133,14 @@ class _SettingsComboPopup(QFrame):
             item.setSizeHint(self._item_size_hint(enabled))
             if not enabled:
                 item.setFlags(Qt.ItemFlag.NoItemFlags)
+
             self._list.addItem(item)
 
         self.select_data(current_data)
         self._filter_items(self._search.text())
 
     def select_data(self, data: Any) -> None:
+        """Highlight the first enabled row whose data matches, or fall back to the first enabled row."""
         for row in range(self._list.count()):
             item = self._list.item(row)
             if item.data(Qt.ItemDataRole.UserRole + 1) and item.data(Qt.ItemDataRole.UserRole) == data:
@@ -146,6 +150,12 @@ class _SettingsComboPopup(QFrame):
         self._select_first_visible_enabled_item()
 
     def popup(self, global_pos: QPoint, width: int) -> None:
+        """
+        Show the popup at global_pos with the given width.
+
+        Flips the popup above the trigger button if it would otherwise extend
+        below the available screen area.
+        """
         if self._searchable:
             self._search.clear()
 
@@ -165,10 +175,12 @@ class _SettingsComboPopup(QFrame):
         if self._searchable:
             self._search.setFocus(Qt.FocusReason.PopupFocusReason)
             self._search.selectAll()
+
         else:
             self._list.setFocus(Qt.FocusReason.PopupFocusReason)
 
     def apply_style(self, stylesheet: str) -> None:
+        """Apply a stylesheet to the popup frame, list, and search field."""
         self.setStyleSheet(stylesheet)
         self._list.setStyleSheet(stylesheet)
         self._search.setStyleSheet(stylesheet)
@@ -235,6 +247,7 @@ class _SettingsComboPopup(QFrame):
                 if group_rows:
                     for group_row in group_rows:
                         self._list.item(group_row).setHidden(not group_has_match)
+
                 group_rows = [row]
                 group_has_match = False
                 item.setHidden(False)
@@ -356,12 +369,14 @@ class SettingsCombo(SettingsField):
         """Get the current selected item's data."""
         if 0 <= self._current_index < len(self._items):
             return self._items[self._current_index][1]
+
         return None
 
     def get_text(self) -> str:
         """Get the current selected item's text."""
         if 0 <= self._current_index < len(self._items):
             return self._items[self._current_index][0]
+
         return ""
 
     def set_value(self, value: Any, reset_initial: bool = True) -> None:
@@ -373,6 +388,7 @@ class SettingsCombo(SettingsField):
                 self._sync_button_text()
                 if reset_initial:
                     self._initial_index = index
+
                 self._emit_if_changed(previous_index)
                 return
 
@@ -454,8 +470,10 @@ class SettingsCombo(SettingsField):
         self._button.setMinimumHeight(int(36 * zoom_factor))
         if self._searchable:
             object_name = "SettingsComboSearchButton"
+
         elif self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
             object_name = "SettingsComboButtonRtl"
+
         else:
             object_name = "SettingsComboButton"
 

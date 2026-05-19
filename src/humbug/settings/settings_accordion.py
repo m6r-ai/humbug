@@ -83,6 +83,7 @@ class SettingsAccordion(SettingsItem):
         item.value_changed.connect(self.value_changed)
 
     def set_label(self, text: str) -> None:
+        """Set the accordion header title text."""
         self._title_label.setText(text)
 
     def is_modified(self) -> bool:

@@ -78,6 +78,18 @@ class AIManager:
 
         return ""
 
+    def get_backend_class(self, provider: str) -> Type[AIBackend] | None:
+        """
+        Get the backend class for a provider.
+
+        Args:
+            provider: The provider name
+
+        Returns:
+            The backend class for the specified provider, or None if not found
+        """
+        return self._BACKEND_CLASSES.get(provider)
+
     def _create_backends(self, backend_settings: Dict[str, AIBackendSettings]) -> Dict[str, AIBackend]:
         """
         Create AI backends based on enabled backends and their settings.

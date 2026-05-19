@@ -15,6 +15,7 @@ def pull_error_message(exc: Exception) -> str:
         msg = str(exc).lower()
         if any(hint in msg for hint in _OLLAMA_NOT_FOUND_HINTS):
             return strings.ollama_pull_model_not_found
+
         return strings.ollama_pull_error.format(str(exc)[:80])
 
     if isinstance(exc, aiohttp.ClientConnectorError):
@@ -23,6 +24,7 @@ def pull_error_message(exc: Exception) -> str:
     if isinstance(exc, aiohttp.ClientResponseError):
         if exc.status == 404:
             return strings.ollama_pull_model_not_found
+
         return strings.ollama_pull_error.format(f"HTTP {exc.status}")
 
     if isinstance(exc, aiohttp.ServerTimeoutError):
@@ -44,19 +46,25 @@ def fetch_error_message(exc: Exception, backend_id: str = "") -> str:
         # Ollama runs locally — give the more actionable "is it running?" message.
         if backend_id == "ollama":
             return strings.ollama_pull_not_running
+
         return strings.fetch_error_connection
 
     if isinstance(exc, aiohttp.ClientResponseError):
         if exc.status == 401:
             return strings.fetch_error_invalid_key
+
         if exc.status == 403:
             return strings.fetch_error_access_denied.format(exc.status)
+
         if exc.status == 404:
             return strings.fetch_error_not_found.format(exc.status)
+
         if exc.status == 429:
             return strings.fetch_error_rate_limited.format(exc.status)
+
         if exc.status >= 500:
             return strings.fetch_error_server_error.format(exc.status)
+
         return strings.fetch_error_generic.format(f"HTTP {exc.status}: {exc.message}")
 
     if isinstance(exc, aiohttp.ServerTimeoutError):
