@@ -1744,7 +1744,7 @@ class ConversationWidget(QWidget):
         assert layout is not None
         margins = layout.contentsMargins()
         chrome = margins.top() + margins.bottom() + layout.spacing()
-        chrome += self._input.banner().sizeHint().height()
+        chrome += self._input.banner().sizeHint().height() + 1
         self._input_chrome_height = chrome
 
     def _on_input_size_hint_changed(self) -> None:

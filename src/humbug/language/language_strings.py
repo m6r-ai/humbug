@@ -279,6 +279,8 @@ class LanguageStrings:
     conversation_status: str
     conversation_status_temperature: str
     conversation_status_no_temperature: str
+    conversation_status_reasoning: str
+    conversation_status_no_reasoning: str
     terminal_status: str
     system_status: str
     log_status: str

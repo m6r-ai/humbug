@@ -425,6 +425,7 @@ class SettingsDialog(QDialog):
                 pull_row = SettingsActionRow(strings.ollama_pull_button)
                 accordion.add_content(pull_row)
                 pull_row.button.setEnabled(False)
+
             else:
                 pull_name_field = None
                 pull_row = None
@@ -755,6 +756,7 @@ class SettingsDialog(QDialog):
         self._update_model_capabilities(settings.model)
         if settings.reasoning_effort is not None:
             self._effort_combo.set_value(settings.reasoning_effort)
+
         self._reasoning_combo.set_value(settings.reasoning)
 
         # Tools
@@ -869,8 +871,10 @@ class SettingsDialog(QDialog):
         items = []
         if capabilities & AIReasoningCapability.NO_REASONING:
             items.append((strings.settings_no_reasoning, AIReasoningCapability.NO_REASONING))
+
         if capabilities & AIReasoningCapability.HIDDEN_REASONING:
             items.append((strings.settings_hidden_reasoning, AIReasoningCapability.HIDDEN_REASONING))
+
         if capabilities & AIReasoningCapability.VISIBLE_REASONING:
             items.append((strings.settings_visible_reasoning, AIReasoningCapability.VISIBLE_REASONING))
 
@@ -891,6 +895,7 @@ class SettingsDialog(QDialog):
             self._effort_combo.set_items(effort_items)
             self._effort_combo.setEnabled(len(effort_items) > 1)
             self._effort_combo.setVisible(True)
+
         else:
             self._effort_combo.set_items([])
             self._effort_combo.setEnabled(False)
@@ -934,11 +939,13 @@ class SettingsDialog(QDialog):
             provider = AIConversationSettings.get_provider(model_name)
             if filter_provider and provider != filter_provider:
                 continue
+
             grouped.setdefault(provider, []).append(model_name)
 
         if filter_provider:
             items = [(m, m) for models in grouped.values() for m in models]
             self._model_combo.set_items(items)
+
         else:
             groups = [
                 (provider_names.get(provider, provider), [(m, m) for m in models])
@@ -1044,12 +1051,15 @@ class SettingsDialog(QDialog):
         async def _do_fetch() -> None:
             try:
                 model_ids = await backend.fetch_models()
+
             except Exception as exc:  # pylint: disable=broad-except
                 fetch_row.set_error(_fetch_error_message(exc, backend_id))
                 self._logger.warning("fetch_models failed for %s: %s", backend_id, exc)
+
             else:
                 if backend_id == "ollama":
                     self._register_ollama_models(model_ids, fetch_row)
+
                 else:
                     newly_added, _ = AIConversationSettings.register_fetched_models(
                         model_ids, backend_id
@@ -1060,8 +1070,10 @@ class SettingsDialog(QDialog):
                     if newly_added:
                         self._refresh_model_combo()
                         fetch_row.set_success(f"Added {len(newly_added)} new model(s).")
+
                     else:
                         fetch_row.set_status("List already up to date.")
+
             finally:
                 self._update_fetch_button_state(backend_id)
 

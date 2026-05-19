@@ -31,7 +31,6 @@ class SettingsAccordion(SettingsItem):
         outer.setSpacing(0)
         outer.setContentsMargins(0, 5, 0, 5)
 
-        # ── Header ────────────────────────────────────────────────────────
         self._header_btn = QPushButton()
         self._header_btn.setObjectName("AccordionHeader")
         self._header_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -55,9 +54,9 @@ class SettingsAccordion(SettingsItem):
         header_layout.addWidget(self._title_label, 1)
         header_layout.addWidget(self._chevron)
 
-        # ── Content area ──────────────────────────────────────────────────
         self._content_widget = QWidget()
         self._content_widget.setObjectName("AccordionContent")
+
         # Clipping ensures content never overflows the animated boundary.
         self._content_widget.setProperty("AccordionContent", True)
         self._content_layout = QVBoxLayout(self._content_widget)
@@ -73,8 +72,6 @@ class SettingsAccordion(SettingsItem):
         self.setLayout(outer)
 
         self._on_style_changed()
-
-    # ── Public API ─────────────────────────────────────────────────────────
 
     def add_content(self, item: SettingsItem) -> None:
         """Add a settings item into the collapsible content area."""
@@ -93,8 +90,6 @@ class SettingsAccordion(SettingsItem):
         for item in self._content_items:
             item.reset_modified_state()
 
-    # ── Private ────────────────────────────────────────────────────────────
-
     def _on_toggle(self) -> None:
         self._expanded = not self._expanded
         self._on_style_changed()   # update header border radius + chevron
@@ -109,6 +104,7 @@ class SettingsAccordion(SettingsItem):
             target_h = self._content_widget.sizeHint().height()
             start_h = 0
             self._content_widget.setMaximumHeight(0)   # will be driven by animation
+
         else:
             start_h = self._content_widget.height()
             target_h = 0
@@ -117,15 +113,14 @@ class SettingsAccordion(SettingsItem):
         anim.setDuration(ACCORDION_ANIM_DURATION_MS)
         anim.setStartValue(start_h)
         anim.setEndValue(target_h)
-        anim.setEasingCurve(
-            QEasingCurve.Type.OutCubic if self._expanded else QEasingCurve.Type.InCubic
-        )
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic if self._expanded else QEasingCurve.Type.InCubic)
         anim.start()
         self._animation = anim
 
     def _update_chevron(self) -> None:
         if self._expanded:
             icon_name = "arrow-down"
+
         else:
             is_rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
             icon_name = "arrow-left" if is_rtl else "arrow-right"
@@ -212,7 +207,6 @@ class SettingsAccordion(SettingsItem):
             QWidget#AccordionContent {{
                 background-color: {content_bg};
                 border: 1px solid {border_color};
-                border-top: 2px solid {accent};
                 border-top-left-radius: 0px;
                 border-top-right-radius: 0px;
                 border-bottom-left-radius: {radius}px;
