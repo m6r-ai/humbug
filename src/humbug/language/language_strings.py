@@ -122,6 +122,7 @@ class LanguageStrings:
     enable_backend: str
     api_key: str
     api_url: str
+    ollama_host_url: str
     anthropic_backend: str
     deepseek_backend: str
     google_backend: str
@@ -377,3 +378,24 @@ class LanguageStrings:
     update_check_failed: str
     update_tooltip: str  # Format: "Humbug {0} available"
     check_for_updates_setting: str
+
+    # Fetch-models error messages ({0} = HTTP status code or error text)
+    fetch_error_invalid_key: str
+    fetch_error_access_denied: str
+    fetch_error_not_found: str
+    fetch_error_rate_limited: str
+    fetch_error_server_error: str
+    fetch_error_connection: str
+    fetch_error_timeout: str
+    fetch_error_generic: str
+
+    # Ollama pull model UI ({0} = model name or detail)
+    ollama_pull_label: str
+    ollama_pull_placeholder: str
+    ollama_pull_button: str
+    ollama_pull_pulling: str
+    ollama_pull_success: str
+    ollama_pull_model_not_found: str
+    ollama_pull_not_running: str
+    ollama_pull_error: str
+    ollama_update_local_models: str

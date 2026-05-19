@@ -2,6 +2,8 @@
 import json
 from typing import Dict, List, Any
 
+import aiohttp
+
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessage, AIMessageSource
@@ -23,6 +25,16 @@ class DeepseekBackend(AIBackend):
             The default URL
         """
         return "https://api.deepseek.com/chat/completions"
+
+    async def fetch_models(self) -> List[str]:
+        """Fetch available model IDs from the DeepSeek API."""
+        url = self._api_url.replace("/chat/completions", "/models")
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, ssl=self._ssl_context) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return [m["id"] for m in data.get("data", [])]
 
     def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
         """

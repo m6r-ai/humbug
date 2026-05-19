@@ -169,6 +169,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#e06050",
                 ColorMode.LIGHT: "#f07060"
             },
+            ColorRole.TEXT_SUCCESS: {
+                ColorMode.DARK: "#4ade80",
+                ColorMode.LIGHT: "#16a34a"
+            },
 
             # Edit box colours
             ColorRole.EDIT_BOX_BORDER: {
@@ -1450,49 +1454,210 @@ class StyleManager(QObject):
         """
 
     def get_combo_box_stylesheet(self, selector: str = "QComboBox") -> str:
-        """Get shared combo-box styling."""
+        """Get shared combo-box styling (MUI outlined variant)."""
         zoom_factor = self.zoom_factor()
         base_font_size = self.base_font_size()
+        font_pt = int(base_font_size * zoom_factor)
+        arrow_size = max(10, int(14 * zoom_factor))
+        drop_width = max(28, int(36 * zoom_factor))
+        pad_v = max(6, int(8 * zoom_factor))
+        pad_h = max(10, int(12 * zoom_factor))
+        is_button_combo = "QPushButton" in selector
+        is_search_button = "SearchButton" in selector
+        is_rtl_button = "ButtonRtl" in selector
+        trigger_icon_pad = max(22, int(26 * zoom_factor))
+        trigger_text_pad = max(6, int(8 * zoom_factor))
+        left_pad = (
+            trigger_text_pad if is_search_button else
+            trigger_icon_pad if is_rtl_button else
+            trigger_text_pad if is_button_combo else
+            pad_h
+        )
+        right_pad = (
+            left_pad if is_search_button else
+            trigger_text_pad if is_rtl_button else
+            trigger_icon_pad if is_button_combo else
+            drop_width
+        )
+        item_pad_v = max(4, int(6 * zoom_factor))
+        item_pad_h = max(10, int(12 * zoom_factor))
+
+        border_normal = self.get_color_str(ColorRole.MENU_BORDER)
+        border_hover  = self.get_color_str(ColorRole.TEXT_INACTIVE)
+        border_active = self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
+        bg            = self.get_color_str(ColorRole.BACKGROUND_DIALOG)
+        bg_disabled   = self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)
+        text          = self.get_color_str(ColorRole.TEXT_PRIMARY)
+        text_disabled = self.get_color_str(ColorRole.TEXT_DISABLED)
+        popup_bg      = self.get_color_str(ColorRole.MENU_BACKGROUND)
+        popup_border  = self.get_color_str(ColorRole.MENU_BORDER)
+        item_hover    = self.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
+        item_selected = self.get_color_str(ColorRole.TEXT_SELECTED)
 
         return f"""
             {selector} {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 6px;
+                background-color: {bg};
+                color: {text};
+                border: 1px solid {border_normal};
+                border-radius: 6px;
+                padding: {pad_v}px {right_pad}px {pad_v}px {left_pad}px;
                 margin: 0px;
-                font-size: {int(base_font_size * zoom_factor)}pt;
+                font-size: {font_pt}pt;
+                text-align: left;
+                selection-background-color: transparent;
+                selection-color: {text};
+            }}
+            {selector}:hover {{
+                border-color: {border_hover};
+                background-color: {popup_bg};
+            }}
+            {selector}:on {{
+                border-color: {border_active};
+                border-width: 2px;
+                padding: {pad_v - 1}px {right_pad - 1}px {pad_v - 1}px {left_pad - 1}px;
             }}
             {selector}:disabled {{
-                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: {bg_disabled};
+                color: {text_disabled};
+                border-color: {border_normal};
+            }}
+            {selector} QLineEdit {{
+                background-color: transparent;
+                border: none;
+                padding: 0px;
+                margin: 0px;
+                color: {text};
+                selection-background-color: {item_selected};
             }}
             {selector}::drop-down {{
+                subcontrol-origin: border;
+                subcontrol-position: right center;
                 border: none;
-                width: 20px;
+                width: {drop_width}px;
             }}
             {selector}::down-arrow {{
                 image: url({self.get_icon_path("arrow-down")});
-                width: 12px;
-                height: 12px;
+                width: {arrow_size}px;
+                height: {arrow_size}px;
             }}
             {selector}::down-arrow:on {{
-                image: url({self.get_icon_path('arrow-up')});
-                width: 12px;
-                height: 12px;
+                image: url({self.get_icon_path("arrow-up")});
             }}
             {selector}::down-arrow:disabled {{
                 image: none;
             }}
-            {selector} QAbstractItemView::item:selected {{
-                border: none;
-                background-color: {self.get_color_str(ColorRole.TEXT_SELECTED)};
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+            {selector} QAbstractItemView {{
+                background-color: {popup_bg};
+                color: {text};
+                border: 1px solid {popup_border};
+                border-radius: 6px;
+                padding: 0px;
+                margin: 0px;
+                outline: none;
+                show-decoration-selected: 1;
             }}
-            {selector} QListView {{
-                background-color: {self.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
-                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+            {selector} QAbstractItemView::item {{
+                padding: {item_pad_v}px {item_pad_h}px;
+                border: none;
+                color: {text};
+            }}
+            {selector} QAbstractItemView::item:hover {{
+                background-color: {item_hover};
+            }}
+            {selector} QAbstractItemView::item:selected {{
+                background-color: {item_selected};
+                color: {text};
+            }}
+            {selector} QAbstractItemView::item:disabled {{
+                color: {text_disabled};
+                background-color: transparent;
+                padding-top: {max(3, item_pad_v // 2)}px;
+                padding-bottom: {max(3, item_pad_v // 2)}px;
+            }}
+        """
+
+    def get_combo_popup_stylesheet(self) -> str:
+        """Stylesheet for the QCompleter popup (a top-level QListView)."""
+        zoom_factor = self.zoom_factor()
+        base_font_size = self.base_font_size()
+        font_pt = int(base_font_size * zoom_factor)
+        search_pad_v = max(5, int(6 * zoom_factor))
+        item_pad_h = max(10, int(12 * zoom_factor))
+
+        popup_bg      = self.get_color_str(ColorRole.MENU_BACKGROUND)
+        popup_border  = self.get_color_str(ColorRole.MENU_BORDER)
+        surface_bg    = self.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        text          = self.get_color_str(ColorRole.TEXT_PRIMARY)
+        text_disabled = self.get_color_str(ColorRole.TEXT_DISABLED)
+        item_hover    = self.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
+        item_selected = self.get_color_str(ColorRole.TEXT_SELECTED)
+        focus_border  = self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
+        scrollbar_bg  = self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)
+        scrollbar_h   = self.get_color_str(ColorRole.SCROLLBAR_HANDLE)
+
+        return f"""
+            QWidget#SettingsComboPopupWindow {{
+                background-color: {popup_bg};
+                border: 1px solid {popup_border};
+                border-radius: 8px;
+                padding: 0px;
+                margin: 0px;
+            }}
+            QLineEdit#SettingsComboPopupSearch {{
+                background-color: {surface_bg};
+                color: {text};
+                border: 1px solid {popup_border};
+                border-radius: 5px;
+                padding: {search_pad_v}px {item_pad_h}px;
+                margin: 0px;
+                font-size: {font_pt}pt;
+                selection-background-color: {item_selected};
+            }}
+            QLineEdit#SettingsComboPopupSearch:focus {{
+                border-color: {focus_border};
+            }}
+            QListView, QListWidget#SettingsComboPopupList {{
+                background-color: {popup_bg};
+                color: {text};
+                border: none;
+                border-radius: 0px;
+                padding: 0px;
+                margin: 0px;
+                outline: none;
+                font-size: {font_pt}pt;
+            }}
+            QListView::item, QListWidget#SettingsComboPopupList::item {{
+                padding: 0px {item_pad_h}px;
+                border: none;
+                border-radius: 4px;
+                color: {text};
+            }}
+            QListView::item:hover, QListWidget#SettingsComboPopupList::item:hover {{
+                background-color: {item_hover};
+            }}
+            QListView::item:selected, QListWidget#SettingsComboPopupList::item:selected {{
+                background-color: {item_selected};
+                color: {text};
+            }}
+            QListView::item:disabled, QListWidget#SettingsComboPopupList::item:disabled {{
+                color: {text_disabled};
+                background-color: transparent;
+            }}
+            QScrollBar:vertical {{
+                background-color: {scrollbar_bg};
+                width: 8px;
+                border-radius: 4px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {scrollbar_h};
+                min-height: 20px;
+                border-radius: 4px;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
             }}
         """
 

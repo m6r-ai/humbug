@@ -201,6 +201,9 @@ def main() -> int:
 
     # Create application
     app = HumbugApplication(sys.argv)
+    # Fusion gives a pure-Qt renderer on every platform — no OS-native popup
+    # containers, so QSS controls 100% of the appearance on Mac, Linux, Windows.
+    app.setStyle("Fusion")
     load_fonts()
     style_manager = StyleManager()
     app_font = QFont(style_manager.proportional_font_families()[0], int(style_manager.base_font_size()))

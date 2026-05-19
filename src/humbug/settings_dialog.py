@@ -1,12 +1,15 @@
 """Unified settings dialog combining user and mindspace settings."""
 
+import asyncio
 import logging
-from typing import Dict, cast
+import os
+from typing import Dict, List, cast
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea,
     QWidget, QFrame, QListWidget, QListWidgetItem, QStackedWidget, QSplitter,
-    QStyledItemDelegate, QStyleOptionViewItem
+    QStyledItemDelegate, QStyleOptionViewItem, QLabel,
+    QDialogButtonBox,
 )
 from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSize, Signal, Qt
 from PySide6.QtGui import QFont
@@ -19,6 +22,8 @@ from humbug.language.language_code import LanguageCode
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
+from humbug.settings.settings_accordion import SettingsAccordion
+from humbug.settings.settings_action_row import SettingsActionRow
 from humbug.settings.settings_container import SettingsContainer
 from humbug.settings.settings_combo import SettingsCombo
 from humbug.settings.settings_double_spinbox import SettingsDoubleSpinBox
@@ -34,6 +39,11 @@ from humbug.user.user_file_sort_order import UserFileSortOrder
 from humbug.user.user_manager import UserManager
 from humbug.user.user_settings import UserSettings
 
+_FETCHED_MODELS_CACHE = os.path.join(os.path.expanduser("~"), ".humbug", "fetched-models.json")
+
+
+from humbug.fetch_error import fetch_error_message as _fetch_error_message
+from humbug.fetch_error import pull_error_message as _pull_error_message
 
 # Section identifier constants
 SECTION_DISPLAY = "display"
@@ -97,6 +107,7 @@ class SettingsDialog(QDialog):
 
         self._ai_backend_controls: Dict[str, Dict[str, QWidget]] = {}
         self._tool_switches: Dict[str, QWidget] = {}
+        self._fetched_models_cache_path = _FETCHED_MODELS_CACHE
 
         # Map section id -> (list item, stack page widget)
         self._section_items: Dict[str, QListWidgetItem] = {}
@@ -121,6 +132,7 @@ class SettingsDialog(QDialog):
         self._ai_backends_container: SettingsContainer
 
         self._ai_model_heading: SettingsPageHeading
+        self._model_filter_combo: SettingsCombo
         self._model_combo: SettingsCombo
         self._temp_spin: SettingsDoubleSpinBox
         self._reasoning_combo: SettingsCombo
@@ -374,32 +386,80 @@ class SettingsDialog(QDialog):
         ]
 
         for backend_id, backend_name in ai_backend_mapping:
-            backend_title = SettingsFactory.create_section(backend_name)
-            container.add_setting(backend_title)
+            accordion = SettingsAccordion(backend_name, expanded=False)
+            container.add_setting(accordion)
 
             enable_switch = SettingsFactory.create_switch(strings.enable_backend)
-            container.add_setting(enable_switch)
+            accordion.add_content(enable_switch)
 
             api_key_field = SettingsFactory.create_text_field(strings.api_key)
-            container.add_setting(api_key_field)
+            accordion.add_content(api_key_field)
 
             default_url = self._ai_manager.get_default_url(backend_id)
-            url_field = SettingsFactory.create_text_field(strings.api_url, placeholder=default_url)
-            container.add_setting(url_field)
+            if backend_id == "ollama":
+                url_label = strings.ollama_host_url
+                url_placeholder = "http://127.0.0.1:11434"
+            else:
+                url_label = strings.api_url
+                url_placeholder = default_url
+            url_field = SettingsFactory.create_text_field(url_label, placeholder=url_placeholder)
+            accordion.add_content(url_field)
+
+            is_ollama = backend_id == "ollama"
+
+            fetch_label = strings.ollama_update_local_models if is_ollama else "Update Models"
+            fetch_row = SettingsActionRow(fetch_label)
+            accordion.add_content(fetch_row)
+            fetch_row.button.setEnabled(False)
+
+            manage_row = SettingsActionRow("Remove Fetched Models…")
+            accordion.add_content(manage_row)
+            manage_row.button.setEnabled(False)
+
+            if is_ollama:
+                pull_name_field = SettingsFactory.create_text_field(
+                    strings.ollama_pull_label,
+                    placeholder=strings.ollama_pull_placeholder,
+                )
+                accordion.add_content(pull_name_field)
+
+                pull_row = SettingsActionRow(strings.ollama_pull_button)
+                accordion.add_content(pull_row)
+                pull_row.button.setEnabled(False)
+            else:
+                pull_name_field = None
+                pull_row = None
 
             self._ai_backend_controls[backend_id] = {
                 "enable": enable_switch,
                 "key": api_key_field,
                 "url": url_field,
-                "title": backend_title,
+                "title": accordion,
+                "fetch_row": fetch_row,
+                "manage_row": manage_row,
+                "pull_name": pull_name_field,
+                "pull_row": pull_row,
             }
 
             enable_switch.value_changed.connect(
                 lambda _checked=None, bid=backend_id: self._handle_backend_enabled(bid)
             )
-
-            spacer = SettingsFactory.create_spacer(24)
-            container.add_setting(spacer)
+            api_key_field.value_changed.connect(
+                lambda _v=None, bid=backend_id: self._update_fetch_button_state(bid)
+            )
+            fetch_row.button.clicked.connect(
+                lambda _checked=False, bid=backend_id: self._on_fetch_models_clicked(bid)
+            )
+            manage_row.button.clicked.connect(
+                lambda _checked=False, bid=backend_id: self._on_manage_models_clicked(bid)
+            )
+            if is_ollama and pull_name_field and pull_row:
+                pull_name_field.value_changed.connect(
+                    lambda _v=None, bid=backend_id: self._update_pull_button_state(bid)
+                )
+                pull_row.button.clicked.connect(
+                    lambda _checked=False, bid=backend_id: self._on_pull_model_clicked(bid)
+                )
 
         container.add_stretch()
         container.value_changed.connect(self._on_value_changed)
@@ -418,7 +478,11 @@ class SettingsDialog(QDialog):
         self._ai_model_heading = SettingsFactory.create_page_heading(strings.model_settings)
         container.add_setting(self._ai_model_heading)
 
+        self._model_filter_combo = SettingsFactory.create_combo("Provider")
+        container.add_setting(self._model_filter_combo)
+
         self._model_combo = SettingsFactory.create_combo(strings.settings_model_label)
+        self._model_combo.set_searchable(True)
         container.add_setting(self._model_combo)
 
         self._reasoning_combo = SettingsFactory.create_combo(strings.settings_reasoning_label)
@@ -432,6 +496,7 @@ class SettingsDialog(QDialog):
         )
         container.add_setting(self._temp_spin)
 
+        self._model_filter_combo.value_changed.connect(self._on_model_filter_changed)
         self._model_combo.value_changed.connect(self._on_model_value_changed)
         self._effort_combo.value_changed.connect(self._on_effort_value_changed)
 
@@ -626,7 +691,8 @@ class SettingsDialog(QDialog):
             for name, cb in self._tool_switches.items()
         }
 
-        reasoning_options = AIConversationSettings.get_supported_reasoning_efforts(self._model_combo.get_text())
+        current_model = str(self._model_combo.get_value() or "")
+        reasoning_options = AIConversationSettings.get_supported_reasoning_efforts(current_model)
         return MindspaceSettings(
             use_soft_tabs=self._soft_tabs_check.get_value(),
             tab_size=self._tab_size_spin.get_value(),
@@ -637,7 +703,7 @@ class SettingsDialog(QDialog):
             terminal_scrollback_enabled=self._terminal_scrollback_check.get_value(),
             terminal_scrollback_lines=self._terminal_scrollback_spin.get_value(),
             terminal_close_on_exit=self._terminal_close_on_exit_check.get_value(),
-            model=self._model_combo.get_text(),
+            model=current_model,
             temperature=self._temp_spin.get_value(),
             reasoning=self._reasoning_combo.get_value(),
             reasoning_effort=self._effort_combo.get_value() if reasoning_options else None,
@@ -671,7 +737,10 @@ class SettingsDialog(QDialog):
             cast(SettingsTextField, controls["key"]).set_value(backend.api_key)
             cast(SettingsTextField, controls["url"]).set_value(backend.url)
             cast(SettingsTextField, controls["key"]).set_enabled(backend.enabled)
-            cast(SettingsTextField, controls["url"]).set_enabled(backend.enabled)
+            cast(SettingsTextField, controls["url"]).set_enabled(
+                backend.enabled or backend_id == "ollama"
+            )
+            self._update_fetch_button_state(backend_id)
 
     def _populate_mindspace_settings(self, settings: MindspaceSettings | None) -> None:
         """Load mindspace settings into the dialog controls."""
@@ -680,8 +749,8 @@ class SettingsDialog(QDialog):
 
         # AI model
         ai_backends = self._user_manager.get_ai_backends()
-        models = [(m, m) for m in AIConversationSettings.iter_models_by_backends(ai_backends)]
-        self._model_combo.set_items(models)
+        self._populate_model_filter_combo(ai_backends)
+        self._populate_model_combo(ai_backends, filter_provider=None)
         self._model_combo.set_value(settings.model)
         self._temp_spin.set_value(settings.temperature)
         self._update_model_capabilities(settings.model)
@@ -777,15 +846,19 @@ class SettingsDialog(QDialog):
         controls = self._ai_backend_controls[backend_id]
         enabled = cast(SettingsSwitch, controls["enable"]).get_value()
         cast(SettingsTextField, controls["key"]).set_enabled(enabled)
-        cast(SettingsTextField, controls["url"]).set_enabled(enabled)
+        # Ollama URL is always editable so the user can set the host before enabling.
+        url_always_on = backend_id == "ollama"
+        cast(SettingsTextField, controls["url"]).set_enabled(enabled or url_always_on)
+        self._update_fetch_button_state(backend_id)
+        self._update_pull_button_state(backend_id)
 
     def _on_model_value_changed(self) -> None:
         """Update capability controls when the model selection changes."""
-        self._update_model_capabilities(self._model_combo.get_text())
+        self._update_model_capabilities(str(self._model_combo.get_value() or ""))
 
     def _on_effort_value_changed(self) -> None:
         """Update temperature enable state when reasoning effort changes."""
-        model = self._model_combo.get_text()
+        model = str(self._model_combo.get_value() or "")
         effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
         self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model, effort))
 
@@ -826,6 +899,217 @@ class SettingsDialog(QDialog):
 
         effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
         self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model, effort))
+
+    # ------------------------------------------------------------------ #
+    #  Model filter / grouping helpers                                     #
+    # ------------------------------------------------------------------ #
+
+    def _get_provider_display_names(self) -> Dict[str, str]:
+        """Return a mapping from provider ID to a human-readable display name."""
+        return {
+            "anthropic": "Anthropic",
+            "deepseek": "DeepSeek",
+            "google": "Google",
+            "mistral": "Mistral",
+            "ollama": "Ollama",
+            "openai": "OpenAI",
+            "vllm": "vLLM",
+            "xai": "xAI",
+            "zai": "Z.ai",
+        }
+
+    def _populate_model_filter_combo(self, ai_backends: Dict) -> None:
+        """Populate the provider filter combo with all providers that have models."""
+        provider_names = self._get_provider_display_names()
+        providers_with_models = set(
+            AIConversationSettings.get_provider(m)
+            for m in AIConversationSettings.iter_models_by_backends(ai_backends)
+        )
+        items: List[tuple] = [("All Providers", None)]
+        for provider_id, display in provider_names.items():
+            if provider_id in providers_with_models:
+                items.append((display, provider_id))
+        self._model_filter_combo.set_items(items)
+
+    def _populate_model_combo(self, ai_backends: Dict, filter_provider: str | None) -> None:
+        """Populate the model combo grouped by provider, optionally filtered."""
+        provider_names = self._get_provider_display_names()
+        # Build {provider: [model_name, ...]}
+        grouped: Dict[str, List[str]] = {}
+        for model_name in AIConversationSettings.iter_models_by_backends(ai_backends):
+            provider = AIConversationSettings.get_provider(model_name)
+            if filter_provider and provider != filter_provider:
+                continue
+            grouped.setdefault(provider, []).append(model_name)
+
+        groups = [
+            (provider_names.get(provider, provider), [(m, m) for m in models])
+            for provider, models in grouped.items()
+        ]
+        self._model_combo.set_grouped_items(groups)
+
+    def _refresh_model_combo(self) -> None:
+        """Re-populate the model combo after new models have been registered."""
+        ai_backends = self._user_manager.get_ai_backends()
+        filter_provider = self._model_filter_combo.get_value()
+        self._populate_model_filter_combo(ai_backends)
+        self._populate_model_combo(ai_backends, filter_provider)
+
+    def _on_model_filter_changed(self) -> None:
+        """Repopulate model list when the provider filter changes."""
+        ai_backends = self._user_manager.get_ai_backends()
+        filter_provider = self._model_filter_combo.get_value()
+        self._populate_model_combo(ai_backends, filter_provider)
+
+    # ------------------------------------------------------------------ #
+    #  Fetch-models button                                                 #
+    # ------------------------------------------------------------------ #
+
+    def _update_fetch_button_state(self, backend_id: str) -> None:
+        """Enable "Update Models" only when backend is on and (for non-Ollama) has a key."""
+        controls = self._ai_backend_controls[backend_id]
+        enabled = cast(SettingsSwitch, controls["enable"]).get_value()
+        api_key = cast(SettingsTextField, controls["key"]).get_value().strip()
+        needs_key = backend_id not in ("ollama", "vllm")
+        can_fetch = enabled and (api_key or not needs_key)
+        cast(SettingsActionRow, controls["fetch_row"]).button.setEnabled(bool(can_fetch))
+        self._update_manage_button_state(backend_id)
+
+    def _update_manage_button_state(self, backend_id: str) -> None:
+        """Enable "Remove Fetched Models" only when there are fetched models for this provider."""
+        controls = self._ai_backend_controls[backend_id]
+        has_fetched = bool(AIConversationSettings.get_fetched_models_by_provider(backend_id))
+        cast(SettingsActionRow, controls["manage_row"]).button.setEnabled(has_fetched)
+
+    def _update_pull_button_state(self, backend_id: str) -> None:
+        """Enable Pull only when Ollama is on and a model name is entered."""
+        controls = self._ai_backend_controls[backend_id]
+        pull_row = controls.get("pull_row")
+        if pull_row is None:
+            return
+        enabled = cast(SettingsSwitch, controls["enable"]).get_value()
+        name = cast(SettingsTextField, controls["pull_name"]).get_value().strip()
+        cast(SettingsActionRow, pull_row).button.setEnabled(bool(enabled and name))
+
+    def _on_pull_model_clicked(self, backend_id: str) -> None:
+        """Pull a model from the Ollama registry by name."""
+        controls = self._ai_backend_controls[backend_id]
+        pull_row = cast(SettingsActionRow, controls["pull_row"])
+        pull_name_field = cast(SettingsTextField, controls["pull_name"])
+        model_name = pull_name_field.get_value().strip()
+        if not model_name:
+            return
+
+        strings = self._language_manager.strings()
+        pull_row.button.setEnabled(False)
+        pull_row.set_status(strings.ollama_pull_pulling.format(model_name))
+
+        url = cast(SettingsTextField, controls["url"]).get_value().strip()
+        backend_class = self._ai_manager._BACKEND_CLASSES.get(backend_id)
+        if backend_class is None:
+            return
+        backend = backend_class(api_key="", api_url=url or None)
+
+        async def _do_pull() -> None:
+            try:
+                def on_progress(status: str) -> None:
+                    pull_row.set_status(status)
+
+                await backend.pull_model(model_name, on_progress)
+                AIConversationSettings.register_fetched_models([model_name], backend_id)
+                AIConversationSettings.save_fetched_models_cache(
+                    self._fetched_models_cache_path
+                )
+                self._refresh_model_combo()
+                self._update_manage_button_state(backend_id)
+                pull_row.set_success(strings.ollama_pull_success.format(model_name))
+            except Exception as exc:  # pylint: disable=broad-except
+                pull_row.set_error(_pull_error_message(exc))
+                self._logger.warning("pull_model failed for %s: %s", model_name, exc)
+            finally:
+                self._update_pull_button_state(backend_id)
+
+        asyncio.get_event_loop().create_task(_do_pull())
+
+    def _on_fetch_models_clicked(self, backend_id: str) -> None:
+        """Kick off an async model-list fetch for the given backend."""
+        controls = self._ai_backend_controls[backend_id]
+        fetch_row = cast(SettingsActionRow, controls["fetch_row"])
+        fetch_row.button.setEnabled(False)
+        fetch_row.set_status("Fetching…")  # clears any previous error colour
+
+        api_key = cast(SettingsTextField, controls["key"]).get_value().strip()
+        url = cast(SettingsTextField, controls["url"]).get_value().strip()
+
+        backend_class = self._ai_manager._BACKEND_CLASSES.get(backend_id)
+        if backend_class is None:
+            fetch_row.set_status("Unknown provider.")
+            return
+        backend = backend_class(api_key=api_key, api_url=url or None)
+
+        async def _do_fetch() -> None:
+            try:
+                model_ids = await backend.fetch_models()
+            except Exception as exc:  # pylint: disable=broad-except
+                fetch_row.set_error(_fetch_error_message(exc, backend_id))
+                self._logger.warning("fetch_models failed for %s: %s", backend_id, exc)
+            else:
+                if backend_id == "ollama":
+                    self._register_ollama_models(model_ids, fetch_row)
+                else:
+                    newly_added, _ = AIConversationSettings.register_fetched_models(
+                        model_ids, backend_id
+                    )
+                    AIConversationSettings.save_fetched_models_cache(
+                        self._fetched_models_cache_path
+                    )
+                    if newly_added:
+                        self._refresh_model_combo()
+                        fetch_row.set_success(f"Added {len(newly_added)} new model(s).")
+                    else:
+                        fetch_row.set_status("List already up to date.")
+            finally:
+                self._update_fetch_button_state(backend_id)
+
+        asyncio.get_event_loop().create_task(_do_fetch())
+
+    def _on_manage_models_clicked(self, backend_id: str) -> None:
+        """Open the fetched-model manager dialog for a provider."""
+        fetched = AIConversationSettings.get_fetched_models_by_provider(backend_id)
+        provider_names = {
+            "anthropic": "Anthropic", "deepseek": "DeepSeek", "google": "Google",
+            "mistral": "Mistral", "ollama": "Ollama", "openai": "OpenAI",
+            "vllm": "vLLM", "xai": "xAI", "zai": "Z.ai",
+        }
+        title = provider_names.get(backend_id, backend_id)
+        dlg = _FetchedModelManagerDialog(fetched, title, self)
+        dlg.exec()
+
+        # After dialog closes, persist and refresh
+        AIConversationSettings.save_fetched_models_cache(self._fetched_models_cache_path)
+        self._update_manage_button_state(backend_id)
+        self._refresh_model_combo()
+
+    def _register_ollama_models(
+        self, model_ids: List[str], fetch_row: SettingsActionRow
+    ) -> None:
+        """Register installed Ollama models returned by /api/tags."""
+        if not model_ids:
+            fetch_row.set_status("No installed models found.")
+            return
+
+        newly_added, _ = AIConversationSettings.register_fetched_models(
+            model_ids, "ollama"
+        )
+        AIConversationSettings.save_fetched_models_cache(
+            self._fetched_models_cache_path
+        )
+        self._refresh_model_combo()
+        self._update_manage_button_state("ollama")
+        if newly_added:
+            fetch_row.set_success(f"Added {len(newly_added)} model(s).")
+        else:
+            fetch_row.set_status("Local model list already up to date.")
 
     def _on_auto_backup_changed(self) -> None:
         """Enable or disable backup interval spin based on auto backup switch."""
@@ -966,15 +1250,16 @@ class SettingsDialog(QDialog):
             "zai": strings.zai_backend,
         }
         for backend_id, controls in self._ai_backend_controls.items():
-            cast(SettingsSection, controls["title"]).set_label(backend_name_map[backend_id])
+            cast(SettingsAccordion, controls["title"]).set_label(backend_name_map[backend_id])
             cast(SettingsSwitch, controls["enable"]).set_label(strings.enable_backend)
             cast(SettingsTextField, controls["key"]).set_label(strings.api_key)
             cast(SettingsTextField, controls["url"]).set_label(strings.api_url)
 
         # Update AI Model page controls
+        self._model_filter_combo.set_label("Provider")
         self._model_combo.set_label(strings.settings_model_label)
         self._temp_spin.set_label(strings.settings_temp_label)
-        current_model = self._model_combo.get_text()
+        current_model = str(self._model_combo.get_value() or "")
         self._update_model_capabilities(current_model)
         self._reasoning_combo.set_label(strings.settings_reasoning_label)
         self._effort_combo.set_label(strings.settings_reasoning_effort_label)
@@ -1111,3 +1396,97 @@ class SettingsDialog(QDialog):
             reasoning=settings.reasoning,
             enabled_tools=settings.enabled_tools.copy(),
         )
+
+
+class _FetchedModelManagerDialog(QDialog):
+    """Dialog for viewing and permanently removing fetched (non-built-in) models."""
+
+    def __init__(
+        self, model_ids: List[str], provider_label: str, parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(f"Fetched Models — {provider_label}")
+        self.setModal(True)
+        self.setMinimumWidth(460)
+
+        outer = QVBoxLayout()
+        outer.setSpacing(0)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        # Scrollable model list
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setMinimumHeight(120)
+        scroll.setMaximumHeight(400)
+
+        list_widget = QWidget()
+        self._list_layout = QVBoxLayout(list_widget)
+        self._list_layout.setSpacing(2)
+        self._list_layout.setContentsMargins(16, 12, 16, 12)
+
+        self._empty_label = QLabel("No fetched models for this provider.")
+        self._list_layout.addWidget(self._empty_label)
+        self._list_layout.addStretch()
+
+        self._rows: dict = {}  # model_id -> row_widget
+        for model_id in sorted(model_ids):
+            self._add_model_row(model_id)
+
+        self._update_empty_label()
+        scroll.setWidget(list_widget)
+        outer.addWidget(scroll)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setObjectName("SettingsSeparator")
+        outer.addWidget(sep)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.setContentsMargins(16, 10, 16, 10)
+        btn_layout.addStretch()
+        close_btn = QPushButton("Close")
+        close_btn.setMinimumWidth(90)
+        close_btn.setMinimumHeight(36)
+        close_btn.setProperty("recommended", True)
+        close_btn.clicked.connect(self.accept)
+        btn_layout.addWidget(close_btn)
+        btn_layout.addStretch()
+        outer.addLayout(btn_layout)
+
+        self.setLayout(outer)
+
+        style_manager = StyleManager()
+        self.setStyleSheet(style_manager.get_dialog_stylesheet())
+
+    def _add_model_row(self, model_id: str) -> None:
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 2, 0, 2)
+        row_layout.setSpacing(8)
+
+        label = QLabel(model_id)
+        label.setSizePolicy(label.sizePolicy().horizontalPolicy(), label.sizePolicy().verticalPolicy())
+        row_layout.addWidget(label, 1)
+
+        remove_btn = QPushButton("Remove")
+        remove_btn.setFixedWidth(80)
+        remove_btn.setMinimumHeight(28)
+        remove_btn.clicked.connect(lambda _checked=False, mid=model_id: self._remove_model(mid))
+        row_layout.addWidget(remove_btn)
+
+        # Insert before the stretch (last item)
+        insert_at = self._list_layout.count() - 1
+        self._list_layout.insertWidget(insert_at, row)
+        self._rows[model_id] = row
+
+    def _remove_model(self, model_id: str) -> None:
+        AIConversationSettings.remove_fetched_model(model_id)
+        row = self._rows.pop(model_id, None)
+        if row:
+            self._list_layout.removeWidget(row)
+            row.deleteLater()
+        self._update_empty_label()
+
+    def _update_empty_label(self) -> None:
+        self._empty_label.setVisible(not self._rows)

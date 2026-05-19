@@ -9,6 +9,7 @@ from typing import Dict, cast
 from PySide6.QtCore import QObject, Signal
 
 from ai import AIBackend, AIBackendSettings, AIManager
+from ai.ai_conversation_settings import AIConversationSettings
 
 from humbug.user.user_settings import UserSettings
 
@@ -27,6 +28,7 @@ class UserManager(QObject):
     USER_DIR = ".humbug"
     SETTINGS_FILE = "user-settings.json"
     API_KEYS_FILE = "api-keys.json"  # Legacy file, maintained for backward compatibility
+    FETCHED_MODELS_FILE = "fetched-models.json"
 
     # Signal emitted when user settings change
     settings_changed = Signal()
@@ -49,12 +51,17 @@ class UserManager(QObject):
             self._settings: UserSettings | None = None
             self._ai_manager = AIManager()
             self._load_settings()
+            self._load_fetched_models()
             self._initialize_ai_backends()
             self._initialized = True
 
     def _get_settings_path(self) -> str:
         """Get path to user settings file."""
         return os.path.join(self._user_path, self.SETTINGS_FILE)
+
+    def _get_fetched_models_path(self) -> str:
+        """Get path to the fetched-models cache file."""
+        return os.path.join(self._user_path, self.FETCHED_MODELS_FILE)
 
     def _get_legacy_api_keys_path(self) -> str:
         """Get path to legacy API keys file."""
@@ -111,6 +118,13 @@ class UserManager(QObject):
 
         except OSError as e:
             self._logger.error("Failed to save user settings: %s", str(e))
+
+    def _load_fetched_models(self) -> None:
+        """Load previously fetched model IDs from the on-disk cache."""
+        try:
+            AIConversationSettings.load_fetched_models_cache(self._get_fetched_models_path())
+        except Exception:  # pylint: disable=broad-except
+            self._logger.exception("Failed to load fetched models cache")
 
     def _initialize_ai_backends(self) -> None:
         """Initialize AI backends using current settings."""

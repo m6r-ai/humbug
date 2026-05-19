@@ -131,6 +131,7 @@ def get_english_strings() -> LanguageStrings:
         enable_backend="Enable Backend",
         api_key="API Key",
         api_url="API URL (optional)",
+        ollama_host_url="Ollama Host URL",
         anthropic_backend="Anthropic",
         deepseek_backend="DeepSeek",
         google_backend="Google",
@@ -409,5 +410,26 @@ def get_english_strings() -> LanguageStrings:
         update_available_message="Version {0} is available — click to download.",
         update_check_failed="Could not check for updates. Please check your network connection.",
         update_tooltip="Humbug {0} available — click for release page",
-        check_for_updates_setting="Automatically check for updates"
+        check_for_updates_setting="Automatically check for updates",
+
+        # Ollama pull
+        ollama_pull_label="Pull Model",
+        ollama_pull_placeholder="Model name (e.g. llama3.2)",
+        ollama_pull_button="Pull",
+        ollama_pull_pulling="Pulling {0}…",
+        ollama_pull_success="'{0}' installed successfully.",
+        ollama_pull_model_not_found="Model not found — check the name at ollama.com/library.",
+        ollama_pull_not_running="Could not connect to Ollama — is it running?",
+        ollama_pull_error="Pull failed: {0}",
+        ollama_update_local_models="Update Local Models",
+
+        # Fetch-models errors
+        fetch_error_invalid_key="Invalid API key — please check your key and try again.",
+        fetch_error_access_denied="Access denied ({0}) — your key may not have model-list permission.",
+        fetch_error_not_found="Models endpoint not found ({0}) — check the API URL.",
+        fetch_error_rate_limited="Rate limited ({0}) — wait a moment then try again.",
+        fetch_error_server_error="Provider server error ({0}) — try again later.",
+        fetch_error_connection="Could not connect — check the URL and your network.",
+        fetch_error_timeout="Request timed out — the provider took too long to respond.",
+        fetch_error_generic="Failed: {0}"
     )

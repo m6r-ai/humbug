@@ -1,5 +1,10 @@
 """Ollama backend implementation."""
-from typing import Dict, List, Any
+import json
+import socket
+from typing import Callable, Dict, List, Any
+from urllib.parse import urlsplit, urlunsplit
+
+import aiohttp
 
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
@@ -21,7 +26,83 @@ class OllamaBackend(AIBackend):
         Returns:
             The default URL
         """
-        return "http://localhost:11434/api/chat"
+        return "http://127.0.0.1:11434/api/chat"
+
+    def _get_api_endpoint_url(self, endpoint: str) -> str:
+        """
+        Build an Ollama API endpoint URL from either a base URL or API URL.
+
+        Users commonly enter either "http://localhost:11434" or a full endpoint
+        such as "http://localhost:11434/api/chat".  Normalize both forms so
+        fetch and pull do not depend on platform-specific shell commands.
+        """
+        split = urlsplit(self._api_url)
+        path = split.path.rstrip("/")
+        if "/api/" in path:
+            base_path = path.split("/api/", 1)[0]
+        elif path.endswith("/api"):
+            base_path = path[:-4]
+        else:
+            base_path = path
+
+        endpoint_path = f"{base_path}/api/{endpoint.lstrip('/')}"
+        return urlunsplit((
+            split.scheme,
+            split.netloc,
+            endpoint_path,
+            "",
+            ""
+        ))
+
+    async def fetch_models(self) -> List[str]:
+        """Fetch installed model names from the Ollama API."""
+        url = self._get_api_endpoint_url("tags")
+        headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
+        # Force IPv4 — on macOS 'localhost' resolves to ::1 (IPv6) but Ollama
+        # listens only on 127.0.0.1, causing EINVAL with the default connector.
+        connector = aiohttp.TCPConnector(family=socket.AF_INET)
+        async with aiohttp.ClientSession(connector=connector) as session:
+            async with session.get(url, headers=headers, ssl=False) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return [m["name"] for m in data.get("models", [])]
+
+    async def pull_model(
+        self, model_name: str, on_progress: Callable[[str], None]
+    ) -> None:
+        """
+        Pull a model from the Ollama registry.
+
+        Streams NDJSON progress lines and calls on_progress with each status
+        string.  Raises ValueError if the model name is not found, or
+        aiohttp errors for network/server problems.
+
+        Args:
+            model_name: Name of the model to pull (e.g. "llama3.2").
+            on_progress: Callback invoked with each status string from Ollama.
+        """
+        url = self._get_api_endpoint_url("pull")
+        data = json.dumps({"name": model_name, "stream": True}).encode()
+        headers = {"Content-Type": "application/json"}
+        if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+
+        connector = aiohttp.TCPConnector(family=socket.AF_INET)
+        async with aiohttp.ClientSession(connector=connector) as session:
+            async with session.post(url, data=data, headers=headers, ssl=False) as response:
+                response.raise_for_status()
+                async for raw_line in response.content:
+                    line = raw_line.decode().strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if "error" in obj:
+                        raise ValueError(obj["error"])
+                    if "status" in obj:
+                        on_progress(obj["status"])
 
     def __init__(self, api_key: str, api_url: str | None = None) -> None:
         """Initialize the Ollama backend.

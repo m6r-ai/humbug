@@ -8,7 +8,7 @@ import logging
 import os
 import ssl
 import sys
-from typing import AsyncGenerator, Dict, Any
+from typing import AsyncGenerator, Dict, List, Any
 
 import aiohttp
 from aiohttp import ClientConnectorError, ClientError
@@ -74,6 +74,10 @@ class AIBackend(ABC):
             cert_path = certifi.where()
 
         self._ssl_context = ssl.create_default_context(cafile=cert_path)
+
+    async def fetch_models(self) -> List[str]:
+        """Fetch available model IDs from the provider API. Returns empty list by default."""
+        return []
 
     @abstractmethod
     def _build_request_config(

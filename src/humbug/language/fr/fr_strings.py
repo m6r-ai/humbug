@@ -131,6 +131,7 @@ def get_french_strings() -> LanguageStrings:
         enable_backend="Activer le backend",
         api_key="Clé API",
         api_url="URL API (optionnel)",
+        ollama_host_url="URL hôte Ollama",
         anthropic_backend="Anthropic",
         deepseek_backend="DeepSeek",
         google_backend="Google",
@@ -409,5 +410,26 @@ def get_french_strings() -> LanguageStrings:
         update_available_message="La version {0} est disponible — cliquez pour télécharger.",
         update_check_failed="Impossible de vérifier les mises à jour. Vérifiez votre connexion réseau.",
         update_tooltip="Humbug {0} disponible — cliquez pour la page de version",
-        check_for_updates_setting="Vérifier automatiquement les mises à jour"
+        check_for_updates_setting="Vérifier automatiquement les mises à jour",
+
+        # Ollama pull
+        ollama_pull_label="Télécharger un modèle",
+        ollama_pull_placeholder="Nom du modèle (ex. llama3.2)",
+        ollama_pull_button="Télécharger",
+        ollama_pull_pulling="Téléchargement de {0}…",
+        ollama_pull_success="« {0} » installé avec succès.",
+        ollama_pull_model_not_found="Modèle introuvable — vérifiez le nom sur ollama.com/library.",
+        ollama_pull_not_running="Impossible de se connecter à Ollama — est-il en cours d'exécution ?",
+        ollama_pull_error="Échec du téléchargement : {0}",
+        ollama_update_local_models="Mettre à jour les modèles locaux",
+
+        # Fetch-models errors
+        fetch_error_invalid_key="Clé API invalide — veuillez vérifier votre clé et réessayer.",
+        fetch_error_access_denied="Accès refusé ({0}) — votre clé n'a peut-être pas la permission de lister les modèles.",
+        fetch_error_not_found="Point de terminaison des modèles introuvable ({0}) — vérifiez l'URL de l'API.",
+        fetch_error_rate_limited="Limite de requêtes atteinte ({0}) — patientez un moment puis réessayez.",
+        fetch_error_server_error="Erreur serveur du fournisseur ({0}) — réessayez plus tard.",
+        fetch_error_connection="Impossible de se connecter — vérifiez l'URL et votre réseau.",
+        fetch_error_timeout="Délai d'attente dépassé — le fournisseur a mis trop de temps à répondre.",
+        fetch_error_generic="Échec : {0}"
     )
