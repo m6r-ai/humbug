@@ -155,10 +155,6 @@ class ConversationSettingsDialog(QDialog):
         # Apply consistent dialog styling
         self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
-    # ------------------------------------------------------------------ #
-    #  Provider grouping helpers                                           #
-    # ------------------------------------------------------------------ #
-
     @staticmethod
     def _provider_display_names() -> Dict[str, str]:
         return {
@@ -194,8 +190,6 @@ class ConversationSettingsDialog(QDialog):
 
     def _on_model_filter_changed(self) -> None:
         self._populate_model_combo(self._model_filter_combo.get_value())
-
-    # ------------------------------------------------------------------ #
 
     def _on_model_value_changed(self) -> None:
         """Handle model selection changes."""

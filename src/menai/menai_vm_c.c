@@ -824,14 +824,14 @@ frame_setup(Frame *f, MenaiCodeObject *co, int base, int return_dest)
     f->is_sentinel = 0;
 }
 
-/* ---------------------------------------------------------------------------
+/*
  * Register array helpers
  *
  * The register array is a flat MenaiValue * array:
  *   regs[depth * max_locals + slot]
  * All slots are initialised to Menai_NONE (borrowed — the singleton is
  * kept alive by the module).  menai_reg_set_own/menai_reg_set_borrow manage reference counts correctly.
- * ------------------------------------------------------------------------- */
+ /
 
 /*
  * GlobalsTable — open-addressing hash table for O(1) name lookup.

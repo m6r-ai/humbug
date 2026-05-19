@@ -900,10 +900,6 @@ class SettingsDialog(QDialog):
         effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
         self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model, effort))
 
-    # ------------------------------------------------------------------ #
-    #  Model filter / grouping helpers                                     #
-    # ------------------------------------------------------------------ #
-
     def _get_provider_display_names(self) -> Dict[str, str]:
         """Return a mapping from provider ID to a human-readable display name."""
         return {
@@ -960,10 +956,6 @@ class SettingsDialog(QDialog):
         ai_backends = self._user_manager.get_ai_backends()
         filter_provider = self._model_filter_combo.get_value()
         self._populate_model_combo(ai_backends, filter_provider)
-
-    # ------------------------------------------------------------------ #
-    #  Fetch-models button                                                 #
-    # ------------------------------------------------------------------ #
 
     def _update_fetch_button_state(self, backend_id: str) -> None:
         """Enable "Update Models" only when backend is on and (for non-Ollama) has a key."""

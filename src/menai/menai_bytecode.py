@@ -465,7 +465,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Packed instruction encoding
 #
 # Each instruction is stored as a single unsigned 64-bit word:
@@ -477,7 +476,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
 # The 12-bit fields support up to 4096 register slots, which is far more
 # than the slot allocator ever produces.  The 16-bit opcode field gives
 # ample room for future expansion.
-# ---------------------------------------------------------------------------
 
 _OPCODE_SHIFT = 48
 _DEST_SHIFT   = 36

@@ -169,7 +169,7 @@ menai_name_str_hash(const char *s)
 hash_t menai_value_hash(MenaiValue *val);
 int menai_value_equal(MenaiValue *a, MenaiValue *b);
 
-/* ---------------------------------------------------------------------------
+/*
  * MenaiHashTable — open-addressing hash table
  *
  * Maps MenaiValue *keys to ssize_t indices.  Used as the internal
@@ -181,8 +181,7 @@ int menai_value_equal(MenaiValue *a, MenaiValue *b);
  *   - used <= slot_count * MENAI_HT_MAX_LOAD.
  *   - A slot is empty when its key pointer is NULL.
  *   - Deleted slots are not used (tables are immutable after construction).
- * ------------------------------------------------------------------------- */
-
+ */
 #define MENAI_HT_MAX_LOAD_NUM 2   /* load factor numerator   */
 #define MENAI_HT_MAX_LOAD_DEN 3   /* load factor denominator */
 
