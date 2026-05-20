@@ -2032,6 +2032,7 @@ class ConversationWidget(QWidget):
         super().resizeEvent(event)
         if self._input_spacer is None:
             return
+
         self._update_input_position()
 
         if self._auto_scroll:
