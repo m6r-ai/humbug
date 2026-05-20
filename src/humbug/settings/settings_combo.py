@@ -171,6 +171,7 @@ class _SettingsComboPopup(QFrame):
 
         self.move(global_pos)
         self.show()
+        self.raise_()
 
         if self._searchable:
             self._search.setFocus(Qt.FocusReason.PopupFocusReason)

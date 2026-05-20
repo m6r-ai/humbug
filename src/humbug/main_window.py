@@ -81,6 +81,7 @@ class MainWindow(QMainWindow):
 
         self._use_custom_title_bar = sys.platform != "darwin"
         self._window_controls: WindowControlsWidget | None = None
+        self._settings_dialog: SettingsDialog | None = None
         self._resize_drag_active = False
         self._resize_direction: tuple[int, int] = (0, 0)
         self._resize_start_pos: QPoint | None = None
@@ -1524,6 +1525,11 @@ class MainWindow(QMainWindow):
 
     def _on_show_settings_dialog(self, initial_section: str | None = None) -> None:
         """Show the unified settings dialog."""
+        if self._settings_dialog and self._settings_dialog.isVisible():
+            self._settings_dialog.raise_()
+            self._settings_dialog.activateWindow()
+            return
+
         has_mindspace = self._mindspace_manager.has_mindspace()
         mindspace_settings = (
             cast(MindspaceSettings, self._mindspace_manager.settings())
@@ -1532,6 +1538,7 @@ class MainWindow(QMainWindow):
         )
 
         dialog = SettingsDialog(self)
+        self._settings_dialog = dialog
 
         def _on_user_settings_changed(new_settings: UserSettings) -> None:
             try:
@@ -1572,10 +1579,16 @@ class MainWindow(QMainWindow):
                     strings.error_saving_mindspace_settings.format(str(e))
                 )
 
+        def _on_dialog_finished(_result: int) -> None:
+            self._settings_dialog = None
+
         dialog.user_settings_changed.connect(_on_user_settings_changed)
         dialog.mindspace_settings_changed.connect(_on_mindspace_settings_changed)
+        dialog.finished.connect(_on_dialog_finished)
         dialog.set_settings(self._user_manager.settings(), mindspace_settings, initial_section)
-        dialog.exec()
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
 
     def _on_show_settings_dialog_ai_backends(self) -> None:
         """Show the unified settings dialog opened to the AI Backends section."""

@@ -31,7 +31,6 @@ class ConversationSettingsDialog(QDialog):
         self.setWindowTitle(strings.conversation_settings)
         self.setMinimumWidth(800)
         self.setMinimumHeight(600)
-        self.setModal(True)
 
         self._user_manager = UserManager()
         self._ai_backends = self._user_manager.get_ai_backends()

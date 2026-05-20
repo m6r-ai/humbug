@@ -24,6 +24,7 @@ class SettingsAccordion(SettingsItem):
         super().__init__(parent)
 
         self._expanded = expanded
+        self._content_visible = expanded
         self._content_items: List[SettingsItem] = []
         self._animation: QPropertyAnimation | None = None
 
@@ -96,32 +97,45 @@ class SettingsAccordion(SettingsItem):
     # ── Private ────────────────────────────────────────────────────────────
 
     def _on_toggle(self) -> None:
-        self._expanded = not self._expanded
-        self._on_style_changed()   # update header border radius + chevron
+        target_expanded = not self._expanded
 
         # Stop any in-progress animation so direction changes feel responsive.
         if self._animation and self._animation.state() == QPropertyAnimation.State.Running:
-            self._animation.stop()
+            active_animation = self._animation
+            self._animation = None
+            active_animation.stop()
 
-        if self._expanded:
+        start_h = self._content_widget.height()
+        self._expanded = target_expanded
+
+        if target_expanded:
+            self._content_visible = True
+            self._on_style_changed()
             # Measure the natural height before constraining it.
             self._content_widget.setMaximumHeight(QWIDGETSIZE_MAX)
             target_h = self._content_widget.sizeHint().height()
-            start_h = 0
-            self._content_widget.setMaximumHeight(0)   # will be driven by animation
+            self._content_widget.setMaximumHeight(start_h)
         else:
-            start_h = self._content_widget.height()
             target_h = 0
+            self._on_style_changed()
 
         anim = QPropertyAnimation(self._content_widget, b"maximumHeight", self)
         anim.setDuration(ACCORDION_ANIM_DURATION_MS)
         anim.setStartValue(start_h)
         anim.setEndValue(target_h)
-        anim.setEasingCurve(
-            QEasingCurve.Type.OutCubic if self._expanded else QEasingCurve.Type.InCubic
-        )
+        anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        anim.finished.connect(lambda: self._on_animation_finished(anim, target_expanded))
         anim.start()
         self._animation = anim
+
+    def _on_animation_finished(self, anim: QPropertyAnimation, expanded: bool) -> None:
+        if anim is not self._animation:
+            return
+
+        self._animation = None
+        self._content_visible = expanded
+        self._content_widget.setMaximumHeight(QWIDGETSIZE_MAX if expanded else 0)
+        self._on_style_changed()
 
     def _update_chevron(self) -> None:
         if self._expanded:
@@ -155,14 +169,13 @@ class SettingsAccordion(SettingsItem):
         bg_hover = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
         bg_pressed = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)
         border_color = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
-        accent = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
         radius = 8
 
         self._chevron.setFixedSize(chevron_size, chevron_size)
         self._header_btn.setMinimumHeight(header_min_height)
 
-        header_bottom_border = "0px" if self._expanded else "1px"
-        header_bottom_radius = 0 if self._expanded else radius
+        header_bottom_border = "0px" if self._content_visible else "1px"
+        header_bottom_radius = 0 if self._content_visible else radius
 
         self._header_btn.setStyleSheet(f"""
             QPushButton#AccordionHeader {{
@@ -212,7 +225,7 @@ class SettingsAccordion(SettingsItem):
             QWidget#AccordionContent {{
                 background-color: {content_bg};
                 border: 1px solid {border_color};
-                border-top: 2px solid {accent};
+                border-top: 1px solid {border_color};
                 border-top-left-radius: 0px;
                 border-top-right-radius: 0px;
                 border-bottom-left-radius: {radius}px;
