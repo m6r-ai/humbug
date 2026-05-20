@@ -668,6 +668,7 @@ class MainWindow(QMainWindow):
 
         # Create the theme menu
         theme_menu = QMenu(strings.display_theme, self)
+        theme_menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
         # Create an action group so only one theme can be selected at a time
         theme_action_group = QActionGroup(self)
@@ -1235,7 +1236,6 @@ class MainWindow(QMainWindow):
         """Handle style changes by updating all styled widgets."""
         # Apply styles to individual top-level widgets
         self._apply_menubar_style()
-        self._apply_all_menu_styles()
         self._apply_statusbar_style()
         if self._window_controls is not None:
             self._window_controls.apply_style()
@@ -1266,18 +1266,6 @@ class MainWindow(QMainWindow):
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)};
             }}
         """)
-
-    def _apply_menu_style(self, menu: QMenu) -> None:
-        """Apply styling to a specific menu."""
-        style_manager = self._style_manager
-        menu.setStyleSheet(style_manager.get_menu_stylesheet())
-
-    def _apply_all_menu_styles(self) -> None:
-        """Apply styling to all menus."""
-        for menu in [self._humbug_menu, self._file_menu, self._edit_menu,
-                     self._view_menu, self._theme_menu]:
-            if menu:
-                self._apply_menu_style(menu)
 
     def _apply_statusbar_style(self) -> None:
         """Apply styling to status bar."""

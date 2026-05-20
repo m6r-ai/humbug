@@ -2556,6 +2556,7 @@ class ConversationWidget(QWidget):
             pos: Local coordinates for menu position
         """
         menu = QMenu(self)
+        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         strings = self._language_manager.strings()
 
         # Copy action

@@ -737,6 +737,7 @@ class MindspaceConversationsView(QWidget):
             QMenu with actions appropriate for the conversations directory
         """
         menu = QMenu(self)
+        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         strings = self._language_manager.strings()
 
         # Conversations root actions
@@ -857,6 +858,7 @@ class MindspaceConversationsView(QWidget):
             menu = self._create_root_context_menu()
         else:
             menu = QMenu(self)
+            menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
             menu.addAction(strings.preview).triggered.connect(lambda: self._handle_preview_view_file(path))
             menu.addAction(strings.new_conversation).triggered.connect(lambda: self.new_conversation_requested.emit(path))
             menu.addAction(strings.new_folder).triggered.connect(lambda: self._start_new_folder_creation(path))
@@ -873,6 +875,7 @@ class MindspaceConversationsView(QWidget):
 
         # Create context menu
         menu = QMenu(self)
+        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
         # Determine the path and whether it's a file or directory
         if not index.isValid():

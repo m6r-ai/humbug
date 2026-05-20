@@ -264,6 +264,7 @@ class DiffPane(QPlainTextEdit):
         block_number = block.blockNumber()
         column = cursor.positionInBlock() + 1
         menu = QMenu(self)
+        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         strings = self._language_manager.strings()
         copy_action = menu.addAction(strings.copy)
         copy_action.setEnabled(self.textCursor().hasSelection())
