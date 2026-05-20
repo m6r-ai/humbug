@@ -131,7 +131,6 @@ def get_french_strings() -> LanguageStrings:
         enable_backend="Activer le backend",
         api_key="Clé API",
         api_url="URL API (optionnel)",
-        ollama_host_url="URL hôte Ollama",
         anthropic_backend="Anthropic",
         deepseek_backend="DeepSeek",
         google_backend="Google",
@@ -139,6 +138,7 @@ def get_french_strings() -> LanguageStrings:
         mistral_backend="Mistral",
         openai_backend="OpenAI",
         ollama_backend="Ollama",
+        ollama_cloud_backend="Ollama Cloud",
         xai_backend="xAI",
         vllm_backend="vLLM",
 

@@ -15,16 +15,6 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 class GoogleBackend(AIBackend):
     """Google Gemini API backend implementation."""
 
-    @classmethod
-    def get_default_url(cls) -> str:
-        """
-        Get the default API URL.
-
-        Returns:
-            The default URL
-        """
-        return "https://generativelanguage.googleapis.com/v1beta/models"
-
     async def fetch_models(self) -> List[str]:
         """Fetch available model IDs from the Google Gemini API."""
         base_url = self._api_url.split("?")[0]

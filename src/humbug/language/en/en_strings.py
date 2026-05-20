@@ -131,7 +131,6 @@ def get_english_strings() -> LanguageStrings:
         enable_backend="Enable Backend",
         api_key="API Key",
         api_url="API URL (optional)",
-        ollama_host_url="Ollama Host URL",
         anthropic_backend="Anthropic",
         deepseek_backend="DeepSeek",
         google_backend="Google",
@@ -139,6 +138,7 @@ def get_english_strings() -> LanguageStrings:
         mistral_backend="Mistral",
         openai_backend="OpenAI",
         ollama_backend="Ollama",
+        ollama_cloud_backend="Ollama Cloud",
         xai_backend="xAI",
         vllm_backend="vLLM",
 

@@ -11,6 +11,7 @@ New features:
 - Removed Gemini 2.5 support and added more Gemini 3 models.
 - In an editor tab, Ctrl+G (on all platforms) will navigate you to a specific line.
 - In an editor tab, Cmd+Opt+F (MacOS) or Ctrl+H (other platforms) will open the "find and replace" control.
+- Added separate support for Ollama cloud and Ollama running locally.
 
 Bug fixes:
 

@@ -378,6 +378,7 @@ class SettingsDialog(QDialog):
             ("google", strings.google_backend),
             ("mistral", strings.mistral_backend),
             ("ollama", strings.ollama_backend),
+            ("ollama-cloud", strings.ollama_cloud_backend),
             ("openai", strings.openai_backend),
             ("vllm", strings.vllm_backend),
             ("xai", strings.xai_backend),
@@ -395,16 +396,12 @@ class SettingsDialog(QDialog):
             accordion.add_content(api_key_field)
 
             default_url = self._ai_manager.get_default_url(backend_id)
-            if backend_id == "ollama":
-                url_label = strings.ollama_host_url
-                url_placeholder = "http://127.0.0.1:11434"
-            else:
-                url_label = strings.api_url
-                url_placeholder = default_url
+            url_label = strings.api_url
+            url_placeholder = default_url
             url_field = SettingsFactory.create_text_field(url_label, placeholder=url_placeholder)
             accordion.add_content(url_field)
 
-            is_ollama = backend_id == "ollama"
+            is_ollama = backend_id in ("ollama", "ollama-cloud")
 
             fetch_label = strings.ollama_update_local_models if is_ollama else "Update Models"
             fetch_row = SettingsActionRow(fetch_label)
@@ -738,7 +735,7 @@ class SettingsDialog(QDialog):
             cast(SettingsTextField, controls["url"]).set_value(backend.url)
             cast(SettingsTextField, controls["key"]).set_enabled(backend.enabled)
             cast(SettingsTextField, controls["url"]).set_enabled(
-                backend.enabled or backend_id == "ollama"
+                backend.enabled or backend_id in ("ollama", "ollama-cloud")
             )
             self._update_fetch_button_state(backend_id)
 
@@ -848,7 +845,7 @@ class SettingsDialog(QDialog):
         enabled = cast(SettingsSwitch, controls["enable"]).get_value()
         cast(SettingsTextField, controls["key"]).set_enabled(enabled)
         # Ollama URL is always editable so the user can set the host before enabling.
-        url_always_on = backend_id == "ollama"
+        url_always_on = backend_id in ("ollama", "ollama-cloud")
         cast(SettingsTextField, controls["url"]).set_enabled(enabled or url_always_on)
         self._update_fetch_button_state(backend_id)
         self._update_pull_button_state(backend_id)
@@ -912,6 +909,7 @@ class SettingsDialog(QDialog):
             "google": "Google",
             "mistral": "Mistral",
             "ollama": "Ollama",
+            "ollama-cloud": "Ollama Cloud",
             "openai": "OpenAI",
             "vllm": "vLLM",
             "xai": "xAI",
@@ -1009,7 +1007,8 @@ class SettingsDialog(QDialog):
         backend_class = self._ai_manager.get_backend_class(backend_id)
         if backend_class is None:
             return
-        backend = backend_class(api_key="", api_url=url or None)
+        api_url = url or self._ai_manager.get_default_url(backend_id)
+        backend = backend_class(api_key="", api_url=api_url)
 
         async def _do_pull() -> None:
             try:
@@ -1046,7 +1045,8 @@ class SettingsDialog(QDialog):
         if backend_class is None:
             fetch_row.set_status("Unknown provider.")
             return
-        backend = backend_class(api_key=api_key, api_url=url or None)
+        api_url = url or self._ai_manager.get_default_url(backend_id)
+        backend = backend_class(api_key=api_key, api_url=api_url)
 
         async def _do_fetch() -> None:
             try:
@@ -1057,8 +1057,8 @@ class SettingsDialog(QDialog):
                 self._logger.warning("fetch_models failed for %s: %s", backend_id, exc)
 
             else:
-                if backend_id == "ollama":
-                    self._register_ollama_models(model_ids, fetch_row)
+                if backend_id in ("ollama", "ollama-cloud"):
+                    self._register_ollama_models(model_ids, fetch_row, backend_id)
 
                 else:
                     newly_added, _ = AIConversationSettings.register_fetched_models(
@@ -1082,12 +1082,7 @@ class SettingsDialog(QDialog):
     def _on_manage_models_clicked(self, backend_id: str) -> None:
         """Open the fetched-model manager dialog for a provider."""
         fetched = AIConversationSettings.get_fetched_models_by_provider(backend_id)
-        provider_names = {
-            "anthropic": "Anthropic", "deepseek": "DeepSeek", "google": "Google",
-            "mistral": "Mistral", "ollama": "Ollama", "openai": "OpenAI",
-            "vllm": "vLLM", "xai": "xAI", "zai": "Z.ai",
-        }
-        title = provider_names.get(backend_id, backend_id)
+        title = self._get_provider_display_names().get(backend_id, backend_id)
         dlg = _FetchedModelManagerDialog(fetched, title, self)
         dlg.exec()
 
@@ -1097,7 +1092,7 @@ class SettingsDialog(QDialog):
         self._refresh_model_combo()
 
     def _register_ollama_models(
-        self, model_ids: List[str], fetch_row: SettingsActionRow
+        self, model_ids: List[str], fetch_row: SettingsActionRow, backend_id: str
     ) -> None:
         """Register installed Ollama models returned by /api/tags."""
         if not model_ids:
@@ -1105,13 +1100,13 @@ class SettingsDialog(QDialog):
             return
 
         newly_added, _ = AIConversationSettings.register_fetched_models(
-            model_ids, "ollama"
+            model_ids, backend_id
         )
         AIConversationSettings.save_fetched_models_cache(
             self._fetched_models_cache_path
         )
         self._refresh_model_combo()
-        self._update_manage_button_state("ollama")
+        self._update_manage_button_state(backend_id)
         if newly_added:
             fetch_row.set_success(f"Added {len(newly_added)} model(s).")
         else:

@@ -1,6 +1,7 @@
 """AI backend management singleton."""
 
 import logging
+from dataclasses import dataclass
 from typing import Dict, Type
 
 from ai.ai_backend import AIBackend
@@ -16,6 +17,13 @@ from ai.xai.xai_backend import XAIBackend
 from ai.zai.zai_backend import ZaiBackend
 
 
+@dataclass
+class _BackendRegistration:
+    """Registration entry for an AI backend."""
+    backend_class: Type[AIBackend]
+    default_url: str
+
+
 class AIManager:
     """
     Singleton manager for AI backends.
@@ -27,17 +35,17 @@ class AIManager:
     _instance: 'AIManager | None' = None
     _logger = logging.getLogger("AIManager")
 
-    # Mapping of provider names to backend classes
-    _BACKEND_CLASSES: Dict[str, Type[AIBackend]] = {
-        "anthropic": AnthropicBackend,
-        "deepseek": DeepseekBackend,
-        "google": GoogleBackend,
-        "mistral": MistralBackend,
-        "ollama": OllamaBackend,
-        "openai": OpenAIBackend,
-        "vllm": VLLMBackend,
-        "xai": XAIBackend,
-        "zai": ZaiBackend
+    _BACKEND_REGISTRY: Dict[str, _BackendRegistration] = {
+        "anthropic": _BackendRegistration(AnthropicBackend, "https://api.anthropic.com/v1/messages"),
+        "deepseek": _BackendRegistration(DeepseekBackend, "https://api.deepseek.com/chat/completions"),
+        "google": _BackendRegistration(GoogleBackend, "https://generativelanguage.googleapis.com/v1beta/models"),
+        "mistral": _BackendRegistration(MistralBackend, "https://api.mistral.ai/v1/chat/completions"),
+        "ollama": _BackendRegistration(OllamaBackend, "http://127.0.0.1:11434/api/chat"),
+        "ollama-cloud": _BackendRegistration(OllamaBackend, "https://ollama.com/api/chat"),
+        "openai": _BackendRegistration(OpenAIBackend, "https://api.openai.com/v1/chat/completions"),
+        "vllm": _BackendRegistration(VLLMBackend, "http://localhost:8000/v1/chat/completions"),
+        "xai": _BackendRegistration(XAIBackend, "https://api.x.ai/v1/chat/completions"),
+        "zai": _BackendRegistration(ZaiBackend, "https://api.z.ai/api/paas/v4/chat/completions"),
     }
 
     def __new__(cls) -> 'AIManager':
@@ -64,7 +72,7 @@ class AIManager:
 
     def get_default_url(self, provider: str) -> str:
         """
-        Get the default API URL for a provider by asking the backend class.
+        Get the default API URL for a provider.
 
         Args:
             provider: The provider name
@@ -72,9 +80,9 @@ class AIManager:
         Returns:
             The default URL for the specified provider, or empty string if not found
         """
-        backend_class = self._BACKEND_CLASSES.get(provider)
-        if backend_class:
-            return backend_class.get_default_url()
+        registration = self._BACKEND_REGISTRY.get(provider)
+        if registration:
+            return registration.default_url
 
         return ""
 
@@ -88,7 +96,11 @@ class AIManager:
         Returns:
             The backend class for the specified provider, or None if not found
         """
-        return self._BACKEND_CLASSES.get(provider)
+        registration = self._BACKEND_REGISTRY.get(provider)
+        if registration:
+            return registration.backend_class
+
+        return None
 
     def _create_backends(self, backend_settings: Dict[str, AIBackendSettings]) -> Dict[str, AIBackend]:
         """
@@ -102,19 +114,15 @@ class AIManager:
         """
         backends: Dict[str, AIBackend] = {}
 
-        # Iterate through all provider names
-        for provider, backend_class in self._BACKEND_CLASSES.items():
-            # Get settings for this provider
+        for provider, registration in self._BACKEND_REGISTRY.items():
             provider_settings = backend_settings.get(provider)
 
-            # Skip if settings don't exist or backend is disabled
             if not provider_settings or not provider_settings.enabled:
                 continue
 
-            # Create backend instance with consistent parameter passing
-            backends[provider] = backend_class(
+            backends[provider] = registration.backend_class(
                 api_key=provider_settings.api_key,
-                api_url=provider_settings.url if provider_settings.url else None
+                api_url=provider_settings.url or registration.default_url
             )
 
         return backends

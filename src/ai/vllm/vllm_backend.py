@@ -19,16 +19,6 @@ class VLLMBackend(AIBackend):
     This backend is designed to work with vLLM's OpenAI-compatible endpoints.
     """
 
-    @classmethod
-    def get_default_url(cls) -> str:
-        """
-        Get the default API URL.
-
-        Returns:
-            The default URL
-        """
-        return "http://localhost:8000/v1/chat/completions"
-
     async def fetch_models(self) -> List[str]:
         """Fetch available model IDs from the vLLM API."""
         url = self._api_url.replace("/chat/completions", "/models")

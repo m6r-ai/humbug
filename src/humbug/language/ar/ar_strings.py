@@ -132,7 +132,6 @@ def get_arabic_strings() -> LanguageStrings:
         enable_backend="تفعيل الخلفية",
         api_key="مفتاح API",
         api_url="عنوان URL للواجهة (اختياري)",
-        ollama_host_url="عنوان مضيف Ollama",
         anthropic_backend="أنثروبيك",
         deepseek_backend="ديبسيك",
         google_backend="جوجل",
@@ -140,6 +139,7 @@ def get_arabic_strings() -> LanguageStrings:
         mistral_backend="ميسترال",
         openai_backend="أوبن إي آي",
         ollama_backend="أولاما",
+        ollama_cloud_backend="Ollama Cloud",
         xai_backend="xAI",
         vllm_backend="vLLM",
 
