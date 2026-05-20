@@ -1596,13 +1596,6 @@ class StyleManager(QObject):
         scrollbar_h   = self.get_color_str(ColorRole.SCROLLBAR_HANDLE)
 
         return f"""
-            QWidget#SettingsComboPopupWindow {{
-                background-color: {popup_bg};
-                border: 1px solid {popup_border};
-                border-radius: 8px;
-                padding: 0px;
-                margin: 0px;
-            }}
             QLineEdit#SettingsComboPopupSearch {{
                 background-color: {surface_bg};
                 color: {text};

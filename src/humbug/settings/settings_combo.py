@@ -4,12 +4,11 @@ Combo box setting for selecting from a list of options.
 
 from typing import Any, List, Tuple, cast
 
-from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
-from PySide6.QtGui import QColor, QIcon, QKeyEvent, QPainter, QPaintEvent
+from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QRectF
+from PySide6.QtGui import QColor, QIcon, QKeyEvent, QPainter, QPaintEvent, QPainterPath
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
-    QGraphicsDropShadowEffect,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
@@ -19,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from humbug.settings.settings_field import SettingsField
+from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 
 
@@ -73,7 +73,7 @@ class _SettingsComboPopup(QFrame):
 
         self._owner = owner
         self.setObjectName("SettingsComboPopupWindow")
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setLineWidth(0)
         self.setMidLineWidth(0)
@@ -107,12 +107,6 @@ class _SettingsComboPopup(QFrame):
         layout.addWidget(self._search)
         layout.addWidget(self._list)
         self.setLayout(layout)
-
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(22)
-        shadow.setOffset(0, 8)
-        shadow.setColor(QColor(0, 0, 0, 70))
-        self.setGraphicsEffect(shadow)
 
     def set_searchable(self, searchable: bool) -> None:
         """Show or hide the search field and clear it when hiding."""
@@ -169,9 +163,10 @@ class _SettingsComboPopup(QFrame):
             if global_pos.y() + self.height() > available.bottom():
                 global_pos.setY(self._owner.button_top_global_y() - self.height())
 
-        # Force native handle creation before move() so Qt applies its one-time
-        # shadow geometry adjustment here rather than after show(), which would
-        # shift the popup away from the intended position on first display.
+        # Force native handle creation before move() so Qt adjusts the window
+        # geometry for the first time here, at an off-screen position, rather
+        # than after show() where it would shift the popup away from the
+        # intended position on first display.
         self.winId()
         self.move(global_pos)
         self.show()
@@ -182,6 +177,23 @@ class _SettingsComboPopup(QFrame):
 
         else:
             self._list.setFocus(Qt.FocusReason.PopupFocusReason)
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """Paint the rounded background manually to support translucent corners."""
+        radius = self._owner.style_manager().radius("surface")
+        bg_color = self._owner.style_manager().get_color(ColorRole.MENU_BACKGROUND)
+        border_color = self._owner.style_manager().get_color(ColorRole.MENU_BORDER)
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), radius, radius)
+
+        painter.fillPath(path, bg_color)
+        painter.setPen(border_color)
+        painter.drawPath(path)
+        painter.end()
 
     def apply_style(self, stylesheet: str) -> None:
         """Apply a stylesheet to the popup frame, list, and search field."""
