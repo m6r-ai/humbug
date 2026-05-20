@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Any
 
 from PySide6.QtWidgets import (
-    QApplication, QDialog, QVBoxLayout, QWidget
+    QApplication, QVBoxLayout, QWidget
 )
 from PySide6.QtCore import QObject, Signal, QRegularExpression
 
@@ -47,6 +47,7 @@ class ConversationTab(TabBase):
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("ConversationTab")
         self._path = path
+        self._conversation_settings_dialog: ConversationSettingsDialog | None = None
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -440,11 +441,26 @@ class ConversationTab(TabBase):
 
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
+        if self._conversation_settings_dialog and self._conversation_settings_dialog.isVisible():
+            self._conversation_settings_dialog.raise_()
+            self._conversation_settings_dialog.activateWindow()
+            return
+
         dialog = ConversationSettingsDialog(self)
+        self._conversation_settings_dialog = dialog
         dialog.set_settings(self._conversation_widget.conversation_settings())
 
-        if dialog.exec() == QDialog.DialogCode.Accepted:
+        def _on_accepted() -> None:
             self._conversation_widget.update_conversation_settings(dialog.get_settings())
+
+        def _on_finished(_result: int) -> None:
+            self._conversation_settings_dialog = None
+
+        dialog.accepted.connect(_on_accepted)
+        dialog.finished.connect(_on_finished)
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""

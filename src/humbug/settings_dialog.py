@@ -161,8 +161,6 @@ class SettingsDialog(QDialog):
         self.setWindowTitle(strings.settings)
         self.setMinimumWidth(900)
         self.setMinimumHeight(700)
-        self.setModal(True)
-
         self._build_ui()
 
         self._style_manager.style_changed.connect(self._on_style_changed)
