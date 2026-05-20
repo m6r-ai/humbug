@@ -5,7 +5,7 @@ Combo box setting for selecting from a list of options.
 from typing import Any, List, Tuple, cast
 
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QRectF
-from PySide6.QtGui import QColor, QHideEvent, QIcon, QKeyEvent, QPainter, QPaintEvent, QPainterPath
+from PySide6.QtGui import QHideEvent, QIcon, QKeyEvent, QPainter, QPaintEvent, QPainterPath
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
@@ -179,7 +179,7 @@ class _SettingsComboPopup(QFrame):
         else:
             self._list.setFocus(Qt.FocusReason.PopupFocusReason)
 
-    def paintEvent(self, event: QPaintEvent) -> None:
+    def paintEvent(self, _event: QPaintEvent) -> None:
         """Paint the rounded background manually to support translucent corners."""
         radius = self._owner.style_manager().radius("surface")
         bg_color = self._owner.style_manager().get_color(ColorRole.MENU_BACKGROUND)
@@ -225,7 +225,7 @@ class _SettingsComboPopup(QFrame):
     def hideEvent(self, event: QHideEvent) -> None:
         """Notify the owner when the popup is hidden so it can reset the chevron."""
         super().hideEvent(event)
-        self._owner._on_popup_hidden()
+        self._owner.on_popup_hidden()
 
     def _item_size_hint(self, enabled: bool) -> QSize:
         zoom = self._owner.style_manager().zoom_factor()
@@ -382,7 +382,7 @@ class SettingsCombo(SettingsField):
         self._popup.popup(global_pos, self._button.width())
         self._button.set_dropdown_icon(self._style_manager.get_icon_path("arrow-up"))
 
-    def _on_popup_hidden(self) -> None:
+    def on_popup_hidden(self) -> None:
         """Reset the chevron to the down arrow when the popup is dismissed."""
         self._button.set_dropdown_icon(self._style_manager.get_icon_path("arrow-down"))
 
