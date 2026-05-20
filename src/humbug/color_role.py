@@ -101,6 +101,7 @@ class ColorRole(Enum):
     MENU_BACKGROUND = auto()            # Menu background
     MENU_HOVER = auto()                 # Menu item hover
     MENU_BORDER = auto()                # Menu border
+    COMBO_ITEM_HOVER = auto()           # Combo popup item hover
 
     # Splitter bars
     SPLITTER = auto()                   # Splitter bar

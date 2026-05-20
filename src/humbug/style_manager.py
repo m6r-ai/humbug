@@ -354,6 +354,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#606060",
                 ColorMode.LIGHT: "#b0b0b0"
             },
+            ColorRole.COMBO_ITEM_HOVER: {
+                ColorMode.DARK: "#484848",
+                ColorMode.LIGHT: "#d0d0d0"
+            },
 
             # Splitter bars
             ColorRole.SPLITTER: {
@@ -1589,7 +1593,7 @@ class StyleManager(QObject):
         surface_bg    = self.get_color_str(ColorRole.BACKGROUND_TERTIARY)
         text          = self.get_color_str(ColorRole.TEXT_PRIMARY)
         text_disabled = self.get_color_str(ColorRole.TEXT_DISABLED)
-        item_hover    = self.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
+        item_hover    = self.get_color_str(ColorRole.COMBO_ITEM_HOVER)
         item_selected = self.get_color_str(ColorRole.TEXT_SELECTED)
         focus_border  = self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
         scrollbar_bg  = self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)
