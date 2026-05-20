@@ -605,6 +605,7 @@ class MindspaceFilesView(QWidget):
             QMenu with actions appropriate for the root directory
         """
         menu = QMenu(self)
+        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         strings = self._language_manager.strings()
 
         # Root directory actions
@@ -673,6 +674,7 @@ class MindspaceFilesView(QWidget):
             menu = self._create_root_context_menu()
         else:
             menu = QMenu(self)
+            menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
             menu.addAction(strings.preview).triggered.connect(lambda: self._handle_preview_view_file(path))
             menu.addAction(strings.new_folder).triggered.connect(lambda: self._start_new_folder_creation(path))
             menu.addAction(strings.new_file).triggered.connect(lambda: self._start_new_file_creation(path))
@@ -689,6 +691,7 @@ class MindspaceFilesView(QWidget):
 
         # Create context menu
         menu = QMenu(self)
+        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         strings = self._language_manager.strings()
 
         # Determine the path and whether it's a file or directory

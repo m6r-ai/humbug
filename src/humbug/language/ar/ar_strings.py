@@ -132,7 +132,6 @@ def get_arabic_strings() -> LanguageStrings:
         enable_backend="تفعيل الخلفية",
         api_key="مفتاح API",
         api_url="عنوان URL للواجهة (اختياري)",
-        ollama_host_url="عنوان مضيف Ollama",
         anthropic_backend="أنثروبيك",
         deepseek_backend="ديبسيك",
         google_backend="جوجل",
@@ -140,6 +139,7 @@ def get_arabic_strings() -> LanguageStrings:
         mistral_backend="ميسترال",
         openai_backend="أوبن إي آي",
         ollama_backend="أولاما",
+        ollama_cloud_backend="Ollama Cloud",
         xai_backend="xAI",
         vllm_backend="vLLM",
 
@@ -291,7 +291,7 @@ def get_arabic_strings() -> LanguageStrings:
         # Status bar
         editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}",
         conversation_status=(
-            "النموذج: {model}  |  {temperature}  |  "
+            "النموذج: {model}  |  {reasoning}  |  {temperature}  |  "
             "رموز الإدخال: {input_tokens} / {max_input_tokens}  |  "
             "إجمالي الإدخال: {total_input_tokens}  |  "
             "رموز الإخراج: {output_tokens} / {max_output_tokens}  |  "
@@ -299,6 +299,8 @@ def get_arabic_strings() -> LanguageStrings:
         ),
         conversation_status_temperature="درجة الحرارة: {temperature:.1f}",
         conversation_status_no_temperature="درجة الحرارة: غير متوفر",
+        conversation_status_reasoning="الاستدلال: {effort}",
+        conversation_status_no_reasoning="الاستدلال: غير متوفر",
         terminal_status="طرفية: {name} ({columns}x{rows})",
         system_status="نظام",
         log_status="سجل",

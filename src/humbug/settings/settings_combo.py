@@ -4,12 +4,11 @@ Combo box setting for selecting from a list of options.
 
 from typing import Any, List, Tuple, cast
 
-from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
-from PySide6.QtGui import QColor, QIcon, QKeyEvent, QPainter, QPaintEvent
+from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QRectF
+from PySide6.QtGui import QColor, QHideEvent, QIcon, QKeyEvent, QPainter, QPaintEvent, QPainterPath
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
-    QGraphicsDropShadowEffect,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
@@ -19,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from humbug.settings.settings_field import SettingsField
+from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 
 
@@ -69,11 +69,11 @@ class _SettingsComboPopup(QFrame):
     """App-owned combo popup without native combo-box chrome."""
 
     def __init__(self, owner: "SettingsCombo") -> None:
-        super().__init__(owner, Qt.WindowType.Popup)
+        super().__init__(owner, Qt.WindowType.Popup | Qt.WindowType.NoDropShadowWindowHint)
 
         self._owner = owner
         self.setObjectName("SettingsComboPopupWindow")
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setLineWidth(0)
         self.setMidLineWidth(0)
@@ -107,12 +107,6 @@ class _SettingsComboPopup(QFrame):
         layout.addWidget(self._search)
         layout.addWidget(self._list)
         self.setLayout(layout)
-
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(22)
-        shadow.setOffset(0, 8)
-        shadow.setColor(QColor(0, 0, 0, 70))
-        self.setGraphicsEffect(shadow)
 
     def set_searchable(self, searchable: bool) -> None:
         """Show or hide the search field and clear it when hiding."""
@@ -169,6 +163,11 @@ class _SettingsComboPopup(QFrame):
             if global_pos.y() + self.height() > available.bottom():
                 global_pos.setY(self._owner.button_top_global_y() - self.height())
 
+        # Force native handle creation before move() so Qt adjusts the window
+        # geometry for the first time here, at an off-screen position, rather
+        # than after show() where it would shift the popup away from the
+        # intended position on first display.
+        self.winId()
         self.move(global_pos)
         self.show()
         self.raise_()
@@ -179,6 +178,29 @@ class _SettingsComboPopup(QFrame):
 
         else:
             self._list.setFocus(Qt.FocusReason.PopupFocusReason)
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """Paint the rounded background manually to support translucent corners."""
+        radius = self._owner.style_manager().radius("surface")
+        bg_color = self._owner.style_manager().get_color(ColorRole.MENU_BACKGROUND)
+        border_color = self._owner.style_manager().get_color(ColorRole.TEXT_INACTIVE)
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Fill the full rounded rect with the background colour.
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), radius, radius)
+        painter.fillPath(path, bg_color)
+
+        # Stroke an inset path so the 1px border sits fully inside the widget
+        # bounds and does not bleed into the transparent area outside.
+        border_path = QPainterPath()
+        border_path.addRoundedRect(QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5), radius - 0.5, radius - 0.5)
+        painter.setPen(border_color)
+        painter.drawPath(border_path)
+
+        painter.end()
 
     def apply_style(self, stylesheet: str) -> None:
         """Apply a stylesheet to the popup frame, list, and search field."""
@@ -199,6 +221,11 @@ class _SettingsComboPopup(QFrame):
             return
 
         super().keyPressEvent(event)
+
+    def hideEvent(self, event: QHideEvent) -> None:
+        """Notify the owner when the popup is hidden so it can reset the chevron."""
+        super().hideEvent(event)
+        self._owner._on_popup_hidden()
 
     def _item_size_hint(self, enabled: bool) -> QSize:
         zoom = self._owner.style_manager().zoom_factor()
@@ -351,8 +378,13 @@ class SettingsCombo(SettingsField):
 
         self._popup.set_items(self._items)
         self._popup.select_data(self.get_value())
-        global_pos = self._button.mapToGlobal(QPoint(0, self._button.height()))
+        global_pos = self._button.mapToGlobal(QPoint(0, self._button.height() - 1))
         self._popup.popup(global_pos, self._button.width())
+        self._button.set_dropdown_icon(self._style_manager.get_icon_path("arrow-up"))
+
+    def _on_popup_hidden(self) -> None:
+        """Reset the chevron to the down arrow when the popup is dismissed."""
+        self._button.set_dropdown_icon(self._style_manager.get_icon_path("arrow-down"))
 
     def _emit_if_changed(self, previous_index: int) -> None:
         if self._current_index != previous_index:

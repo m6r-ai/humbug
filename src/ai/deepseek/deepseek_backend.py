@@ -16,16 +16,6 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 class DeepseekBackend(AIBackend):
     """Deepseek API backend implementation with streaming support."""
 
-    @classmethod
-    def get_default_url(cls) -> str:
-        """
-        Get the default API URL.
-
-        Returns:
-            The default URL
-        """
-        return "https://api.deepseek.com/chat/completions"
-
     async def fetch_models(self) -> List[str]:
         """Fetch available model IDs from the DeepSeek API."""
         url = self._api_url.replace("/chat/completions", "/models")

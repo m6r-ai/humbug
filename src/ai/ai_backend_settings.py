@@ -9,3 +9,4 @@ class AIBackendSettings:
     enabled: bool = False
     api_key: str = ""
     url: str = ""
+    default_url: str = ""

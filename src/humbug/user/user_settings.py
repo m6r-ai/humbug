@@ -43,6 +43,7 @@ class UserSettings:
                 "mistral": AIBackendSettings(),
                 "openai": AIBackendSettings(),
                 "ollama": AIBackendSettings(),
+                "ollama-cloud": AIBackendSettings(),
                 "vllm": AIBackendSettings(),
                 "xai": AIBackendSettings(),
                 "zai": AIBackendSettings()

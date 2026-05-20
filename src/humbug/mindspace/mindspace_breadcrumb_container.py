@@ -1,6 +1,7 @@
 """Container that coordinates the breadcrumb bar and tree view geometry."""
 
 import os
+import logging
 from typing import Callable
 from PySide6.QtCore import QEvent, QModelIndex, QObject, QPoint, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import QFont, QResizeEvent
@@ -48,6 +49,8 @@ class MindspaceBreadcrumbContainer(QWidget):
 
         self._breadcrumb_bar = breadcrumb_bar
         self._tree_view = tree_view
+
+        self._logger = logging.getLogger("MindspaceBreadcrumbContainer")
 
         self._last_spine_path: str = ""
         self._breadcrumb_rows: int = 0
@@ -217,6 +220,13 @@ class MindspaceBreadcrumbContainer(QWidget):
         tree_sb = self._tree_view.verticalScrollBar()
         self._scrollbar.setRange(minimum, maximum)
         self._scrollbar.setPageStep(tree_sb.pageStep())
+
+        # Diagnostic log to help identify a rare intermittent scrollbar sizing bug
+        # where the scrollbar handle shrinks to minimum size.  Remove once root cause found.
+        self._logger.debug(
+            "rangeChanged: min=%d max=%d pageStep=%d row_height=%d breadcrumb_rows=%d",
+            minimum, maximum, tree_sb.pageStep(), self._row_height, self._breadcrumb_rows
+        )
         single_step = self._row_height if self._row_height > 0 else tree_sb.singleStep()
         self._scrollbar.setSingleStep(single_step)
 

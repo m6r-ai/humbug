@@ -1246,6 +1246,7 @@ class TerminalWidget(QAbstractScrollArea):
     def _show_terminal_context_menu(self, pos: QPoint) -> None:
         """Show context menu for terminal operations."""
         menu = QMenu(self)
+        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
         # Copy action
         copy_action = menu.addAction("Copy")

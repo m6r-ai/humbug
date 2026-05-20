@@ -131,7 +131,6 @@ def get_english_strings() -> LanguageStrings:
         enable_backend="Enable Backend",
         api_key="API Key",
         api_url="API URL (optional)",
-        ollama_host_url="Ollama Host URL",
         anthropic_backend="Anthropic",
         deepseek_backend="DeepSeek",
         google_backend="Google",
@@ -139,6 +138,7 @@ def get_english_strings() -> LanguageStrings:
         mistral_backend="Mistral",
         openai_backend="OpenAI",
         ollama_backend="Ollama",
+        ollama_cloud_backend="Ollama Cloud",
         xai_backend="xAI",
         vllm_backend="vLLM",
 
@@ -290,7 +290,7 @@ def get_english_strings() -> LanguageStrings:
         # Status bar
         editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}",
         conversation_status=(
-            "Model: {model}  |  {temperature}  |  "
+            "Model: {model}  |  {reasoning}  |  {temperature}  |  "
             "Input Tokens: {input_tokens} / {max_input_tokens}  |  "
             "Input Total: {total_input_tokens}  |  "
             "Output Tokens: {output_tokens} / {max_output_tokens}  |  "
@@ -298,6 +298,8 @@ def get_english_strings() -> LanguageStrings:
         ),
         conversation_status_temperature="Temp: {temperature:.1f}",
         conversation_status_no_temperature="Temp: N/A",
+        conversation_status_reasoning="Reasoning: {effort}",
+        conversation_status_no_reasoning="Reasoning: N/A",
         terminal_status="Terminal: {name} ({columns}x{rows})",
         system_status="System",
         log_status="Log",

@@ -15,16 +15,6 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 class AnthropicBackend(AIBackend):
     """Anthropic API backend implementation."""
 
-    @classmethod
-    def get_default_url(cls) -> str:
-        """
-        Get the default API URL.
-
-        Returns:
-            The default URL
-        """
-        return "https://api.anthropic.com/v1/messages"
-
     async def fetch_models(self) -> List[str]:
         """Fetch available model IDs from the Anthropic API."""
         url = self._api_url.replace("/messages", "/models")

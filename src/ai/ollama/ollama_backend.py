@@ -18,16 +18,6 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 class OllamaBackend(AIBackend):
     """Ollama API backend implementation with streaming support."""
 
-    @classmethod
-    def get_default_url(cls) -> str:
-        """
-        Get the default API URL.
-
-        Returns:
-            The default URL
-        """
-        return "http://127.0.0.1:11434/api/chat"
-
     def _get_api_endpoint_url(self, endpoint: str) -> str:
         """
         Build an Ollama API endpoint URL from either a base URL or API URL.
@@ -104,7 +94,7 @@ class OllamaBackend(AIBackend):
                     if "status" in obj:
                         on_progress(obj["status"])
 
-    def __init__(self, api_key: str, api_url: str | None = None) -> None:
+    def __init__(self, api_key: str, api_url: str) -> None:
         """Initialize the Ollama backend.
 
         Args:

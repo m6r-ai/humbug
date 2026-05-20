@@ -162,57 +162,7 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
 
-        # Ollama models
-        "gemma4:31b-cloud (Ollama)": AIModel(
-            name="gemma4:31b-cloud",
-            provider="ollama",
-            context_window=256000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
-        ),
-        "glm-5.1 (Ollama)": AIModel(
-            name="glm-5.1:cloud",
-            provider="ollama",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
-        ),
-        "glm-4.7 (Ollama)": AIModel(
-            name="glm-4.7:cloud",
-            provider="ollama",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
-        ),
-        "gpt-oss:20b": AIModel(
-            name="gpt-oss:20b",
-            provider="ollama",
-            context_window=131072,
-            max_output_tokens=32768,  # This is actually 131072 but that's too much
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
-        ),
-        "gpt-oss:120b": AIModel(
-            name="gpt-oss:120b",
-            provider="ollama",
-            context_window=131072,
-            max_output_tokens=32768,  # This is actually 131072 but that's too much
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
-        ),
+        # Ollama local models
         "llama3.2": AIModel(
             name="llama3.2",
             provider="ollama",
@@ -221,45 +171,6 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.NO_TOOLS
-        ),
-        "kimi-k2.6": AIModel(
-            name="kimi-k2.6:cloud",
-            provider="ollama",
-            context_window=262144,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
-        ),
-        "minimax-m2.7": AIModel(
-            name="minimax-m2.7:cloud",
-            provider="ollama",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.HIGH],
-        ),
-        "minimax-m2.5": AIModel(
-            name="minimax-m2.5:cloud",
-            provider="ollama",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.HIGH],
-        ),
-        "mistral-large-3 (Ollama)": AIModel(
-            name="mistral-large-3:675b-cloud",
-            provider="ollama",
-            context_window=262144,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "qwen3.6": AIModel(
             name="qwen3.6:35b",
@@ -271,9 +182,100 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
+
+        # Ollama Cloud models
+        "gpt-oss:20b": AIModel(
+            name="gpt-oss:20b",
+            provider="ollama-cloud",
+            context_window=131072,
+            max_output_tokens=32768,  # This is actually 131072 but that's too much
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
+        ),
+        "gpt-oss:120b": AIModel(
+            name="gpt-oss:120b",
+            provider="ollama-cloud",
+            context_window=131072,
+            max_output_tokens=32768,  # This is actually 131072 but that's too much
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
+        ),
+        "gemma4:31b-cloud (Ollama)": AIModel(
+            name="gemma4:31b-cloud",
+            provider="ollama-cloud",
+            context_window=256000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+        ),
+        "glm-5.1 (Ollama)": AIModel(
+            name="glm-5.1:cloud",
+            provider="ollama-cloud",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+        ),
+        "glm-4.7 (Ollama)": AIModel(
+            name="glm-4.7:cloud",
+            provider="ollama-cloud",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+        ),
+        "kimi-k2.6": AIModel(
+            name="kimi-k2.6:cloud",
+            provider="ollama-cloud",
+            context_window=262144,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+        ),
+        "minimax-m2.7": AIModel(
+            name="minimax-m2.7:cloud",
+            provider="ollama-cloud",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.HIGH],
+        ),
+        "minimax-m2.5": AIModel(
+            name="minimax-m2.5:cloud",
+            provider="ollama-cloud",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.HIGH],
+        ),
+        "mistral-large-3 (Ollama)": AIModel(
+            name="mistral-large-3:675b-cloud",
+            provider="ollama-cloud",
+            context_window=262144,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "qwen3.5": AIModel(
             name="qwen3.5:cloud",
-            provider="ollama",
+            provider="ollama-cloud",
             context_window=256000,
             max_output_tokens=2048,
             supports_temperature=True,
@@ -632,7 +634,7 @@ class AIConversationSettings:
         """
         provider_preference = [
             "google", "anthropic", "deepseek", "mistral",
-            "openai", "xai", "zai", "ollama", "vllm",
+            "openai", "xai", "zai", "ollama-cloud", "ollama", "vllm",
         ]
         for provider in provider_preference:
             if provider not in ai_backends:
@@ -677,6 +679,12 @@ class AIConversationSettings:
             "tool_capabilities": ToolCapability.FUNCTION_CALLING,
         },
         "ollama": {
+            "context_window": 128000, "max_output_tokens": 8192,
+            "supports_temperature": True,
+            "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
+            "tool_capabilities": ToolCapability.FUNCTION_CALLING,
+        },
+        "ollama-cloud": {
             "context_window": 128000, "max_output_tokens": 8192,
             "supports_temperature": True,
             "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
@@ -861,7 +869,7 @@ class AIConversationSettings:
 
         valid_providers = {
             "anthropic", "deepseek", "google", "mistral",
-            "ollama", "openai", "vllm", "xai", "zai",
+            "ollama", "ollama-cloud", "openai", "vllm", "xai", "zai",
         }
         reasoning_map: Dict[str, AIReasoningCapability] = {
             "NO_REASONING": AIReasoningCapability.NO_REASONING,

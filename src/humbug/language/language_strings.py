@@ -122,7 +122,6 @@ class LanguageStrings:
     enable_backend: str
     api_key: str
     api_url: str
-    ollama_host_url: str
     anthropic_backend: str
     deepseek_backend: str
     google_backend: str
@@ -130,6 +129,7 @@ class LanguageStrings:
     mistral_backend: str
     openai_backend: str
     ollama_backend: str
+    ollama_cloud_backend: str
     xai_backend: str
     vllm_backend: str
 
@@ -279,6 +279,8 @@ class LanguageStrings:
     conversation_status: str
     conversation_status_temperature: str
     conversation_status_no_temperature: str
+    conversation_status_reasoning: str
+    conversation_status_no_reasoning: str
     terminal_status: str
     system_status: str
     log_status: str

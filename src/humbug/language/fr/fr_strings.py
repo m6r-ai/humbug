@@ -131,7 +131,6 @@ def get_french_strings() -> LanguageStrings:
         enable_backend="Activer le backend",
         api_key="Clé API",
         api_url="URL API (optionnel)",
-        ollama_host_url="URL hôte Ollama",
         anthropic_backend="Anthropic",
         deepseek_backend="DeepSeek",
         google_backend="Google",
@@ -139,6 +138,7 @@ def get_french_strings() -> LanguageStrings:
         mistral_backend="Mistral",
         openai_backend="OpenAI",
         ollama_backend="Ollama",
+        ollama_cloud_backend="Ollama Cloud",
         xai_backend="xAI",
         vllm_backend="vLLM",
 
@@ -290,7 +290,7 @@ def get_french_strings() -> LanguageStrings:
         # Status bar
         editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}",
         conversation_status=(
-            "Modèle : {model}  |  {temperature}  |  "
+            "Modèle : {model}  |  {reasoning}  |  {temperature}  |  "
             "Jetons d'Entrée : {input_tokens} / {max_input_tokens}  |  "
             "Total Entrée : {total_input_tokens}  |  "
             "Jetons de Sortie : {output_tokens} / {max_output_tokens}  |  "
@@ -298,6 +298,8 @@ def get_french_strings() -> LanguageStrings:
         ),
         conversation_status_temperature="Temp : {temperature:.1f}",
         conversation_status_no_temperature="Temp : N/D",
+        conversation_status_reasoning="Raisonnement : {effort}",
+        conversation_status_no_reasoning="Raisonnement : N/D",
         terminal_status="Terminal : {name} ({columns}x{rows})",
         system_status="Statut du système",
         log_status="Journal",

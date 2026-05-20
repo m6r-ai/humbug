@@ -47,20 +47,10 @@ class AIBackend(ABC):
         """
         cls._system_prompt = prompt
 
-    @classmethod
-    def get_default_url(cls) -> str:
-        """
-        Get the default API URL for this backend.
-
-        Returns:
-            The default URL for this backend.
-        """
-        return ""
-
-    def __init__(self, api_key: str, api_url: str | None) -> None:
+    def __init__(self, api_key: str, api_url: str) -> None:
         """Initialize common attributes."""
         self._api_key = api_key
-        self._api_url = api_url or self.get_default_url()
+        self._api_url = api_url
         self._uses_data = True  # Indicates that we default to normal SSE encoding
         self._max_retries = 6
         self._base_delay = 2
