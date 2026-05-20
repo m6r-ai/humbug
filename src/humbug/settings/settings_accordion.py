@@ -109,8 +109,7 @@ class SettingsAccordion(SettingsItem):
             # Measure the natural height before constraining it.
             self._content_widget.setMaximumHeight(QWIDGETSIZE_MAX)
             target_h = self._content_widget.sizeHint().height()
-            start_h = 0
-            self._content_widget.setMaximumHeight(0)   # will be driven by animation
+            self._content_widget.setMaximumHeight(start_h)
 
         else:
             target_h = 0
@@ -120,7 +119,8 @@ class SettingsAccordion(SettingsItem):
         anim.setDuration(ACCORDION_ANIM_DURATION_MS)
         anim.setStartValue(start_h)
         anim.setEndValue(target_h)
-        anim.setEasingCurve(QEasingCurve.Type.OutCubic if self._expanded else QEasingCurve.Type.InCubic)
+        anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        anim.finished.connect(lambda: self._on_animation_finished(anim, target_expanded))
         anim.start()
         self._animation = anim
 
@@ -171,14 +171,12 @@ class SettingsAccordion(SettingsItem):
         self._chevron.setFixedSize(chevron_size, chevron_size)
         self._header_btn.setMinimumHeight(header_min_height)
 
-        header_bottom_border = "0px" if self._content_visible else "1px"
         header_bottom_radius = 0 if self._content_visible else radius
 
         self._header_btn.setStyleSheet(f"""
             QPushButton#AccordionHeader {{
                 background-color: {bg};
                 border: 1px solid {border_color};
-                border-bottom-width: {header_bottom_border};
                 border-top-left-radius: {radius}px;
                 border-top-right-radius: {radius}px;
                 border-bottom-left-radius: {header_bottom_radius}px;
@@ -221,7 +219,8 @@ class SettingsAccordion(SettingsItem):
         self._content_widget.setStyleSheet(f"""
             QWidget#AccordionContent {{
                 background-color: {content_bg};
-                border-top: 1px solid {border_color};
+                border: 1px solid {border_color};
+                border-top: 0px;
                 border-top-left-radius: 0px;
                 border-top-right-radius: 0px;
                 border-bottom-left-radius: {radius}px;
