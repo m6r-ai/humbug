@@ -123,6 +123,7 @@ class TabBar(QTabBar):
         if data:
             data.text = text
             self.adjustSize()
+            self.updateGeometry()
 
     def set_tab_state(
         self,
