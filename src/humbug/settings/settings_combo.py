@@ -169,6 +169,10 @@ class _SettingsComboPopup(QFrame):
             if global_pos.y() + self.height() > available.bottom():
                 global_pos.setY(self._owner.button_top_global_y() - self.height())
 
+        # Force native handle creation before move() so Qt applies its one-time
+        # shadow geometry adjustment here rather than after show(), which would
+        # shift the popup away from the intended position on first display.
+        self.winId()
         self.move(global_pos)
         self.show()
 
