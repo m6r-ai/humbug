@@ -271,11 +271,11 @@ class GoogleBackend(AIBackend):
         }
 
         # Only include temperature if supported by model
-        if AIConversationSettings.supports_temperature(settings.model):
+        if AIConversationSettings.supports_temperature(settings.model, settings.provider):
             generation_config["temperature"] = settings.temperature
 
         # Add thinking config if the model supports variable effort levels
-        efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model)
+        efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model, settings.provider)
         if efforts and settings.reasoning_effort is not None:
             thinking_level_map = {
                 AIReasoningEffort.MINIMAL: "minimal",
@@ -315,7 +315,7 @@ class GoogleBackend(AIBackend):
                 self._logger.debug("Added %d tool definitions for google", len(tool_definitions))
 
         # Build URL with model and API key
-        model_path = AIConversationSettings.get_name(settings.model)
+        model_path = settings.model
         url = f"{self._api_url}/{model_path}:streamGenerateContent?alt=sse&key={self._api_key}"
 
         # Build headers

@@ -233,17 +233,29 @@ class DelegateAITool(AITool):
         # Validate model exists if provided
         reasoning = AIReasoningCapability.NO_REASONING
         reasoning_effort: str | None = None
+        effective_model: str = ""
+        effective_provider: str = ""
         if model:
             ai_backends = self._ai_manager.get_backends()
-            available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
+            available_keys = list(AIConversationSettings.iter_models_by_backends(ai_backends))
+            available_display = [
+                AIConversationSettings.get_display_name(m, p) for (m, p) in available_keys
+            ]
 
-            if model not in available_models:
+            # Match by display name
+            matched_key = next(
+                (k for k in available_keys if AIConversationSettings.get_display_name(k[0], k[1]) == model),
+                None
+            )
+            if matched_key is None:
                 raise AIToolExecutionError(
-                    f"Model '{model}' is not available. Available models: {', '.join(available_models)}"
+                    f"Model '{model}' is not available. Available models: {', '.join(available_display)}"
                 )
 
+            effective_model, effective_provider = matched_key
+
             # Get reasoning capability from model
-            model_config = AIConversationSettings.MODELS.get(model)
+            model_config = AIConversationSettings.MODELS.get(matched_key)
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
@@ -255,12 +267,13 @@ class DelegateAITool(AITool):
                 )
 
             # Check the effort is supported by the chosen model (if model is known)
-            effective_model = model or (
-                requester_ref.conversation_settings().model
-                if hasattr(requester_ref, "conversation_settings") else None
-            )
-            if effective_model:
-                supported = AIConversationSettings.get_supported_reasoning_efforts(effective_model)
+            if not effective_model and hasattr(requester_ref, "conversation_settings"):
+                ref_settings = requester_ref.conversation_settings()
+                effective_model = ref_settings.model
+                effective_provider = ref_settings.provider
+
+            if effective_model and effective_provider:
+                supported = AIConversationSettings.get_supported_reasoning_efforts(effective_model, effective_provider)
                 if supported and reasoning_effort_arg not in supported:
                     raise AIToolExecutionError(
                         f"Model '{effective_model}' does not support reasoning_effort '{reasoning_effort_arg}'. "
@@ -290,11 +303,15 @@ class DelegateAITool(AITool):
 
         ai_conversation: AIConversation = requester_ref
         if model is None:
-            model = ai_conversation.conversation_settings().model
+            ref_settings = ai_conversation.conversation_settings()
+            effective_model = ref_settings.model
+            effective_provider = ref_settings.provider
 
         try:
             return await self._delegate_task(
-                tool_call, ai_conversation, task_prompt, session_id, model, temperature, reasoning, reasoning_effort
+                tool_call, ai_conversation, task_prompt, session_id,
+                effective_model, effective_provider,
+                temperature, reasoning, reasoning_effort
             )
 
         except (AIToolExecutionError, AIToolAuthorizationDenied):
@@ -412,6 +429,7 @@ class DelegateAITool(AITool):
         task_prompt: str,
         session_id: str | None,
         model: str,
+        provider: str,
         temperature: float | None,
         reasoning_capability: AIReasoningCapability,
         reasoning_effort: str | None
@@ -441,7 +459,8 @@ class DelegateAITool(AITool):
 
             child_settings = AIConversationSettings(
                 model=model,
-                temperature=temperature if AIConversationSettings.supports_temperature(model, reasoning_effort) else None,
+                provider=provider,
+                temperature=temperature if AIConversationSettings.supports_temperature(model, provider, reasoning_effort) else None,
                 reasoning=reasoning_capability,
                 reasoning_effort=reasoning_effort,
             )
@@ -462,7 +481,8 @@ class DelegateAITool(AITool):
                 )
 
             # Submit the prompt directly to the child AIConversation
-            requester = parent_ai_conversation.conversation_settings().model
+            parent_settings = parent_ai_conversation.conversation_settings()
+            requester = AIConversationSettings.get_display_name(parent_settings.model, parent_settings.provider)
 
             # Record the parent relationship on the child before the first message is written
             self._set_child_parent_metadata(child_ai_conversation, parent_ai_conversation, tool_call)

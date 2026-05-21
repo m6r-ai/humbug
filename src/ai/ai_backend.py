@@ -94,10 +94,10 @@ class AIBackend(ABC):
         """
         Determine whether a reasoning message from history is compatible with the current model.
 
-        The default implementation matches at the provider level, which is correct for backends
-        that serve a single well-defined API (Anthropic, DeepSeek, xAI, Z.ai).  Backends that
-        host many structurally different models under one API (Ollama, vLLM) should override
-        this method and require an exact model key match instead.
+        The default implementation matches on provider, which is correct for backends
+        that serve a single well-defined API (Anthropic, DeepSeek, xAI, Z.ai).  Backends
+        that host many structurally different models under one API (Ollama, vLLM) should
+        override this method and require an exact model match instead.
 
         Args:
             message: The reasoning message from conversation history
@@ -106,7 +106,7 @@ class AIBackend(ABC):
         Returns:
             True if the reasoning message is compatible with the current model
         """
-        return AIConversationSettings.get_provider(message.model or "") == AIConversationSettings.get_provider(settings.model)
+        return (message.provider or "") == settings.provider
 
     def _resolve_message_content(
         self,
@@ -152,11 +152,7 @@ class AIBackend(ABC):
         Returns:
             True if the model supports tools
         """
-        model_config = AIConversationSettings.MODELS.get(settings.model)
-        if not model_config:
-            return False
-
-        return model_config.supports_tools()
+        return AIConversationSettings.supports_tools(settings.model, settings.provider)
 
     async def stream_message(
         self,

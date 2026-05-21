@@ -267,18 +267,18 @@ class XAIBackend(AIBackend):
 
         # Build request data
         data = {
-            "model": AIConversationSettings.get_name(settings.model),
+            "model": settings.model,
             "messages": messages,
             "stream": True,
             "stream_options": {"include_usage": True}
         }
 
         # Only include temperature if supported by model
-        if AIConversationSettings.supports_temperature(settings.model):
+        if AIConversationSettings.supports_temperature(settings.model, settings.provider):
             data["temperature"] = settings.temperature
 
         # Add reasoning effort if the model supports variable effort levels
-        efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model)
+        efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model, settings.provider)
         if efforts and settings.reasoning_effort is not None:
             data["reasoning_effort"] = settings.reasoning_effort
 

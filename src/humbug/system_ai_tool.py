@@ -401,17 +401,27 @@ class SystemAITool(AITool):
         # Validate model exists if provided
         reasoning = None
         reasoning_effort: str | None = None
+        effective_model: str = ""
+        effective_provider: str = ""
         if model:
             ai_backends = self._user_manager.get_ai_backends()
-            available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
-
-            if model not in available_models:
+            available_keys = list(AIConversationSettings.iter_models_by_backends(ai_backends))
+            available_display = [
+                AIConversationSettings.get_display_name(m, p) for (m, p) in available_keys
+            ]
+            matched_key = next(
+                (k for k in available_keys if AIConversationSettings.get_display_name(k[0], k[1]) == model),
+                None
+            )
+            if matched_key is None:
                 raise AIToolExecutionError(
-                    f"Model '{model}' is not available. Available models: {', '.join(available_models)}"
+                    f"Model '{model}' is not available. Available models: {', '.join(available_display)}"
                 )
 
+            effective_model, effective_provider = matched_key
+
             # Get reasoning capability from model
-            model_config = AIConversationSettings.MODELS.get(model)
+            model_config = AIConversationSettings.MODELS.get(matched_key)
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
@@ -423,11 +433,11 @@ class SystemAITool(AITool):
                 )
 
             # Check the effort is supported by the chosen model (if model is known)
-            if model:
-                supported = AIConversationSettings.get_supported_reasoning_efforts(model)
+            if effective_model and effective_provider:
+                supported = AIConversationSettings.get_supported_reasoning_efforts(effective_model, effective_provider)
                 if supported and reasoning_effort_arg not in supported:
                     raise AIToolExecutionError(
-                        f"Model '{model}' does not support reasoning_effort '{reasoning_effort_arg}'. "
+                        f"Model '{effective_model}' does not support reasoning_effort '{reasoning_effort_arg}'. "
                         f"Supported efforts: {', '.join(supported)}"
                     )
 
@@ -441,7 +451,7 @@ class SystemAITool(AITool):
             try:
                 self._mindspace_manager.ensure_mindspace_dir("conversations")
                 conversation_tab = self._column_manager.new_conversation(
-                    False, None, model, temperature, reasoning, reasoning_effort
+                    False, None, effective_model, effective_provider, temperature, reasoning, reasoning_effort
                 )
 
             finally:
@@ -767,16 +777,12 @@ class SystemAITool(AITool):
 
             # AI models information
             ai_backends = self._user_manager.get_ai_backends()
-            available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
 
             # Categorize models by backend
             models_by_backend: Dict[str, List[str]] = {}
-            for model_name in available_models:
-                provider = AIConversationSettings.get_provider(model_name)
-                if provider not in models_by_backend:
-                    models_by_backend[provider] = []
-
-                models_by_backend[provider].append(model_name)
+            for (model_name, provider) in AIConversationSettings.iter_models_by_backends(ai_backends):
+                display = AIConversationSettings.get_display_name(model_name, provider)
+                models_by_backend.setdefault(provider, []).append(display)
 
             ai_info = {
                 "models_by_backend": models_by_backend

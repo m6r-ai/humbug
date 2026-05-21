@@ -242,7 +242,7 @@ class ConversationTab(TabBase):
 
         strings = self._language_manager.strings()
 
-        if AIConversationSettings.supports_temperature(settings.model):
+        if AIConversationSettings.supports_temperature(settings.model, settings.provider):
             temp_display = strings.conversation_status_temperature.format(
                 temperature=settings.temperature
             )
@@ -258,7 +258,7 @@ class ConversationTab(TabBase):
             reasoning_display = strings.conversation_status_no_reasoning
 
         status = strings.conversation_status.format(
-            model=settings.model,
+            model=AIConversationSettings.get_display_name(settings.model, settings.provider),
             temperature=temp_display,
             reasoning=reasoning_display,
             input_tokens=counts['input'],

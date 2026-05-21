@@ -18,8 +18,9 @@ class MindspaceSettings:
     _logger = logging.getLogger("MindspaceSettings")
 
     enabled_tools: Dict[str, bool]
-    model: str = AIConversationSettings.get_default_model({})  # Will be overridden with actual backends
-    temperature: float = 0.7  # Default temperature
+    model: str = ""
+    provider: str = ""
+    temperature: float = 0.7
     reasoning: AIReasoningCapability = AIReasoningCapability.NO_REASONING
     reasoning_effort: str | None = None
     use_soft_tabs: bool = True
@@ -125,8 +126,8 @@ class MindspaceSettings:
         terminal = cls._safe_get_dict(data, "terminal")
 
         # Get defaults
-        default_model = AIConversationSettings.get_default_model({})
-        default_reasoning = AIConversationSettings.get_reasoning_capability(default_model)
+        default_model, default_provider = AIConversationSettings.get_default_model({})
+        default_reasoning = AIConversationSettings.get_reasoning_capability(default_model, default_provider)
 
         # Load model with validation
         model = conversation.get("model", default_model)
@@ -136,6 +137,20 @@ class MindspaceSettings:
                 path, type(model).__name__
             )
             model = default_model
+
+        # Load provider with validation
+        provider = conversation.get("provider", "")
+        if not isinstance(provider, str):
+            cls._logger.warning(
+                "Invalid provider type in %s: expected str, got %s. Using default.",
+                path, type(provider).__name__
+            )
+            provider = ""
+
+        # Migrate: derive provider from registry if absent
+        if not provider and model:
+            derived = AIConversationSettings.find_provider_for_model(model)
+            provider = derived if derived else ""
 
         # Load temperature with validation
         temperature = conversation.get("temperature", 0.7)
@@ -318,6 +333,7 @@ class MindspaceSettings:
 
         return cls(
             model=model,
+            provider=provider,
             temperature=temperature,
             reasoning=reasoning,
             reasoning_effort=reasoning_effort,
@@ -338,6 +354,7 @@ class MindspaceSettings:
         data = {
             "conversation": {
                 "model": self.model,
+                "provider": self.provider,
                 "temperature": self.temperature,
                 "reasoning": self.reasoning.value,  # Use .value to get the integer value of the enum
                 "reasoning_effort": self.reasoning_effort,

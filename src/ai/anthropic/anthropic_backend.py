@@ -286,7 +286,7 @@ class AnthropicBackend(AIBackend):
 
         # Build request data
         data = {
-            "model": AIConversationSettings.get_name(settings.model),
+            "model": settings.model,
             "messages": messages,
             "max_tokens": settings.max_output_tokens,
             "stream": True
@@ -312,7 +312,7 @@ class AnthropicBackend(AIBackend):
             }
 
         # Only include temperature if supported by model
-        if not thinking and AIConversationSettings.supports_temperature(settings.model):
+        if not thinking and AIConversationSettings.supports_temperature(settings.model, settings.provider):
             data["temperature"] = settings.temperature
 
         # Add tools if supported

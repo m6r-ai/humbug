@@ -135,6 +135,7 @@ class AIConversation:
         """
         return AIConversationSettings(
             model=self._settings.model,
+            provider=self._settings.provider,
             temperature=self._settings.temperature,
             reasoning=self._settings.reasoning,
             reasoning_effort=self._settings.reasoning_effort,
@@ -173,9 +174,10 @@ class AIConversation:
             # Update settings if AI message
             if message.source == AIMessageSource.AI:
                 reasoning = message.reasoning_capability if message.reasoning_capability else AIReasoningCapability.NO_REASONING
-                if message.model:
+                if message.model and message.provider:
                     self.update_conversation_settings(AIConversationSettings(
                         model=message.model,
+                        provider=message.provider,
                         temperature=message.temperature,
                         reasoning=reasoning,
                         reasoning_effort=message.reasoning_effort,
@@ -200,9 +202,10 @@ class AIConversation:
 
             if message.source == AIMessageSource.AI:
                 reasoning = message.reasoning_capability if message.reasoning_capability else AIReasoningCapability.NO_REASONING
-                if message.model:
+                if message.model and message.provider:
                     self.update_conversation_settings(AIConversationSettings(
                         model=message.model,
+                        provider=message.provider,
                         temperature=message.temperature,
                         reasoning=reasoning,
                         reasoning_effort=message.reasoning_effort,
@@ -235,6 +238,7 @@ class AIConversation:
                 AIMessageSource.USER_QUEUED,
                 user_message,
                 model=settings.model,
+            provider=settings.provider,
                 temperature=settings.temperature,
                 reasoning_capability=settings.reasoning,
                 reasoning_effort=settings.reasoning_effort,
@@ -249,6 +253,7 @@ class AIConversation:
             user_message,
             user_name=requester,
             model=settings.model,
+            provider=settings.provider,
             temperature=settings.temperature,
             reasoning_capability=settings.reasoning,
             reasoning_effort=settings.reasoning_effort,
@@ -281,11 +286,10 @@ class AIConversation:
             self._logger.debug("Starting AI response streaming")
 
             # Get appropriate backend for conversation
-            provider = AIConversationSettings.get_provider(settings.model)
-            backend = self._ai_manager.get_backends().get(provider)
+            backend = self._ai_manager.get_backends().get(settings.provider)
 
             if not backend:
-                error_msg = f"No backend available for provider: {provider}"
+                error_msg = f"No backend available for provider: {settings.provider}"
                 self._logger.error(error_msg)
                 error_message = AIMessage.create(
                     AIMessageSource.SYSTEM,
@@ -785,6 +789,7 @@ class AIConversation:
             AIMessageSource.AI_CONNECTED,
             "",
             model=settings.model,
+            provider=settings.provider,
             temperature=settings.temperature,
             reasoning_capability=settings.reasoning,
             reasoning_effort=settings.reasoning_effort,
@@ -838,6 +843,7 @@ class AIConversation:
             AIMessageSource.AI,
             content,
             model=settings.model,
+            provider=settings.provider,
             temperature=settings.temperature,
             reasoning_capability=settings.reasoning,
             reasoning_effort=settings.reasoning_effort,
@@ -895,6 +901,7 @@ class AIConversation:
             AIMessageSource.REASONING,
             reasoning,
             model=settings.model,
+            provider=settings.provider,
             temperature=settings.temperature,
             reasoning_capability=settings.reasoning,
             reasoning_effort=settings.reasoning_effort,
@@ -927,6 +934,7 @@ class AIConversation:
                 AIMessageSource.AI,
                 content="",
                 model=settings.model,
+                provider=settings.provider,
                 temperature=settings.temperature,
                 reasoning_capability=settings.reasoning,
                 reasoning_effort=settings.reasoning_effort,

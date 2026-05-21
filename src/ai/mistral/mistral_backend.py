@@ -228,14 +228,14 @@ class MistralBackend(AIBackend):
 
         # Build request data
         data = {
-            "model": AIConversationSettings.get_name(settings.model),
+            "model": settings.model,
             "messages": messages,
             "max_tokens": settings.max_output_tokens,
             "stream": True
         }
 
         # Only include temperature if supported by model
-        if AIConversationSettings.supports_temperature(settings.model):
+        if AIConversationSettings.supports_temperature(settings.model, settings.provider):
             data["temperature"] = settings.temperature
 
         # Add tools if supported

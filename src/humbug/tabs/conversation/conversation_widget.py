@@ -469,7 +469,7 @@ class ConversationWidget(QWidget):
         msg_widget = ConversationMessage(
             message.source,
             message.timestamp,
-            message.model or "",
+            AIConversationSettings.get_display_name(message.model or "", message.provider or ""),
             message.id,
             message.user_name,
             message.content,
@@ -1348,7 +1348,7 @@ class ConversationWidget(QWidget):
         """Update conversation settings and associated backend."""
         self._ai_conversation.update_conversation_settings(new_settings)
         self.status_updated.emit()
-        self._input.set_model(new_settings.model)
+        self._input.set_model(AIConversationSettings.get_display_name(new_settings.model, new_settings.provider))
 
     def ai_conversation(self) -> AITranscriptConversation:
         """
@@ -1837,6 +1837,7 @@ class ConversationWidget(QWidget):
 
             default_settings = AIConversationSettings(
                 model=settings.model,
+                provider=settings.provider,
                 temperature=settings.temperature,
                 reasoning=settings.reasoning,
                 reasoning_effort=settings.reasoning_effort,
@@ -1847,7 +1848,8 @@ class ConversationWidget(QWidget):
             if attachments:
                 self._ai_conversation.get_conversation_history().restore_attachments(attachments)
 
-        self._input.set_model(self._ai_conversation.conversation_settings().model)
+        cs = self._ai_conversation.conversation_settings()
+        self._input.set_model(AIConversationSettings.get_display_name(cs.model, cs.provider))
 
         # Split into a tail loaded synchronously (so the visible end of the
         # conversation appears immediately without glitching) and a head that
@@ -2636,7 +2638,7 @@ class ConversationWidget(QWidget):
         self._messages = preserved_messages
 
         conversation_settings = self._ai_conversation.conversation_settings()
-        self._input.set_model(conversation_settings.model)
+        self._input.set_model(AIConversationSettings.get_display_name(conversation_settings.model, conversation_settings.provider))
 
         if self._animated_message and self._animated_message not in preserved_messages:
             self._stop_message_border_animation()
@@ -2698,7 +2700,7 @@ class ConversationWidget(QWidget):
         self._messages = preserved_messages
 
         conversation_settings = self._ai_conversation.conversation_settings()
-        self._input.set_model(conversation_settings.model)
+        self._input.set_model(AIConversationSettings.get_display_name(conversation_settings.model, conversation_settings.provider))
 
         if self._animated_message and self._animated_message not in preserved_messages:
             self._stop_message_border_animation()
@@ -3001,6 +3003,7 @@ class ConversationWidget(QWidget):
         settings = self._ai_conversation.conversation_settings()
         metadata["settings"] = {
             "model": settings.model,
+            "provider": settings.provider,
             "temperature": settings.temperature,
             "reasoning": settings.reasoning.value,
             "reasoning_effort": settings.reasoning_effort,
@@ -3099,7 +3102,8 @@ class ConversationWidget(QWidget):
             # Restore streaming state from a tab move
             self._is_streaming = metadata["is_streaming"]
             self._input.set_streaming(self._is_streaming)
-            self._input.set_model(self._ai_conversation.conversation_settings().model)
+            cs = self._ai_conversation.conversation_settings()
+            self._input.set_model(AIConversationSettings.get_display_name(cs.model, cs.provider))
 
             current_unfinished_message = metadata.get("current_unfinished_message")
             if current_unfinished_message:
@@ -3118,6 +3122,7 @@ class ConversationWidget(QWidget):
                 )
                 settings = AIConversationSettings(
                     model=metadata["settings"].get("model"),
+                    provider=metadata["settings"].get("provider", ""),
                     temperature=metadata["settings"].get("temperature"),
                     reasoning=reasoning_options,
                     reasoning_effort=metadata["settings"].get("reasoning_effort"),

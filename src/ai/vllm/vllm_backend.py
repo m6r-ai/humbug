@@ -37,7 +37,7 @@ class VLLMBackend(AIBackend):
         matching is insufficient — a reasoning block from one vLLM model is not
         compatible with a different vLLM model.
         """
-        return message.model == settings.model
+        return message.model == settings.model and message.provider == settings.provider
 
     def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
         """
@@ -237,7 +237,7 @@ class VLLMBackend(AIBackend):
 
         # Build request data
         data = {
-            "model": AIConversationSettings.get_name(settings.model),
+            "model": settings.model,
             "messages": messages,
             "chat_id": "",  # This is a specific workaround for a broken VLLM backend server!
             "stream": True,
@@ -245,7 +245,7 @@ class VLLMBackend(AIBackend):
         }
 
         # Only include temperature if supported by model
-        if AIConversationSettings.supports_temperature(settings.model):
+        if AIConversationSettings.supports_temperature(settings.model, settings.provider):
             data["temperature"] = settings.temperature
 
         # Add tools if supported

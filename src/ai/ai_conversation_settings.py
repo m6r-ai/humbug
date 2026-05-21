@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Dict, List, Any, Generator, Tuple
+from typing import Dict, Generator, List, Any, Tuple
 
 from ai.ai_model import AIModel, AIReasoningCapability, AIReasoningEffort, ToolCapability
 
@@ -10,12 +10,13 @@ from ai.ai_model import AIModel, AIReasoningCapability, AIReasoningEffort, ToolC
 class AIConversationSettings:
     """Data class for conversation settings."""
 
-    # Single dictionary of all available models
-    MODELS = {
+    # Registry keyed by (model_name, provider) — the canonical identity of a model.
+    MODELS: Dict[Tuple[str, str], AIModel] = {
         # Anthropic models
-        "claude-haiku-4-5": AIModel(
+        ("claude-haiku-4-5", "anthropic"): AIModel(
             name="claude-haiku-4-5",
             provider="anthropic",
+            display_name="Claude Haiku 4.5",
             context_window=200000,
             max_output_tokens=32000,
             supports_temperature=True,
@@ -23,9 +24,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "claude-sonnet-4-6": AIModel(
+        ("claude-sonnet-4-6", "anthropic"): AIModel(
             name="claude-sonnet-4-6",
             provider="anthropic",
+            display_name="Claude Sonnet 4.6",
             context_window=1000000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=True,
@@ -34,9 +36,10 @@ class AIConversationSettings:
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
             temperature_incompatible_efforts={AIReasoningEffort.HIGH},
         ),
-        "claude-opus-4-7": AIModel(
+        ("claude-opus-4-7", "anthropic"): AIModel(
             name="claude-opus-4-7",
             provider="anthropic",
+            display_name="Claude Opus 4.7",
             context_window=1000000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=False,
@@ -44,9 +47,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "claude-opus-4-6": AIModel(
+        ("claude-opus-4-6", "anthropic"): AIModel(
             name="claude-opus-4-6",
             provider="anthropic",
+            display_name="Claude Opus 4.6",
             context_window=1000000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=True,
@@ -57,9 +61,10 @@ class AIConversationSettings:
         ),
 
         # Deepseek models
-        "deepseek-v4-flash": AIModel(
+        ("deepseek-v4-flash", "deepseek"): AIModel(
             name="deepseek-v4-flash",
             provider="deepseek",
+            display_name="DeepSeek V4 Flash",
             context_window=1000000,
             max_output_tokens=384000,
             supports_temperature=True,
@@ -67,9 +72,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "deepseek-v4-pro": AIModel(
+        ("deepseek-v4-pro", "deepseek"): AIModel(
             name="deepseek-v4-pro",
             provider="deepseek",
+            display_name="DeepSeek V4 Pro",
             context_window=1000000,
             max_output_tokens=384000,
             supports_temperature=True,
@@ -79,9 +85,10 @@ class AIConversationSettings:
         ),
 
         # Google models
-        "gemini-3.1-flash-lite": AIModel(
+        ("gemini-3.1-flash-lite", "google"): AIModel(
             name="gemini-3.1-flash-lite",
             provider="google",
+            display_name="Gemini 3.1 Flash Lite",
             context_window=1048576,
             max_output_tokens=65536,
             supports_temperature=True,
@@ -94,9 +101,10 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH,
             ]
         ),
-        "gemini-3-flash-preview": AIModel(
+        ("gemini-3-flash-preview", "google"): AIModel(
             name="gemini-3-flash-preview",
             provider="google",
+            display_name="Gemini 3 Flash Preview",
             context_window=1048576,
             max_output_tokens=65536,
             supports_temperature=True,
@@ -109,9 +117,10 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH,
             ]
         ),
-        "gemini-3.1-pro-preview": AIModel(
+        ("gemini-3.1-pro-preview", "google"): AIModel(
             name="gemini-3.1-pro-preview",
             provider="google",
+            display_name="Gemini 3.1 Pro Preview",
             context_window=1048576,
             max_output_tokens=65536,
             supports_temperature=True,
@@ -125,36 +134,40 @@ class AIConversationSettings:
         ),
 
         # Mistral models
-        "devstral-small-latest": AIModel(
+        ("devstral-small-latest", "mistral"): AIModel(
             name="devstral-small-latest",
             provider="mistral",
+            display_name="Devstral Small",
             context_window=131072,
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "codestral-latest": AIModel(
+        ("codestral-latest", "mistral"): AIModel(
             name="codestral-latest",
             provider="mistral",
+            display_name="Codestral",
             context_window=131072,
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "mistral-large-latest": AIModel(
+        ("mistral-large-latest", "mistral"): AIModel(
             name="mistral-large-latest",
             provider="mistral",
+            display_name="Mistral Large",
             context_window=262144,
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "mistral-small-latest": AIModel(
+        ("mistral-small-latest", "mistral"): AIModel(
             name="mistral-small-latest",
             provider="mistral",
+            display_name="Mistral Small",
             context_window=131072,
             max_output_tokens=32768,
             supports_temperature=True,
@@ -163,18 +176,21 @@ class AIConversationSettings:
         ),
 
         # Ollama local models
-        "llama3.2": AIModel(
-            name="llama3.2",
+        ("gpt-oss:20b", "ollama-cloud"): AIModel(
+            name="gpt-oss:20b",
             provider="ollama",
+            display_name="GPT-OSS (20B)",
             context_window=131072,
-            max_output_tokens=2048,
+            max_output_tokens=32768,  # This is actually 131072 but that's too much
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
         ),
-        "qwen3.6": AIModel(
+        ("qwen3.6:35b", "ollama"): AIModel(
             name="qwen3.6:35b",
             provider="ollama",
+            display_name="Qwen 3.6 (35B)",
             context_window=256000,
             max_output_tokens=2048,
             supports_temperature=True,
@@ -184,9 +200,10 @@ class AIConversationSettings:
         ),
 
         # Ollama Cloud models
-        "gpt-oss:20b": AIModel(
+        ("gpt-oss:20b", "ollama-cloud"): AIModel(
             name="gpt-oss:20b",
             provider="ollama-cloud",
+            display_name="GPT-OSS (20B)",
             context_window=131072,
             max_output_tokens=32768,  # This is actually 131072 but that's too much
             supports_temperature=True,
@@ -194,9 +211,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
         ),
-        "gpt-oss:120b": AIModel(
+        ("gpt-oss:120b", "ollama-cloud"): AIModel(
             name="gpt-oss:120b",
             provider="ollama-cloud",
+            display_name="GPT-OSS (120B)",
             context_window=131072,
             max_output_tokens=32768,  # This is actually 131072 but that's too much
             supports_temperature=True,
@@ -204,9 +222,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
         ),
-        "gemma4:31b-cloud (Ollama)": AIModel(
+        ("gemma4:31b-cloud", "ollama-cloud"): AIModel(
             name="gemma4:31b-cloud",
             provider="ollama-cloud",
+            display_name="Gemma 4 (31B)",
             context_window=256000,
             max_output_tokens=32768,
             supports_temperature=True,
@@ -214,9 +233,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "glm-5.1 (Ollama)": AIModel(
+        ("glm-5.1:cloud", "ollama-cloud"): AIModel(
             name="glm-5.1:cloud",
             provider="ollama-cloud",
+            display_name="GLM 5.1",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
@@ -224,9 +244,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "glm-4.7 (Ollama)": AIModel(
+        ("glm-4.7:cloud", "ollama-cloud"): AIModel(
             name="glm-4.7:cloud",
             provider="ollama-cloud",
+            display_name="GLM 4.7",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
@@ -234,9 +255,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "kimi-k2.6": AIModel(
+        ("kimi-k2.6:cloud", "ollama-cloud"): AIModel(
             name="kimi-k2.6:cloud",
             provider="ollama-cloud",
+            display_name="Kimi K2.6",
             context_window=262144,
             max_output_tokens=32768,
             supports_temperature=True,
@@ -244,9 +266,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "minimax-m2.7": AIModel(
+        ("minimax-m2.7:cloud", "ollama-cloud"): AIModel(
             name="minimax-m2.7:cloud",
             provider="ollama-cloud",
+            display_name="MiniMax M2.7",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
@@ -254,9 +277,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.HIGH],
         ),
-        "minimax-m2.5": AIModel(
+        ("minimax-m2.5:cloud", "ollama-cloud"): AIModel(
             name="minimax-m2.5:cloud",
             provider="ollama-cloud",
+            display_name="MiniMax M2.5",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
@@ -264,18 +288,20 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.HIGH],
         ),
-        "mistral-large-3 (Ollama)": AIModel(
+        ("mistral-large-3:675b-cloud", "ollama-cloud"): AIModel(
             name="mistral-large-3:675b-cloud",
             provider="ollama-cloud",
+            display_name="Mistral Large 3",
             context_window=262144,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "qwen3.5": AIModel(
+        ("qwen3.5:cloud", "ollama-cloud"): AIModel(
             name="qwen3.5:cloud",
             provider="ollama-cloud",
+            display_name="Qwen 3.5",
             context_window=256000,
             max_output_tokens=2048,
             supports_temperature=True,
@@ -285,9 +311,10 @@ class AIConversationSettings:
         ),
 
         # OpenAI models
-        "gpt-5.4-nano": AIModel(
+        ("gpt-5.4-nano", "openai"): AIModel(
             name="gpt-5.4-nano",
             provider="openai",
+            display_name="GPT 5.4 Nano",
             context_window=400000,
             max_output_tokens=128000,
             supports_temperature=False,
@@ -297,9 +324,10 @@ class AIConversationSettings:
                 AIReasoningEffort.MEDIUM,
             ]
         ),
-        "gpt-5.4-mini": AIModel(
+        ("gpt-5.4-mini", "openai"): AIModel(
             name="gpt-5.4-mini",
             provider="openai",
+            display_name="GPT 5.4 Mini",
             context_window=400000,
             max_output_tokens=128000,
             supports_temperature=False,
@@ -309,9 +337,10 @@ class AIConversationSettings:
                 AIReasoningEffort.MEDIUM,
             ]
         ),
-        "gpt-5.5": AIModel(
+        ("gpt-5.5", "openai"): AIModel(
             name="gpt-5.5",
             provider="openai",
+            display_name="GPT 5.5",
             context_window=1000000,
             max_output_tokens=128000,
             supports_temperature=False,
@@ -321,9 +350,10 @@ class AIConversationSettings:
                 AIReasoningEffort.MEDIUM,
             ]
         ),
-        "gpt-5.4": AIModel(
+        ("gpt-5.4", "openai"): AIModel(
             name="gpt-5.4",
             provider="openai",
+            display_name="GPT 5.4",
             context_window=1000000,
             max_output_tokens=128000,
             supports_temperature=False,
@@ -336,9 +366,10 @@ class AIConversationSettings:
         ),
 
         # vLLM models
-        "gemma3:27b": AIModel(
+        ("gemma3:27b", "vllm"): AIModel(
             name="gemma3:27b",
             provider="vllm",
+            display_name="Gemma 3 (27B)",
             context_window=131072,
             max_output_tokens=2048,
             supports_temperature=True,
@@ -347,9 +378,10 @@ class AIConversationSettings:
         ),
 
         # xAI models
-        "grok-4.3": AIModel(
+        ("grok-4.3", "xai"): AIModel(
             name="grok-4.3",
             provider="xai",
+            display_name="Grok 4.3",
             context_window=1000000,
             max_output_tokens=32768,
             supports_temperature=True,
@@ -364,9 +396,10 @@ class AIConversationSettings:
         ),
 
         # Z.ai models
-        "glm-5.1 (Z.ai)": AIModel(
+        ("glm-5.1", "zai"): AIModel(
             name="glm-5.1",
             provider="zai",
+            display_name="GLM 5.1",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
@@ -374,9 +407,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "glm-4.7 (Z.ai)": AIModel(
+        ("glm-4.7", "zai"): AIModel(
             name="glm-4.7",
             provider="zai",
+            display_name="GLM 4.7",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
@@ -384,9 +418,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "glm-4.5-X": AIModel(
+        ("glm-4.5-x", "zai"): AIModel(
             name="glm-4.5-x",
             provider="zai",
+            display_name="GLM 4.5-X",
             context_window=128000,
             max_output_tokens=8192,
             supports_temperature=True,
@@ -394,9 +429,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "glm-4.5-air": AIModel(
+        ("glm-4.5-air", "zai"): AIModel(
             name="glm-4.5-air",
             provider="zai",
+            display_name="GLM 4.5 Air",
             context_window=128000,
             max_output_tokens=8192,
             supports_temperature=True,
@@ -404,9 +440,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        "glm-4.5-airx": AIModel(
+        ("glm-4.5-airx", "zai"): AIModel(
             name="glm-4.5-airx",
             provider="zai",
+            display_name="GLM 4.5 AirX",
             context_window=128000,
             max_output_tokens=8192,
             supports_temperature=True,
@@ -426,7 +463,9 @@ class AIConversationSettings:
     DEFAULT_TOOL_CAPABILITY = ToolCapability.NO_TOOLS
 
     def __init__(
-        self, model: str = "gemini-1.5-flash",
+        self,
+        model: str = "",
+        provider: str = "",
         temperature: float | None = 0.7,
         reasoning: AIReasoningCapability = AIReasoningCapability.NO_REASONING,
         reasoning_effort: str | None = None,
@@ -435,7 +474,8 @@ class AIConversationSettings:
         Initialize conversation settings with defaults.
 
         Args:
-            model: Optional model name. If None, must be set later based on available backends
+            model: The API model name (e.g. 'claude-sonnet-4-6')
+            provider: The provider name (e.g. 'anthropic')
             temperature: Temperature setting (0.0-1.0)
             reasoning: Reasoning capability
             reasoning_effort: Selected reasoning effort level, or None for the model default.
@@ -450,11 +490,12 @@ class AIConversationSettings:
             raise ValueError("Temperature must be between 0.0 and 1.0")
 
         self.model = model
+        self.provider = provider
         self.temperature = temperature
         self.reasoning = reasoning
         self.reasoning_effort = reasoning_effort
 
-        model_config = self.MODELS.get(model)
+        model_config = self.MODELS.get((model, provider))
         if model_config:
             self.context_window = model_config.context_window
             self.max_output_tokens = model_config.max_output_tokens
@@ -469,97 +510,88 @@ class AIConversationSettings:
             self.max_output_tokens = self.DEFAULT_MAX_OUTPUT_TOKENS
 
     @classmethod
-    def get_available_models(cls) -> List[str]:
+    def get_display_name(cls, model: str, provider: str) -> str:
         """
-        Return list of available models.
+        Get the display name for a given model and provider.
+
+        Falls back to a generated name if the model is not in the registry.
+
+        Args:
+            model: The API model name
+            provider: The provider name
 
         Returns:
-            List of model names
+            Human-readable display name
+        """
+        model_config = cls.MODELS.get((model, provider))
+        if model_config:
+            return model_config.display_name
+
+        if provider:
+            return f"{model} ({provider})"
+
+        return model
+
+    @classmethod
+    def get_available_models(cls) -> List[Tuple[str, str]]:
+        """
+        Return list of available (model, provider) keys.
+
+        Returns:
+            List of (model_name, provider) tuples
         """
         return list(cls.MODELS.keys())
 
     @classmethod
-    def get_name(cls, model: str) -> str:
-        """
-        Get the name for a given model.
-
-        Args:
-            model: Name of the model
-
-        Returns:
-            Model name or "unknown" if model not found
-        """
-        model_config = cls.MODELS.get(model)
-        if model_config:
-            return model_config.name
-
-        return "unknown"
-
-    @classmethod
-    def get_provider(cls, model: str) -> str:
-        """
-        Get the provider for a given model.
-
-        Args:
-            model: Name of the model
-
-        Returns:
-            Provider name or "unknown" if model not found
-        """
-        model_config = cls.MODELS.get(model)
-        if model_config:
-            return model_config.provider
-
-        return "unknown"
-
-    @classmethod
-    def supports_temperature(cls, model: str, reasoning_effort: str | None = None) -> bool:
+    def supports_temperature(cls, model: str, provider: str, reasoning_effort: str | None = None) -> bool:
         """
         Check if model supports temperature setting at the given reasoning effort level.
 
         Args:
-            model: Name of the model
+            model: The API model name
+            provider: The provider name
             reasoning_effort: The currently selected effort level, or None.
 
         Returns:
             True if the model supports temperature at that effort level, False otherwise
         """
-        model_config = cls.MODELS.get(model)
+        model_config = cls.MODELS.get((model, provider))
         if model_config:
             return model_config.supports_temperature_for_effort(reasoning_effort)
 
         return False
 
     @classmethod
-    def supports_tools(cls, model: str) -> bool:
+    def supports_tools(cls, model: str, provider: str) -> bool:
         """Check if model supports tool calling."""
-        model_config = cls.MODELS.get(model)
+        model_config = cls.MODELS.get((model, provider))
         if model_config:
             return model_config.supports_tools()
 
         return False
 
     @classmethod
-    def get_tool_capabilities(cls, model: str) -> ToolCapability:
+    def get_tool_capabilities(cls, model: str, provider: str) -> ToolCapability:
         """Get the tool capabilities for a model."""
-        model_config = cls.MODELS.get(model)
+        model_config = cls.MODELS.get((model, provider))
         if model_config:
             return model_config.tool_capabilities
 
         return cls.DEFAULT_TOOL_CAPABILITY
 
     @classmethod
-    def get_model_limits(cls, model: str) -> Dict[str, int]:
+    def get_model_limits(cls, model: str, provider: str) -> Dict[str, int]:
         """
         Get the context window and max output tokens for a model.
 
         Args:
-            model: Name of the model
+            model: The API model name
+            provider: The provider name
 
         Returns:
             Dictionary with context_window and max_output_tokens keys
         """
-        model_config = cls.MODELS.get(model)
+        model_config = cls.MODELS.get((model, provider))
         if model_config:
             return {
                 "context_window": model_config.context_window,
@@ -572,65 +604,69 @@ class AIConversationSettings:
         }
 
     @classmethod
-    def get_reasoning_capability(cls, model: str) -> AIReasoningCapability:
+    def get_reasoning_capability(cls, model: str, provider: str) -> AIReasoningCapability:
         """
         Get the reasoning capabilities supported by a model.
 
         Args:
-            model: Name of the model
+            model: The API model name
+            provider: The provider name
 
         Returns:
             AIReasoningCapability bitmap of supported reasoning capabilities
         """
-        model_config = cls.MODELS.get(model)
+        model_config = cls.MODELS.get((model, provider))
         if model_config:
             return model_config.reasoning_capabilities
 
         return cls.DEFAULT_REASONING_CAPABILITY
 
     @classmethod
-    def get_supported_reasoning_efforts(cls, model: str) -> List[str]:
+    def get_supported_reasoning_efforts(cls, model: str, provider: str) -> List[str]:
         """
         Get the ordered list of reasoning effort levels supported by a model.
 
         Args:
-            model: Name of the model
+            model: The API model name
+            provider: The provider name
 
         Returns:
             List of effort level strings in ascending order, or empty list if
             the model does not support variable reasoning effort.
         """
-        model_config = cls.MODELS.get(model)
+        model_config = cls.MODELS.get((model, provider))
         if model_config:
             return list(model_config.supported_reasoning_efforts)
 
         return []
 
     @classmethod
-    def iter_models_by_backends(cls, ai_backends: Dict[str, Any]) -> Generator[str, None, None]:
+    def iter_models_by_backends(
+        cls, ai_backends: Dict[str, Any]
+    ) -> Generator[Tuple[str, str], None, None]:
         """
-        Generator that yields models supported by available backends.
+        Generator that yields (model, provider) keys for models supported by available backends.
 
         Args:
             ai_backends: Dictionary of available AI backends
 
         Yields:
-            Model names supported by the available backends
+            (model_name, provider) tuples for models whose provider has an active backend
         """
-        for model_name, model in cls.MODELS.items():
+        for key, model in cls.MODELS.items():
             if model.provider in ai_backends:
-                yield model_name
+                yield key
 
     @classmethod
-    def get_default_model(cls, ai_backends: Dict[str, Any]) -> str:
+    def get_default_model(cls, ai_backends: Dict[str, Any]) -> Tuple[str, str]:
         """
-        Get the default model based on available backends.
+        Get the default (model, provider) based on available backends.
 
         Args:
             ai_backends: Dictionary of available AI backends
 
         Returns:
-            The name of the default model to use
+            (model_name, provider) tuple for the default model
         """
         provider_preference = [
             "google", "anthropic", "deepseek", "mistral",
@@ -640,11 +676,46 @@ class AIConversationSettings:
             if provider not in ai_backends:
                 continue
 
-            for model_name, model in cls.MODELS.items():
+            for key, model in cls.MODELS.items():
                 if model.provider == provider:
-                    return model_name
+                    return key
 
         return next(iter(cls.MODELS))
+
+    @classmethod
+    def find_by_model_and_provider(cls, model: str, provider: str) -> AIModel | None:
+        """
+        Look up an AIModel by its API name and provider.
+
+        Args:
+            model: The API model name
+            provider: The provider name
+
+        Returns:
+            AIModel if found, None otherwise
+        """
+        return cls.MODELS.get((model, provider))
+
+    @classmethod
+    def find_provider_for_model(cls, model: str) -> str | None:
+        """
+        Find the provider for a model name when only the model name is known.
+
+        Used for migration of old transcripts/settings that lack a provider field.
+        If multiple providers offer the same model name, returns the first match
+        in registry insertion order.
+
+        Args:
+            model: The API model name
+
+        Returns:
+            Provider string if found, None otherwise
+        """
+        for (m, p) in cls.MODELS:
+            if m == model:
+                return p
+
+        return None
 
     # Provider-level defaults for models fetched from an API (capabilities unknown).
     _PROVIDER_FETCH_DEFAULTS: Dict[str, Dict[str, Any]] = {
@@ -711,27 +782,32 @@ class AIConversationSettings:
     }
 
     @classmethod
-    def get_fetched_models_by_provider(cls, provider: str) -> List[str]:
-        """Return model IDs that were fetched (not built-in) for the given provider."""
+    def get_fetched_models_by_provider(cls, provider: str) -> List[Tuple[str, str]]:
+        """Return (model, provider) keys that were fetched (not built-in) for the given provider."""
         return [
-            model_id for model_id, model in cls.MODELS.items()
-            if model.provider == provider and model_id not in cls._BUILTIN_MODEL_KEYS
+            key for key, model in cls.MODELS.items()
+            if model.provider == provider and key not in cls._BUILTIN_MODEL_KEYS
         ]
 
     @classmethod
-    def remove_fetched_model(cls, model_id: str) -> bool:
+    def remove_fetched_model(cls, model: str, provider: str) -> bool:
         """
         Remove a fetched model from the registry.
 
-        Built-in models (those present at class-definition time) cannot be removed.
+        Built-in models cannot be removed.
+
+        Args:
+            model: The API model name
+            provider: The provider name
 
         Returns:
             True if the model was found and removed, False otherwise.
         """
-        if model_id in cls._BUILTIN_MODEL_KEYS or model_id not in cls.MODELS:
+        key = (model, provider)
+        if key in cls._BUILTIN_MODEL_KEYS or key not in cls.MODELS:
             return False
 
-        del cls.MODELS[model_id]
+        del cls.MODELS[key]
         return True
 
     @classmethod
@@ -758,13 +834,15 @@ class AIConversationSettings:
         newly_added: List[str] = []
         already_present: List[str] = []
         for model_id in model_ids:
-            if model_id in cls.MODELS:
+            key = (model_id, provider)
+            if key in cls.MODELS:
                 already_present.append(model_id)
 
             else:
-                cls.MODELS[model_id] = AIModel(
+                cls.MODELS[key] = AIModel(
                     name=model_id,
                     provider=provider,
+                    display_name=model_id,
                     context_window=defaults["context_window"],
                     max_output_tokens=defaults["max_output_tokens"],
                     supports_temperature=defaults["supports_temperature"],
@@ -781,16 +859,15 @@ class AIConversationSettings:
         Persist fetched (non-built-in) model IDs to a JSON cache file.
 
         The cache stores {provider: [model_id, ...]} for all models that were
-        added via register_fetched_models() (i.e. models whose name matches
-        their display key in MODELS, coming from provider fetch).
+        added via register_fetched_models().
 
         Args:
             path: Absolute path for the cache JSON file.
         """
         cache: Dict[str, List[str]] = {}
-        for model_id, model in cls.MODELS.items():
-            if model_id not in cls._BUILTIN_MODEL_KEYS and model.provider in cls._PROVIDER_FETCH_DEFAULTS:
-                cache.setdefault(model.provider, []).append(model_id)
+        for (model_id, provider), _ in cls.MODELS.items():
+            if (model_id, provider) not in cls._BUILTIN_MODEL_KEYS and provider in cls._PROVIDER_FETCH_DEFAULTS:
+                cache.setdefault(provider, []).append(model_id)
 
         try:
             os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -835,8 +912,8 @@ class AIConversationSettings:
         MODELS.  All errors found across all entries are collected and returned so the
         caller can surface them to the user in a single message.
 
-        Collision policy: a display_name that already exists in MODELS (whether built-in
-        or previously registered by this method) is treated as an error.
+        Collision policy: a (name, provider) pair that already exists in MODELS
+        (whether built-in or previously registered by this method) is treated as an error.
 
         Args:
             path: Absolute path to the JSON config file.
@@ -883,8 +960,8 @@ class AIConversationSettings:
         }
 
         errors: List[str] = []
-        pending: List[tuple[str, AIModel]] = []
-        seen_display_names: set[str] = set()
+        pending: List[Tuple[Tuple[str, str], AIModel]] = []
+        seen_keys: set[Tuple[str, str]] = set()
 
         required_str_fields = ("display_name", "name", "provider")
         required_int_fields = ("context_window", "max_output_tokens")
@@ -970,20 +1047,6 @@ class AIConversationSettings:
                 errors.append(f"{prefix}: " + "; ".join(entry_errors))
                 continue
 
-            display_name: str = entry["display_name"]
-
-            if display_name in cls.MODELS:
-                errors.append(
-                    f'{prefix}: display_name "{display_name}" conflicts with an existing model'
-                )
-                continue
-
-            if display_name in seen_display_names:
-                errors.append(
-                    f'{prefix}: display_name "{display_name}" is duplicated within the config file'
-                )
-                continue
-
             provider: str = entry["provider"]
             if provider not in valid_providers:
                 errors.append(
@@ -991,12 +1054,29 @@ class AIConversationSettings:
                 )
                 continue
 
-            seen_display_names.add(display_name)
+            name: str = entry["name"]
+            display_name: str = entry["display_name"]
+            key: Tuple[str, str] = (name, provider)
+
+            if key in cls.MODELS:
+                errors.append(
+                    f'{prefix}: model "{name}" for provider "{provider}" conflicts with an existing model'
+                )
+                continue
+
+            if key in seen_keys:
+                errors.append(
+                    f'{prefix}: model "{name}" for provider "{provider}" is duplicated within the config file'
+                )
+                continue
+
+            seen_keys.add(key)
             pending.append((
-                display_name,
+                key,
                 AIModel(
-                    name=entry["name"],
+                    name=name,
                     provider=provider,
+                    display_name=display_name,
                     context_window=entry["context_window"],
                     max_output_tokens=entry["max_output_tokens"],
                     supports_temperature=entry["supports_temperature"],
@@ -1010,7 +1090,7 @@ class AIConversationSettings:
         if errors:
             return errors
 
-        for display_name, model in pending:
-            cls.MODELS[display_name] = model
+        for key, model in pending:
+            cls.MODELS[key] = model
 
         return []

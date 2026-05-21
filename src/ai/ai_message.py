@@ -7,6 +7,7 @@ import uuid
 
 from ai.ai_message_source import AIMessageSource
 from ai.ai_model import AIReasoningCapability, AIReasoningEffort
+from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_usage import AIUsage
 from ai_tool import AIToolCall, AIToolResult
 
@@ -16,7 +17,7 @@ class AIMessage:
     """
     Represents a single message in the conversation.
 
-    These messsages represent an abstraction of the actual messages we send and receive.  We want them
+    These messages represent an abstraction of the actual messages we send and receive.  We want them
     to be independent of the actual backend, so we can swap backends mid-conversation without losing context.
     """
     id: str
@@ -26,6 +27,7 @@ class AIMessage:
     usage: AIUsage | None = None
     error: Dict | None = None
     model: str | None = None
+    provider: str | None = None
     temperature: float | None = None
     reasoning_capability: AIReasoningCapability | None = None
     reasoning_effort: str | None = None
@@ -69,6 +71,7 @@ class AIMessage:
         usage: AIUsage | None = None,
         error: Dict | None = None,
         model: str | None = None,
+        provider: str | None = None,
         temperature: float | None = None,
         reasoning_capability: AIReasoningCapability | None = None,
         reasoning_effort: str | None = None,
@@ -94,6 +97,7 @@ class AIMessage:
             usage=usage,
             error=error,
             model=model,
+            provider=provider,
             temperature=temperature,
             reasoning_capability=reasoning_capability,
             reasoning_effort=reasoning_effort,
@@ -117,6 +121,7 @@ class AIMessage:
             usage=self.usage.copy() if self.usage else None,
             error=self.error.copy() if self.error else None,
             model=self.model,
+            provider=self.provider,
             temperature=self.temperature,
             reasoning_capability=self.reasoning_capability,
             reasoning_effort=self.reasoning_effort,
@@ -155,6 +160,9 @@ class AIMessage:
 
         if self.model:
             message["model"] = self.model
+
+        if self.provider:
+            message["provider"] = self.provider
 
         if self.reasoning_capability:
             message["reasoning_capability"] = self.reasoning_capability.value
@@ -306,6 +314,12 @@ class AIMessage:
             except (KeyError, TypeError) as e:
                 raise ValueError(f"Invalid tool_results data format: {data['tool_results']}") from e
 
+        # Derive provider from registry if absent (migration for old transcripts)
+        model = data.get("model", None)
+        provider = data.get("provider", None)
+        if model and not provider:
+            provider = AIConversationSettings.find_provider_for_model(model)
+
         return cls(
             id=data["id"],
             source=source,
@@ -313,7 +327,8 @@ class AIMessage:
             timestamp=timestamp,
             usage=usage,
             error=data.get("error", None),
-            model=data.get("model", None),
+            model=model,
+            provider=provider,
             temperature=data.get("temperature", None),
             reasoning_capability=reasoning_capability,
             reasoning_effort=reasoning_effort,

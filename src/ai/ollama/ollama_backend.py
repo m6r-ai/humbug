@@ -114,7 +114,7 @@ class OllamaBackend(AIBackend):
         matching is insufficient — a reasoning block from one Ollama model is not
         compatible with a different Ollama model.
         """
-        return message.model == settings.model
+        return message.model == settings.model and message.provider == settings.provider
 
     def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
         """
@@ -350,7 +350,7 @@ class OllamaBackend(AIBackend):
 
         # Build request data
         data = {
-            "model": AIConversationSettings.get_name(settings.model),
+            "model": settings.model,
             "messages": messages,
             "stream": True,
             "options": {

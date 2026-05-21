@@ -677,7 +677,9 @@ class SettingsDialog(QDialog):
         }
 
         current_model = str(self._model_combo.get_value() or "")
-        reasoning_options = AIConversationSettings.get_supported_reasoning_efforts(current_model)
+        key = self._model_combo.get_value()
+        current_model, current_provider = key if isinstance(key, tuple) else ("", "")
+        reasoning_options = AIConversationSettings.get_supported_reasoning_efforts(current_model, current_provider)
         return MindspaceSettings(
             use_soft_tabs=self._soft_tabs_check.get_value(),
             tab_size=self._tab_size_spin.get_value(),
@@ -689,6 +691,7 @@ class SettingsDialog(QDialog):
             terminal_scrollback_lines=self._terminal_scrollback_spin.get_value(),
             terminal_close_on_exit=self._terminal_close_on_exit_check.get_value(),
             model=current_model,
+            provider=current_provider,
             temperature=self._temp_spin.get_value(),
             reasoning=self._reasoning_combo.get_value(),
             reasoning_effort=self._effort_combo.get_value() if reasoning_options else None,
@@ -736,9 +739,9 @@ class SettingsDialog(QDialog):
         ai_backends = self._user_manager.get_ai_backends()
         self._populate_model_filter_combo(ai_backends)
         self._populate_model_combo(ai_backends, filter_provider=None)
-        self._model_combo.set_value(settings.model)
+        self._model_combo.set_value((settings.model, settings.provider))
         self._temp_spin.set_value(settings.temperature)
-        self._update_model_capabilities(settings.model)
+        self._update_model_capabilities(settings.model, settings.provider)
         if settings.reasoning_effort is not None:
             self._effort_combo.set_value(settings.reasoning_effort)
 
@@ -840,18 +843,21 @@ class SettingsDialog(QDialog):
 
     def _on_model_value_changed(self) -> None:
         """Update capability controls when the model selection changes."""
-        self._update_model_capabilities(str(self._model_combo.get_value() or ""))
+        key = self._model_combo.get_value()
+        model, provider = key if isinstance(key, tuple) else ("", "")
+        self._update_model_capabilities(model, provider)
 
     def _on_effort_value_changed(self) -> None:
         """Update temperature enable state when reasoning effort changes."""
-        model = str(self._model_combo.get_value() or "")
-        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
-        self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model, effort))
+        key = self._model_combo.get_value()
+        model, provider = key if isinstance(key, tuple) else ("", "")
+        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model, provider) else None
+        self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model, provider, effort))
 
-    def _update_model_capabilities(self, model: str) -> None:
+    def _update_model_capabilities(self, model: str, provider: str) -> None:
         """Refresh reasoning combo and temperature enable state for a model."""
         strings = self._language_manager.strings()
-        capabilities = AIConversationSettings.get_reasoning_capability(model)
+        capabilities = AIConversationSettings.get_reasoning_capability(model, provider)
 
         items = []
         if capabilities & AIReasoningCapability.NO_REASONING:
@@ -874,7 +880,7 @@ class SettingsDialog(QDialog):
             AIReasoningEffort.HIGH: strings.settings_effort_high,
             AIReasoningEffort.XHIGH: strings.settings_effort_xhigh,
         }
-        efforts = AIConversationSettings.get_supported_reasoning_efforts(model)
+        efforts = AIConversationSettings.get_supported_reasoning_efforts(model, provider)
         if efforts:
             effort_items = [(effort_labels.get(e, e), e) for e in efforts]
             self._effort_combo.set_items(effort_items)
@@ -886,8 +892,8 @@ class SettingsDialog(QDialog):
             self._effort_combo.setEnabled(False)
             self._effort_combo.setVisible(False)
 
-        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
-        self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model, effort))
+        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model, provider) else None
+        self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model, provider, effort))
 
     def _get_provider_display_names(self) -> Dict[str, str]:
         """Return a mapping from provider ID to a human-readable display name."""
@@ -897,8 +903,8 @@ class SettingsDialog(QDialog):
         """Populate the provider filter combo with all providers that have models."""
         provider_names = self._get_provider_display_names()
         providers_with_models = set(
-            AIConversationSettings.get_provider(m)
-            for m in AIConversationSettings.iter_models_by_backends(ai_backends)
+            provider
+            for (_, provider) in AIConversationSettings.iter_models_by_backends(ai_backends)
         )
         items: List[tuple] = [("All Providers", None)]
         for provider_id, display in provider_names.items():
@@ -909,22 +915,22 @@ class SettingsDialog(QDialog):
     def _populate_model_combo(self, ai_backends: Dict, filter_provider: str | None) -> None:
         """Populate the model combo grouped by provider, optionally filtered."""
         provider_names = self._get_provider_display_names()
-        grouped: Dict[str, List[str]] = {}
-        for model_name in AIConversationSettings.iter_models_by_backends(ai_backends):
-            provider = AIConversationSettings.get_provider(model_name)
+        grouped: Dict[str, List[tuple]] = {}
+        for (model_name, provider) in AIConversationSettings.iter_models_by_backends(ai_backends):
             if filter_provider and provider != filter_provider:
                 continue
 
-            grouped.setdefault(provider, []).append(model_name)
+            display = AIConversationSettings.get_display_name(model_name, provider)
+            grouped.setdefault(provider, []).append((display, (model_name, provider)))
 
         if filter_provider:
-            items = [(m, m) for models in grouped.values() for m in models]
+            items = [item for entries in grouped.values() for item in entries]
             self._model_combo.set_items(items)
 
         else:
             groups = [
-                (provider_names.get(provider, provider), [(m, m) for m in models])
-                for provider, models in grouped.items()
+                (provider_names.get(provider, provider), entries)
+                for provider, entries in grouped.items()
             ]
             self._model_combo.set_grouped_items(groups)
 
@@ -1060,7 +1066,8 @@ class SettingsDialog(QDialog):
         """Open the fetched-model manager dialog for a provider."""
         fetched = AIConversationSettings.get_fetched_models_by_provider(backend_id)
         title = self._get_provider_display_names().get(backend_id, backend_id)
-        dlg = _FetchedModelManagerDialog(fetched, title, self)
+        # Pass (model, provider) tuples; dialog shows model names and removes by key
+        dlg = _FetchedModelManagerDialog(fetched, backend_id, title, self)
         dlg.exec()
 
         # After dialog closes, persist and refresh
@@ -1226,8 +1233,9 @@ class SettingsDialog(QDialog):
         self._model_filter_combo.set_label("Provider")
         self._model_combo.set_label(strings.settings_model_label)
         self._temp_spin.set_label(strings.settings_temp_label)
-        current_model = str(self._model_combo.get_value() or "")
-        self._update_model_capabilities(current_model)
+        key = self._model_combo.get_value()
+        model, provider = key if isinstance(key, tuple) else ("", "")
+        self._update_model_capabilities(model, provider)
         self._reasoning_combo.set_label(strings.settings_reasoning_label)
         self._effort_combo.set_label(strings.settings_reasoning_effort_label)
 
@@ -1359,6 +1367,7 @@ class SettingsDialog(QDialog):
             terminal_scrollback_lines=settings.terminal_scrollback_lines,
             terminal_close_on_exit=settings.terminal_close_on_exit,
             model=settings.model,
+            provider=settings.provider,
             temperature=settings.temperature,
             reasoning=settings.reasoning,
             enabled_tools=settings.enabled_tools.copy(),
@@ -1369,7 +1378,7 @@ class _FetchedModelManagerDialog(QDialog):
     """Dialog for viewing and permanently removing fetched (non-built-in) models."""
 
     def __init__(
-        self, model_ids: List[str], provider_label: str, parent: QWidget | None = None
+        self, model_keys: List[tuple], backend_id: str, provider_label: str, parent: QWidget | None = None
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(f"Fetched Models — {provider_label}")
@@ -1396,9 +1405,10 @@ class _FetchedModelManagerDialog(QDialog):
         self._list_layout.addWidget(self._empty_label)
         self._list_layout.addStretch()
 
-        self._rows: dict = {}  # model_id -> row_widget
-        for model_id in sorted(model_ids):
-            self._add_model_row(model_id)
+        self._rows: dict = {}  # model_name -> row_widget
+        self._backend_id = backend_id
+        for (model_name, _provider) in sorted(model_keys):
+            self._add_model_row(model_name)
 
         self._update_empty_label()
         scroll.setWidget(list_widget)
@@ -1439,7 +1449,7 @@ class _FetchedModelManagerDialog(QDialog):
         remove_btn = QPushButton("Remove")
         remove_btn.setFixedWidth(80)
         remove_btn.setMinimumHeight(28)
-        remove_btn.clicked.connect(lambda _checked=False, mid=model_id: self._remove_model(mid))
+        remove_btn.clicked.connect(lambda _checked=False, mid=model_id: self._remove_model(mid, self._backend_id))
         row_layout.addWidget(remove_btn)
 
         # Insert before the stretch (last item)
@@ -1447,8 +1457,8 @@ class _FetchedModelManagerDialog(QDialog):
         self._list_layout.insertWidget(insert_at, row)
         self._rows[model_id] = row
 
-    def _remove_model(self, model_id: str) -> None:
-        AIConversationSettings.remove_fetched_model(model_id)
+    def _remove_model(self, model_id: str, provider: str) -> None:
+        AIConversationSettings.remove_fetched_model(model_id, provider)
         row = self._rows.pop(model_id, None)
         if row:
             self._list_layout.removeWidget(row)

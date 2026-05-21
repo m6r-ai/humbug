@@ -25,7 +25,7 @@ class ShellCommandConversation(ShellCommand):
         Initialize conversation command.
 
         Args:
-            create_conversation_callback: Callback to create a new conversation with optional model
+            column_manager: The column manager for creating conversation tabs
         """
         super().__init__()
         self._column_manager = column_manager
@@ -54,22 +54,19 @@ class ShellCommandConversation(ShellCommand):
 
     def get_option_value_count(self, option_name: str) -> int:
         """Determine how many values each option takes."""
-        # Get base class handling for common options
         result = super().get_option_value_count(option_name)
         if result != 0:
             return result
 
-        # Handle command-specific options
         if option_name in ("-m", "--model"):
-            return 1  # Takes exactly one value
+            return 1
 
         if option_name in ("-t", "--temperature"):
-            return 1  # Takes exactly one value
+            return 1
 
         if option_name in ("-r", "--reasoning-effort"):
-            return 1  # Takes exactly one value
+            return 1
 
-        # Default for unknown options
         return 0
 
     def _execute_command(self, tokens: List[Token]) -> bool:
@@ -82,14 +79,29 @@ class ShellCommandConversation(ShellCommand):
         Returns:
             True if command executed successfully, False otherwise
         """
-        # Get options
         options = self._get_options(tokens)
 
-        # Get model if specified
-        model = None
+        # Resolve model display name to (model, provider)
+        effective_model: str | None = None
+        effective_provider: str | None = None
         model_values = options.get("--model", []) or options.get("-m", [])
         if model_values:
-            model = model_values[0]
+            model_input = model_values[0]
+            ai_backends = self._user_manager.get_ai_backends()
+            available_keys = list(AIConversationSettings.iter_models_by_backends(ai_backends))
+            matched_key = next(
+                (k for k in available_keys if AIConversationSettings.get_display_name(k[0], k[1]) == model_input),
+                None
+            )
+            if matched_key is None:
+                available_display = [AIConversationSettings.get_display_name(m, p) for (m, p) in available_keys]
+                self._history_manager.add_message(
+                    ShellEventSource.ERROR,
+                    f"Model '{model_input}' not found. Available models: {', '.join(available_display)}"
+                )
+                return False
+
+            effective_model, effective_provider = matched_key
 
         # Get temperature if specified
         temperature_val = None
@@ -114,7 +126,6 @@ class ShellCommandConversation(ShellCommand):
         reasoning: AIReasoningCapability | None = None
         reasoning_effort: str | None = None
 
-        # Get reasoning effort if specified
         effort_values = options.get("--reasoning-effort", []) or options.get("-r", [])
         if effort_values:
             effort_str = effort_values[0]
@@ -125,31 +136,30 @@ class ShellCommandConversation(ShellCommand):
                 )
                 return False
 
-            if model:
-                supported = AIConversationSettings.get_supported_reasoning_efforts(model)
+            if effective_model and effective_provider:
+                supported = AIConversationSettings.get_supported_reasoning_efforts(effective_model, effective_provider)
                 if supported and effort_str not in supported:
                     self._history_manager.add_message(
                         ShellEventSource.ERROR,
-                        f"Model '{model}' does not support reasoning effort '{effort_str}'. "
+                        f"Model '{effective_model}' does not support reasoning effort '{effort_str}'. "
                         f"Supported: {', '.join(supported)}"
                     )
                     return False
 
             reasoning_effort = effort_str
 
-        if model:
-            model_config = AIConversationSettings.MODELS.get(model)
+        if effective_model and effective_provider:
+            model_config = AIConversationSettings.MODELS.get((effective_model, effective_provider))
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
-        # Create new conversation with model if specified
         current_tab = cast(TabBase, self._column_manager.get_current_tab())
         self._column_manager.protect_tab(current_tab.tab_id())
 
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
             conversation_tab = self._column_manager.new_conversation(
-                False, None, model, temperature_val, reasoning, reasoning_effort
+                False, None, effective_model, effective_provider, temperature_val, reasoning, reasoning_effort
             )
 
         except (MindspaceError, ColumnManagerError) as e:
@@ -175,19 +185,20 @@ class ShellCommandConversation(ShellCommand):
 
     def _complete_model_names(self, partial_value: str) -> List[str]:
         """
-        Complete model names for -m/--model option.
+        Complete model display names for -m/--model option.
 
         Args:
-            partial_value: Partial model name
+            partial_value: Partial model display name
 
         Returns:
-            List of matching model names
+            List of matching model display names
         """
         ai_backends = self._user_manager.get_ai_backends()
         models = []
-        for model in AIConversationSettings.iter_models_by_backends(ai_backends):
-            if not partial_value or model.startswith(partial_value):
-                models.append(model)
+        for (model_name, provider) in AIConversationSettings.iter_models_by_backends(ai_backends):
+            display = AIConversationSettings.get_display_name(model_name, provider)
+            if not partial_value or display.startswith(partial_value):
+                models.append(display)
 
         return models
 
@@ -220,28 +231,21 @@ class ShellCommandConversation(ShellCommand):
         Returns:
             List of possible completions
         """
-        # Handle option completions
         if current_token.type == TokenType.OPTION:
             return self._get_option_completions(current_token.value)
 
-        # Check if we're completing a model name for -m/--model option
         if current_token.type in (TokenType.ARGUMENT, TokenType.OPTION_VALUE) and cursor_token_index > 0:
             prev_token = tokens[cursor_token_index - 1]
             if prev_token.type == TokenType.OPTION:
                 option_name = prev_token.value
 
-                # Check if this is the -m/--model option
                 if option_name in ["-m", "--model"]:
                     return self._complete_model_names(current_token.value)
 
-                # Check if we're completing a temperature value for -t/--temperature option
                 if option_name in ["-t", "--temperature"]:
-                    # Temperature should be a float between 0.0 and 1.0
                     return [str(i / 10) for i in range(11) if str(i / 10).startswith(current_token.value)]
 
-                # Check if we're completing a reasoning effort for -r/--reasoning-effort option
                 if option_name in ["-r", "--reasoning-effort"]:
                     return self._complete_reasoning_efforts(current_token.value)
 
-        # No completions for other arguments
         return []

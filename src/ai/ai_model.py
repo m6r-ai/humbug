@@ -55,6 +55,7 @@ class AIModel:
         self,
         name: str,
         provider: str,
+        display_name: str,
         context_window: int,
         max_output_tokens: int,
         supports_temperature: bool,
@@ -67,8 +68,9 @@ class AIModel:
         Initialize an AI model configuration.
 
         Args:
-            name: The name of the model
+            name: The API model name sent to the provider
             provider: The provider of the model (e.g., 'anthropic', 'google')
+            display_name: The human-readable name shown in the UI
             context_window: Maximum context window size in tokens
             max_output_tokens: Maximum output tokens the model can generate
             supports_temperature: Whether the model supports temperature settings
@@ -82,6 +84,7 @@ class AIModel:
         """
         self.name = name
         self.provider = provider
+        self.display_name = display_name
         self.context_window = context_window
         self.max_output_tokens = max_output_tokens
         self.supports_temperature = supports_temperature

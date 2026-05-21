@@ -1,6 +1,6 @@
 """Dialog for configuring conversation-specific settings using the settings framework."""
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea, QWidget, QFrame
@@ -158,32 +158,31 @@ class ConversationSettingsDialog(QDialog):
         strings = self._language_manager.strings()
         seen: set = set()
         items: List[tuple] = [("All Providers", None)]
-        for m in AIConversationSettings.iter_models_by_backends(self._ai_backends):
-            p = AIConversationSettings.get_provider(m)
-            if p not in seen:
-                seen.add(p)
-                items.append((get_backend_display_name(p, strings), p))
+        for (_, provider) in AIConversationSettings.iter_models_by_backends(self._ai_backends):
+            if provider not in seen:
+                seen.add(provider)
+                items.append((get_backend_display_name(provider, strings), provider))
 
         self._model_filter_combo.set_items(items)
 
     def _populate_model_combo(self, filter_provider: str | None) -> None:
         provider_names = get_all_backend_display_names(self._language_manager.strings())
-        grouped: Dict[str, List[str]] = {}
-        for m in AIConversationSettings.iter_models_by_backends(self._ai_backends):
-            p = AIConversationSettings.get_provider(m)
-            if filter_provider and p != filter_provider:
+        grouped: Dict[str, List[Tuple[str, Tuple[str, str]]]] = {}
+        for (model, provider) in AIConversationSettings.iter_models_by_backends(self._ai_backends):
+            if filter_provider and provider != filter_provider:
                 continue
 
-            grouped.setdefault(p, []).append(m)
+            display = AIConversationSettings.get_display_name(model, provider)
+            grouped.setdefault(provider, []).append((display, (model, provider)))
 
         if filter_provider:
-            items = [(m, m) for models in grouped.values() for m in models]
+            items = [item for entries in grouped.values() for item in entries]
             self._model_combo.set_items(items)
 
         else:
             groups = [
-                (provider_names.get(p, p), [(m, m) for m in models])
-                for p, models in grouped.items()
+                (provider_names.get(p, p), entries)
+                for p, entries in grouped.items()
             ]
             self._model_combo.set_grouped_items(groups)
 
@@ -192,14 +191,22 @@ class ConversationSettingsDialog(QDialog):
 
     def _on_model_value_changed(self) -> None:
         """Handle model selection changes."""
-        current_model = str(self._model_combo.get_value() or "")
-        self._update_model_displays(current_model)
+        key = self._model_combo.get_value()
+        if not isinstance(key, tuple):
+            return
+
+        model, provider = key
+        self._update_model_displays(model, provider)
 
     def _on_effort_value_changed(self) -> None:
         """Handle reasoning effort changes — temperature support may change."""
-        model = str(self._model_combo.get_value() or "")
-        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
-        supports_temp = AIConversationSettings.supports_temperature(model, effort)
+        key = self._model_combo.get_value()
+        if not isinstance(key, tuple):
+            return
+
+        model, provider = key
+        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model, provider) else None
+        supports_temp = AIConversationSettings.supports_temperature(model, provider, effort)
         self._temp_spin.set_enabled(supports_temp)
 
     def _get_effort_label(self, effort: str) -> str:
@@ -215,9 +222,9 @@ class ConversationSettingsDialog(QDialog):
         }
         return effort_labels.get(effort, effort)
 
-    def _update_reasoning_combo(self, model: str) -> None:
+    def _update_reasoning_combo(self, model: str, provider: str) -> None:
         """Update the reasoning combo box based on the current model's capabilities."""
-        capabilities = AIConversationSettings.get_reasoning_capability(model)
+        capabilities = AIConversationSettings.get_reasoning_capability(model, provider)
         strings = self._language_manager.strings()
 
         items = []
@@ -234,9 +241,9 @@ class ConversationSettingsDialog(QDialog):
         self._reasoning_combo.set_items(items)
         self._reasoning_combo.setEnabled(len(items) > 1)
 
-    def _update_effort_combo(self, model: str) -> None:
+    def _update_effort_combo(self, model: str, provider: str) -> None:
         """Update the reasoning effort combo box based on the current model's supported efforts."""
-        efforts = AIConversationSettings.get_supported_reasoning_efforts(model)
+        efforts = AIConversationSettings.get_supported_reasoning_efforts(model, provider)
 
         if not efforts:
             self._effort_combo.set_items([])
@@ -249,23 +256,23 @@ class ConversationSettingsDialog(QDialog):
         self._effort_combo.setEnabled(len(items) > 1)
         self._effort_combo.setVisible(True)
 
-    def _update_model_displays(self, model: str) -> None:
+    def _update_model_displays(self, model: str, provider: str) -> None:
         """Update the model-specific displays with proper localization."""
         strings = self._language_manager.strings()
-        limits = AIConversationSettings.get_model_limits(model)
+        limits = AIConversationSettings.get_model_limits(model, provider)
 
         # Update reasoning capabilities dropdown
-        self._update_reasoning_combo(model)
+        self._update_reasoning_combo(model, provider)
 
         # Update reasoning effort dropdown
-        self._update_effort_combo(model)
+        self._update_effort_combo(model, provider)
 
         # Update temperature setting — effort level may affect temperature support
-        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
-        supports_temp = AIConversationSettings.supports_temperature(model, effort)
+        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model, provider) else None
+        supports_temp = AIConversationSettings.supports_temperature(model, provider, effort)
         self._temp_spin.set_enabled(supports_temp)
 
-        # Update context window display (model is already a str from get_value)
+        # Update context window display
         self._context_display.set_value(
             f"{limits['context_window']:,} {strings.settings_tokens_label}"
         )
@@ -284,12 +291,14 @@ class ConversationSettingsDialog(QDialog):
 
     def get_settings(self) -> AIConversationSettings:
         """Get the current settings from the dialog."""
-        model = str(self._model_combo.get_value() or "")
+        key = self._model_combo.get_value()
+        model, provider = key if isinstance(key, tuple) else ("", "")
         temperature = self._temp_spin.get_value()
         reasoning = self._reasoning_combo.get_value()
-        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model) else None
+        effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model, provider) else None
         return AIConversationSettings(
             model=model,
+            provider=provider,
             temperature=temperature,
             reasoning=reasoning,
             reasoning_effort=effort,
@@ -299,12 +308,14 @@ class ConversationSettingsDialog(QDialog):
         """Set the current settings in the dialog."""
         self._initial_settings = AIConversationSettings(
             model=settings.model,
+            provider=settings.provider,
             temperature=settings.temperature,
             reasoning=settings.reasoning,
             reasoning_effort=settings.reasoning_effort,
         )
         self._current_settings = AIConversationSettings(
             model=settings.model,
+            provider=settings.provider,
             temperature=settings.temperature,
             reasoning=settings.reasoning,
             reasoning_effort=settings.reasoning_effort,
@@ -313,13 +324,13 @@ class ConversationSettingsDialog(QDialog):
         # Populate filter then model combo (grouped by provider)
         self._populate_model_filter_combo()
         self._populate_model_combo(filter_provider=None)
-        self._model_combo.set_value(settings.model)
+        self._model_combo.set_value((settings.model, settings.provider))
 
         # Set temperature
         self._temp_spin.set_value(settings.temperature)
 
         # Update model displays (populates both combos with correct items)
-        self._update_model_displays(settings.model)
+        self._update_model_displays(settings.model, settings.provider)
 
         # Restore saved effort selection (must happen after _update_effort_combo populates items)
         if settings.reasoning_effort is not None:

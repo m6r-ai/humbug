@@ -1716,6 +1716,7 @@ class ColumnManager(QWidget):
         child: bool = False,
         history: AIConversationHistory | None = None,
         model: str | None = None,
+        provider: str | None = None,
         temperature: float | None = None,
         reasoning: AIReasoningCapability | None = None,
         reasoning_effort: str | None = None,
@@ -1760,6 +1761,9 @@ class ColumnManager(QWidget):
         if model is None:
             model = settings.model
 
+        if provider is None:
+            provider = settings.provider
+
         if temperature is None:
             temperature = settings.temperature
 
@@ -1771,7 +1775,8 @@ class ColumnManager(QWidget):
 
         conversation_settings = AIConversationSettings(
             model=model,
-            temperature=temperature if AIConversationSettings.supports_temperature(model, reasoning_effort) else None,
+            provider=provider,
+            temperature=temperature if AIConversationSettings.supports_temperature(model, provider, reasoning_effort) else None,
             reasoning=reasoning,
             reasoning_effort=reasoning_effort,
         )
