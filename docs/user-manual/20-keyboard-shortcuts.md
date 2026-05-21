@@ -1,124 +1,107 @@
 # Keyboard Shortcuts
 
-> **macOS note:** Most shortcuts listed here use Ctrl. On macOS, these use Cmd instead
-> (as shown in the menu bar). The exception is **Go to Line** (Ctrl+G), which uses the
-> physical Ctrl key on all platforms. Find and Replace also differs: **Ctrl+Alt+F** on
-> macOS, **Ctrl+H** on Windows and Linux.
+All keyboard shortcuts are listed below for both macOS and Windows/Linux. The main difference is
+that Windows/Linux uses **Ctrl** while macOS uses **Cmd**. Two shortcuts have platform-specific
+differences and are noted in their rows.
 
 ---
 
 ## File
 
-| Action | Shortcut |
-|---|---|
-| New Mindspace | **Ctrl+Alt+N** |
-| New Conversation | **Ctrl+Shift+N** |
-| New File | **Ctrl+N** |
-| New Terminal | **Ctrl+Alt+T** |
-| Open Mindspace | **Ctrl+Alt+O** |
-| Open File | **Ctrl+O** |
-| Open Conversation | **Ctrl+Shift+O** |
-| Open Preview | **Ctrl+Shift+W** |
-| Open Diff | **Ctrl+Shift+D** |
-| Save | **Ctrl+S** |
-| Save As | **Ctrl+Shift+S** |
-| Close Tab | **Ctrl+W** |
-| Close Mindspace | **Ctrl+Alt+W** |
-
----
+| Action | macOS | Windows/Linux |
+|:---|:---|:---|
+| New Mindspace | Cmd+Alt+N | Ctrl+Alt+N |
+| New Conversation | Cmd+Shift+N | Ctrl+Shift+N |
+| New File | Cmd+N | Ctrl+N |
+| New Terminal | Cmd+Alt+T | Ctrl+Alt+T |
+| Open Mindspace | Cmd+Alt+O | Ctrl+Alt+O |
+| Open File | Cmd+O | Ctrl+O |
+| Open Conversation | Cmd+Shift+O | Ctrl+Shift+O |
+| Open Preview | Cmd+Shift+W | Ctrl+Shift+W |
+| Open Diff | Cmd+Shift+D | Ctrl+Shift+D |
+| Save | Cmd+S | Ctrl+S |
+| Save As | Cmd+Shift+S | Ctrl+Shift+S |
+| Close Tab | Cmd+W | Ctrl+W |
+| Close Mindspace | Cmd+Alt+W | Ctrl+Alt+W |
 
 ## Edit
 
-| Action | Shortcut |
-|---|---|
-| Submit Message | **Ctrl+Enter** |
-| Undo | **Ctrl+Z** |
-| Redo | **Ctrl+Shift+Z** |
-| Cut | **Ctrl+X** |
-| Copy | **Ctrl+C** |
-| Paste | **Ctrl+V** |
-| Find | **Ctrl+F** |
-| Find and Replace | **Ctrl+Alt+F** (macOS) / **Ctrl+H** |
-| Go to Line | **Ctrl+G** |
-| Global Search | **Ctrl+Shift+F** |
-| Conversation Settings | **Ctrl+Shift+,** |
-
----
+| Action | macOS | Windows/Linux |
+|:---|:---|:---|
+| Submit Message | Cmd+Enter | Ctrl+Enter |
+| Undo | Cmd+Z | Ctrl+Z |
+| Redo | Cmd+Shift+Z | Ctrl+Shift+Z |
+| Cut | Cmd+X | Ctrl+X |
+| Copy | Cmd+C | Ctrl+C |
+| Paste | Cmd+V | Ctrl+V |
+| Find | Cmd+F | Ctrl+F |
+| Find and Replace | Ctrl+Alt+F | Ctrl+H |
+| Go to Line | Ctrl+G | Ctrl+G |
+| Global Search | Cmd+Shift+F | Ctrl+Shift+F |
+| Conversation Settings | Cmd+Shift+, | Ctrl+Shift+, |
 
 ## View
 
-| Action | Shortcut |
-|---|---|
-| Zoom In | **Ctrl+=** |
-| Zoom Out | **Ctrl+-** |
-| Reset Zoom | **Ctrl+0** |
-| Show System Log | **Ctrl+Shift+L** |
-| Show Humbug Shell | **Ctrl+Shift+Y** |
-| Show All Columns | **Ctrl+\\** |
-| Split Column Left | **Ctrl+Shift+[** |
-| Split Column Right | **Ctrl+Shift+]** |
-| Merge Column Left | **Ctrl+[** |
-| Merge Column Right | **Ctrl+]** |
-| Swap Column Left | **Ctrl+Alt+[** |
-| Swap Column Right | **Ctrl+Alt+]** |
-| Next Message | **Alt+Down** |
-| Previous Message | **Alt+Up** |
-
----
+| Action | macOS | Windows/Linux |
+|:---|:---|:---|
+| Zoom In | Cmd+= | Ctrl+= |
+| Zoom Out | Cmd+- | Ctrl+- |
+| Reset Zoom | Cmd+0 | Ctrl+0 |
+| Show System Log | Cmd+Shift+L | Ctrl+Shift+L |
+| Show Humbug Shell | Cmd+Shift+Y | Ctrl+Shift+Y |
+| Show All Columns | Cmd+\ | Ctrl+\ |
+| Split Column Left | Cmd+Shift+[ | Ctrl+Shift+[ |
+| Split Column Right | Cmd+Shift+] | Ctrl+Shift+] |
+| Merge Column Left | Cmd+[ | Ctrl+[ |
+| Merge Column Right | Cmd+] | Ctrl+] |
+| Swap Column Left | Cmd+Alt+[ | Ctrl+Alt+[ |
+| Swap Column Right | Cmd+Alt+] | Ctrl+Alt+] |
+| Next Message | Alt+Down | Alt+Down |
+| Previous Message | Alt+Up | Alt+Up |
 
 ## Settings
 
-| Action | Shortcut |
-|---|---|
-| User Settings | **Ctrl+,** |
-| Mindspace Settings | **Ctrl+Alt+,** |
-| Conversation Settings | **Ctrl+Shift+,** |
-
----
-
-## Conversation navigation
-
-| Action | Shortcut |
-|---|---|
-| Next user message | **Alt+Down** |
-| Previous user message | **Alt+Up** |
-| Cancel / Stop AI response | **Esc** (with confirmation) |
-
----
+| Action | macOS | Windows/Linux |
+|:---|:---|:---|
+| User Settings | Cmd+, | Ctrl+, |
+| Mindspace Settings | Cmd+Alt+, | Ctrl+Alt+, |
+| Conversation Settings | Cmd+Shift+, | Ctrl+Shift+, |
 
 ## Find bar (all tab types)
 
-| Action | Shortcut |
-|---|---|
-| Open find | **Ctrl+F** |
-| Find next | **Enter** |
-| Find previous | **Shift+Enter** |
-| Close find bar | **Esc** |
+| Action | macOS | Windows/Linux |
+|:---|:---|:---|
+| Open find | Cmd+F | Ctrl+F |
+| Find next | Enter | Enter |
+| Find previous | Shift+Enter | Shift+Enter |
+| Close find bar | Esc | Esc |
 
----
+## Conversation tabs
 
-## Editor
+| Action | macOS | Windows/Linux |
+|:---|:---|:---|
+| Sumbit message | Cmd+Enter | Ctrl+Enter |
+| Go to previous user message | Alt+Up | Alt+Up |
+| Go to next user message | Alt+Down | Alt+Down |
 
-| Action | Shortcut |
-|---|---|
-| Find | **Ctrl+F** |
-| Find and Replace | **Ctrl+Alt+F** (macOS) / **Ctrl+H** |
-| Go to Line | **Ctrl+G** |
-| Save | **Ctrl+S** |
-| Save As | **Ctrl+Shift+S** |
-| Indent selection | **Tab** |
-| De-indent selection | **Shift+Tab** |
-| Select to start of line | **Shift+Home** |
-| Select to end of line | **Shift+End** |
+## Editor tabs
 
----
+| Action | macOS | Windows/Linux |
+|:---|:---|:---|
+| Find and Replace | Ctrl+Alt+F | Ctrl+H |
+| Go to Line | Ctrl+G | Ctrl+G |
+| Save | Cmd+S | Ctrl+S |
+| Save As | Cmd+Shift+S | Ctrl+Shift+S |
+| Indent selection | Tab | Tab |
+| De-indent selection | Shift+Tab | Shift+Tab |
+| Select to start of line | Shift+Home | Shift+Home |
+| Select to end of line | Shift+End | Shift+End |
 
 ## Application
 
-| Action | Shortcut |
-|---|---|
-| Quit | **Ctrl+Q** |
-| Check for Updates | *(Humbug menu)* |
+| Action | macOS | Windows/Linux |
+|:---|:---|:---|
+| Quit | Cmd+Q | Ctrl+Q |
 
 ---
 
