@@ -92,22 +92,67 @@ wheel**.
 
 ## Ephemeral and persistent tabs
 
-Tabs opened by a single-click from the mindspace panel are **ephemeral**. Ephemeral tabs are
-temporary placeholders:
+Humbug distinguishes between two kinds of tabs: **ephemeral** and **persistent**. Understanding
+the difference will help you work more efficiently.
+
+### What are ephemeral tabs?
+
+Tabs opened by a **single-click** from the mindspace panel are **ephemeral**. They are temporary
+placeholders designed for quick browsing:
 
 - Their label is shown in **italic** text with a distinct colour to distinguish them from
   persistent tabs
 - When the next new tab opens in the same column, the ephemeral tab is automatically replaced
 - Only one ephemeral tab exists per column at a time
 
-A tab becomes **persistent** — and stays open — when you:
+### What are persistent tabs?
+
+A tab becomes **persistent** — and stays open indefinitely — when you:
 
 - **Double-click** its label in the tab bar
 - **Interact** with its content (for example, typing in a conversation or editing a file)
 - **Move** the tab to a different column
 
-If you want to browse through several files quickly, ephemeral tabs let you do so without
-accumulating a stack of open tabs you then have to close.
+Once a tab is persistent, it will not be replaced when you open another tab. It will remain
+visible until you explicitly close it.
+
+### When to use ephemeral tabs
+
+Ephemeral tabs are ideal for:
+
+- **Quick browsing** — Looking at several files to understand the structure of a project
+- **Checking references** — Opening a file to see how something is used, then moving on
+- **Exploring with the AI** — When the AI opens a file to show you something, you can quickly
+  look at it and then open the next one without accumulating tabs
+- **One-off previews** — Glancing at a README or configuration file
+
+**Example:** You ask an AI to review your code. It opens five different files in sequence to show
+you issues. With ephemeral tabs, each new file replaces the previous one, so you stay focused on
+the current file the AI is discussing. When you are done, there are no extra tabs left open.
+
+### When to use persistent tabs
+
+Persistent tabs are ideal for:
+
+- **Active work** — A file you are editing or a conversation you are actively engaged with
+- **Reference material** — A file you need to keep visible while working on something else
+- **Side-by-side comparison** — Keeping two related files open at the same time
+- **Long-running tasks** — A terminal session or conversation you will return to repeatedly
+
+**Example:** You are writing code and need to refer to a data schema while you work. Open the
+schema file in one column (making it persistent by double-clicking or by starting to edit it),
+and keep your code file in another column. Both stay visible until you close them.
+
+### Converting between ephemeral and persistent
+
+- **Ephemeral → Persistent:** Double-click the tab label, or start editing/interacting with it
+- **Persistent → Ephemeral:** There is no way to convert back. Instead, close the tab and
+  single-click the file again to open it as ephemeral
+
+### Visual distinction
+
+Ephemeral tabs are always shown in **italic** text with a distinct colour. This makes it
+immediately obvious which tabs are temporary. Persistent tabs use normal (non-italic) text.
 
 ---
 

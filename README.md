@@ -46,7 +46,7 @@ Humbug now has a full [user manual](./docs/user-manual/index.md).
 - **LLMs, lots of LLMs**  
 
   Humbug lets you work with multiple large language models (LLMs) simultaneously, supporting local, cloud-based, or hybrids of both.
-  Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, vLLM, xAI, and Z.ai, so you're not tied to any one provider.
+  Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama (local and cloud), OpenAI, vLLM, xAI, and Z.ai, so you're not tied to any one provider.
   You can optimize for cost, and are future-proofed when you want to use something new.
   You can seamlessly switch between models, even switching mid-conversation.
 

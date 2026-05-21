@@ -97,6 +97,13 @@ differences and are noted in their rows.
 | Select to start of line | Shift+Home | Shift+Home |
 | Select to end of line | Shift+End | Shift+End |
 
+## Diff tabs
+
+| Action | macOS | Windows/Linux |
+|:---|:---|:---|
+| Go to previous change lines | Alt+Up | Alt+Up |
+| Go to next changed lines | Alt+Down | Alt+Down |
+
 ## Application
 
 | Action | macOS | Windows/Linux |

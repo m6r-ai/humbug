@@ -7,9 +7,19 @@ Humbug runs on Windows, macOS, and Linux. There are two ways to install it:
 
 ---
 
-## Requirements
+## Option 1: Download a release
 
-Before installing, make sure you have **Python 3.10 or higher** installed on your system. You can
+Pre-built releases are available on the
+[Humbug releases page](https://github.com/m6r-ai/humbug/releases).
+
+Download the appropriate package for your platform and follow the installation instructions
+included with the release.
+
+---
+
+## Option 2: Install from source
+
+Before installing from source, make sure you have **Python 3.10 or higher** installed on your system. You can
 check by running:
 
 ```text
@@ -21,8 +31,6 @@ or, on some systems:
 ```text
 python3 --version
 ```
-
-### Additional platform requirements
 
 **Windows only:** You will need
 [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (Visual
@@ -38,20 +46,6 @@ sudo apt install gcc python3-dev
 On other distributions, install the equivalent packages for your package manager.
 
 **macOS:** No additional requirements beyond Python itself.
-
----
-
-## Option 1: Download a release
-
-Pre-built releases are available on the
-[Humbug releases page](https://github.com/m6r-ai/humbug/releases).
-
-Download the appropriate package for your platform and follow the installation instructions
-included with the release.
-
----
-
-## Option 2: Install from source
 
 ### 1. Get the source code
 
