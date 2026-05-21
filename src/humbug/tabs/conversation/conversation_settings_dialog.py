@@ -11,6 +11,7 @@ from ai import AIConversationSettings, AIReasoningCapability
 from ai.ai_model import AIReasoningEffort
 
 from humbug.language.language_manager import LanguageManager
+from humbug.ai_backend_display import get_all_backend_display_names, get_backend_display_name
 from humbug.settings.settings_container import SettingsContainer
 from humbug.settings.settings_factory import SettingsFactory
 from humbug.style_manager import StyleManager
@@ -153,36 +154,32 @@ class ConversationSettingsDialog(QDialog):
         # Apply consistent dialog styling
         self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
-    @staticmethod
-    def _provider_display_names() -> Dict[str, str]:
-        return {
-            "anthropic": "Anthropic", "deepseek": "DeepSeek", "google": "Google",
-            "mistral": "Mistral", "ollama": "Ollama", "openai": "OpenAI",
-            "vllm": "vLLM", "xai": "xAI", "zai": "Z.ai",
-        }
-
     def _populate_model_filter_combo(self) -> None:
-        provider_names = self._provider_display_names()
+        strings = self._language_manager.strings()
         seen: set = set()
         items: List[tuple] = [("All Providers", None)]
         for m in AIConversationSettings.iter_models_by_backends(self._ai_backends):
             p = AIConversationSettings.get_provider(m)
             if p not in seen:
                 seen.add(p)
-                items.append((provider_names.get(p, p), p))
+                items.append((get_backend_display_name(p, strings), p))
+
         self._model_filter_combo.set_items(items)
 
     def _populate_model_combo(self, filter_provider: str | None) -> None:
-        provider_names = self._provider_display_names()
+        provider_names = get_all_backend_display_names(self._language_manager.strings())
         grouped: Dict[str, List[str]] = {}
         for m in AIConversationSettings.iter_models_by_backends(self._ai_backends):
             p = AIConversationSettings.get_provider(m)
             if filter_provider and p != filter_provider:
                 continue
+
             grouped.setdefault(p, []).append(m)
+
         if filter_provider:
             items = [(m, m) for models in grouped.values() for m in models]
             self._model_combo.set_items(items)
+
         else:
             groups = [
                 (provider_names.get(p, p), [(m, m) for m in models])

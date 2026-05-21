@@ -17,6 +17,7 @@ from ai import AIBackendSettings, AIConversationSettings, AIManager, AIReasoning
 from ai.ai_model import AIReasoningEffort
 from ai.ollama.ollama_backend import OllamaBackend
 from ai_tool import AIToolManager
+from humbug.ai_backend_display import get_all_backend_display_names, get_backend_display_name
 
 from humbug.language.language_code import LanguageCode
 from humbug.color_role import ColorRole
@@ -370,18 +371,7 @@ class SettingsDialog(QDialog):
         self._ai_backends_heading = SettingsFactory.create_page_heading(strings.ai_backend_config)
         container.add_setting(self._ai_backends_heading)
 
-        ai_backend_mapping = [
-            ("anthropic", strings.anthropic_backend),
-            ("deepseek", strings.deepseek_backend),
-            ("google", strings.google_backend),
-            ("mistral", strings.mistral_backend),
-            ("ollama", strings.ollama_backend),
-            ("ollama-cloud", strings.ollama_cloud_backend),
-            ("openai", strings.openai_backend),
-            ("vllm", strings.vllm_backend),
-            ("xai", strings.xai_backend),
-            ("zai", strings.zai_backend),
-        ]
+        ai_backend_mapping = list(get_all_backend_display_names(strings).items())
 
         for backend_id, backend_name in ai_backend_mapping:
             accordion = SettingsAccordion(backend_name, expanded=False)
@@ -901,18 +891,7 @@ class SettingsDialog(QDialog):
 
     def _get_provider_display_names(self) -> Dict[str, str]:
         """Return a mapping from provider ID to a human-readable display name."""
-        return {
-            "anthropic": "Anthropic",
-            "deepseek": "DeepSeek",
-            "google": "Google",
-            "mistral": "Mistral",
-            "ollama": "Ollama",
-            "ollama-cloud": "Ollama Cloud",
-            "openai": "OpenAI",
-            "vllm": "vLLM",
-            "xai": "xAI",
-            "zai": "Z.ai",
-        }
+        return get_all_backend_display_names(self._language_manager.strings())
 
     def _populate_model_filter_combo(self, ai_backends: Dict) -> None:
         """Populate the provider filter combo with all providers that have models."""
@@ -1237,19 +1216,8 @@ class SettingsDialog(QDialog):
         self._external_denylist_area.set_label(strings.external_file_denylist)
 
         # Update AI Backends page controls
-        backend_name_map = {
-            "anthropic": strings.anthropic_backend,
-            "deepseek": strings.deepseek_backend,
-            "google": strings.google_backend,
-            "mistral": strings.mistral_backend,
-            "ollama": strings.ollama_backend,
-            "openai": strings.openai_backend,
-            "vllm": strings.vllm_backend,
-            "xai": strings.xai_backend,
-            "zai": strings.zai_backend,
-        }
         for backend_id, controls in self._ai_backend_controls.items():
-            cast(SettingsAccordion, controls["title"]).set_label(backend_name_map[backend_id])
+            cast(SettingsAccordion, controls["title"]).set_label(get_backend_display_name(backend_id, strings))
             cast(SettingsSwitch, controls["enable"]).set_label(strings.enable_backend)
             cast(SettingsTextField, controls["key"]).set_label(strings.api_key)
             cast(SettingsTextField, controls["url"]).set_label(strings.api_url)
