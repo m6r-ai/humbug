@@ -14,6 +14,8 @@ New features:
 - Added separate support for Ollama cloud and Ollama running locally.
 - Separated the concept of the AI model and the AI model provider, making it possible to have the same model accessible via
   different routes, but using the same model name.
+- The mindspace settings now offers the ability to fetch all available models from a given AI provider, and to remove any
+  that were fetched this way.
 
 Bug fixes:
 
