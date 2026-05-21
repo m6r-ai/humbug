@@ -75,6 +75,11 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._breadcrumb_refresh_timer.setInterval(0)
         self._breadcrumb_refresh_timer.timeout.connect(self._on_breadcrumb_refresh)
 
+        self._page_step_timer = QTimer(self)
+        self._page_step_timer.setSingleShot(True)
+        self._page_step_timer.setInterval(0)
+        self._page_step_timer.timeout.connect(self._on_page_step_refresh)
+
         breadcrumb_bar.setParent(self)
         tree_view.setParent(self)
 
@@ -100,7 +105,7 @@ class MindspaceBreadcrumbContainer(QWidget):
 
     def set_dot_click_handler(self, handler: Callable[[], None]) -> None:
         """
-        Set a callable invoked when the user clicks the \".\" breadcrumb item.
+        Set a callable invoked when the user clicks the "." breadcrumb item.
 
         Args:
             handler: Callable to invoke with no arguments.
@@ -109,7 +114,7 @@ class MindspaceBreadcrumbContainer(QWidget):
 
     def set_dot_double_click_handler(self, handler: Callable[[], None]) -> None:
         """
-        Set a callable invoked when the user double-clicks the \".\" breadcrumb item.
+        Set a callable invoked when the user double-clicks the "." breadcrumb item.
 
         Args:
             handler: Callable to invoke with no arguments.
@@ -219,21 +224,19 @@ class MindspaceBreadcrumbContainer(QWidget):
         """
         tree_sb = self._tree_view.verticalScrollBar()
         self._scrollbar.setRange(minimum, maximum)
-        self._scrollbar.setPageStep(tree_sb.pageStep())
-
-        # Diagnostic log to help identify a rare intermittent scrollbar sizing bug
-        # where the scrollbar handle shrinks to minimum size.  Remove once root cause found.
-        self._logger.debug(
-            "rangeChanged: min=%d max=%d pageStep=%d row_height=%d breadcrumb_rows=%d",
-            minimum, maximum, tree_sb.pageStep(), self._row_height, self._breadcrumb_rows
-        )
+        page_step = tree_sb.pageStep()
+        self._scrollbar.setPageStep(page_step)
         single_step = self._row_height if self._row_height > 0 else tree_sb.singleStep()
         self._scrollbar.setSingleStep(single_step)
+
+        if page_step == 0 and maximum > minimum:
+            self._page_step_timer.start()
 
         bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
         external_value = max(minimum, tree_sb.value() - bc_h)
         if self._scrollbar.value() != external_value:
             self._scrollbar.setValue(external_value)
+
         else:
             self._breadcrumb_refresh_timer.start()
 
@@ -257,6 +260,20 @@ class MindspaceBreadcrumbContainer(QWidget):
         if path and self._tree_view.visualRect(index).top() < 0:
             self._pending_expand_path = path
 
+    def _on_page_step_refresh(self) -> None:
+        """
+        Re-sync the external scrollbar page step after Qt has completed its layout pass.
+
+        Qt emits rangeChanged before it has finished recalculating pageStep, so the
+        value read in _on_tree_range_changed can be 0 even when the viewport is visible.
+        This single-shot callback fires on the next event-loop iteration by which time
+        the correct pageStep is available.
+        """
+        tree_sb = self._tree_view.verticalScrollBar()
+        page_step = tree_sb.pageStep()
+        if page_step > 0:
+            self._scrollbar.setPageStep(page_step)
+
     def _on_external_scroll(self, value: int) -> None:
         """
         Drive the tree view and update the breadcrumb bar from the external scrollbar.
@@ -276,6 +293,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._scrolling = True
         try:
             self._do_external_scroll(value)
+
         finally:
             self._scrolling = False
 
@@ -314,9 +332,11 @@ class MindspaceBreadcrumbContainer(QWidget):
                 if os.path.dirname(ancestor) == second_parent and ancestor != second_path:
                     straddling_sibling_boundary = True
                     break
+
                 parent_of_ancestor = os.path.dirname(ancestor)
                 if parent_of_ancestor == ancestor:
                     break
+
                 ancestor = parent_of_ancestor
 
         if straddling_sibling_boundary:
@@ -333,9 +353,11 @@ class MindspaceBreadcrumbContainer(QWidget):
                 # Unlatch: the latched folder's header has scrolled back into view.
                 parent = os.path.dirname(topmost_path)
                 spine_path = parent if parent and parent != topmost_path else ""
+
             elif os.path.isdir(topmost_path) and topmost_is_expanded and \
                     self._tree_view.visualRect(index).top() < 0:
                 spine_path = topmost_path
+
             else:
                 parent = os.path.dirname(topmost_path)
                 spine_path = parent if parent and parent != topmost_path else ""
