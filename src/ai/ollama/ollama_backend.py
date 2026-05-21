@@ -94,14 +94,14 @@ class OllamaBackend(AIBackend):
                     if "status" in obj:
                         on_progress(obj["status"])
 
-    def __init__(self, api_key: str, api_url: str) -> None:
+    def __init__(self, api_key: str, api_url: str | None) -> None:
         """Initialize the Ollama backend.
 
         Args:
             api_key: API key for authentication (not used in this case)
             api_url: Custom API base URL (optional)
         """
-        super().__init__(api_key, api_url)
+        super().__init__(api_key, api_url or "http://localhost:11434")
 
         # Llama doesn't use normal SSE encoding!
         self._uses_data = False
