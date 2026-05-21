@@ -456,6 +456,9 @@ class AIConversationSettings:
     # Snapshot of keys that are built-in (set once at class definition time).
     _BUILTIN_MODEL_KEYS: frozenset = frozenset(MODELS.keys())
 
+    # Keys added via load_user_config (accumulated across calls, never removed).
+    _USER_CONFIG_MODEL_KEYS: set = set()
+
     # Default fallback values for unknown models
     DEFAULT_CONTEXT_WINDOW = 8192
     DEFAULT_MAX_OUTPUT_TOKENS = 2048
@@ -782,11 +785,16 @@ class AIConversationSettings:
     }
 
     @classmethod
+    def _is_fetched_key(cls, key: Tuple[str, str]) -> bool:
+        """Return True if key was added via register_fetched_models (not built-in or user-config)."""
+        return key not in cls._BUILTIN_MODEL_KEYS and key not in cls._USER_CONFIG_MODEL_KEYS
+
+    @classmethod
     def get_fetched_models_by_provider(cls, provider: str) -> List[Tuple[str, str]]:
         """Return (model, provider) keys that were fetched (not built-in) for the given provider."""
         return [
             key for key, model in cls.MODELS.items()
-            if model.provider == provider and key not in cls._BUILTIN_MODEL_KEYS
+            if model.provider == provider and cls._is_fetched_key(key)
         ]
 
     @classmethod
@@ -794,7 +802,7 @@ class AIConversationSettings:
         """
         Remove a fetched model from the registry.
 
-        Built-in models cannot be removed.
+        Built-in and user-config models cannot be removed.
 
         Args:
             model: The API model name
@@ -804,7 +812,7 @@ class AIConversationSettings:
             True if the model was found and removed, False otherwise.
         """
         key = (model, provider)
-        if key in cls._BUILTIN_MODEL_KEYS or key not in cls.MODELS:
+        if not cls._is_fetched_key(key) or key not in cls.MODELS:
             return False
 
         del cls.MODELS[key]
@@ -866,7 +874,7 @@ class AIConversationSettings:
         """
         cache: Dict[str, List[str]] = {}
         for (model_id, provider), _ in cls.MODELS.items():
-            if (model_id, provider) not in cls._BUILTIN_MODEL_KEYS and provider in cls._PROVIDER_FETCH_DEFAULTS:
+            if cls._is_fetched_key((model_id, provider)) and provider in cls._PROVIDER_FETCH_DEFAULTS:
                 cache.setdefault(provider, []).append(model_id)
 
         try:
@@ -1092,5 +1100,6 @@ class AIConversationSettings:
 
         for key, model in pending:
             cls.MODELS[key] = model
+            cls._USER_CONFIG_MODEL_KEYS.add(key)
 
         return []
