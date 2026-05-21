@@ -112,8 +112,8 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Input widget
         processing_message="محادثة مع {model} (Esc للإلغاء، {key} للإرسال)",
-        input_prompt="تحدث مع {model}... ({key} للإرسال)",
-        command_prompt="الأمر... (Enter أو {key} للإرسال)",
+        input_prompt="تحدث مع {model} ({key} للإرسال)",
+        command_prompt="الأمر (Enter أو {key} للإرسال)",
 
         # AI thinking message
         ai_thinking="الذكاء الاصطناعي يفكر...",

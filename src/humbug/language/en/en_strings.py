@@ -111,8 +111,8 @@ def get_english_strings() -> LanguageStrings:
 
         # Input widget
         processing_message="Chat with {model} (Esc to cancel, {key} to submit)",
-        input_prompt="Chat with {model}... ({key} to submit)",
-        command_prompt="Command... (Enter or {key} to submit)",
+        input_prompt="Chat with {model} ({key} to submit)",
+        command_prompt="Command (Enter or {key} to submit)",
 
         # AI thinking message
         ai_thinking="AI is thinking...",

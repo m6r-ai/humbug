@@ -110,9 +110,9 @@ def get_french_strings() -> LanguageStrings:
         goto_line_label="Numéro de ligne :",
 
         # Input widget
-        processing_message="Discuter avec {model}... (Échap pour annuler, {key} pour envoyer)",
-        input_prompt="Discuter avec {model}... ({key} pour envoyer)",
-        command_prompt="Commande... (Entrée ou {key} pour envoyer)",
+        processing_message="Discuter avec {model} (Échap pour annuler, {key} pour envoyer)",
+        input_prompt="Discuter avec {model} ({key} pour envoyer)",
+        command_prompt="Commande (Entrée ou {key} pour envoyer)",
 
         # AI thinking message
         ai_thinking="L'IA réfléchit...",
