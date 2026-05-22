@@ -16,6 +16,7 @@ New features:
   different routes, but using the same model name.
 - The mindspace settings now offers the ability to fetch all available models from a given AI provider, and to remove any
   that were fetched this way.
+- Added a comprehensive user manual.
 
 Bug fixes:
 
