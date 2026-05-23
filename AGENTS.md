@@ -64,13 +64,26 @@ Multi-backend AI conversation system.
 - `zai/` - Z.ai models
 
 ### `src/ai_tool/`
-Framework for AI tools and capabilities.
+Core framework for AI tools and capabilities (base classes, manager, definitions, exceptions).
+No longer contains tool subdirectories — individual tools have been hoisted to top-level packages.
 
-**Tool subdirectories:**
-- `menai/` - Menai language execution
-- `clock/` - Date/time operations
-- `filesystem/` - File operations
-- `help/` - Tool documentation
+### `src/menai_ai_tool/`
+AI tool implementation for Menai language execution.
+
+### `src/clock_ai_tool/`
+AI tool implementation for date/time operations.
+
+### `src/filesystem_ai_tool/`
+AI tool implementation for file operations.
+
+### `src/help_ai_tool/`
+AI tool implementation for tool documentation.
+
+### `src/ai_transcript_conversation/`
+AI transcript and conversation support.
+
+### `src/docx/`
+DOCX file handling support.
 
 ### `src/menai/`
 Pure functional programming language designed for AI use. Includes lexer, parser, compiler, and virtual machine.
@@ -104,21 +117,31 @@ Cross-platform terminal emulator with Unix and Windows implementations.
 
 Test structure mirrors `src/` organization:
 - `ai_tool/` - AI tool tests
-- `menai/` - Menai language tests
+- `ai_transcript_conversation/` - AI transcript/conversation tests
 - `diff/` - Diff system tests
+- `docx/` - DOCX handling tests
 - `dmarkdown/` - Markdown parser tests
+- `menai/` - Menai language tests
+- `pdf/` - PDF extraction tests
 - `syntax/` - Syntax highlighting tests
+- `terminal/` - Terminal emulator tests
 
 ## `tools/` Directory
 
 Development and debugging utilities:
 - `menai/benchmark/` - Menai performance benchmarking
-- `menai/bytecode_analyzer/` - Bytecode inspection
 - `menai/checker/` - Static analysis
 - `menai/disassembler/` - Bytecode disassembly
-- `menai/pretty_print/` - Code formatting
+- `menai/pretty-print/` - Code formatting
+- `menai/profiler/` - Menai profiling
+- `menai/test-runner/` - Menai test runner
 - `dependency_checker/` - Module dependency validation
+- `docx/` - DOCX-related tooling
+- `md_to_docx/` - Markdown to DOCX conversion
+- `pdf/` - PDF-related tooling
+- `pipeline-runner/` - Pipeline execution
 - `planner/` - Project planning
+- `reformat_c/` - C code reformatting
 
 ## Key Documentation Files
 
