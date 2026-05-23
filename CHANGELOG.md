@@ -1,6 +1,16 @@
 # Change log for Humbug
 
-## v48 (2026-05-xx)
+## v49 (2026-05-xx)
+
+New features:
+
+Bug fixes:
+
+Internal structure changes:
+
+- Moved the core AI tools into separate top-level modules so the dependency management is clearer.
+
+## v48 (2026-05-22)
 
 New features:
 
