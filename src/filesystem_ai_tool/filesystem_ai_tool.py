@@ -9,18 +9,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Callable, Tuple, cast
 
-from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
-from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
-from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
-from syntax.programming_language_utils import ProgrammingLanguageUtils
-
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
     AIToolResult, AIToolCall
 )
-from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
-from ai_tool.filesystem.filesystem_diff_applier import FilesystemDiffApplier
+from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
+from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
+from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
+from syntax.programming_language_utils import ProgrammingLanguageUtils
+
+from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
+from filesystem_ai_tool.filesystem_diff_applier import FilesystemDiffApplier
 
 
 class FileSystemAITool(AITool):

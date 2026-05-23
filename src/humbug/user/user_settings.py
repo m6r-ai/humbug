@@ -7,7 +7,7 @@ import logging
 from typing import Dict, List, Any
 
 from ai import AIBackendSettings
-from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
+from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 
 from humbug.language.language_code import LanguageCode
 from humbug.style_manager import ColorMode

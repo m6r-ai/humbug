@@ -15,14 +15,13 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QEvent, QPoint
 from PySide6.QtGui import QKeyEvent, QMouseEvent, QAction, QKeySequence, QActionGroup
 
-from ai_tool import AIToolManager
-from ai_tool.menai.menai_ai_tool import MenaiAITool
-from ai_tool.clock.clock_ai_tool import ClockAITool
-from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
-from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
-from ai_tool.help.help_ai_tool import HelpAITool
-
 from ai.ai_conversation_settings import AIConversationSettings
+from ai_tool import AIToolManager
+from clock_ai_tool.clock_ai_tool import ClockAITool
+from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
+from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
+from help_ai_tool.help_ai_tool import HelpAITool
+from menai_ai_tool.menai_ai_tool import MenaiAITool
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole

@@ -18,12 +18,12 @@ modules:
       - "standard_library"
 
   ai_tool:
+    external_dependencies:
+      - "standard_library"
+
+  clock_ai_tool:
     internal_dependencies:
-      - menai
-      - diff
-      - docx
-      - pdf
-      - syntax
+      - ai_tool
     external_dependencies:
       - "standard_library"
 
@@ -43,8 +43,24 @@ modules:
     external_dependencies:
       - "standard_library"
 
+  filesystem_ai_tool:
+    internal_dependencies:
+      - ai_tool
+      - diff
+      - docx
+      - pdf
+      - syntax
+    external_dependencies:
+      - "standard_library"
+
   git:
     internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  help_ai_tool:
+    internal_dependencies:
+      - ai_tool
     external_dependencies:
       - "standard_library"
 
@@ -53,9 +69,13 @@ modules:
       - ai
       - ai_tool
       - ai_transcript_conversation
+      - clock_ai_tool
       - diff
       - dmarkdown
+      - filesystem_ai_tool
       - git
+      - help_ai_tool
+      - menai_ai_tool
       - pdf
       - docx
       - syntax
@@ -67,6 +87,13 @@ modules:
       - "qasync"
 
   menai:
+    external_dependencies:
+      - "standard_library"
+
+  menai_ai_tool:
+    internal_dependencies:
+      - ai_tool
+      - menai
     external_dependencies:
       - "standard_library"
 
