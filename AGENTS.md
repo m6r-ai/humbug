@@ -67,6 +67,11 @@ Multi-backend AI conversation system.
 Core framework for AI tools and capabilities (base classes, manager, definitions, exceptions).
 No longer contains tool subdirectories — individual tools have been hoisted to top-level packages.
 
+### `src/delegate_ai_tool/`
+AI tool implementation for task delegation to child AI instances. Contains the backend
+logic (conversation creation, session management, persistence, completion handling) and
+the `DelegateAIListener` protocol for frontend integration. GUI wiring lives in `src/humbug/`.
+
 ### `src/ai_transcript_conversation/`
 AI transcript and conversation support.
 

@@ -27,6 +27,14 @@ modules:
     external_dependencies:
       - "standard_library"
 
+  delegate_ai_tool:
+    internal_dependencies:
+      - ai
+      - ai_transcript_conversation
+      - ai_tool
+    external_dependencies:
+      - "standard_library"
+
   diff:
     internal_dependencies: []
     external_dependencies:
@@ -70,6 +78,7 @@ modules:
       - ai_tool
       - ai_transcript_conversation
       - clock_ai_tool
+      - delegate_ai_tool
       - diff
       - dmarkdown
       - filesystem_ai_tool

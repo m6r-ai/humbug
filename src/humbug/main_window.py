@@ -25,7 +25,7 @@ from menai_ai_tool.menai_ai_tool import MenaiAITool
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
-from humbug.delegate_ai_tool import DelegateAITool
+from humbug.delegate_ai_tool import _make_delegate_ai_tool
 from humbug.exception_notifier import get_exception_notifier
 from humbug.update_checker import UpdateChecker
 from humbug.update_dialog import UpdateDialog
@@ -456,7 +456,7 @@ class MainWindow(QMainWindow):
         )
         self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
         self._ai_tool_manager.register_tool(
-            DelegateAITool(self._column_manager), "Delegate: delegates tasks to specialized AI instances"
+            _make_delegate_ai_tool(self._column_manager), "Delegate: delegates tasks to specialized AI instances"
         )
         self._ai_tool_manager.register_tool(
             FileSystemAITool(

@@ -11,6 +11,7 @@ Bug fixes:
 Internal structure changes:
 
 - Moved the core AI tools into separate top-level modules so the dependency management is clearer.
+- Reworked the Delegate AI tool to have a clean back-end and front-end separation.
 
 ## v48 (2026-05-22)
 
