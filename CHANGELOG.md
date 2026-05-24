@@ -6,6 +6,8 @@ New features:
 
 Bug fixes:
 
+- Resolved a problem that could leave the cursor in the wrong column after the UI resized a terminal.
+
 Internal structure changes:
 
 - Moved the core AI tools into separate top-level modules so the dependency management is clearer.

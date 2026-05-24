@@ -415,16 +415,30 @@ class TerminalBuffer:
                 if i >= n or not physical_lines[i].continuation:
                     break
 
-            # Strip trailing spaces from the logical line so that re-wrapping
-            # produces clean lines.  We only strip from the very end.
-            while cells and cells[-1][0] == ' ':
-                cells.pop()
-
             # Check whether the cursor falls inside this logical line.
             cursor_in_logical = (
                 not cursor_resolved
                 and logical_start <= cursor_abs < logical_start + (i - logical_start)
             )
+
+            if cursor_in_logical:
+                # Compute the cursor's offset within the concatenated cells.
+                lines_before_cursor = cursor_abs - logical_start
+
+                # Each old physical line had old_rows columns... no: we need
+                # the actual widths of the physical lines we concatenated.
+                cell_offset = 0
+                for k in range(lines_before_cursor):
+                    cell_offset += physical_lines[logical_start + k].width
+
+                cell_offset += cursor_col_before
+
+            # Strip trailing spaces from the logical line so that re-wrapping
+            # produces clean lines, but never strip past the cursor position.
+            strip_limit = cell_offset if cursor_in_logical else 0
+            while len(cells) > strip_limit and cells[-1][0] == ' ':
+                cells.pop()
+
             # Check whether max_cursor_row falls inside this logical line.
             max_cursor_in_logical = (
                 not max_cursor_resolved
@@ -440,19 +454,6 @@ class TerminalBuffer:
                 for k in range(max_lines_before):
                     max_cell_offset += physical_lines[logical_start + k].width
 
-            if cursor_in_logical:
-                # Compute the cursor's offset within the concatenated cells.
-                lines_before_cursor = cursor_abs - logical_start
-
-                # Each old physical line had old_rows columns... no: we need
-                # the actual widths of the physical lines we concatenated.
-                cell_offset = 0
-                for k in range(lines_before_cursor):
-                    cell_offset += physical_lines[logical_start + k].width
-
-                cell_offset += cursor_col_before
-                cell_offset = min(cell_offset, len(cells))
-
             # Re-wrap the logical line into new_cols-wide physical lines.
             if not cells:
                 # Blank logical line — emit one empty physical line.
@@ -465,6 +466,7 @@ class TerminalBuffer:
                     new_cursor_abs = len(new_lines)
                     new_cursor_col = 0
                     cursor_resolved = True
+
                 if max_cursor_in_logical:
                     new_max_cursor_abs = len(new_lines)
                     max_cursor_resolved = True
