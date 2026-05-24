@@ -67,35 +67,35 @@ Multi-backend AI conversation system.
 Core framework for AI tools and capabilities (base classes, manager, definitions, exceptions).
 No longer contains tool subdirectories — individual tools have been hoisted to top-level packages.
 
-### `src/menai_ai_tool/`
-AI tool implementation for Menai language execution.
+### `src/ai_transcript_conversation/`
+AI transcript and conversation support.
 
 ### `src/clock_ai_tool/`
 AI tool implementation for date/time operations.
 
-### `src/filesystem_ai_tool/`
-AI tool implementation for file operations.
+### `src/diff/`
+Unified diff parsing and application with fuzzy matching.
 
-### `src/help_ai_tool/`
-AI tool implementation for tool documentation.
-
-### `src/ai_transcript_conversation/`
-AI transcript and conversation support.
+### `src/dmarkdown/`
+Advanced markdown parsing to AST.
 
 ### `src/docx/`
 DOCX file handling support.
 
-### `src/menai/`
-Pure functional programming language designed for AI use. Includes lexer, parser, compiler, and virtual machine.
-
-### `src/diff/`
-Unified diff parsing and application with fuzzy matching.
+### `src/filesystem_ai_tool/`
+AI tool implementation for file operations.
 
 ### `src/git/`
 Lightweight, GUI-free tools for git operations.
 
-### `src/dmarkdown/`
-Advanced markdown parsing to AST.
+### `src/help_ai_tool/`
+AI tool implementation for tool documentation.
+
+### `src/menai/`
+Pure functional programming language designed for AI use. Includes lexer, parser, compiler, and virtual machine.
+
+### `src/menai_ai_tool/`
+AI tool implementation for Menai language execution.
 
 ### `src/pdf/`
 Pure-Python PDF text extraction (stdlib only). Parses PDF structure, decodes streams
