@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from ai_tool import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError, AIToolTimeoutError
-from ai_tool.menai.menai_ai_tool import MenaiAITool
+from menai_ai_tool.menai_ai_tool import MenaiAITool
 from menai import MenaiError
 
 

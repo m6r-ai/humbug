@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
-from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
+from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 
 
 class TestFileSystemAIToolDeleteFile:

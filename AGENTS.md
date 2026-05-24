@@ -116,12 +116,14 @@ Cross-platform terminal emulator with Unix and Windows implementations.
 ## `tests/` Directory
 
 Test structure mirrors `src/` organization:
-- `ai_tool/` - AI tool tests
 - `ai_transcript_conversation/` - AI transcript/conversation tests
+- `clock_ai_tool/` - Clock AI tool tests
 - `diff/` - Diff system tests
 - `docx/` - DOCX handling tests
 - `dmarkdown/` - Markdown parser tests
+- `filesystem_ai_tool/` - Filesystem AI tool tests
 - `menai/` - Menai language tests
+- `menai_ai_tool/` - Menai AI tool tests
 - `pdf/` - PDF extraction tests
 - `syntax/` - Syntax highlighting tests
 - `terminal/` - Terminal emulator tests

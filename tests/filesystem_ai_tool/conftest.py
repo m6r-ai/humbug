@@ -1,16 +1,15 @@
 """
-Shared fixtures and utilities for tool tests.
+Shared fixtures and utilities for filesystem tool tests.
 """
 import tempfile
 from pathlib import Path
-from typing import Tuple, Dict, Any
+from typing import Tuple
 from unittest.mock import MagicMock
 
 import pytest
 
-from ai_tool import AIToolCall
-from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
-from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
+from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
+from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 
 
 @pytest.fixture
@@ -105,22 +104,6 @@ def mock_authorization_denied():
 
     mock.side_effect = mock_auth_callback
     return mock
-
-
-@pytest.fixture
-def make_tool_call():
-    """Factory for creating AIToolCall objects for testing."""
-    counter = [0]
-
-    def _make_call(tool_name: str, arguments: Dict[str, Any]) -> AIToolCall:
-        counter[0] += 1
-        return AIToolCall(
-            id=f"test_call_{counter[0]}",
-            name=tool_name,
-            arguments=arguments
-        )
-
-    return _make_call
 
 
 @pytest.fixture

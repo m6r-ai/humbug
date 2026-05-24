@@ -7,8 +7,8 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from ai_tool import AIToolExecutionError
-from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
-from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
+from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
+from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 
 
 def make_tool_with_tmp(tmp_path):

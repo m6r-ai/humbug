@@ -20,7 +20,7 @@ class TestFileSystemAIToolGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('ai_tool.filesystem.filesystem_ai_tool.datetime') as mock_datetime:
+             patch('filesystem_ai_tool.filesystem_ai_tool.datetime') as mock_datetime:
 
             mock_exists.return_value = True
             mock_is_file.return_value = True
@@ -56,7 +56,7 @@ class TestFileSystemAIToolGetInfo:
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.suffix', new_callable=lambda: ""), \
-             patch('ai_tool.filesystem.filesystem_ai_tool.datetime') as mock_datetime:
+             patch('filesystem_ai_tool.filesystem_ai_tool.datetime') as mock_datetime:
 
             mock_exists.return_value = True
             mock_is_file.return_value = True
@@ -101,7 +101,7 @@ class TestFileSystemAIToolGetInfo:
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('ai_tool.filesystem.filesystem_ai_tool.datetime') as mock_datetime:
+             patch('filesystem_ai_tool.filesystem_ai_tool.datetime') as mock_datetime:
 
             mock_exists.return_value = True
             mock_is_file.return_value = False
@@ -136,7 +136,7 @@ class TestFileSystemAIToolGetInfo:
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('ai_tool.filesystem.filesystem_ai_tool.datetime') as mock_datetime:
+             patch('filesystem_ai_tool.filesystem_ai_tool.datetime') as mock_datetime:
 
             mock_exists.return_value = True
             mock_is_file.return_value = False
@@ -169,7 +169,7 @@ class TestFileSystemAIToolGetInfo:
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('ai_tool.filesystem.filesystem_ai_tool.datetime') as mock_datetime:
+             patch('filesystem_ai_tool.filesystem_ai_tool.datetime') as mock_datetime:
 
             mock_exists.return_value = True
             mock_is_file.return_value = False
@@ -200,7 +200,7 @@ class TestFileSystemAIToolGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('ai_tool.filesystem.filesystem_ai_tool.datetime') as mock_datetime:
+             patch('filesystem_ai_tool.filesystem_ai_tool.datetime') as mock_datetime:
 
             mock_exists.return_value = True
             mock_is_file.return_value = False
@@ -272,7 +272,7 @@ class TestFileSystemAIToolGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('ai_tool.filesystem.filesystem_ai_tool.datetime') as mock_datetime:
+             patch('filesystem_ai_tool.filesystem_ai_tool.datetime') as mock_datetime:
 
             mock_exists.return_value = True
             mock_is_file.return_value = True
@@ -311,7 +311,7 @@ class TestFileSystemAIToolGetInfo:
                  patch('pathlib.Path.is_file') as mock_is_file, \
                  patch('pathlib.Path.is_dir') as mock_is_dir, \
                  patch('pathlib.Path.stat') as mock_stat, \
-                 patch('ai_tool.filesystem.filesystem_ai_tool.datetime') as mock_datetime:
+                 patch('filesystem_ai_tool.filesystem_ai_tool.datetime') as mock_datetime:
 
                 mock_exists.return_value = True
                 mock_is_file.return_value = True
@@ -340,7 +340,7 @@ class TestFileSystemAIToolGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('ai_tool.filesystem.filesystem_ai_tool.datetime') as mock_datetime:
+             patch('filesystem_ai_tool.filesystem_ai_tool.datetime') as mock_datetime:
 
             mock_exists.return_value = True
             mock_is_file.return_value = True
