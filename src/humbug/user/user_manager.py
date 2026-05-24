@@ -4,11 +4,11 @@ Manages Humbug application user settings, primarily API keys.
 
 import logging
 import os
-from typing import Dict, cast
+from typing import cast
 
 from PySide6.QtCore import QObject, Signal
 
-from ai import AIBackend, AIBackendSettings, AIManager
+from ai import AIBackendSettings, AIManager
 from ai.ai_conversation_settings import AIConversationSettings
 
 from humbug.user.user_settings import UserSettings
@@ -183,12 +183,3 @@ class UserManager(QObject):
             The current UserSettings object
         """
         return cast(UserSettings, self._settings)
-
-    def get_ai_backends(self) -> Dict[str, AIBackend]:
-        """
-        Get the current AI backends.
-
-        Returns:
-            Dictionary mapping provider names to backend instances
-        """
-        return self._ai_manager.get_backends()

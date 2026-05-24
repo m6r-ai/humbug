@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
-from ai import AIConversationSettings, AIReasoningCapability
+from ai import AIConversationSettings, AIReasoningCapability, AIManager
 from ai.ai_model import AIReasoningEffort
 
 from humbug.language.language_manager import LanguageManager
@@ -15,7 +15,6 @@ from humbug.ai_backend_display import get_all_backend_display_names, get_backend
 from humbug.settings.settings_container import SettingsContainer
 from humbug.settings.settings_factory import SettingsFactory
 from humbug.style_manager import StyleManager
-from humbug.user.user_manager import UserManager
 
 
 class ConversationSettingsDialog(QDialog):
@@ -33,8 +32,8 @@ class ConversationSettingsDialog(QDialog):
         self.setMinimumWidth(800)
         self.setMinimumHeight(600)
 
-        self._user_manager = UserManager()
-        self._ai_backends = self._user_manager.get_ai_backends()
+        self._ai_manager = AIManager()
+        self._ai_backends = self._ai_manager.get_backends()
         self._initial_settings: AIConversationSettings | None = None
         self._current_settings: AIConversationSettings | None = None
 

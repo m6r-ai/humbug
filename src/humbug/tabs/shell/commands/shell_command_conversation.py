@@ -3,7 +3,7 @@
 import logging
 from typing import List, Dict, cast
 
-from ai import AIConversationSettings, AIReasoningCapability
+from ai import AIConversationSettings, AIReasoningCapability, AIManager
 from ai.ai_model import AIReasoningEffort
 from syntax import Token, TokenType
 
@@ -14,7 +14,6 @@ from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
 from humbug.tabs.tab_base import TabBase
-from humbug.user.user_manager import UserManager
 
 
 class ShellCommandConversation(ShellCommand):
@@ -29,7 +28,7 @@ class ShellCommandConversation(ShellCommand):
         """
         super().__init__()
         self._column_manager = column_manager
-        self._user_manager = UserManager()
+        self._ai_manager = AIManager()
         self._logger = logging.getLogger("ShellCommandConversation")
 
     def name(self) -> str:
@@ -87,7 +86,7 @@ class ShellCommandConversation(ShellCommand):
         model_values = options.get("--model", []) or options.get("-m", [])
         if model_values:
             model_input = model_values[0]
-            ai_backends = self._user_manager.get_ai_backends()
+            ai_backends = self._ai_manager.get_backends()
             available_keys = list(AIConversationSettings.iter_models_by_backends(ai_backends))
             matched_key = next(
                 (k for k in available_keys if AIConversationSettings.get_display_name(k[0], k[1]) == model_input),
@@ -193,7 +192,7 @@ class ShellCommandConversation(ShellCommand):
         Returns:
             List of matching model display names
         """
-        ai_backends = self._user_manager.get_ai_backends()
+        ai_backends = self._ai_manager.get_backends()
         models = []
         for (model_name, provider) in AIConversationSettings.iter_models_by_backends(ai_backends):
             display = AIConversationSettings.get_display_name(model_name, provider)

@@ -39,7 +39,6 @@ from humbug.settings.settings_text_area import SettingsTextArea
 from humbug.settings.settings_text_field import SettingsTextField
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.user.user_file_sort_order import UserFileSortOrder
-from humbug.user.user_manager import UserManager
 from humbug.user.user_settings import UserSettings
 
 _FETCHED_MODELS_CACHE = os.path.join(os.path.expanduser("~"), ".humbug", "fetched-models.json")
@@ -97,7 +96,6 @@ class SettingsDialog(QDialog):
         self._style_manager = StyleManager()
         self._ai_manager = AIManager()
         self._tool_manager = AIToolManager()
-        self._user_manager = UserManager()
 
         self._initial_user_settings: UserSettings | None = None
         self._current_user_settings: UserSettings | None = None
@@ -736,7 +734,7 @@ class SettingsDialog(QDialog):
             return
 
         # AI model
-        ai_backends = self._user_manager.get_ai_backends()
+        ai_backends = self._ai_manager.get_backends()
         self._populate_model_filter_combo(ai_backends)
         self._populate_model_combo(ai_backends, filter_provider=None)
         self._model_combo.set_value((settings.model, settings.provider))
@@ -936,14 +934,14 @@ class SettingsDialog(QDialog):
 
     def _refresh_model_combo(self) -> None:
         """Re-populate the model combo after new models have been registered."""
-        ai_backends = self._user_manager.get_ai_backends()
+        ai_backends = self._ai_manager.get_backends()
         filter_provider = self._model_filter_combo.get_value()
         self._populate_model_filter_combo(ai_backends)
         self._populate_model_combo(ai_backends, filter_provider)
 
     def _on_model_filter_changed(self) -> None:
         """Repopulate model list when the provider filter changes."""
-        ai_backends = self._user_manager.get_ai_backends()
+        ai_backends = self._ai_manager.get_backends()
         filter_provider = self._model_filter_combo.get_value()
         self._populate_model_combo(ai_backends, filter_provider)
 

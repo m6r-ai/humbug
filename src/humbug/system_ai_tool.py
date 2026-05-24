@@ -5,7 +5,7 @@ import platform
 import sys
 from typing import Any, Dict, List, cast
 
-from ai import AIConversationSettings
+from ai import AIConversationSettings, AIManager
 from ai.ai_model import AIReasoningEffort
 from ai_tool import (
     AITool,
@@ -24,7 +24,6 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
-from humbug.user.user_manager import UserManager
 from humbug.version import CURRENT_VERSION
 
 
@@ -47,7 +46,7 @@ class SystemAITool(AITool):
         """
         self._column_manager = column_manager
         self._mindspace_manager = MindspaceManager()
-        self._user_manager = UserManager()
+        self._ai_manager = AIManager()
         self._logger = logging.getLogger("SystemAITool")
 
     def get_definition(self) -> AIToolDefinition:
@@ -404,7 +403,7 @@ class SystemAITool(AITool):
         effective_model: str = ""
         effective_provider: str = ""
         if model:
-            ai_backends = self._user_manager.get_ai_backends()
+            ai_backends = self._ai_manager.get_backends()
             available_keys = list(AIConversationSettings.iter_models_by_backends(ai_backends))
             available_display = [
                 AIConversationSettings.get_display_name(m, p) for (m, p) in available_keys
@@ -776,7 +775,7 @@ class SystemAITool(AITool):
             }
 
             # AI models information
-            ai_backends = self._user_manager.get_ai_backends()
+            ai_backends = self._ai_manager.get_backends()
 
             # Categorize models by backend
             models_by_backend: Dict[str, List[str]] = {}
