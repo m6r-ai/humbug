@@ -74,6 +74,17 @@ class TerminalState:
         """Get current terminal buffer."""
         return self._current_buffer
 
+    def set_response_callback(self, callback: Callable[[bytes], None]) -> None:
+        """
+        Set or replace the callback used to send responses to the terminal process.
+
+        Called when an existing TerminalState is adopted by a new TerminalWidget.
+
+        Args:
+            callback: Callable that receives response bytes and forwards them to the PTY.
+        """
+        self._response_callback = callback
+
     def mouse_tracking(self) -> MouseTrackingState:
         """Get mouse tracking state."""
         return self._mouse_tracking

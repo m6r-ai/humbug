@@ -112,6 +112,7 @@ modules:
       - ai
       - ai_transcript_conversation
       - ai_tool
+      - terminal
     external_dependencies:
       - "standard_library"
 

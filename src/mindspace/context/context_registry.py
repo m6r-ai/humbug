@@ -1,7 +1,7 @@
 import uuid
 import logging
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Set
+from typing import Any, Callable, Dict, List, Set, TypeVar, Type
 
 from mindspace.context.context_info import ContextInfo
 from mindspace.context.context_type import ContextType
@@ -31,6 +31,7 @@ class ContextRegistry:
     def __init__(self) -> None:
         """Initialise an empty registry."""
         self._contexts: Dict[str, ContextInfo] = {}
+        self._models: Dict[str, Any] = {}
         self._callbacks: Dict[ContextEvent, Set[Callable]] = {
             event: set() for event in ContextEvent
         }
@@ -112,6 +113,7 @@ class ContextRegistry:
         if context_id in self._contexts:
             del self._contexts[context_id]
             self._emit(ContextEvent.CLOSED, context_id)
+        self._models.pop(context_id, None)
 
     def update(self, context_id: str, **kwargs: Any) -> None:
         """
@@ -167,6 +169,7 @@ class ContextRegistry:
         its own mechanisms, so events are not needed.
         """
         self._contexts.clear()
+        self._models.clear()
 
     # ── queries ───────────────────────────────────────────────────────────────
 
@@ -209,6 +212,42 @@ class ContextRegistry:
             List of ContextInfo snapshots.
         """
         return list(self._contexts.values())
+
+    T = TypeVar('T')
+
+    def register_model(self, context_id: str, model: Any) -> None:
+        """
+        Associate a context model object with a context_id.
+
+        The model is stored alongside the ContextInfo entry and can be
+        retrieved by any code that has access to the registry.  It is
+        automatically removed when the context is closed.
+
+        Args:
+            context_id: ID of the context to associate the model with.
+            model: The context model object (e.g. TerminalContext).
+        """
+        self._models[context_id] = model
+
+    def get_model(self, context_id: str, model_type: 'Type[T]') -> 'T | None':
+        """
+        Retrieve the context model for a context_id, type-checked.
+
+        Args:
+            context_id: ID of the context whose model to retrieve.
+            model_type: Expected type of the model.
+
+        Returns:
+            The model if found and of the correct type, otherwise None.
+        """
+        model = self._models.get(context_id)
+        if model is None:
+            return None
+
+        if not isinstance(model, model_type):
+            return None
+
+        return model
 
     def __len__(self) -> int:
         """Return the number of open contexts."""

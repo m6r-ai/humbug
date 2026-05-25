@@ -9,6 +9,8 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import QRegularExpression
 
 from terminal import TerminalBase, create_terminal
+from terminal import TerminalState
+from mindspace.context.terminal_context import TerminalContext
 
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -102,6 +104,10 @@ class TerminalTab(TabBase):
         if settings.terminal_fixed_width_enabled:
             minimum_width = settings.terminal_fixed_width
 
+        # Create terminal process and state before the widget so the context can own them
+        self._terminal_process: TerminalBase = create_terminal(self._mindspace_manager.mindspace_path())
+        self._terminal_state = TerminalState(24, minimum_width or 80, scrollback_limit, None)
+
         # Create layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -117,7 +123,7 @@ class TerminalTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create terminal widget with scrollback limit
-        self._terminal_widget = TerminalWidget(self, scrollback_limit, minimum_width)
+        self._terminal_widget = TerminalWidget(self, scrollback_limit, minimum_width, self._terminal_state)
         layout.addWidget(self._terminal_widget)
         self._find_widget.set_preferred_width(self.preferred_width)
 
@@ -128,7 +134,6 @@ class TerminalTab(TabBase):
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Initialize process and task tracking
-        self._terminal_process: TerminalBase = create_terminal(self._mindspace_manager.mindspace_path())
         self._tasks: Set[asyncio.Task] = set()
         self._prev_rows = 0
         self._prev_cols = 0
@@ -138,6 +143,15 @@ class TerminalTab(TabBase):
 
         # Initialize window size handling
         self._terminal_widget.size_changed.connect(self._on_terminal_size_changed)
+
+        # Build the context and register it with the mindspace
+        self._terminal_context = TerminalContext(
+            context_id=self._tab_id,
+            terminal_process=self._terminal_process,
+            terminal_state=self._terminal_state,
+        )
+        mindspace = self._mindspace_manager.mindspace()
+        mindspace.contexts().register_model(self._tab_id, self._terminal_context)
 
         # Start local shell process
         if start_process:
@@ -425,6 +439,14 @@ class TerminalTab(TabBase):
 
         # Transfer the process state
         source_tab._terminal_process.transfer_to(self._terminal_process)
+
+        # Update the context so it references the new process
+        self._terminal_context = TerminalContext(
+            context_id=self._tab_id,
+            terminal_process=self._terminal_process,
+            terminal_state=self._terminal_state,
+        )
+        self._mindspace_manager.mindspace().contexts().register_model(self._tab_id, self._terminal_context)
 
         # Create new read loop task in this tab
         self._create_tracked_task(self._read_loop())

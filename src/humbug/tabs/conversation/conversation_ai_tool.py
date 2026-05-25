@@ -207,7 +207,7 @@ class ConversationAITool(AITool):
         if not isinstance(tab_id, str):
             raise AIToolExecutionError("'tab_id' must be a string")
 
-        context = self._mindspace.get_conversation_context(tab_id)
+        context = self._mindspace.contexts().get_model(tab_id, ConversationContext)
         if context is None:
             raise AIToolExecutionError(f"No conversation context found with ID: {tab_id}")
 

@@ -41,7 +41,8 @@ class TerminalWidget(QAbstractScrollArea):
         self,
         parent: QWidget | None = None,
         scrollback_limit: int | None = None,
-        fixed_width: int | None = None
+        fixed_width: int | None = None,
+        terminal_state: TerminalState | None = None,
     ) -> None:
         """
         Initialize terminal widget.
@@ -50,6 +51,7 @@ class TerminalWidget(QAbstractScrollArea):
             parent: Parent widget
             scrollback_limit: Maximum total lines to keep (including visible rows), None for unlimited
             fixed_width: Fixed terminal width in columns, None for no fixed width
+            terminal_state: Existing TerminalState to use, or None to create a new one
         """
         super().__init__(parent)
         self._logger = logging.getLogger("TerminalWidget")
@@ -69,7 +71,12 @@ class TerminalWidget(QAbstractScrollArea):
         self.setViewportMargins(4, 4, 4, 4)
 
         # Initialize terminal state with scrollback limit
-        self._state = TerminalState(24, fixed_width or 80, scrollback_limit, self._on_terminal_response)
+        if terminal_state is not None:
+            self._state = terminal_state
+            self._state.set_response_callback(self._on_terminal_response)
+
+        else:
+            self._state = TerminalState(24, fixed_width or 80, scrollback_limit, self._on_terminal_response)
 
         # Initialize highlight tracking
         self._search_highlights: Dict[int, List[Tuple[int, int, bool]]] = {}

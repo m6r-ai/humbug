@@ -473,7 +473,7 @@ class MainWindow(QMainWindow):
             EditorAITool(self._column_manager, mindspace), "Editor: operations for interacting with editor tabs"
         )
         self._ai_tool_manager.register_tool(
-            TerminalAITool(self._column_manager, mindspace), "Terminal: operations for interacting with terminal tabs"
+            TerminalAITool(mindspace), "Terminal: operations for interacting with terminal tabs"
         )
         self._ai_tool_manager.register_tool(
             ConversationAITool(mindspace), "Conversation: operations for interacting with conversation tabs"

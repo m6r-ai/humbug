@@ -14,11 +14,9 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
 )
-from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
-
-from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.terminal.terminal_tab import TerminalTab
+from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.context.terminal_context import TerminalContext
 
 
 class TerminalAITool(AITool):
@@ -30,15 +28,13 @@ class TerminalAITool(AITool):
     (use system tool to create terminals).
     """
 
-    def __init__(self, column_manager: ColumnManager, mindspace: Mindspace):
+    def __init__(self, mindspace: Mindspace):
         """
         Initialize the terminal tool.
 
         Args:
-            column_manager: Column manager for accessing terminal tabs
             mindspace: The active mindspace model
         """
-        self._column_manager = column_manager
         self._mindspace = mindspace
         self._logger = logging.getLogger("TerminalAITool")
 
@@ -130,73 +126,31 @@ class TerminalAITool(AITool):
             ),
         }
 
-    def extract_context(self, tool_call: AIToolCall) -> str | None:
+    def _get_terminal_context(self, arguments: Dict[str, Any]) -> TerminalContext:
         """
-        Extract context from the tool call.
-
-        Args:
-            tool_call: The tool call object
-
-        Returns:
-            Context string if applicable, otherwise None
-        """
-        arguments = tool_call.arguments
-        operation = arguments.get("operation")
-        if not operation:
-            return None
-
-        if not isinstance(operation, str):
-            return None
-
-        # Get operation definition
-        operation_definitions = self.get_operation_definitions()
-        if operation not in operation_definitions:
-            return None
-
-        operation_def = operation_definitions[operation]
-        extract_context = operation_def.extract_context
-        if extract_context is None:
-            return None
-
-        try:
-            return extract_context(arguments)
-
-        except AIToolExecutionError:
-            # Ignore errors during context extraction
-            return None
-
-    def _get_terminal_tab(self, arguments: Dict[str, Any]) -> TerminalTab:
-        """
-        Get a terminal tab by ID.
+        Retrieve the TerminalContext for the given context_id.
 
         Args:
             arguments: Tool arguments containing tab_id
 
         Returns:
-            TerminalTab instance
+            TerminalContext instance
 
         Raises:
-            AIToolExecutionError: If no terminal tab found
+            AIToolExecutionError: If no terminal context found for the given ID
         """
-        if "tab_id" not in arguments:
-            raise AIToolExecutionError("No 'tab_id' argument provided")
+        context_id = self._get_required_str_value("tab_id", arguments)
+        context = self._mindspace.contexts().get_model(context_id, TerminalContext)
+        if context is None:
+            raise AIToolExecutionError(
+                f"No terminal context found with ID: {context_id}"
+            )
 
-        tab_id = self._get_required_str_value("tab_id", arguments)
-        tab = self._column_manager.get_tab_by_id(tab_id)
-        if not tab:
-            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
-
-        if not isinstance(tab, TerminalTab):
-            raise AIToolExecutionError(f"Tab {tab_id} is not a terminal tab")
-
-        return tab
+        return context
 
     def _process_ai_escape_sequences(self, raw_input: str) -> str:
         """
         Convert AI's literal Unicode escape sequences to actual control characters.
-
-        This handles the JSON double-escaping issue where the AI sends input with
-        Unicode escapes that got converted to literal text.
 
         Args:
             raw_input: Input string potentially containing literal Unicode escape sequences
@@ -207,7 +161,6 @@ class TerminalAITool(AITool):
         if not raw_input:
             return raw_input
 
-        # Convert \u#### Unicode sequences to actual characters
         def unicode_replace(match: re.Match[str]) -> str:
             hex_value = match.group(1)
             try:
@@ -215,12 +168,10 @@ class TerminalAITool(AITool):
                 return chr(char_code)
 
             except (ValueError, OverflowError):
-                # If invalid Unicode code point, return original
                 return match.group(0)
 
         result = re.sub(r'\\u([0-9a-fA-F]{4})', unicode_replace, raw_input)
 
-        # Log conversion for debugging if any changes were made
         if result != raw_input:
             self._logger.debug("Processed AI Unicode escape sequences: %r -> %r", raw_input, result)
 
@@ -228,7 +179,7 @@ class TerminalAITool(AITool):
 
     def _preview_ai_escape_sequences(self, input_text: str) -> str:
         """
-        Preview AI's literal Unicode escape sequences as actual control characters for preview display.
+        Preview AI's literal Unicode escape sequences for display purposes.
 
         Args:
             input_text: Input string potentially containing literal Unicode escape sequences
@@ -239,17 +190,14 @@ class TerminalAITool(AITool):
         if not input_text:
             return input_text
 
-        # Replace \u000a with actual newline and \u000d with carriage return for preview
-        preview_text = input_text.replace('\\u000a', '\n').replace('\\u000d', '\r')
-
-        return preview_text
+        return input_text.replace('\\u000a', '\n').replace('\\u000d', '\r')
 
     def write_context(self, arguments: Dict[str, Any]) -> str | None:
         """
         Extract context for write operation.
 
         Args:
-            tool_call: Tool call containing arguments
+            arguments: Tool call arguments
 
         Returns:
             Context string for write operation
@@ -266,29 +214,23 @@ class TerminalAITool(AITool):
     ) -> AIToolResult:
         """Write keystrokes to a terminal."""
         arguments = tool_call.arguments
-
-        # Get and validate keystrokes
         raw_keystrokes = self._get_required_str_value("keystrokes", arguments)
         processed_keystrokes = self._process_ai_escape_sequences(raw_keystrokes)
 
-        # Get terminal tab
-        terminal_tab = self._get_terminal_tab(arguments)
-        tab_id = terminal_tab.tab_id()
+        terminal_context = self._get_terminal_context(arguments)
+        context_id = terminal_context.context_id()
 
-        # Build authorization context
-        context = f"Send keystrokes to terminal (tab {tab_id}):"
-
-        # Request authorization - commands can be destructive
+        context = f"Send keystrokes to terminal (tab {context_id}):"
         authorized = await request_authorization("terminal", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to send keystrokes: {raw_keystrokes}")
 
         try:
-            await terminal_tab.send_keystrokes(processed_keystrokes)
+            await terminal_context.send_keystrokes(processed_keystrokes)
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI sent keystrokes to terminal: '{raw_keystrokes}'\ntab ID: {tab_id}"
+                f"AI sent keystrokes to terminal: '{raw_keystrokes}'\ntab ID: {context_id}"
             )
 
             return AIToolResult(
@@ -308,18 +250,16 @@ class TerminalAITool(AITool):
     ) -> AIToolResult:
         """Read terminal buffer content."""
         arguments = tool_call.arguments
-
-        terminal_tab = self._get_terminal_tab(arguments)
-        tab_id = terminal_tab.tab_id()
-
+        terminal_context = self._get_terminal_context(arguments)
+        context_id = terminal_context.context_id()
         lines = self._get_optional_int_value("lines", arguments)
 
         try:
-            buffer_content = terminal_tab.get_terminal_buffer_content(lines)
+            buffer_content = terminal_context.get_buffer_content(lines)
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI read terminal buffer\ntab ID: {tab_id}"
+                f"AI read terminal buffer\ntab ID: {context_id}"
             )
 
             return AIToolResult(
@@ -340,37 +280,37 @@ class TerminalAITool(AITool):
     ) -> AIToolResult:
         """Get terminal status information."""
         arguments = tool_call.arguments
-
-        terminal_tab = self._get_terminal_tab(arguments)
-        tab_id = terminal_tab.tab_id()
+        terminal_context = self._get_terminal_context(arguments)
+        context_id = terminal_context.context_id()
 
         try:
-            status_info = terminal_tab.get_terminal_status_info()
+            status = terminal_context.get_status()
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested terminal status\ntab ID: {tab_id}"
+                f"AI requested terminal status\ntab ID: {context_id}"
             )
 
             status_dict = {
-                "tab_id": status_info.tab_id,
-                "tab_running": status_info.tab_running,
-                "shell": status_info.shell,
-                "platform": status_info.platform,
-                "process_id": status_info.process_id,
-                "process_running": status_info.process_running,
-                "process_name": status_info.process_name,
+                "tab_id": status["context_id"],
+                "tab_running": status["process_running"],
+                "shell": status["shell"],
+                "platform": status["platform"],
+                "process_id": status["process_id"],
+                "process_running": status["process_running"],
+                "process_name": status["process_name"],
                 "terminal_size": {
-                    "rows": status_info.terminal_size[0],
-                    "cols": status_info.terminal_size[1]
+                    "rows": status["terminal_size"][0],
+                    "cols": status["terminal_size"][1]
                 },
                 "cursor_position": {
-                    "row": status_info.cursor_position[0],
-                    "col": status_info.cursor_position[1],
-                    "visible": status_info.cursor_visible
+                    "row": status["cursor_position"][0],
+                    "col": status["cursor_position"][1],
+                    "visible": status["cursor_visible"]
                 },
-                "buffer_lines": status_info.buffer_lines
+                "buffer_lines": status["buffer_lines"]
             }
+
             return AIToolResult(
                 id=tool_call.id,
                 name="terminal",

@@ -489,8 +489,6 @@ class ColumnManager(QWidget):
         QTimer.singleShot(0, self.show_all_columns)
         if self._mindspace_manager.has_mindspace():
             self._mindspace_manager.mindspace().contexts().close(tab_id)
-            if isinstance(tab, ConversationTab):
-                self._mindspace_manager.mindspace().remove_conversation_context(tab_id)
 
     def _tab_context_type(self, tab: TabBase) -> ContextType:
         """Map a TabBase subclass to the corresponding ContextType."""
@@ -594,7 +592,7 @@ class ColumnManager(QWidget):
                     ai_transcript_conversation=tab.ai_conversation(),
                     on_scroll_to_message=tab.scroll_to_message,
                 )
-                mindspace.add_conversation_context(context)
+                mindspace.contexts().register_model(tab.tab_id(), context)
 
     def _move_tab_between_columns(
         self,
