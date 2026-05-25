@@ -18,8 +18,6 @@ from ai_tool import (
 )
 from ai_transcript_conversation import AITranscriptConversation
 
-from delegate_ai_tool.delegate_ai_listener import DelegateAIListener
-
 
 class DelegateAITool(AITool):
     """
@@ -37,7 +35,8 @@ class DelegateAITool(AITool):
         resolve_session_path: Callable[[str], str],
         get_default_settings: Callable[[], AIConversationSettings],
         log_interaction: Callable[[str, str], None],
-        listener: DelegateAIListener
+        on_conversation_created: Callable[[AIConversation, str, AIConversation], None],
+        on_conversation_completed: Callable[[str], None],
     ) -> None:
         """
         Initialize the delegate AI tool.
@@ -52,14 +51,18 @@ class DelegateAITool(AITool):
                 (model, provider, temperature, etc.) from the active mindspace.
             log_interaction: Logs a message to the mindspace interaction log.
                 Receives (level_str, message) where level_str is e.g. "info".
-            listener: Receives lifecycle notifications so a frontend can attach
-                and detach its display at the right moments.
+            on_conversation_created: Called synchronously with (child_conversation,
+                session_path, parent_conversation) before the prompt is submitted.
+                The frontend must register any event callbacks it needs before returning.
+            on_conversation_completed: Called with (session_path) after the child
+                conversation finishes. The frontend should close or flush its display.
         """
         self._generate_conversation_path = generate_conversation_path
         self._resolve_session_path = resolve_session_path
         self._get_default_settings = get_default_settings
         self._log_interaction = log_interaction
-        self._listener = listener
+        self._on_conversation_created = on_conversation_created
+        self._on_conversation_completed = on_conversation_completed
         self._ai_manager = AIManager()
         self._logger = logging.getLogger("DelegateAITool")
 
@@ -372,7 +375,7 @@ class DelegateAITool(AITool):
 
         # Notify the listener synchronously so it can attach display callbacks
         # before we submit the prompt (and events start firing).
-        self._listener.on_conversation_created(
+        self._on_conversation_created(
             child_ai_conversation,
             relative_session_id,
             parent_ai_conversation
@@ -445,7 +448,7 @@ class DelegateAITool(AITool):
         child_ai_conversation.unregister_callback(AIConversationEvent.ERROR, on_error)
 
         # Notify the listener that this session is done
-        self._listener.on_conversation_completed(session_id)
+        self._on_conversation_completed(session_id)
 
         # Build the result from the child's message history
         messages = child_ai_conversation.get_conversation_history().get_messages()
