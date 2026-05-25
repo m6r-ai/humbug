@@ -7,6 +7,7 @@ from typing import Callable, Dict, List
 from ai_tool import AIToolManager
 
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
+from mindspace.context.context_registry import ContextRegistry
 from mindspace.mindspace_interactions import MindspaceInteractions
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
@@ -47,6 +48,7 @@ class Mindspace:
         self._path: str = ""
         self._settings: MindspaceSettings | None = None
         self._interactions = MindspaceInteractions()
+        self._context_registry = ContextRegistry()
         self._tool_manager = AIToolManager()
         self._logger = logging.getLogger("Mindspace")
 
@@ -61,6 +63,14 @@ class Mindspace:
     def settings(self) -> MindspaceSettings | None:
         """Return current mindspace settings, or None if no mindspace is open."""
         return self._settings
+
+    def contexts(self) -> ContextRegistry:
+        """
+        Return the context registry for this mindspace.
+
+        The registry tracks all open contexts and emits events when they change.
+        """
+        return self._context_registry
 
     def is_already_mindspace(self, path: str) -> bool:
         """Return True if a mindspace already exists at path."""
@@ -143,6 +153,7 @@ class Mindspace:
             self._path = ""
             self._settings = None
             self._interactions.clear()
+            self._context_registry.clear()
             self._reset_tool_manager()
             self._on_settings_changed()
 

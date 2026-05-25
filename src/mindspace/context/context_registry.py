@@ -1,0 +1,228 @@
+import uuid
+import logging
+from enum import Enum, auto
+from typing import Any, Callable, Dict, List, Set
+
+from mindspace.context.context_info import ContextInfo
+from mindspace.context.context_type import ContextType
+
+
+class ContextEvent(Enum):
+    """Events emitted by the ContextRegistry."""
+    OPENED  = auto()   # args: (context_info: ContextInfo)
+    CLOSED  = auto()   # args: (context_id: str)
+    UPDATED = auto()   # args: (context_info: ContextInfo)
+    FOCUSED = auto()   # args: (context_id: str)
+
+
+class ContextRegistry:
+    """
+    Tracks all open contexts within a mindspace.
+
+    Frontend-agnostic: notifies observers via registered callbacks rather than
+    Qt signals.  The Qt ColumnManager subscribes to these events and creates or
+    destroys tabs accordingly.  A CLI or TUI would subscribe and maintain its
+    own representation.
+
+    ContextInfo objects are immutable snapshots.  Mutable state lives here;
+    callers should call get() again when they need a fresh view.
+    """
+
+    def __init__(self) -> None:
+        """Initialise an empty registry."""
+        self._contexts: Dict[str, ContextInfo] = {}
+        self._callbacks: Dict[ContextEvent, Set[Callable]] = {
+            event: set() for event in ContextEvent
+        }
+        self._logger = logging.getLogger("ContextRegistry")
+
+    # ── observer registration ─────────────────────────────────────────────────
+
+    def register_callback(self, event: ContextEvent, callback: Callable) -> None:
+        """
+        Register a callback for a context event.
+
+        Args:
+            event: The event to subscribe to.
+            callback: Callable invoked with event-specific arguments when the
+                event fires.
+        """
+        self._callbacks[event].add(callback)
+
+    def unregister_callback(self, event: ContextEvent, callback: Callable) -> None:
+        """
+        Unregister a previously registered callback.
+
+        Args:
+            event: The event to unsubscribe from.
+            callback: The callback to remove.
+        """
+        self._callbacks[event].discard(callback)
+
+    # ── mutations ─────────────────────────────────────────────────────────────
+
+    def open(
+        self,
+        context_type: ContextType,
+        path:         str  = "",
+        title:        str  = "",
+        is_ephemeral: bool = False,
+        context_id:   str  = "",
+        column_index: int  = 0,
+    ) -> str:
+        """
+        Register a new open context and emit OPENED.
+
+        Args:
+            context_type: The kind of context being opened.
+            path:         Associated file path, or empty string.
+            title:        Display title.
+            is_ephemeral: True if this context should auto-close when another
+                          context is opened in the same column.
+            context_id:   Stable ID to use (e.g. when restoring from session).
+                          A new UUID is generated if not provided.
+            column_index: Layout hint — which column the context occupies.
+
+        Returns:
+            The context_id for the newly registered context.
+        """
+        if not context_id:
+            context_id = str(uuid.uuid4())
+
+        info = ContextInfo(
+            context_id=context_id,
+            context_type=context_type,
+            path=path,
+            title=title,
+            is_ephemeral=is_ephemeral,
+            is_modified=False,
+            column_index=column_index,
+        )
+        self._contexts[context_id] = info
+        self._emit(ContextEvent.OPENED, info)
+        return context_id
+
+    def close(self, context_id: str) -> None:
+        """
+        Deregister a context and emit CLOSED.
+
+        Args:
+            context_id: ID of the context to close.
+        """
+        if context_id in self._contexts:
+            del self._contexts[context_id]
+            self._emit(ContextEvent.CLOSED, context_id)
+
+    def update(self, context_id: str, **kwargs: Any) -> None:
+        """
+        Update mutable fields on a context and emit UPDATED.
+
+        Only title, is_ephemeral, is_modified, and column_index may be updated.
+        Unknown keys are silently ignored.
+
+        Args:
+            context_id: ID of the context to update.
+            **kwargs:   Fields to update (title, is_ephemeral, is_modified,
+                        column_index).
+        """
+        info = self._contexts.get(context_id)
+        if info is None:
+            return
+
+        allowed = {"title", "is_ephemeral", "is_modified", "column_index"}
+        updates = {k: v for k, v in kwargs.items() if k in allowed}
+        if not updates:
+            return
+
+        self._contexts[context_id] = ContextInfo(
+            context_id=info.context_id,
+            context_type=info.context_type,
+            path=info.path,
+            title=updates.get("title", info.title),
+            is_ephemeral=updates.get("is_ephemeral", info.is_ephemeral),
+            is_modified=updates.get("is_modified", info.is_modified),
+            column_index=updates.get("column_index", info.column_index),
+        )
+        self._emit(ContextEvent.UPDATED, self._contexts[context_id])
+
+    def focus(self, context_id: str) -> None:
+        """
+        Signal that a context has been brought to the front.
+
+        This is a transient intent — it does not change stored state, only
+        notifies observers.  The Qt layer scrolls to the tab; a CLI might print
+        the context title; the registry itself records nothing.
+
+        Args:
+            context_id: ID of the context being focused.
+        """
+        if context_id in self._contexts:
+            self._emit(ContextEvent.FOCUSED, context_id)
+
+    def clear(self) -> None:
+        """
+        Remove all contexts without emitting events.
+
+        Used when a mindspace is closed — the Qt layer tears down tabs through
+        its own mechanisms, so events are not needed.
+        """
+        self._contexts.clear()
+
+    # ── queries ───────────────────────────────────────────────────────────────
+
+    def get(self, context_id: str) -> ContextInfo | None:
+        """
+        Return a snapshot of a context by ID, or None if not found.
+
+        Args:
+            context_id: ID of the context to retrieve.
+
+        Returns:
+            Immutable ContextInfo snapshot, or None.
+        """
+        return self._contexts.get(context_id)
+
+    def get_by_path(self, path: str) -> ContextInfo | None:
+        """
+        Find an open context by its associated path.
+
+        Returns the first match if multiple contexts share the same path
+        (which should not happen in normal use).
+
+        Args:
+            path: Absolute file path to search for.
+
+        Returns:
+            Immutable ContextInfo snapshot, or None if not found.
+        """
+        for info in self._contexts.values():
+            if info.path == path:
+                return info
+
+        return None
+
+    def list_all(self) -> List[ContextInfo]:
+        """
+        Return a snapshot list of all open contexts in registration order.
+
+        Returns:
+            List of ContextInfo snapshots.
+        """
+        return list(self._contexts.values())
+
+    def __len__(self) -> int:
+        """Return the number of open contexts."""
+        return len(self._contexts)
+
+    # ── internals ─────────────────────────────────────────────────────────────
+
+    def _emit(self, event: ContextEvent, *args: Any) -> None:
+        """Invoke all callbacks registered for an event."""
+        for callback in self._callbacks[event]:
+            try:
+                callback(*args)
+
+            except Exception:
+                self._logger.exception(
+                    "Error in ContextRegistry callback for %s", event
+                )

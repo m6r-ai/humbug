@@ -10,6 +10,8 @@ from PySide6.QtGui import QResizeEvent
 from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
 from ai_transcript_conversation import AITranscriptConversation
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.context.context_registry import ContextRegistry
+from mindspace.context.context_type import ContextType
 from mindspace.mindspace_settings import MindspaceSettings
 
 from humbug.language.language_manager import LanguageManager
@@ -484,6 +486,26 @@ class ColumnManager(QWidget):
         column.removeTab(index)
         tab.deleteLater()
         QTimer.singleShot(0, self.show_all_columns)
+        if self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.mindspace().contexts().close(tab_id)
+
+    def _tab_context_type(self, tab: TabBase) -> ContextType:
+        """Map a TabBase subclass to the corresponding ContextType."""
+        if isinstance(tab, ConversationTab):
+            return ContextType.CONVERSATION
+        if isinstance(tab, DiffTab):
+            return ContextType.DIFF
+        if isinstance(tab, EditorTab):
+            return ContextType.EDITOR
+        if isinstance(tab, LogTab):
+            return ContextType.LOG
+        if isinstance(tab, PreviewTab):
+            return ContextType.PREVIEW
+        if isinstance(tab, ShellTab):
+            return ContextType.SHELL
+        if isinstance(tab, TerminalTab):
+            return ContextType.TERMINAL
+        return ContextType.EDITOR  # fallback
 
     def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
         """
@@ -545,6 +567,16 @@ class ColumnManager(QWidget):
         # Update MRU order for the new tab
         self._update_mru_order(tab, column)
         QTimer.singleShot(0, self.show_all_columns)
+        if self._mindspace_manager.has_mindspace():
+            column_index = self._tab_columns.index(column)
+            self._mindspace_manager.mindspace().contexts().open(
+                context_type=self._tab_context_type(tab),
+                path=tab.path(),
+                title=title,
+                is_ephemeral=tab.is_ephemeral(),
+                context_id=tab.tab_id(),
+                column_index=column_index,
+            )
 
     def _move_tab_between_columns(
         self,
@@ -1306,6 +1338,8 @@ class ColumnManager(QWidget):
         tab_index, tab_bar = self._find_tab_bar_and_index(tab)
         if tab_bar and tab_index != -1:
             tab_bar.set_tab_ephemeral(tab_index, False)
+        if self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.mindspace().contexts().update(tab.tab_id(), is_ephemeral=False)
 
     def _move_tab_to_active_column(self, tab: TabBase) -> None:
         """
@@ -1353,6 +1387,8 @@ class ColumnManager(QWidget):
                     tab_bar.set_tab_text(tab_index, current_text[:-1])
 
             self._update_tab_bar_for_label_change(tab)
+        if self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.mindspace().contexts().update(tab_id, is_modified=modified)
 
     def current_tab_path(self) -> str:
         """
