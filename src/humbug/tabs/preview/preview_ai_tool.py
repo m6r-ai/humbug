@@ -35,7 +35,7 @@ class PreviewAITool(AITool):
             column_manager: Column manager for accessing preview tabs
         """
         self._column_manager = column_manager
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace = MindspaceManager().mindspace()
         self._logger = logging.getLogger("PreviewAITool")
 
     def get_definition(self) -> AIToolDefinition:
@@ -196,7 +196,7 @@ class PreviewAITool(AITool):
         try:
             info = preview_tab.get_preview_info()
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI requested preview info\ntab ID: {tab_id}"
             )
@@ -241,7 +241,7 @@ class PreviewAITool(AITool):
                 flags.append("regexp")
 
             flag_desc = f" ({', '.join(flags)})" if flags else ""
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI searched preview for '{search_text}'{flag_desc}: "
                 f"{result['total_matches']} matches\ntab ID: {tab_id}"
@@ -296,7 +296,7 @@ class PreviewAITool(AITool):
                     f"section={section_index}, pos={text_position}"
                 )
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI scrolled preview to block {block_index}, section {section_index}, "
                 f"position {text_position} ({position})\ntab ID: {tab_id}"

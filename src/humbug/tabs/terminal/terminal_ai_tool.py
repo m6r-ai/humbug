@@ -38,7 +38,7 @@ class TerminalAITool(AITool):
             column_manager: Column manager for accessing terminal tabs
         """
         self._column_manager = column_manager
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace = MindspaceManager().mindspace()
         self._logger = logging.getLogger("TerminalAITool")
 
     def get_definition(self) -> AIToolDefinition:
@@ -285,7 +285,7 @@ class TerminalAITool(AITool):
         try:
             await terminal_tab.send_keystrokes(processed_keystrokes)
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI sent keystrokes to terminal: '{raw_keystrokes}'\ntab ID: {tab_id}"
             )
@@ -316,7 +316,7 @@ class TerminalAITool(AITool):
         try:
             buffer_content = terminal_tab.get_terminal_buffer_content(lines)
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI read terminal buffer\ntab ID: {tab_id}"
             )
@@ -346,7 +346,7 @@ class TerminalAITool(AITool):
         try:
             status_info = terminal_tab.get_terminal_status_info()
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI requested terminal status\ntab ID: {tab_id}"
             )

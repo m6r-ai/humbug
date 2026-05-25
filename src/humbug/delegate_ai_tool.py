@@ -24,7 +24,7 @@ def _make_delegate_ai_tool(column_manager: ColumnManager) -> DelegateAITool:
     Returns:
         A DelegateAITool instance ready for registration with the tool manager
     """
-    mindspace_manager = MindspaceManager()
+    mindspace = MindspaceManager().mindspace()
 
     # tab_ids tracks session_path -> tab_id for cleanup on completion
     tab_ids: Dict[str, str] = {}
@@ -33,8 +33,8 @@ def _make_delegate_ai_tool(column_manager: ColumnManager) -> DelegateAITool:
         timestamp = datetime.now(timezone.utc)
         title = "dAI-" + timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
         filename = os.path.join("conversations", f"{title}.conv")
-        mindspace_manager.ensure_mindspace_dir("conversations")
-        return mindspace_manager.get_absolute_path(filename)
+        mindspace.ensure_mindspace_dir("conversations")
+        return mindspace.get_absolute_path(filename)
 
     def resolve_session_path(session_id: str) -> str:
         if not session_id:
@@ -47,8 +47,8 @@ def _make_delegate_ai_tool(column_manager: ColumnManager) -> DelegateAITool:
         if normalized.startswith(".."):
             raise AIToolExecutionError(f"session_id attempts path traversal: {session_id}")
 
-        abs_path = mindspace_manager.get_absolute_path(normalized)
-        relative = mindspace_manager.get_mindspace_relative_path(abs_path)
+        abs_path = mindspace.get_absolute_path(normalized)
+        relative = mindspace.get_mindspace_relative_path(abs_path)
         if relative is None:
             raise AIToolExecutionError(f"session_id is outside mindspace boundaries: {session_id}")
 
@@ -58,11 +58,11 @@ def _make_delegate_ai_tool(column_manager: ColumnManager) -> DelegateAITool:
         return abs_path
 
     def compute_session_id(absolute_path: str) -> str:
-        relative = mindspace_manager.get_mindspace_relative_path(absolute_path)
+        relative = mindspace.get_mindspace_relative_path(absolute_path)
         return relative if relative is not None else absolute_path
 
     def get_default_settings() -> AIConversationSettings:
-        settings = mindspace_manager.settings()
+        settings = mindspace.settings()
         if settings is None:
             return AIConversationSettings()
         return AIConversationSettings(
@@ -81,7 +81,7 @@ def _make_delegate_ai_tool(column_manager: ColumnManager) -> DelegateAITool:
             log_level = MindspaceLogLevel.ERROR
         elif level == "trace":
             log_level = MindspaceLogLevel.TRACE
-        mindspace_manager.add_interaction(log_level, message)
+        mindspace.add_interaction(log_level, message)
 
     def on_conversation_created(
         child_conversation: AIConversation,

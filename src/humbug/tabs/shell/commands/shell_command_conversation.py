@@ -156,14 +156,14 @@ class ShellCommandConversation(ShellCommand):
         self._column_manager.protect_tab(current_tab.tab_id())
 
         try:
-            self._mindspace_manager.ensure_mindspace_dir("conversations")
+            self._mindspace.ensure_mindspace_dir("conversations")
             conversation_tab = self._column_manager.new_conversation(
                 False, None, effective_model, effective_provider, temperature_val, reasoning, reasoning_effort
             )
 
         except (MindspaceError, ColumnManagerError) as e:
             self._history_manager.add_message(ShellEventSource.ERROR, f"Failed to create conversation: {str(e)}")
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.ERROR,
                 f"Shell failed to create conversation: {str(e)}"
             )
@@ -176,7 +176,7 @@ class ShellCommandConversation(ShellCommand):
             ShellEventSource.SUCCESS,
             "Started new conversation"
         )
-        self._mindspace_manager.add_interaction(
+        self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"Shell created new conversion\ntab ID: {conversation_tab.tab_id()}"
         )

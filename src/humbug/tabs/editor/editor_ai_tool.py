@@ -36,7 +36,7 @@ class EditorAITool(AITool):
             column_manager: Column manager for accessing editor tabs
         """
         self._column_manager = column_manager
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace = MindspaceManager().mindspace()
         self._logger = logging.getLogger("EditorAITool")
 
     def get_definition(self) -> AIToolDefinition:
@@ -302,7 +302,7 @@ class EditorAITool(AITool):
             else:
                 log_msg = f"AI read editor content\ntab ID: {tab_id}"
 
-            self._mindspace_manager.add_interaction(MindspaceLogLevel.INFO, log_msg)
+            self._mindspace.add_interaction(MindspaceLogLevel.INFO, log_msg)
 
             range_value = "all lines"
             if start_line is not None or end_line is not None:
@@ -340,7 +340,7 @@ class EditorAITool(AITool):
         try:
             cursor_info = editor_tab.get_cursor_info()
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI requested cursor info\ntab ID: {tab_id}"
             )
@@ -369,7 +369,7 @@ class EditorAITool(AITool):
         try:
             editor_info = editor_tab.get_editor_info()
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI requested editor info\ntab ID: {tab_id}"
             )
@@ -408,7 +408,7 @@ class EditorAITool(AITool):
             editor_tab.goto_line(line, column)
 
             col_desc = f", column {column}" if column != 1 else ""
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI moved cursor to line {line}{col_desc}\ntab ID: {tab_id}"
             )
@@ -452,7 +452,7 @@ class EditorAITool(AITool):
                 flags.append("regexp")
 
             flag_desc = f" ({', '.join(flags)})" if flags else ""
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI searched for '{search_text}'{flag_desc}: {len(matches)} matches\ntab ID: {tab_id}"
             )
@@ -499,7 +499,7 @@ class EditorAITool(AITool):
         try:
             selected_text = editor_tab.get_selected_text()
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI requested selected text\ntab ID: {tab_id}"
             )
@@ -539,7 +539,7 @@ class EditorAITool(AITool):
         try:
             diff = editor_tab.get_diff(context_lines)
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI requested diff\ntab ID: {tab_id}"
             )
@@ -602,7 +602,7 @@ class EditorAITool(AITool):
             if not success:
                 raise AIToolExecutionError("Save operation failed")
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI saved editor file: {file_path}\ntab ID: {tab_id}"
             )
@@ -633,7 +633,7 @@ class EditorAITool(AITool):
             result = editor_tab.apply_diff(diff_content)
 
             if result['success']:
-                self._mindspace_manager.add_interaction(
+                self._mindspace.add_interaction(
                     MindspaceLogLevel.INFO,
                     f"AI applied diff to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {tab_id}"
                 )
@@ -646,7 +646,7 @@ class EditorAITool(AITool):
 
             # Diff failed to apply
             error_details = result.get('error_details', {})
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI diff application failed: {result['message']}\ntab ID: {tab_id}"
             )

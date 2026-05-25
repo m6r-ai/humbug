@@ -23,7 +23,7 @@ class ShellCommand:
         """
         self._logger = logging.getLogger(self.__class__.__name__)
         self._history_manager = ShellHistoryManager()
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace = MindspaceManager().mindspace()
 
     def name(self) -> str:
         """
@@ -286,7 +286,7 @@ class ShellCommand:
         Returns:
             List of path completions
         """
-        if not self._mindspace_manager.has_mindspace():
+        if not self._mindspace.has_mindspace():
             return []
 
         # Unescape the partial path
@@ -301,7 +301,7 @@ class ShellCommand:
 
         # Check if dir_path exists in mindspace.  Note if the dir_path is empty we pass an
         # empty string because it will be appended to the mindspace path
-        mindspace_dir = self._mindspace_manager.get_absolute_path(dir_path or "")
+        mindspace_dir = self._mindspace.get_absolute_path(dir_path or "")
         if not os.path.exists(mindspace_dir) or not os.path.isdir(mindspace_dir):
             return []
 
@@ -342,10 +342,10 @@ class ShellCommand:
         Returns:
             List of items in directory with proper path formatting
         """
-        if not self._mindspace_manager.has_mindspace():
+        if not self._mindspace.has_mindspace():
             return []
 
-        mindspace_dir = self._mindspace_manager.get_absolute_path(dir_path)
+        mindspace_dir = self._mindspace.get_absolute_path(dir_path)
         if not os.path.exists(mindspace_dir) or not os.path.isdir(mindspace_dir):
             return []
 

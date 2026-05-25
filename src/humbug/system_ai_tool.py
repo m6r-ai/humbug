@@ -46,7 +46,7 @@ class SystemAITool(AITool):
             column_manager: Column manager for tab operations
         """
         self._column_manager = column_manager
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace = MindspaceManager().mindspace()
         self._ai_manager = AIManager()
         self._logger = logging.getLogger("SystemAITool")
 
@@ -244,10 +244,10 @@ class SystemAITool(AITool):
             path_str = path_str[1:]
 
         # Convert to absolute path via mindspace manager
-        abs_path = self._mindspace_manager.get_absolute_path(path_str)
+        abs_path = self._mindspace.get_absolute_path(path_str)
 
         # Verify the resolved path is still within mindspace
-        relative_path = self._mindspace_manager.get_mindspace_relative_path(abs_path)
+        relative_path = self._mindspace.get_mindspace_relative_path(abs_path)
         if relative_path is None:
             raise AIToolExecutionError(f"Path is outside mindspace boundaries: {path_str}")
 
@@ -282,9 +282,9 @@ class SystemAITool(AITool):
             finally:
                 self._column_manager.unprotect_tab(requester_tab.tab_id())
 
-            relative_path = self._mindspace_manager.get_relative_path(file_path)
+            relative_path = self._mindspace.get_relative_path(file_path)
             tab_id = editor_tab.tab_id()
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI opened editor for file: '{relative_path}'\ntab ID: {tab_id}"
             )
@@ -318,7 +318,7 @@ class SystemAITool(AITool):
                 self._column_manager.unprotect_tab(requester_tab.tab_id())
 
             tab_id = terminal_tab.tab_id()
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI created new terminal\ntab ID: {tab_id}"
             )
@@ -346,7 +346,7 @@ class SystemAITool(AITool):
 
         try:
             # Ensure conversations directory exists
-            self._mindspace_manager.ensure_mindspace_dir("conversations")
+            self._mindspace.ensure_mindspace_dir("conversations")
 
             # Open conversation
             requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
@@ -359,7 +359,7 @@ class SystemAITool(AITool):
                 self._column_manager.unprotect_tab(requester_tab.tab_id())
 
             tab_id = conversation_tab.tab_id()
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI opened conversation for: '{conversation_path}'\ntab ID: {tab_id}"
             )
@@ -449,7 +449,7 @@ class SystemAITool(AITool):
 
             # Create conversation
             try:
-                self._mindspace_manager.ensure_mindspace_dir("conversations")
+                self._mindspace.ensure_mindspace_dir("conversations")
                 conversation_tab = self._column_manager.new_conversation(
                     False, None, effective_model, effective_provider, temperature, reasoning, reasoning_effort
                 )
@@ -458,7 +458,7 @@ class SystemAITool(AITool):
                 self._column_manager.unprotect_tab(requester_tab.tab_id())
 
             tab_id = conversation_tab.tab_id()
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI created new conversation\ntab ID: {tab_id}"
             )
@@ -499,7 +499,7 @@ class SystemAITool(AITool):
 
         else:
             # Use mindspace root if no path provided
-            preview_path = self._mindspace_manager.get_absolute_path(".")
+            preview_path = self._mindspace.get_absolute_path(".")
 
         try:
             # Open preview page
@@ -512,11 +512,11 @@ class SystemAITool(AITool):
             finally:
                 self._column_manager.unprotect_tab(requester_tab.tab_id())
 
-            relative_path = self._mindspace_manager.get_relative_path(preview_path)
+            relative_path = self._mindspace.get_relative_path(preview_path)
             location = relative_path if relative_path else "."
 
             tab_id = preview_tab.tab_id()
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI opened preview tab for: '{location}'\ntab ID: {tab_id}"
             )
@@ -560,9 +560,9 @@ class SystemAITool(AITool):
             finally:
                 self._column_manager.unprotect_tab(requester_tab.tab_id())
 
-            relative_path = self._mindspace_manager.get_relative_path(file_path)
+            relative_path = self._mindspace.get_relative_path(file_path)
             tab_id = diff_tab.tab_id()
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI opened diff for file: '{relative_path}'\ntab ID: {tab_id}"
             )
@@ -602,7 +602,7 @@ class SystemAITool(AITool):
         if not tab_info:
             raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
 
-        self._mindspace_manager.add_interaction(
+        self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"AI requested info for tab ID: {tab_id}"
         )
@@ -652,7 +652,7 @@ class SystemAITool(AITool):
             # Force close to bypass the editor's modal save dialog
             self._column_manager.close_tab_by_id(tab_id, force_close=True)
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI closed tab\ntab ID: {tab_id}"
             )
@@ -676,7 +676,7 @@ class SystemAITool(AITool):
             tab_info = self._column_manager.list_all_tabs()
 
             if not tab_info:
-                self._mindspace_manager.add_interaction(
+                self._mindspace.add_interaction(
                     MindspaceLogLevel.INFO,
                     "AI requested tab list: no tabs currently open"
                 )
@@ -693,7 +693,7 @@ class SystemAITool(AITool):
                 "tabs": tab_info
             }
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI requested tab list: {len(tab_info)} tabs across {result['total_columns']} columns"
             )
@@ -740,7 +740,7 @@ class SystemAITool(AITool):
         except ColumnManagerError as e:
             raise AIToolExecutionError(str(e)) from e
 
-        self._mindspace_manager.add_interaction(
+        self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"AI moved tab {tab_id} to column {target_column}"
         )
@@ -767,7 +767,7 @@ class SystemAITool(AITool):
             }
 
             # Mindspace information
-            mindspace_path = self._mindspace_manager.mindspace_path()
+            mindspace_path = self._mindspace.mindspace_path()
             mindspace_name = os.path.basename(mindspace_path)
 
             mindspace_info = {
@@ -821,7 +821,7 @@ class SystemAITool(AITool):
                 "shell": shell_info
             }
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 "AI requested system information"
             )

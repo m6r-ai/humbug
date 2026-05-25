@@ -26,7 +26,7 @@ class ShellCommandDiff(ShellCommand):
         """
         super().__init__()
         self._column_manager = column_manager
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace = MindspaceManager().mindspace()
         self._logger = logging.getLogger("ShellCommandDiff")
 
     def name(self) -> str:
@@ -55,7 +55,7 @@ class ShellCommandDiff(ShellCommand):
             )
             return False
 
-        full_path = self._mindspace_manager.get_absolute_path(args[0])
+        full_path = self._mindspace.get_absolute_path(args[0])
         if not os.path.exists(full_path):
             self._history_manager.add_message(
                 ShellEventSource.ERROR,
@@ -79,7 +79,7 @@ class ShellCommandDiff(ShellCommand):
         finally:
             self._column_manager.unprotect_tab(current_tab.tab_id())
 
-        self._mindspace_manager.add_interaction(
+        self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"Shell opened diff for: '{full_path}'\ntab ID: {diff_tab.tab_id()}"
         )

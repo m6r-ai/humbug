@@ -27,7 +27,7 @@ class ShellCommandPreview(ShellCommand):
         """
         super().__init__()
         self._column_manager = column_manager
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace = MindspaceManager().mindspace()
         self._logger = logging.getLogger("ShellCommandPreview")
 
     def name(self) -> str:
@@ -57,7 +57,7 @@ class ShellCommandPreview(ShellCommand):
             )
             return False
 
-        full_path = self._mindspace_manager.get_absolute_path(args[0])
+        full_path = self._mindspace.get_absolute_path(args[0])
         if not os.path.exists(full_path):
             # Create directory if ned
             directory = os.path.dirname(full_path)
@@ -80,7 +80,7 @@ class ShellCommandPreview(ShellCommand):
 
         except ColumnManagerError as e:
             self._history_manager.add_message(ShellEventSource.ERROR, f"Failed to open preview page: {str(e)}")
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.ERROR,
                 f"Shell failed to open preview page: {str(e)}"
             )

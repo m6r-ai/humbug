@@ -1,341 +1,105 @@
-"""
-Manages Humbug application mindspaces.
-
-This module provides functionality for creating, opening, and managing Humbug mindspaces.
-A mindspace contains project-specific settings, recent files, and conversation history.
-"""
-
 import json
 import logging
 import os
-import shutil
 from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal
 
-from ai_tool import AIToolManager
-
-from humbug.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
-from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
-from mindspace.mindspace_interactions import MindspaceInteractions
+from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
 from mindspace.mindspace_settings import MindspaceSettings
 
+from humbug.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
+
 
 class MindspaceManager(QObject):
     """
-    Manages Humbug application mindspaces.
+    Qt-facing singleton that owns the Mindspace model.
 
-    A mindspace is a directory containing project-specific settings and data. Each mindspace
-    has a .humbug subdirectory containing configuration files and conversation history.
+    Wraps Mindspace with Qt signals and adds the two UI-only concerns that do
+    not belong in the pure model: directory tracking (last-used file dialog
+    paths) and home-config tracking (last opened mindspace path).
 
-    Implements singleton pattern to provide global access to mindspace state.
-
-    Attributes:
-        MINDSPACE_DIR: Name of the mindspace configuration directory
-        SETTINGS_FILE: Name of the mindspace settings file
-        SESSION_FILE: Name of the file storing recent tabs
+    All mindspace logic lives in Mindspace.  This class only adds the Qt
+    observer machinery and the UI-specific state.
     """
 
-    # Signal emitted when mindspace settings change
-    settings_changed = Signal()
-
-    # Signal emitted when system interactions are updated
+    settings_changed     = Signal()
     interactions_updated = Signal()
 
-    MINDSPACE_DIR = ".humbug"
-    SETTINGS_FILE = "settings.json"
-    SESSION_FILE = "session.json"
-    SYSTEM_INTERACTIONS_FILE = "system.json"
+    MINDSPACE_DIR = Mindspace.MINDSPACE_DIR
 
     _instance = None
+    _logger = logging.getLogger("MindspaceManager")
 
     def __new__(cls) -> 'MindspaceManager':
         """Create or return singleton instance."""
         if cls._instance is None:
-            cls._instance = super(MindspaceManager, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
 
         return cls._instance
 
     def __init__(self) -> None:
-        """Initialize mindspace manager if not already initialized."""
+        """Initialise if not already done."""
         if not hasattr(self, '_initialized'):
             super().__init__()
-            self._mindspace_path: str = ""
-            self._settings: MindspaceSettings | None = None
-            self._home_config = os.path.expanduser("~/.humbug/mindspace.json")
+            self._mindspace = Mindspace(
+                on_settings_changed=self.settings_changed.emit,
+                on_interactions_updated=self.interactions_updated.emit,
+            )
             self._directory_tracker = MindspaceDirectoryTracker()
-            self._interactions = MindspaceInteractions()
+            self._home_config = os.path.expanduser("~/.humbug/mindspace.json")
             self._initialized = True
-            self._tool_manager = AIToolManager()
-            self._logger = logging.getLogger("MindspaceManager")
+
+    def mindspace(self) -> Mindspace:
+        """Return the underlying Mindspace model for direct access."""
+        return self._mindspace
 
     def mindspace_path(self) -> str:
-        """
-        Get the current mindspace path.
-
-        Returns:
-            The absolute path to the current mindspace, or None if no mindspace is open.
-        """
-        return self._mindspace_path
-
-    def settings(self) -> MindspaceSettings | None:
-        """
-        Get the current mindspace settings.
-
-        Returns:
-            The MindspaceSettings object for the current mindspace, or None if no mindspace is open.
-        """
-        return self._settings
-
-    def update_settings(self, new_settings: MindspaceSettings) -> None:
-        """
-        Update mindspace settings and notify listeners.
-
-        Args:
-            new_settings: New settings to apply
-
-        Raises:
-            MindspaceError: If settings cannot be saved
-        """
-        assert self.has_mindspace(), "No mindspace is currently open"
-
-        # Save settings to file
-        settings_path = os.path.join(
-            self._mindspace_path,
-            self.MINDSPACE_DIR,
-            self.SETTINGS_FILE
-        )
-        try:
-            new_settings.save(settings_path)
-            self._settings = new_settings
-
-            # Apply tool settings to the tool manager
-            self._apply_tool_settings(new_settings)
-
-            self.settings_changed.emit()
-
-        except OSError as e:
-            raise MindspaceError(f"Failed to save mindspace settings: {str(e)}") from e
+        """Return the absolute path to the open mindspace, or empty string."""
+        return self._mindspace.mindspace_path()
 
     def has_mindspace(self) -> bool:
-        """
-        Check if a mindspace is currently open.
+        """Return True if a mindspace is currently open."""
+        return self._mindspace.has_mindspace()
 
-        Returns:
-            True if a mindspace is open, False otherwise.
-        """
-        return bool(self._mindspace_path)
+    def settings(self) -> MindspaceSettings | None:
+        """Return current mindspace settings, or None if no mindspace is open."""
+        return self._mindspace.settings()
 
     def is_already_mindspace(self, path: str) -> bool:
-        """Check if we already have a mindspace at the specified path."""
-        mindspace_dir = os.path.join(path, self.MINDSPACE_DIR)
-        if os.path.exists(mindspace_dir):
-            return True
-
-        return False
-
-    def create_mindspace(self, path: str, folders: List[str]) -> None:
-        """
-        Create a new mindspace at the specified path.
-
-        Args:
-            path: Directory path where the mindspace should be created.
-            folders: List of folder names to create within the mindspace.
-
-        Raises:
-            MindspaceExistsError: If a mindspace already exists at the specified path.
-            MindspaceError: If there are filesystem errors creating the mindspace.
-        """
-        mindspace_dir = os.path.join(path, self.MINDSPACE_DIR)
-        if os.path.exists(mindspace_dir):
-            raise MindspaceExistsError(f"Mindspace already exists at {path}")
-
-        try:
-            # Create mindspace directory structure
-            os.makedirs(mindspace_dir)
-
-            for folder in folders:
-                os.makedirs(os.path.join(path, folder), exist_ok=True)
-
-            # Create and save default settings
-            settings = MindspaceSettings(self._tool_manager.get_default_enabled_tools())
-            settings.save(os.path.join(mindspace_dir, self.SETTINGS_FILE))
-
-            # Create empty session file
-            session_path = os.path.join(mindspace_dir, self.SESSION_FILE)
-            with open(session_path, 'w', encoding='utf-8') as f:
-                json.dump({"tabs": []}, f, indent=4)
-
-        except OSError as e:
-            self._logger.error("Failed to create mindspace at %s: %s", path, str(e))
-            # Clean up any partially created mindspace
-            if os.path.exists(mindspace_dir):
-                try:
-                    shutil.rmtree(mindspace_dir)
-
-                except OSError:
-                    pass  # Ignore cleanup errors
-
-            # Also clean up any created folders
-            if folders:
-                for folder in folders:
-                    folder_path = os.path.join(path, folder)
-                    if os.path.exists(folder_path):
-                        try:
-
-                            shutil.rmtree(folder_path)
-                        except OSError:
-                            pass  # Ignore cleanup errors
-
-            raise MindspaceError(f"Failed to create mindspace: {str(e)}") from e
+        """Return True if a mindspace already exists at path."""
+        return self._mindspace.is_already_mindspace(path)
 
     def check_mindspace(self, path: str) -> bool:
-        """
-        Check if a mindspace exists at the specified path.
+        """Return True if a mindspace exists at path."""
+        return self._mindspace.check_mindspace(path)
 
-        Args:
-            path: Path to the directory to check.
-
-        Returns:
-            True if a mindspace exists, False otherwise.
-        """
-        mindspace_dir = os.path.join(path, self.MINDSPACE_DIR)
-        return os.path.exists(mindspace_dir)
+    def create_mindspace(self, path: str, folders: list) -> None:
+        """Create a new mindspace at path with the given subdirectories."""
+        self._mindspace.create_mindspace(path, folders)
 
     def open_mindspace(self, path: str) -> None:
-        """
-        Open an existing mindspace.
-
-        Args:
-            path: Path to the mindspace directory.
-
-        Returns:
-            The MindspaceSettings object for the opened mindspace.
-
-        Raises:
-            MindspaceNotFoundError: If no mindspace exists at the specified path.
-            MindspaceError: If there are errors loading the mindspace settings.
-        """
-        mindspace_dir = os.path.join(path, self.MINDSPACE_DIR)
-        if not os.path.exists(mindspace_dir):
-            raise MindspaceNotFoundError(f"No mindspace found at {path}")
-
-        try:
-            settings_path = os.path.join(mindspace_dir, self.SETTINGS_FILE)
-            settings = MindspaceSettings.load(settings_path)
-            self._mindspace_path = path
-            self._settings = settings
-            self._directory_tracker.load_tracking(path)
-            self._update_home_tracking()
-            self._load_interactions()
-
-            # Apply tool settings to the tool manager
-            self._apply_tool_settings(settings)
-
-            self.settings_changed.emit()
-
-        except Exception as e:
-            self._logger.error("Failed to open mindspace at %s: %s", path, str(e))
-            raise MindspaceError(f"Failed to open mindspace: {str(e)}") from e
+        """Open an existing mindspace and load its state."""
+        self._mindspace.open_mindspace(path)
+        self._directory_tracker.load_tracking(path)
+        self._update_home_tracking()
 
     def close_mindspace(self) -> None:
-        """Close the current mindspace."""
-        if self.has_mindspace():
-            self._directory_tracker.save_tracking(self._mindspace_path)
-            self._mindspace_path = ""
-            self._settings = None
-            self._interactions.clear()
+        """Close the current mindspace and persist directory tracking."""
+        if self._mindspace.has_mindspace():
+            self._directory_tracker.save_tracking(self._mindspace.mindspace_path())
+            self._mindspace.close_mindspace()
             self._directory_tracker.clear_tracking()
             self._update_home_tracking()
 
-            # Reset tool manager to default state
-            self._reset_tool_manager()
-
-            self.settings_changed.emit()
-
-    def save_mindspace_state(self, state: Dict) -> None:
-        """
-        Save mindspace state to disk.
-
-        Args:
-            state: Dictionary containing tabs and layout state
-
-        Raises:
-            MindspaceError: If saving state fails
-        """
-        if not self.has_mindspace():
-            raise MindspaceError("No mindspace is active")
-
-        try:
-            # Ensure .humbug directory exists
-            self.ensure_mindspace_dir(".humbug")
-
-            for tab_state in state.get('tabs', []):
-                if 'path' in tab_state and os.path.isabs(tab_state['path']):
-                    try:
-                        tab_state['path'] = os.path.relpath(
-                            tab_state['path'],
-                            self._mindspace_path
-                        )
-
-                    except ValueError:
-                        # Path is outside mindspace, keep as absolute
-                        pass
-
-            # Write session file
-            session_file = os.path.join(self._mindspace_path, self.MINDSPACE_DIR, self.SESSION_FILE)
-            with open(session_file, 'w', encoding='utf-8') as f:
-                json.dump(state, f, indent=4)
-
-        except OSError as e:
-            raise MindspaceError(f"Failed to save mindspace state: {str(e)}") from e
-
-    def load_mindspace_state(self) -> Dict:
-        """
-        Load mindspace state from disk.
-
-        Returns:
-            Dictionary containing tabs and layout state
-
-        Raises:
-            MindspaceError: If loading state fails
-        """
-        if not self.has_mindspace():
-            raise MindspaceError("No mindspace is active")
-
-        try:
-            session_file = os.path.join(self._mindspace_path, self.MINDSPACE_DIR, self.SESSION_FILE)
-            if not os.path.exists(session_file):
-                return {}
-
-            with open(session_file, encoding='utf-8') as f:
-                state = json.load(f)
-
-            for tab_state in state.get('tabs', []):
-                if 'path' in tab_state and not os.path.isabs(tab_state['path']):
-                    tab_state['path'] = os.path.join(
-                        self._mindspace_path,
-                        tab_state['path']
-                    )
-
-            return state
-
-        except json.JSONDecodeError as e:
-            raise MindspaceError(f"Failed to parse mindspace state: {str(e)}") from e
-
-        except OSError as e:
-            raise MindspaceError(f"Failed to load mindspace state: {str(e)}") from e
+    def update_settings(self, new_settings: MindspaceSettings) -> None:
+        """Persist and apply updated mindspace settings."""
+        self._mindspace.update_settings(new_settings)
 
     def get_last_mindspace(self) -> str | None:
-        """
-        Get the path of the last opened mindspace.
-
-        Returns:
-            Path to the last mindspace that was opened, or None if no mindspace has been opened
-            or the last mindspace no longer exists.
-        """
+        """Return the path of the last opened mindspace, or None."""
         try:
             with open(self._home_config, encoding='utf-8') as f:
                 data = json.load(f)
@@ -349,215 +113,63 @@ class MindspaceManager(QObject):
         return None
 
     def get_absolute_path(self, path: str) -> str:
-        """
-        Convert a mindspace-relative path to an absolute path.
-
-        Args:
-            path: Absolute path or path relative to the mindspace root.
-
-        Returns:
-            Absolute path.
-        """
-        assert self.has_mindspace(), "No mindspace is currently open"
-
-        path = os.path.expanduser(path)
-        if os.path.isabs(path):
-            return os.path.abspath(path)
-
-        return os.path.abspath(os.path.join(self._mindspace_path, path))
+        """Convert a mindspace-relative path to an absolute path."""
+        return self._mindspace.get_absolute_path(path)
 
     def get_relative_path(self, path: str) -> str:
-        """
-        Convert an absolute path to a mindspace-relative path if possible.
-
-        Args:
-            path: Absolute path to convert.
-
-        Returns:
-            Path relative to mindspace root, or the absolute path if outside mindspace,
-        """
-        abs_path = os.path.abspath(os.path.expanduser(path))
-        if not self.has_mindspace():
-            return abs_path
-
-        try:
-            # Normalize both paths for comparison
-            mindspace_path = os.path.abspath(self._mindspace_path)
-
-            # Check if the path is actually within the mindspace
-            # by comparing the normalized path beginnings
-            common_path = os.path.commonpath([abs_path, mindspace_path])
-            if common_path != mindspace_path:
-                return abs_path
-
-            # If we get here, the path is within the mindspace, so make it relative
-            return os.path.relpath(abs_path, mindspace_path)
-
-        except ValueError:
-            self._logger.warning(
-                "Failed to convert path '%s' to relative path within mindspace '%s': %s",
-                path, self._mindspace_path, str(ValueError)
-            )
-            raise
+        """Convert an absolute path to a mindspace-relative path if possible."""
+        return self._mindspace.get_relative_path(path)
 
     def get_mindspace_relative_path(self, path: str) -> str | None:
-        """
-        Convert an absolute path to a mindspace-relative path if within mindspace.
-
-        Args:
-            path: Absolute path to convert.
-
-        Returns:
-            Path relative to mindspace root if within mindspace, None if outside mindspace.
-        """
-        assert self.has_mindspace(), "No mindspace is currently open"
-        abs_path = os.path.abspath(os.path.expanduser(path))
-
-        try:
-            # Normalize both paths for comparison
-            mindspace_path = os.path.abspath(self._mindspace_path)
-
-            # Check if the path is actually within the mindspace
-            common_path = os.path.commonpath([abs_path, mindspace_path])
-            if common_path != mindspace_path:
-                return None
-
-            # Path is within mindspace, return relative path
-            return os.path.relpath(abs_path, mindspace_path)
-
-        except ValueError:
-            # This can happen on Windows with different drive letters
-            return None
+        """Convert an absolute path to a mindspace-relative path, or None if outside."""
+        return self._mindspace.get_mindspace_relative_path(path)
 
     def ensure_mindspace_dir(self, dir_path: str) -> str:
-        """
-        Ensure a directory exists within the mindspace.
+        """Ensure a directory exists within the mindspace, creating it if needed."""
+        return self._mindspace.ensure_mindspace_dir(dir_path)
 
-        Args:
-            dir_path: Directory path relative to mindspace root.
+    def add_interaction(self, level: MindspaceLogLevel, content: str) -> MindspaceMessage:
+        """Append a message to the interaction log and persist it."""
+        return self._mindspace.add_interaction(level, content)
 
-        Returns:
-            Absolute path to the created directory.
+    def get_interactions(self) -> List[MindspaceMessage]:
+        """Return all interaction log messages."""
+        return self._mindspace.get_interactions()
 
-        Raises:
-            MindspaceError: If directory cannot be created.
-        """
-        assert self.has_mindspace(), "No mindspace is currently open"
-        abs_path = self.get_absolute_path(dir_path)
-        try:
-            os.makedirs(abs_path, exist_ok=True)
-            return abs_path
+    def save_mindspace_state(self, state: Dict) -> None:
+        """Persist session state (open tabs, layout) to disk."""
+        self._mindspace.save_mindspace_state(state)
 
-        except OSError as e:
-            raise MindspaceError(f"Failed to create directory '{dir_path}' in mindspace: {e}") from e
+    def load_mindspace_state(self) -> Dict:
+        """Load session state from disk."""
+        return self._mindspace.load_mindspace_state()
+
+    def file_dialog_directory(self) -> str:
+        """Return the last directory used in a file dialog."""
+        return self._directory_tracker.file_dialog_directory()
+
+    def update_file_dialog_directory(self, path: str) -> None:
+        """Update and persist the last used file dialog directory."""
+        if self._mindspace.has_mindspace():
+            self._directory_tracker.update_file_dialog_directory(path)
+            self._directory_tracker.save_tracking(self._mindspace.mindspace_path())
+
+    def conversations_directory(self) -> str:
+        """Return the last directory used when opening or saving conversations."""
+        return self._directory_tracker.conversations_directory()
+
+    def update_conversations_directory(self, path: str) -> None:
+        """Update and persist the last used conversations directory."""
+        if self._mindspace.has_mindspace():
+            self._directory_tracker.update_conversations_directory(path)
+            self._directory_tracker.save_tracking(self._mindspace.mindspace_path())
 
     def _update_home_tracking(self) -> None:
-        """Update the home directory tracking file with current mindspace path."""
+        """Persist the last-opened mindspace path to the home config file."""
         try:
             os.makedirs(os.path.dirname(self._home_config), exist_ok=True)
             with open(self._home_config, 'w', encoding='utf-8') as f:
-                json.dump({"lastMindspace": self._mindspace_path}, f, indent=4)
+                json.dump({"lastMindspace": self._mindspace.mindspace_path()}, f, indent=4)
 
         except OSError as e:
             self._logger.error("Failed to update home tracking: %s", str(e))
-            # Non-critical error, don't raise
-
-    def _apply_tool_settings(self, settings: MindspaceSettings) -> None:
-        """Apply tool settings to the tool manager."""
-        try:
-            self._tool_manager.set_tool_enabled_states(settings.enabled_tools)
-            self._logger.debug("Applied tool settings to tool manager: %s", settings.enabled_tools)
-
-        except Exception as e:
-            self._logger.error("Failed to apply tool settings: %s", str(e))
-            # Non-critical error, don't raise
-
-    def _reset_tool_manager(self) -> None:
-        """Reset tool manager to default state when no mindspace is open."""
-        try:
-            default_tools = self._tool_manager.get_default_enabled_tools()
-            self._tool_manager.set_tool_enabled_states(default_tools)
-            self._logger.debug("Reset tool manager to default state")
-
-        except Exception as e:
-            self._logger.error("Failed to reset tool manager: %s", str(e))
-            # Non-critical error, don't raise
-
-    def update_file_dialog_directory(self, path: str) -> None:
-        """Update the last used file dialog directory."""
-        if self.has_mindspace():
-            self._directory_tracker.update_file_dialog_directory(path)
-            self._directory_tracker.save_tracking(self._mindspace_path)
-
-    def update_conversations_directory(self, path: str) -> None:
-        """Update the last used conversations directory."""
-        if self.has_mindspace():
-            self._directory_tracker.update_conversations_directory(path)
-            self._directory_tracker.save_tracking(self._mindspace_path)
-
-    def file_dialog_directory(self) -> str:
-        """Get the last used file dialog directory."""
-        return self._directory_tracker.file_dialog_directory()
-
-    def conversations_directory(self) -> str:
-        """Get the last used conversations directory."""
-        return self._directory_tracker.conversations_directory()
-
-    def add_interaction(self, level: MindspaceLogLevel, content: str) -> MindspaceMessage:
-        """
-        Add a new system interaction message.
-
-        Args:
-            level: Log level of the message
-            content: Content of the message
-
-        Returns:
-            The created MindspaceMessage
-        """
-        assert self.has_mindspace(), "No mindspace is currently open"
-
-        message = MindspaceMessage.create(level, content)
-        self._interactions.add_message(message)
-        self._save_interactions()
-        self.interactions_updated.emit()
-        return message
-
-    def get_interactions(self) -> List[MindspaceMessage]:
-        """
-        Get all system interaction messages.
-
-        Returns:
-            List of MindspaceMessage objects
-        """
-        assert self.has_mindspace(), "No mindspace is currently open"
-
-        return self._interactions.get_messages()
-
-    def _save_interactions(self) -> None:
-        """Save system interactions to disk."""
-        try:
-            # Ensure .humbug directory exists
-            mindspace_dir = os.path.join(self._mindspace_path, self.MINDSPACE_DIR)
-            os.makedirs(mindspace_dir, exist_ok=True)
-
-            # Save interactions
-            interactions_path = os.path.join(mindspace_dir, self.SYSTEM_INTERACTIONS_FILE)
-            self._interactions.save(interactions_path)
-
-        except OSError as e:
-            # Non-critical error, don't raise any exceptions
-            self._logger.error("Failed to save system interactions: %s", str(e))
-
-    def _load_interactions(self) -> None:
-        """Load system interactions from disk."""
-        try:
-            interactions_path = os.path.join(
-                self._mindspace_path,
-                self.MINDSPACE_DIR,
-                self.SYSTEM_INTERACTIONS_FILE
-            )
-            self._interactions.load(interactions_path)
-
-        except Exception as e:
-            # Non-critical error, don't raise any exceptions
-            self._logger.info("Failed to load system interactions: %s", str(e))

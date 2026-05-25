@@ -36,7 +36,7 @@ class ConversationAITool(AITool):
             column_manager: Column manager for accessing conversation tabs
         """
         self._column_manager = column_manager
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace = MindspaceManager().mindspace()
         self._logger = logging.getLogger("ConversationAITool")
 
     def get_definition(self) -> AIToolDefinition:
@@ -255,10 +255,10 @@ class ConversationAITool(AITool):
             info = conversation_tab.get_conversation_info()
 
             # Add file path to info
-            info['file_path'] = self._mindspace_manager.get_relative_path(conversation_tab.path())
+            info['file_path'] = self._mindspace.get_relative_path(conversation_tab.path())
             info['tab_id'] = tab_id
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI requested conversation info\ntab ID: {tab_id}"
             )
@@ -316,7 +316,7 @@ class ConversationAITool(AITool):
 
             log_parts.append(f"tab ID: {tab_id}")
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 "\n".join(log_parts)
             )
@@ -361,7 +361,7 @@ class ConversationAITool(AITool):
                 identifier = f"ID {message_id}" if message_id else f"index {message_index}"
                 raise AIToolExecutionError(f"Message not found: {identifier}")
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI requested message {message_id or message_index}\ntab ID: {tab_id}"
             )
@@ -413,7 +413,7 @@ class ConversationAITool(AITool):
                 flags.append("regexp")
 
             flag_desc = f" ({', '.join(flags)})" if flags else ""
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI searched conversation for '{search_text}'{flag_desc}: "
                 f"{result['total_matches']} matches\ntab ID: {tab_id}"
@@ -465,7 +465,7 @@ class ConversationAITool(AITool):
             # Build identifier for logging and response
             actual_identifier = f"index {result['actual_index']}"
 
-            self._mindspace_manager.add_interaction(
+            self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI scrolled conversation to message {actual_identifier}\\ntab ID: {tab_id}"
             )
