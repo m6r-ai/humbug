@@ -1,8 +1,8 @@
 import json
 import logging
 from typing import Any, Dict, cast
-
 from ai import AIMessage
+
 from ai_tool import (
     AITool,
     AIToolAuthorizationCallback,
@@ -13,11 +13,9 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
 )
+from mindspace.context.conversation_context import ConversationContext
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
-
-from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.conversation.conversation_tab import ConversationTab
 
 
 class ConversationAITool(AITool):
@@ -28,15 +26,13 @@ class ConversationAITool(AITool):
     Requires a conversation tab to be open (use system tool to create conversations).
     """
 
-    def __init__(self, column_manager: ColumnManager, mindspace: Mindspace):
+    def __init__(self, mindspace: Mindspace):
         """
         Initialize the conversation tool.
 
         Args:
-            column_manager: Column manager for accessing conversation tabs
             mindspace: The active mindspace model
         """
-        self._column_manager = column_manager
         self._mindspace = mindspace
         self._logger = logging.getLogger("ConversationAITool")
 
@@ -191,18 +187,18 @@ class ConversationAITool(AITool):
             ),
         }
 
-    def _get_conversation_tab(self, arguments: Dict[str, Any]) -> ConversationTab:
+    def _get_conversation_context(self, arguments: Dict[str, Any]) -> ConversationContext:
         """
-        Get a conversation tab by ID.
+        Get a ConversationContext by context_id from the mindspace.
 
         Args:
             arguments: Tool arguments containing tab_id
 
         Returns:
-            ConversationTab instance
+            ConversationContext instance
 
         Raises:
-            AIToolExecutionError: If no conversation tab found
+            AIToolExecutionError: If no conversation context found
         """
         if "tab_id" not in arguments:
             raise AIToolExecutionError("No 'tab_id' argument provided")
@@ -211,14 +207,11 @@ class ConversationAITool(AITool):
         if not isinstance(tab_id, str):
             raise AIToolExecutionError("'tab_id' must be a string")
 
-        tab = self._column_manager.get_tab_by_id(tab_id)
-        if not tab:
-            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
+        context = self._mindspace.get_conversation_context(tab_id)
+        if context is None:
+            raise AIToolExecutionError(f"No conversation context found with ID: {tab_id}")
 
-        if not isinstance(tab, ConversationTab):
-            raise AIToolExecutionError(f"Tab {tab_id} is not a conversation tab")
-
-        return tab
+        return context
 
     def _validate_message_types(self, message_types: list[str] | None) -> None:
         """
@@ -249,14 +242,14 @@ class ConversationAITool(AITool):
     ) -> AIToolResult:
         """Get conversation metadata."""
         arguments = tool_call.arguments
-        conversation_tab = self._get_conversation_tab(arguments)
-        tab_id = conversation_tab.tab_id()
+        context = self._get_conversation_context(arguments)
+        tab_id = context.context_id()
 
         try:
-            info = conversation_tab.get_conversation_info()
+            info = context.get_conversation_info()
 
             # Add file path to info
-            info['file_path'] = self._mindspace.get_relative_path(conversation_tab.path())
+            info['file_path'] = self._mindspace.get_relative_path(context.ai_transcript_conversation().path())
             info['tab_id'] = tab_id
 
             self._mindspace.add_interaction(
@@ -282,8 +275,8 @@ class ConversationAITool(AITool):
     ) -> AIToolResult:
         """Read messages from conversation."""
         arguments = tool_call.arguments
-        conversation_tab = self._get_conversation_tab(arguments)
-        tab_id = conversation_tab.tab_id()
+        context = self._get_conversation_context(arguments)
+        tab_id = context.context_id()
 
         # Extract optional parameters
         start_index = self._get_optional_int_value("start_index", arguments)
@@ -302,7 +295,7 @@ class ConversationAITool(AITool):
             ]
 
         try:
-            result = conversation_tab.read_messages(start_index, end_index, message_types, limit)
+            result = context.read_messages(start_index, end_index, message_types, limit)
 
             # Build log message
             log_parts = ["AI read conversation messages"]
@@ -340,8 +333,8 @@ class ConversationAITool(AITool):
     ) -> AIToolResult:
         """Get a specific message by ID or index."""
         arguments = tool_call.arguments
-        conversation_tab = self._get_conversation_tab(arguments)
-        tab_id = conversation_tab.tab_id()
+        context = self._get_conversation_context(arguments)
+        tab_id = context.context_id()
 
         message_id = arguments.get("message_id")
         message_index = arguments.get("message_index")
@@ -356,7 +349,7 @@ class ConversationAITool(AITool):
             raise AIToolExecutionError("'message_index' must be an integer")
 
         try:
-            message = conversation_tab.get_message_by_id_or_index(message_id, message_index)
+            message = context.get_message_by_id_or_index(message_id, message_index)
 
             if message is None:
                 identifier = f"ID {message_id}" if message_id else f"index {message_index}"
@@ -388,8 +381,8 @@ class ConversationAITool(AITool):
     ) -> AIToolResult:
         """Search for text in conversation."""
         arguments = tool_call.arguments
-        conversation_tab = self._get_conversation_tab(arguments)
-        tab_id = conversation_tab.tab_id()
+        context = self._get_conversation_context(arguments)
+        tab_id = context.context_id()
 
         search_text = self._get_required_str_value("search_text", arguments)
 
@@ -402,7 +395,7 @@ class ConversationAITool(AITool):
         self._validate_message_types(message_types)
 
         try:
-            result = conversation_tab.search_messages(
+            result = context.search_messages(
                 search_text, case_sensitive, message_types, max_results, regexp
             )
 
@@ -441,8 +434,8 @@ class ConversationAITool(AITool):
     ) -> AIToolResult:
         """Scroll conversation to a specific message."""
         arguments = tool_call.arguments
-        conversation_tab = self._get_conversation_tab(arguments)
-        tab_id = conversation_tab.tab_id()
+        context = self._get_conversation_context(arguments)
+        tab_id = context.context_id()
 
         message_id = arguments.get("message_id")
         message_index = arguments.get("message_index")
@@ -457,7 +450,7 @@ class ConversationAITool(AITool):
             raise AIToolExecutionError("'message_index' must be an integer")
 
         try:
-            result = conversation_tab.scroll_to_message(message_id, message_index)
+            result = context.scroll_to_message(message_id, message_index)
 
             if not result["success"]:
                 error_msg = result.get("error", "Unknown error")

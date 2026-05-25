@@ -476,7 +476,7 @@ class MainWindow(QMainWindow):
             TerminalAITool(self._column_manager, mindspace), "Terminal: operations for interacting with terminal tabs"
         )
         self._ai_tool_manager.register_tool(
-            ConversationAITool(self._column_manager, mindspace), "Conversation: operations for interacting with conversation tabs"
+            ConversationAITool(mindspace), "Conversation: operations for interacting with conversation tabs"
         )
         self._ai_tool_manager.register_tool(
             PreviewAITool(self._column_manager, mindspace), "Preview: operations for interacting with preview tabs"

@@ -2,12 +2,13 @@ import json
 import logging
 import os
 import shutil
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List
 
 from ai_tool import AIToolManager
 
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
 from mindspace.context.context_registry import ContextRegistry
+from mindspace.context.conversation_context import ConversationContext
 from mindspace.mindspace_interactions import MindspaceInteractions
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
@@ -49,6 +50,7 @@ class Mindspace:
         self._settings: MindspaceSettings | None = None
         self._interactions = MindspaceInteractions()
         self._context_registry = ContextRegistry()
+        self._conversation_contexts: Dict[str, ConversationContext] = {}
         self._tool_manager = AIToolManager()
         self._logger = logging.getLogger("Mindspace")
 
@@ -71,6 +73,40 @@ class Mindspace:
         The registry tracks all open contexts and emits events when they change.
         """
         return self._context_registry
+
+    def add_conversation_context(self, context: ConversationContext) -> None:
+        """
+        Register a ConversationContext by its context_id.
+
+        Called by the Qt layer when a conversation tab is opened.
+
+        Args:
+            context: The ConversationContext to register.
+        """
+        self._conversation_contexts[context.context_id()] = context
+
+    def remove_conversation_context(self, context_id: str) -> None:
+        """
+        Deregister a ConversationContext.
+
+        Called by the Qt layer when a conversation tab is closed.
+
+        Args:
+            context_id: ID of the context to remove.
+        """
+        self._conversation_contexts.pop(context_id, None)
+
+    def get_conversation_context(self, context_id: str) -> ConversationContext | None:
+        """
+        Return the ConversationContext for a given context_id, or None.
+
+        Args:
+            context_id: The context identifier to look up.
+
+        Returns:
+            ConversationContext if found, None otherwise.
+        """
+        return self._conversation_contexts.get(context_id)
 
     def is_already_mindspace(self, path: str) -> bool:
         """Return True if a mindspace already exists at path."""
@@ -154,6 +190,7 @@ class Mindspace:
             self._settings = None
             self._interactions.clear()
             self._context_registry.clear()
+            self._conversation_contexts.clear()
             self._reset_tool_manager()
             self._on_settings_changed()
 

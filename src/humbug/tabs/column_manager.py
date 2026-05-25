@@ -12,6 +12,7 @@ from ai_transcript_conversation import AITranscriptConversation
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.context.context_registry import ContextRegistry
 from mindspace.context.context_type import ContextType
+from mindspace.context.conversation_context import ConversationContext
 from mindspace.mindspace_settings import MindspaceSettings
 
 from humbug.language.language_manager import LanguageManager
@@ -488,23 +489,32 @@ class ColumnManager(QWidget):
         QTimer.singleShot(0, self.show_all_columns)
         if self._mindspace_manager.has_mindspace():
             self._mindspace_manager.mindspace().contexts().close(tab_id)
+            if isinstance(tab, ConversationTab):
+                self._mindspace_manager.mindspace().remove_conversation_context(tab_id)
 
     def _tab_context_type(self, tab: TabBase) -> ContextType:
         """Map a TabBase subclass to the corresponding ContextType."""
         if isinstance(tab, ConversationTab):
             return ContextType.CONVERSATION
+
         if isinstance(tab, DiffTab):
             return ContextType.DIFF
+
         if isinstance(tab, EditorTab):
             return ContextType.EDITOR
+
         if isinstance(tab, LogTab):
             return ContextType.LOG
+
         if isinstance(tab, PreviewTab):
             return ContextType.PREVIEW
+
         if isinstance(tab, ShellTab):
             return ContextType.SHELL
+
         if isinstance(tab, TerminalTab):
             return ContextType.TERMINAL
+
         return ContextType.EDITOR  # fallback
 
     def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
@@ -577,6 +587,14 @@ class ColumnManager(QWidget):
                 context_id=tab.tab_id(),
                 column_index=column_index,
             )
+            if isinstance(tab, ConversationTab):
+                mindspace = self._mindspace_manager.mindspace()
+                context = ConversationContext(
+                    context_id=tab.tab_id(),
+                    ai_transcript_conversation=tab.ai_conversation(),
+                    on_scroll_to_message=tab.scroll_to_message,
+                )
+                mindspace.add_conversation_context(context)
 
     def _move_tab_between_columns(
         self,

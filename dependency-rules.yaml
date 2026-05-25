@@ -110,6 +110,7 @@ modules:
   mindspace:
     internal_dependencies:
       - ai
+      - ai_transcript_conversation
       - ai_tool
     external_dependencies:
       - "standard_library"
