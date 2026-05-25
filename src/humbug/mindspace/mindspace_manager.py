@@ -16,11 +16,11 @@ from PySide6.QtCore import QObject, Signal
 from ai_tool import AIToolManager
 
 from humbug.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
-from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
-from humbug.mindspace.mindspace_interactions import MindspaceInteractions
-from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
-from humbug.mindspace.mindspace_message import MindspaceMessage
-from humbug.mindspace.mindspace_settings import MindspaceSettings
+from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
+from mindspace.mindspace_interactions import MindspaceInteractions
+from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.mindspace_message import MindspaceMessage
+from mindspace.mindspace_settings import MindspaceSettings
 
 
 class MindspaceManager(QObject):

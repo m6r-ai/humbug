@@ -85,6 +85,7 @@ modules:
       - git
       - help_ai_tool
       - menai_ai_tool
+      - mindspace
       - pdf
       - docx
       - syntax
@@ -103,6 +104,13 @@ modules:
     internal_dependencies:
       - ai_tool
       - menai
+    external_dependencies:
+      - "standard_library"
+
+  mindspace:
+    internal_dependencies:
+      - ai
+      - ai_tool
     external_dependencies:
       - "standard_library"
 

@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from mindspace.mindspace_content_type import MindspaceContentType
+
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
@@ -292,16 +294,17 @@ class MindspaceSearchView(QWidget):
             first_match = path_matches[0]
             top_level = QTreeWidgetItem([first_match.relative_path])
             top_level.setData(0, Qt.ItemDataRole.UserRole, first_match.path)
-            top_level.setData(0, Qt.ItemDataRole.UserRole + 1, first_match.view_type)
+            first_view_type = self._content_type_to_view_type(first_match.content_type)
+            top_level.setData(0, Qt.ItemDataRole.UserRole + 1, first_view_type)
             top_level.setData(0, _HIGHLIGHT_RANGES_ROLE, self._highlight_ranges_for_text(first_match.relative_path))
             top_level.setToolTip(0, first_match.relative_path)
-            top_level.setIcon(0, self._icon_for_view_type(first_match.view_type))
+            top_level.setIcon(0, self._icon_for_view_type(first_view_type))
 
             for match in path_matches:
                 child_text = self._describe_match(match)
                 child = QTreeWidgetItem([child_text])
                 child.setData(0, Qt.ItemDataRole.UserRole, match.path)
-                child.setData(0, Qt.ItemDataRole.UserRole + 1, match.view_type)
+                child.setData(0, Qt.ItemDataRole.UserRole + 1, self._content_type_to_view_type(match.content_type))
                 child.setData(0, _LINE_NUMBER_ROLE, match.line_number)
                 child.setData(0, _MESSAGE_ID_ROLE, match.message_id)
                 child.setData(0, _HIGHLIGHT_RANGES_ROLE, self._highlight_ranges_for_match(match, child_text))
@@ -383,6 +386,13 @@ class MindspaceSearchView(QWidget):
 
             ranges.append((pos, len(query)))
             pos += max(1, len(query))
+
+    def _content_type_to_view_type(self, content_type: MindspaceContentType) -> MindspaceViewType:
+        """Map a MindspaceContentType to the corresponding MindspaceViewType for display."""
+        if content_type == MindspaceContentType.CONVERSATIONS:
+            return MindspaceViewType.CONVERSATIONS
+
+        return MindspaceViewType.FILES
 
     def _icon_for_view_type(self, view_type: MindspaceViewType) -> QIcon:
         icon_name = "conversation" if view_type == MindspaceViewType.CONVERSATIONS else "files"

@@ -3,7 +3,7 @@ import logging
 import os
 from typing import List
 
-from humbug.mindspace.mindspace_message import MindspaceMessage
+from mindspace.mindspace_message import MindspaceMessage
 
 
 class MindspaceInteractions:
@@ -14,13 +14,12 @@ class MindspaceInteractions:
     def __init__(self) -> None:
         """Initialize empty interaction history."""
         self._messages: List[MindspaceMessage] = []
-        self._logger = logging.getLogger("SystemInteraction")
+        self._logger = logging.getLogger("MindspaceInteractions")
 
     def add_message(self, message: MindspaceMessage) -> None:
         """Add a message to the history, maintaining the max message limit."""
         self._messages.append(message)
 
-        # Trim to the maximum number of messages
         if len(self._messages) > self.MAX_MESSAGES:
             self._messages = self._messages[-self.MAX_MESSAGES:]
 
@@ -48,14 +47,11 @@ class MindspaceInteractions:
             messages_data = data.get("messages", [])
             self._messages = [MindspaceMessage.from_dict(msg) for msg in messages_data]
 
-            # Ensure we don't exceed the maximum
             if len(self._messages) > self.MAX_MESSAGES:
                 self._messages = self._messages[-self.MAX_MESSAGES:]
 
         except (json.JSONDecodeError, KeyError):
-            self._logger.exception("Failed to load shell interaction history")
-
-            # If there's an error loading, start with an empty history
+            self._logger.exception("Failed to load interaction history")
             self._messages = []
 
     def clear(self) -> None:

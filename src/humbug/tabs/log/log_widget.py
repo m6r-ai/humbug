@@ -9,10 +9,11 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
+from mindspace.mindspace_message import MindspaceMessage
+
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_message import MindspaceMessage
 from humbug.style_manager import StyleManager
 from humbug.tabs.log.log_message import LogMessage
 from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS

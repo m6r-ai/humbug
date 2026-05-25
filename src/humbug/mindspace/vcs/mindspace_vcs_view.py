@@ -15,7 +15,7 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
-from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_pane_style import build_list_pane_stylesheet
 from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller

@@ -7,8 +7,8 @@ from typing import cast, Dict
 from ai import AIConversation, AIConversationSettings
 from ai_tool import AIToolExecutionError
 from delegate_ai_tool import DelegateAITool
+from mindspace.mindspace_log_level import MindspaceLogLevel
 
-from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError

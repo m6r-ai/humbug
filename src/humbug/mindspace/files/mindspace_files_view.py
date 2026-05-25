@@ -10,13 +10,14 @@ from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QVBoxLayout, QMenu
 )
 
+from mindspace.mindspace_log_level import MindspaceLogLevel
+
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.files.mindspace_files_model import MindspaceFilesModel
 from humbug.mindspace.files.mindspace_files_tree_view import MindspaceFilesTreeView
 from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
 from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
 from humbug.mindspace.mindspace_breadcrumb_container import MindspaceBreadcrumbContainer
-from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
 from humbug.mindspace.mindspace_tree_delegate import MindspaceTreeDelegate

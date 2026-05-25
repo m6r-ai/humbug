@@ -13,9 +13,10 @@ from PySide6.QtGui import (
     QTextCharFormat, QTextDocument
 )
 
+from mindspace.mindspace_log_level import MindspaceLogLevel
+
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.style_manager import StyleManager
 from humbug.tabs.log.log_text_edit import LogTextEdit
 

@@ -12,7 +12,8 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
 )
-from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.mindspace_log_level import MindspaceLogLevel
+
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.preview.preview_tab import PreviewTab

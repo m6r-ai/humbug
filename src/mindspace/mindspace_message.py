@@ -3,12 +3,12 @@ from datetime import datetime, timezone
 from typing import Dict
 import uuid
 
-from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.mindspace_log_level import MindspaceLogLevel
 
 
 @dataclass
 class MindspaceMessage:
-    """Represents a single shell message in the interaction history."""
+    """Represents a single message in the mindspace interaction history."""
     message_id: str
     level: MindspaceLogLevel
     content: str

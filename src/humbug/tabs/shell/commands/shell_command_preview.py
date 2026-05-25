@@ -4,9 +4,9 @@ import logging
 import os
 from typing import List, cast
 
+from mindspace.mindspace_log_level import MindspaceLogLevel
 from syntax import Token, TokenType
 
-from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError

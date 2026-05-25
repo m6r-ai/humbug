@@ -9,9 +9,10 @@ from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
 )
 
+from mindspace.mindspace_settings import MindspaceSettings
+
 from humbug.min_height_text_edit import MinHeightTextEdit
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.style_manager import StyleManager
 from humbug.tabs.markdown_highlighter import MarkdownHighlighter
 

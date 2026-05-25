@@ -17,14 +17,14 @@ from ai import AIBackendSettings, AIConversationSettings, AIManager, AIReasoning
 from ai.ai_model import AIReasoningEffort
 from ai.ollama.ollama_backend import OllamaBackend
 from ai_tool import AIToolManager
-from humbug.ai_backend_display import get_all_backend_display_names, get_backend_display_name
+from mindspace.mindspace_settings import MindspaceSettings
 
+from humbug.ai_backend_display import get_all_backend_display_names, get_backend_display_name
 from humbug.language.language_code import LanguageCode
 from humbug.color_role import ColorRole
 from humbug.fetch_error import fetch_error_message as _fetch_error_message
 from humbug.fetch_error import pull_error_message as _pull_error_message
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.settings.settings_accordion import SettingsAccordion
 from humbug.settings.settings_action_row import SettingsActionRow
 from humbug.settings.settings_container import SettingsContainer

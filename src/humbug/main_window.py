@@ -22,6 +22,9 @@ from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 from help_ai_tool.help_ai_tool import HelpAITool
 from menai_ai_tool.menai_ai_tool import MenaiAITool
+from mindspace.mindspace_error import MindspaceError, MindspaceExistsError
+from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.mindspace_settings import MindspaceSettings
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
@@ -31,11 +34,8 @@ from humbug.update_checker import UpdateChecker
 from humbug.update_dialog import UpdateDialog
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from humbug.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
-from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.mindspace.mindspace_view import MindspaceView
 from humbug.main_window_splitter import MainWindowSplitter
 from humbug.mindspace.mindspace_view_type import MindspaceViewType

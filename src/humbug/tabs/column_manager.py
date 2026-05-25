@@ -9,11 +9,11 @@ from PySide6.QtGui import QResizeEvent
 
 from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
 from ai_transcript_conversation import AITranscriptConversation
+from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.mindspace_settings import MindspaceSettings
 
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage
 from humbug.message_box import MessageBox, MessageBoxType

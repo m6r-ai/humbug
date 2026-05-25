@@ -5,10 +5,10 @@ from typing import List, Dict, cast
 
 from ai import AIConversationSettings, AIReasoningCapability, AIManager
 from ai.ai_model import AIReasoningEffort
+from mindspace.mindspace_error import MindspaceError
+from mindspace.mindspace_log_level import MindspaceLogLevel
 from syntax import Token, TokenType
 
-from humbug.mindspace.mindspace_error import MindspaceError
-from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.shell.shell_command import ShellCommand
