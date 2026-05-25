@@ -7,25 +7,24 @@ from typing import cast, Dict
 from ai import AIConversation, AIConversationSettings
 from ai_tool import AIToolExecutionError
 from delegate_ai_tool import DelegateAITool
+from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
-from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 
 
-def _make_delegate_ai_tool(column_manager: ColumnManager) -> DelegateAITool:
+def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) -> DelegateAITool:
     """
     Build a fully wired DelegateAITool for the GUI environment.
 
     Args:
         column_manager: The application column manager
+        mindspace: The active mindspace model
 
     Returns:
         A DelegateAITool instance ready for registration with the tool manager
     """
-    mindspace = MindspaceManager().mindspace()
-
     # tab_ids tracks session_path -> tab_id for cleanup on completion
     tab_ids: Dict[str, str] = {}
 

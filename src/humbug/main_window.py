@@ -433,6 +433,7 @@ class MainWindow(QMainWindow):
         self._column_manager.update_welcome_widget(user_settings)
 
         self._mindspace_manager = MindspaceManager()
+        mindspace = self._mindspace_manager.mindspace()
 
         # Initialize command registry and register commands
         self._command_registry = ShellCommandRegistry()
@@ -456,7 +457,7 @@ class MainWindow(QMainWindow):
         )
         self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
         self._ai_tool_manager.register_tool(
-            _make_delegate_ai_tool(self._column_manager), "Delegate: delegates tasks to specialized AI instances"
+            _make_delegate_ai_tool(self._column_manager, mindspace), "Delegate: delegates tasks to specialized AI instances"
         )
         self._ai_tool_manager.register_tool(
             FileSystemAITool(
@@ -466,19 +467,19 @@ class MainWindow(QMainWindow):
             "FileSystem: handles file operations in the current mindspace"
         )
         self._ai_tool_manager.register_tool(
-            SystemAITool(self._column_manager), "System: manages UI tab lifecycle operations (create, open, close, organize tabs)"
+            SystemAITool(self._column_manager, mindspace), "System: manages UI tab lifecycle operations (create, open, close, organize tabs)"
         )
         self._ai_tool_manager.register_tool(
-            EditorAITool(self._column_manager), "Editor: operations for interacting with editor tabs"
+            EditorAITool(self._column_manager, mindspace), "Editor: operations for interacting with editor tabs"
         )
         self._ai_tool_manager.register_tool(
-            TerminalAITool(self._column_manager), "Terminal: operations for interacting with terminal tabs"
+            TerminalAITool(self._column_manager, mindspace), "Terminal: operations for interacting with terminal tabs"
         )
         self._ai_tool_manager.register_tool(
-            ConversationAITool(self._column_manager), "Conversation: operations for interacting with conversation tabs"
+            ConversationAITool(self._column_manager, mindspace), "Conversation: operations for interacting with conversation tabs"
         )
         self._ai_tool_manager.register_tool(
-            PreviewAITool(self._column_manager), "Preview: operations for interacting with preview tabs"
+            PreviewAITool(self._column_manager, mindspace), "Preview: operations for interacting with preview tabs"
         )
         self._ai_tool_manager.register_tool(
             HelpAITool(self._ai_tool_manager), "Help: provides detailed documentation for AI tools and operations"

@@ -7,7 +7,6 @@ from typing import List, cast
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from syntax import Token, TokenType
 
-from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
@@ -26,7 +25,6 @@ class ShellCommandEdit(ShellCommand):
         """
         super().__init__()
         self._column_manager = column_manager
-        self._mindspace = MindspaceManager().mindspace()
         self._logger = logging.getLogger("ShellCommandEdit")
 
     def name(self) -> str:

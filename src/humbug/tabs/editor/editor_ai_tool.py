@@ -14,8 +14,8 @@ from ai_tool import (
     AIToolResult,
 )
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.mindspace import Mindspace
 
-from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.editor.editor_tab import EditorTab
 
@@ -28,15 +28,16 @@ class EditorAITool(AITool):
     editor content. Requires an editor tab to be open (use system tool to create tabs).
     """
 
-    def __init__(self, column_manager: ColumnManager):
+    def __init__(self, column_manager: ColumnManager, mindspace: Mindspace):
         """
         Initialize the editor tool.
 
         Args:
             column_manager: Column manager for accessing editor tabs
+            mindspace: The active mindspace model
         """
         self._column_manager = column_manager
-        self._mindspace = MindspaceManager().mindspace()
+        self._mindspace = mindspace
         self._logger = logging.getLogger("EditorAITool")
 
     def get_definition(self) -> AIToolDefinition:

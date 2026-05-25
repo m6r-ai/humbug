@@ -20,8 +20,8 @@ from ai_tool import (
 )
 from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.mindspace import Mindspace
 
-from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
@@ -38,15 +38,16 @@ class SystemAITool(AITool):
     tab content.
     """
 
-    def __init__(self, column_manager: ColumnManager):
+    def __init__(self, column_manager: ColumnManager, mindspace: Mindspace):
         """
         Initialize the system tool.
 
         Args:
             column_manager: Column manager for tab operations
+            mindspace: The active mindspace model
         """
         self._column_manager = column_manager
-        self._mindspace = MindspaceManager().mindspace()
+        self._mindspace = mindspace
         self._ai_manager = AIManager()
         self._logger = logging.getLogger("SystemAITool")
 

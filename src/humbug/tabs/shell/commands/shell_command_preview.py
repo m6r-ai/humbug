@@ -7,7 +7,6 @@ from typing import List, cast
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from syntax import Token, TokenType
 
-from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.shell.shell_command import ShellCommand
@@ -27,7 +26,6 @@ class ShellCommandPreview(ShellCommand):
         """
         super().__init__()
         self._column_manager = column_manager
-        self._mindspace = MindspaceManager().mindspace()
         self._logger = logging.getLogger("ShellCommandPreview")
 
     def name(self) -> str:
