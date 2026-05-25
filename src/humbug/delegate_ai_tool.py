@@ -57,6 +57,10 @@ def _make_delegate_ai_tool(column_manager: ColumnManager) -> DelegateAITool:
 
         return abs_path
 
+    def compute_session_id(absolute_path: str) -> str:
+        relative = mindspace_manager.get_mindspace_relative_path(absolute_path)
+        return relative if relative is not None else absolute_path
+
     def get_default_settings() -> AIConversationSettings:
         settings = mindspace_manager.settings()
         if settings is None:
@@ -122,6 +126,7 @@ def _make_delegate_ai_tool(column_manager: ColumnManager) -> DelegateAITool:
 
     return DelegateAITool(
         generate_conversation_path=generate_conversation_path,
+        compute_session_id=compute_session_id,
         resolve_session_path=resolve_session_path,
         get_default_settings=get_default_settings,
         log_interaction=log_interaction,

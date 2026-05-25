@@ -1394,9 +1394,9 @@ class Menai:
         """
         Set the module search path and clear the module cache.
 
-        This should be called when the base directory changes (e.g., when switching
-        mindspaces in Humbug) to ensure modules are loaded from the correct location
-        and old cached modules are discarded.
+        This should be called when the base directory of the project changes, to
+        ensure modules are loaded from the correct location and stale cached modules
+        are discarded.
 
         Args:
             module_path: List of directories to search for modules

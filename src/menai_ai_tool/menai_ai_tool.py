@@ -74,9 +74,9 @@ class MenaiAITool(AITool):
         """
         Update the module search path.
 
-        This should be called when the base directory changes (e.g., when switching
-        mindspaces in Humbug) to ensure modules are loaded from the correct location.
-        The module cache will be automatically cleared.
+        This should be called when the base directory of the project changes, to
+        ensure modules are loaded from the correct location. The module cache will
+        be automatically cleared.
 
         Args:
             module_path: List of directories to search for modules.

@@ -3,7 +3,6 @@
 import asyncio
 import json
 import logging
-import os
 from typing import Any, Callable, Dict
 
 from ai import (
@@ -32,6 +31,7 @@ class DelegateAITool(AITool):
     def __init__(
         self,
         generate_conversation_path: Callable[[], str],
+        compute_session_id: Callable[[str], str],
         resolve_session_path: Callable[[str], str],
         get_default_settings: Callable[[], AIConversationSettings],
         log_interaction: Callable[[str, str], None],
@@ -44,12 +44,14 @@ class DelegateAITool(AITool):
         Args:
             generate_conversation_path: Returns a new unique absolute path for a child
                 conversation transcript file.
-            resolve_session_path: Validates a mindspace-relative session_id and returns
+            compute_session_id: Converts an absolute transcript path to the project-relative
+                session_id string that will be returned to the AI.
+            resolve_session_path: Validates a project-relative session_id and returns
                 the corresponding absolute path.  Raises AIToolExecutionError if the
-                session_id is invalid or outside the mindspace.
+                session_id is invalid or outside the project root.
             get_default_settings: Returns the current default AIConversationSettings
-                (model, provider, temperature, etc.) from the active mindspace.
-            log_interaction: Logs a message to the mindspace interaction log.
+                (model, provider, temperature, etc.) from the active project.
+            log_interaction: Logs a message to the project interaction log.
                 Receives (level_str, message) where level_str is e.g. "info".
             on_conversation_created: Called synchronously with (child_conversation,
                 session_path, parent_conversation) before the prompt is submitted.
@@ -58,6 +60,7 @@ class DelegateAITool(AITool):
                 conversation finishes. The frontend should close or flush its display.
         """
         self._generate_conversation_path = generate_conversation_path
+        self._compute_session_id = compute_session_id
         self._resolve_session_path = resolve_session_path
         self._get_default_settings = get_default_settings
         self._log_interaction = log_interaction
@@ -366,12 +369,7 @@ class DelegateAITool(AITool):
 
         ai_transcript_conversation = AITranscriptConversation(transcript_path, child_ai_conversation)
 
-        # Compute the mindspace-relative session_id from the absolute transcript path.
-        # The generate_conversation_path callback always returns a path of the form:
-        #   <mindspace_root>/conversations/<title>.conv
-        # so we can derive the relative path portably.
-        mindspace_root = os.path.dirname(os.path.dirname(transcript_path))
-        relative_session_id = os.path.relpath(transcript_path, mindspace_root)
+        relative_session_id = self._compute_session_id(transcript_path)
 
         # Notify the listener synchronously so it can attach display callbacks
         # before we submit the prompt (and events start firing).
@@ -420,7 +418,7 @@ class DelegateAITool(AITool):
         Args:
             child_ai_conversation: The child AIConversation
             ai_transcript_conversation: The transcript wrapper (kept alive for persistence)
-            session_id: Mindspace-relative session path
+            session_id: Project-relative session path
             tool_call: The originating tool call
 
         Returns:

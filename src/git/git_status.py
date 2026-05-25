@@ -66,18 +66,18 @@ def _xy_to_code(xy: str) -> VCSStatusCode:
     return VCSStatusCode.UNKNOWN
 
 
-def get_status(repo_root: str, mindspace_path: str) -> list[VCSFileStatus]:
+def get_status(repo_root: str, subtree_path: str) -> list[VCSFileStatus]:
     """
-    Return the list of changed files within *mindspace_path*.
+    Return the list of changed files within *subtree_path*.
 
     Runs ``git status --porcelain=v1 -z`` and filters results to only
-    those files that live inside *mindspace_path*.  Paths are returned
+    those files that live inside *subtree_path*.  Paths are returned
     as absolute paths.
 
     Args:
         repo_root: Absolute path to the git repository root.
-        mindspace_path: Absolute path to the mindspace directory.  Only
-            files within this subtree are included in the result.
+        subtree_path: Absolute path to a directory.  Only files within
+            this subtree are included in the result.
 
     Returns:
         List of VCSFileStatus objects, one per changed file.
@@ -125,12 +125,12 @@ def get_status(repo_root: str, mindspace_path: str) -> list[VCSFileStatus]:
                 original_rel = tokens[i]
                 i += 1
                 original_abs = os.path.normpath(os.path.join(repo_root, original_rel))
-                if _within_mindspace(original_abs, mindspace_path):
+                if _within_subtree(original_abs, subtree_path):
                     original_path = original_abs
 
         abs_path = os.path.normpath(os.path.join(repo_root, rel_path))
 
-        if not _within_mindspace(abs_path, mindspace_path):
+        if not _within_subtree(abs_path, subtree_path):
             continue
 
         entries.append(VCSFileStatus(code=code, path=abs_path, original_path=original_path))
@@ -138,26 +138,26 @@ def get_status(repo_root: str, mindspace_path: str) -> list[VCSFileStatus]:
     return entries
 
 
-def _within_mindspace(abs_path: str, mindspace_path: str) -> bool:
+def _within_subtree(abs_path: str, subtree_path: str) -> bool:
     """
-    Return True if *abs_path* is inside *mindspace_path*.
+    Return True if *abs_path* is inside *subtree_path*.
 
     Args:
         abs_path: Absolute path to test.
-        mindspace_path: Absolute mindspace root path.
+        subtree_path: Absolute path to the subtree root.
 
     Returns:
-        True if abs_path is within mindspace_path.
+        True if abs_path is within subtree_path.
     """
-    mindspace_path = os.path.normpath(mindspace_path)
+    subtree_path = os.path.normpath(subtree_path)
 
     if sys.platform == "win32":
         abs_path = os.path.normpath(abs_path).lower()
-        mindspace_path = mindspace_path.lower()
+        subtree_path = subtree_path.lower()
 
     try:
-        common = os.path.commonpath([abs_path, mindspace_path])
-        return common == mindspace_path
+        common = os.path.commonpath([abs_path, subtree_path])
+        return common == subtree_path
 
     except ValueError:
         return False

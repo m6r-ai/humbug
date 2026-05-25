@@ -282,7 +282,7 @@ class AITool(ABC):
             Brief description string
 
         Example:
-            "File and directory operations in mindspace"
+            "File and directory operations."
         """
         definition = self.get_definition()
         description = definition.description
