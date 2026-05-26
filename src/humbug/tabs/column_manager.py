@@ -702,6 +702,32 @@ class ColumnManager(QWidget):
         if tab is not None:
             self._set_current_tab(tab, False)
 
+    def _register_tab_with_registry(self, tab: TabBase, title: str) -> None:
+        """
+        Register a newly created tab with the context registry.
+
+        Called after _add_tab so the tab is already in self._tabs.
+        _on_context_opened sees the tab already exists, skips Qt creation,
+        and calls _register_context_models to attach the context model.
+
+        Args:
+            tab: The tab that was just added.
+            title: The display title used for the tab.
+        """
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        col = self._find_column_for_tab(tab)
+        col_index = self._tab_columns.index(col) if col is not None else 0
+        self._mindspace_manager.mindspace().contexts().open(
+            context_type=self._tab_context_type(tab),
+            path=tab.path(),
+            title=title,
+            is_ephemeral=tab.is_ephemeral(),
+            context_id=tab.tab_id(),
+            column_index=col_index,
+        )
+
     def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
         """
         Add a tab to a column and set up associated data.
@@ -1854,6 +1880,7 @@ class ColumnManager(QWidget):
 
         # Use language strings for the tab title
         self._add_tab(log_tab, "Mindspace Log")
+        self._register_tab_with_registry(log_tab, "Mindspace Log")
         return log_tab
 
     def show_system_shell(self) -> ShellTab:
@@ -1873,6 +1900,7 @@ class ColumnManager(QWidget):
 
         # Use language strings for the tab title
         self._add_tab(shell_tab, "Humbug Shell")
+        self._register_tab_with_registry(shell_tab, "Humbug Shell")
         return shell_tab
 
     def clear_shell_history(self) -> None:
@@ -1886,7 +1914,9 @@ class ColumnManager(QWidget):
         """Create a new empty editor tab."""
         self._untitled_count += 1
         editor = EditorTab("", "", self._untitled_count, self)
-        self._add_tab(editor, f"Untitled-{self._untitled_count}")
+        title = f"Untitled-{self._untitled_count}"
+        self._add_tab(editor, title)
+        self._register_tab_with_registry(editor, title)
         return editor
 
     def open_file(self, path: str, ephemeral: bool) -> EditorTab:
@@ -1907,7 +1937,9 @@ class ColumnManager(QWidget):
 
         editor = EditorTab("", path, None, self)
         editor.set_ephemeral(ephemeral)
-        self._add_tab(editor, os.path.basename(path))
+        title = os.path.basename(path)
+        self._add_tab(editor, title)
+        self._register_tab_with_registry(editor, title)
         return editor
 
     def open_diff(self, path: str, ephemeral: bool) -> DiffTab:
@@ -1929,7 +1961,9 @@ class ColumnManager(QWidget):
         diff_tab.open_file_requested.connect(self._on_diff_open_file_requested)
         diff_tab.open_preview_requested.connect(self._on_diff_open_preview_requested)
         diff_tab.set_ephemeral(ephemeral)
-        self._add_tab(diff_tab, os.path.basename(path))
+        title = os.path.basename(path)
+        self._add_tab(diff_tab, title)
+        self._register_tab_with_registry(diff_tab, title)
         return diff_tab
 
     def new_conversation(
@@ -2009,6 +2043,7 @@ class ColumnManager(QWidget):
             conversation_tab.set_conversation_history(history)
 
         self._add_tab(conversation_tab, conversation_title)
+        self._register_tab_with_registry(conversation_tab, conversation_title)
         return conversation_tab
 
     def open_conversation(self, path: str, ephemeral: bool) -> ConversationTab:
@@ -2034,6 +2069,7 @@ class ColumnManager(QWidget):
             conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
             conversation_tab.set_ephemeral(ephemeral)
             self._add_tab(conversation_tab, conversation_title)
+            self._register_tab_with_registry(conversation_tab, conversation_title)
             return conversation_tab
 
         except ConversationError as e:
@@ -2112,7 +2148,9 @@ class ColumnManager(QWidget):
             new_tab.set_conversation_history(new_history)
 
             new_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
-            self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])
+            fork_title = os.path.splitext(os.path.basename(new_tab.path()))[0]
+            self._add_tab(new_tab, fork_title)
+            self._register_tab_with_registry(new_tab, fork_title)
 
         except ConversationError as e:
             self._logger.exception("Failed to fork conversation: %s", str(e))
@@ -2140,6 +2178,7 @@ class ColumnManager(QWidget):
             title = "Terminal"
 
         self._add_tab(terminal, title)
+        self._register_tab_with_registry(terminal, title)
         return terminal
 
     def _on_preview_open_link_requested(self, path: str) -> None:
@@ -2203,6 +2242,7 @@ class ColumnManager(QWidget):
                 title = name
 
             self._add_tab(preview_tab, title)
+            self._register_tab_with_registry(preview_tab, title)
 
             # If there's an anchor, scroll to it
             if anchor:
