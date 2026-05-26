@@ -35,7 +35,7 @@ class DelegateAITool(AITool):
         resolve_session_path: Callable[[str], str],
         get_default_settings: Callable[[], AIConversationSettings],
         log_interaction: Callable[[str, str], None],
-        on_conversation_created: Callable[[AIConversation, str, AIConversation], None],
+        on_conversation_created: Callable[[AITranscriptConversation, str, AIConversation], None],
         on_conversation_completed: Callable[[str], None],
     ) -> None:
         """
@@ -53,7 +53,7 @@ class DelegateAITool(AITool):
                 (model, provider, temperature, etc.) from the active project.
             log_interaction: Logs a message to the project interaction log.
                 Receives (level_str, message) where level_str is e.g. "info".
-            on_conversation_created: Called synchronously with (child_conversation,
+            on_conversation_created: Called synchronously with (child_transcript,
                 session_path, parent_conversation) before the prompt is submitted.
                 The frontend must register any event callbacks it needs before returning.
             on_conversation_completed: Called with (session_path) after the child
@@ -374,7 +374,7 @@ class DelegateAITool(AITool):
         # Notify the listener synchronously so it can attach display callbacks
         # before we submit the prompt (and events start firing).
         self._on_conversation_created(
-            child_ai_conversation,
+            ai_transcript_conversation,
             relative_session_id,
             parent_ai_conversation
         )

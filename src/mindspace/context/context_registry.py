@@ -70,6 +70,7 @@ class ContextRegistry:
         is_ephemeral: bool = False,
         context_id:   str  = "",
         column_index: int  = 0,
+        initial_model: Any = None,
     ) -> str:
         """
         Register a new open context and emit OPENED.
@@ -83,6 +84,9 @@ class ContextRegistry:
             context_id:   Stable ID to use (e.g. when restoring from session).
                           A new UUID is generated if not provided.
             column_index: Layout hint — which column the context occupies.
+            initial_model: Optional model object to register atomically with
+                           the context.  Stored before OPENED is emitted so
+                           subscribers can retrieve it immediately.
 
         Returns:
             The context_id for the newly registered context.
@@ -100,6 +104,8 @@ class ContextRegistry:
             column_index=column_index,
         )
         self._contexts[context_id] = info
+        if initial_model is not None:
+            self._models[context_id] = initial_model
         self._emit(ContextEvent.OPENED, info)
         return context_id
 

@@ -10,6 +10,8 @@ from PySide6.QtGui import QResizeEvent
 from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
 from ai_transcript_conversation import AITranscriptConversation
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.context.context_info import ContextInfo
+from mindspace.context.context_registry import ContextEvent
 from mindspace.context.context_type import ContextType
 from mindspace.context.conversation_context import ConversationContext
 from mindspace.context.preview_context import PreviewContext
@@ -60,6 +62,10 @@ class ColumnManager(QWidget):
         self._untitled_count = 0
         self._mindspace_manager = MindspaceManager()
         self._logger = logging.getLogger("ColumnManager")
+
+        # Subscribe to mindspace open/close so we can wire registry callbacks
+        self._mindspace_manager.settings_changed.connect(self._on_mindspace_settings_changed)
+        self._registry_subscribed = False
 
         self.setObjectName("ColumnManager")
 
@@ -487,8 +493,6 @@ class ColumnManager(QWidget):
         column.removeTab(index)
         tab.deleteLater()
         QTimer.singleShot(0, self.show_all_columns)
-        if self._mindspace_manager.has_mindspace():
-            self._mindspace_manager.mindspace().contexts().close(tab_id)
 
     def _tab_context_type(self, tab: TabBase) -> ContextType:
         """Map a TabBase subclass to the corresponding ContextType."""
@@ -514,6 +518,189 @@ class ColumnManager(QWidget):
             return ContextType.TERMINAL
 
         return ContextType.EDITOR  # fallback
+
+    def _on_mindspace_settings_changed(self) -> None:
+        """Wire or unwire registry callbacks when a mindspace opens or closes."""
+        if self._mindspace_manager.has_mindspace():
+            self._subscribe_to_registry()
+        else:
+            self._unsubscribe_from_registry()
+
+    def _subscribe_to_registry(self) -> None:
+        """Register ColumnManager as a subscriber to the active ContextRegistry."""
+        if self._registry_subscribed:
+            return
+
+        registry = self._mindspace_manager.mindspace().contexts()
+        registry.register_callback(ContextEvent.OPENED, self._on_context_opened)
+        registry.register_callback(ContextEvent.CLOSED, self._on_context_closed)
+        registry.register_callback(ContextEvent.UPDATED, self._on_context_updated)
+        registry.register_callback(ContextEvent.FOCUSED, self._on_context_focused)
+        self._registry_subscribed = True
+
+    def _unsubscribe_from_registry(self) -> None:
+        """Unregister ColumnManager from the ContextRegistry."""
+        if not self._registry_subscribed:
+            return
+
+        # The mindspace may already be gone; guard with has_mindspace
+        if self._mindspace_manager.has_mindspace():
+            registry = self._mindspace_manager.mindspace().contexts()
+            registry.unregister_callback(ContextEvent.OPENED, self._on_context_opened)
+            registry.unregister_callback(ContextEvent.CLOSED, self._on_context_closed)
+            registry.unregister_callback(ContextEvent.UPDATED, self._on_context_updated)
+            registry.unregister_callback(ContextEvent.FOCUSED, self._on_context_focused)
+
+        self._registry_subscribed = False
+
+    def _on_context_opened(self, info: ContextInfo) -> None:
+        """
+        React to a context being opened in the registry.
+
+        If the tab_id is already tracked (e.g. session restore called _add_tab
+        before calling registry.open), we skip tab creation to avoid duplicates.
+        We do still register context models for tabs created via the restore path.
+        """
+        context_id = info.context_id
+
+        if context_id in self._tabs:
+            # Tab already exists (session restore path) — just ensure context
+            # models are registered for this tab.
+            existing_tab = self._tabs[context_id]
+            self._register_context_models(existing_tab)
+            return
+
+        # New tab requested by an AI tool or delegate — create the Qt tab.
+        mindspace = self._mindspace_manager.mindspace()
+        registry = mindspace.contexts()
+        new_tab: TabBase | None = None
+
+        try:
+            if info.context_type == ContextType.EDITOR:
+                tab: TabBase = EditorTab(context_id, info.path, None, self)
+                tab.set_ephemeral(info.is_ephemeral)
+                self._add_tab(tab, os.path.basename(info.path))
+                new_tab = tab
+
+            elif info.context_type == ContextType.TERMINAL:
+                terminal_tab = TerminalTab(context_id, None, self)
+                terminal_tab.set_ephemeral(info.is_ephemeral)
+                self._add_tab(terminal_tab, "Terminal")
+                new_tab = terminal_tab
+
+            elif info.context_type == ContextType.PREVIEW:
+                preview_tab = PreviewTab(context_id, info.path, self)
+                preview_tab.open_link_requested.connect(self._on_preview_open_link_requested)
+                preview_tab.edit_file_requested.connect(self._on_preview_edit_file_requested)
+                preview_tab.set_ephemeral(info.is_ephemeral)
+                norm_path = os.path.normpath(info.path)
+                name = os.path.basename(norm_path)
+                is_mindspace_root = (
+                    norm_path == os.path.normpath(self._mindspace_manager.mindspace_path())
+                )
+                title = f"[{name.upper()}]" if is_mindspace_root else name
+                self._add_tab(preview_tab, title)
+                new_tab = preview_tab
+
+            elif info.context_type == ContextType.DIFF:
+                diff_tab = DiffTab(context_id, info.path, self)
+                diff_tab.open_file_requested.connect(self._on_diff_open_file_requested)
+                diff_tab.open_preview_requested.connect(self._on_diff_open_preview_requested)
+                diff_tab.set_ephemeral(info.is_ephemeral)
+                self._add_tab(diff_tab, os.path.basename(info.path))
+                new_tab = diff_tab
+
+            elif info.context_type == ContextType.CONVERSATION:
+                transcript = registry.get_model(context_id, AITranscriptConversation)
+                if transcript is not None:
+                    # New conversation with a pre-built transcript (new_conversation_tab
+                    # or delegate path)
+                    conv_tab = ConversationTab(
+                        context_id, transcript.path(), self,
+                        ai_transcript_conversation=transcript,
+                    )
+                else:
+                    # Open-existing conversation (open_conversation_tab path)
+                    conv_tab = ConversationTab(context_id, info.path, self)
+
+                conv_tab.fork_from_index_requested.connect(
+                    self._on_conversation_fork_from_index_requested
+                )
+                conv_tab.set_ephemeral(info.is_ephemeral)
+                title = os.path.splitext(os.path.basename(info.path))[0]
+                self._add_tab(conv_tab, title)
+                new_tab = conv_tab
+
+        except Exception:
+            self._logger.exception(
+                "Failed to create tab for context %s (%s)", context_id, info.context_type
+            )
+
+        if new_tab is not None:
+            self._register_context_models(new_tab)
+
+    def _register_context_models(self, tab: TabBase) -> None:
+        """Register context models for a tab that was created outside the registry flow."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        mindspace = self._mindspace_manager.mindspace()
+        tab_id = tab.tab_id()
+
+        if isinstance(tab, ConversationTab):
+            conv_context = ConversationContext(
+                context_id=tab_id,
+                ai_transcript_conversation=tab.ai_conversation(),
+                on_scroll_to_message=tab.scroll_to_message,
+            )
+            mindspace.contexts().register_model(tab_id, conv_context)
+
+        elif isinstance(tab, PreviewTab):
+            preview_context = PreviewContext(
+                context_id=tab_id,
+                path=tab.path(),
+                content_blocks=tab.get_content_blocks(),
+                on_scroll_to_position=tab.scroll_to_content_position,
+            )
+            mindspace.contexts().register_model(tab_id, preview_context)
+
+        elif isinstance(tab, EditorTab):
+            editor_context = tab.get_editor_context()
+            if editor_context is not None:
+                mindspace.contexts().register_model(tab_id, editor_context)
+
+        elif isinstance(tab, TerminalTab):
+            mindspace.contexts().register_model(tab_id, tab.terminal_context())
+
+    def _on_context_closed(self, context_id: str) -> None:
+        """React to a context being closed in the registry — close the Qt tab."""
+        if context_id in self._tabs:
+            self.close_tab_by_id(context_id, force_close=True)
+
+    def _on_context_updated(self, info: ContextInfo) -> None:
+        """React to a context being updated — handle column_index changes."""
+        context_id = info.context_id
+        tab = self._tabs.get(context_id)
+        if tab is None:
+            return
+
+        # Check if the tab is in the right column; if not, move it
+        current_column = self._find_column_for_tab(tab)
+        if current_column is None:
+            return
+
+        current_index = self._tab_columns.index(current_column)
+        if current_index != info.column_index:
+            try:
+                self.move_tab_to_column(context_id, info.column_index)
+            except ColumnManagerError:
+                pass  # Best effort
+
+    def _on_context_focused(self, context_id: str) -> None:
+        """React to a context focus request — bring the Qt tab to front."""
+        tab = self._tabs.get(context_id)
+        if tab is not None:
+            self._set_current_tab(tab, False)
 
     def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
         """
@@ -575,40 +762,6 @@ class ColumnManager(QWidget):
         # Update MRU order for the new tab
         self._update_mru_order(tab, column)
         QTimer.singleShot(0, self.show_all_columns)
-        if self._mindspace_manager.has_mindspace():
-            column_index = self._tab_columns.index(column)
-            self._mindspace_manager.mindspace().contexts().open(
-                context_type=self._tab_context_type(tab),
-                path=tab.path(),
-                title=title,
-                is_ephemeral=tab.is_ephemeral(),
-                context_id=tab.tab_id(),
-                column_index=column_index,
-            )
-            if isinstance(tab, ConversationTab):
-                mindspace = self._mindspace_manager.mindspace()
-                conv_context = ConversationContext(
-                    context_id=tab.tab_id(),
-                    ai_transcript_conversation=tab.ai_conversation(),
-                    on_scroll_to_message=tab.scroll_to_message,
-                )
-                mindspace.contexts().register_model(tab.tab_id(), conv_context)
-
-            elif isinstance(tab, PreviewTab):
-                mindspace = self._mindspace_manager.mindspace()
-                preview_context = PreviewContext(
-                    context_id=tab.tab_id(),
-                    path=tab.path(),
-                    content_blocks=tab.get_content_blocks(),
-                    on_scroll_to_position=tab.scroll_to_content_position,
-                )
-                mindspace.contexts().register_model(tab.tab_id(), preview_context)
-
-            elif isinstance(tab, EditorTab):
-                editor_context = tab.get_editor_context()
-                if editor_context is not None:
-                    mindspace = self._mindspace_manager.mindspace()
-                    mindspace.contexts().register_model(tab.tab_id(), editor_context)
 
     def _move_tab_between_columns(
         self,
@@ -2185,6 +2338,21 @@ class ColumnManager(QWidget):
                 self._active_column = self._tab_columns[column_index]
                 title = self._get_tab_title(tab, state)
                 self._add_tab(tab, title)
+
+                # Register this tab with the context registry.  _on_context_opened
+                # will see the tab already in _tabs and skip Qt tab creation,
+                # but will register the appropriate context model.
+                if self._mindspace_manager.has_mindspace():
+                    col = self._find_column_for_tab(tab)
+                    col_index = self._tab_columns.index(col) if col else column_index
+                    self._mindspace_manager.mindspace().contexts().open(
+                        context_type=self._tab_context_type(tab),
+                        path=tab.path(),
+                        title=title,
+                        is_ephemeral=tab.is_ephemeral(),
+                        context_id=tab.tab_id(),
+                        column_index=col_index,
+                    )
 
             except Exception as e:
                 self._logger.exception("Failed to restore tab manager state: %s", str(e))

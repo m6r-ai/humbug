@@ -3,10 +3,12 @@ import json
 import os
 import platform
 import sys
-from typing import Any, Dict, List, cast
+from datetime import datetime, timezone
+from typing import Any, Dict, List
 
-from ai import AIConversationSettings, AIManager
+from ai import AIConversation, AIConversationSettings, AIManager, AIReasoningCapability
 from ai.ai_model import AIReasoningEffort
+from ai_transcript_conversation import AITranscriptConversation
 from ai_tool import (
     AITool,
     AIToolAuthorizationCallback,
@@ -18,13 +20,13 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
 )
+from mindspace.context.context_type import ContextType
 from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
 
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
-from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.version import CURRENT_VERSION
 
 
@@ -43,7 +45,7 @@ class SystemAITool(AITool):
         Initialize the system tool.
 
         Args:
-            column_manager: Column manager for tab operations
+            column_manager: Column manager for layout queries and tab protection
             mindspace: The active mindspace model
         """
         self._column_manager = column_manager
@@ -240,19 +242,21 @@ class SystemAITool(AITool):
         if not path_str:
             raise AIToolExecutionError("Path parameter is required")
 
-        # Check if our path starts with a separator - assume it's for the root of the mindspace
         if path_str.startswith(os.sep):
             path_str = path_str[1:]
 
-        # Convert to absolute path via mindspace manager
         abs_path = self._mindspace.get_absolute_path(path_str)
 
-        # Verify the resolved path is still within mindspace
         relative_path = self._mindspace.get_mindspace_relative_path(abs_path)
         if relative_path is None:
             raise AIToolExecutionError(f"Path is outside mindspace boundaries: {path_str}")
 
         return abs_path
+
+    def _requester_tab_id(self, requester_ref: Any) -> str | None:
+        """Return the tab_id of the conversation that issued this tool call."""
+        tab = self._column_manager.find_tab_by_ai_conversation(requester_ref)
+        return tab.tab_id() if tab else None
 
     async def _open_editor_tab(
         self,
@@ -262,37 +266,47 @@ class SystemAITool(AITool):
     ) -> AIToolResult:
         """Open or create a file in an editor tab."""
         arguments = tool_call.arguments
-
         file_path_arg = self._get_required_str_value("file_path", arguments)
-
         file_path = self._validate_and_resolve_path(file_path_arg)
 
+        # Return existing tab if this file is already open
+        existing = self._mindspace.contexts().get_by_path(file_path)
+        if existing is not None:
+            self._mindspace.contexts().focus(existing.context_id)
+            relative_path = self._mindspace.get_relative_path(file_path)
+            return AIToolResult(
+                id=tool_call.id, name="system",
+                content=f"Opened editor tab for file: '{relative_path}', tab ID: {existing.context_id}"
+            )
+
         try:
-            # Create parent directories if needed
             directory = os.path.dirname(file_path)
             if directory and not os.path.exists(directory):
                 os.makedirs(directory, exist_ok=True)
 
-            # Open the file in editor
-            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
-            self._column_manager.protect_tab(requester_tab.tab_id())
+            requester_id = self._requester_tab_id(requester_ref)
+            if requester_id:
+                self._column_manager.protect_tab(requester_id)
 
             try:
-                editor_tab = self._column_manager.open_file(file_path, False)
-
+                context_id = self._mindspace.contexts().open(
+                    context_type=ContextType.EDITOR,
+                    path=file_path,
+                    title=os.path.basename(file_path),
+                )
             finally:
-                self._column_manager.unprotect_tab(requester_tab.tab_id())
+                if requester_id:
+                    self._column_manager.unprotect_tab(requester_id)
 
             relative_path = self._mindspace.get_relative_path(file_path)
-            tab_id = editor_tab.tab_id()
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened editor for file: '{relative_path}'\ntab ID: {tab_id}"
+                f"AI opened editor for file: '{relative_path}'\ntab ID: {context_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Opened editor tab for file: '{relative_path}', tab ID: {tab_id}"
+                content=f"Opened editor tab for file: '{relative_path}', tab ID: {context_id}"
             )
 
         except OSError as e:
@@ -309,24 +323,27 @@ class SystemAITool(AITool):
     ) -> AIToolResult:
         """Create a new terminal tab."""
         try:
-            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
-            self._column_manager.protect_tab(requester_tab.tab_id())
+            requester_id = self._requester_tab_id(requester_ref)
+            if requester_id:
+                self._column_manager.protect_tab(requester_id)
 
             try:
-                terminal_tab = self._column_manager.new_terminal()
-
+                context_id = self._mindspace.contexts().open(
+                    context_type=ContextType.TERMINAL,
+                    title="Terminal",
+                )
             finally:
-                self._column_manager.unprotect_tab(requester_tab.tab_id())
+                if requester_id:
+                    self._column_manager.unprotect_tab(requester_id)
 
-            tab_id = terminal_tab.tab_id()
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI created new terminal\ntab ID: {tab_id}"
+                f"AI created new terminal\ntab ID: {context_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Created new terminal, tab ID: {tab_id}"
+                content=f"Created new terminal, tab ID: {context_id}"
             )
 
         except Exception as e:
@@ -340,41 +357,48 @@ class SystemAITool(AITool):
     ) -> AIToolResult:
         """Open an existing conversation tab."""
         arguments = tool_call.arguments
-
         file_path_arg = self._get_required_str_value("file_path", arguments)
-
         conversation_path = self._validate_and_resolve_path(file_path_arg)
 
+        # Return existing tab if this conversation is already open
+        existing = self._mindspace.contexts().get_by_path(conversation_path)
+        if existing is not None:
+            self._mindspace.contexts().focus(existing.context_id)
+            return AIToolResult(
+                id=tool_call.id, name="system",
+                content=f"Opened conversation for: '{conversation_path}', tab ID: {existing.context_id}"
+            )
+
         try:
-            # Ensure conversations directory exists
             self._mindspace.ensure_mindspace_dir("conversations")
 
-            # Open conversation
-            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
-            self._column_manager.protect_tab(requester_tab.tab_id())
+            requester_id = self._requester_tab_id(requester_ref)
+            if requester_id:
+                self._column_manager.protect_tab(requester_id)
 
+            title = os.path.splitext(os.path.basename(conversation_path))[0]
             try:
-                conversation_tab = self._column_manager.open_conversation(conversation_path, False)
-
+                context_id = self._mindspace.contexts().open(
+                    context_type=ContextType.CONVERSATION,
+                    path=conversation_path,
+                    title=title,
+                )
             finally:
-                self._column_manager.unprotect_tab(requester_tab.tab_id())
+                if requester_id:
+                    self._column_manager.unprotect_tab(requester_id)
 
-            tab_id = conversation_tab.tab_id()
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened conversation for: '{conversation_path}'\ntab ID: {tab_id}"
+                f"AI opened conversation for: '{conversation_path}'\ntab ID: {context_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Opened conversation for: '{conversation_path}', tab ID: {tab_id}"
+                content=f"Opened conversation for: '{conversation_path}', tab ID: {context_id}"
             )
 
         except MindspaceError as e:
             raise AIToolExecutionError(f"Failed to create conversation directory: {str(e)}") from e
-
-        except ColumnManagerError as e:
-            raise AIToolExecutionError(f"Failed to open conversation: {str(e)}") from e
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to open conversation: {str(e)}") from e
@@ -391,19 +415,17 @@ class SystemAITool(AITool):
         temperature = arguments.get("temperature")
         reasoning_effort_arg = self._get_optional_str_value("reasoning_effort", arguments)
 
-        # Validate temperature if provided
         if temperature is not None:
             if not isinstance(temperature, (int, float)):
                 raise AIToolExecutionError("'temperature' must be a number")
-
             if not 0.0 <= temperature <= 1.0:
                 raise AIToolExecutionError("'temperature' must be between 0.0 and 1.0")
 
-        # Validate model exists if provided
         reasoning = None
         reasoning_effort: str | None = None
         effective_model: str = ""
         effective_provider: str = ""
+
         if model:
             ai_backends = self._ai_manager.get_backends()
             available_keys = list(AIConversationSettings.iter_models_by_backends(ai_backends))
@@ -418,22 +440,16 @@ class SystemAITool(AITool):
                 raise AIToolExecutionError(
                     f"Model '{model}' is not available. Available models: {', '.join(available_display)}"
                 )
-
             effective_model, effective_provider = matched_key
-
-            # Get reasoning capability from model
             model_config = AIConversationSettings.MODELS.get(matched_key)
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
-        # Validate reasoning_effort if provided
         if reasoning_effort_arg is not None:
             if not AIReasoningEffort.is_valid(reasoning_effort_arg):
                 raise AIToolExecutionError(
                     f"'reasoning_effort' must be one of: {', '.join(AIReasoningEffort.values())}"
                 )
-
-            # Check the effort is supported by the chosen model (if model is known)
             if effective_model and effective_provider:
                 supported = AIConversationSettings.get_supported_reasoning_efforts(effective_model, effective_provider)
                 if supported and reasoning_effort_arg not in supported:
@@ -441,35 +457,64 @@ class SystemAITool(AITool):
                         f"Model '{effective_model}' does not support reasoning_effort '{reasoning_effort_arg}'. "
                         f"Supported efforts: {', '.join(supported)}"
                     )
-
             reasoning_effort = reasoning_effort_arg
 
         try:
-            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
-            self._column_manager.protect_tab(requester_tab.tab_id())
+            self._mindspace.ensure_mindspace_dir("conversations")
 
-            # Create conversation
+            # Build the conversation settings
+            settings = self._mindspace.settings()
+            resolved_model = effective_model or (settings.model if settings else "")
+            resolved_provider = effective_provider or (settings.provider if settings else "")
+            resolved_temperature = temperature if temperature is not None else (settings.temperature if settings else None)
+            resolved_reasoning = reasoning or (settings.reasoning if settings else AIReasoningCapability.NO_REASONING)
+            resolved_effort = reasoning_effort or (settings.reasoning_effort if settings else None)
+
+            conversation_settings = AIConversationSettings(
+                model=resolved_model,
+                provider=resolved_provider,
+                temperature=resolved_temperature if AIConversationSettings.supports_temperature(
+                    resolved_model, resolved_provider, resolved_effort
+                ) else None,
+                reasoning=resolved_reasoning,
+                reasoning_effort=resolved_effort,
+            )
+
+            # Generate conversation path
+            timestamp = datetime.now(timezone.utc)
+            conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+            filename = os.path.join("conversations", f"{conversation_title}.conv")
+            full_path = self._mindspace.get_absolute_path(filename)
+
+            # Build the AIConversation with settings applied, wrap in transcript
+            ai_conversation = AIConversation()
+            ai_conversation.update_conversation_settings(conversation_settings)
+            transcript = AITranscriptConversation(full_path, ai_conversation)
+
+            requester_id = self._requester_tab_id(requester_ref)
+            if requester_id:
+                self._column_manager.protect_tab(requester_id)
+
             try:
-                self._mindspace.ensure_mindspace_dir("conversations")
-                conversation_tab = self._column_manager.new_conversation(
-                    False, None, effective_model, effective_provider, temperature, reasoning, reasoning_effort
+                context_id = self._mindspace.contexts().open(
+                    context_type=ContextType.CONVERSATION,
+                    path=full_path,
+                    title=conversation_title,
+                    initial_model=transcript,
                 )
-
             finally:
-                self._column_manager.unprotect_tab(requester_tab.tab_id())
+                if requester_id:
+                    self._column_manager.unprotect_tab(requester_id)
 
-            tab_id = conversation_tab.tab_id()
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI created new conversation\ntab ID: {tab_id}"
+                f"AI created new conversation\ntab ID: {context_id}"
             )
-            result_parts = [f"Created new conversation, tab ID: {tab_id}"]
+            result_parts = [f"Created new conversation, tab ID: {context_id}"]
             if model:
                 result_parts.append(f"model: {model}")
-
             if temperature is not None:
                 result_parts.append(f"temperature: {temperature}")
-
             if reasoning_effort:
                 result_parts.append(f"reasoning_effort: {reasoning_effort}")
 
@@ -497,34 +542,50 @@ class SystemAITool(AITool):
 
         if file_path_arg:
             preview_path = self._validate_and_resolve_path(file_path_arg)
-
         else:
-            # Use mindspace root if no path provided
             preview_path = self._mindspace.get_absolute_path(".")
 
+        # Return existing tab if this path is already open in a preview
+        existing = self._mindspace.contexts().get_by_path(preview_path)
+        if existing is not None:
+            self._mindspace.contexts().focus(existing.context_id)
+            relative_path = self._mindspace.get_relative_path(preview_path)
+            location = relative_path if relative_path else "."
+            return AIToolResult(
+                id=tool_call.id, name="system",
+                content=f"Opened preview tab for: '{location}', tab ID: {existing.context_id}"
+            )
+
         try:
-            # Open preview page
-            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
-            self._column_manager.protect_tab(requester_tab.tab_id())
+            requester_id = self._requester_tab_id(requester_ref)
+            if requester_id:
+                self._column_manager.protect_tab(requester_id)
+
+            norm_path = os.path.normpath(preview_path)
+            name = os.path.basename(norm_path)
+            is_mindspace_root = norm_path == os.path.normpath(self._mindspace.mindspace_path())
+            title = f"[{name.upper()}]" if is_mindspace_root else name
 
             try:
-                preview_tab = self._column_manager.open_preview_page(preview_path, False)
-
+                context_id = self._mindspace.contexts().open(
+                    context_type=ContextType.PREVIEW,
+                    path=preview_path,
+                    title=title,
+                )
             finally:
-                self._column_manager.unprotect_tab(requester_tab.tab_id())
+                if requester_id:
+                    self._column_manager.unprotect_tab(requester_id)
 
             relative_path = self._mindspace.get_relative_path(preview_path)
             location = relative_path if relative_path else "."
-
-            tab_id = preview_tab.tab_id()
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened preview tab for: '{location}'\ntab ID: {tab_id}"
+                f"AI opened preview tab for: '{location}'\ntab ID: {context_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Opened preview tab for: '{location}', tab ID: {tab_id}"
+                content=f"Opened preview tab for: '{location}', tab ID: {context_id}"
             )
 
         except ColumnManagerError as e:
@@ -541,7 +602,6 @@ class SystemAITool(AITool):
     ) -> AIToolResult:
         """Open a side-by-side git diff tab for a file."""
         arguments = tool_call.arguments
-
         file_path_arg = self._get_required_str_value("file_path", arguments)
         file_path = self._validate_and_resolve_path(file_path_arg)
 
@@ -551,26 +611,40 @@ class SystemAITool(AITool):
         if os.path.isdir(file_path):
             raise AIToolExecutionError(f"Cannot diff a directory: '{file_path_arg}'")
 
+        # Return existing tab if this file is already open in a diff tab
+        existing = self._mindspace.contexts().get_by_path(file_path)
+        if existing is not None:
+            self._mindspace.contexts().focus(existing.context_id)
+            relative_path = self._mindspace.get_relative_path(file_path)
+            return AIToolResult(
+                id=tool_call.id, name="system",
+                content=f"Opened diff tab for file: '{relative_path}', tab ID: {existing.context_id}"
+            )
+
         try:
-            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
-            self._column_manager.protect_tab(requester_tab.tab_id())
+            requester_id = self._requester_tab_id(requester_ref)
+            if requester_id:
+                self._column_manager.protect_tab(requester_id)
 
             try:
-                diff_tab = self._column_manager.open_diff(file_path, False)
-
+                context_id = self._mindspace.contexts().open(
+                    context_type=ContextType.DIFF,
+                    path=file_path,
+                    title=os.path.basename(file_path),
+                )
             finally:
-                self._column_manager.unprotect_tab(requester_tab.tab_id())
+                if requester_id:
+                    self._column_manager.unprotect_tab(requester_id)
 
             relative_path = self._mindspace.get_relative_path(file_path)
-            tab_id = diff_tab.tab_id()
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened diff for file: '{relative_path}'\ntab ID: {tab_id}"
+                f"AI opened diff for file: '{relative_path}'\ntab ID: {context_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Opened diff tab for file: '{relative_path}', tab ID: {tab_id}"
+                content=f"Opened diff tab for file: '{relative_path}', tab ID: {context_id}"
             )
 
         except Exception as e:
@@ -586,19 +660,15 @@ class SystemAITool(AITool):
         arguments = tool_call.arguments
         tab_id = arguments.get("tab_id")
 
-        # If no tab ID provided, use the current tab
         if not tab_id:
             current_tab = self._column_manager.get_current_tab()
             if not current_tab:
                 raise AIToolExecutionError("No current tab is open")
-
             tab_id = current_tab.tab_id()
 
-        # Validate tab_id is a string if provided
         if not isinstance(tab_id, str):
             raise AIToolExecutionError("'tab_id' must be a string")
 
-        # Get tab info
         tab_info = self._column_manager.get_tab_info_by_id(tab_id)
         if not tab_info:
             raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
@@ -636,22 +706,18 @@ class SystemAITool(AITool):
             if not tab:
                 raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
 
-            # If tab has unsaved changes, request user authorization before closing
             if tab.is_modified():
                 tab_info = self._column_manager.get_tab_info_by_id(tab_id)
                 tab_title = tab_info.get('title', tab_id) if tab_info else tab_id
                 context = f"Close tab '{tab_title}' with unsaved changes? Unsaved modifications will be lost."
-
-                authorized = await request_authorization(
-                    "system", arguments, context, None, True
-                )
+                authorized = await request_authorization("system", arguments, context, None, True)
                 if not authorized:
                     raise AIToolAuthorizationDenied(
                         f"User denied permission to close modified tab '{tab_title}'"
                     )
 
-            # Force close to bypass the editor's modal save dialog
-            self._column_manager.close_tab_by_id(tab_id, force_close=True)
+            # Close via registry — ColumnManager._on_context_closed will close the Qt tab
+            self._mindspace.contexts().close(tab_id)
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -662,6 +728,12 @@ class SystemAITool(AITool):
                 name="system",
                 content="Closed tab"
             )
+
+        except AIToolAuthorizationDenied:
+            raise
+
+        except AIToolExecutionError:
+            raise
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to close tab {tab_id}: {str(e)}") from e
@@ -687,7 +759,6 @@ class SystemAITool(AITool):
                     content="No tabs are currently open."
                 )
 
-            # Format the response as a structured result
             result = {
                 "total_tabs": len(tab_info),
                 "total_columns": self._column_manager.num_colunns(),
@@ -731,7 +802,6 @@ class SystemAITool(AITool):
         if not isinstance(target_column, int):
             raise AIToolExecutionError("'target_column' must be an integer")
 
-        # Validate target column is non-negative
         if target_column < 0:
             raise AIToolExecutionError(f"Target column must be non-negative, got {target_column}")
 
@@ -759,7 +829,6 @@ class SystemAITool(AITool):
     ) -> AIToolResult:
         """Get system and mindspace information."""
         try:
-            # System information
             system_info = {
                 "version": f"v{CURRENT_VERSION}",
                 "platform": sys.platform,
@@ -767,40 +836,29 @@ class SystemAITool(AITool):
                 "architecture": platform.machine()
             }
 
-            # Mindspace information
             mindspace_path = self._mindspace.mindspace_path()
             mindspace_name = os.path.basename(mindspace_path)
-
             mindspace_info = {
                 "name": mindspace_name,
                 "path": mindspace_path
             }
 
-            # AI models information
             ai_backends = self._ai_manager.get_backends()
-
-            # Categorize models by backend
             models_by_backend: Dict[str, List[str]] = {}
             for (model_name, provider) in AIConversationSettings.iter_models_by_backends(ai_backends):
                 display = AIConversationSettings.get_display_name(model_name, provider)
                 models_by_backend.setdefault(provider, []).append(display)
 
-            ai_info = {
-                "models_by_backend": models_by_backend
-            }
+            ai_info = {"models_by_backend": models_by_backend}
 
-            # Shell information
             if sys.platform == 'win32':
                 shell_env = os.environ.get('COMSPEC', 'cmd.exe')
-
             else:
                 shell_env = os.environ.get('SHELL', '/bin/sh')
 
             if os.path.isabs(shell_env):
                 shell_path = shell_env
-
             else:
-                # Try to find it in PATH
                 shell_path = shell_env
                 for path_dir in os.environ.get('PATH', '').split(os.pathsep):
                     potential_path = os.path.join(path_dir, shell_env)
@@ -814,7 +872,6 @@ class SystemAITool(AITool):
                 "cwd": mindspace_path
             }
 
-            # Combine all information
             result = {
                 "system": system_info,
                 "mindspace": mindspace_info,

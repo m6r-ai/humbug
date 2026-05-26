@@ -150,8 +150,6 @@ class TerminalTab(TabBase):
             terminal_process=self._terminal_process,
             terminal_state=self._terminal_state,
         )
-        mindspace = self._mindspace_manager.mindspace()
-        mindspace.contexts().register_model(self._tab_id, self._terminal_context)
 
         # Start local shell process
         if start_process:
@@ -167,6 +165,15 @@ class TerminalTab(TabBase):
         """
         if active:
             self.activated.emit()
+
+    def terminal_context(self) -> TerminalContext:
+        """
+        Return the TerminalContext for this tab.
+
+        Returns:
+            The TerminalContext owned by this tab.
+        """
+        return self._terminal_context
 
     def activate(self) -> None:
         """Activate the tab."""

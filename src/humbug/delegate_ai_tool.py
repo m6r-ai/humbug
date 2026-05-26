@@ -6,7 +6,9 @@ from typing import cast, Dict
 
 from ai import AIConversation, AIConversationSettings
 from ai_tool import AIToolExecutionError
+from ai_transcript_conversation import AITranscriptConversation
 from delegate_ai_tool import DelegateAITool
+from mindspace.context.context_type import ContextType
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
@@ -25,8 +27,8 @@ def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) 
     Returns:
         A DelegateAITool instance ready for registration with the tool manager
     """
-    # tab_ids tracks session_path -> tab_id for cleanup on completion
-    tab_ids: Dict[str, str] = {}
+    # context_ids tracks session_path -> context_id for cleanup on completion
+    context_ids: Dict[str, str] = {}
 
     def generate_conversation_path() -> str:
         timestamp = datetime.now(timezone.utc)
@@ -83,7 +85,7 @@ def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) 
         mindspace.add_interaction(log_level, message)
 
     def on_conversation_created(
-        child_conversation: AIConversation,
+        child_transcript: AITranscriptConversation,
         session_path: str,
         parent_conversation: AIConversation
     ) -> None:
@@ -92,12 +94,16 @@ def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) 
             column_manager.protect_tab(parent_tab.tab_id())
 
         try:
-            conversation_tab = column_manager.new_conversation(
-                child=True,
-                ai_conversation=child_conversation
+            title = os.path.splitext(os.path.basename(child_transcript.path()))[0]
+
+            context_id = mindspace.contexts().open(
+                context_type=ContextType.CONVERSATION,
+                path=child_transcript.path(),
+                title=title,
+                initial_model=child_transcript,
             )
 
-        except ColumnManagerError:
+        except Exception:
             # Tab creation failed — the conversation will still run and persist;
             # the user just won't have a live view.
             return
@@ -106,7 +112,7 @@ def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) 
             if parent_tab:
                 column_manager.unprotect_tab(parent_tab.tab_id())
 
-        tab_ids[session_path] = conversation_tab.tab_id()
+        context_ids[session_path] = context_id
 
         # Move the child tab one column to the right of the parent
         if parent_tab:
@@ -114,14 +120,14 @@ def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) 
             if parent_info:
                 target_column = min(cast(int, parent_info["column_index"]) + 1, 5)
                 try:
-                    column_manager.move_tab_to_column(conversation_tab.tab_id(), target_column)
+                    column_manager.move_tab_to_column(context_id, target_column)
                 except ColumnManagerError:
                     pass  # Best effort — tab is still functional if move fails
 
     def on_conversation_completed(session_path: str) -> None:
-        tab_id = tab_ids.pop(session_path, None)
-        if tab_id:
-            column_manager.close_tab_by_id(tab_id)
+        context_id = context_ids.pop(session_path, None)
+        if context_id:
+            mindspace.contexts().close(context_id)
 
     return DelegateAITool(
         generate_conversation_path=generate_conversation_path,
