@@ -49,8 +49,6 @@ class PreviewContext:
         """Return the stable context identifier."""
         return self._context_id
 
-    # ── data operations ───────────────────────────────────────────────────────
-
     def get_info(self) -> Dict[str, Any]:
         """
         Return high-level metadata about the preview content.
@@ -69,8 +67,10 @@ class PreviewContext:
             markdown_extensions = {'.md', '.markdown'}
             if ext in image_extensions:
                 content_type = "image"
+
             elif ext in markdown_extensions:
                 content_type = "markdown"
+
             else:
                 content_type = "file"
 
@@ -118,6 +118,7 @@ class PreviewContext:
         if regexp:
             try:
                 pattern = re.compile(search_text, flags)
+
             except re.error as e:
                 raise ValueError(f"Invalid regular expression: {e}") from e
         else:
@@ -142,6 +143,7 @@ class PreviewContext:
                     })
                     if len(matches) >= max_results:
                         break
+
             else:
                 search_str = search_text if case_sensitive else search_text.lower()
                 haystack = raw_text if case_sensitive else raw_text.lower()
@@ -150,6 +152,7 @@ class PreviewContext:
                     pos = haystack.find(search_str, pos)
                     if pos == -1:
                         break
+
                     context_start = max(0, pos - 50)
                     context_end = min(len(raw_text), pos + len(search_text) + 50)
                     matches.append({
@@ -163,6 +166,7 @@ class PreviewContext:
                     })
                     if len(matches) >= max_results:
                         break
+
                     pos += 1
 
             if len(matches) >= max_results:
@@ -175,8 +179,6 @@ class PreviewContext:
             "returned_matches": len(matches),
             "matches": matches,
         }
-
-    # ── visualisation hint ────────────────────────────────────────────────────
 
     def scroll_to(
         self,

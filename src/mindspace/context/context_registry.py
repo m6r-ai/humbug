@@ -37,8 +37,6 @@ class ContextRegistry:
         }
         self._logger = logging.getLogger("ContextRegistry")
 
-    # ── observer registration ─────────────────────────────────────────────────
-
     def register_callback(self, event: ContextEvent, callback: Callable) -> None:
         """
         Register a callback for a context event.
@@ -59,8 +57,6 @@ class ContextRegistry:
             callback: The callback to remove.
         """
         self._callbacks[event].discard(callback)
-
-    # ── mutations ─────────────────────────────────────────────────────────────
 
     def open(
         self,
@@ -177,8 +173,6 @@ class ContextRegistry:
         self._contexts.clear()
         self._models.clear()
 
-    # ── queries ───────────────────────────────────────────────────────────────
-
     def get(self, context_id: str) -> ContextInfo | None:
         """
         Return a snapshot of a context by ID, or None if not found.
@@ -258,8 +252,6 @@ class ContextRegistry:
     def __len__(self) -> int:
         """Return the number of open contexts."""
         return len(self._contexts)
-
-    # ── internals ─────────────────────────────────────────────────────────────
 
     def _emit(self, event: ContextEvent, *args: Any) -> None:
         """Invoke all callbacks registered for an event."""

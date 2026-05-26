@@ -49,8 +49,6 @@ class ConversationContext:
         """Return the backing AITranscriptConversation."""
         return self._transcript
 
-    # ── data operations ───────────────────────────────────────────────────────
-
     def get_conversation_info(self) -> Dict[str, Any]:
         """
         Return high-level metadata about the conversation.
@@ -299,8 +297,6 @@ class ConversationContext:
             "matches": matches,
         }
 
-    # ── visualisation hint ────────────────────────────────────────────────────
-
     def scroll_to_message(
         self,
         message_id: str | None = None,
@@ -359,13 +355,12 @@ class ConversationContext:
             "message_id": actual_id,
         }
 
-    # ── internals ─────────────────────────────────────────────────────────────
-
     @staticmethod
     def _serialize_parent(parent: Any) -> Any:
         """Serialize an AIConversationParent to a JSON-safe dict, or None."""
         if parent is None:
             return None
+
         return {"message_id": parent.message_id, "tool_call_id": parent.tool_call_id}
 
     def _get_history(self) -> AIConversationHistory:

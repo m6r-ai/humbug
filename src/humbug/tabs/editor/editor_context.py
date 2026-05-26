@@ -62,8 +62,6 @@ class EditorContext:
         """Return the stable context identifier."""
         return self._context_id
 
-    # ── data operations ───────────────────────────────────────────────────────
-
     def get_text_range(
         self,
         start_line: int | None = None,
@@ -320,8 +318,6 @@ class EditorContext:
             True if the save was successful.
         """
         return self._save_cb()
-
-    # ── visualisation hint ────────────────────────────────────────────────────
 
     def goto_line(self, line: int, column: int = 1) -> None:
         """
