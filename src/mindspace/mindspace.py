@@ -20,9 +20,6 @@ class Mindspace:
 
     Owns settings, the interaction log, path resolution, and session persistence.
     Has no Qt dependency — notifies observers via plain callbacks.
-
-    The Qt MindspaceManager wraps this, re-emitting callbacks as Qt signals and
-    adding the directory tracker and home config tracking that are UI concerns.
     """
 
     MINDSPACE_DIR     = ".humbug"
