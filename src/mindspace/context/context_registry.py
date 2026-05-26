@@ -65,7 +65,6 @@ class ContextRegistry:
         title:        str  = "",
         is_ephemeral: bool = False,
         context_id:   str  = "",
-        column_index: int  = 0,
         initial_model: Any = None,
     ) -> str:
         """
@@ -79,7 +78,6 @@ class ContextRegistry:
                           context is opened in the same column.
             context_id:   Stable ID to use (e.g. when restoring from session).
                           A new UUID is generated if not provided.
-            column_index: Layout hint — which column the context occupies.
             initial_model: Optional model object to register atomically with
                            the context.  Stored before OPENED is emitted so
                            subscribers can retrieve it immediately.
@@ -97,7 +95,6 @@ class ContextRegistry:
             title=title,
             is_ephemeral=is_ephemeral,
             is_modified=False,
-            column_index=column_index,
         )
         self._contexts[context_id] = info
         if initial_model is not None:
@@ -121,19 +118,18 @@ class ContextRegistry:
         """
         Update mutable fields on a context and emit UPDATED.
 
-        Only title, is_ephemeral, is_modified, and column_index may be updated.
+        Only title, is_ephemeral, and is_modified may be updated.
         Unknown keys are silently ignored.
 
         Args:
             context_id: ID of the context to update.
-            **kwargs:   Fields to update (title, is_ephemeral, is_modified,
-                        column_index).
+            **kwargs:   Fields to update (title, is_ephemeral, is_modified).
         """
         info = self._contexts.get(context_id)
         if info is None:
             return
 
-        allowed = {"title", "is_ephemeral", "is_modified", "column_index"}
+        allowed = {"title", "is_ephemeral", "is_modified"}
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
             return
@@ -145,7 +141,6 @@ class ContextRegistry:
             title=updates.get("title", info.title),
             is_ephemeral=updates.get("is_ephemeral", info.is_ephemeral),
             is_modified=updates.get("is_modified", info.is_modified),
-            column_index=updates.get("column_index", info.column_index),
         )
         self._emit(ContextEvent.UPDATED, self._contexts[context_id])
 

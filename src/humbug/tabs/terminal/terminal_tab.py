@@ -447,13 +447,12 @@ class TerminalTab(TabBase):
         # Transfer the process state
         source_tab._terminal_process.transfer_to(self._terminal_process)
 
-        # Update the context so it references the new process
+        # Rebuild the context so it references the transferred process
         self._terminal_context = TerminalContext(
             context_id=self._tab_id,
             terminal_process=self._terminal_process,
             terminal_state=self._terminal_state,
         )
-        self._mindspace_manager.mindspace().contexts().register_model(self._tab_id, self._terminal_context)
 
         # Create new read loop task in this tab
         self._create_tracked_task(self._read_loop())

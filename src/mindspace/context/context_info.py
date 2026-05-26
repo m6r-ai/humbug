@@ -17,4 +17,3 @@ class ContextInfo:
     title:        str
     is_ephemeral: bool
     is_modified:  bool
-    column_index: int   # layout hint for the Qt frontend; ignored by CLI

@@ -678,23 +678,7 @@ class ColumnManager(QWidget):
             self.close_tab_by_id(context_id, force_close=True)
 
     def _on_context_updated(self, info: ContextInfo) -> None:
-        """React to a context being updated — handle column_index changes."""
-        context_id = info.context_id
-        tab = self._tabs.get(context_id)
-        if tab is None:
-            return
-
-        # Check if the tab is in the right column; if not, move it
-        current_column = self._find_column_for_tab(tab)
-        if current_column is None:
-            return
-
-        current_index = self._tab_columns.index(current_column)
-        if current_index != info.column_index:
-            try:
-                self.move_tab_to_column(context_id, info.column_index)
-            except ColumnManagerError:
-                pass  # Best effort
+        """React to a context being updated — currently a no-op at the Qt layer."""
 
     def _on_context_focused(self, context_id: str) -> None:
         """React to a context focus request — bring the Qt tab to front."""
@@ -717,15 +701,12 @@ class ColumnManager(QWidget):
         if not self._mindspace_manager.has_mindspace():
             return
 
-        col = self._find_column_for_tab(tab)
-        col_index = self._tab_columns.index(col) if col is not None else 0
         self._mindspace_manager.mindspace().contexts().open(
             context_type=self._tab_context_type(tab),
             path=tab.path(),
             title=title,
             is_ephemeral=tab.is_ephemeral(),
             context_id=tab.tab_id(),
-            column_index=col_index,
         )
 
     def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
@@ -831,6 +812,7 @@ class ColumnManager(QWidget):
             return
 
         self._add_tab_to_column(new_tab, tab_title, target_column)
+        self._register_context_models(new_tab)
 
         if remove_if_empty and source_column.count() == 0 and len(self._tab_columns) > 1:
             source_column_index = self._tab_columns.index(source_column)
@@ -2383,15 +2365,12 @@ class ColumnManager(QWidget):
                 # will see the tab already in _tabs and skip Qt tab creation,
                 # but will register the appropriate context model.
                 if self._mindspace_manager.has_mindspace():
-                    col = self._find_column_for_tab(tab)
-                    col_index = self._tab_columns.index(col) if col else column_index
                     self._mindspace_manager.mindspace().contexts().open(
                         context_type=self._tab_context_type(tab),
                         path=tab.path(),
                         title=title,
                         is_ephemeral=tab.is_ephemeral(),
                         context_id=tab.tab_id(),
-                        column_index=col_index,
                     )
 
             except Exception as e:
