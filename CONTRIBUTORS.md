@@ -4,7 +4,7 @@ Thank you to everyone who has contributed to this project so far!
 
 Dave Hudson [dave-hudson](https://github.com/dave-hudson)
 
-* Project lead.
+* Project lead (if it's not listed below then it was build by Dave).
 
 Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 

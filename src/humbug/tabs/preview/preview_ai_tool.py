@@ -14,9 +14,7 @@ from ai_tool import (
 )
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
-
-from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.preview.preview_tab import PreviewTab
+from mindspace.context.preview_context import PreviewContext
 
 
 class PreviewAITool(AITool):
@@ -27,15 +25,13 @@ class PreviewAITool(AITool):
     Requires a preview tab to be open (use system tool to open previews).
     """
 
-    def __init__(self, column_manager: ColumnManager, mindspace: Mindspace):
+    def __init__(self, mindspace: Mindspace):
         """
         Initialize the preview tool.
 
         Args:
-            column_manager: Column manager for accessing preview tabs
             mindspace: The active mindspace model
         """
-        self._column_manager = column_manager
         self._mindspace = mindspace
         self._logger = logging.getLogger("PreviewAITool")
 
@@ -154,34 +150,27 @@ class PreviewAITool(AITool):
             ),
         }
 
-    def _get_preview_tab(self, arguments: Dict[str, Any]) -> PreviewTab:
+    def _get_preview_context(self, arguments: Dict[str, Any]) -> PreviewContext:
         """
-        Get a preview tab by ID.
+        Retrieve the PreviewContext for the given context_id.
 
         Args:
             arguments: Tool arguments containing tab_id
 
         Returns:
-            PreviewTab instance
+            PreviewContext instance
 
         Raises:
-            AIToolExecutionError: If no preview tab found
+            AIToolExecutionError: If no preview context found for the given ID
         """
-        if "tab_id" not in arguments:
-            raise AIToolExecutionError("No 'tab_id' argument provided")
+        context_id = self._get_required_str_value("tab_id", arguments)
+        context = self._mindspace.contexts().get_model(context_id, PreviewContext)
+        if context is None:
+            raise AIToolExecutionError(
+                f"No preview context found with ID: {context_id}"
+            )
 
-        tab_id = arguments["tab_id"]
-        if not isinstance(tab_id, str):
-            raise AIToolExecutionError("'tab_id' must be a string")
-
-        tab = self._column_manager.get_tab_by_id(tab_id)
-        if not tab:
-            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
-
-        if not isinstance(tab, PreviewTab):
-            raise AIToolExecutionError(f"Tab {tab_id} is not a preview tab")
-
-        return tab
+        return context
 
     async def _get_info(
         self,
@@ -191,15 +180,15 @@ class PreviewAITool(AITool):
     ) -> AIToolResult:
         """Get preview content metadata."""
         arguments = tool_call.arguments
-        preview_tab = self._get_preview_tab(arguments)
-        tab_id = preview_tab.tab_id()
+        context = self._get_preview_context(arguments)
+        context_id = context.context_id()
 
         try:
-            info = preview_tab.get_preview_info()
+            info = context.get_info()
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested preview info\ntab ID: {tab_id}"
+                f"AI requested preview info\ntab ID: {context_id}"
             )
 
             return AIToolResult(
@@ -220,8 +209,8 @@ class PreviewAITool(AITool):
     ) -> AIToolResult:
         """Search for text in preview content."""
         arguments = tool_call.arguments
-        preview_tab = self._get_preview_tab(arguments)
-        tab_id = preview_tab.tab_id()
+        context = self._get_preview_context(arguments)
+        context_id = context.context_id()
 
         search_text = self._get_required_str_value("search_text", arguments)
 
@@ -230,9 +219,7 @@ class PreviewAITool(AITool):
         regexp = self._get_optional_bool_value("regexp", arguments, False)
 
         try:
-            result = preview_tab.search_content(
-                search_text, case_sensitive, max_results, regexp
-            )
+            result = context.search(search_text, case_sensitive, max_results, regexp)
 
             flags = []
             if case_sensitive:
@@ -245,7 +232,7 @@ class PreviewAITool(AITool):
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI searched preview for '{search_text}'{flag_desc}: "
-                f"{result['total_matches']} matches\ntab ID: {tab_id}"
+                f"{result['total_matches']} matches\ntab ID: {context_id}"
             )
 
             return AIToolResult(
@@ -269,8 +256,8 @@ class PreviewAITool(AITool):
     ) -> AIToolResult:
         """Scroll preview to a specific content position."""
         arguments = tool_call.arguments
-        preview_tab = self._get_preview_tab(arguments)
-        tab_id = preview_tab.tab_id()
+        context = self._get_preview_context(arguments)
+        context_id = context.context_id()
 
         if "block_index" not in arguments:
             raise AIToolExecutionError("No 'block_index' argument provided")
@@ -287,9 +274,7 @@ class PreviewAITool(AITool):
             raise AIToolExecutionError("'position' must be 'top', 'center', or 'bottom'")
 
         try:
-            success = preview_tab.scroll_to_content_position(
-                block_index, section_index, text_position, position
-            )
+            success = context.scroll_to(block_index, section_index, text_position, position)
 
             if not success:
                 raise AIToolExecutionError(
@@ -300,7 +285,7 @@ class PreviewAITool(AITool):
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI scrolled preview to block {block_index}, section {section_index}, "
-                f"position {text_position} ({position})\ntab ID: {tab_id}"
+                f"position {text_position} ({position})\ntab ID: {context_id}"
             )
 
             return AIToolResult(

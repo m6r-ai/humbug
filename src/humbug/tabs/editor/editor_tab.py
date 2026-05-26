@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 import logging
 
 from PySide6.QtWidgets import (
@@ -9,6 +9,7 @@ from PySide6.QtCore import QTimer, QRegularExpression
 from humbug.tabs.editor.editor_goto_line_dialog import EditorGotoLineDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
+from humbug.tabs.editor.editor_context import EditorContext
 from humbug.tabs.editor.editor_widget import EditorWidget
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
@@ -61,6 +62,17 @@ class EditorTab(TabBase):
         self._editor_widget.status_updated.connect(self.update_status)
         self._editor_widget.file_saved.connect(self._on_file_saved)
         layout.addWidget(self._editor_widget)
+
+        # Build the EditorContext backed by the widget's document
+        self._editor_context: Optional[EditorContext] = EditorContext(
+            context_id=tab_id,
+            document=self._editor_widget.document(),
+            get_cursor_info_cb=self._editor_widget.get_cursor_info,
+            get_selected_text_cb=self._editor_widget.get_selected_text,
+            get_editor_info_cb=self._editor_widget.get_editor_info,
+            save_cb=self._editor_widget.save_file,
+            on_goto_line=self._editor_widget.goto_line,
+        )
 
         # Set up debounced search update timer
         self._search_update_timer = QTimer(self)
@@ -144,6 +156,7 @@ class EditorTab(TabBase):
 
     def get_state(self, temp_state: bool=False) -> TabState:
         """Get serializable state for mindspace persistence."""
+
         metadata = self._editor_widget.create_state_metadata(temp_state)
 
         if temp_state:
@@ -159,6 +172,15 @@ class EditorTab(TabBase):
             path=path,
             metadata=metadata
         )
+
+    def get_editor_context(self) -> Optional[EditorContext]:
+        """
+        Return the EditorContext for this tab.
+
+        Returns:
+            The EditorContext, or None if not yet initialised.
+        """
+        return self._editor_context
 
     @classmethod
     def restore_from_state(cls, state: TabState, parent: QWidget) -> 'EditorTab':

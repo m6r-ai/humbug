@@ -7,7 +7,7 @@ import stat
 from datetime import datetime
 from typing import List, Tuple, Set
 
-from humbug.mindspace.mindspace_manager import MindspaceManager
+from mindspace.mindspace import Mindspace
 from humbug.tabs.preview.preview_error import PreviewIOError
 
 
@@ -26,10 +26,15 @@ class PreviewContent:
     different file types or directories.
     """
 
-    def __init__(self) -> None:
-        """Initialize the preview manager."""
+    def __init__(self, mindspace: Mindspace) -> None:
+        """
+        Initialize the preview manager.
+
+        Args:
+            mindspace: The active mindspace model, used for path resolution.
+        """
         self._logger = logging.getLogger("PreviewContent")
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace = mindspace
 
     def get_preview_content(self, path: str) -> Tuple[List[Tuple[PreviewContentType, str]], Set[str]]:
         """
@@ -262,7 +267,7 @@ class PreviewContent:
             files = ["."]
 
             # If we're not in the root of the mindspace, add ".." entry
-            rel_path = self._mindspace_manager.get_relative_path(directory_path)
+            rel_path = self._mindspace.get_relative_path(directory_path)
             if rel_path not in (".", ""):
                 files.append("..")
 

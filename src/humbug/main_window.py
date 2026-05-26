@@ -467,10 +467,11 @@ class MainWindow(QMainWindow):
             "FileSystem: handles file operations in the current mindspace"
         )
         self._ai_tool_manager.register_tool(
-            SystemAITool(self._column_manager, mindspace), "System: manages UI tab lifecycle operations (create, open, close, organize tabs)"
+            SystemAITool(self._column_manager, mindspace),
+            "System: manages UI tab lifecycle operations (create, open, close, organize tabs)"
         )
         self._ai_tool_manager.register_tool(
-            EditorAITool(self._column_manager, mindspace), "Editor: operations for interacting with editor tabs"
+            EditorAITool(mindspace), "Editor: operations for interacting with editor tabs"
         )
         self._ai_tool_manager.register_tool(
             TerminalAITool(mindspace), "Terminal: operations for interacting with terminal tabs"
@@ -479,7 +480,7 @@ class MainWindow(QMainWindow):
             ConversationAITool(mindspace), "Conversation: operations for interacting with conversation tabs"
         )
         self._ai_tool_manager.register_tool(
-            PreviewAITool(self._column_manager, mindspace), "Preview: operations for interacting with preview tabs"
+            PreviewAITool(mindspace), "Preview: operations for interacting with preview tabs"
         )
         self._ai_tool_manager.register_tool(
             HelpAITool(self._ai_tool_manager), "Help: provides detailed documentation for AI tools and operations"

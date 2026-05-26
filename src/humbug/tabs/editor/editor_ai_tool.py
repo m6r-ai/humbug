@@ -16,8 +16,7 @@ from ai_tool import (
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
 
-from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.editor.editor_tab import EditorTab
+from humbug.tabs.editor.editor_context import EditorContext
 
 
 class EditorAITool(AITool):
@@ -28,15 +27,13 @@ class EditorAITool(AITool):
     editor content. Requires an editor tab to be open (use system tool to create tabs).
     """
 
-    def __init__(self, column_manager: ColumnManager, mindspace: Mindspace):
+    def __init__(self, mindspace: Mindspace):
         """
         Initialize the editor tool.
 
         Args:
-            column_manager: Column manager for accessing editor tabs
             mindspace: The active mindspace model
         """
-        self._column_manager = column_manager
         self._mindspace = mindspace
         self._logger = logging.getLogger("EditorAITool")
 
@@ -240,34 +237,27 @@ class EditorAITool(AITool):
         diff_content = arguments["diff_content"]
         return f"Diff content:\n```diff\n{diff_content}\n```"
 
-    def _get_editor_tab(self, arguments: Dict[str, Any]) -> EditorTab:
+    def _get_editor_context(self, arguments: Dict[str, Any]) -> EditorContext:
         """
-        Get an editor tab by ID.
+        Retrieve the EditorContext for the given context_id.
 
         Args:
             arguments: Tool arguments containing tab_id
 
         Returns:
-            EditorTab instance
+            EditorContext instance
 
         Raises:
-            AIToolExecutionError: If no editor tab found
+            AIToolExecutionError: If no editor context found for the given ID
         """
-        if "tab_id" not in arguments:
-            raise AIToolExecutionError("No 'tab_id' argument provided")
+        context_id = self._get_required_str_value("tab_id", arguments)
+        context = self._mindspace.contexts().get_model(context_id, EditorContext)
+        if context is None:
+            raise AIToolExecutionError(
+                f"No editor context found with ID: {context_id}"
+            )
 
-        tab_id = arguments["tab_id"]
-        if not isinstance(tab_id, str):
-            raise AIToolExecutionError("'tab_id' must be a string")
-
-        tab = self._column_manager.get_tab_by_id(tab_id)
-        if not tab:
-            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
-
-        if not isinstance(tab, EditorTab):
-            raise AIToolExecutionError(f"Tab {tab_id} is not an editor tab")
-
-        return tab
+        return context
 
     async def _read_lines(
         self,
@@ -277,20 +267,18 @@ class EditorAITool(AITool):
     ) -> AIToolResult:
         """Read content from an editor tab."""
         arguments = tool_call.arguments
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
+        context = self._get_editor_context(arguments)
+        context_id = context.context_id()
 
         start_line = self._get_optional_int_value("start_line", arguments)
         end_line = self._get_optional_int_value("end_line", arguments)
 
         try:
-            content = editor_tab.get_text_range(start_line, end_line)
+            content = context.get_text_range(start_line, end_line)
             context_object = {}
 
-            # Handle empty content - should still show line 1 as empty string
             if not content:
                 context_object[1] = ""
-
             else:
                 content_lines = content.splitlines()
                 for line_num, line_text in enumerate(content_lines):
@@ -298,10 +286,9 @@ class EditorAITool(AITool):
 
             if start_line is not None or end_line is not None:
                 range_desc = f"lines {start_line or 1}-{end_line or 'end'}"
-                log_msg = f"AI read editor content ({range_desc})\ntab ID: {tab_id}"
-
+                log_msg = f"AI read editor content ({range_desc})\ntab ID: {context_id}"
             else:
-                log_msg = f"AI read editor content\ntab ID: {tab_id}"
+                log_msg = f"AI read editor content\ntab ID: {context_id}"
 
             self._mindspace.add_interaction(MindspaceLogLevel.INFO, log_msg)
 
@@ -335,15 +322,15 @@ class EditorAITool(AITool):
     ) -> AIToolResult:
         """Get cursor position and selection information."""
         arguments = tool_call.arguments
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
+        context = self._get_editor_context(arguments)
+        context_id = context.context_id()
 
         try:
-            cursor_info = editor_tab.get_cursor_info()
+            cursor_info = context.get_cursor_info()
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested cursor info\ntab ID: {tab_id}"
+                f"AI requested cursor info\ntab ID: {context_id}"
             )
 
             return AIToolResult(
@@ -364,15 +351,15 @@ class EditorAITool(AITool):
     ) -> AIToolResult:
         """Get editor metadata and document information."""
         arguments = tool_call.arguments
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
+        context = self._get_editor_context(arguments)
+        context_id = context.context_id()
 
         try:
-            editor_info = editor_tab.get_editor_info()
+            editor_info = context.get_editor_info()
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested editor info\ntab ID: {tab_id}"
+                f"AI requested editor info\ntab ID: {context_id}"
             )
 
             return AIToolResult(
@@ -393,8 +380,8 @@ class EditorAITool(AITool):
     ) -> AIToolResult:
         """Move cursor to specific line and column."""
         arguments = tool_call.arguments
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
+        context = self._get_editor_context(arguments)
+        context_id = context.context_id()
 
         if "line" not in arguments:
             raise AIToolExecutionError("No 'line' argument provided")
@@ -406,12 +393,12 @@ class EditorAITool(AITool):
         column = cast(int, self._get_optional_int_value("column", arguments, 1))
 
         try:
-            editor_tab.goto_line(line, column)
+            context.goto_line(line, column)
 
             col_desc = f", column {column}" if column != 1 else ""
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI moved cursor to line {line}{col_desc}\ntab ID: {tab_id}"
+                f"AI moved cursor to line {line}{col_desc}\ntab ID: {context_id}"
             )
 
             return AIToolResult(
@@ -434,8 +421,8 @@ class EditorAITool(AITool):
     ) -> AIToolResult:
         """Find all occurrences of text."""
         arguments = tool_call.arguments
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
+        context = self._get_editor_context(arguments)
+        context_id = context.context_id()
 
         search_text = self._get_required_str_value("search_text", arguments)
 
@@ -443,7 +430,7 @@ class EditorAITool(AITool):
         regexp = self._get_optional_bool_value("regexp", arguments, False)
 
         try:
-            matches = editor_tab.find_all_occurrences(search_text, case_sensitive, regexp)
+            matches = context.find_all_occurrences(search_text, case_sensitive, regexp)
 
             flags = []
             if case_sensitive:
@@ -455,7 +442,7 @@ class EditorAITool(AITool):
             flag_desc = f" ({', '.join(flags)})" if flags else ""
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI searched for '{search_text}'{flag_desc}: {len(matches)} matches\ntab ID: {tab_id}"
+                f"AI searched for '{search_text}'{flag_desc}: {len(matches)} matches\ntab ID: {context_id}"
             )
 
             if not matches:
@@ -494,15 +481,15 @@ class EditorAITool(AITool):
     ) -> AIToolResult:
         """Get the currently selected text."""
         arguments = tool_call.arguments
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
+        context = self._get_editor_context(arguments)
+        context_id = context.context_id()
 
         try:
-            selected_text = editor_tab.get_selected_text()
+            selected_text = context.get_selected_text()
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested selected text\ntab ID: {tab_id}"
+                f"AI requested selected text\ntab ID: {context_id}"
             )
 
             if not selected_text:
@@ -530,27 +517,25 @@ class EditorAITool(AITool):
     ) -> AIToolResult:
         """Get unified diff between saved file and current buffer."""
         arguments = tool_call.arguments
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
+        context = self._get_editor_context(arguments)
+        context_id = context.context_id()
 
         context_lines = cast(int, self._get_optional_int_value("context_lines", arguments, 3))
         if context_lines < 0:
             raise AIToolExecutionError("'context_lines' must be non-negative")
 
         try:
-            diff = editor_tab.get_diff(context_lines)
+            diff = context.get_diff(context_lines)
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested diff\ntab ID: {tab_id}"
+                f"AI requested diff\ntab ID: {context_id}"
             )
 
             if not diff:
-                # Get editor info to provide helpful message
-                editor_info = editor_tab.get_editor_info()
+                editor_info = context.get_editor_info()
                 if not editor_info.get('file_path'):
                     message = "No diff available: file has never been saved (untitled)"
-
                 else:
                     message = "No changes: buffer matches saved file content"
 
@@ -578,34 +563,31 @@ class EditorAITool(AITool):
     ) -> AIToolResult:
         """Save the current editor content to file."""
         arguments = tool_call.arguments
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
+        context = self._get_editor_context(arguments)
+        context_id = context.context_id()
 
-        # Get editor info to show file path
-        editor_info = editor_tab.get_editor_info()
+        editor_info = context.get_editor_info()
         file_path = editor_info.get('file_path', '')
 
         if not file_path:
             raise AIToolExecutionError("Cannot save: editor has no file path (untitled file)")
 
-        # Build authorization context
-        context = f"Save editor content to file: {file_path} (tab {tab_id})"
-        diff = editor_tab.get_diff(3)
+        context_str = f"Save editor content to file: {file_path} (tab {context_id})"
+        diff = context.get_diff(3)
 
-        # Request authorization - writing to filesystem
-        authorized = await request_authorization("editor", arguments, context, diff, True)
+        authorized = await request_authorization("editor", arguments, context_str, diff, True)
         if not authorized:
             raise AIToolAuthorizationDenied("User denied permission to save file")
 
         try:
-            success = editor_tab.save()
+            success = context.save()
 
             if not success:
                 raise AIToolExecutionError("Save operation failed")
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI saved editor file: {file_path}\ntab ID: {tab_id}"
+                f"AI saved editor file: {file_path}\ntab ID: {context_id}"
             )
 
             return AIToolResult(
@@ -613,6 +595,9 @@ class EditorAITool(AITool):
                 name="editor",
                 content=f"Saved file: '{file_path}'"
             )
+
+        except AIToolExecutionError:
+            raise
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to save file: {str(e)}") from e
@@ -625,18 +610,18 @@ class EditorAITool(AITool):
     ) -> AIToolResult:
         """Apply a unified diff to editor content."""
         arguments = tool_call.arguments
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
+        context = self._get_editor_context(arguments)
+        context_id = context.context_id()
 
         diff_content = self._get_required_str_value("diff_content", arguments)
 
         try:
-            result = editor_tab.apply_diff(diff_content)
+            result = context.apply_diff(diff_content)
 
             if result['success']:
                 self._mindspace.add_interaction(
                     MindspaceLogLevel.INFO,
-                    f"AI applied diff to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {tab_id}"
+                    f"AI applied diff to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {context_id}"
                 )
 
                 return AIToolResult(
@@ -645,11 +630,10 @@ class EditorAITool(AITool):
                     content=result['message']
                 )
 
-            # Diff failed to apply
             error_details = result.get('error_details', {})
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI diff application failed: {result['message']}\ntab ID: {tab_id}"
+                f"AI diff application failed: {result['message']}\ntab ID: {context_id}"
             )
 
             return AIToolResult(

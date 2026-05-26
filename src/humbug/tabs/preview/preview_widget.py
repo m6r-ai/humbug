@@ -14,6 +14,7 @@ from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
+from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.style_manager import StyleManager
 from humbug.tabs.preview.preview_content import PreviewContent, PreviewContentType
 from humbug.tabs.preview.preview_content_widget import PreviewContentWidget
@@ -42,6 +43,7 @@ class PreviewWidget(QWidget):
     def __init__(
         self,
         path: str,
+        mindspace_manager: MindspaceManager,
         parent: QWidget | None = None
     ) -> None:
         """
@@ -49,13 +51,15 @@ class PreviewWidget(QWidget):
 
         Args:
             path: Full path to preview file
+            mindspace_manager: The mindspace manager, used for path resolution
+                in directory listings.
             parent: Optional parent widget
         """
         super().__init__(parent)
         self._logger = logging.getLogger("PreviewWidget")
         self._path = path
 
-        self._preview = PreviewContent()
+        self._preview = PreviewContent(mindspace_manager.mindspace())
 
         # File watching integration
         self._file_watcher = MindspaceFileWatcher()
@@ -404,6 +408,16 @@ class PreviewWidget(QWidget):
             Absolute path to the target or None if it's an external link
         """
         return self._preview.resolve_link(current_path, target_path)
+
+    def get_content_blocks(self) -> List[Tuple[PreviewContentType, str]]:
+        """
+        Return the cached raw content blocks for this preview.
+
+        Returns:
+            List of (PreviewContentType, str) tuples representing the last
+            successfully loaded content.
+        """
+        return list(self._last_content_list)
 
     def set_path(self, new_path: str) -> None:
         """

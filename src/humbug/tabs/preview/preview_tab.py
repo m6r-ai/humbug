@@ -1,7 +1,7 @@
 """Preview tab implementation with file change detection."""
 
 import logging
-from typing import Any, Dict, cast
+from typing import Any, Dict, List, Tuple, cast
 
 from PySide6.QtCore import QUrl, Signal, QRegularExpression
 from PySide6.QtGui import QDesktopServices
@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
+from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.status_message import StatusMessage
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
@@ -62,7 +63,8 @@ class PreviewTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create preview content widget
-        self._preview_content_widget = PreviewWidget(path, self)
+        mindspace_manager = MindspaceManager()
+        self._preview_content_widget = PreviewWidget(path, mindspace_manager, self)
         self._preview_content_widget.status_updated.connect(self.update_status)
         self._preview_content_widget.open_link.connect(self._on_open_link)
         self._preview_content_widget.edit_file.connect(self.edit_file_requested)
@@ -380,6 +382,15 @@ class PreviewTab(TabBase):
             Dictionary containing preview metadata
         """
         return self._preview_content_widget.get_preview_info()
+
+    def get_content_blocks(self) -> List[Tuple[Any, str]]:
+        """
+        Return the cached raw content blocks for the PreviewContext.
+
+        Returns:
+            List of (PreviewContentType, str) tuples from the last load.
+        """
+        return self._preview_content_widget.get_content_blocks()
 
     def search_content(
         self,

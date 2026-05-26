@@ -338,7 +338,7 @@ class ConversationContext:
             if message_index is None:
                 return {"success": False, "error": f"Message not found: {message_id}"}
 
-        if message_index is not None and not (0 <= message_index < len(messages)):
+        if message_index is not None and not 0 <= message_index < len(messages):
             return {
                 "success": False,
                 "error": f"Message index {message_index} out of range (0-{len(messages) - 1})",

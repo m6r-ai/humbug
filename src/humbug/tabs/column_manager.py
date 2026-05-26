@@ -10,9 +10,9 @@ from PySide6.QtGui import QResizeEvent
 from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
 from ai_transcript_conversation import AITranscriptConversation
 from mindspace.mindspace_log_level import MindspaceLogLevel
-from mindspace.context.context_registry import ContextRegistry
 from mindspace.context.context_type import ContextType
 from mindspace.context.conversation_context import ConversationContext
+from mindspace.context.preview_context import PreviewContext
 from mindspace.mindspace_settings import MindspaceSettings
 
 from humbug.language.language_manager import LanguageManager
@@ -587,12 +587,28 @@ class ColumnManager(QWidget):
             )
             if isinstance(tab, ConversationTab):
                 mindspace = self._mindspace_manager.mindspace()
-                context = ConversationContext(
+                conv_context = ConversationContext(
                     context_id=tab.tab_id(),
                     ai_transcript_conversation=tab.ai_conversation(),
                     on_scroll_to_message=tab.scroll_to_message,
                 )
-                mindspace.contexts().register_model(tab.tab_id(), context)
+                mindspace.contexts().register_model(tab.tab_id(), conv_context)
+
+            elif isinstance(tab, PreviewTab):
+                mindspace = self._mindspace_manager.mindspace()
+                preview_context = PreviewContext(
+                    context_id=tab.tab_id(),
+                    path=tab.path(),
+                    content_blocks=tab.get_content_blocks(),
+                    on_scroll_to_position=tab.scroll_to_content_position,
+                )
+                mindspace.contexts().register_model(tab.tab_id(), preview_context)
+
+            elif isinstance(tab, EditorTab):
+                editor_context = tab.get_editor_context()
+                if editor_context is not None:
+                    mindspace = self._mindspace_manager.mindspace()
+                    mindspace.contexts().register_model(tab.tab_id(), editor_context)
 
     def _move_tab_between_columns(
         self,
