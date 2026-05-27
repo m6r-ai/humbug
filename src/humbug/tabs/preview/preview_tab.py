@@ -1,11 +1,15 @@
 """Preview tab implementation with file change detection."""
 
+import os
 import logging
 from typing import Any, Dict, List, Tuple, cast
 
 from PySide6.QtCore import QUrl, Signal, QRegularExpression
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QVBoxLayout, QWidget
+
+from mindspace.context.context_registry import ContextRegistry
+from mindspace.context.preview_context import PreviewContext
 
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
@@ -14,7 +18,6 @@ from humbug.status_message import StatusMessage
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
-from humbug.tabs.tab_type import TabType
 from humbug.tabs.preview.preview_error import PreviewError
 from humbug.tabs.preview.preview_widget import PreviewWidget
 from humbug.style_manager import StyleManager
@@ -81,6 +84,25 @@ class PreviewTab(TabBase):
         self._preview_content_widget.load_content()
 
         self._start_file_watching(self._path)
+
+    def tool_name(self) -> str:
+        """Return the tool name for this tab type."""
+        return "preview"
+
+    def register_context_models(self, registry: ContextRegistry) -> None:
+        """Register the PreviewContext with the registry."""
+        preview_context = PreviewContext(
+            context_id=self._tab_id,
+            path=self._path,
+            content_blocks=self.get_content_blocks(),
+            on_scroll_to_position=self.scroll_to_content_position,
+        )
+        registry.register_model(self._tab_id, preview_context)
+
+    def on_path_renamed(self, new_path: str) -> None:
+        """Update path and emit a new tab bar label after a file rename."""
+        self.set_path(new_path)
+        self.tab_label_changed.emit(self._tab_id, os.path.basename(new_path))
 
     def set_active(self, widget: QWidget, active: bool) -> None:
         """
@@ -226,7 +248,7 @@ class PreviewTab(TabBase):
             metadata['find_widget'] = self._find_widget.create_state_metadata()
 
         return TabState(
-            type=TabType.PREVIEW,
+            type=self.tool_name(),
             tab_id=self._tab_id,
             path=self._path,
             metadata=metadata,

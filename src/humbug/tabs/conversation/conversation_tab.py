@@ -1,6 +1,7 @@
 """Unified conversation tab implementation."""
 
 import logging
+import os
 from typing import Dict, Any
 
 from PySide6.QtWidgets import (
@@ -10,6 +11,8 @@ from PySide6.QtCore import QObject, Signal, QRegularExpression
 
 from ai import AIConversationHistory, AIConversationSettings
 from ai_transcript_conversation import AITranscriptConversation
+from mindspace.context.context_registry import ContextRegistry
+from mindspace.context.conversation_context import ConversationContext
 
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
@@ -18,7 +21,6 @@ from humbug.tabs.conversation.conversation_widget import ConversationWidget
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
-from humbug.tabs.tab_type import TabType
 from humbug.style_manager import StyleManager
 
 
@@ -85,6 +87,32 @@ class ConversationTab(TabBase):
 
         self._start_file_watching(self._path)
 
+    def tool_name(self) -> str:
+        """Return the tool name for this tab type."""
+        return "conversation"
+
+    def tab_title_from_path(self) -> str:
+        """Return the conversation title derived from the filename (without extension)."""
+        return os.path.splitext(os.path.basename(self._path))[0] if self._path else ""
+
+    def on_modified_changed(self, modified: bool) -> None:
+        """Conversation tabs become permanent on first modification; nothing extra needed here."""
+
+    def on_path_renamed(self, new_path: str) -> None:
+        """Update path and emit a new tab bar label after a conversation file rename."""
+        self.set_path(new_path)
+        title = os.path.splitext(os.path.basename(new_path))[0] if new_path else ""
+        self.tab_label_changed.emit(self._tab_id, title)
+
+    def register_context_models(self, registry: ContextRegistry) -> None:
+        """Register the ConversationContext with the registry."""
+        conv_context = ConversationContext(
+            context_id=self._tab_id,
+            ai_transcript_conversation=self.ai_conversation(),
+            on_scroll_to_message=self.scroll_to_message,
+        )
+        registry.register_model(self._tab_id, conv_context)
+
     def set_active(self, widget: QWidget, active: bool) -> None:
         """
         Set the active state of the tab.
@@ -149,7 +177,7 @@ class ConversationTab(TabBase):
             metadata['temp_state'] = True
 
         return TabState(
-            type=TabType.CONVERSATION,
+            type=self.tool_name(),
             tab_id=self._tab_id,
             path=self._path,
             metadata=metadata,

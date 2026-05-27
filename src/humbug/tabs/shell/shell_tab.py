@@ -16,7 +16,6 @@ from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.shell.shell_widget import ShellWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
-from humbug.tabs.tab_type import TabType
 from humbug.style_manager import StyleManager
 
 
@@ -62,6 +61,17 @@ class ShellTab(TabBase):
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
+
+    def tool_name(self) -> str:
+        """Return the tool name for this tab type."""
+        return "shell"
+
+    def tab_title_from_path(self) -> str:
+        """Return the fixed display title for the shell tab."""
+        return "Humbug Shell"
+
+    def on_path_renamed(self, new_path: str) -> None:
+        """Shell tabs have no path; ignore renames."""
 
     def set_active(self, widget: QWidget, active: bool) -> None:
         """
@@ -119,7 +129,7 @@ class ShellTab(TabBase):
             metadata['find_widget'] = self._find_widget.create_state_metadata()
 
         return TabState(
-            type=TabType.SHELL,
+            type=self.tool_name(),
             tab_id=self._tab_id,
             path="",  # Shell tab doesn't have a file path
             metadata=metadata

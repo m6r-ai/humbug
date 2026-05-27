@@ -5,6 +5,7 @@ import logging
 from PySide6.QtWidgets import QFrame, QWidget
 from PySide6.QtCore import Signal
 
+from mindspace.context.context_registry import ContextRegistry
 from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
 from humbug.status_message import StatusMessage
 from humbug.tabs.tab_state import TabState
@@ -19,6 +20,7 @@ class TabBase(QFrame):
     file_state_changed = Signal(str, bool)  # Emits (tab_id, file_exists)
     status_message = Signal(StatusMessage)
     activated = Signal()  # Emits when tab is activated by user interaction
+    tab_label_changed = Signal(str, str)  # Emits (tab_id, new_title) when the tab bar label should change
     close_requested = Signal()  # Emits when tab requests to be closed
 
     def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
@@ -118,6 +120,65 @@ class TabBase(QFrame):
         """
         return self._path
 
+    def tool_name(self) -> str:
+        """Return the registered tool name for this tab type (e.g. 'editor', 'conversation').
+
+        Used by ColumnManager for context type registration, tab info reporting, and
+        icon selection.  Every concrete tab subclass must override this.
+        """
+        raise NotImplementedError("Subclasses must implement tool_name")
+
+    def tab_icon(self) -> str:
+        """Return the icon name used in the tab bar (e.g. 'editor', 'conversation').
+
+        Defaults to tool_name().  Override only when the icon name differs.
+        """
+        return self.tool_name()
+
+    def tab_title_from_path(self) -> str:
+        """Derive a display title from the tab's current path.
+
+        Used when restoring tabs and when updating labels after a rename.
+        The default returns the basename of the path, which is correct for most
+        tab types.  Override for tabs that need a different derivation (e.g.
+        conversation strips the extension, terminal uses a fixed string).
+        """
+        return os.path.basename(self._path) if self._path else ""
+
+    def on_modified_changed(self, modified: bool) -> None:
+        """Called by ColumnManager when this tab's modified state changes.
+
+        Override to implement tab-type-specific behaviour such as updating the
+        tab label or making an ephemeral tab permanent.
+
+        Args:
+            modified: True if the tab now has unsaved changes.
+        """
+
+    def on_path_renamed(self, new_path: str) -> None:
+        """Called by ColumnManager when the file at this tab's path has been renamed.
+
+        The default implementation calls set_path() so file watching is updated.
+        Override to also update the tab bar label or perform other tab-specific
+        housekeeping.  Implementations must call super().on_path_renamed(new_path)
+        or call set_path() themselves.
+
+        Args:
+            new_path: The new absolute path after the rename.
+        """
+        self.set_path(new_path)
+
+    def register_context_models(self, registry: ContextRegistry) -> None:
+        """Register context models for this tab with the given registry.
+
+        Called after the tab is added to a column and after a tab is moved
+        between columns.  The default implementation is a no-op.  Tabs that
+        own a context model (editor, terminal, preview, conversation) override
+        this to register it.
+
+        Args:
+            registry: The ContextRegistry for the active mindspace.
+        """
     def set_path(self, path: str) -> None:
         """
         Set the path associated with this tab.
@@ -230,7 +291,6 @@ class TabBase(QFrame):
 
         Args:
             state: TabState object containing serialized state
-                (note: state.type will be string, not TabType enum)
             parent: Parent widget
 
         Returns:

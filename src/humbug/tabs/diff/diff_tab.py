@@ -13,7 +13,6 @@ from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
 from humbug.status_message import StatusMessage
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
-from humbug.tabs.tab_type import TabType
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.diff.diff_widget import DiffWidget
 
@@ -68,6 +67,10 @@ class DiffTab(TabBase):
         self._vcs_poller.status_changed.connect(self._on_vcs_status_changed)
 
         self.update_status()
+
+    def tool_name(self) -> str:
+        """Return the tool name for this tab type."""
+        return "diff"
 
     def set_active(self, widget: QWidget, active: bool) -> None:
         """
@@ -151,7 +154,7 @@ class DiffTab(TabBase):
     def get_state(self, temp_state: bool = False) -> TabState:
         """Return serialisable state for mindspace persistence."""
         return TabState(
-            type=TabType.DIFF,
+            type=self.tool_name(),
             tab_id=self._tab_id,
             path=self._path,
             metadata=None,

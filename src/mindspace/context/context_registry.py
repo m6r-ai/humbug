@@ -4,7 +4,6 @@ from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Set, TypeVar, Type
 
 from mindspace.context.context_info import ContextInfo
-from mindspace.context.context_type import ContextType
 
 
 class ContextEvent(Enum):
@@ -60,7 +59,7 @@ class ContextRegistry:
 
     def open(
         self,
-        context_type: ContextType,
+        context_type: str,
         path:         str  = "",
         title:        str  = "",
         is_ephemeral: bool = False,

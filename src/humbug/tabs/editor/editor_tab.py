@@ -1,10 +1,13 @@
 from typing import Any, Dict, List, Optional
 import logging
+import os
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QWidget
 )
 from PySide6.QtCore import QTimer, QRegularExpression
+
+from mindspace.context.context_registry import ContextRegistry
 
 from humbug.tabs.editor.editor_goto_line_dialog import EditorGotoLineDialog
 from humbug.language.language_manager import LanguageManager
@@ -14,7 +17,6 @@ from humbug.tabs.editor.editor_widget import EditorWidget
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
-from humbug.tabs.tab_type import TabType
 
 
 class EditorTab(TabBase):
@@ -83,8 +85,33 @@ class EditorTab(TabBase):
         # Start file watching if we have a path
         if self._path:
             self._start_file_watching(self._path)
-
         self.update_status()
+
+    def tool_name(self) -> str:
+        """Return the tool name for this tab type."""
+        return "editor"
+
+    def on_modified_changed(self, modified: bool) -> None:
+        """Update the tab bar label to show or hide the unsaved-changes marker."""
+        title = os.path.basename(self._path) if self._path else (
+            f"Untitled-{self._untitled_number}" if self._untitled_number else "Untitled"
+        )
+        if modified:
+            title += "*"
+        self.tab_label_changed.emit(self._tab_id, title)
+
+    def on_path_renamed(self, new_path: str) -> None:
+        """Update path and emit a new tab bar label after a file rename."""
+        self.set_path(new_path)
+        title = os.path.basename(new_path) if new_path else (
+            f"Untitled-{self._untitled_number}" if self._untitled_number else "Untitled"
+        )
+        self.tab_label_changed.emit(self._tab_id, title)
+
+    def register_context_models(self, registry: ContextRegistry) -> None:
+        """Register the EditorContext with the registry."""
+        if self._editor_context is not None:
+            registry.register_model(self._tab_id, self._editor_context)
 
     def set_active(self, widget: QWidget, active: bool) -> None:
         """
@@ -167,7 +194,7 @@ class EditorTab(TabBase):
             path = f"untitled-{self._untitled_number}"
 
         return TabState(
-            type=TabType.EDITOR,
+            type=self.tool_name(),
             tab_id=self._tab_id,
             path=path,
             metadata=metadata

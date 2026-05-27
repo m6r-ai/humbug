@@ -8,7 +8,6 @@ from ai import AIConversation, AIConversationSettings
 from ai_tool import AIToolExecutionError
 from ai_transcript_conversation import AITranscriptConversation
 from delegate_ai_tool import DelegateAITool
-from mindspace.context.context_type import ContextType
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
@@ -97,7 +96,7 @@ def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) 
             title = os.path.splitext(os.path.basename(child_transcript.path()))[0]
 
             context_id = mindspace.contexts().open(
-                context_type=ContextType.CONVERSATION,
+                context_type="conversation",
                 path=child_transcript.path(),
                 title=title,
                 initial_model=child_transcript,

@@ -17,7 +17,6 @@ from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.log.log_widget import LogWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
-from humbug.tabs.tab_type import TabType
 from humbug.style_manager import StyleManager
 
 
@@ -65,6 +64,17 @@ class LogTab(TabBase):
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
+
+    def tool_name(self) -> str:
+        """Return the tool name for this tab type."""
+        return "log"
+
+    def tab_title_from_path(self) -> str:
+        """Return the fixed display title for the log tab."""
+        return "Mindspace Log"
+
+    def on_path_renamed(self, new_path: str) -> None:
+        """Log tabs have no path; ignore renames."""
 
     def set_active(self, widget: QWidget, active: bool) -> None:
         """
@@ -134,7 +144,7 @@ class LogTab(TabBase):
             metadata['find_widget'] = self._find_widget.create_state_metadata()
 
         return TabState(
-            type=TabType.LOG,
+            type=self.tool_name(),
             tab_id=self._tab_id,
             path="",  # Log tab doesn't have a file path
             metadata=metadata

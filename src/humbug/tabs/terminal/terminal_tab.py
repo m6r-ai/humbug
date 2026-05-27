@@ -1,6 +1,7 @@
 """Terminal tab implementation."""
 
 import asyncio
+import os
 import sys
 import logging
 from typing import Any, Coroutine, Dict, Set
@@ -8,8 +9,9 @@ from typing import Any, Coroutine, Dict, Set
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import QRegularExpression
 
-from terminal import TerminalBase, create_terminal
-from terminal import TerminalState
+from terminal import TerminalBase, TerminalState, create_terminal
+
+from mindspace.context.context_registry import ContextRegistry
 from mindspace.context.terminal_context import TerminalContext
 
 from humbug.language.language_manager import LanguageManager
@@ -18,7 +20,6 @@ from humbug.status_message import StatusMessage
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
-from humbug.tabs.tab_type import TabType
 from humbug.tabs.terminal.terminal_status import TerminalStatusInfo
 from humbug.tabs.terminal.terminal_widget import TerminalWidget
 
@@ -154,6 +155,23 @@ class TerminalTab(TabBase):
         # Start local shell process
         if start_process:
             self._create_tracked_task(self._start_process())
+
+    def tool_name(self) -> str:
+        """Return the tool name for this tab type."""
+        return "terminal"
+
+    def tab_title_from_path(self) -> str:
+        """Return a display title derived from the command, or 'Terminal'."""
+        if self._command:
+            return os.path.basename(self._command)
+        return "Terminal"
+
+    def on_path_renamed(self, new_path: str) -> None:
+        """Terminal tabs have no meaningful path; ignore renames."""
+
+    def register_context_models(self, registry: ContextRegistry) -> None:
+        """Register the TerminalContext with the registry."""
+        registry.register_model(self._tab_id, self._terminal_context)
 
     def set_active(self, widget: QWidget, active: bool) -> None:
         """
@@ -372,7 +390,7 @@ class TerminalTab(TabBase):
             metadata['find_widget'] = self._find_widget.create_state_metadata()
 
         return TabState(
-            type=TabType.TERMINAL,
+            type=self.tool_name(),
             tab_id=self._tab_id,
             path="terminal://local",
             metadata=metadata

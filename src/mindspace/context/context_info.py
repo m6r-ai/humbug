@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from mindspace.context.context_type import ContextType
-
 
 @dataclass(frozen=True)
 class ContextInfo:
@@ -12,7 +10,7 @@ class ContextInfo:
     state; call ContextRegistry.get() again to get a fresh snapshot.
     """
     context_id:   str
-    context_type: ContextType
+    context_type: str
     path:         str   # empty string if not path-associated
     title:        str
     is_ephemeral: bool

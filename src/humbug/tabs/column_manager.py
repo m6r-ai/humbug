@@ -12,9 +12,6 @@ from ai_transcript_conversation import AITranscriptConversation
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.context.context_info import ContextInfo
 from mindspace.context.context_registry import ContextEvent
-from mindspace.context.context_type import ContextType
-from mindspace.context.conversation_context import ConversationContext
-from mindspace.context.preview_context import PreviewContext
 from mindspace.mindspace_settings import MindspaceSettings
 
 from humbug.language.language_manager import LanguageManager
@@ -28,6 +25,7 @@ from humbug.tabs.column_splitter import ColumnSplitter
 from humbug.tabs.column_widget import ColumnWidget
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.spacer_drop_widget import SpacerDropWidget
+from humbug.tabs.preview.preview_error import PreviewError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.diff.diff_tab import DiffTab
 from humbug.tabs.editor.editor_tab import EditorTab
@@ -35,11 +33,10 @@ from humbug.tabs.log.log_tab import LogTab
 from humbug.tabs.shell.shell_tab import ShellTab
 from humbug.tabs.tab_bar import TabBar
 from humbug.tabs.tab_base import TabBase
+from humbug.tabs.tab_factory_registry import TabFactory, TabFactoryRegistry
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_style import build_column_manager_stylesheet, build_tab_bar_stylesheet
-from humbug.tabs.tab_type import TabType
 from humbug.tabs.terminal.terminal_tab import TerminalTab
-from humbug.tabs.preview.preview_error import PreviewError
 from humbug.tabs.preview.preview_tab import PreviewTab
 from humbug.tabs.welcome_widget import WelcomeWidget
 from humbug.user.user_settings import UserSettings
@@ -139,10 +136,22 @@ class ColumnManager(QWidget):
         # Track tabs
         self._tabs: Dict[str, TabBase] = {}
 
+        # Factory registry for session restore
+        self._tab_factory_registry = TabFactoryRegistry()
+
         # Are we protecting the current tab against being ovewrwritten?
         self._protected_tab_id: str | None = None
 
         self._current_status_tab: TabBase | None = None
+
+    def register_tab_factory(self, tool_name: str, factory: TabFactory) -> None:
+        """Register a tab factory for session restore.
+
+        Args:
+            tool_name: The tool name string (e.g. 'editor', 'conversation').
+            factory: Callable(state, parent) -> TabBase | None.
+        """
+        self._tab_factory_registry.register(tool_name, factory)
 
     def protect_tab(self, tab_id: str) -> None:
         """
@@ -213,29 +222,6 @@ class ColumnManager(QWidget):
         tab_id = tab.tab_id()
         tab_index, tab_bar = self._find_tab_bar_and_index(tab)
 
-        # Determine tab type
-        tab_type = "unknown"
-        if isinstance(tab, ConversationTab):
-            tab_type = "conversation"
-
-        elif isinstance(tab, EditorTab):
-            tab_type = "editor"
-
-        elif isinstance(tab, LogTab):
-            tab_type = "log"
-
-        elif isinstance(tab, ShellTab):
-            tab_type = "shell"
-
-        elif isinstance(tab, TerminalTab):
-            tab_type = "terminal"
-
-        elif isinstance(tab, PreviewTab):
-            tab_type = "preview"
-
-        elif isinstance(tab, DiffTab):
-            tab_type = "diff"
-
         # Get relative path if available
         path = tab.path()
         relative_path = ""
@@ -252,7 +238,7 @@ class ColumnManager(QWidget):
         return {
             "tab_id": tab_id,
             "title": tab_bar.get_tab_text(tab_index) if tab_bar and tab_index != -1 else "",
-            "type": tab_type,
+            "type": tab.tool_name(),
             "path": relative_path,
             "column_index": column_index,
             "is_modified": tab.is_modified(),
@@ -269,7 +255,6 @@ class ColumnManager(QWidget):
         Returns:
             Dictionary containing tab information or None if tab not found
         """
-        # Find the tab by ID
         tab = self._tabs.get(tab_id)
         if not tab:
             return None
@@ -323,45 +308,33 @@ class ColumnManager(QWidget):
         Raises:
             ColumnManagerError: If target_column_index is invalid or tab_id doesn't exist
         """
-        # Validate tab exists
         tab = self._tabs.get(tab_id)
         if not tab:
             raise ColumnManagerError(f"Tab with ID '{tab_id}' not found")
 
-        # Find source column
         source_column = self._find_column_for_tab(tab)
         if source_column is None:
             raise ColumnManagerError(f"Could not find column for tab '{tab_id}'")
 
-        # Validate target column index
         if target_column_index < 0:
             raise ColumnManagerError(f"Target column index must be non-negative, got {target_column_index}")
 
-        # Validate target column index
         if target_column_index >= 6:
             raise ColumnManagerError(f"Target column index must be less than 6, got {target_column_index}")
 
-        # Create new columns if necessary (up to maximum of 6)
         if target_column_index >= len(self._tab_columns):
             self._create_column(len(self._tab_columns))
             target_column_index = len(self._tab_columns) - 1
 
         target_column = self._tab_columns[target_column_index]
 
-        # Don't move if already in target column
         if source_column == target_column:
             return
 
-        # Move the tab
         self._move_tab_between_columns(tab, source_column, target_column)
 
-        # Update active column to target
         self._active_column = target_column
-
-        # Resize columns to distribute space evenly
         self.show_all_columns()
-
-        # Update tab states
         self._update_tabs()
 
     def _update_mru_order(self, tab: TabBase, column: ColumnWidget) -> None:
@@ -375,11 +348,9 @@ class ColumnManager(QWidget):
         tab_id = tab.tab_id()
         mru_list = self._column_mru_order[column]
 
-        # Remove tab_id if it already exists in the list
         if tab_id in mru_list:
             mru_list.remove(tab_id)
 
-        # Add to front of list (most recent)
         mru_list.insert(0, tab_id)
 
     def _get_next_mru_tab(self, column: ColumnWidget, excluding_tab_id: str | None = None) -> TabBase | None:
@@ -401,7 +372,6 @@ class ColumnManager(QWidget):
 
             if tab_id in self._tabs:
                 tab = self._tabs[tab_id]
-                # Verify tab is still in this column
                 if self._find_column_for_tab(tab) == column:
                     return tab
 
@@ -416,7 +386,7 @@ class ColumnManager(QWidget):
 
             if tab.is_ephemeral():
                 self.close_tab_by_id(tab.tab_id(), force_close=True)
-                break  # Only one ephemeral tab per column
+                break
 
     def _on_tab_label_close_clicked(self, tab_id: str) -> None:
         """
@@ -494,31 +464,6 @@ class ColumnManager(QWidget):
         tab.deleteLater()
         QTimer.singleShot(0, self.show_all_columns)
 
-    def _tab_context_type(self, tab: TabBase) -> ContextType:
-        """Map a TabBase subclass to the corresponding ContextType."""
-        if isinstance(tab, ConversationTab):
-            return ContextType.CONVERSATION
-
-        if isinstance(tab, DiffTab):
-            return ContextType.DIFF
-
-        if isinstance(tab, EditorTab):
-            return ContextType.EDITOR
-
-        if isinstance(tab, LogTab):
-            return ContextType.LOG
-
-        if isinstance(tab, PreviewTab):
-            return ContextType.PREVIEW
-
-        if isinstance(tab, ShellTab):
-            return ContextType.SHELL
-
-        if isinstance(tab, TerminalTab):
-            return ContextType.TERMINAL
-
-        return ContextType.EDITOR  # fallback
-
     def _on_mindspace_settings_changed(self) -> None:
         """Wire or unwire registry callbacks when a mindspace opens or closes."""
         if self._mindspace_manager.has_mindspace():
@@ -543,7 +488,6 @@ class ColumnManager(QWidget):
         if not self._registry_subscribed:
             return
 
-        # The mindspace may already be gone; guard with has_mindspace
         if self._mindspace_manager.has_mindspace():
             registry = self._mindspace_manager.mindspace().contexts()
             registry.unregister_callback(ContextEvent.OPENED, self._on_context_opened)
@@ -567,31 +511,30 @@ class ColumnManager(QWidget):
             # Tab already exists (session restore path) — just ensure context
             # models are registered for this tab.
             existing_tab = self._tabs[context_id]
-            self._register_context_models(existing_tab)
+            self._apply_context_models(existing_tab)
             return
 
-        # New tab requested by an AI tool or delegate — create the Qt tab.
         mindspace = self._mindspace_manager.mindspace()
         registry = mindspace.contexts()
         new_tab: TabBase | None = None
 
         try:
-            if info.context_type == ContextType.EDITOR:
+            if info.context_type == "editor":
                 tab: TabBase = EditorTab(context_id, info.path, None, self)
                 tab.set_ephemeral(info.is_ephemeral)
                 self._add_tab(tab, os.path.basename(info.path))
                 new_tab = tab
 
-            elif info.context_type == ContextType.TERMINAL:
+            elif info.context_type == "terminal":
                 terminal_tab = TerminalTab(context_id, None, self)
                 terminal_tab.set_ephemeral(info.is_ephemeral)
                 self._add_tab(terminal_tab, "Terminal")
                 new_tab = terminal_tab
 
-            elif info.context_type == ContextType.PREVIEW:
+            elif info.context_type == "preview":
                 preview_tab = PreviewTab(context_id, info.path, self)
-                preview_tab.open_link_requested.connect(self._on_preview_open_link_requested)
-                preview_tab.edit_file_requested.connect(self._on_preview_edit_file_requested)
+                preview_tab.open_link_requested.connect(self.on_preview_open_link_requested)
+                preview_tab.edit_file_requested.connect(self.on_preview_edit_file_requested)
                 preview_tab.set_ephemeral(info.is_ephemeral)
                 norm_path = os.path.normpath(info.path)
                 name = os.path.basename(norm_path)
@@ -602,29 +545,27 @@ class ColumnManager(QWidget):
                 self._add_tab(preview_tab, title)
                 new_tab = preview_tab
 
-            elif info.context_type == ContextType.DIFF:
+            elif info.context_type == "diff":
                 diff_tab = DiffTab(context_id, info.path, self)
-                diff_tab.open_file_requested.connect(self._on_diff_open_file_requested)
-                diff_tab.open_preview_requested.connect(self._on_diff_open_preview_requested)
+                diff_tab.open_file_requested.connect(self.on_diff_open_file_requested)
+                diff_tab.open_preview_requested.connect(self.on_diff_open_preview_requested)
                 diff_tab.set_ephemeral(info.is_ephemeral)
                 self._add_tab(diff_tab, os.path.basename(info.path))
                 new_tab = diff_tab
 
-            elif info.context_type == ContextType.CONVERSATION:
+            elif info.context_type == "conversation":
                 transcript = registry.get_model(context_id, AITranscriptConversation)
                 if transcript is not None:
-                    # New conversation with a pre-built transcript (new_conversation_tab
-                    # or delegate path)
                     conv_tab = ConversationTab(
                         context_id, transcript.path(), self,
                         ai_transcript_conversation=transcript,
                     )
+
                 else:
-                    # Open-existing conversation (open_conversation_tab path)
                     conv_tab = ConversationTab(context_id, info.path, self)
 
                 conv_tab.fork_from_index_requested.connect(
-                    self._on_conversation_fork_from_index_requested
+                    self.on_conversation_fork_from_index_requested
                 )
                 conv_tab.set_ephemeral(info.is_ephemeral)
                 title = os.path.splitext(os.path.basename(info.path))[0]
@@ -637,40 +578,14 @@ class ColumnManager(QWidget):
             )
 
         if new_tab is not None:
-            self._register_context_models(new_tab)
+            self._apply_context_models(new_tab)
 
-    def _register_context_models(self, tab: TabBase) -> None:
-        """Register context models for a tab that was created outside the registry flow."""
+    def _apply_context_models(self, tab: TabBase) -> None:
+        """Register context models for a tab by delegating to the tab itself."""
         if not self._mindspace_manager.has_mindspace():
             return
 
-        mindspace = self._mindspace_manager.mindspace()
-        tab_id = tab.tab_id()
-
-        if isinstance(tab, ConversationTab):
-            conv_context = ConversationContext(
-                context_id=tab_id,
-                ai_transcript_conversation=tab.ai_conversation(),
-                on_scroll_to_message=tab.scroll_to_message,
-            )
-            mindspace.contexts().register_model(tab_id, conv_context)
-
-        elif isinstance(tab, PreviewTab):
-            preview_context = PreviewContext(
-                context_id=tab_id,
-                path=tab.path(),
-                content_blocks=tab.get_content_blocks(),
-                on_scroll_to_position=tab.scroll_to_content_position,
-            )
-            mindspace.contexts().register_model(tab_id, preview_context)
-
-        elif isinstance(tab, EditorTab):
-            editor_context = tab.get_editor_context()
-            if editor_context is not None:
-                mindspace.contexts().register_model(tab_id, editor_context)
-
-        elif isinstance(tab, TerminalTab):
-            mindspace.contexts().register_model(tab_id, tab.terminal_context())
+        tab.register_context_models(self._mindspace_manager.mindspace().contexts())
 
     def _on_context_closed(self, context_id: str) -> None:
         """React to a context being closed in the registry — close the Qt tab."""
@@ -692,7 +607,7 @@ class ColumnManager(QWidget):
 
         Called after _add_tab so the tab is already in self._tabs.
         _on_context_opened sees the tab already exists, skips Qt creation,
-        and calls _register_context_models to attach the context model.
+        and calls _apply_context_models to attach the context model.
 
         Args:
             tab: The tab that was just added.
@@ -702,7 +617,7 @@ class ColumnManager(QWidget):
             return
 
         self._mindspace_manager.mindspace().contexts().open(
-            context_type=self._tab_context_type(tab),
+            context_type=tab.tool_name(),
             path=tab.path(),
             title=title,
             is_ephemeral=tab.is_ephemeral(),
@@ -722,33 +637,12 @@ class ColumnManager(QWidget):
         if tool_tip:
             tool_tip = self._mindspace_manager.get_relative_path(tool_tip)
 
-        icon = ""
-        if isinstance(tab, ConversationTab):
-            icon = "conversation"
-
-        elif isinstance(tab, EditorTab):
-            icon = "editor"
-
-        elif isinstance(tab, LogTab):
-            icon = "log"
-
-        elif isinstance(tab, ShellTab):
-            icon = "shell"
-
-        elif isinstance(tab, TerminalTab):
-            icon = "terminal"
-
-        elif isinstance(tab, PreviewTab):
-            icon = "preview"
-
-        elif isinstance(tab, DiffTab):
-            icon = "diff"
-
         tab_id = tab.tab_id()
         tab.activated.connect(lambda: self._on_tab_activated(tab))
         tab.updated_state_changed.connect(self._on_tab_updated_state_changed)
         tab.modified_state_changed.connect(self._on_tab_modified_state_changed)
         tab.file_state_changed.connect(self._on_tab_file_state_changed)
+        tab.tab_label_changed.connect(self._on_tab_label_changed)
         tab.close_requested.connect(lambda: self.close_tab_by_id(tab_id, force_close=True))
 
         self._tabs[tab_id] = tab
@@ -757,7 +651,7 @@ class ColumnManager(QWidget):
         tab_bar = column.tabBar()
         assert isinstance(tab_bar, TabBar)
         tab_bar.add_tab_data(
-            index, tab_id, icon, title, tool_tip,
+            index, tab_id, tab.tab_icon(), title, tool_tip,
             is_ephemeral=tab.is_ephemeral(),
             is_file_missing=tab.is_path_missing(),
         )
@@ -766,7 +660,6 @@ class ColumnManager(QWidget):
         if focus_widget is not None:
             focus_widget.setFocus()
 
-        # Update MRU order for the new tab
         self._update_mru_order(tab, column)
         QTimer.singleShot(0, self.show_all_columns)
 
@@ -786,7 +679,6 @@ class ColumnManager(QWidget):
             target_column: Target column
             remove_if_empty: Whether to remove the source column if it becomes empty
         """
-        # Save tab state before removal
         tab_state = tab.get_state(True)
 
         # Moving a tab is a deliberate user action, so it is no longer ephemeral
@@ -796,23 +688,20 @@ class ColumnManager(QWidget):
         src_index, src_tab_bar = self._find_tab_bar_and_index(tab)
         tab_title = src_tab_bar.get_tab_text(src_index) if src_tab_bar and src_index != -1 else ""
 
-        # Remove from source column's MRU order
         source_mru = self._column_mru_order[source_column]
         if tab_id in source_mru:
             source_mru.remove(tab_id)
 
         tab.stop_file_watching()
 
-        # Remove from source
         self._remove_tab_from_column(tab, source_column)
 
-        # Create and add new tab
         new_tab = self._restore_tab_from_state(tab_state)
         if not new_tab:
             return
 
         self._add_tab_to_column(new_tab, tab_title, target_column)
-        self._register_context_models(new_tab)
+        self._apply_context_models(new_tab)
 
         if remove_if_empty and source_column.count() == 0 and len(self._tab_columns) > 1:
             source_column_index = self._tab_columns.index(source_column)
@@ -871,7 +760,6 @@ class ColumnManager(QWidget):
             )
             return preview_tab
 
-        # From files view - always open as editor
         if os.path.isdir(path):
             return None
 
@@ -924,14 +812,11 @@ class ColumnManager(QWidget):
 
     def _on_welcome_widget_path_dropped(self, source_type: str, path: str) -> None:
         """Handle mindspace tree drops when only welcome widget is visible."""
-        # Create first column if it doesn't exist
         if not self._tab_columns:
             self._create_column(0)
 
-        # Set as active column
         self._active_column = self._tab_columns[0]
 
-        # Handle the file drop using source type
         tab = self._open_file_by_source_type(source_type, path, False)
         if tab is None:
             return
@@ -1040,15 +925,11 @@ class ColumnManager(QWidget):
                     if self._active_column == source_column:
                         self._active_column = target_column
 
-                    # Move all tabs from source to target
                     while source_column.count() > 0:
                         tab = cast(TabBase, source_column.widget(0))
                         self._move_tab_between_columns(tab, source_column, target_column, remove_if_empty=False)
 
-                    # Remove the empty column
                     self._remove_column_and_resize(i, source_column)
-
-                    # Update tab highlighting
                     self._update_tabs()
                     break
 
@@ -1077,9 +958,7 @@ class ColumnManager(QWidget):
 
         self._move_tab_between_columns(tab, source_column, target_column)
 
-        # Set our new active column before we possibly delete the previous one
         self._active_column = target_column
-        # Update active states
         self._update_tabs()
 
     def _on_column_widget_path_dropped(
@@ -1098,7 +977,6 @@ class ColumnManager(QWidget):
             target_index: Target position in the column
             source_type: Source view type if available
         """
-        # Set the target column as active
         self._active_column = target_column
 
         existing_tab = self._find_existing_tab_by_source_type(source_type, path)
@@ -1114,7 +992,6 @@ class ColumnManager(QWidget):
         if tab is None:
             return
 
-        # Move the tab to the target position if not already there
         current_index = target_column.indexOf(tab)
         if current_index != target_index:
             target_column.tabBar().moveTab(current_index, target_index)
@@ -1143,43 +1020,14 @@ class ColumnManager(QWidget):
             old_path: Original path of renamed file
             new_path: New path after renaming
         """
-        # Update any editor tab for this file
-        editor_tab = self._find_editor_tab_by_path(old_path)
-        if editor_tab:
-            editor_tab.set_path(new_path)
-            self._update_editor_tab_label(editor_tab)
-
-        # Update any conversation tab for this file
-        if old_path.endswith('.conv'):
-            conversation_tab = self._find_conversation_tab_by_path(old_path)
-            if conversation_tab:
-                conversation_tab.set_path(new_path)
-
-                # Update tab label text
-                new_title = os.path.splitext(os.path.basename(new_path))[0]
-                tab_index, tab_bar = self._find_tab_bar_and_index(conversation_tab)
-                if tab_bar and tab_index != -1:
-                    tab_bar.set_tab_text(tab_index, new_title)
-
-                self._update_tab_bar_for_label_change(conversation_tab)
-
-        # Update any preview tab for this file
-        preview_tab = self._find_preview_tab_by_path(old_path)
-        if preview_tab:
-            preview_tab.set_path(new_path)
-
-            # Update tab label text
-            new_title = os.path.basename(new_path)
-            tab_index, tab_bar = self._find_tab_bar_and_index(preview_tab)
-            if tab_bar and tab_index != -1:
-                tab_bar.set_tab_text(tab_index, new_title)
-
-            self._update_tab_bar_for_label_change(preview_tab)
+        for tab in self._tabs.values():
+            if tab.path() == old_path:
+                tab.on_path_renamed(new_path)
 
     def _create_column(self, index: int) -> ColumnWidget:
         """Create a new tab column."""
         column_widget = ColumnWidget()
-        column_widget.setMinimumWidth(200)  # Set minimum width
+        column_widget.setMinimumWidth(200)
         column_widget.currentChanged.connect(self._on_column_widget_current_changed)
         column_widget.column_activated.connect(self._on_column_widget_column_activated)
         column_widget.tab_dropped.connect(self._on_column_widget_tab_dropped)
@@ -1246,7 +1094,6 @@ class ColumnManager(QWidget):
                 tab_bar = cast(TabBar, column.tabBar())
                 tab_bar.set_tab_state(tab_index, is_current, is_updated, is_active_column)
 
-        # Trigger repaint of the tab bar to show updated colors
         for column in self._tab_columns:
             if isinstance(column.tabBar(), TabBar):
                 column.tabBar().update()
@@ -1319,7 +1166,6 @@ class ColumnManager(QWidget):
         Args:
             tab: The tab that was activated
         """
-        # Find which column contains the tab
         column = self._find_column_for_tab(tab)
         if column is None:
             return
@@ -1327,7 +1173,6 @@ class ColumnManager(QWidget):
         if column == self._active_column:
             return
 
-        # Update active column
         self._active_column = column
         self._update_mru_order(tab, column)
         self._update_tabs()
@@ -1369,11 +1214,10 @@ class ColumnManager(QWidget):
             self.show_all_columns()
             return new_column
 
-        # Try to use the column to the right if possible
+        # We want to use the column to the right of the protected tab if possible.
         if current_column_number < num_columns - 1:
             return self._tab_columns[current_column_number + 1]
 
-        # Otherwise use the column to the left
         return self._tab_columns[current_column_number - 1]
 
     def _ensure_tab_not_in_protected_column(self, tab: TabBase) -> None:
@@ -1433,13 +1277,11 @@ class ColumnManager(QWidget):
         if not tab:
             return
 
-        # Check if tab can be closed
         if not force_close and not tab.can_close_tab():
             return
 
         tab.close_tab()
 
-        # Find which column contains the tab
         column = self._find_column_for_tab(tab)
         if column is None:
             return
@@ -1509,7 +1351,6 @@ class ColumnManager(QWidget):
             tab: The tab to make current
             ephemeral: Whether the tab is ephemeral (temporary)
         """
-        # Find which column contains the tab
         column = self._find_column_for_tab(tab)
         if column is None:
             return
@@ -1561,27 +1402,25 @@ class ColumnManager(QWidget):
         if not tab:
             return
 
-        if isinstance(tab, ConversationTab):
-            if modified:
-                self._make_tab_permanent(tab)
+        if modified:
+            self._make_tab_permanent(tab)
 
-            return
+        tab.on_modified_changed(modified)
 
-        if isinstance(tab, EditorTab):
-            if modified:
-                self._make_tab_permanent(tab)
-
-            tab_index, tab_bar = self._find_tab_bar_and_index(tab)
-            if tab_bar and tab_index != -1:
-                current_text = tab_bar.get_tab_text(tab_index)
-                if modified and not current_text.endswith('*'):
-                    tab_bar.set_tab_text(tab_index, f"{current_text}*")
-                elif not modified and current_text.endswith('*'):
-                    tab_bar.set_tab_text(tab_index, current_text[:-1])
-
-            self._update_tab_bar_for_label_change(tab)
         if self._mindspace_manager.has_mindspace():
             self._mindspace_manager.mindspace().contexts().update(tab_id, is_modified=modified)
+
+    def _on_tab_label_changed(self, tab_id: str, new_title: str) -> None:
+        """Update the tab bar label when a tab signals its title has changed."""
+        tab = self._tabs.get(tab_id)
+        if not tab:
+            return
+
+        tab_index, tab_bar = self._find_tab_bar_and_index(tab)
+        if tab_bar and tab_index != -1:
+            tab_bar.set_tab_text(tab_index, new_title)
+
+        self._update_tab_bar_for_label_change(tab)
 
     def current_tab_path(self) -> str:
         """
@@ -1618,7 +1457,6 @@ class ColumnManager(QWidget):
         target_column_number = current_column_number + (0 if split_left else 1)
         target_column = self._create_column(target_column_number)
 
-        # Move the current tab to the new column
         current_tab = self.get_current_tab()
         if not current_tab:
             return
@@ -1627,8 +1465,6 @@ class ColumnManager(QWidget):
         self.show_all_columns()
 
         self._active_column = target_column
-
-        # Emit signal about column state change
         self._update_tabs()
 
     def can_merge_column(self, merge_left: bool) -> bool:
@@ -1655,7 +1491,6 @@ class ColumnManager(QWidget):
         target_column = self._tab_columns[target_column_number]
         current_column = self._active_column
 
-        # Move all tabs to target column
         while current_column.count() > 0:
             tab = cast(TabBase, current_column.widget(0))
             self._move_tab_between_columns(tab, current_column, target_column, remove_if_empty=False)
@@ -1664,7 +1499,6 @@ class ColumnManager(QWidget):
         column_number = self._tab_columns.index(current_column)
         self._remove_column_and_resize(column_number, current_column)
 
-        # Emit signal about column state change
         self._update_tabs()
 
     def can_swap_column(self, swap_left: bool) -> bool:
@@ -1712,7 +1546,6 @@ class ColumnManager(QWidget):
 
         target_column_number = current_column_number + (-1 if swap_left else 1)
 
-        # Get the source and target columns
         source_column = self._tab_columns[current_column_number]
         target_column = self._tab_columns[target_column_number]
 
@@ -1731,15 +1564,12 @@ class ColumnManager(QWidget):
         self._column_splitter.replaceWidget(index_source, target_column)
         self._column_splitter.replaceWidget(index_target, source_column)
 
-        # Update the _tab_columns list to reflect the swap
         self._tab_columns[current_column_number], self._tab_columns[target_column_number] = \
             self._tab_columns[target_column_number], self._tab_columns[current_column_number]
 
-        # Clean up temporary widgets
         temp_source.deleteLater()
         temp_target.deleteLater()
 
-        # Emit signal about column state change
         self._update_tabs()
 
     def _get_current_column(self) -> int:
@@ -1778,7 +1608,6 @@ class ColumnManager(QWidget):
         if source_type == "preview":
             return self._find_preview_tab_by_path(path)
 
-        # files view
         return self._find_editor_tab_by_path(path)
 
     def _find_conversation_tab_by_path(self, path: str) -> ConversationTab | None:
@@ -1786,7 +1615,7 @@ class ColumnManager(QWidget):
         Find a conversation tab by its conversation path.
 
         Args:
-            conversation_path: The path to search for
+            path: The path to search for
 
         Returns:
             The ConversationTab if found, None otherwise
@@ -1859,8 +1688,6 @@ class ColumnManager(QWidget):
                 return tab
 
         log_tab = LogTab("", self)
-
-        # Use language strings for the tab title
         self._add_tab(log_tab, "Mindspace Log")
         self._register_tab_with_registry(log_tab, "Mindspace Log")
         return log_tab
@@ -1879,8 +1706,6 @@ class ColumnManager(QWidget):
                 return tab
 
         shell_tab = ShellTab("", self)
-
-        # Use language strings for the tab title
         self._add_tab(shell_tab, "Humbug Shell")
         self._register_tab_with_registry(shell_tab, "Humbug Shell")
         return shell_tab
@@ -1905,7 +1730,6 @@ class ColumnManager(QWidget):
         """Open a file in a new or existing editor tab."""
         assert os.path.isabs(path), "Path must be absolute"
 
-        # Check if file is already open
         existing_tab = self._find_editor_tab_by_path(path)
         if existing_tab:
             if existing_tab.is_ephemeral() and not ephemeral:
@@ -1940,8 +1764,8 @@ class ColumnManager(QWidget):
             return existing_tab
 
         diff_tab = DiffTab("", path, self)
-        diff_tab.open_file_requested.connect(self._on_diff_open_file_requested)
-        diff_tab.open_preview_requested.connect(self._on_diff_open_preview_requested)
+        diff_tab.open_file_requested.connect(self.on_diff_open_file_requested)
+        diff_tab.open_preview_requested.connect(self.on_diff_open_preview_requested)
         diff_tab.set_ephemeral(ephemeral)
         title = os.path.basename(path)
         self._add_tab(diff_tab, title)
@@ -1958,16 +1782,14 @@ class ColumnManager(QWidget):
         reasoning: AIReasoningCapability | None = None,
         reasoning_effort: str | None = None,
         folder: str | None = None,
-        ai_conversation: AIConversation | None = None  # inner AIConversation for delegation
+        ai_conversation: AIConversation | None = None
     ) -> ConversationTab:
         """Create a new conversation tab and return its ID."""
-        # Generate timestamp for ID
         timestamp = datetime.now(timezone.utc)
         conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
         prefix = "dAI-" if child else ""
         conversation_title = f"{prefix}{conversation_title}"
         if folder is not None:
-            # folder is an absolute path; compute path relative to mindspace
             relative_folder = self._mindspace_manager.get_relative_path(folder)
             filename = os.path.join(relative_folder, f"{conversation_title}.conv")
 
@@ -1976,7 +1798,6 @@ class ColumnManager(QWidget):
 
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
-        # Wrap the inner AIConversation in a transcript conversation if provided
         ai_transcript_conversation: AITranscriptConversation | None = None
         if ai_conversation is not None:
             ai_transcript_conversation = AITranscriptConversation(full_path, ai_conversation)
@@ -1991,9 +1812,8 @@ class ColumnManager(QWidget):
             self._logger.exception("Failed to create new conversation: %s", str(e))
             raise ColumnManagerError("Failed to create new conversation tab") from e
 
-        conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
+        conversation_tab.fork_from_index_requested.connect(self.on_conversation_fork_from_index_requested)
 
-        # Set model based on mindspace settings
         settings = cast(MindspaceSettings, self._mindspace_manager.settings())
         if model is None:
             model = settings.model
@@ -2032,7 +1852,6 @@ class ColumnManager(QWidget):
         """Open an existing conversation file."""
         assert os.path.isabs(path), "Path must be absolute"
 
-        # Check if already open
         abs_path = self._mindspace_manager.get_absolute_path(path)
         existing_tab = self._find_conversation_tab_by_path(abs_path)
         if existing_tab:
@@ -2047,7 +1866,7 @@ class ColumnManager(QWidget):
 
         try:
             conversation_tab = ConversationTab("", abs_path, self)
-            conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
+            conversation_tab.fork_from_index_requested.connect(self.on_conversation_fork_from_index_requested)
             conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
             conversation_tab.set_ephemeral(ephemeral)
             self._add_tab(conversation_tab, conversation_title)
@@ -2058,7 +1877,7 @@ class ColumnManager(QWidget):
             self._logger.exception("Failed to open conversation: %s", str(e))
             raise ColumnManagerError("Failed to open conversation tab") from e
 
-    def _on_conversation_fork_from_index_requested(self, message_index: int) -> None:
+    def on_conversation_fork_from_index_requested(self, message_index: int) -> None:
         """Handle the fork conversation from index request signal."""
         self.fork_from_index_requested.emit(message_index)
 
@@ -2121,7 +1940,6 @@ class ColumnManager(QWidget):
 
             self.protect_tab(conversation_tab.tab_id())
 
-            # Generate new file path using fork naming convention
             new_path = self._get_fork_file_name(conversation_tab.path())
             new_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
 
@@ -2129,7 +1947,7 @@ class ColumnManager(QWidget):
             new_history = conversation_tab.ai_conversation().fork_history(source_index)
             new_tab.set_conversation_history(new_history)
 
-            new_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
+            new_tab.fork_from_index_requested.connect(self.on_conversation_fork_from_index_requested)
             fork_title = os.path.splitext(os.path.basename(new_tab.path()))[0]
             self._add_tab(new_tab, fork_title)
             self._register_tab_with_registry(new_tab, fork_title)
@@ -2163,20 +1981,20 @@ class ColumnManager(QWidget):
         self._register_tab_with_registry(terminal, title)
         return terminal
 
-    def _on_preview_open_link_requested(self, path: str) -> None:
+    def on_preview_open_link_requested(self, path: str) -> None:
         """Handle a preview link click."""
         self.open_preview_link_requested.emit(path)
 
-    def _on_preview_edit_file_requested(self, path: str) -> None:
+    def on_preview_edit_file_requested(self, path: str) -> None:
         """Edit a file from a preview page."""
         self.edit_file_requested.emit(path)
 
-    def _on_diff_open_file_requested(self, path: str, line: int, column: int) -> None:
+    def on_diff_open_file_requested(self, path: str, line: int, column: int) -> None:
         """Open a file in an editor tab from a diff tab context menu."""
         editor = self.open_file(path, False)
         editor.goto_line(line, column)
 
-    def _on_diff_open_preview_requested(self, path: str) -> None:
+    def on_diff_open_preview_requested(self, path: str) -> None:
         """Open a file in a preview tab from a diff tab context menu."""
         self.open_preview_page(path, False)
 
@@ -2189,7 +2007,6 @@ class ColumnManager(QWidget):
         if '#' in path:
             path_minus_anchor, anchor = path.split('#', 1)
 
-        # Check if already open
         existing_tab = self._find_preview_tab_by_path(path_minus_anchor)
         if existing_tab:
             if existing_tab.is_ephemeral() and not ephemeral:
@@ -2200,7 +2017,6 @@ class ColumnManager(QWidget):
             self._ensure_tab_not_in_protected_column(existing_tab)
             self._set_current_tab(existing_tab, ephemeral)
 
-            # If there's an anchor, scroll to it
             if anchor:
                 existing_tab.scroll_to_anchor(anchor)
 
@@ -2208,8 +2024,8 @@ class ColumnManager(QWidget):
 
         try:
             preview_tab = PreviewTab("", path_minus_anchor, self)
-            preview_tab.open_link_requested.connect(self._on_preview_open_link_requested)
-            preview_tab.edit_file_requested.connect(self._on_preview_edit_file_requested)
+            preview_tab.open_link_requested.connect(self.on_preview_open_link_requested)
+            preview_tab.edit_file_requested.connect(self.on_preview_edit_file_requested)
             preview_tab.set_ephemeral(ephemeral)
             norm_path = os.path.normpath(path_minus_anchor)
             name = os.path.basename(norm_path)
@@ -2226,7 +2042,6 @@ class ColumnManager(QWidget):
             self._add_tab(preview_tab, title)
             self._register_tab_with_registry(preview_tab, title)
 
-            # If there's an anchor, scroll to it
             if anchor:
                 preview_tab.scroll_to_anchor(anchor)
 
@@ -2245,7 +2060,6 @@ class ColumnManager(QWidget):
             tab_states = []
             active_tab_id = None
 
-            # Get active tab ID for this column
             current_index = column.currentIndex()
             if current_index != -1:
                 current_tab = cast(TabBase, column.widget(current_index))
@@ -2273,64 +2087,8 @@ class ColumnManager(QWidget):
         }
 
     def _restore_tab_from_state(self, state: TabState) -> TabBase | None:
-        """Create appropriate tab type from state."""
-        match state.type:
-            case TabType.CONVERSATION:
-                conversation_tab = ConversationTab.restore_from_state(state, self)
-                conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
-                return conversation_tab
-
-            case TabType.EDITOR:
-                editor_tab = EditorTab.restore_from_state(state, self)
-                return editor_tab
-
-            case TabType.LOG:
-                return LogTab.restore_from_state(state, self)
-
-            case TabType.SHELL:
-                return ShellTab.restore_from_state(state, self)
-
-            case TabType.TERMINAL:
-                return TerminalTab.restore_from_state(state, self)
-
-            case TabType.PREVIEW:
-                preview_tab = PreviewTab.restore_from_state(state, self)
-                preview_tab.open_link_requested.connect(self._on_preview_open_link_requested)
-                preview_tab.edit_file_requested.connect(self._on_preview_edit_file_requested)
-                return preview_tab
-
-            case TabType.DIFF:
-                diff_tab = DiffTab.restore_from_state(state, self)
-                diff_tab.open_file_requested.connect(self._on_diff_open_file_requested)
-                diff_tab.open_preview_requested.connect(self._on_diff_open_preview_requested)
-                return diff_tab
-
-        return None
-
-    def _get_tab_title(self, tab: TabBase, state: TabState) -> str:
-        """Get appropriate title for tab type."""
-        if isinstance(tab, ConversationTab):
-            return os.path.splitext(os.path.basename(state.path))[0]
-
-        if isinstance(tab, LogTab):
-            return "Mindspace Log"
-
-        if isinstance(tab, ShellTab):
-            return "Humbug Shell"
-
-        if isinstance(tab, TerminalTab):
-            if state.metadata and "command" in state.metadata:
-                return os.path.basename(state.metadata['command'])
-
-            return "Terminal"
-
-        if isinstance(tab, PreviewTab):
-            return os.path.basename(state.path)
-
-        if isinstance(tab, DiffTab):
-            return os.path.basename(state.path)
-
-        return os.path.basename(state.path)
+        """Create a tab from state using the factory registry."""
+        return self._tab_factory_registry.restore(state, self)
 
     def _restore_column_state(self, column_index: int, tab_states: List[Dict]) -> None:
         """
@@ -2345,9 +2103,9 @@ class ColumnManager(QWidget):
                 state = TabState.from_dict(state_dict)
                 state.path = self._mindspace_manager.get_absolute_path(state.path)
 
-                if state.type == TabType.DIFF and not DiffTab.can_restore(state.path):
+                if not self._tab_factory_registry.can_restore(state):
                     self._logger.info(
-                        "Skipping diff tab restore: file missing or not in a git repo: %s", state.path
+                        "Skipping tab restore for type '%s', path: %s", state.type, state.path
                     )
                     continue
 
@@ -2358,15 +2116,12 @@ class ColumnManager(QWidget):
                 tab.set_ephemeral(state.is_ephemeral)
 
                 self._active_column = self._tab_columns[column_index]
-                title = self._get_tab_title(tab, state)
+                title = tab.tab_title_from_path()
                 self._add_tab(tab, title)
 
-                # Register this tab with the context registry.  _on_context_opened
-                # will see the tab already in _tabs and skip Qt tab creation,
-                # but will register the appropriate context model.
                 if self._mindspace_manager.has_mindspace():
                     self._mindspace_manager.mindspace().contexts().open(
-                        context_type=self._tab_context_type(tab),
+                        context_type=tab.tool_name(),
                         path=tab.path(),
                         title=title,
                         is_ephemeral=tab.is_ephemeral(),
@@ -2439,11 +2194,9 @@ class ColumnManager(QWidget):
         """Apply style changes from StyleManager."""
         self.setStyleSheet(build_column_manager_stylesheet(self._style_manager))
 
-        # Apply styles to individual widgets
         self._update_column_splitter()
         self._apply_all_tab_bar_styles()
 
-        # Notify all tab bars of style change
         for column in self._tab_columns:
             tab_bar = column.tabBar()
             if isinstance(tab_bar, TabBar):
@@ -2460,7 +2213,6 @@ class ColumnManager(QWidget):
 
     def _update_column_splitter(self) -> None:
         """Trigger repaint of column splitter handles."""
-        # The column splitter uses custom painted handles, so we just need to trigger a repaint
         self._column_splitter.update()
 
     def _apply_tab_bar_style(self, tab_bar: QTabBar) -> None:
@@ -2581,7 +2333,6 @@ class ColumnManager(QWidget):
         Args:
             path: Path of file being deleted
         """
-        # Find and close any editor tab for this file
         editor_tab = self._find_editor_tab_by_path(path)
         if editor_tab:
             self._mindspace_manager.add_interaction(
@@ -2590,7 +2341,6 @@ class ColumnManager(QWidget):
             )
             self.close_tab_by_id(editor_tab.tab_id(), True)
 
-        # Also check for conversation files
         if path.endswith('.conv'):
             conversation_tab = self._find_conversation_tab_by_path(path)
             if conversation_tab:
@@ -2600,7 +2350,6 @@ class ColumnManager(QWidget):
                 )
                 self.close_tab_by_id(conversation_tab.tab_id(), True)
 
-        # Close any preview page we may have had for this file
         preview_tab = self._find_preview_tab_by_path(path)
         if preview_tab:
             self._mindspace_manager.add_interaction(
@@ -2609,7 +2358,6 @@ class ColumnManager(QWidget):
             )
             self.close_tab_by_id(preview_tab.tab_id(), True)
 
-        # Close any diff tab we may have had for this file
         diff_tab = self._find_diff_tab_by_path(path)
         if diff_tab:
             self._mindspace_manager.add_interaction(
@@ -2665,7 +2413,6 @@ class ColumnManager(QWidget):
             return ""
 
         current_tab.save()
-        self._update_editor_tab_label(current_tab)
 
         return current_tab.path()
 
@@ -2684,26 +2431,8 @@ class ColumnManager(QWidget):
             return ""
 
         current_tab.save_as()
-        self._update_editor_tab_label(current_tab)
 
         return current_tab.path()
-
-    def _update_editor_tab_label(self, tab: EditorTab) -> None:
-        """
-        Update the tab label.
-
-        Args:
-            current_tab: Tab to update
-        """
-        title = os.path.basename(tab.path())
-        if tab.is_modified():
-            title += "*"
-
-        tab_index, tab_bar = self._find_tab_bar_and_index(tab)
-        if tab_bar and tab_index != -1:
-            tab_bar.set_tab_text(tab_index, title)
-
-        self._update_tab_bar_for_label_change(tab)
 
     def can_show_all_columns(self) -> bool:
         """Check if all columns can be shown."""

@@ -20,7 +20,6 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
 )
-from mindspace.context.context_type import ContextType
 from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
@@ -290,7 +289,7 @@ class SystemAITool(AITool):
 
             try:
                 context_id = self._mindspace.contexts().open(
-                    context_type=ContextType.EDITOR,
+                    context_type="editor",
                     path=file_path,
                     title=os.path.basename(file_path),
                 )
@@ -329,7 +328,7 @@ class SystemAITool(AITool):
 
             try:
                 context_id = self._mindspace.contexts().open(
-                    context_type=ContextType.TERMINAL,
+                    context_type="terminal",
                     title="Terminal",
                 )
             finally:
@@ -379,7 +378,7 @@ class SystemAITool(AITool):
             title = os.path.splitext(os.path.basename(conversation_path))[0]
             try:
                 context_id = self._mindspace.contexts().open(
-                    context_type=ContextType.CONVERSATION,
+                    context_type="conversation",
                     path=conversation_path,
                     title=title,
                 )
@@ -497,7 +496,7 @@ class SystemAITool(AITool):
 
             try:
                 context_id = self._mindspace.contexts().open(
-                    context_type=ContextType.CONVERSATION,
+                    context_type="conversation",
                     path=full_path,
                     title=conversation_title,
                     initial_model=transcript,
@@ -568,7 +567,7 @@ class SystemAITool(AITool):
 
             try:
                 context_id = self._mindspace.contexts().open(
-                    context_type=ContextType.PREVIEW,
+                    context_type="preview",
                     path=preview_path,
                     title=title,
                 )
@@ -628,7 +627,7 @@ class SystemAITool(AITool):
 
             try:
                 context_id = self._mindspace.contexts().open(
-                    context_type=ContextType.DIFF,
+                    context_type="diff",
                     path=file_path,
                     title=os.path.basename(file_path),
                 )

@@ -1,6 +1,7 @@
 """Main window implementation for Humbug application."""
 
 import asyncio
+import functools
 import json
 import logging
 import os
@@ -61,10 +62,38 @@ from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.diff.diff_tab import DiffTab
 from humbug.tabs.terminal.terminal_ai_tool import TerminalAITool
+from humbug.tabs.editor.editor_tab import EditorTab
+from humbug.tabs.log.log_tab import LogTab
+from humbug.tabs.shell.shell_tab import ShellTab
+from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.tabs.preview.preview_tab import PreviewTab
+from humbug.tabs.tab_state import TabState
 from humbug.title_bar import MenuBarDragFilter, WindowControlsWidget
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
+
+
+def _wire_conversation_tab(cm: 'ColumnManager', state: TabState, parent: QWidget) -> ConversationTab:
+    """Factory for ConversationTab with signal wiring."""
+    tab = ConversationTab.restore_from_state(state, parent)
+    tab.fork_from_index_requested.connect(cm.on_conversation_fork_from_index_requested)
+    return tab
+
+
+def _wire_preview_tab(cm: 'ColumnManager', state: TabState, parent: QWidget) -> PreviewTab:
+    """Factory for PreviewTab with signal wiring."""
+    tab = PreviewTab.restore_from_state(state, parent)
+    tab.open_link_requested.connect(cm.on_preview_open_link_requested)
+    tab.edit_file_requested.connect(cm.on_preview_edit_file_requested)
+    return tab
+
+
+def _wire_diff_tab(cm: 'ColumnManager', state: TabState, parent: QWidget) -> DiffTab:
+    """Factory for DiffTab with signal wiring."""
+    tab = DiffTab.restore_from_state(state, parent)
+    tab.open_file_requested.connect(cm.on_diff_open_file_requested)
+    tab.open_preview_requested.connect(cm.on_diff_open_preview_requested)
+    return tab
 
 
 class MainWindow(QMainWindow):
@@ -387,6 +416,17 @@ class MainWindow(QMainWindow):
         self._column_manager.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
         self._column_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
         self._splitter.addWidget(self._column_manager)
+
+        # Register tab factories for session restore.  Each factory wraps
+        # restore_from_state and wires any tab-type-specific signals.
+        cm = self._column_manager
+        cm.register_tab_factory("conversation", functools.partial(_wire_conversation_tab, cm))
+        cm.register_tab_factory("editor", EditorTab.restore_from_state)
+        cm.register_tab_factory("log", LogTab.restore_from_state)
+        cm.register_tab_factory("shell", ShellTab.restore_from_state)
+        cm.register_tab_factory("terminal", TerminalTab.restore_from_state)
+        cm.register_tab_factory("preview", functools.partial(_wire_preview_tab, cm))
+        cm.register_tab_factory("diff", functools.partial(_wire_diff_tab, cm))
 
         # Set initial mindspace view width
         self._splitter.setSizes([300, self.width() - 300])
