@@ -15,6 +15,7 @@ from mindspace.context.context_registry import ContextRegistry
 from mindspace.context.conversation_context import ConversationContext
 
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage
 from humbug.tabs.conversation.conversation_settings_dialog import ConversationSettingsDialog
 from humbug.tabs.conversation.conversation_widget import ConversationWidget
@@ -90,6 +91,10 @@ class ConversationTab(TabBase):
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""
         return "conversation"
+
+    def mindspace_view_type(self) -> MindspaceViewType:
+        """Return the mindspace view panel for conversation tabs."""
+        return MindspaceViewType.CONVERSATIONS
 
     def tab_title_from_path(self) -> str:
         """Return the conversation title derived from the filename (without extension)."""

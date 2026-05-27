@@ -18,6 +18,7 @@ from PySide6.QtGui import QKeyEvent, QMouseEvent, QAction, QKeySequence, QAction
 
 from ai.ai_conversation_settings import AIConversationSettings
 from ai_tool import AIToolManager
+from ai_transcript_conversation import AITranscriptConversation
 from clock_ai_tool.clock_ai_tool import ClockAITool
 from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
@@ -26,6 +27,8 @@ from menai_ai_tool.menai_ai_tool import MenaiAITool
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_settings import MindspaceSettings
+from mindspace.context.context_info import ContextInfo
+from mindspace.context.context_registry import ContextRegistry
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
@@ -59,7 +62,6 @@ from humbug.tabs.shell.commands.shell_command_log import ShellCommandLog
 from humbug.tabs.shell.commands.shell_command_terminal import ShellCommandTerminal
 from humbug.tabs.shell.commands.shell_command_preview import ShellCommandPreview
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
-from humbug.tabs.tab_base import TabBase
 from humbug.tabs.diff.diff_tab import DiffTab
 from humbug.tabs.terminal.terminal_ai_tool import TerminalAITool
 from humbug.tabs.editor.editor_tab import EditorTab
@@ -91,6 +93,57 @@ def _wire_preview_tab(cm: 'ColumnManager', state: TabState, parent: QWidget) -> 
 def _wire_diff_tab(cm: 'ColumnManager', state: TabState, parent: QWidget) -> DiffTab:
     """Factory for DiffTab with signal wiring."""
     tab = DiffTab.restore_from_state(state, parent)
+    tab.open_file_requested.connect(cm.on_diff_open_file_requested)
+    tab.open_preview_requested.connect(cm.on_diff_open_preview_requested)
+    return tab
+
+
+def _create_conversation_tab(
+    cm: 'ColumnManager', info: ContextInfo, registry: ContextRegistry, parent: QWidget
+) -> ConversationTab:
+    """Context factory for ConversationTab with signal wiring."""
+    transcript = registry.get_model(info.context_id, AITranscriptConversation)
+    if transcript is not None:
+        tab = ConversationTab(
+            info.context_id, transcript.path(), parent,
+            ai_transcript_conversation=transcript,
+        )
+    else:
+        tab = ConversationTab(info.context_id, info.path, parent)
+
+    tab.fork_from_index_requested.connect(cm.on_conversation_fork_from_index_requested)
+    return tab
+
+
+def _create_editor_tab(
+    _cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+) -> EditorTab:
+    """Context factory for EditorTab."""
+    return EditorTab(info.context_id, info.path, None, parent)
+
+
+def _create_terminal_tab(
+    _cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+) -> TerminalTab:
+    """Context factory for TerminalTab."""
+    return TerminalTab(info.context_id, None, parent)
+
+
+def _create_preview_tab(
+    cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+) -> PreviewTab:
+    """Context factory for PreviewTab with signal wiring."""
+    tab = PreviewTab(info.context_id, info.path, parent)
+    tab.open_link_requested.connect(cm.on_preview_open_link_requested)
+    tab.edit_file_requested.connect(cm.on_preview_edit_file_requested)
+    return tab
+
+
+def _create_diff_tab(
+    cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+) -> DiffTab:
+    """Context factory for DiffTab with signal wiring."""
+    tab = DiffTab(info.context_id, info.path, parent)
     tab.open_file_requested.connect(cm.on_diff_open_file_requested)
     tab.open_preview_requested.connect(cm.on_diff_open_preview_requested)
     return tab
@@ -428,6 +481,12 @@ class MainWindow(QMainWindow):
         cm.register_tab_factory("preview", functools.partial(_wire_preview_tab, cm))
         cm.register_tab_factory("diff", functools.partial(_wire_diff_tab, cm))
 
+        cm.register_context_factory("conversation", functools.partial(_create_conversation_tab, cm))
+        cm.register_context_factory("editor", functools.partial(_create_editor_tab, cm))
+        cm.register_context_factory("terminal", functools.partial(_create_terminal_tab, cm))
+        cm.register_context_factory("preview", functools.partial(_create_preview_tab, cm))
+        cm.register_context_factory("diff", functools.partial(_create_diff_tab, cm))
+
         # Set initial mindspace view width
         self._splitter.setSizes([300, self.width() - 300])
 
@@ -763,19 +822,6 @@ class MainWindow(QMainWindow):
         """
         self._style_manager.set_color_mode(theme)
 
-    def _map_tab_to_mindspace_view(self, tab: TabBase) -> MindspaceViewType:
-        """Map a tab to its corresponding mindspace view type."""
-        if isinstance(tab, ConversationTab):
-            return MindspaceViewType.CONVERSATIONS
-
-        if isinstance(tab, PreviewTab):
-            return MindspaceViewType.PREVIEW
-
-        if isinstance(tab, DiffTab):
-            return MindspaceViewType.VCS
-
-        return MindspaceViewType.FILES
-
     def _on_column_manager_tab_changed(self) -> None:
         """Handle tab change events."""
         current_tab = self._column_manager.get_current_tab()
@@ -786,8 +832,7 @@ class MainWindow(QMainWindow):
         if path is None:
             return
 
-        view_type = self._map_tab_to_mindspace_view(current_tab)
-        self._mindspace_view.reveal_and_select_file(view_type, path)
+        self._mindspace_view.reveal_and_select_file(current_tab.mindspace_view_type(), path)
 
     def _on_column_manager_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""

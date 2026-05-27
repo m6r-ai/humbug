@@ -14,6 +14,7 @@ from mindspace.context.preview_context import PreviewContext
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
@@ -88,6 +89,10 @@ class PreviewTab(TabBase):
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""
         return "preview"
+
+    def mindspace_view_type(self) -> MindspaceViewType:
+        """Return the mindspace view panel for preview tabs."""
+        return MindspaceViewType.PREVIEW
 
     def register_context_models(self, registry: ContextRegistry) -> None:
         """Register the PreviewContext with the registry."""

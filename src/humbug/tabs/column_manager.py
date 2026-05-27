@@ -33,7 +33,7 @@ from humbug.tabs.log.log_tab import LogTab
 from humbug.tabs.shell.shell_tab import ShellTab
 from humbug.tabs.tab_bar import TabBar
 from humbug.tabs.tab_base import TabBase
-from humbug.tabs.tab_factory_registry import TabFactory, TabFactoryRegistry
+from humbug.tabs.tab_factory_registry import ContextFactory, TabFactory, TabFactoryRegistry
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_style import build_column_manager_stylesheet, build_tab_bar_stylesheet
 from humbug.tabs.terminal.terminal_tab import TerminalTab
@@ -152,6 +152,15 @@ class ColumnManager(QWidget):
             factory: Callable(state, parent) -> TabBase | None.
         """
         self._tab_factory_registry.register(tool_name, factory)
+
+    def register_context_factory(self, tool_name: str, factory: ContextFactory) -> None:
+        """Register a context factory for live context-open events.
+
+        Args:
+            tool_name: The tool name string (e.g. 'editor', 'conversation').
+            factory: Callable(info, registry, parent) -> TabBase | None.
+        """
+        self._tab_factory_registry.register_context_factory(tool_name, factory)
 
     def protect_tab(self, tab_id: str) -> None:
         """
@@ -514,71 +523,21 @@ class ColumnManager(QWidget):
             self._apply_context_models(existing_tab)
             return
 
-        mindspace = self._mindspace_manager.mindspace()
-        registry = mindspace.contexts()
-        new_tab: TabBase | None = None
-
+        registry = self._mindspace_manager.mindspace().contexts()
         try:
-            if info.context_type == "editor":
-                tab: TabBase = EditorTab(context_id, info.path, None, self)
-                tab.set_ephemeral(info.is_ephemeral)
-                self._add_tab(tab, os.path.basename(info.path))
-                new_tab = tab
-
-            elif info.context_type == "terminal":
-                terminal_tab = TerminalTab(context_id, None, self)
-                terminal_tab.set_ephemeral(info.is_ephemeral)
-                self._add_tab(terminal_tab, "Terminal")
-                new_tab = terminal_tab
-
-            elif info.context_type == "preview":
-                preview_tab = PreviewTab(context_id, info.path, self)
-                preview_tab.open_link_requested.connect(self.on_preview_open_link_requested)
-                preview_tab.edit_file_requested.connect(self.on_preview_edit_file_requested)
-                preview_tab.set_ephemeral(info.is_ephemeral)
-                norm_path = os.path.normpath(info.path)
-                name = os.path.basename(norm_path)
-                is_mindspace_root = (
-                    norm_path == os.path.normpath(self._mindspace_manager.mindspace_path())
-                )
-                title = f"[{name.upper()}]" if is_mindspace_root else name
-                self._add_tab(preview_tab, title)
-                new_tab = preview_tab
-
-            elif info.context_type == "diff":
-                diff_tab = DiffTab(context_id, info.path, self)
-                diff_tab.open_file_requested.connect(self.on_diff_open_file_requested)
-                diff_tab.open_preview_requested.connect(self.on_diff_open_preview_requested)
-                diff_tab.set_ephemeral(info.is_ephemeral)
-                self._add_tab(diff_tab, os.path.basename(info.path))
-                new_tab = diff_tab
-
-            elif info.context_type == "conversation":
-                transcript = registry.get_model(context_id, AITranscriptConversation)
-                if transcript is not None:
-                    conv_tab = ConversationTab(
-                        context_id, transcript.path(), self,
-                        ai_transcript_conversation=transcript,
-                    )
-
-                else:
-                    conv_tab = ConversationTab(context_id, info.path, self)
-
-                conv_tab.fork_from_index_requested.connect(
-                    self.on_conversation_fork_from_index_requested
-                )
-                conv_tab.set_ephemeral(info.is_ephemeral)
-                title = os.path.splitext(os.path.basename(info.path))[0]
-                self._add_tab(conv_tab, title)
-                new_tab = conv_tab
-
+            new_tab = self._tab_factory_registry.create_from_context(info, registry, self)
         except Exception:
             self._logger.exception(
                 "Failed to create tab for context %s (%s)", context_id, info.context_type
             )
+            return
 
-        if new_tab is not None:
-            self._apply_context_models(new_tab)
+        if new_tab is None:
+            return
+
+        new_tab.set_ephemeral(info.is_ephemeral)
+        self._add_tab(new_tab, info.title)
+        self._apply_context_models(new_tab)
 
     def _apply_context_models(self, tab: TabBase) -> None:
         """Register context models for a tab by delegating to the tab itself."""
