@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import logging
 import os
 from typing import Dict, List, cast
@@ -7,16 +6,12 @@ from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QHBoxLayout, QStack
 from PySide6.QtCore import Signal, QTimer
 from PySide6.QtGui import QResizeEvent
 
-from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
-from ai_transcript_conversation import AITranscriptConversation
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.context.context_info import ContextInfo
 from mindspace.context.context_registry import ContextEvent
-from mindspace.mindspace_settings import MindspaceSettings
 
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.style_manager import StyleManager
@@ -25,19 +20,13 @@ from humbug.tabs.column_splitter import ColumnSplitter
 from humbug.tabs.column_widget import ColumnWidget
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.spacer_drop_widget import SpacerDropWidget
-from humbug.tabs.preview.preview_error import PreviewError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
-from humbug.tabs.diff.diff_tab import DiffTab
 from humbug.tabs.editor.editor_tab import EditorTab
-from humbug.tabs.log.log_tab import LogTab
-from humbug.tabs.shell.shell_tab import ShellTab
 from humbug.tabs.tab_bar import TabBar
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_factory_registry import ContextFactory, TabFactory, TabFactoryRegistry
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_style import build_column_manager_stylesheet, build_tab_bar_stylesheet
-from humbug.tabs.terminal.terminal_tab import TerminalTab
-from humbug.tabs.preview.preview_tab import PreviewTab
 from humbug.tabs.welcome_widget import WelcomeWidget
 from humbug.user.user_settings import UserSettings
 
@@ -644,109 +633,6 @@ class ColumnManager(QWidget):
             source_column_index = self._tab_columns.index(source_column)
             self._remove_column_and_resize(source_column_index, source_column)
 
-    def open_file_by_mindspace_view_type(self, source: MindspaceViewType, path: str, ephemeral: bool) -> TabBase | None:
-        """
-        Open a file with the appropriate tab type based on mindspace view.
-
-        Args:
-            source: Mindspace view type
-            path: File path to open
-            ephemeral: Whether tab should be ephemeral
-
-        Returns:
-            Created tab or None if failed
-        """
-        if source == MindspaceViewType.VCS:
-            if os.path.isdir(path):
-                return None
-
-            diff_tab = self.open_diff(path, ephemeral)
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"User opened diff: '{path}'\ntab ID: {diff_tab.tab_id()}"
-            )
-            return diff_tab
-
-        if source == MindspaceViewType.CONVERSATIONS:
-            if os.path.isdir(path):
-                return None
-
-            try:
-                conversation_tab = self.open_conversation(path, ephemeral)
-
-            except ColumnManagerError:
-                return None
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"User opened conversation: '{path}'\ntab ID: {conversation_tab.tab_id()}"
-            )
-
-            return conversation_tab
-
-        if source == MindspaceViewType.PREVIEW:
-            try:
-                preview_tab = self.open_preview_page(path, ephemeral)
-
-            except ColumnManagerError:
-                return None
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"User opened preview page: '{path}'\ntab ID: {preview_tab.tab_id()}"
-            )
-            return preview_tab
-
-        if os.path.isdir(path):
-            return None
-
-        try:
-            editor_tab = self.open_file(path, ephemeral)
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"User opened file: '{path}'\ntab ID: {editor_tab.tab_id()}"
-            )
-            return editor_tab
-
-        except Exception as e:
-            self._logger.exception("Failed to open file: %s", path)
-            raise ColumnManagerError(f"Failed to open file: {path}") from e
-
-    def _open_file_by_source_type(self, source_type: str, path: str, ephemeral: bool) -> TabBase | None:
-        """
-        Open a file with the appropriate tab type based on source view.
-
-        Args:
-            source_type: Source view type ("conversations", "files", "preview") or None
-            path: File path to open
-            ephemeral: Whether tab should be ephemeral
-
-        Returns:
-            Created tab or None if failed
-        """
-        mapping = {
-            "conversations": MindspaceViewType.CONVERSATIONS,
-            "files": MindspaceViewType.FILES,
-            "vcs": MindspaceViewType.VCS,
-            "preview": MindspaceViewType.PREVIEW
-        }
-
-        assert source_type in mapping
-        view_type = mapping[source_type]
-        try:
-            return self.open_file_by_mindspace_view_type(view_type, path, ephemeral)
-
-        except ColumnManagerError as e:
-            self._logger.error("Failed to open dropped file '%s': %s", path, str(e))
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.error_opening_file_title,
-                strings.could_not_open.format(path, str(e))
-            )
-            return None
-
     def _on_welcome_widget_path_dropped(self, source_type: str, path: str) -> None:
         """Handle mindspace tree drops when only welcome widget is visible."""
         if not self._tab_columns:
@@ -754,8 +640,8 @@ class ColumnManager(QWidget):
 
         self._active_column = self._tab_columns[0]
 
-        tab = self._open_file_by_source_type(source_type, path, False)
-        if tab is None:
+        context_id = self._open_context_by_source_type(source_type, path, False)
+        if context_id is None:
             return
 
         self._stack.setCurrentWidget(self._columns_widget)
@@ -775,8 +661,8 @@ class ColumnManager(QWidget):
                 self._update_tabs()
                 return
 
-        tab = self._open_file_by_source_type(source_type, path, False)
-        if tab is not None:
+        context_id = self._open_context_by_source_type(source_type, path, False)
+        if context_id is not None:
             self._update_tabs()
             return
 
@@ -799,8 +685,8 @@ class ColumnManager(QWidget):
                 self._update_tabs()
                 return
 
-        tab = self._open_file_by_source_type(source_type, path, False)
-        if tab is not None:
+        context_id = self._open_context_by_source_type(source_type, path, False)
+        if context_id is not None:
             self._update_tabs()
             return
 
@@ -925,11 +811,12 @@ class ColumnManager(QWidget):
                 self._update_tabs()
                 return
 
-        tab = self._open_file_by_source_type(source_type, path, False)
-        if tab is None:
+        context_id = self._open_context_by_source_type(source_type, path, False)
+        if context_id is None:
             return
 
-        current_index = target_column.indexOf(tab)
+        tab = self.get_tab_by_id(context_id)
+        current_index = target_column.indexOf(tab) if tab else -1
         if current_index != target_index:
             target_column.tabBar().moveTab(current_index, target_index)
 
@@ -1547,6 +1434,58 @@ class ColumnManager(QWidget):
 
         return self._find_tab_by_path("editor", path)
 
+    def _open_context_by_source_type(self, source_type: str, path: str, ephemeral: bool) -> str | None:
+        """Open a context via the registry, routing to the correct type based on source view.
+
+        Args:
+            source_type: Source view type string ('conversations', 'files', 'vcs', 'preview').
+            path: File path to open.
+            ephemeral: Whether the tab should be ephemeral.
+
+        Returns:
+            The context_id of the opened or focused context, or None if skipped/failed.
+        """
+        if source_type == "conversations":
+            context_type = "conversation"
+            path = self._mindspace_manager.get_absolute_path(path)
+
+        elif source_type == "vcs":
+            context_type = "diff"
+
+        elif source_type == "preview":
+            context_type = "preview"
+
+        else:
+            context_type = "editor"
+
+        if os.path.isdir(path) and context_type != "preview":
+            return None
+
+        try:
+            contexts = self._mindspace_manager.mindspace().contexts()
+            existing = contexts.get_by_path_and_type(path, context_type)
+            if existing:
+                contexts.focus(existing.context_id)
+                return existing.context_id
+
+            return contexts.open(
+                context_type=context_type,
+                path=path,
+                title=os.path.basename(path),
+                is_ephemeral=ephemeral,
+            )
+
+        except Exception as e:
+            self._logger.error("Failed to open dropped file '%s': %s", path, str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_opening_file_title,
+                strings.could_not_open.format(path, str(e))
+            )
+            return None
+
     def _find_tab_by_path(self, tool_name: str, path: str) -> TabBase | None:
         """Find an open tab by tool name and path.
 
@@ -1578,42 +1517,6 @@ class ColumnManager(QWidget):
 
         return None
 
-    def show_system_log(self) -> LogTab:
-        """
-            Show the system log tab.
-
-        Returns:
-            The system log tab
-        """
-        existing_tab = self._find_tab_by_tool_name("log")
-        if existing_tab:
-            self._ensure_tab_not_in_protected_column(existing_tab)
-            self._set_current_tab(existing_tab, False)
-            return cast(LogTab, existing_tab)
-
-        log_tab = LogTab("", self)
-        self._add_tab(log_tab, "Mindspace Log")
-        self._register_tab_with_registry(log_tab, "Mindspace Log")
-        return log_tab
-
-    def show_system_shell(self) -> ShellTab:
-        """
-            Show the system shell tab.
-
-        Returns:
-            The system shell tab
-        """
-        existing_tab = self._find_tab_by_tool_name("shell")
-        if existing_tab:
-            self._ensure_tab_not_in_protected_column(existing_tab)
-            self._set_current_tab(existing_tab, False)
-            return cast(ShellTab, existing_tab)
-
-        shell_tab = ShellTab("", self)
-        self._add_tab(shell_tab, "Humbug Shell")
-        self._register_tab_with_registry(shell_tab, "Humbug Shell")
-        return shell_tab
-
     def clear_shell_history(self) -> None:
         """Clear the shell tab history."""
         tab = self._find_tab_by_tool_name("shell")
@@ -1628,157 +1531,6 @@ class ColumnManager(QWidget):
         self._add_tab(editor, title)
         self._register_tab_with_registry(editor, title)
         return editor
-
-    def open_file(self, path: str, ephemeral: bool) -> EditorTab:
-        """Open a file in a new or existing editor tab."""
-        assert os.path.isabs(path), "Path must be absolute"
-
-        existing_tab = cast(EditorTab, self._find_tab_by_path("editor", path))
-        if existing_tab:
-            if existing_tab.is_ephemeral() and not ephemeral:
-                self._make_tab_permanent(existing_tab)
-                self._move_tab_to_active_column(existing_tab)
-                existing_tab = cast(EditorTab, self._find_tab_by_path("editor", path))
-
-            self._ensure_tab_not_in_protected_column(existing_tab)
-            self._set_current_tab(existing_tab, ephemeral)
-            return existing_tab
-
-        editor = EditorTab("", path, None, self)
-        editor.set_ephemeral(ephemeral)
-        title = os.path.basename(path)
-        self._add_tab(editor, title)
-        self._register_tab_with_registry(editor, title)
-        return editor
-
-    def open_diff(self, path: str, ephemeral: bool) -> DiffTab:
-        """Open a file diff in a new or existing diff tab."""
-        assert os.path.isabs(path), "Path must be absolute"
-
-        existing_tab = cast(DiffTab, self._find_tab_by_path("diff", path))
-        if existing_tab:
-            if existing_tab.is_ephemeral() and not ephemeral:
-                self._make_tab_permanent(existing_tab)
-                self._move_tab_to_active_column(existing_tab)
-                existing_tab = cast(DiffTab, self._find_tab_by_path("diff", path))
-
-            self._ensure_tab_not_in_protected_column(existing_tab)
-            self._set_current_tab(existing_tab, ephemeral)
-            return existing_tab
-
-        diff_tab = DiffTab("", path, self)
-        diff_tab.open_file_requested.connect(self.on_diff_open_file_requested)
-        diff_tab.open_preview_requested.connect(self.on_diff_open_preview_requested)
-        diff_tab.set_ephemeral(ephemeral)
-        title = os.path.basename(path)
-        self._add_tab(diff_tab, title)
-        self._register_tab_with_registry(diff_tab, title)
-        return diff_tab
-
-    def new_conversation(
-        self,
-        child: bool = False,
-        history: AIConversationHistory | None = None,
-        model: str | None = None,
-        provider: str | None = None,
-        temperature: float | None = None,
-        reasoning: AIReasoningCapability | None = None,
-        reasoning_effort: str | None = None,
-        folder: str | None = None,
-        ai_conversation: AIConversation | None = None
-    ) -> ConversationTab:
-        """Create a new conversation tab and return its ID."""
-        timestamp = datetime.now(timezone.utc)
-        conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-        prefix = "dAI-" if child else ""
-        conversation_title = f"{prefix}{conversation_title}"
-        if folder is not None:
-            relative_folder = self._mindspace_manager.get_relative_path(folder)
-            filename = os.path.join(relative_folder, f"{conversation_title}.conv")
-
-        else:
-            filename = os.path.join("conversations", f"{conversation_title}.conv")
-
-        full_path = self._mindspace_manager.get_absolute_path(filename)
-
-        ai_transcript_conversation: AITranscriptConversation | None = None
-        if ai_conversation is not None:
-            ai_transcript_conversation = AITranscriptConversation(full_path, ai_conversation)
-
-        try:
-            conversation_tab = ConversationTab(
-                "", full_path, self,
-                ai_transcript_conversation=ai_transcript_conversation
-            )
-
-        except ConversationError as e:
-            self._logger.exception("Failed to create new conversation: %s", str(e))
-            raise ColumnManagerError("Failed to create new conversation tab") from e
-
-        conversation_tab.fork_from_index_requested.connect(self.on_conversation_fork_from_index_requested)
-
-        settings = cast(MindspaceSettings, self._mindspace_manager.settings())
-        if model is None:
-            model = settings.model
-
-        if provider is None:
-            provider = settings.provider
-
-        if temperature is None:
-            temperature = settings.temperature
-
-        if reasoning is None:
-            reasoning = settings.reasoning
-
-        if reasoning_effort is None:
-            reasoning_effort = settings.reasoning_effort
-
-        conversation_settings = AIConversationSettings(
-            model=model,
-            provider=provider,
-            temperature=temperature if AIConversationSettings.supports_temperature(model, provider, reasoning_effort) else None,
-            reasoning=reasoning,
-            reasoning_effort=reasoning_effort,
-        )
-
-        if ai_conversation is None:
-            conversation_tab.update_conversation_settings(conversation_settings)
-
-        if history:
-            conversation_tab.set_conversation_history(history)
-
-        self._add_tab(conversation_tab, conversation_title)
-        self._register_tab_with_registry(conversation_tab, conversation_title)
-        return conversation_tab
-
-    def open_conversation(self, path: str, ephemeral: bool) -> ConversationTab:
-        """Open an existing conversation file."""
-        assert os.path.isabs(path), "Path must be absolute"
-
-        abs_path = self._mindspace_manager.get_absolute_path(path)
-        existing_tab = cast(ConversationTab, self._find_tab_by_path("conversation", abs_path))
-        if existing_tab:
-            if existing_tab.is_ephemeral() and not ephemeral:
-                self._make_tab_permanent(existing_tab)
-                self._move_tab_to_active_column(existing_tab)
-                existing_tab = cast(ConversationTab, self._find_tab_by_path("conversation", abs_path))
-
-            self._ensure_tab_not_in_protected_column(existing_tab)
-            self._set_current_tab(existing_tab, ephemeral)
-            return existing_tab
-
-        try:
-            conversation_tab = ConversationTab("", abs_path, self)
-            conversation_tab.fork_from_index_requested.connect(self.on_conversation_fork_from_index_requested)
-            conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
-            conversation_tab.set_ephemeral(ephemeral)
-            self._add_tab(conversation_tab, conversation_title)
-            self._register_tab_with_registry(conversation_tab, conversation_title)
-            return conversation_tab
-
-        except ConversationError as e:
-            self._logger.exception("Failed to open conversation: %s", str(e))
-            raise ColumnManagerError("Failed to open conversation tab") from e
 
     def on_conversation_fork_from_index_requested(self, message_index: int) -> None:
         """Handle the fork conversation from index request signal."""
@@ -1863,27 +1615,6 @@ class ColumnManager(QWidget):
             conversation_tab = cast(ConversationTab, self.get_current_tab())
             self.unprotect_tab(conversation_tab.tab_id())
 
-    def new_terminal(self, command: str | None = None) -> TerminalTab:
-        """Create new terminal tab.
-
-        Args:
-            command: Optional command to run in terminal
-
-        Returns:
-            Created terminal tab
-        """
-        terminal = TerminalTab("", command, self)
-
-        if command:
-            title = os.path.basename(command)
-
-        else:
-            title = "Terminal"
-
-        self._add_tab(terminal, title)
-        self._register_tab_with_registry(terminal, title)
-        return terminal
-
     def on_preview_open_link_requested(self, path: str) -> None:
         """Handle a preview link click."""
         self.open_preview_link_requested.emit(path)
@@ -1894,65 +1625,33 @@ class ColumnManager(QWidget):
 
     def on_diff_open_file_requested(self, path: str, line: int, column: int) -> None:
         """Open a file in an editor tab from a diff tab context menu."""
-        editor = self.open_file(path, False)
-        editor.goto_line(line, column)
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(path, "editor")
+        if existing:
+            contexts.focus(existing.context_id)
+            context_id = existing.context_id
+        else:
+            context_id = contexts.open(
+                context_type="editor",
+                path=path,
+                title=os.path.basename(path),
+            )
+        editor_tab = cast(EditorTab, self.get_tab_by_id(context_id))
+        if editor_tab is not None:
+            editor_tab.goto_line(line, column)
 
     def on_diff_open_preview_requested(self, path: str) -> None:
         """Open a file in a preview tab from a diff tab context menu."""
-        self.open_preview_page(path, False)
-
-    def open_preview_page(self, path: str, ephemeral: bool) -> PreviewTab:
-        """Open a preview page."""
-        assert os.path.isabs(path), "Path must be absolute"
-
-        path_minus_anchor = path
-        anchor = None
-        if '#' in path:
-            path_minus_anchor, anchor = path.split('#', 1)
-
-        existing_tab = cast(PreviewTab, self._find_tab_by_path("preview", path_minus_anchor))
-        if existing_tab:
-            if existing_tab.is_ephemeral() and not ephemeral:
-                self._make_tab_permanent(existing_tab)
-                self._move_tab_to_active_column(existing_tab)
-                existing_tab = cast(PreviewTab, self._find_tab_by_path("preview", path_minus_anchor))
-
-            self._ensure_tab_not_in_protected_column(existing_tab)
-            self._set_current_tab(existing_tab, ephemeral)
-
-            if anchor:
-                existing_tab.scroll_to_anchor(anchor)
-
-            return existing_tab
-
-        try:
-            preview_tab = PreviewTab("", path_minus_anchor, self)
-            preview_tab.open_link_requested.connect(self.on_preview_open_link_requested)
-            preview_tab.edit_file_requested.connect(self.on_preview_edit_file_requested)
-            preview_tab.set_ephemeral(ephemeral)
-            norm_path = os.path.normpath(path_minus_anchor)
-            name = os.path.basename(norm_path)
-            is_mindspace_root = (
-                self._mindspace_manager.has_mindspace() and
-                norm_path == os.path.normpath(self._mindspace_manager.mindspace_path())
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(path, "preview")
+        if existing:
+            contexts.focus(existing.context_id)
+        else:
+            contexts.open(
+                context_type="preview",
+                path=path,
+                title=os.path.basename(path),
             )
-            if is_mindspace_root:
-                title = f"[{name.upper()}]"
-
-            else:
-                title = name
-
-            self._add_tab(preview_tab, title)
-            self._register_tab_with_registry(preview_tab, title)
-
-            if anchor:
-                preview_tab.scroll_to_anchor(anchor)
-
-            return preview_tab
-
-        except PreviewError as e:
-            self._logger.exception("Failed to open preview page: %s", str(e))
-            raise ColumnManagerError("Failed to open preview tab") from e
 
     def save_state(self) -> Dict:
         """Get current state of all tabs and columns."""

@@ -1,19 +1,21 @@
 """Command for creating a new conversation tab from the system shell."""
 
+from datetime import datetime, timezone
 import logging
-from typing import List, Dict, cast
+import os
+from typing import List, Dict
 
-from ai import AIConversationSettings, AIReasoningCapability, AIManager
+from ai import AIConversation, AIConversationSettings, AIReasoningCapability, AIManager
 from ai.ai_model import AIReasoningEffort
+from ai_transcript_conversation import AITranscriptConversation
 from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from syntax import Token, TokenType
 
 from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
-from humbug.tabs.tab_base import TabBase
+
 
 
 class ShellCommandConversation(ShellCommand):
@@ -152,16 +154,40 @@ class ShellCommandConversation(ShellCommand):
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
-        current_tab = cast(TabBase, self._column_manager.get_current_tab())
+        current_tab = self._column_manager.get_current_tab()
+        assert current_tab is not None
         self._column_manager.protect_tab(current_tab.tab_id())
 
         try:
             self._mindspace.ensure_mindspace_dir("conversations")
-            conversation_tab = self._column_manager.new_conversation(
-                False, None, effective_model, effective_provider, temperature_val, reasoning, reasoning_effort
-            )
+            timestamp = datetime.now(timezone.utc)
+            title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+            filename = os.path.join("conversations", f"{title}.conv")
+            full_path = self._mindspace.get_absolute_path(filename)
 
-        except (MindspaceError, ColumnManagerError) as e:
+            initial_model = None
+            if effective_model and effective_provider:
+                settings = self._mindspace.settings()
+                conversation_settings = AIConversationSettings(
+                    model=effective_model,
+                    provider=effective_provider,
+                    temperature=temperature_val if AIConversationSettings.supports_temperature(
+                        effective_model, effective_provider, reasoning_effort
+                    ) else None,
+                    reasoning=reasoning or (settings.reasoning if settings else AIReasoningCapability.NO_REASONING),
+                    reasoning_effort=reasoning_effort,
+                )
+                ai_conversation = AIConversation()
+                ai_conversation.update_conversation_settings(conversation_settings)
+                initial_model = AITranscriptConversation(full_path, ai_conversation)
+
+            context_id = self._mindspace.contexts().open(
+                context_type="conversation",
+                path=full_path,
+                title=title,
+                initial_model=initial_model,
+            )
+        except MindspaceError as e:
             self._history_manager.add_message(ShellEventSource.ERROR, f"Failed to create conversation: {str(e)}")
             self._mindspace.add_interaction(
                 MindspaceLogLevel.ERROR,
@@ -178,7 +204,7 @@ class ShellCommandConversation(ShellCommand):
         )
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"Shell created new conversion\ntab ID: {conversation_tab.tab_id()}"
+            f"Shell created new conversation\ntab ID: {context_id}"
         )
         return True
 

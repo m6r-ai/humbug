@@ -2,16 +2,14 @@
 
 import logging
 import os
-from typing import List, cast
+from typing import List
 
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from syntax import Token, TokenType
 
 from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
-from humbug.tabs.tab_base import TabBase
 
 
 class ShellCommandPreview(ShellCommand):
@@ -70,19 +68,22 @@ class ShellCommandPreview(ShellCommand):
                     )
                     return False
 
-        current_tab = cast(TabBase, self._column_manager.get_current_tab())
+        current_tab = self._column_manager.get_current_tab()
+        assert current_tab is not None
         self._column_manager.protect_tab(current_tab.tab_id())
 
         try:
-            self._column_manager.open_preview_page(full_path, False)
+            contexts = self._mindspace.contexts()
+            existing = contexts.get_by_path_and_type(full_path, "preview")
+            if existing:
+                contexts.focus(existing.context_id)
 
-        except ColumnManagerError as e:
-            self._history_manager.add_message(ShellEventSource.ERROR, f"Failed to open preview page: {str(e)}")
-            self._mindspace.add_interaction(
-                MindspaceLogLevel.ERROR,
-                f"Shell failed to open preview page: {str(e)}"
-            )
-            return False
+            else:
+                contexts.open(
+                    context_type="preview",
+                    path=full_path,
+                    title=os.path.basename(full_path),
+                )
 
         finally:
             self._column_manager.unprotect_tab(current_tab.tab_id())

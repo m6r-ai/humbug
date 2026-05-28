@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import List, cast
+from typing import List
 
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from syntax import Token, TokenType
@@ -10,7 +10,6 @@ from syntax import Token, TokenType
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
-from humbug.tabs.tab_base import TabBase
 
 
 class ShellCommandDiff(ShellCommand):
@@ -68,18 +67,30 @@ class ShellCommandDiff(ShellCommand):
             )
             return False
 
-        current_tab = cast(TabBase, self._column_manager.get_current_tab())
+        current_tab = self._column_manager.get_current_tab()
+        assert current_tab is not None
         self._column_manager.protect_tab(current_tab.tab_id())
 
         try:
-            diff_tab = self._column_manager.open_diff(full_path, False)
+            contexts = self._mindspace.contexts()
+            existing = contexts.get_by_path_and_type(full_path, "diff")
+            if existing:
+                contexts.focus(existing.context_id)
+                context_id = existing.context_id
+
+            else:
+                context_id = contexts.open(
+                    context_type="diff",
+                    path=full_path,
+                    title=os.path.basename(full_path),
+                )
 
         finally:
             self._column_manager.unprotect_tab(current_tab.tab_id())
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"Shell opened diff for: '{full_path}'\ntab ID: {diff_tab.tab_id()}"
+            f"Shell opened diff for: '{full_path}'\ntab ID: {context_id}"
         )
         self._history_manager.add_message(
             ShellEventSource.SUCCESS,
