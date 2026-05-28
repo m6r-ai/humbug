@@ -18,7 +18,7 @@ Two sub-passes run to a joint fixed point:
    all jump predecessors are inlined the terminal block itself is removed.
 """
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 from menai.menai_cfg import (
     MenaiCFGBlock,
@@ -244,7 +244,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
 
         def trivial_return_content(
             block: MenaiCFGBlock,
-        ) -> Optional[Tuple[object, MenaiCFGReturnTerm]]:
+        ) -> Tuple[object, MenaiCFGReturnTerm] | None:
             """
             Return (content, return_term) if block is a trivial terminal block,
             or None if it does not qualify.

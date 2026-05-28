@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import List, Optional, Set, Tuple
+from typing import List, Set, Tuple
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollBar, QSplitter, QLabel, QSizePolicy
 from PySide6.QtCore import Qt, QTimer, Signal
@@ -305,7 +305,7 @@ class DiffWidget(QWidget):
         else:
             super().keyPressEvent(event)
 
-    def _fetch_content(self) -> Optional[tuple[List[str], List[str], str]]:
+    def _fetch_content(self) -> tuple[List[str], List[str], str] | None:
         """
         Retrieve the HEAD content, working-tree content, and diff text.
 
@@ -343,7 +343,7 @@ class DiffWidget(QWidget):
             self._show_message(f"Could not read file: {e}")
             return None
 
-    def _parse_diff(self, diff_text: str) -> Optional[List[DiffHunk]]:
+    def _parse_diff(self, diff_text: str) -> List[DiffHunk] | None:
         """Parse diff text into hunks.
 
         Returns the hunk list, or None if parsing failed.

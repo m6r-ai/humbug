@@ -3,7 +3,7 @@
 import os
 import sys
 import subprocess
-from typing import List, Optional
+from typing import List
 
 from git.git_error import GitCommandError, GitNotFoundError, GitNotRepositoryError
 
@@ -209,7 +209,7 @@ def _untracked_file_diff(file_path: str) -> str:
     return header + body
 
 
-def get_file_at_head(repo_root: str, file_path: str) -> Optional[str]:
+def get_file_at_head(repo_root: str, file_path: str) -> str | None:
     """
     Return the content of a file at HEAD, or None if the file is not tracked.
 

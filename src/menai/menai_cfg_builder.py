@@ -5,7 +5,7 @@ Translates a symbolic MenaiIR tree into a MenaiCFGFunction in SSA form.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 from menai.menai_cfg import (
     MenaiCFGApplyInstr,
@@ -64,15 +64,17 @@ class MenaiCFGScope:
     Frames are chained via `parent`; lookup walks innermost-first.
     """
     bindings: Dict[str, MenaiCFGValue] = field(default_factory=dict)
-    parent: Optional['MenaiCFGScope'] = None
+    parent: 'MenaiCFGScope | None' = None
 
-    def lookup(self, name: str) -> Optional[MenaiCFGValue]:
+    def lookup(self, name: str) -> MenaiCFGValue | None:
         """Search this frame and all ancestors for `name`."""
-        frame: Optional[MenaiCFGScope] = self
+        frame: MenaiCFGScope | None = self
         while frame is not None:
             if name in frame.bindings:
                 return frame.bindings[name]
+
             frame = frame.parent
+
         return None
 
     def bind(self, name: str, value: MenaiCFGValue) -> None:
@@ -127,12 +129,12 @@ class MenaiCFGBuilder:
         # expressions) so that _build_lambda_expr can detect lambdas that have
         # sibling captures and need PATCH_CLOSURE treatment.  None at all other
         # times, including during normal lambda-only letrec Phase 1.
-        self._letrec_sibling_names: Optional[set] = None
+        self._letrec_sibling_names: set | None = None
 
         # Collected during Phase 2b: (closure_val, ir_lambda) pairs for lambdas
         # embedded in non-lambda letrec binding RHS expressions that have at
         # least one sibling capture.  Processed (patched) after Phase 2b.
-        self._letrec_deferred_patches: Optional[List[Tuple[MenaiCFGValue, MenaiIRLambda]]] = None
+        self._letrec_deferred_patches: List[Tuple[MenaiCFGValue, MenaiIRLambda]] | None = None
 
     def build(self, ir: MenaiIRExpr) -> MenaiCFGFunction:
         """

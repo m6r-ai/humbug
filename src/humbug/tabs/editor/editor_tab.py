@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 import logging
 import os
 
@@ -66,7 +66,7 @@ class EditorTab(TabBase):
         layout.addWidget(self._editor_widget)
 
         # Build the EditorContext backed by the widget's document
-        self._editor_context: Optional[EditorContext] = EditorContext(
+        self._editor_context: EditorContext | None = EditorContext(
             context_id=tab_id,
             document=self._editor_widget.document(),
             get_cursor_info_cb=self._editor_widget.get_cursor_info,
@@ -200,7 +200,7 @@ class EditorTab(TabBase):
             metadata=metadata
         )
 
-    def get_editor_context(self) -> Optional[EditorContext]:
+    def get_editor_context(self) -> EditorContext | None:
         """
         Return the EditorContext for this tab.
 

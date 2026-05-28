@@ -1,7 +1,7 @@
 """Single pane of the side-by-side diff view."""
 
 import logging
-from typing import List, Optional
+from typing import List
 
 from PySide6.QtWidgets import QMenu, QPlainTextEdit, QWidget
 from PySide6.QtCore import Qt, QRect, QRegularExpression, Signal
@@ -30,7 +30,7 @@ class _BlockData(QTextBlockUserData):
     block.
     """
 
-    def __init__(self, row_type: DiffRowType, line_no: Optional[int]) -> None:
+    def __init__(self, row_type: DiffRowType, line_no: int | None) -> None:
         super().__init__()
         self.row_type = row_type
         self.line_no = line_no

@@ -18,7 +18,7 @@ Key properties
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from menai.menai_value import MenaiValue, MenaiStructType
 
@@ -300,7 +300,7 @@ class MenaiVCodeFunction:
     params: List[str] = field(default_factory=list)
     free_vars: List[str] = field(default_factory=list)
     is_variadic: bool = False
-    binding_name: Optional[str] = None
+    binding_name: str | None = None
     reg_count: int = 0
     source_line: int = 0
     source_file: str = ""
