@@ -60,10 +60,10 @@ class ContextRegistry:
     def open(
         self,
         context_type: str,
-        path:         str  = "",
-        title:        str  = "",
+        path: str  = "",
+        title: str  = "",
         is_ephemeral: bool = False,
-        context_id:   str  = "",
+        context_id: str  = "",
         initial_model: Any = None,
     ) -> str:
         """
@@ -194,6 +194,27 @@ class ContextRegistry:
         """
         for info in self._contexts.values():
             if info.path == path:
+                return info
+
+        return None
+
+    def get_by_path_and_type(self, path: str, context_type: str) -> ContextInfo | None:
+        """
+        Find an open context by its associated path and type.
+
+        Use this in preference to get_by_path when the context type is known,
+        since multiple contexts of different types may share the same path
+        (e.g. an editor tab and a diff tab open for the same file).
+
+        Args:
+            path: Absolute file path to search for.
+            context_type: The context type string to match (e.g. 'editor', 'diff').
+
+        Returns:
+            Immutable ContextInfo snapshot, or None if not found.
+        """
+        for info in self._contexts.values():
+            if info.path == path and info.context_type == context_type:
                 return info
 
         return None

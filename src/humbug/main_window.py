@@ -1,6 +1,7 @@
 """Main window implementation for Humbug application."""
 
 import asyncio
+from datetime import datetime, timezone
 import functools
 import json
 import logging
@@ -1098,7 +1099,10 @@ class MainWindow(QMainWindow):
         if not self._mindspace_manager.has_mindspace():
             return
 
-        self._column_manager.new_terminal()
+        self._mindspace_manager.mindspace().contexts().open(
+            context_type="terminal",
+            title="Terminal",
+        )
 
     def _on_new_file(self) -> None:
         """Create a new empty editor tab."""
@@ -1109,45 +1113,43 @@ class MainWindow(QMainWindow):
 
     def _on_mindspace_view_file_opened_in_preview(self, path: str, ephemeral: bool) -> None:
         """Handle click of a preview link from the mindspace view."""
-        try:
-            preview_tab = self._column_manager.open_preview_page(path, ephemeral)
-
-        except ColumnManagerError as e:
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.preview_error_title,
-                strings.error_opening_preview.format(path, str(e))
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(path, "preview")
+        if existing:
+            contexts.focus(existing.context_id)
+        else:
+            context_id = contexts.open(
+                context_type="preview",
+                path=path,
+                title=os.path.basename(path),
+                is_ephemeral=ephemeral,
             )
-            return
-
-        self._mindspace_manager.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"User opened preview: '{path}'\ntab ID: {preview_tab.tab_id()}"
-        )
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"User opened preview: '{path}'\ntab ID: {context_id}"
+            )
 
     def _on_mindspace_view_file_opened_in_diff(self, path: str, ephemeral: bool) -> None:
         """Handle request to open a file diff from the mindspace view."""
-        diff_tab = self._column_manager.open_diff(path, ephemeral)
-        self._mindspace_manager.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"User opened diff: '{path}'\ntab ID: {diff_tab.tab_id()}"
-        )
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(path, "diff")
+        if existing:
+            contexts.focus(existing.context_id)
+        else:
+            context_id = contexts.open(
+                context_type="diff",
+                path=path,
+                title=os.path.basename(path),
+                is_ephemeral=ephemeral,
+            )
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"User opened diff: '{path}'\ntab ID: {context_id}"
+            )
 
     def _on_mindspace_view_file_clicked(self, source: MindspaceViewType, path: str, ephemeral: bool) -> None:
         """Handle click of a file from the mindspace view."""
-        try:
-            self._column_manager.open_file_by_mindspace_view_type(source, path, ephemeral)
-
-        except ColumnManagerError as e:
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.error_opening_file_title,
-                str(e)
-            )
+        self._open_by_view_type(source, path, ephemeral)
 
     def _on_mindspace_search_result_activated(
         self,
@@ -1161,12 +1163,48 @@ class MainWindow(QMainWindow):
         message_id: str | None,
     ) -> None:
         """Open a search result and apply the same highlight without changing local find UI state."""
-        try:
-            tab = self._column_manager.open_file_by_mindspace_view_type(source, path, ephemeral)
+        context_id = self._open_by_view_type(source, path, ephemeral)
+        if context_id is not None:
+            tab = self._column_manager.get_tab_by_id(context_id)
             if tab is not None:
                 tab.navigate_to_search_match(search_text, line_number, message_id, case_sensitive=case_sensitive, regexp=regexp)
 
-        except ColumnManagerError as e:
+    def _open_by_view_type(self, source: MindspaceViewType, path: str, ephemeral: bool) -> str | None:
+        """Open a file with the appropriate tab type based on mindspace view type.
+
+        Returns the context_id of the opened or focused tab, or None if skipped/failed.
+        """
+        if os.path.isdir(path) and source not in (MindspaceViewType.PREVIEW,):
+            return None
+
+        if source == MindspaceViewType.VCS:
+            context_type = "diff"
+
+        elif source == MindspaceViewType.CONVERSATIONS:
+            context_type = "conversation"
+
+        elif source == MindspaceViewType.PREVIEW:
+            context_type = "preview"
+
+        else:
+            context_type = "editor"
+
+        try:
+            contexts = self._mindspace_manager.mindspace().contexts()
+            existing = contexts.get_by_path_and_type(path, context_type)
+            if existing:
+                contexts.focus(existing.context_id)
+                return existing.context_id
+
+            context_id = contexts.open(
+                context_type=context_type,
+                path=path,
+                title=os.path.basename(path),
+                is_ephemeral=ephemeral,
+            )
+            return context_id
+
+        except Exception as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
@@ -1174,6 +1212,7 @@ class MainWindow(QMainWindow):
                 strings.error_opening_file_title,
                 str(e)
             )
+            return None
 
     def _clear_global_search_highlights(self) -> None:
         """Clear transient highlights that were applied from global search."""
@@ -1221,11 +1260,21 @@ class MainWindow(QMainWindow):
     def _open_file_path(self, path: str, ephemeral: bool) -> None:
         """Open file in editor tab."""
         try:
-            editor_tab = self._column_manager.open_file(path, ephemeral)
-
+            contexts = self._mindspace_manager.mindspace().contexts()
+            existing = contexts.get_by_path_and_type(path, "editor")
+            if existing:
+                contexts.focus(existing.context_id)
+                context_id = existing.context_id
+            else:
+                context_id = contexts.open(
+                    context_type="editor",
+                    path=path,
+                    title=os.path.basename(path),
+                    is_ephemeral=ephemeral,
+                )
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"User opened editor for file: '{path}'\nTab ID: {editor_tab.tab_id()}"
+                f"User opened editor for file: '{path}'\nTab ID: {context_id}"
             )
 
         except Exception as e:
@@ -1269,7 +1318,19 @@ class MainWindow(QMainWindow):
 
     def _on_open_preview(self) -> None:
         """Open the preview page in a new tab."""
-        self._column_manager.open_preview_page(self._mindspace_manager.get_absolute_path("."), False)
+        preview_path = self._mindspace_manager.get_absolute_path(".")
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(preview_path, "preview")
+        if existing:
+            contexts.focus(existing.context_id)
+            return
+
+        mindspace_name = os.path.basename(self._mindspace_manager.mindspace_path())
+        contexts.open(
+            context_type="preview",
+            path=preview_path,
+            title=f"[{mindspace_name.upper()}]",
+        )
 
     def _on_open_diff(self) -> None:
         """Show open file dialog and open a diff tab for the selected file."""
@@ -1289,19 +1350,40 @@ class MainWindow(QMainWindow):
             return
 
         self._mindspace_manager.update_file_dialog_directory(file_path)
-        diff_tab = self._column_manager.open_diff(file_path, False)
-        self._mindspace_manager.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"User opened diff: '{file_path}'\ntab ID: {diff_tab.tab_id()}"
-        )
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(file_path, "diff")
+        if existing:
+            contexts.focus(existing.context_id)
+        else:
+            context_id = contexts.open(
+                context_type="diff",
+                path=file_path,
+                title=os.path.basename(file_path),
+            )
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"User opened diff: '{file_path}'\ntab ID: {context_id}"
+            )
 
     def _on_show_system_log(self) -> None:
         """Show the log tab."""
-        self._column_manager.show_system_log()
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = next((i for i in contexts.list_all() if i.context_type == "log"), None)
+        if existing:
+            contexts.focus(existing.context_id)
+            return
+
+        contexts.open(context_type="log", title="Mindspace Log")
 
     def _on_show_system_shell(self) -> None:
         """Show the shell tab."""
-        self._column_manager.show_system_shell()
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = next((i for i in contexts.list_all() if i.context_type == "shell"), None)
+        if existing:
+            contexts.focus(existing.context_id)
+            return
+
+        contexts.open(context_type="shell", title="Humbug Shell")
 
     def _on_show_all_columns(self) -> None:
         """Show all columns equally."""
@@ -1395,10 +1477,25 @@ class MainWindow(QMainWindow):
         # The main window splitter uses custom painted handles, so we just need to trigger a repaint
         self._splitter.update()
 
-    def _on_new_conversation(self) -> ConversationTab | None:
+    def _generate_conversation_path(self, relative_folder: str | None = None) -> tuple[str, str]:
+        """Generate a timestamped title and absolute path for a new conversation file.
+
+        Args:
+            relative_folder: Optional folder path relative to mindspace. Defaults to 'conversations'.
+
+        Returns:
+            Tuple of (title, absolute_path).
+        """
+        timestamp = datetime.now(timezone.utc)
+        title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+        folder = relative_folder if relative_folder is not None else "conversations"
+        filename = os.path.join(folder, f"{title}.conv")
+        return title, self._mindspace_manager.get_absolute_path(filename)
+
+    def _on_new_conversation(self) -> None:
         """Create new conversation tab."""
         if not self._mindspace_manager.has_mindspace():
-            return None
+            return
 
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
@@ -1415,12 +1512,16 @@ class MainWindow(QMainWindow):
                 MindspaceLogLevel.ERROR,
                 f"User failed to create new conversation: {str(e)}"
             )
-            return None
+            return
 
         try:
-            conversation_tab = self._column_manager.new_conversation()
-
-        except ColumnManagerError as e:
+            title, full_path = self._generate_conversation_path()
+            context_id = self._mindspace_manager.mindspace().contexts().open(
+                context_type="conversation",
+                path=full_path,
+                title=title,
+            )
+        except Exception as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
@@ -1432,13 +1533,12 @@ class MainWindow(QMainWindow):
                 MindspaceLogLevel.ERROR,
                 f"User failed to create new conversation: {str(e)}"
             )
-            return None
+            return
 
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
-            f"User created new conversation\ntab ID: {conversation_tab.tab_id()}"
+            f"User created new conversation\ntab ID: {context_id}"
         )
-        return conversation_tab
 
     def _on_mindspace_view_new_conversation_in_folder(self, folder_path: str) -> None:
         """Create a new conversation in a specific folder."""
@@ -1446,9 +1546,15 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            conversation_tab = self._column_manager.new_conversation(folder=folder_path)
-
-        except ColumnManagerError as e:
+            self._mindspace_manager.ensure_mindspace_dir("conversations")
+            relative_folder = self._mindspace_manager.get_relative_path(folder_path)
+            title, full_path = self._generate_conversation_path(relative_folder)
+            context_id = self._mindspace_manager.mindspace().contexts().open(
+                context_type="conversation",
+                path=full_path,
+                title=title,
+            )
+        except Exception as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
@@ -1464,10 +1570,10 @@ class MainWindow(QMainWindow):
 
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
-            f"User created new conversation in folder '{folder_path}'\ntab ID: {conversation_tab.tab_id()}"
+            f"User created new conversation in folder '{folder_path}'\ntab ID: {context_id}"
         )
 
-        self._mindspace_view.reveal_and_select_file(MindspaceViewType.CONVERSATIONS, conversation_tab.path())
+        self._mindspace_view.reveal_and_select_file(MindspaceViewType.CONVERSATIONS, full_path)
 
     def _get_canonical_mindspace_path(self, path: str) -> str | None:
         """Get the canonical path of the current mindspace."""
@@ -1523,13 +1629,23 @@ class MainWindow(QMainWindow):
         self._mindspace_manager.update_conversations_directory(file_path)
         self._open_conversation_path(file_path, False)
 
-    def _open_conversation_path(self, path: str, ephemeral: bool) -> ConversationTab | None:
+    def _open_conversation_path(self, path: str, ephemeral: bool) -> None:
         """Open an existing conversation file."""
         try:
-            tab = self._column_manager.open_conversation(path, ephemeral)
-            return tab
+            contexts = self._mindspace_manager.mindspace().contexts()
+            existing = contexts.get_by_path_and_type(path, "conversation")
+            if existing:
+                contexts.focus(existing.context_id)
+                return
 
-        except ColumnManagerError as e:
+            title = os.path.splitext(os.path.basename(path))[0]
+            contexts.open(
+                context_type="conversation",
+                path=path,
+                title=title,
+                is_ephemeral=ephemeral,
+            )
+        except Exception as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
@@ -1537,7 +1653,6 @@ class MainWindow(QMainWindow):
                 strings.conversation_error_title,
                 strings.error_opening_conversation.format(path, str(e))
             )
-            return None
 
     def _on_column_manager_fork_from_index_requested(self, index: int) -> None:
         """Handle fork conversation requests from a specific index."""
@@ -1555,18 +1670,19 @@ class MainWindow(QMainWindow):
 
     def _on_column_manager_open_preview_link_requested(self, path: str) -> None:
         """Handle requests to open a preview page."""
-        try:
-            self._column_manager.open_preview_page(path, True)
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(path, "preview")
+        if existing:
+            contexts.focus(existing.context_id)
+            return
 
-        except ColumnManagerError as e:
-            self._logger.info("Error opening preview page: %s: %s", path, str(e))
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.preview_error_title,
-                strings.error_opening_preview.format(path, str(e))
-            )
+        norm_path = os.path.normpath(path)
+        contexts.open(
+            context_type="preview",
+            path=path,
+            title=os.path.basename(norm_path),
+            is_ephemeral=True,
+        )
 
     def _on_column_manager_edit_file_requested(self, path: str) -> None:
         """Handle requests to open a file in the editor."""
