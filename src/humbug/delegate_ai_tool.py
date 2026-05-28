@@ -77,10 +77,13 @@ def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) 
         log_level = MindspaceLogLevel.INFO
         if level == "warn":
             log_level = MindspaceLogLevel.WARN
+
         elif level == "error":
             log_level = MindspaceLogLevel.ERROR
+
         elif level == "trace":
             log_level = MindspaceLogLevel.TRACE
+
         mindspace.add_interaction(log_level, message)
 
     def on_conversation_created(
@@ -88,9 +91,15 @@ def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) 
         session_path: str,
         parent_conversation: AIConversation
     ) -> None:
-        parent_tab = column_manager.find_tab_by_ai_conversation(parent_conversation)
-        if parent_tab:
-            column_manager.protect_tab(parent_tab.tab_id())
+        parent_context_id: str | None = None
+        for info in mindspace.contexts().list_all():
+            model = mindspace.contexts().get_model(info.context_id, AITranscriptConversation)
+            if model is not None and model.inner_conversation() is parent_conversation:
+                parent_context_id = info.context_id
+                break
+
+        if parent_context_id:
+            column_manager.protect_tab(parent_context_id)
 
         try:
             title = os.path.splitext(os.path.basename(child_transcript.path()))[0]
@@ -108,14 +117,14 @@ def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) 
             return
 
         finally:
-            if parent_tab:
-                column_manager.unprotect_tab(parent_tab.tab_id())
+            if parent_context_id:
+                column_manager.unprotect_tab(parent_context_id)
 
         context_ids[session_path] = context_id
 
         # Move the child tab one column to the right of the parent
-        if parent_tab:
-            parent_info = column_manager.get_tab_info_by_id(parent_tab.tab_id())
+        if parent_context_id:
+            parent_info = column_manager.get_tab_info_by_id(parent_context_id)
             if parent_info:
                 target_column = min(cast(int, parent_info["column_index"]) + 1, 5)
                 try:

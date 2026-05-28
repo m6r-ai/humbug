@@ -472,6 +472,10 @@ class ConversationTab(TabBase):
         """
         return self._conversation_widget.handle_esc_key()
 
+    def can_show_conversation_settings_dialog(self) -> bool:
+        """Return True — conversation tabs always support the settings dialog."""
+        return True
+
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
         if self._conversation_settings_dialog and self._conversation_settings_dialog.isVisible():

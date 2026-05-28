@@ -313,6 +313,10 @@ class DiffTab(TabBase):
         current, total, truncated = self._diff_widget.find_text(text, True, case_sensitive=case_sensitive, regexp=regexp)
         self._find_widget.set_match_status(current, total, truncated)
 
+    def is_navigating_as_hunks(self) -> bool:
+        """Return True — diff tabs navigate by hunks rather than messages."""
+        return True
+
     def can_navigate_next_message(self) -> bool:
         """Return True if there is a hunk after the current scroll position."""
         return self._diff_widget.can_navigate_next_hunk()

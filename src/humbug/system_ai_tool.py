@@ -254,8 +254,12 @@ class SystemAITool(AITool):
 
     def _requester_tab_id(self, requester_ref: Any) -> str | None:
         """Return the tab_id of the conversation that issued this tool call."""
-        tab = self._column_manager.find_tab_by_ai_conversation(requester_ref)
-        return tab.tab_id() if tab else None
+        for info in self._mindspace.contexts().list_all():
+            model = self._mindspace.contexts().get_model(info.context_id, AITranscriptConversation)
+            if model is not None and model.inner_conversation() is requester_ref:
+                return info.context_id
+
+        return None
 
     async def _open_editor_tab(
         self,

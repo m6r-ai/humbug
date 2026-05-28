@@ -510,6 +510,68 @@ class TabBase(QFrame):
         """
         return MindspaceViewType.FILES
 
+    def clear_history(self) -> None:
+        """Clear the tab's history if it has one.
+
+        No-op by default.  Override in tab types that maintain a command or
+        message history (e.g. ShellTab).
+        """
+
+    def can_show_conversation_settings_dialog(self) -> bool:
+        """Return True if this tab can show a conversation settings dialog.
+
+        False by default.  Override in ConversationTab.
+        """
+        return False
+
+    def show_conversation_settings_dialog(self) -> None:
+        """Show the conversation settings dialog if supported.
+
+        No-op by default.  Override in ConversationTab.
+        """
+
+    def handle_esc_key(self) -> bool:
+        """Handle the Escape key if this tab has a use for it.
+
+        Returns True if the key was consumed, False otherwise.
+        No-op by default.  Override in ConversationTab.
+        """
+        return False
+
+    def can_navigate_next_message(self) -> bool:
+        """Return True if this tab supports forward message/hunk navigation.
+
+        False by default.  Override in tabs that support navigation
+        (ConversationTab, DiffTab, LogTab, ShellTab).
+        """
+        return False
+
+    def navigate_next_message(self) -> None:
+        """Navigate to the next message or hunk if supported.
+
+        No-op by default.  Override in tabs that support navigation.
+        """
+
+    def can_navigate_previous_message(self) -> bool:
+        """Return True if this tab supports backward message/hunk navigation.
+
+        False by default.  Override in tabs that support navigation.
+        """
+        return False
+
+    def navigate_previous_message(self) -> None:
+        """Navigate to the previous message or hunk if supported.
+
+        No-op by default.  Override in tabs that support navigation.
+        """
+
+    def is_navigating_as_hunks(self) -> bool:
+        """Return True if this tab navigates by diff hunks rather than messages.
+
+        False by default.  Override in DiffTab.
+        """
+        return False
+
     def preferred_width(self) -> int | None:
         """
         Return the preferred maximum pixel width for this tab's column, or None for no preference.

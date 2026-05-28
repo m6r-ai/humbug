@@ -183,28 +183,6 @@ class ColumnManager(QWidget):
 
         self._protected_tab_id = None
 
-    def find_tab_by_ai_conversation(self, ai_conversation: AIConversation) -> TabBase | None:
-        """
-        Find a conversation tab by its inner AIConversation instance.
-
-        Compares against the inner AIConversation of each tab's AITranscriptConversation.
-
-        Args:
-            ai_conversation: The inner AIConversation instance to search for
-
-        Returns:
-            The matching ConversationTab, or None if not found
-        """
-        for tab in self._tabs.values():
-            if isinstance(tab, ConversationTab) and tab.ai_conversation().inner_conversation() is ai_conversation:
-                return tab
-
-        return None
-
-    def get_open_conversation_tabs(self) -> List[ConversationTab]:
-        """Return all currently open conversation tabs."""
-        return [tab for tab in self._tabs.values() if isinstance(tab, ConversationTab)]
-
     def num_colunns(self) -> int:
         """Get the number of columns currently in use."""
         return len(self._tab_columns)
@@ -1559,76 +1537,43 @@ class ColumnManager(QWidget):
         """
         if source_type == "conversations":
             abs_path = self._mindspace_manager.get_absolute_path(path)
-            return self._find_conversation_tab_by_path(abs_path)
+            return self._find_tab_by_path("conversation", abs_path)
 
         if source_type == "vcs":
-            return self._find_diff_tab_by_path(path)
+            return self._find_tab_by_path("diff", path)
 
         if source_type == "preview":
-            return self._find_preview_tab_by_path(path)
+            return self._find_tab_by_path("preview", path)
 
-        return self._find_editor_tab_by_path(path)
+        return self._find_tab_by_path("editor", path)
 
-    def _find_conversation_tab_by_path(self, path: str) -> ConversationTab | None:
-        """
-        Find a conversation tab by its conversation path.
+    def _find_tab_by_path(self, tool_name: str, path: str) -> TabBase | None:
+        """Find an open tab by tool name and path.
 
         Args:
-            path: The path to search for
+            tool_name: The tool name to match (e.g. 'editor', 'conversation').
+            path: The path to search for.
 
         Returns:
-            The ConversationTab if found, None otherwise
+            The matching tab if found, None otherwise.
         """
         for tab in self._tabs.values():
-            if isinstance(tab, ConversationTab) and tab.path() == path:
+            if tab.tool_name() == tool_name and tab.path() == path:
                 return tab
 
         return None
 
-    def _find_editor_tab_by_path(self, path: str) -> EditorTab | None:
-        """
-        Find an editor tab by its path.
+    def _find_tab_by_tool_name(self, tool_name: str) -> TabBase | None:
+        """Find the first open tab with the given tool name.
 
         Args:
-            path: The path to search for
+            tool_name: The tool name to match (e.g. 'log', 'shell').
 
         Returns:
-            The EditorTab if found, None otherwise
+            The first matching tab if found, None otherwise.
         """
         for tab in self._tabs.values():
-            if isinstance(tab, EditorTab) and tab.path() == path:
-                return tab
-
-        return None
-
-    def _find_diff_tab_by_path(self, path: str) -> DiffTab | None:
-        """
-        Find a diff tab by its path.
-
-        Args:
-            path: The path to search for
-
-        Returns:
-            The DiffTab if found, None otherwise
-        """
-        for tab in self._tabs.values():
-            if isinstance(tab, DiffTab) and tab.path() == path:
-                return tab
-
-        return None
-
-    def _find_preview_tab_by_path(self, path: str) -> PreviewTab | None:
-        """
-        Find a preview tab by its path.
-
-        Args:
-            path: The preview path to search for
-
-        Returns:
-            The PreviewTab if found, None otherwise
-        """
-        for tab in self._tabs.values():
-            if isinstance(tab, PreviewTab) and tab.path() == path:
+            if tab.tool_name() == tool_name:
                 return tab
 
         return None
@@ -1640,11 +1585,11 @@ class ColumnManager(QWidget):
         Returns:
             The system log tab
         """
-        for tab in self._tabs.values():
-            if isinstance(tab, LogTab):
-                self._ensure_tab_not_in_protected_column(tab)
-                self._set_current_tab(tab, False)
-                return tab
+        existing_tab = self._find_tab_by_tool_name("log")
+        if existing_tab:
+            self._ensure_tab_not_in_protected_column(existing_tab)
+            self._set_current_tab(existing_tab, False)
+            return cast(LogTab, existing_tab)
 
         log_tab = LogTab("", self)
         self._add_tab(log_tab, "Mindspace Log")
@@ -1658,11 +1603,11 @@ class ColumnManager(QWidget):
         Returns:
             The system shell tab
         """
-        for tab in self._tabs.values():
-            if isinstance(tab, ShellTab):
-                self._ensure_tab_not_in_protected_column(tab)
-                self._set_current_tab(tab, False)
-                return tab
+        existing_tab = self._find_tab_by_tool_name("shell")
+        if existing_tab:
+            self._ensure_tab_not_in_protected_column(existing_tab)
+            self._set_current_tab(existing_tab, False)
+            return cast(ShellTab, existing_tab)
 
         shell_tab = ShellTab("", self)
         self._add_tab(shell_tab, "Humbug Shell")
@@ -1671,10 +1616,9 @@ class ColumnManager(QWidget):
 
     def clear_shell_history(self) -> None:
         """Clear the shell tab history."""
-        for tab in self._tabs.values():
-            if isinstance(tab, ShellTab):
-                tab.clear_history()
-                return
+        tab = self._find_tab_by_tool_name("shell")
+        if tab:
+            tab.clear_history()
 
     def new_file(self) -> EditorTab:
         """Create a new empty editor tab."""
@@ -1689,12 +1633,12 @@ class ColumnManager(QWidget):
         """Open a file in a new or existing editor tab."""
         assert os.path.isabs(path), "Path must be absolute"
 
-        existing_tab = self._find_editor_tab_by_path(path)
+        existing_tab = cast(EditorTab, self._find_tab_by_path("editor", path))
         if existing_tab:
             if existing_tab.is_ephemeral() and not ephemeral:
                 self._make_tab_permanent(existing_tab)
                 self._move_tab_to_active_column(existing_tab)
-                existing_tab = cast(EditorTab, self._find_editor_tab_by_path(path))
+                existing_tab = cast(EditorTab, self._find_tab_by_path("editor", path))
 
             self._ensure_tab_not_in_protected_column(existing_tab)
             self._set_current_tab(existing_tab, ephemeral)
@@ -1711,12 +1655,12 @@ class ColumnManager(QWidget):
         """Open a file diff in a new or existing diff tab."""
         assert os.path.isabs(path), "Path must be absolute"
 
-        existing_tab = self._find_diff_tab_by_path(path)
+        existing_tab = cast(DiffTab, self._find_tab_by_path("diff", path))
         if existing_tab:
             if existing_tab.is_ephemeral() and not ephemeral:
                 self._make_tab_permanent(existing_tab)
                 self._move_tab_to_active_column(existing_tab)
-                existing_tab = cast(DiffTab, self._find_diff_tab_by_path(path))
+                existing_tab = cast(DiffTab, self._find_tab_by_path("diff", path))
 
             self._ensure_tab_not_in_protected_column(existing_tab)
             self._set_current_tab(existing_tab, ephemeral)
@@ -1812,12 +1756,12 @@ class ColumnManager(QWidget):
         assert os.path.isabs(path), "Path must be absolute"
 
         abs_path = self._mindspace_manager.get_absolute_path(path)
-        existing_tab = self._find_conversation_tab_by_path(abs_path)
+        existing_tab = cast(ConversationTab, self._find_tab_by_path("conversation", abs_path))
         if existing_tab:
             if existing_tab.is_ephemeral() and not ephemeral:
                 self._make_tab_permanent(existing_tab)
                 self._move_tab_to_active_column(existing_tab)
-                existing_tab = cast(ConversationTab, self._find_conversation_tab_by_path(abs_path))
+                existing_tab = cast(ConversationTab, self._find_tab_by_path("conversation", abs_path))
 
             self._ensure_tab_not_in_protected_column(existing_tab)
             self._set_current_tab(existing_tab, ephemeral)
@@ -1966,12 +1910,12 @@ class ColumnManager(QWidget):
         if '#' in path:
             path_minus_anchor, anchor = path.split('#', 1)
 
-        existing_tab = self._find_preview_tab_by_path(path_minus_anchor)
+        existing_tab = cast(PreviewTab, self._find_tab_by_path("preview", path_minus_anchor))
         if existing_tab:
             if existing_tab.is_ephemeral() and not ephemeral:
                 self._make_tab_permanent(existing_tab)
                 self._move_tab_to_active_column(existing_tab)
-                existing_tab = cast(PreviewTab, self._find_preview_tab_by_path(path_minus_anchor))
+                existing_tab = cast(PreviewTab, self._find_tab_by_path("preview", path_minus_anchor))
 
             self._ensure_tab_not_in_protected_column(existing_tab)
             self._set_current_tab(existing_tab, ephemeral)
@@ -2292,38 +2236,13 @@ class ColumnManager(QWidget):
         Args:
             path: Path of file being deleted
         """
-        editor_tab = self._find_editor_tab_by_path(path)
-        if editor_tab:
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"Deleted '{path}' - closed editor tab\ntab ID: {editor_tab.tab_id()}"
-            )
-            self.close_tab_by_id(editor_tab.tab_id(), True)
-
-        if path.endswith('.conv'):
-            conversation_tab = self._find_conversation_tab_by_path(path)
-            if conversation_tab:
+        for tab in list(self._tabs.values()):
+            if tab.path() == path:
                 self._mindspace_manager.add_interaction(
                     MindspaceLogLevel.INFO,
-                    f"Deleted '{path}' - closed conversation tab\ntab ID: {conversation_tab.tab_id()}"
+                    f"Deleted '{path}' - closed {tab.tool_name()} tab\ntab ID: {tab.tab_id()}"
                 )
-                self.close_tab_by_id(conversation_tab.tab_id(), True)
-
-        preview_tab = self._find_preview_tab_by_path(path)
-        if preview_tab:
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"Deleted '{path}' - closed preview tab\ntab ID: {preview_tab.tab_id()}"
-            )
-            self.close_tab_by_id(preview_tab.tab_id(), True)
-
-        diff_tab = self._find_diff_tab_by_path(path)
-        if diff_tab:
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"Deleted '{path}' - closed diff tab\ntab ID: {diff_tab.tab_id()}"
-            )
-            self.close_tab_by_id(diff_tab.tab_id(), True)
+                self.close_tab_by_id(tab.tab_id(), True)
 
     def close_all_tabs(self) -> bool:
         """
@@ -2368,11 +2287,10 @@ class ColumnManager(QWidget):
     def save_file(self) -> str:
         """Save the current file."""
         current_tab = self.get_current_tab()
-        if not isinstance(current_tab, EditorTab):
+        if current_tab is None or not current_tab.can_save():
             return ""
 
         current_tab.save()
-
         return current_tab.path()
 
     def can_save_file_as(self) -> bool:
@@ -2386,11 +2304,10 @@ class ColumnManager(QWidget):
     def save_file_as(self) -> str:
         """Save the current file with a new name."""
         current_tab = self.get_current_tab()
-        if not isinstance(current_tab, EditorTab):
+        if current_tab is None or not current_tab.can_save_as():
             return ""
 
         current_tab.save_as()
-
         return current_tab.path()
 
     def can_show_all_columns(self) -> bool:
@@ -2474,57 +2391,42 @@ class ColumnManager(QWidget):
     def can_show_conversation_settings_dialog(self) -> bool:
         """Check if the conversation settings dialog can be shown."""
         tab = self.get_current_tab()
-        return isinstance(tab, ConversationTab)
+        return tab is not None and tab.can_show_conversation_settings_dialog()
 
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab):
-            return
-
-        tab.show_conversation_settings_dialog()
+        if tab is not None:
+            tab.show_conversation_settings_dialog()
 
     def handle_esc_key(self) -> bool:
         """Handle processing of the "Esc" key with confirmation for active conversations."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab):
-            return False
-
-        return tab.handle_esc_key()
+        return tab is not None and tab.handle_esc_key()
 
     def can_navigate_next_message(self) -> bool:
         """Check if next message navigation is possible."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
-            return False
-
-        return tab.can_navigate_next_message()
+        return tab is not None and tab.can_navigate_next_message()
 
     def is_navigating_as_hunks(self) -> bool:
         """Return True if the current tab navigates by hunks rather than messages."""
         tab = self.get_current_tab()
-        return isinstance(tab, DiffTab)
+        return tab is not None and tab.is_navigating_as_hunks()
 
     def navigate_next_message(self) -> None:
         """Navigate to next message in the tab."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
-            return
-
-        tab.navigate_next_message()
+        if tab is not None:
+            tab.navigate_next_message()
 
     def can_navigate_previous_message(self) -> bool:
         """Check if previous message navigation is possible."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
-            return False
-
-        return tab.can_navigate_previous_message()
+        return tab is not None and tab.can_navigate_previous_message()
 
     def navigate_previous_message(self) -> None:
         """Navigate to previous message in the tab."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
-            return
-
-        tab.navigate_previous_message()
+        if tab is not None:
+            tab.navigate_previous_message()
