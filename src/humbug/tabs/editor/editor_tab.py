@@ -74,6 +74,7 @@ class EditorTab(TabBase):
             get_editor_info_cb=self._editor_widget.get_editor_info,
             save_cb=self._editor_widget.save_file,
             on_goto_line=self._editor_widget.goto_line,
+            on_apply_diff=self._editor_widget.apply_unified_diff,
         )
 
         # Set up debounced search update timer
@@ -543,15 +544,3 @@ class EditorTab(TabBase):
             exist or file has never been saved
         """
         return self._editor_widget.get_diff(context_lines)
-
-    def apply_diff(self, diff_text: str) -> Dict[str, Any]:
-        """
-        Apply a unified diff to the editor content.
-
-        Args:
-            diff_text: Unified diff format text
-
-        Returns:
-            Dictionary with operation result
-        """
-        return self._editor_widget.apply_unified_diff(diff_text)

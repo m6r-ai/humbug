@@ -21,7 +21,7 @@ class EditorContext:
     Operations that depend on the widget's cursor or viewport (get_cursor_info,
     get_selected_text, goto_line, save) are delegated to callbacks supplied by
     EditorWidget at construction time.  A headless test harness can supply
-    stubs; a CLI would supply None for the viewport callback.
+    stubs; a CLI would supply None for the viewport callbacks.
     """
 
     def __init__(
@@ -33,6 +33,7 @@ class EditorContext:
         get_editor_info_cb: Callable[[], Dict[str, Any]],
         save_cb: Callable[[], bool],
         on_goto_line: Callable[[int, int], None] | None = None,
+        on_apply_diff: Callable[[str], Dict[str, Any]] | None = None,
     ) -> None:
         """
         Initialise the editor context.
@@ -48,6 +49,9 @@ class EditorContext:
             on_goto_line: Optional callable(line, column) that scrolls the Qt
                 viewport to the target position.  The Qt EditorWidget supplies
                 this; a CLI would pass None.
+            on_apply_diff: Optional callable(diff_text) -> result dict that
+                applies the diff via the Qt EditorWidget (which also handles
+                scrolling).  The Qt EditorWidget supplies this; a CLI would pass None.
         """
         self._context_id = context_id
         self._document = document
@@ -56,6 +60,7 @@ class EditorContext:
         self._get_editor_info_cb = get_editor_info_cb
         self._save_cb = save_cb
         self._on_goto_line = on_goto_line
+        self._on_apply_diff = on_apply_diff
         self._logger = logging.getLogger("EditorContext")
 
     def context_id(self) -> str:
@@ -284,6 +289,9 @@ class EditorContext:
             Dictionary with success, message, hunks_applied, and
             error_details keys.
         """
+        if self._on_apply_diff is not None:
+            return self._on_apply_diff(diff_text)
+
         diff_applier = EditorDiffApplier(confidence_threshold=0.75, search_window=50)
         cursor = QTextCursor(self._document)
 
