@@ -150,6 +150,20 @@ def _create_diff_tab(
     return tab
 
 
+def _create_log_tab(
+    _cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+) -> LogTab:
+    """Context factory for LogTab."""
+    return LogTab(info.context_id, parent)
+
+
+def _create_shell_tab(
+    _cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+) -> ShellTab:
+    """Context factory for ShellTab."""
+    return ShellTab(info.context_id, parent)
+
+
 class MainWindow(QMainWindow):
     """Main window for the Humbug application."""
 
@@ -487,6 +501,8 @@ class MainWindow(QMainWindow):
         cm.register_context_factory("terminal", functools.partial(_create_terminal_tab, cm))
         cm.register_context_factory("preview", functools.partial(_create_preview_tab, cm))
         cm.register_context_factory("diff", functools.partial(_create_diff_tab, cm))
+        cm.register_context_factory("log", functools.partial(_create_log_tab, cm))
+        cm.register_context_factory("shell", functools.partial(_create_shell_tab, cm))
 
         # Set initial mindspace view width
         self._splitter.setSizes([300, self.width() - 300])
