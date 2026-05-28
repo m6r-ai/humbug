@@ -36,7 +36,7 @@ class MindspaceConversationsView(QWidget):
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
-    file_opened_in_preview = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in preview
+    file_opened_in_preview = Signal(str)  # Emits path when file is opened in preview
     new_conversation_requested = Signal(str)  # Emits target folder path when user requests new conversation in folder
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -999,7 +999,7 @@ class MindspaceConversationsView(QWidget):
 
     def _handle_preview_view_file(self, path: str) -> None:
         """View a file in the preview."""
-        self.file_opened_in_preview.emit(path, False)
+        self.file_opened_in_preview.emit(path)
 
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.

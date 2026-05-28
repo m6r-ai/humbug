@@ -13,5 +13,4 @@ class ContextInfo:
     context_type: str
     path:         str   # empty string if not path-associated
     title:        str
-    is_ephemeral: bool
     is_modified:  bool

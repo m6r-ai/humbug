@@ -36,7 +36,7 @@ class MindspacePreviewView(QWidget):
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
-    file_opened_in_preview = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in preview
+    file_opened_in_preview = Signal(str)  # Emits path when file is opened in preview
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the preview view widget."""
@@ -287,7 +287,7 @@ class MindspacePreviewView(QWidget):
 
             # If it's a file, signal that it should be opened in preview
             if not is_folder:
-                self.file_opened_in_preview.emit(new_path, False)
+                self.file_opened_in_preview.emit(new_path)
 
         except OSError as e:
             self._logger.error("Failed to rename temporary %s from '%s' to '%s': %s",
@@ -855,7 +855,7 @@ class MindspacePreviewView(QWidget):
 
     def _handle_preview_view_file(self, path: str) -> None:
         """View a file in the preview."""
-        self.file_opened_in_preview.emit(path, False)
+        self.file_opened_in_preview.emit(path)
 
     def _on_breadcrumb_dot_clicked(self) -> None:
         """Handle a click on the '.' breadcrumb item — open the mindspace root in preview."""

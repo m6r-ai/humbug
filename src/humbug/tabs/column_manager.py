@@ -431,6 +431,7 @@ class ColumnManager(QWidget):
             mru_list.remove(tab_id)
 
         del self._tabs[tab_id]
+        self._mindspace_manager.mindspace().contexts().close(tab_id)
         index = column.indexOf(tab)
         tab_bar = column.tabBar()
         if isinstance(tab_bar, TabBar):
@@ -473,7 +474,7 @@ class ColumnManager(QWidget):
 
         self._registry_subscribed = False
 
-    def _on_context_opened(self, info: ContextInfo) -> None:
+    def _on_context_opened(self, info: ContextInfo, is_ephemeral: bool) -> None:
         """
         React to a context being opened in the registry.
 
@@ -502,7 +503,7 @@ class ColumnManager(QWidget):
         if new_tab is None:
             return
 
-        new_tab.set_ephemeral(info.is_ephemeral)
+        new_tab.set_ephemeral(is_ephemeral)
         self._add_tab(new_tab, info.title)
         self._apply_context_models(new_tab)
 
@@ -546,7 +547,6 @@ class ColumnManager(QWidget):
             context_type=tab.tool_name(),
             path=tab.path(),
             title=title,
-            is_ephemeral=tab.is_ephemeral(),
             context_id=tab.tab_id(),
         )
 
@@ -640,7 +640,7 @@ class ColumnManager(QWidget):
 
         self._active_column = self._tab_columns[0]
 
-        context_id = self._open_context_by_source_type(source_type, path, False)
+        context_id = self._open_context_by_source_type(source_type, path)
         if context_id is None:
             return
 
@@ -661,7 +661,7 @@ class ColumnManager(QWidget):
                 self._update_tabs()
                 return
 
-        context_id = self._open_context_by_source_type(source_type, path, False)
+        context_id = self._open_context_by_source_type(source_type, path)
         if context_id is not None:
             self._update_tabs()
             return
@@ -685,7 +685,7 @@ class ColumnManager(QWidget):
                 self._update_tabs()
                 return
 
-        context_id = self._open_context_by_source_type(source_type, path, False)
+        context_id = self._open_context_by_source_type(source_type, path)
         if context_id is not None:
             self._update_tabs()
             return
@@ -811,7 +811,7 @@ class ColumnManager(QWidget):
                 self._update_tabs()
                 return
 
-        context_id = self._open_context_by_source_type(source_type, path, False)
+        context_id = self._open_context_by_source_type(source_type, path)
         if context_id is None:
             return
 
@@ -1196,8 +1196,18 @@ class ColumnManager(QWidget):
         tab_index, tab_bar = self._find_tab_bar_and_index(tab)
         if tab_bar and tab_index != -1:
             tab_bar.set_tab_ephemeral(tab_index, False)
-        if self._mindspace_manager.has_mindspace():
-            self._mindspace_manager.mindspace().contexts().update(tab.tab_id(), is_ephemeral=False)
+
+    def make_tab_permanent(self, tab_id: str) -> None:
+        """Make an ephemeral tab permanent.
+
+        Args:
+            tab_id: ID of the tab to make permanent.
+        """
+        tab = self._tabs.get(tab_id)
+        if tab is None or not tab.is_ephemeral():
+            return
+
+        self._make_tab_permanent(tab)
 
     def _move_tab_to_active_column(self, tab: TabBase) -> None:
         """
@@ -1434,13 +1444,12 @@ class ColumnManager(QWidget):
 
         return self._find_tab_by_path("editor", path)
 
-    def _open_context_by_source_type(self, source_type: str, path: str, ephemeral: bool) -> str | None:
+    def _open_context_by_source_type(self, source_type: str, path: str) -> str | None:
         """Open a context via the registry, routing to the correct type based on source view.
 
         Args:
             source_type: Source view type string ('conversations', 'files', 'vcs', 'preview').
             path: File path to open.
-            ephemeral: Whether the tab should be ephemeral.
 
         Returns:
             The context_id of the opened or focused context, or None if skipped/failed.
@@ -1472,7 +1481,6 @@ class ColumnManager(QWidget):
                 context_type=context_type,
                 path=path,
                 title=os.path.basename(path),
-                is_ephemeral=ephemeral,
             )
 
         except Exception as e:
@@ -1726,7 +1734,6 @@ class ColumnManager(QWidget):
                         context_type=tab.tool_name(),
                         path=tab.path(),
                         title=title,
-                        is_ephemeral=tab.is_ephemeral(),
                         context_id=tab.tab_id(),
                     )
 

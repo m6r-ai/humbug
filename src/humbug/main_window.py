@@ -1111,7 +1111,7 @@ class MainWindow(QMainWindow):
 
         self._column_manager.new_file()
 
-    def _on_mindspace_view_file_opened_in_preview(self, path: str, ephemeral: bool) -> None:
+    def _on_mindspace_view_file_opened_in_preview(self, path: str) -> None:
         """Handle click of a preview link from the mindspace view."""
         contexts = self._mindspace_manager.mindspace().contexts()
         existing = contexts.get_by_path_and_type(path, "preview")
@@ -1122,7 +1122,6 @@ class MainWindow(QMainWindow):
                 context_type="preview",
                 path=path,
                 title=os.path.basename(path),
-                is_ephemeral=ephemeral,
             )
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -1134,6 +1133,8 @@ class MainWindow(QMainWindow):
         contexts = self._mindspace_manager.mindspace().contexts()
         existing = contexts.get_by_path_and_type(path, "diff")
         if existing:
+            if not ephemeral:
+                self._column_manager.make_tab_permanent(existing.context_id)
             contexts.focus(existing.context_id)
         else:
             context_id = contexts.open(
@@ -1193,6 +1194,9 @@ class MainWindow(QMainWindow):
             contexts = self._mindspace_manager.mindspace().contexts()
             existing = contexts.get_by_path_and_type(path, context_type)
             if existing:
+                if not ephemeral:
+                    self._column_manager.make_tab_permanent(existing.context_id)
+
                 contexts.focus(existing.context_id)
                 return existing.context_id
 
@@ -1263,6 +1267,9 @@ class MainWindow(QMainWindow):
             contexts = self._mindspace_manager.mindspace().contexts()
             existing = contexts.get_by_path_and_type(path, "editor")
             if existing:
+                if not ephemeral:
+                    self._column_manager.make_tab_permanent(existing.context_id)
+
                 contexts.focus(existing.context_id)
                 context_id = existing.context_id
             else:
@@ -1270,7 +1277,6 @@ class MainWindow(QMainWindow):
                     context_type="editor",
                     path=path,
                     title=os.path.basename(path),
-                    is_ephemeral=ephemeral,
                 )
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -1627,9 +1633,9 @@ class MainWindow(QMainWindow):
             return
 
         self._mindspace_manager.update_conversations_directory(file_path)
-        self._open_conversation_path(file_path, False)
+        self._open_conversation_path(file_path)
 
-    def _open_conversation_path(self, path: str, ephemeral: bool) -> None:
+    def _open_conversation_path(self, path: str) -> None:
         """Open an existing conversation file."""
         try:
             contexts = self._mindspace_manager.mindspace().contexts()
@@ -1643,7 +1649,6 @@ class MainWindow(QMainWindow):
                 context_type="conversation",
                 path=path,
                 title=title,
-                is_ephemeral=ephemeral,
             )
         except Exception as e:
             strings = self._language_manager.strings()
@@ -1681,7 +1686,7 @@ class MainWindow(QMainWindow):
             context_type="preview",
             path=path,
             title=os.path.basename(norm_path),
-            is_ephemeral=True,
+            is_ephemeral=True,  # preview links open as ephemeral
         )
 
     def _on_column_manager_edit_file_requested(self, path: str) -> None:

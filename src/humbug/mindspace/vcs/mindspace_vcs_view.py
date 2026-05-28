@@ -93,7 +93,7 @@ class MindspaceVCSView(QWidget):
 
     file_clicked = Signal(MindspaceViewType, str, bool)   # view type, path, ephemeral
     file_edited = Signal(str, bool)                        # path, ephemeral
-    file_opened_in_preview = Signal(str, bool)             # path, ephemeral
+    file_opened_in_preview = Signal(str)                   # path
     file_deleted = Signal(str)                             # path
     file_opened_in_diff = Signal(str, bool)                # path, ephemeral
     repo_available = Signal(bool)                          # True = repo found, False = hidden
@@ -247,7 +247,7 @@ class MindspaceVCSView(QWidget):
             edit_action.triggered.connect(lambda: self.file_edited.emit(path, False))
 
             preview_action = menu.addAction(strings.preview)
-            preview_action.triggered.connect(lambda: self.file_opened_in_preview.emit(path, False))
+            preview_action.triggered.connect(lambda: self.file_opened_in_preview.emit(path))
 
             delete_action = menu.addAction(strings.delete)
             delete_action.triggered.connect(lambda: self._handle_delete_file(path))

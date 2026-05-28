@@ -8,7 +8,7 @@ from mindspace.context.context_info import ContextInfo
 
 class ContextEvent(Enum):
     """Events emitted by the ContextRegistry."""
-    OPENED  = auto()   # args: (context_info: ContextInfo)
+    OPENED  = auto()   # args: (context_info: ContextInfo, is_ephemeral: bool)
     CLOSED  = auto()   # args: (context_id: str)
     UPDATED = auto()   # args: (context_info: ContextInfo)
     FOCUSED = auto()   # args: (context_id: str)
@@ -92,13 +92,12 @@ class ContextRegistry:
             context_type=context_type,
             path=path,
             title=title,
-            is_ephemeral=is_ephemeral,
             is_modified=False,
         )
         self._contexts[context_id] = info
         if initial_model is not None:
             self._models[context_id] = initial_model
-        self._emit(ContextEvent.OPENED, info)
+        self._emit(ContextEvent.OPENED, info, is_ephemeral)
         return context_id
 
     def close(self, context_id: str) -> None:
@@ -117,18 +116,18 @@ class ContextRegistry:
         """
         Update mutable fields on a context and emit UPDATED.
 
-        Only title, is_ephemeral, and is_modified may be updated.
+        Only title and is_modified may be updated.
         Unknown keys are silently ignored.
 
         Args:
             context_id: ID of the context to update.
-            **kwargs:   Fields to update (title, is_ephemeral, is_modified).
+            **kwargs:   Fields to update (title, is_modified).
         """
         info = self._contexts.get(context_id)
         if info is None:
             return
 
-        allowed = {"title", "is_ephemeral", "is_modified"}
+        allowed = {"title", "is_modified"}
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
             return
@@ -138,7 +137,6 @@ class ContextRegistry:
             context_type=info.context_type,
             path=info.path,
             title=updates.get("title", info.title),
-            is_ephemeral=updates.get("is_ephemeral", info.is_ephemeral),
             is_modified=updates.get("is_modified", info.is_modified),
         )
         self._emit(ContextEvent.UPDATED, self._contexts[context_id])
