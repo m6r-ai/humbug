@@ -2,7 +2,7 @@
 
 import os
 from datetime import datetime, timezone
-from typing import cast, Dict
+from typing import Dict
 
 from ai import AIConversation, AIConversationSettings
 from ai_tool import AIToolExecutionError
@@ -10,17 +10,14 @@ from ai_transcript_conversation import AITranscriptConversation
 from delegate_ai_tool import DelegateAITool
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
-
-from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.column_manager_error import ColumnManagerError
+from mindspace.context.conversation_context import ConversationContext
 
 
-def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) -> DelegateAITool:
+def _make_delegate_ai_tool(mindspace: Mindspace) -> DelegateAITool:
     """
     Build a fully wired DelegateAITool for the GUI environment.
 
     Args:
-        column_manager: The application column manager
         mindspace: The active mindspace model
 
     Returns:
@@ -65,6 +62,7 @@ def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) 
         settings = mindspace.settings()
         if settings is None:
             return AIConversationSettings()
+
         return AIConversationSettings(
             model=settings.model,
             provider=settings.provider,
@@ -93,44 +91,25 @@ def _make_delegate_ai_tool(column_manager: ColumnManager, mindspace: Mindspace) 
     ) -> None:
         parent_context_id: str | None = None
         for info in mindspace.contexts().list_all():
-            model = mindspace.contexts().get_model(info.context_id, AITranscriptConversation)
-            if model is not None and model.inner_conversation() is parent_conversation:
+            model = mindspace.contexts().get_model(info.context_id, ConversationContext)
+            if model is not None and model.ai_transcript_conversation().inner_conversation() is parent_conversation:
                 parent_context_id = info.context_id
                 break
 
-        if parent_context_id:
-            column_manager.protect_tab(parent_context_id)
-
         try:
             title = os.path.splitext(os.path.basename(child_transcript.path()))[0]
-
             context_id = mindspace.contexts().open(
                 context_type="conversation",
                 path=child_transcript.path(),
                 title=title,
                 initial_model=child_transcript,
+                requester_id=parent_context_id or "",
             )
-
+            context_ids[session_path] = context_id
         except Exception:
             # Tab creation failed — the conversation will still run and persist;
             # the user just won't have a live view.
-            return
-
-        finally:
-            if parent_context_id:
-                column_manager.unprotect_tab(parent_context_id)
-
-        context_ids[session_path] = context_id
-
-        # Move the child tab one column to the right of the parent
-        if parent_context_id:
-            parent_info = column_manager.get_tab_info_by_id(parent_context_id)
-            if parent_info:
-                target_column = min(cast(int, parent_info["column_index"]) + 1, 5)
-                try:
-                    column_manager.move_tab_to_column(context_id, target_column)
-                except ColumnManagerError:
-                    pass  # Best effort — tab is still functional if move fails
+            pass
 
     def on_conversation_completed(session_path: str) -> None:
         context_id = context_ids.pop(session_path, None)

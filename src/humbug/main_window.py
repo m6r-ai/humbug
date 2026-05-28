@@ -557,7 +557,7 @@ class MainWindow(QMainWindow):
         )
         self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
         self._ai_tool_manager.register_tool(
-            _make_delegate_ai_tool(self._column_manager, mindspace), "Delegate: delegates tasks to specialized AI instances"
+            _make_delegate_ai_tool(mindspace), "Delegate: delegates tasks to specialized AI instances"
         )
         self._ai_tool_manager.register_tool(
             FileSystemAITool(

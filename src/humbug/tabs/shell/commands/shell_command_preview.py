@@ -43,7 +43,6 @@ class ShellCommandPreview(ShellCommand):
         Returns:
             True if command executed successfully, False otherwise
         """
-        # Get positional arguments
         args = self._get_positional_arguments(tokens)
         if not args:
             self._history_manager.add_message(
@@ -54,7 +53,6 @@ class ShellCommandPreview(ShellCommand):
 
         full_path = self._mindspace.get_absolute_path(args[0])
         if not os.path.exists(full_path):
-            # Create directory if ned
             directory = os.path.dirname(full_path)
             if directory and not os.path.exists(directory):
                 try:
@@ -69,23 +67,18 @@ class ShellCommandPreview(ShellCommand):
 
         current_tab = self._column_manager.get_current_tab()
         assert current_tab is not None
-        self._column_manager.protect_tab(current_tab.tab_id())
 
-        try:
-            contexts = self._mindspace.contexts()
-            existing = contexts.get_by_path_and_type(full_path, "preview")
-            if existing:
-                contexts.focus(existing.context_id)
-
-            else:
-                contexts.open(
-                    context_type="preview",
-                    path=full_path,
-                    title=os.path.basename(full_path),
-                )
-
-        finally:
-            self._column_manager.unprotect_tab(current_tab.tab_id())
+        contexts = self._mindspace.contexts()
+        existing = contexts.get_by_path_and_type(full_path, "preview")
+        if existing:
+            contexts.focus(existing.context_id)
+        else:
+            contexts.open(
+                context_type="preview",
+                path=full_path,
+                title=os.path.basename(full_path),
+                requester_id=current_tab.tab_id(),
+            )
 
         self._history_manager.add_message(
             ShellEventSource.SUCCESS,
@@ -104,16 +97,13 @@ class ShellCommandPreview(ShellCommand):
 
         Args:
             current_token: The token at cursor position
-            tokens: All tokens in the command line
-            cursor_token_index: Index of current_token in tokens list
+            _tokens: All tokens in the command line
+            _cursor_token_index: Index of current_token in tokens list
 
         Returns:
             List of possible completions
         """
-        # For the preview command, we're primarily interested in completing file paths
-        # Only handle options if we're explicitly looking at an option token
         if current_token.type == TokenType.OPTION:
             return self._get_option_completions(current_token.value)
 
-        # For arguments, complete file paths
         return self._get_mindspace_path_completions(current_token.value)

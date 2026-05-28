@@ -43,13 +43,12 @@ class ShellCommandTerminal(ShellCommand):
         """
         current_tab = self._column_manager.get_current_tab()
         assert current_tab is not None
-        self._column_manager.protect_tab(current_tab.tab_id())
 
-        try:
-            self._mindspace.contexts().open(context_type="terminal", title="Terminal")
-
-        finally:
-            self._column_manager.unprotect_tab(current_tab.tab_id())
+        self._mindspace.contexts().open(
+            context_type="terminal",
+            title="Terminal",
+            requester_id=current_tab.tab_id(),
+        )
 
         self._history_manager.add_message(
             ShellEventSource.SUCCESS,
@@ -68,15 +67,13 @@ class ShellCommandTerminal(ShellCommand):
 
         Args:
             current_token: The token at cursor position
-            tokens: All tokens in the command line
-            cursor_token_index: Index of current_token in tokens list
+            _tokens: All tokens in the command line
+            _cursor_token_index: Index of current_token in tokens list
 
         Returns:
             List of possible completions
         """
-        # If the current token is an option, get option completions
         if current_token.type == TokenType.OPTION:
             return self._get_option_completions(current_token.value)
 
-        # Terminal command doesn't take any arguments, so no completions for arguments
         return []

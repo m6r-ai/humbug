@@ -69,24 +69,19 @@ class ShellCommandDiff(ShellCommand):
 
         current_tab = self._column_manager.get_current_tab()
         assert current_tab is not None
-        self._column_manager.protect_tab(current_tab.tab_id())
 
-        try:
-            contexts = self._mindspace.contexts()
-            existing = contexts.get_by_path_and_type(full_path, "diff")
-            if existing:
-                contexts.focus(existing.context_id)
-                context_id = existing.context_id
-
-            else:
-                context_id = contexts.open(
-                    context_type="diff",
-                    path=full_path,
-                    title=os.path.basename(full_path),
-                )
-
-        finally:
-            self._column_manager.unprotect_tab(current_tab.tab_id())
+        contexts = self._mindspace.contexts()
+        existing = contexts.get_by_path_and_type(full_path, "diff")
+        if existing:
+            contexts.focus(existing.context_id)
+            context_id = existing.context_id
+        else:
+            context_id = contexts.open(
+                context_type="diff",
+                path=full_path,
+                title=os.path.basename(full_path),
+                requester_id=current_tab.tab_id(),
+            )
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,

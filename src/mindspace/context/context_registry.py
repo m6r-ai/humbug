@@ -65,6 +65,7 @@ class ContextRegistry:
         is_ephemeral: bool = False,
         context_id: str  = "",
         initial_model: Any = None,
+        requester_id: str = "",
     ) -> str:
         """
         Register a new open context and emit OPENED.
@@ -80,6 +81,9 @@ class ContextRegistry:
             initial_model: Optional model object to register atomically with
                            the context.  Stored before OPENED is emitted so
                            subscribers can retrieve it immediately.
+            requester_id: Optional ID of the context that is requesting this
+                          open.  Forwarded opaquely to OPENED callbacks so the
+                          frontend can use it for tab placement decisions.
 
         Returns:
             The context_id for the newly registered context.
@@ -97,7 +101,7 @@ class ContextRegistry:
         self._contexts[context_id] = info
         if initial_model is not None:
             self._models[context_id] = initial_model
-        self._emit(ContextEvent.OPENED, info, is_ephemeral)
+        self._emit(ContextEvent.OPENED, info, is_ephemeral, requester_id)
         return context_id
 
     def close(self, context_id: str) -> None:

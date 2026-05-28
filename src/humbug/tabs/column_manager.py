@@ -128,9 +128,6 @@ class ColumnManager(QWidget):
         # Factory registry for session restore
         self._tab_factory_registry = TabFactoryRegistry()
 
-        # Are we protecting the current tab against being ovewrwritten?
-        self._protected_tab_id: str | None = None
-
         self._current_status_tab: TabBase | None = None
 
     def register_tab_factory(self, tool_name: str, factory: TabFactory) -> None:
@@ -150,27 +147,6 @@ class ColumnManager(QWidget):
             factory: Callable(info, registry, parent) -> TabBase | None.
         """
         self._tab_factory_registry.register_context_factory(tool_name, factory)
-
-    def protect_tab(self, tab_id: str) -> None:
-        """
-        Protect a specific tab from being displaced by new tabs.
-
-        Args:
-            tab_id: ID of the tab to protect
-        """
-        self._protected_tab_id = tab_id
-
-    def unprotect_tab(self, tab_id: str) -> None:
-        """
-        Remove protection from a previously protected tab.
-
-        Args:
-            tab_id: ID of the tab to unprotect
-        """
-        if self._protected_tab_id != tab_id:
-            return
-
-        self._protected_tab_id = None
 
     def num_colunns(self) -> int:
         """Get the number of columns currently in use."""
@@ -474,7 +450,7 @@ class ColumnManager(QWidget):
 
         self._registry_subscribed = False
 
-    def _on_context_opened(self, info: ContextInfo, is_ephemeral: bool) -> None:
+    def _on_context_opened(self, info: ContextInfo, is_ephemeral: bool, requester_id: str = "") -> None:
         """
         React to a context being opened in the registry.
 
@@ -504,7 +480,7 @@ class ColumnManager(QWidget):
             return
 
         new_tab.set_ephemeral(is_ephemeral)
-        self._add_tab(new_tab, info.title)
+        self._add_tab(new_tab, info.title, requester_id)
         self._apply_context_models(new_tab)
 
     def _apply_context_models(self, tab: TabBase) -> None:
@@ -550,7 +526,7 @@ class ColumnManager(QWidget):
             context_id=tab.tab_id(),
         )
 
-    def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
+    def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget, background: bool = False) -> None:
         """
         Add a tab to a column and set up associated data.
 
@@ -558,6 +534,7 @@ class ColumnManager(QWidget):
             tab: Tab widget to add
             title: Initial title for the tab
             column: Target column
+            background: If True, do not make this tab current or change the active column.
         """
         tool_tip = tab.path()
         if tool_tip:
@@ -581,10 +558,11 @@ class ColumnManager(QWidget):
             is_ephemeral=tab.is_ephemeral(),
             is_file_missing=tab.is_path_missing(),
         )
-        focus_widget = QApplication.focusWidget()
-        column.setCurrentWidget(tab)
-        if focus_widget is not None:
-            focus_widget.setFocus()
+        if not background:
+            focus_widget = QApplication.focusWidget()
+            column.setCurrentWidget(tab)
+            if focus_widget is not None:
+                focus_widget.setFocus()
 
         self._update_mru_order(tab, column)
         QTimer.singleShot(0, self.show_all_columns)
@@ -972,14 +950,13 @@ class ColumnManager(QWidget):
         column = cast(ColumnWidget, sender)
         self._active_column = column
 
-        # Update MRU order for the newly selected tab.  Also check if we need to update focus.  We don't
-        # want to change focus if the current tab is ephemeral, or if a tab is protected (meaning an AI
-        # tool is opening a new tab in the background).
+        # Update MRU order for the newly selected tab.  Also check if we need to update focus.
+        # We don't want to change focus if the current tab is ephemeral.
         current_tab = self.get_current_tab()
         update_focus = True
         if current_tab:
             self._update_mru_order(current_tab, column)
-            update_focus = not current_tab.is_ephemeral() and not self._protected_tab_id
+            update_focus = not current_tab.is_ephemeral()
 
         self._update_tabs(change_focus=update_focus)
 
@@ -1012,79 +989,51 @@ class ColumnManager(QWidget):
         self._active_column = column
         self._update_tabs()
 
-    def _get_target_column_for_new_tab(self) -> ColumnWidget:
+    def _get_target_column_for_new_tab(self, requester_id: str = "") -> ColumnWidget:
         """
         Determine which column should receive a new tab.
 
-        If a tab is protected, use a column that does not contain it.
+        If a requester_id is provided, place the new tab in a column adjacent
+        to the requester rather than in the same column.
 
         Returns:
             The column widget where the new tab should be added
         """
-        # If no tab is protected, use the normal behaviour
-        if not self._protected_tab_id:
+        if not requester_id:
             return self._active_column
 
-        # Find the column containing the protected tab
-        protected_tab = self._tabs.get(self._protected_tab_id)
-        protected_column = self._find_column_for_tab(protected_tab) if protected_tab else None
-        current_column_number = self._tab_columns.index(protected_column) if \
-            protected_column else self._tab_columns.index(self._active_column)
+        requester_tab = self._tabs.get(requester_id)
+        requester_column = self._find_column_for_tab(requester_tab) if requester_tab else None
+        current_column_number = self._tab_columns.index(requester_column) if \
+            requester_column else self._tab_columns.index(self._active_column)
 
-        # We want to use the column to the right of the protected tab if possible.
         num_columns = len(self._tab_columns)
         if current_column_number == (num_columns - 1) and num_columns < 6:
             new_column = self._create_column(num_columns)
             self.show_all_columns()
             return new_column
 
-        # We want to use the column to the right of the protected tab if possible.
         if current_column_number < num_columns - 1:
             return self._tab_columns[current_column_number + 1]
 
         return self._tab_columns[current_column_number - 1]
 
-    def _ensure_tab_not_in_protected_column(self, tab: TabBase) -> None:
-        """
-        Move a tab out of the protected column if necessary.
-
-        When tab protection is active and the given tab is in the same column as
-        the protected tab, move it to the target column for new tabs.  If the tab
-        is already in a different column, leave it where it is.
-
-        Args:
-            tab: The tab to check and potentially move
-        """
-        if not self._protected_tab_id:
-            return
-
-        protected_tab = self._tabs.get(self._protected_tab_id)
-        protected_column = self._find_column_for_tab(protected_tab) if protected_tab else None
-        tab_column = self._find_column_for_tab(tab)
-
-        if protected_column is None or tab_column is None:
-            return
-
-        if tab_column != protected_column:
-            return
-
-        target_column = self._get_target_column_for_new_tab()
-        self._move_tab_between_columns(tab, tab_column, target_column)
-
-    def _add_tab(self, tab: TabBase, title: str) -> None:
+    def _add_tab(self, tab: TabBase, title: str, requester_id: str = "") -> None:
         """
         Add a new tab to the manager.
 
         Args:
             tab: The tab widget to add
             title: Initial title for the tab
+            requester_id: Optional ID of the tab requesting this open, used
+                          to determine placement column.
         """
         if len(self._tabs) == 0:
             # If no tabs exist, we need to switch to the columns widget
             self._stack.setCurrentWidget(self._columns_widget)
 
-        target_column = self._get_target_column_for_new_tab()
-        self._add_tab_to_column(tab, title, target_column)
+        target_column = self._get_target_column_for_new_tab(requester_id)
+        self._add_tab_to_column(tab, title, target_column, background=bool(requester_id))
 
         # Close any ephemeral tab in target column because we've just added a new one
         self._close_ephemeral_tab_in_column(target_column, tab)
@@ -1601,8 +1550,7 @@ class ColumnManager(QWidget):
             if not isinstance(conversation_tab, ConversationTab):
                 return
 
-            self.protect_tab(conversation_tab.tab_id())
-
+            requester_id = conversation_tab.tab_id()
             new_path = self._get_fork_file_name(conversation_tab.path())
             new_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
 
@@ -1612,16 +1560,12 @@ class ColumnManager(QWidget):
 
             new_tab.fork_from_index_requested.connect(self.on_conversation_fork_from_index_requested)
             fork_title = os.path.splitext(os.path.basename(new_tab.path()))[0]
-            self._add_tab(new_tab, fork_title)
+            self._add_tab(new_tab, fork_title, requester_id)
             self._register_tab_with_registry(new_tab, fork_title)
 
         except ConversationError as e:
             self._logger.exception("Failed to fork conversation: %s", str(e))
             raise ColumnManagerError("Failed to fork conversation tab") from e
-
-        finally:
-            conversation_tab = cast(ConversationTab, self.get_current_tab())
-            self.unprotect_tab(conversation_tab.tab_id())
 
     def on_preview_open_link_requested(self, path: str) -> None:
         """Handle a preview link click."""

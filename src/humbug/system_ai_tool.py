@@ -23,6 +23,7 @@ from ai_tool import (
 from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
+from mindspace.context.conversation_context import ConversationContext
 
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
@@ -255,8 +256,8 @@ class SystemAITool(AITool):
     def _requester_tab_id(self, requester_ref: Any) -> str | None:
         """Return the tab_id of the conversation that issued this tool call."""
         for info in self._mindspace.contexts().list_all():
-            model = self._mindspace.contexts().get_model(info.context_id, AITranscriptConversation)
-            if model is not None and model.inner_conversation() is requester_ref:
+            model = self._mindspace.contexts().get_model(info.context_id, ConversationContext)
+            if model is not None and model.ai_transcript_conversation().inner_conversation() is requester_ref:
                 return info.context_id
 
         return None
@@ -287,19 +288,13 @@ class SystemAITool(AITool):
             if directory and not os.path.exists(directory):
                 os.makedirs(directory, exist_ok=True)
 
-            requester_id = self._requester_tab_id(requester_ref)
-            if requester_id:
-                self._column_manager.protect_tab(requester_id)
-
-            try:
-                context_id = self._mindspace.contexts().open(
-                    context_type="editor",
-                    path=file_path,
-                    title=os.path.basename(file_path),
-                )
-            finally:
-                if requester_id:
-                    self._column_manager.unprotect_tab(requester_id)
+            requester_id = self._requester_tab_id(requester_ref) or ""
+            context_id = self._mindspace.contexts().open(
+                context_type="editor",
+                path=file_path,
+                title=os.path.basename(file_path),
+                requester_id=requester_id,
+            )
 
             relative_path = self._mindspace.get_relative_path(file_path)
             self._mindspace.add_interaction(
@@ -326,18 +321,12 @@ class SystemAITool(AITool):
     ) -> AIToolResult:
         """Create a new terminal tab."""
         try:
-            requester_id = self._requester_tab_id(requester_ref)
-            if requester_id:
-                self._column_manager.protect_tab(requester_id)
-
-            try:
-                context_id = self._mindspace.contexts().open(
-                    context_type="terminal",
-                    title="Terminal",
-                )
-            finally:
-                if requester_id:
-                    self._column_manager.unprotect_tab(requester_id)
+            requester_id = self._requester_tab_id(requester_ref) or ""
+            context_id = self._mindspace.contexts().open(
+                context_type="terminal",
+                title="Terminal",
+                requester_id=requester_id,
+            )
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -375,20 +364,14 @@ class SystemAITool(AITool):
         try:
             self._mindspace.ensure_mindspace_dir("conversations")
 
-            requester_id = self._requester_tab_id(requester_ref)
-            if requester_id:
-                self._column_manager.protect_tab(requester_id)
-
+            requester_id = self._requester_tab_id(requester_ref) or ""
             title = os.path.splitext(os.path.basename(conversation_path))[0]
-            try:
-                context_id = self._mindspace.contexts().open(
-                    context_type="conversation",
-                    path=conversation_path,
-                    title=title,
-                )
-            finally:
-                if requester_id:
-                    self._column_manager.unprotect_tab(requester_id)
+            context_id = self._mindspace.contexts().open(
+                context_type="conversation",
+                path=conversation_path,
+                title=title,
+                requester_id=requester_id,
+            )
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -494,20 +477,14 @@ class SystemAITool(AITool):
             ai_conversation.update_conversation_settings(conversation_settings)
             transcript = AITranscriptConversation(full_path, ai_conversation)
 
-            requester_id = self._requester_tab_id(requester_ref)
-            if requester_id:
-                self._column_manager.protect_tab(requester_id)
-
-            try:
-                context_id = self._mindspace.contexts().open(
-                    context_type="conversation",
-                    path=full_path,
-                    title=conversation_title,
-                    initial_model=transcript,
-                )
-            finally:
-                if requester_id:
-                    self._column_manager.unprotect_tab(requester_id)
+            requester_id = self._requester_tab_id(requester_ref) or ""
+            context_id = self._mindspace.contexts().open(
+                context_type="conversation",
+                path=full_path,
+                title=conversation_title,
+                initial_model=transcript,
+                requester_id=requester_id,
+            )
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -560,24 +537,18 @@ class SystemAITool(AITool):
             )
 
         try:
-            requester_id = self._requester_tab_id(requester_ref)
-            if requester_id:
-                self._column_manager.protect_tab(requester_id)
-
+            requester_id = self._requester_tab_id(requester_ref) or ""
             norm_path = os.path.normpath(preview_path)
             name = os.path.basename(norm_path)
             is_mindspace_root = norm_path == os.path.normpath(self._mindspace.mindspace_path())
             title = f"[{name.upper()}]" if is_mindspace_root else name
 
-            try:
-                context_id = self._mindspace.contexts().open(
-                    context_type="preview",
-                    path=preview_path,
-                    title=title,
-                )
-            finally:
-                if requester_id:
-                    self._column_manager.unprotect_tab(requester_id)
+            context_id = self._mindspace.contexts().open(
+                context_type="preview",
+                path=preview_path,
+                title=title,
+                requester_id=requester_id,
+            )
 
             relative_path = self._mindspace.get_relative_path(preview_path)
             location = relative_path if relative_path else "."
@@ -625,19 +596,13 @@ class SystemAITool(AITool):
             )
 
         try:
-            requester_id = self._requester_tab_id(requester_ref)
-            if requester_id:
-                self._column_manager.protect_tab(requester_id)
-
-            try:
-                context_id = self._mindspace.contexts().open(
-                    context_type="diff",
-                    path=file_path,
-                    title=os.path.basename(file_path),
-                )
-            finally:
-                if requester_id:
-                    self._column_manager.unprotect_tab(requester_id)
+            requester_id = self._requester_tab_id(requester_ref) or ""
+            context_id = self._mindspace.contexts().open(
+                context_type="diff",
+                path=file_path,
+                title=os.path.basename(file_path),
+                requester_id=requester_id,
+            )
 
             relative_path = self._mindspace.get_relative_path(file_path)
             self._mindspace.add_interaction(

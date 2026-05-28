@@ -48,19 +48,17 @@ class ShellCommandLog(ShellCommand):
         """
         current_tab = self._column_manager.get_current_tab()
         assert current_tab is not None
-        self._column_manager.protect_tab(current_tab.tab_id())
 
-        try:
-            contexts = self._mindspace.contexts()
-            existing = next((i for i in contexts.list_all() if i.context_type == "log"), None)
-            if existing:
-                contexts.focus(existing.context_id)
-
-            else:
-                contexts.open(context_type="log", title="Mindspace Log")
-
-        finally:
-            self._column_manager.unprotect_tab(current_tab.tab_id())
+        contexts = self._mindspace.contexts()
+        existing = next((i for i in contexts.list_all() if i.context_type == "log"), None)
+        if existing:
+            contexts.focus(existing.context_id)
+        else:
+            contexts.open(
+                context_type="log",
+                title="Mindspace Log",
+                requester_id=current_tab.tab_id(),
+            )
 
         self._history_manager.add_message(
             ShellEventSource.SUCCESS,

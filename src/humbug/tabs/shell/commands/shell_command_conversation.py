@@ -156,8 +156,8 @@ class ShellCommandConversation(ShellCommand):
 
         current_tab = self._column_manager.get_current_tab()
         assert current_tab is not None
-        self._column_manager.protect_tab(current_tab.tab_id())
 
+        requester_id = current_tab.tab_id()
         try:
             self._mindspace.ensure_mindspace_dir("conversations")
             timestamp = datetime.now(timezone.utc)
@@ -186,6 +186,7 @@ class ShellCommandConversation(ShellCommand):
                 path=full_path,
                 title=title,
                 initial_model=initial_model,
+                requester_id=requester_id,
             )
         except MindspaceError as e:
             self._history_manager.add_message(ShellEventSource.ERROR, f"Failed to create conversation: {str(e)}")
@@ -194,9 +195,6 @@ class ShellCommandConversation(ShellCommand):
                 f"Shell failed to create conversation: {str(e)}"
             )
             return False
-
-        finally:
-            self._column_manager.unprotect_tab(current_tab.tab_id())
 
         self._history_manager.add_message(
             ShellEventSource.SUCCESS,
