@@ -5,7 +5,6 @@ from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QHBoxLayout, QStack
 from PySide6.QtCore import Signal, QTimer
 from PySide6.QtGui import QResizeEvent
 
-from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.context.context_info import ContextInfo
 from mindspace.context.context_registry import ContextEvent
 
@@ -30,6 +29,7 @@ class ColumnManager(QWidget):
 
     status_message = Signal(StatusMessage)
     tab_changed = Signal()
+    tab_closed = Signal(str)
     user_settings_requested = Signal()
 
     def __init__(
@@ -342,10 +342,7 @@ class ColumnManager(QWidget):
             tab_id: ID of the tab to close
         """
         self.close_tab_by_id(tab_id)
-        self._mindspace_manager.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"User closed tab\ntab ID: {tab_id}"
-        )
+        self.tab_closed.emit(tab_id)
 
     def _on_tab_label_double_clicked(self, tab_id: str) -> None:
         """
@@ -1607,10 +1604,6 @@ class ColumnManager(QWidget):
         """
         for tab in list(self._tabs.values()):
             if tab.path() == path:
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"Deleted '{path}' - closed {tab.tool_name()} tab\ntab ID: {tab.tab_id()}"
-                )
                 self.close_tab_by_id(tab.tab_id(), True)
 
     def close_all_tabs(self) -> bool:

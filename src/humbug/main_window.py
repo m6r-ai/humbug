@@ -453,6 +453,7 @@ class MainWindow(QMainWindow):
         self._column_manager = ColumnManager(self._open_path_from_drop, self)
         self._column_manager.tab_changed.connect(self._on_column_manager_tab_changed)
         self._column_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
+        self._column_manager.tab_closed.connect(self._on_column_manager_tab_closed)
         self._splitter.addWidget(self._column_manager)
 
         # Register tab factories for session restore and context-open events.
@@ -1264,7 +1265,13 @@ class MainWindow(QMainWindow):
         Args:
             path: Path of file being deleted
         """
+        tabs = [t for t in self._column_manager.get_all_tabs() if t.path() == path]
         self._column_manager.close_deleted_file(path)
+        for tab in tabs:
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Deleted '{path}' - closed {tab.tool_name()} tab\ntab ID: {tab.tab_id()}"
+            )
 
     def _on_mindspace_view_file_renamed(self, old_path: str, new_path: str) -> None:
         """Handle renaming of files.
@@ -1720,6 +1727,13 @@ class MainWindow(QMainWindow):
         tab = self._column_manager.get_current_tab()
         if tab is not None:
             tab.submit()
+
+    def _on_column_manager_tab_closed(self, tab_id: str) -> None:
+        """Handle a tab closed via the tab bar close button."""
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"User closed tab\ntab ID: {tab_id}"
+        )
 
     def _on_navigate_next_message(self) -> None:
         """Navigate to the next message in conversation."""
