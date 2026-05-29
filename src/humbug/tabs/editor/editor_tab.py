@@ -22,14 +22,22 @@ from humbug.tabs.tab_state import TabState
 class EditorTab(TabBase):
     """Tab for editing text files."""
 
-    def __init__(self, tab_id: str, path: str, untitled_number: int | None, parent: QWidget | None = None) -> None:
+    _untitled_counter: int = 0
+
+    @classmethod
+    def next_untitled_title(cls) -> str:
+        """Allocate and return the next untitled tab title."""
+        cls._untitled_counter += 1
+        return f"Untitled-{cls._untitled_counter}"
+
+    def __init__(self, tab_id: str, path: str, untitled_number: int | None = None, parent: QWidget | None = None) -> None:
         """
         Initialize editor tab.
 
         Args:
             tab_id: Unique identifier for this tab, or a UUID will be generated if not provided
             path: File path to edit, or empty string for new file
-            untitled_number: Optional untitled file number for new files
+            untitled_number: Untitled file number for pathless tabs; only passed when restoring from state
             parent: Optional parent widget
         """
         super().__init__(tab_id, parent)

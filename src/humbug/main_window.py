@@ -522,7 +522,14 @@ class MainWindow(QMainWindow):
 
         # Initialize command registry and register commands
         self._command_registry = ShellCommandRegistry()
-        self._command_registry.register_command(ShellCommandClear(self._column_manager))
+
+        def _clear_shell_history() -> None:
+            for tab in self._column_manager.get_all_tabs():
+                if tab.tool_name() == "shell":
+                    tab.clear_history()
+                    return
+
+        self._command_registry.register_command(ShellCommandClear(_clear_shell_history))
         self._command_registry.register_command(ShellCommandConversation(self._column_manager))
         self._command_registry.register_command(ShellCommandEdit(self._column_manager))
         self._command_registry.register_command(ShellCommandLog(self._column_manager))
@@ -1113,7 +1120,11 @@ class MainWindow(QMainWindow):
         if not self._mindspace_manager.has_mindspace():
             return
 
-        self._column_manager.new_file()
+        self._mindspace_manager.mindspace().contexts().open(
+            context_type="editor",
+            path="",
+            title=EditorTab.next_untitled_title(),
+        )
 
     def _on_mindspace_view_file_opened_in_preview(self, path: str) -> None:
         """Handle click of a preview link from the mindspace view."""

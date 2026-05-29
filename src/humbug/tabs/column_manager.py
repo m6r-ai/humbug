@@ -19,7 +19,6 @@ from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.column_splitter import ColumnSplitter
 from humbug.tabs.column_widget import ColumnWidget
 from humbug.tabs.spacer_drop_widget import SpacerDropWidget
-from humbug.tabs.editor.editor_tab import EditorTab
 from humbug.tabs.tab_bar import TabBar
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_factory_registry import ContextFactory, TabFactory, TabFactoryRegistry
@@ -40,7 +39,6 @@ class ColumnManager(QWidget):
         """Initialize the tab manager."""
         super().__init__(parent)
 
-        self._untitled_count = 0
         self._mindspace_manager = MindspaceManager()
         self._logger = logging.getLogger("ColumnManager")
 
@@ -1453,36 +1451,6 @@ class ColumnManager(QWidget):
                 return tab
 
         return None
-
-    def _find_tab_by_tool_name(self, tool_name: str) -> TabBase | None:
-        """Find the first open tab with the given tool name.
-
-        Args:
-            tool_name: The tool name to match (e.g. 'log', 'shell').
-
-        Returns:
-            The first matching tab if found, None otherwise.
-        """
-        for tab in self._tabs.values():
-            if tab.tool_name() == tool_name:
-                return tab
-
-        return None
-
-    def clear_shell_history(self) -> None:
-        """Clear the shell tab history."""
-        tab = self._find_tab_by_tool_name("shell")
-        if tab:
-            tab.clear_history()
-
-    def new_file(self) -> EditorTab:
-        """Create a new empty editor tab."""
-        self._untitled_count += 1
-        editor = EditorTab("", "", self._untitled_count, self)
-        title = f"Untitled-{self._untitled_count}"
-        self._add_tab(editor, title)
-        self._register_tab_with_registry(editor, title)
-        return editor
 
     def save_state(self) -> Dict:
         """Get current state of all tabs and columns."""
