@@ -497,28 +497,6 @@ class ColumnManager(QWidget):
         if tab is not None:
             self._set_current_tab(tab, False)
 
-    def _register_tab_with_registry(self, tab: TabBase, title: str) -> None:
-        """
-        Register a newly created tab with the context registry.
-
-        Called after _add_tab so the tab is already in self._tabs.
-        _on_context_opened sees the tab already exists, skips Qt creation,
-        and calls _apply_context_models to attach the context model.
-
-        Args:
-            tab: The tab that was just added.
-            title: The display title used for the tab.
-        """
-        if not self._mindspace_manager.has_mindspace():
-            return
-
-        self._mindspace_manager.mindspace().contexts().open(
-            context_type=tab.tool_name(),
-            path=tab.path(),
-            title=title,
-            context_id=tab.tab_id(),
-        )
-
     def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
         """
         Add a tab to a column and set up associated data.
