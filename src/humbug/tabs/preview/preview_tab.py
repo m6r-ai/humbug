@@ -4,7 +4,7 @@ import os
 import logging
 from typing import Any, Dict, List, Tuple, cast
 
-from PySide6.QtCore import QUrl, Signal, QRegularExpression
+from PySide6.QtCore import QUrl, QRegularExpression
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
@@ -26,12 +26,6 @@ from humbug.style_manager import StyleManager
 
 class PreviewTab(TabBase):
     """Preview tab for previewing content."""
-
-    # Signal to request opening a new preview tab
-    open_link_requested = Signal(str)
-
-    # Signal to request editing a file
-    edit_file_requested = Signal(str)
 
     def __init__(
         self,
@@ -71,7 +65,7 @@ class PreviewTab(TabBase):
         self._preview_content_widget = PreviewWidget(path, mindspace_manager, self)
         self._preview_content_widget.status_updated.connect(self.update_status)
         self._preview_content_widget.open_link.connect(self._on_open_link)
-        self._preview_content_widget.edit_file.connect(self.edit_file_requested)
+        self._preview_content_widget.edit_file.connect(self._on_edit_file)
 
         # Connect new signals for file watching
         self._preview_content_widget.content_refreshed.connect(self._on_content_refreshed)
@@ -159,8 +153,22 @@ class PreviewTab(TabBase):
             # Try to resolve the link path
             resolved_path = self._preview_content_widget.resolve_link(cast(str, self._path), url)
             if resolved_path is not None:
-                # It's a local mindspace link - open in preview tab
-                self.open_link_requested.emit(resolved_path)
+                mindspace_manager = MindspaceManager()
+                if mindspace_manager.has_mindspace():
+                    contexts = mindspace_manager.mindspace().contexts()
+                    existing = contexts.get_by_path_and_type(resolved_path, "preview")
+                    if existing:
+                        contexts.focus(existing.context_id)
+
+                    else:
+                        norm_path = os.path.normpath(resolved_path)
+                        contexts.open(
+                            context_type="preview",
+                            path=resolved_path,
+                            title=os.path.basename(norm_path),
+                            is_ephemeral=True,
+                            requester_id=self._tab_id,
+                        )
                 return
 
             # Otherwise, it's an external link - open in browser
@@ -174,6 +182,24 @@ class PreviewTab(TabBase):
                 MessageBoxType.CRITICAL,
                 strings.error_opening_file_title,
                 strings.could_not_open.format(url, str(e)),
+            )
+
+    def _on_edit_file(self, path: str) -> None:
+        """Open a file from the preview in an editor tab."""
+        mindspace_manager = MindspaceManager()
+        if not mindspace_manager.has_mindspace():
+            return
+
+        contexts = mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(path, "editor")
+        if existing:
+            contexts.focus(existing.context_id)
+
+        else:
+            contexts.open(
+                context_type="editor",
+                path=path,
+                title=os.path.basename(path),
             )
 
     def _open_external_url(self, url: str) -> None:

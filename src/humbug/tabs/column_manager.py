@@ -34,8 +34,6 @@ class ColumnManager(QWidget):
 
     status_message = Signal(StatusMessage)
     tab_changed = Signal()
-    open_preview_link_requested = Signal(str)
-    edit_file_requested = Signal(str)
     user_settings_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -1485,14 +1483,6 @@ class ColumnManager(QWidget):
         self._add_tab(editor, title)
         self._register_tab_with_registry(editor, title)
         return editor
-
-    def on_preview_open_link_requested(self, path: str) -> None:
-        """Handle a preview link click."""
-        self.open_preview_link_requested.emit(path)
-
-    def on_preview_edit_file_requested(self, path: str) -> None:
-        """Edit a file from a preview page."""
-        self.edit_file_requested.emit(path)
 
     def save_state(self) -> Dict:
         """Get current state of all tabs and columns."""

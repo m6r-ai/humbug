@@ -2,7 +2,6 @@
 
 import asyncio
 from datetime import datetime, timezone
-import functools
 import json
 import logging
 import os
@@ -69,22 +68,13 @@ from humbug.tabs.log.log_tab import LogTab
 from humbug.tabs.shell.shell_tab import ShellTab
 from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.tabs.preview.preview_tab import PreviewTab
-from humbug.tabs.tab_state import TabState
 from humbug.title_bar import MenuBarDragFilter, WindowControlsWidget
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 
 
-def _wire_preview_tab(cm: 'ColumnManager', state: TabState, parent: QWidget) -> PreviewTab:
-    """Factory for PreviewTab with signal wiring."""
-    tab = PreviewTab.restore_from_state(state, parent)
-    tab.open_link_requested.connect(cm.on_preview_open_link_requested)
-    tab.edit_file_requested.connect(cm.on_preview_edit_file_requested)
-    return tab
-
-
 def _create_conversation_tab(
-    _cm: 'ColumnManager', info: ContextInfo, registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, registry: ContextRegistry, parent: QWidget
 ) -> ConversationTab:
     """Context factory for ConversationTab."""
     transcript = registry.get_model(info.context_id, AITranscriptConversation)
@@ -101,11 +91,11 @@ def _create_conversation_tab(
 
 
 def _create_editor_tab(
-    _cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, registry: ContextRegistry, parent: QWidget
 ) -> EditorTab:
     """Context factory for EditorTab."""
     tab = EditorTab(info.context_id, info.path, None, parent)
-    goto = _registry.get_model(info.context_id, tuple)
+    goto = registry.get_model(info.context_id, tuple)
     if goto is not None:
         tab.goto_line(goto[0], goto[1])
 
@@ -113,38 +103,35 @@ def _create_editor_tab(
 
 
 def _create_terminal_tab(
-    _cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> TerminalTab:
     """Context factory for TerminalTab."""
     return TerminalTab(info.context_id, None, parent)
 
 
 def _create_preview_tab(
-    cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> PreviewTab:
-    """Context factory for PreviewTab with signal wiring."""
-    tab = PreviewTab(info.context_id, info.path, parent)
-    tab.open_link_requested.connect(cm.on_preview_open_link_requested)
-    tab.edit_file_requested.connect(cm.on_preview_edit_file_requested)
-    return tab
+    """Context factory for PreviewTab."""
+    return PreviewTab(info.context_id, info.path, parent)
 
 
 def _create_diff_tab(
-    _cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> DiffTab:
     """Context factory for DiffTab."""
     return DiffTab(info.context_id, info.path, parent)
 
 
 def _create_log_tab(
-    _cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> LogTab:
     """Context factory for LogTab."""
     return LogTab(info.context_id, parent)
 
 
 def _create_shell_tab(
-    _cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> ShellTab:
     """Context factory for ShellTab."""
     return ShellTab(info.context_id, parent)
@@ -465,8 +452,6 @@ class MainWindow(QMainWindow):
         # Create tab manager in splitter
         self._column_manager = ColumnManager(self)
         self._column_manager.tab_changed.connect(self._on_column_manager_tab_changed)
-        self._column_manager.open_preview_link_requested.connect(self._on_column_manager_open_preview_link_requested)
-        self._column_manager.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
         self._column_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
         self._splitter.addWidget(self._column_manager)
 
@@ -477,16 +462,16 @@ class MainWindow(QMainWindow):
         cm.register_tab_factory("log", LogTab.restore_from_state)
         cm.register_tab_factory("shell", ShellTab.restore_from_state)
         cm.register_tab_factory("terminal", TerminalTab.restore_from_state)
-        cm.register_tab_factory("preview", functools.partial(_wire_preview_tab, cm))
+        cm.register_tab_factory("preview", PreviewTab.restore_from_state)
         cm.register_tab_factory("diff", DiffTab.restore_from_state)
 
-        cm.register_context_factory("conversation", functools.partial(_create_conversation_tab, cm))
-        cm.register_context_factory("editor", functools.partial(_create_editor_tab, cm))
-        cm.register_context_factory("terminal", functools.partial(_create_terminal_tab, cm))
-        cm.register_context_factory("preview", functools.partial(_create_preview_tab, cm))
-        cm.register_context_factory("diff", functools.partial(_create_diff_tab, cm))
-        cm.register_context_factory("log", functools.partial(_create_log_tab, cm))
-        cm.register_context_factory("shell", functools.partial(_create_shell_tab, cm))
+        cm.register_context_factory("conversation", _create_conversation_tab)
+        cm.register_context_factory("editor", _create_editor_tab)
+        cm.register_context_factory("terminal", _create_terminal_tab)
+        cm.register_context_factory("preview", _create_preview_tab)
+        cm.register_context_factory("diff", _create_diff_tab)
+        cm.register_context_factory("log", _create_log_tab)
+        cm.register_context_factory("shell", _create_shell_tab)
 
         # Set initial mindspace view width
         self._splitter.setSizes([300, self.width() - 300])
@@ -1658,26 +1643,6 @@ class MainWindow(QMainWindow):
                 strings.conversation_error_title,
                 strings.error_opening_conversation.format(path, str(e))
             )
-
-    def _on_column_manager_open_preview_link_requested(self, path: str) -> None:
-        """Handle requests to open a preview page."""
-        contexts = self._mindspace_manager.mindspace().contexts()
-        existing = contexts.get_by_path_and_type(path, "preview")
-        if existing:
-            contexts.focus(existing.context_id)
-            return
-
-        norm_path = os.path.normpath(path)
-        contexts.open(
-            context_type="preview",
-            path=path,
-            title=os.path.basename(norm_path),
-            is_ephemeral=True,  # preview links open as ephemeral
-        )
-
-    def _on_column_manager_edit_file_requested(self, path: str) -> None:
-        """Handle requests to open a file in the editor."""
-        self._open_file_path(path, False)
 
     def _on_close_tab(self) -> None:
         """Close the current tab."""
