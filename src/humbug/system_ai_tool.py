@@ -276,6 +276,7 @@ class SystemAITool(AITool):
         # Return existing tab if this file is already open
         existing = self._mindspace.contexts().get_by_path(file_path)
         if existing is not None:
+            self._column_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             relative_path = self._mindspace.get_relative_path(file_path)
             return AIToolResult(
@@ -355,6 +356,7 @@ class SystemAITool(AITool):
         # Return existing tab if this conversation is already open
         existing = self._mindspace.contexts().get_by_path(conversation_path)
         if existing is not None:
+            self._column_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             return AIToolResult(
                 id=tool_call.id, name="system",
@@ -528,6 +530,7 @@ class SystemAITool(AITool):
         # Return existing tab if this path is already open in a preview
         existing = self._mindspace.contexts().get_by_path(preview_path)
         if existing is not None:
+            self._column_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             relative_path = self._mindspace.get_relative_path(preview_path)
             location = relative_path if relative_path else "."
@@ -588,6 +591,7 @@ class SystemAITool(AITool):
         # Return existing tab if this file is already open in a diff tab
         existing = self._mindspace.contexts().get_by_path(file_path)
         if existing is not None:
+            self._column_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             relative_path = self._mindspace.get_relative_path(file_path)
             return AIToolResult(

@@ -1121,6 +1121,7 @@ class MainWindow(QMainWindow):
         existing = contexts.get_by_path_and_type(path, "preview")
         if existing:
             contexts.focus(existing.context_id)
+
         else:
             context_id = contexts.open(
                 context_type="preview",
@@ -1140,6 +1141,7 @@ class MainWindow(QMainWindow):
             if not ephemeral:
                 self._column_manager.make_tab_permanent(existing.context_id)
             contexts.focus(existing.context_id)
+
         else:
             context_id = contexts.open(
                 context_type="diff",
