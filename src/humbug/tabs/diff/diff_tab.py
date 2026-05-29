@@ -4,11 +4,13 @@ import logging
 import os
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
-from PySide6.QtCore import QRegularExpression, Signal
+from PySide6.QtCore import QRegularExpression
 
 from git import GitNotFoundError, GitNotRepositoryError, find_repo_root
 
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.tabs.editor.editor_context import EditorContext
 from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage
@@ -20,9 +22,6 @@ from humbug.tabs.diff.diff_widget import DiffWidget
 
 class DiffTab(TabBase):
     """Tab showing a side-by-side diff between the working tree and HEAD for one file."""
-
-    open_file_requested = Signal(str, int, int)
-    open_preview_requested = Signal(str)
 
     def __init__(self, tab_id: str, path: str, parent: QWidget | None = None) -> None:
         """
@@ -56,8 +55,8 @@ class DiffTab(TabBase):
 
         self._diff_widget = DiffWidget(path, self)
         self._diff_widget.status_updated.connect(self.update_status)
-        self._diff_widget.open_in_editor_requested.connect(lambda line, col: self.open_file_requested.emit(self._path, line, col))
-        self._diff_widget.open_in_preview_requested.connect(lambda: self.open_preview_requested.emit(self._path))
+        self._diff_widget.open_in_editor_requested.connect(self._open_in_editor)
+        self._diff_widget.open_in_preview_requested.connect(self._open_in_preview)
         layout.addWidget(self._diff_widget)
 
         if path:
@@ -68,6 +67,46 @@ class DiffTab(TabBase):
         self._vcs_poller.status_changed.connect(self._on_vcs_status_changed)
 
         self.update_status()
+
+    def _open_in_editor(self, line: int, column: int) -> None:
+        """Open this tab's file in an editor tab, navigating to the given line and column."""
+        mindspace_manager = MindspaceManager()
+        if not mindspace_manager.has_mindspace():
+            return
+
+        contexts = mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(self._path, "editor")
+        if existing:
+            contexts.focus(existing.context_id)
+            editor_context = contexts.get_model(existing.context_id, EditorContext)
+            if editor_context is not None:
+                editor_context.goto_line(line, column)
+
+        else:
+            contexts.open(
+                context_type="editor",
+                path=self._path,
+                title=os.path.basename(self._path),
+                initial_model=(line, column),
+            )
+
+    def _open_in_preview(self) -> None:
+        """Open this tab's file in a preview tab."""
+        mindspace_manager = MindspaceManager()
+        if not mindspace_manager.has_mindspace():
+            return
+
+        contexts = mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(self._path, "preview")
+        if existing:
+            contexts.focus(existing.context_id)
+
+        else:
+            contexts.open(
+                context_type="preview",
+                path=self._path,
+                title=os.path.basename(self._path),
+            )
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""

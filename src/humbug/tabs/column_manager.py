@@ -1494,36 +1494,6 @@ class ColumnManager(QWidget):
         """Edit a file from a preview page."""
         self.edit_file_requested.emit(path)
 
-    def on_diff_open_file_requested(self, path: str, line: int, column: int) -> None:
-        """Open a file in an editor tab from a diff tab context menu."""
-        contexts = self._mindspace_manager.mindspace().contexts()
-        existing = contexts.get_by_path_and_type(path, "editor")
-        if existing:
-            contexts.focus(existing.context_id)
-            context_id = existing.context_id
-        else:
-            context_id = contexts.open(
-                context_type="editor",
-                path=path,
-                title=os.path.basename(path),
-            )
-        editor_tab = cast(EditorTab, self.get_tab_by_id(context_id))
-        if editor_tab is not None:
-            editor_tab.goto_line(line, column)
-
-    def on_diff_open_preview_requested(self, path: str) -> None:
-        """Open a file in a preview tab from a diff tab context menu."""
-        contexts = self._mindspace_manager.mindspace().contexts()
-        existing = contexts.get_by_path_and_type(path, "preview")
-        if existing:
-            contexts.focus(existing.context_id)
-        else:
-            contexts.open(
-                context_type="preview",
-                path=path,
-                title=os.path.basename(path),
-            )
-
     def save_state(self) -> Dict:
         """Get current state of all tabs and columns."""
         tab_columns = []

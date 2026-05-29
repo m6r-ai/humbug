@@ -83,14 +83,6 @@ def _wire_preview_tab(cm: 'ColumnManager', state: TabState, parent: QWidget) -> 
     return tab
 
 
-def _wire_diff_tab(cm: 'ColumnManager', state: TabState, parent: QWidget) -> DiffTab:
-    """Factory for DiffTab with signal wiring."""
-    tab = DiffTab.restore_from_state(state, parent)
-    tab.open_file_requested.connect(cm.on_diff_open_file_requested)
-    tab.open_preview_requested.connect(cm.on_diff_open_preview_requested)
-    return tab
-
-
 def _create_conversation_tab(
     _cm: 'ColumnManager', info: ContextInfo, registry: ContextRegistry, parent: QWidget
 ) -> ConversationTab:
@@ -101,6 +93,7 @@ def _create_conversation_tab(
             info.context_id, transcript.path(), parent,
             ai_transcript_conversation=transcript,
         )
+
     else:
         tab = ConversationTab(info.context_id, info.path, parent)
 
@@ -111,7 +104,12 @@ def _create_editor_tab(
     _cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> EditorTab:
     """Context factory for EditorTab."""
-    return EditorTab(info.context_id, info.path, None, parent)
+    tab = EditorTab(info.context_id, info.path, None, parent)
+    goto = _registry.get_model(info.context_id, tuple)
+    if goto is not None:
+        tab.goto_line(goto[0], goto[1])
+
+    return tab
 
 
 def _create_terminal_tab(
@@ -132,13 +130,10 @@ def _create_preview_tab(
 
 
 def _create_diff_tab(
-    cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    _cm: 'ColumnManager', info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> DiffTab:
-    """Context factory for DiffTab with signal wiring."""
-    tab = DiffTab(info.context_id, info.path, parent)
-    tab.open_file_requested.connect(cm.on_diff_open_file_requested)
-    tab.open_preview_requested.connect(cm.on_diff_open_preview_requested)
-    return tab
+    """Context factory for DiffTab."""
+    return DiffTab(info.context_id, info.path, parent)
 
 
 def _create_log_tab(
@@ -475,8 +470,7 @@ class MainWindow(QMainWindow):
         self._column_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
         self._splitter.addWidget(self._column_manager)
 
-        # Register tab factories for session restore.  Each factory wraps
-        # restore_from_state and wires any tab-type-specific signals.
+        # Register tab factories for session restore and context-open events.
         cm = self._column_manager
         cm.register_tab_factory("conversation", ConversationTab.restore_from_state)
         cm.register_tab_factory("editor", EditorTab.restore_from_state)
@@ -484,7 +478,7 @@ class MainWindow(QMainWindow):
         cm.register_tab_factory("shell", ShellTab.restore_from_state)
         cm.register_tab_factory("terminal", TerminalTab.restore_from_state)
         cm.register_tab_factory("preview", functools.partial(_wire_preview_tab, cm))
-        cm.register_tab_factory("diff", functools.partial(_wire_diff_tab, cm))
+        cm.register_tab_factory("diff", DiffTab.restore_from_state)
 
         cm.register_context_factory("conversation", functools.partial(_create_conversation_tab, cm))
         cm.register_context_factory("editor", functools.partial(_create_editor_tab, cm))
