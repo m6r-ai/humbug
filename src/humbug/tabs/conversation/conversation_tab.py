@@ -15,6 +15,7 @@ from mindspace.context.context_registry import ContextRegistry
 from mindspace.context.conversation_context import ConversationContext
 
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage
 from humbug.tabs.conversation.conversation_settings_dialog import ConversationSettingsDialog
@@ -28,7 +29,6 @@ from humbug.style_manager import StyleManager
 class ConversationTab(TabBase):
     """Unified conversation tab."""
 
-    fork_from_index_requested = Signal(int)
     conversation_completed = Signal(dict)  # Signal for conversation completion
 
     def __init__(
@@ -72,7 +72,7 @@ class ConversationTab(TabBase):
             path, self,
             ai_transcript_conversation=ai_transcript_conversation
         )
-        self._conversation_widget.fork_from_index_requested.connect(self.fork_from_index_requested)
+        self._conversation_widget.fork_from_index_requested.connect(self.fork_from_index)
         self._conversation_widget.conversation_settings_requested.connect(
             self.show_conversation_settings_dialog
         )
@@ -99,6 +99,58 @@ class ConversationTab(TabBase):
     def tab_title_from_path(self) -> str:
         """Return the conversation title derived from the filename (without extension)."""
         return os.path.splitext(os.path.basename(self._path))[0] if self._path else ""
+
+    def _get_fork_file_name(self) -> str:
+        """Generate a unique fork filename based on this conversation's path."""
+        parent_path = os.path.dirname(self._path)
+        name, ext = os.path.splitext(os.path.basename(self._path))
+
+        fork_suffix = " - fork"
+        if name.endswith(fork_suffix):
+            base_name = name[:-len(fork_suffix)]
+
+        elif " - fork (" in name and name.endswith(")"):
+            fork_index = name.rfind(" - fork (")
+            base_name = name[:fork_index] if fork_index != -1 else name
+
+        else:
+            base_name = name
+
+        counter = 1
+        while True:
+            if counter == 1:
+                candidate = f"{base_name}{fork_suffix}{ext}"
+
+            else:
+                candidate = f"{base_name}{fork_suffix} ({counter}){ext}"
+
+            if not os.path.exists(os.path.join(parent_path, candidate)):
+                return os.path.join(parent_path, candidate)
+
+            counter += 1
+
+    def fork_from_index(self, message_index: int) -> None:
+        """Fork this conversation from message_index into a new tab."""
+        mindspace_manager = MindspaceManager()
+        if not mindspace_manager.has_mindspace():
+            return
+
+        source_messages = self.conversation_history().get_messages()
+        source_index = min(message_index, len(source_messages))
+        forked_history = self.ai_conversation().fork_history(source_index)
+
+        new_path = self._get_fork_file_name()
+        new_ai_conversation = AITranscriptConversation(new_path)
+        new_ai_conversation.set_conversation_history(forked_history)
+
+        fork_title = os.path.splitext(os.path.basename(new_path))[0]
+        mindspace_manager.mindspace().contexts().open(
+            context_type="conversation",
+            path=new_path,
+            title=fork_title,
+            initial_model=new_ai_conversation,
+            requester_id=self._tab_id,
+        )
 
     def on_modified_changed(self, modified: bool) -> None:
         """Conversation tabs become permanent on first modification; nothing extra needed here."""

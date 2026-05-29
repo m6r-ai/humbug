@@ -49,7 +49,6 @@ from humbug.status_message import StatusMessage
 from humbug.system_ai_tool import SystemAITool
 from humbug.settings_dialog import SettingsDialog, SECTION_AI_BACKENDS
 from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.conversation.conversation_ai_tool import ConversationAITool
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.editor.editor_ai_tool import EditorAITool
@@ -76,13 +75,6 @@ from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 
 
-def _wire_conversation_tab(cm: 'ColumnManager', state: TabState, parent: QWidget) -> ConversationTab:
-    """Factory for ConversationTab with signal wiring."""
-    tab = ConversationTab.restore_from_state(state, parent)
-    tab.fork_from_index_requested.connect(cm.on_conversation_fork_from_index_requested)
-    return tab
-
-
 def _wire_preview_tab(cm: 'ColumnManager', state: TabState, parent: QWidget) -> PreviewTab:
     """Factory for PreviewTab with signal wiring."""
     tab = PreviewTab.restore_from_state(state, parent)
@@ -100,9 +92,9 @@ def _wire_diff_tab(cm: 'ColumnManager', state: TabState, parent: QWidget) -> Dif
 
 
 def _create_conversation_tab(
-    cm: 'ColumnManager', info: ContextInfo, registry: ContextRegistry, parent: QWidget
+    _cm: 'ColumnManager', info: ContextInfo, registry: ContextRegistry, parent: QWidget
 ) -> ConversationTab:
-    """Context factory for ConversationTab with signal wiring."""
+    """Context factory for ConversationTab."""
     transcript = registry.get_model(info.context_id, AITranscriptConversation)
     if transcript is not None:
         tab = ConversationTab(
@@ -112,7 +104,6 @@ def _create_conversation_tab(
     else:
         tab = ConversationTab(info.context_id, info.path, parent)
 
-    tab.fork_from_index_requested.connect(cm.on_conversation_fork_from_index_requested)
     return tab
 
 
@@ -479,7 +470,6 @@ class MainWindow(QMainWindow):
         # Create tab manager in splitter
         self._column_manager = ColumnManager(self)
         self._column_manager.tab_changed.connect(self._on_column_manager_tab_changed)
-        self._column_manager.fork_from_index_requested.connect(self._on_column_manager_fork_from_index_requested)
         self._column_manager.open_preview_link_requested.connect(self._on_column_manager_open_preview_link_requested)
         self._column_manager.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
         self._column_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
@@ -488,7 +478,7 @@ class MainWindow(QMainWindow):
         # Register tab factories for session restore.  Each factory wraps
         # restore_from_state and wires any tab-type-specific signals.
         cm = self._column_manager
-        cm.register_tab_factory("conversation", functools.partial(_wire_conversation_tab, cm))
+        cm.register_tab_factory("conversation", ConversationTab.restore_from_state)
         cm.register_tab_factory("editor", EditorTab.restore_from_state)
         cm.register_tab_factory("log", LogTab.restore_from_state)
         cm.register_tab_factory("shell", ShellTab.restore_from_state)
@@ -1673,20 +1663,6 @@ class MainWindow(QMainWindow):
                 MessageBoxType.CRITICAL,
                 strings.conversation_error_title,
                 strings.error_opening_conversation.format(path, str(e))
-            )
-
-    def _on_column_manager_fork_from_index_requested(self, index: int) -> None:
-        """Handle fork conversation requests from a specific index."""
-        try:
-            self._column_manager.fork_conversation_from_index(index)
-
-        except ColumnManagerError as e:
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.conversation_error_title,
-                strings.error_forking_conversation.format(str(e))
             )
 
     def _on_column_manager_open_preview_link_requested(self, path: str) -> None:

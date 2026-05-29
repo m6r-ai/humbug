@@ -18,9 +18,7 @@ from humbug.style_manager import StyleManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.column_splitter import ColumnSplitter
 from humbug.tabs.column_widget import ColumnWidget
-from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.spacer_drop_widget import SpacerDropWidget
-from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.editor.editor_tab import EditorTab
 from humbug.tabs.tab_bar import TabBar
 from humbug.tabs.tab_base import TabBase
@@ -36,7 +34,6 @@ class ColumnManager(QWidget):
 
     status_message = Signal(StatusMessage)
     tab_changed = Signal()
-    fork_from_index_requested = Signal(int)
     open_preview_link_requested = Signal(str)
     edit_file_requested = Signal(str)
     user_settings_requested = Signal()
@@ -1488,84 +1485,6 @@ class ColumnManager(QWidget):
         self._add_tab(editor, title)
         self._register_tab_with_registry(editor, title)
         return editor
-
-    def on_conversation_fork_from_index_requested(self, message_index: int) -> None:
-        """Handle the fork conversation from index request signal."""
-        self.fork_from_index_requested.emit(message_index)
-
-    def _get_fork_file_name(self, original_path: str) -> str:
-        """
-        Generate a unique fork name based on the original conversation file.
-
-        Args:
-            original_path: Path to the original conversation file
-
-        Returns:
-            New filename with " - fork" suffix that doesn't conflict
-        """
-        parent_path = os.path.dirname(original_path)
-        original_filename = os.path.basename(original_path)
-
-        # Split filename and extension (.conv)
-        name, ext = os.path.splitext(original_filename)
-
-        # Check if the name already ends with " - fork" or " - fork (n)"
-        fork_suffix = " - fork"
-        if name.endswith(fork_suffix):
-            # Remove the existing " - fork" suffix to get the base name
-            base_name = name[:-len(fork_suffix)]
-
-        elif " - fork (" in name and name.endswith(")"):
-            # Handle case like "filename - fork (2)" - extract base name
-            fork_index = name.rfind(" - fork (")
-            if fork_index != -1:
-                base_name = name[:fork_index]
-
-            else:
-                base_name = name
-
-        else:
-            # No existing fork suffix
-            base_name = name
-
-        # Generate unique fork name
-        counter = 1
-        while True:
-            if counter == 1:
-                candidate_name = f"{base_name}{fork_suffix}{ext}"
-
-            else:
-                candidate_name = f"{base_name}{fork_suffix} ({counter}){ext}"
-
-            full_path = os.path.join(parent_path, candidate_name)
-            if not os.path.exists(full_path):
-                return full_path
-
-            counter += 1
-
-    def fork_conversation_from_index(self, message_index: int | None) -> None:
-        """Create a new conversation tab with the history from an index in the current conversation."""
-        try:
-            conversation_tab = self.get_current_tab()
-            if not isinstance(conversation_tab, ConversationTab):
-                return
-
-            requester_id = conversation_tab.tab_id()
-            new_path = self._get_fork_file_name(conversation_tab.path())
-            new_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
-
-            source_index = len(conversation_tab.conversation_history().get_messages()) if message_index is None else message_index
-            new_history = conversation_tab.ai_conversation().fork_history(source_index)
-            new_tab.set_conversation_history(new_history)
-
-            new_tab.fork_from_index_requested.connect(self.on_conversation_fork_from_index_requested)
-            fork_title = os.path.splitext(os.path.basename(new_tab.path()))[0]
-            self._add_tab(new_tab, fork_title, requester_id)
-            self._register_tab_with_registry(new_tab, fork_title)
-
-        except ConversationError as e:
-            self._logger.exception("Failed to fork conversation: %s", str(e))
-            raise ColumnManagerError("Failed to fork conversation tab") from e
 
     def on_preview_open_link_requested(self, path: str) -> None:
         """Handle a preview link click."""
