@@ -615,20 +615,21 @@ class MainWindow(QMainWindow):
 
         # Update tab-specific actions
         column_manager = self._column_manager
-        self._save_action.setEnabled(column_manager.can_save_file())
-        self._save_as_action.setEnabled(column_manager.can_save_file_as())
-        self._close_tab_action.setEnabled(column_manager.can_close_tab())
-        self._undo_action.setEnabled(column_manager.can_undo())
-        self._redo_action.setEnabled(column_manager.can_redo())
-        self._cut_action.setEnabled(column_manager.can_cut())
-        self._copy_action.setEnabled(column_manager.can_copy())
-        self._paste_action.setEnabled(column_manager.can_paste())
-        self._find_action.setEnabled(column_manager.can_show_find())
-        self._find_replace_action.setEnabled(column_manager.can_show_find_replace())
-        self._goto_line_action.setEnabled(column_manager.can_show_goto_line())
+        tab = column_manager.get_current_tab()
+        self._save_action.setEnabled(tab is not None and tab.can_save())
+        self._save_as_action.setEnabled(tab is not None and tab.can_save_as())
+        self._close_tab_action.setEnabled(tab is not None)
+        self._undo_action.setEnabled(tab is not None and tab.can_undo())
+        self._redo_action.setEnabled(tab is not None and tab.can_redo())
+        self._cut_action.setEnabled(tab is not None and tab.can_cut())
+        self._copy_action.setEnabled(tab is not None and tab.can_copy())
+        self._paste_action.setEnabled(tab is not None and tab.can_paste())
+        self._find_action.setEnabled(tab is not None)
+        self._find_replace_action.setEnabled(tab is not None and tab.can_show_find_replace())
+        self._goto_line_action.setEnabled(tab is not None and tab.can_show_goto_line())
         self._global_search_action.setEnabled(has_mindspace)
-        self._submit_message_action.setEnabled(column_manager.can_submit_message())
-        self._conv_settings_action.setEnabled(column_manager.can_show_conversation_settings_dialog())
+        self._submit_message_action.setEnabled(tab is not None and tab.can_submit())
+        self._conv_settings_action.setEnabled(tab is not None and tab.can_show_conversation_settings_dialog())
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor()
@@ -644,8 +645,8 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setEnabled(column_manager.can_merge_column(not left_to_right))
         self._swap_column_left_action.setEnabled(column_manager.can_swap_column(left_to_right))
         self._swap_column_right_action.setEnabled(column_manager.can_swap_column(not left_to_right))
-        self._next_message_action.setEnabled(column_manager.can_navigate_next_message())
-        self._previous_message_action.setEnabled(column_manager.can_navigate_previous_message())
+        self._next_message_action.setEnabled(tab is not None and tab.can_navigate_next_message())
+        self._previous_message_action.setEnabled(tab is not None and tab.can_navigate_previous_message())
         self._update_navigation_action_text()
 
     def _on_language_changed(self) -> None:
@@ -656,6 +657,7 @@ class MainWindow(QMainWindow):
         left_to_right = self._language_manager.left_to_right()
         if left_to_right:
             app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
         else:
             app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
 
@@ -736,7 +738,8 @@ class MainWindow(QMainWindow):
     def _update_navigation_action_text(self) -> None:
         """Set the next/previous action labels to match the current tab type."""
         strings = self._language_manager.strings()
-        if self._column_manager.is_navigating_as_hunks():
+        tab = self._column_manager.get_current_tab()
+        if tab is not None and tab.is_navigating_as_hunks():
             self._next_message_action.setText(strings.next_hunk)
             self._previous_message_action.setText(strings.previous_hunk)
 
@@ -1017,28 +1020,44 @@ class MainWindow(QMainWindow):
         return self._column_manager.close_all_tabs()
 
     def _undo(self) -> None:
-        self._column_manager.undo()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.undo()
 
     def _redo(self) -> None:
-        self._column_manager.redo()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.redo()
 
     def _cut(self) -> None:
-        self._column_manager.cut()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.cut()
 
     def _copy(self) -> None:
-        self._column_manager.copy()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.copy()
 
     def _paste(self) -> None:
-        self._column_manager.paste()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.paste()
 
     def _find(self) -> None:
-        self._column_manager.show_find()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.show_find()
 
     def _find_replace(self) -> None:
-        self._column_manager.show_find_replace()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.show_find_replace()
 
     def _goto_line(self) -> None:
-        self._column_manager.show_goto_line()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.show_goto_line()
 
     def _show_global_search(self) -> None:
         """Open the mindspace global-search pane."""
@@ -1280,7 +1299,11 @@ class MainWindow(QMainWindow):
     def _on_save_file(self) -> None:
         """Save the current file."""
         try:
-            path = self._column_manager.save_file()
+            tab = self._column_manager.get_current_tab()
+            if tab is None or not tab.can_save():
+                return
+            tab.save()
+            path = tab.path()
             self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
 
         except Exception as e:
@@ -1295,7 +1318,11 @@ class MainWindow(QMainWindow):
     def _on_save_file_as(self) -> None:
         """Save the current file with a new name."""
         try:
-            path = self._column_manager.save_file_as()
+            tab = self._column_manager.get_current_tab()
+            if tab is None or not tab.can_save_as():
+                return
+            tab.save_as()
+            path = tab.path()
             self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
 
         except Exception as e:
@@ -1651,7 +1678,7 @@ class MainWindow(QMainWindow):
             self._logger.error("No current tab to close")
             return
 
-        self._column_manager.close_tab()
+        self._column_manager.close_tab_by_id(tab.tab_id())
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
             f"User closed tab\nTab ID: {tab.tab_id()}"
@@ -1659,15 +1686,21 @@ class MainWindow(QMainWindow):
 
     def _on_submit_message(self) -> None:
         """Handle message submission."""
-        self._column_manager.submit_message()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.submit()
 
     def _on_navigate_next_message(self) -> None:
         """Navigate to the next message in conversation."""
-        self._column_manager.navigate_next_message()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.navigate_next_message()
 
     def _on_navigate_previous_message(self) -> None:
         """Navigate to the previous message in conversation."""
-        self._column_manager.navigate_previous_message()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.navigate_previous_message()
 
     def _on_show_settings_dialog(self, initial_section: str | None = None) -> None:
         """Show the unified settings dialog."""
@@ -1742,12 +1775,15 @@ class MainWindow(QMainWindow):
 
     def _on_show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
-        self._column_manager.show_conversation_settings_dialog()
+        tab = self._column_manager.get_current_tab()
+        if tab is not None:
+            tab.show_conversation_settings_dialog()
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle global key events."""
         if event.key() == Qt.Key.Key_Escape:
-            if self._column_manager.handle_esc_key():
+            tab = self._column_manager.get_current_tab()
+            if tab is not None and tab.handle_esc_key():
                 event.accept()
                 return
 
