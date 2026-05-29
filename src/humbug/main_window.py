@@ -450,7 +450,7 @@ class MainWindow(QMainWindow):
         self._splitter.addWidget(self._mindspace_view)
 
         # Create tab manager in splitter
-        self._column_manager = ColumnManager(self)
+        self._column_manager = ColumnManager(self._open_path_from_drop, self)
         self._column_manager.tab_changed.connect(self._on_column_manager_tab_changed)
         self._column_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
         self._splitter.addWidget(self._column_manager)
@@ -1186,6 +1186,24 @@ class MainWindow(QMainWindow):
             tab = self._column_manager.get_tab_by_id(context_id)
             if tab is not None:
                 tab.navigate_to_search_match(search_text, line_number, message_id, case_sensitive=case_sensitive, regexp=regexp)
+
+    def _open_path_from_drop(self, source_type: str, path: str) -> str | None:
+        """Adapter for ColumnManager's open_path callable: maps drag-drop source strings to MindspaceViewType.
+
+        Args:
+            source_type: Source view type string from mime data ('conversations', 'vcs', 'preview', 'files').
+            path: File path to open.
+
+        Returns:
+            The context_id of the opened or focused tab, or None if skipped/failed.
+        """
+        source_map = {
+            "conversations": MindspaceViewType.CONVERSATIONS,
+            "vcs": MindspaceViewType.VCS,
+            "preview": MindspaceViewType.PREVIEW,
+        }
+        source = source_map.get(source_type, MindspaceViewType.FILES)
+        return self._open_by_view_type(source, path, ephemeral=False)
 
     def _open_by_view_type(self, source: MindspaceViewType, path: str, ephemeral: bool) -> str | None:
         """Open a file with the appropriate tab type based on mindspace view type.

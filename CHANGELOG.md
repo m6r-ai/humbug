@@ -7,6 +7,8 @@ New features:
 Bug fixes:
 
 - Resolved a problem that could leave the cursor in the wrong column after the UI resized a terminal.
+- On moving tabs between columns we could end up placing the tab in the wrong position in the new column.
+- System shell and AI tool operations could end up leaving ephemeral tabs as ephemeral instead of making them permanent.
 
 Internal structure changes:
 

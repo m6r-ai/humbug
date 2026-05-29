@@ -124,13 +124,7 @@ class ColumnWidget(QTabWidget):
 
             tab_id = mime_data.decode()
 
-            # Map the drop position to the tab bar
-            pos = self.tabBar().mapFromParent(event.pos())
-            target_index = self.tabBar().tabAt(pos)
-
-            # If dropped past the last tab, append
-            if target_index == -1:
-                target_index = self.count()
+            target_index = self._drop_insertion_index(event.pos())
 
             # Emit signal with drop info for tab manager to handle
             self.tab_dropped.emit(tab_id, self, target_index)
@@ -158,13 +152,7 @@ class ColumnWidget(QTabWidget):
 
                 source_type = source_data.decode()
 
-            # Map the drop position to the tab bar
-            pos = self.tabBar().mapFromParent(event.pos())
-            target_index = self.tabBar().tabAt(pos)
-
-            # If dropped past the last tab, append
-            if target_index == -1:
-                target_index = self.count()
+            target_index = self._drop_insertion_index(event.pos())
 
             # Emit signal with path info for column manager to handle
             self.path_dropped.emit(source_type, path, self, target_index)

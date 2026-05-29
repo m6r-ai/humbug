@@ -1,6 +1,5 @@
 import logging
-import os
-from typing import Dict, List, cast
+from typing import Callable, Dict, List, cast
 
 from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer
@@ -10,10 +9,8 @@ from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.context.context_info import ContextInfo
 from mindspace.context.context_registry import ContextEvent
 
-from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.status_message import StatusMessage
-from humbug.message_box import MessageBox, MessageBoxType
 from humbug.style_manager import StyleManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.column_splitter import ColumnSplitter
@@ -35,7 +32,11 @@ class ColumnManager(QWidget):
     tab_changed = Signal()
     user_settings_requested = Signal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        open_path: Callable[[str, str], str | None],
+        parent: QWidget | None = None
+    ) -> None:
         """Initialize the tab manager."""
         super().__init__(parent)
 
@@ -48,7 +49,7 @@ class ColumnManager(QWidget):
 
         self.setObjectName("ColumnManager")
 
-        self._language_manager = LanguageManager()
+        self._open_path = open_path
 
         # Track MRU order for each column
         self._column_mru_order: Dict[ColumnWidget, List[str]] = {}
@@ -521,7 +522,7 @@ class ColumnManager(QWidget):
             context_id=tab.tab_id(),
         )
 
-    def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget, background: bool = False) -> None:
+    def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
         """
         Add a tab to a column and set up associated data.
 
@@ -529,7 +530,6 @@ class ColumnManager(QWidget):
             tab: Tab widget to add
             title: Initial title for the tab
             column: Target column
-            background: If True, do not change the active column or move keyboard focus.
         """
         tool_tip = tab.path()
         if tool_tip:
@@ -612,11 +612,10 @@ class ColumnManager(QWidget):
 
         self._active_column = self._tab_columns[0]
 
-        context_id = self._open_context_by_source_type(source_type, path)
-        if context_id is None:
-            return
-
-        self._stack.setCurrentWidget(self._columns_widget)
+        existing = self._find_existing_tab(source_type, path)
+        context_id = existing.tab_id() if existing else self._open_path(source_type, path)
+        if context_id is not None:
+            self._stack.setCurrentWidget(self._columns_widget)
 
     def _on_left_spacer_path_dropped(self, source_type: str, path: str) -> None:
         """Handle a path dropped onto the left spacer, opening it in a new leftmost column."""
@@ -624,22 +623,21 @@ class ColumnManager(QWidget):
         self._active_column = new_column
         self._stack.setCurrentWidget(self._columns_widget)
 
-        existing_tab = self._find_existing_tab_by_source_type(source_type, path)
-        if existing_tab:
-            source_column = self._find_column_for_tab(existing_tab)
-            if source_column:
-                self._move_tab_between_columns(existing_tab, source_column, new_column)
-                self.show_all_columns()
-                self._update_tabs()
-                return
+        existing = self._find_existing_tab(source_type, path)
+        if existing is not None:
+            source_column = self._find_column_for_tab(existing)
+            if source_column and source_column != new_column:
+                self._move_tab_between_columns(existing, source_column, new_column)
 
-        context_id = self._open_context_by_source_type(source_type, path)
-        if context_id is not None:
             self._update_tabs()
-            return
 
-        if new_column.count() == 0 and len(self._tab_columns) > 1:
-            self._remove_column_and_resize(0, new_column)
+        else:
+            context_id = self._open_path(source_type, path)
+            if context_id is not None:
+                self._update_tabs()
+
+            elif new_column.count() == 0 and len(self._tab_columns) > 1:
+                self._remove_column_and_resize(0, new_column)
 
     def _on_right_spacer_path_dropped(self, source_type: str, path: str) -> None:
         """Handle a path dropped onto the right spacer, opening it in a new rightmost column."""
@@ -648,22 +646,20 @@ class ColumnManager(QWidget):
         self._active_column = new_column
         self._stack.setCurrentWidget(self._columns_widget)
 
-        existing_tab = self._find_existing_tab_by_source_type(source_type, path)
-        if existing_tab:
-            source_column = self._find_column_for_tab(existing_tab)
-            if source_column:
-                self._move_tab_between_columns(existing_tab, source_column, new_column)
-                self.show_all_columns()
-                self._update_tabs()
-                return
+        existing = self._find_existing_tab(source_type, path)
+        if existing is not None:
+            source_column = self._find_column_for_tab(existing)
+            if source_column and source_column != new_column:
+                self._move_tab_between_columns(existing, source_column, new_column)
 
-        context_id = self._open_context_by_source_type(source_type, path)
-        if context_id is not None:
             self._update_tabs()
-            return
+        else:
+            context_id = self._open_path(source_type, path)
+            if context_id is not None:
+                self._update_tabs()
 
-        if new_column.count() == 0 and len(self._tab_columns) > 1:
-            self._remove_column_and_resize(new_index, new_column)
+            elif new_column.count() == 0 and len(self._tab_columns) > 1:
+                self._remove_column_and_resize(new_index, new_column)
 
     def _on_left_spacer_tab_dropped(self, tab_id: str) -> None:
         """Handle a tab dropped onto the left spacer, moving it to a new leftmost column."""
@@ -747,11 +743,17 @@ class ColumnManager(QWidget):
 
         source_index = source_column.indexOf(tab)
 
-        # Don't process if dropped on itself
-        if (source_column == target_column and (target_index - 1 <= source_index <= target_index)):
-            return
-
-        self._move_tab_between_columns(tab, source_column, target_column)
+        if source_column == target_column:
+            # Simple reorder within the same column — no teardown needed
+            adjusted_index = target_index if source_index > target_index else target_index - 1
+            if adjusted_index != source_index:
+                target_column.tabBar().moveTab(source_index, adjusted_index)
+        else:
+            self._move_tab_between_columns(tab, source_column, target_column)
+            new_tab = self._tabs.get(tab_id)
+            current_index = target_column.indexOf(new_tab) if new_tab else -1
+            if current_index not in (-1, target_index):
+                target_column.tabBar().moveTab(current_index, target_index)
 
         self._active_column = target_column
         self._update_tabs()
@@ -767,32 +769,46 @@ class ColumnManager(QWidget):
         Handle a file being dropped into a column.
 
         Args:
+            source_type: Source view type if available
             path: Path dropped
             target_column: Column where the file was dropped
             target_index: Target position in the column
-            source_type: Source view type if available
         """
         self._active_column = target_column
 
-        existing_tab = self._find_existing_tab_by_source_type(source_type, path)
-        if existing_tab:
-            source_column = self._find_column_for_tab(existing_tab)
-            if source_column and source_column != target_column:
-                self._move_tab_between_columns(existing_tab, source_column, target_column)
-                self.show_all_columns()
-                self._update_tabs()
-                return
-
-        context_id = self._open_context_by_source_type(source_type, path)
+        target_column_index = self._tab_columns.index(target_column)
+        existing = self._find_existing_tab(source_type, path)
+        context_id = existing.tab_id() if existing else self._open_path(source_type, path)
         if context_id is None:
             return
 
-        tab = self.get_tab_by_id(context_id)
-        current_index = target_column.indexOf(tab) if tab else -1
-        if current_index != target_index:
-            target_column.tabBar().moveTab(current_index, target_index)
+        if existing is not None:
+            source_column = self._find_column_for_tab(existing)
+            if source_column and source_column != target_column:
+                self._move_tab_between_columns(existing, source_column, target_column)
 
+        self.reposition_tab(context_id, target_column_index, target_index)
         self._update_tabs()
+
+    def reposition_tab(self, tab_id: str, column_index: int, target_index: int) -> None:
+        """Reposition a tab to a specific index within a specific column.
+
+        Args:
+            tab_id: ID of the tab to reposition.
+            column_index: Index of the column containing the tab.
+            target_index: Target position within the column's tab bar.
+        """
+        if column_index < 0 or column_index >= len(self._tab_columns):
+            return
+
+        column = self._tab_columns[column_index]
+        tab = self._tabs.get(tab_id)
+        if tab is None:
+            return
+
+        current_index = column.indexOf(tab)
+        if current_index not in (-1, target_index):
+            column.tabBar().moveTab(current_index, target_index)
 
     def _update_tab_bar_for_label_change(self, tab: TabBase) -> None:
         """
@@ -1027,7 +1043,7 @@ class ColumnManager(QWidget):
             self._stack.setCurrentWidget(self._columns_widget)
 
         target_column = self._get_target_column_for_new_tab(requester_id)
-        self._add_tab_to_column(tab, title, target_column, background=bool(requester_id))
+        self._add_tab_to_column(tab, title, target_column)
 
         # Close any ephemeral tab in target column because we've just added a new one
         self._close_ephemeral_tab_in_column(target_column, tab)
@@ -1365,78 +1381,6 @@ class ColumnManager(QWidget):
         """
         return self._tabs.get(tab_id)
 
-    def _find_existing_tab_by_source_type(self, source_type: str, path: str) -> TabBase | None:
-        """Find an already-open tab matching the given source type and path.
-
-        Args:
-            source_type: Source view type string (conversations, files, vcs, preview)
-            path: File path to look up
-
-        Returns:
-            The existing tab if found, None otherwise
-        """
-        if source_type == "conversations":
-            abs_path = self._mindspace_manager.get_absolute_path(path)
-            return self._find_tab_by_path("conversation", abs_path)
-
-        if source_type == "vcs":
-            return self._find_tab_by_path("diff", path)
-
-        if source_type == "preview":
-            return self._find_tab_by_path("preview", path)
-
-        return self._find_tab_by_path("editor", path)
-
-    def _open_context_by_source_type(self, source_type: str, path: str) -> str | None:
-        """Open a context via the registry, routing to the correct type based on source view.
-
-        Args:
-            source_type: Source view type string ('conversations', 'files', 'vcs', 'preview').
-            path: File path to open.
-
-        Returns:
-            The context_id of the opened or focused context, or None if skipped/failed.
-        """
-        if source_type == "conversations":
-            context_type = "conversation"
-            path = self._mindspace_manager.get_absolute_path(path)
-
-        elif source_type == "vcs":
-            context_type = "diff"
-
-        elif source_type == "preview":
-            context_type = "preview"
-
-        else:
-            context_type = "editor"
-
-        if os.path.isdir(path) and context_type != "preview":
-            return None
-
-        try:
-            contexts = self._mindspace_manager.mindspace().contexts()
-            existing = contexts.get_by_path_and_type(path, context_type)
-            if existing:
-                contexts.focus(existing.context_id)
-                return existing.context_id
-
-            return contexts.open(
-                context_type=context_type,
-                path=path,
-                title=os.path.basename(path),
-            )
-
-        except Exception as e:
-            self._logger.error("Failed to open dropped file '%s': %s", path, str(e))
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.error_opening_file_title,
-                strings.could_not_open.format(path, str(e))
-            )
-            return None
-
     def _find_tab_by_path(self, tool_name: str, path: str) -> TabBase | None:
         """Find an open tab by tool name and path.
 
@@ -1452,6 +1396,33 @@ class ColumnManager(QWidget):
                 return tab
 
         return None
+
+    def _find_existing_tab(self, source_type: str, path: str) -> TabBase | None:
+        """Find an already-open tab matching the given drag-drop source type and path.
+
+        Handles the source_type to tool_name mapping and any path transformation
+        needed (e.g. relative→absolute for conversations), then delegates to
+        _find_tab_by_path.  Does not open, focus, or modify anything.
+
+        Args:
+            source_type: Source view type string ('conversations', 'vcs', 'preview', 'files').
+            path: File path as carried in the drop mime data.
+
+        Returns:
+            The matching TabBase if found, None otherwise.
+        """
+        if source_type == "conversations":
+            return self._find_tab_by_path(
+                "conversation", self._mindspace_manager.get_absolute_path(path)
+            )
+
+        if source_type == "vcs":
+            return self._find_tab_by_path("diff", path)
+
+        if source_type == "preview":
+            return self._find_tab_by_path("preview", path)
+
+        return self._find_tab_by_path("editor", path)
 
     def save_state(self) -> Dict:
         """Get current state of all tabs and columns."""
