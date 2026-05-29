@@ -529,7 +529,7 @@ class ColumnManager(QWidget):
             tab: Tab widget to add
             title: Initial title for the tab
             column: Target column
-            background: If True, do not make this tab current or change the active column.
+            background: If True, do not change the active column or move keyboard focus.
         """
         tool_tip = tab.path()
         if tool_tip:
@@ -553,11 +553,10 @@ class ColumnManager(QWidget):
             is_ephemeral=tab.is_ephemeral(),
             is_file_missing=tab.is_path_missing(),
         )
-        if not background:
-            focus_widget = QApplication.focusWidget()
-            column.setCurrentWidget(tab)
-            if focus_widget is not None:
-                focus_widget.setFocus()
+        focus_widget = QApplication.focusWidget()
+        column.setCurrentWidget(tab)
+        if focus_widget is not None:
+            focus_widget.setFocus()
 
         self._update_mru_order(tab, column)
         QTimer.singleShot(0, self.show_all_columns)
