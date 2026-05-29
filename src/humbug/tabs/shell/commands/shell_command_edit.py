@@ -1,30 +1,17 @@
 """Command for opening or creating files in an editor tab from the system shell."""
 
-import logging
 import os
 from typing import List
 
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from syntax import Token, TokenType
 
-from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
 
 
 class ShellCommandEdit(ShellCommand):
     """Command to open or create a file in an editor tab."""
-
-    def __init__(self, column_manager: ColumnManager) -> None:
-        """
-        Initialize edit command.
-
-        Args:
-            open_file_callback: Callback to open an existing file
-        """
-        super().__init__()
-        self._column_manager = column_manager
-        self._logger = logging.getLogger("ShellCommandEdit")
 
     def name(self) -> str:
         """Get the name of the command."""
@@ -72,9 +59,6 @@ class ShellCommandEdit(ShellCommand):
                     )
                     return False
 
-        current_tab = self._column_manager.get_current_tab()
-        assert current_tab is not None
-
         contexts = self._mindspace.contexts()
         existing = contexts.get_by_path_and_type(full_path, "editor")
         if existing:
@@ -85,7 +69,7 @@ class ShellCommandEdit(ShellCommand):
                 context_type="editor",
                 path=full_path,
                 title=os.path.basename(full_path),
-                requester_id=current_tab.tab_id(),
+                requester_id=self._requester_id,
             )
 
         self._mindspace.add_interaction(

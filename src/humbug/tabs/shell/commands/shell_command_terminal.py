@@ -4,23 +4,12 @@ from typing import List
 
 from syntax import Token, TokenType
 
-from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
 
 
 class ShellCommandTerminal(ShellCommand):
     """Command to create a new terminal tab."""
-
-    def __init__(self, column_manager: ColumnManager) -> None:
-        """
-        Initialize the command.
-
-        Args:
-            create_terminal_callback: Function to call to create a new terminal
-        """
-        super().__init__()
-        self._column_manager = column_manager
 
     def name(self) -> str:
         return "terminal"
@@ -41,13 +30,10 @@ class ShellCommandTerminal(ShellCommand):
         Returns:
             True if command executed successfully, False otherwise
         """
-        current_tab = self._column_manager.get_current_tab()
-        assert current_tab is not None
-
         self._mindspace.contexts().open(
             context_type="terminal",
             title="Terminal",
-            requester_id=current_tab.tab_id(),
+            requester_id=self._requester_id,
         )
 
         self._history_manager.add_message(

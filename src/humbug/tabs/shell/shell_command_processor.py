@@ -80,12 +80,13 @@ class ShellCommandProcessor:
 
         return unescaped
 
-    def process_command(self, command_text: str) -> None:
+    def process_command(self, command_text: str, requester_id: str = "") -> None:
         """
         Process a command string and execute appropriate action.
 
         Args:
             command_text: The command text to process
+            requester_id: Tab ID of the shell tab executing the command
         """
         command_text = command_text.strip()
         if not command_text:
@@ -114,6 +115,7 @@ class ShellCommandProcessor:
             return
 
         try:
+            command.set_requester_id(requester_id)
             command.execute(self._current_tokens, command_text)
 
         except Exception as e:

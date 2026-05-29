@@ -530,12 +530,12 @@ class MainWindow(QMainWindow):
                     return
 
         self._command_registry.register_command(ShellCommandClear(_clear_shell_history))
-        self._command_registry.register_command(ShellCommandConversation(self._column_manager))
-        self._command_registry.register_command(ShellCommandEdit(self._column_manager))
-        self._command_registry.register_command(ShellCommandLog(self._column_manager))
-        self._command_registry.register_command(ShellCommandTerminal(self._column_manager))
-        self._command_registry.register_command(ShellCommandPreview(self._column_manager))
-        self._command_registry.register_command(ShellCommandDiff(self._column_manager))
+        self._command_registry.register_command(ShellCommandConversation())
+        self._command_registry.register_command(ShellCommandEdit())
+        self._command_registry.register_command(ShellCommandLog())
+        self._command_registry.register_command(ShellCommandTerminal())
+        self._command_registry.register_command(ShellCommandPreview())
+        self._command_registry.register_command(ShellCommandDiff())
 
         # Register help command last so it can see all other commands
         self._command_registry.register_command(ShellCommandHelp(self._command_registry))

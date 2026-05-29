@@ -33,16 +33,19 @@ class ShellWidget(QWidget):
 
     def __init__(
         self,
+        tab_id: str,
         parent: QWidget | None = None,
     ) -> None:
         """
         Initialize the shell widget.
 
         Args:
+            tab_id: Tab ID of the owning shell tab, used as requester when opening new tabs
             parent: Optional parent widget
         """
         super().__init__(parent)
         self._logger = logging.getLogger("ShellWidget")
+        self._tab_id = tab_id
 
         # Create shell history manager
         self._command_registry = ShellCommandRegistry()
@@ -316,7 +319,7 @@ class ShellWidget(QWidget):
             command_text: The command text to process
         """
         # Process the command (this will add the user message and any responses to shell history)
-        self._command_processor.process_command(command_text)
+        self._command_processor.process_command(command_text, self._tab_id)
 
         # Refresh the messages display
         self.load_messages()

@@ -1,29 +1,16 @@
 """Command for opening pages in a preview tab from the system shell."""
 
-import logging
 import os
 from typing import List
 
 from syntax import Token, TokenType
 
-from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
 
 
 class ShellCommandPreview(ShellCommand):
     """Command to open a preview tab."""
-
-    def __init__(self, column_manager: ColumnManager) -> None:
-        """
-        Initialize preview command.
-
-        Args:
-            open_file_callback: Callback to open an existing file
-        """
-        super().__init__()
-        self._column_manager = column_manager
-        self._logger = logging.getLogger("ShellCommandPreview")
 
     def name(self) -> str:
         """Get the name of the command."""
@@ -65,9 +52,6 @@ class ShellCommandPreview(ShellCommand):
                     )
                     return False
 
-        current_tab = self._column_manager.get_current_tab()
-        assert current_tab is not None
-
         contexts = self._mindspace.contexts()
         existing = contexts.get_by_path_and_type(full_path, "preview")
         if existing:
@@ -77,7 +61,7 @@ class ShellCommandPreview(ShellCommand):
                 context_type="preview",
                 path=full_path,
                 title=os.path.basename(full_path),
-                requester_id=current_tab.tab_id(),
+                requester_id=self._requester_id,
             )
 
         self._history_manager.add_message(

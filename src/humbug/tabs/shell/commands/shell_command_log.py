@@ -1,28 +1,15 @@
 """Command for opening the mindspace log."""
 
-import logging
 from typing import List
 
 from syntax import Token
 
-from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
 
 
 class ShellCommandLog(ShellCommand):
     """Command to open the mindspace log."""
-
-    def __init__(self, column_manager: ColumnManager) -> None:
-        """
-        Initialize the command.
-
-        Args:
-            process_clear_command_callback: Callback to process the clear command
-        """
-        super().__init__()
-        self._column_manager = column_manager
-        self._logger = logging.getLogger("ShellCommandLog")
 
     def name(self) -> str:
         """Get the name of the command."""
@@ -46,9 +33,6 @@ class ShellCommandLog(ShellCommand):
         Returns:
             True if command executed successfully, False otherwise
         """
-        current_tab = self._column_manager.get_current_tab()
-        assert current_tab is not None
-
         contexts = self._mindspace.contexts()
         existing = next((i for i in contexts.list_all() if i.context_type == "log"), None)
         if existing:
@@ -57,7 +41,7 @@ class ShellCommandLog(ShellCommand):
             contexts.open(
                 context_type="log",
                 title="Mindspace Log",
-                requester_id=current_tab.tab_id(),
+                requester_id=self._requester_id,
             )
 
         self._history_manager.add_message(

@@ -55,7 +55,7 @@ class ShellTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create shell widget
-        self._shell_widget = ShellWidget(self)
+        self._shell_widget = ShellWidget(self._tab_id, self)
         self._shell_widget.status_updated.connect(self.update_status)
         layout.addWidget(self._shell_widget)
 

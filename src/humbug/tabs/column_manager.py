@@ -414,6 +414,7 @@ class ColumnManager(QWidget):
         """Wire or unwire registry callbacks when a mindspace opens or closes."""
         if self._mindspace_manager.has_mindspace():
             self._subscribe_to_registry()
+
         else:
             self._unsubscribe_from_registry()
 
@@ -463,6 +464,7 @@ class ColumnManager(QWidget):
         registry = self._mindspace_manager.mindspace().contexts()
         try:
             new_tab = self._tab_factory_registry.create_from_context(info, registry, self)
+
         except Exception:
             self._logger.exception(
                 "Failed to create tab for context %s (%s)", context_id, info.context_type

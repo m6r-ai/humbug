@@ -1,7 +1,6 @@
 """Command for creating a new conversation tab from the system shell."""
 
 from datetime import datetime, timezone
-import logging
 import os
 from typing import List, Dict
 
@@ -12,26 +11,17 @@ from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from syntax import Token, TokenType
 
-from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
-
 
 
 class ShellCommandConversation(ShellCommand):
     """Command to create a new conversation tab."""
 
-    def __init__(self, column_manager: ColumnManager) -> None:
-        """
-        Initialize conversation command.
-
-        Args:
-            column_manager: The column manager for creating conversation tabs
-        """
+    def __init__(self) -> None:
+        """Initialize conversation command."""
         super().__init__()
-        self._column_manager = column_manager
         self._ai_manager = AIManager()
-        self._logger = logging.getLogger("ShellCommandConversation")
 
     def name(self) -> str:
         """Get the name of the command."""
@@ -154,10 +144,7 @@ class ShellCommandConversation(ShellCommand):
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
-        current_tab = self._column_manager.get_current_tab()
-        assert current_tab is not None
-
-        requester_id = current_tab.tab_id()
+        requester_id = self._requester_id
         try:
             self._mindspace.ensure_mindspace_dir("conversations")
             timestamp = datetime.now(timezone.utc)

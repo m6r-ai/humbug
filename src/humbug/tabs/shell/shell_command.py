@@ -17,13 +17,19 @@ class ShellCommand:
     def __init__(self) -> None:
         """
         Initialize base shell command.
-
-        Args:
-            history_manager: Shell history manager for command output
         """
         self._logger = logging.getLogger(self.__class__.__name__)
         self._history_manager = ShellHistoryManager()
         self._mindspace = MindspaceManager().mindspace()
+        self._requester_id = ""
+
+    def set_requester_id(self, requester_id: str) -> None:
+        """Set the tab ID of the shell tab executing this command.
+
+        Args:
+            requester_id: Tab ID of the shell tab, used as requester when opening new tabs.
+        """
+        self._requester_id = requester_id
 
     def name(self) -> str:
         """
