@@ -32,6 +32,7 @@ modules:
       - ai
       - ai_transcript_conversation
       - ai_tool
+      - mindspace
     external_dependencies:
       - "standard_library"
 

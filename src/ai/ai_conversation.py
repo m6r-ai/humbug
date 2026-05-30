@@ -622,6 +622,7 @@ class AIConversation:
                         tool_result.continuation = None
                         tool_result.content = continuation.content
                         tool_result.context = continuation.context
+                        tool_result.error = continuation.error
 
                         # Create tool result message
                         tool_result_dict = tool_result.to_dict()

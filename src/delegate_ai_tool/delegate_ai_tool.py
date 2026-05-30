@@ -1,9 +1,11 @@
 """Delegate AI tool backend."""
 
 import asyncio
+import os
 import json
 import logging
-from typing import Any, Callable, Dict
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 from ai import (
     AIConversation, AIConversationEvent, AIConversationParent,
@@ -16,6 +18,9 @@ from ai_tool import (
     AIToolResult, AIToolCall, AIToolOperationDefinition
 )
 from ai_transcript_conversation import AITranscriptConversation
+from mindspace.mindspace import Mindspace
+from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.context.conversation_context import ConversationContext
 
 
 class DelegateAITool(AITool):
@@ -30,44 +35,18 @@ class DelegateAITool(AITool):
 
     def __init__(
         self,
-        generate_conversation_path: Callable[[], str],
-        compute_session_id: Callable[[str], str],
-        resolve_session_path: Callable[[str], str],
-        get_default_settings: Callable[[], AIConversationSettings],
-        log_interaction: Callable[[str, str], None],
-        on_conversation_created: Callable[[AITranscriptConversation, str, AIConversation], None],
-        on_conversation_completed: Callable[[str], None],
+        mindspace: Mindspace,
     ) -> None:
         """
         Initialize the delegate AI tool.
 
         Args:
-            generate_conversation_path: Returns a new unique absolute path for a child
-                conversation transcript file.
-            compute_session_id: Converts an absolute transcript path to the project-relative
-                session_id string that will be returned to the AI.
-            resolve_session_path: Validates a project-relative session_id and returns
-                the corresponding absolute path.  Raises AIToolExecutionError if the
-                session_id is invalid or outside the project root.
-            get_default_settings: Returns the current default AIConversationSettings
-                (model, provider, temperature, etc.) from the active project.
-            log_interaction: Logs a message to the project interaction log.
-                Receives (level_str, message) where level_str is e.g. "info".
-            on_conversation_created: Called synchronously with (child_transcript,
-                session_path, parent_conversation) before the prompt is submitted.
-                The frontend must register any event callbacks it needs before returning.
-            on_conversation_completed: Called with (session_path) after the child
-                conversation finishes. The frontend should close or flush its display.
+            mindspace: The active mindspace.
         """
-        self._generate_conversation_path = generate_conversation_path
-        self._compute_session_id = compute_session_id
-        self._resolve_session_path = resolve_session_path
-        self._get_default_settings = get_default_settings
-        self._log_interaction = log_interaction
-        self._on_conversation_created = on_conversation_created
-        self._on_conversation_completed = on_conversation_completed
+        self._mindspace = mindspace
         self._ai_manager = AIManager()
         self._logger = logging.getLogger("DelegateAITool")
+        self._context_ids: Dict[str, str] = {}
 
     def get_definition(self) -> AIToolDefinition:
         """Get the tool definition."""
@@ -130,6 +109,13 @@ class DelegateAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
+                    name="provider",
+                    type="string",
+                    description="Provider to use for the delegated task. Required when the model name "
+                        "is offered by more than one provider",
+                    required=False
+                ),
+                AIToolParameter(
                     name="temperature",
                     type="number",
                     description="Temperature setting 0.0-1.0 for creativity vs precision",
@@ -157,7 +143,7 @@ class DelegateAITool(AITool):
                 name="delegate",
                 handler=self._delegate,
                 extract_context=None,
-                allowed_parameters={"task_prompt", "session_id", "model", "temperature", "reasoning_effort"},
+                allowed_parameters={"task_prompt", "session_id", "model", "provider", "temperature", "reasoning_effort"},
                 required_parameters={"task_prompt"},
                 description="Delegate a task to a specialized child AI instance"
             )
@@ -188,6 +174,7 @@ class DelegateAITool(AITool):
         task_prompt = self._get_required_str_value("task_prompt", arguments)
         session_id_arg = self._get_optional_str_value("session_id", arguments)
         model = self._get_optional_str_value("model", arguments)
+        provider = self._get_optional_str_value("provider", arguments)
         temperature = arguments.get("temperature")
         reasoning_effort_arg = self._get_optional_str_value("reasoning_effort", arguments)
 
@@ -213,23 +200,37 @@ class DelegateAITool(AITool):
         effective_model: str = ""
         effective_provider: str = ""
 
+        if provider and not model:
+            raise AIToolExecutionError("'provider' requires 'model' to also be specified")
+
         if model:
             ai_backends = self._ai_manager.get_backends()
             available_keys = list(AIConversationSettings.iter_models_by_backends(ai_backends))
-            available_display = [
-                AIConversationSettings.get_display_name(m, p) for (m, p) in available_keys
+            candidate_keys = [
+                k for k in available_keys if AIConversationSettings.get_display_name(k[0], k[1]) == model
             ]
-            matched_key = next(
-                (k for k in available_keys if AIConversationSettings.get_display_name(k[0], k[1]) == model),
-                None
-            )
-            if matched_key is None:
+            if provider:
+                candidate_keys = [k for k in candidate_keys if k[1] == provider]
+
+            if not candidate_keys:
+                available_display = [
+                    AIConversationSettings.get_display_name(m, p) for (m, p) in available_keys
+                ]
                 raise AIToolExecutionError(
-                    f"Model '{model}' is not available. Available models: {', '.join(available_display)}"
+                    f"Model '{model}'"
+                    + (f" with provider '{provider}'" if provider else "")
+                    + f" is not available. Available models: {', '.join(available_display)}"
                 )
 
-            effective_model, effective_provider = matched_key
-            model_config = AIConversationSettings.MODELS.get(matched_key)
+            if len(candidate_keys) > 1:
+                providers = [k[1] for k in candidate_keys]
+                raise AIToolExecutionError(
+                    f"Model '{model}' is available from multiple providers: {', '.join(providers)}. "
+                    f"Specify the 'provider' parameter to disambiguate."
+                )
+
+            effective_model, effective_provider = candidate_keys[0]
+            model_config = AIConversationSettings.MODELS.get(candidate_keys[0])
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
@@ -262,7 +263,8 @@ class DelegateAITool(AITool):
         # Request user authorization
         session_info = "continue a previous session" if session_path == "current" else \
                        "continue an existing session" if session_path else "start a new session"
-        model_info = f" using model '{model}'" if model else " using the default model"
+        model_info = f" using model '{model}'" + (f" ({provider})" if provider else "") \
+            if model else " using the default model"
         temp_info = f" with temperature {temperature}" if temperature is not None else ""
         effort_info = f" with reasoning effort '{reasoning_effort}'" if reasoning_effort else ""
         context = (
@@ -284,7 +286,7 @@ class DelegateAITool(AITool):
 
         # Fall back to default temperature if not specified
         if temperature is None:
-            temperature = self._get_default_settings().temperature
+            temperature = self._get_default_temperature()
 
         try:
             return await self._run_delegation(
@@ -365,15 +367,15 @@ class DelegateAITool(AITool):
             transcript_path = session_path
 
         else:
-            transcript_path = self._generate_conversation_path()
+            transcript_path = self._new_conversation_path()
 
         ai_transcript_conversation = AITranscriptConversation(transcript_path, child_ai_conversation)
 
-        relative_session_id = self._compute_session_id(transcript_path)
+        relative_session_id = self._mindspace.get_mindspace_relative_path(transcript_path) or transcript_path
 
         # Notify the listener synchronously so it can attach display callbacks
         # before we submit the prompt (and events start firing).
-        self._on_conversation_created(
+        self._open_conversation_context(
             ai_transcript_conversation,
             relative_session_id,
             parent_ai_conversation
@@ -385,8 +387,8 @@ class DelegateAITool(AITool):
         await child_ai_conversation.submit_message(requester, task_prompt)
 
         session_info = "continuing session" if continuing_session else "new session"
-        self._log_interaction(
-            "info",
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
             f"AI delegated task ({session_info})\nsession ID: {relative_session_id}\n"
             f"prompt: '{task_prompt[:50]}...'"
         )
@@ -446,7 +448,7 @@ class DelegateAITool(AITool):
         child_ai_conversation.unregister_callback(AIConversationEvent.ERROR, on_error)
 
         # Notify the listener that this session is done
-        self._on_conversation_completed(session_id)
+        self._close_conversation_context(session_id)
 
         # Build the result from the child's message history
         messages = child_ai_conversation.get_conversation_history().get_messages()
@@ -455,8 +457,8 @@ class DelegateAITool(AITool):
         if not last_message or not last_message.completed:
             error_msg = "AI response was terminated early" if last_message else "No messages in conversation"
             self._logger.warning("Delegated AI task failed: %s", error_msg)
-            self._log_interaction(
-                "info",
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.INFO,
                 f"Delegated AI task failed\nsession ID: {session_id}\nerror: {error_msg}"
             )
             return AIToolResult(
@@ -470,8 +472,8 @@ class DelegateAITool(AITool):
         if last_message.source == AIMessageSource.SYSTEM:
             error_msg = last_message.content
             self._logger.warning("Delegated AI task failed: %s", error_msg)
-            self._log_interaction(
-                "info",
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.INFO,
                 f"Delegated AI task failed\nsession ID: {session_id}\nerror: {error_msg}"
             )
             return AIToolResult(
@@ -492,8 +494,8 @@ class DelegateAITool(AITool):
             "usage": usage_info
         }
 
-        self._log_interaction(
-            "info",
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
             f"Delegated AI task completed\nsession ID: {session_id}\n"
             f"response: {response_content[:50]}..."
         )
@@ -543,3 +545,105 @@ class DelegateAITool(AITool):
         child_ai_conversation.get_conversation_history().set_parent(
             AIConversationParent(message_id=parent_message_id, tool_call_id=tool_call.id)
         )
+
+    def _resolve_session_path(self, session_id: str) -> str:
+        """
+        Validate a mindspace-relative session_id and return its absolute path.
+
+        Args:
+            session_id: Mindspace-relative path to an existing transcript file.
+
+        Returns:
+            Absolute path to the transcript file.
+
+        Raises:
+            AIToolExecutionError: If the session_id is invalid, attempts path traversal,
+                or does not refer to an existing file within the mindspace.
+        """
+        if not session_id:
+            raise AIToolExecutionError("session_id must not be empty")
+
+        if session_id.startswith("/") or session_id.startswith(os.sep):
+            session_id = session_id[1:]
+
+        normalized = os.path.normpath(session_id)
+        if normalized.startswith(".."):
+            raise AIToolExecutionError(f"session_id attempts path traversal: {session_id}")
+
+        abs_path = self._mindspace.get_absolute_path(normalized)
+        relative = self._mindspace.get_mindspace_relative_path(abs_path)
+        if relative is None:
+            raise AIToolExecutionError(f"session_id is outside mindspace boundaries: {session_id}")
+
+        if not os.path.isfile(abs_path):
+            raise AIToolExecutionError(f"session_id does not refer to an existing file: {session_id}")
+
+        return abs_path
+
+    def _new_conversation_path(self) -> str:
+        """
+        Generate a unique absolute path for a new child conversation transcript.
+
+        Returns:
+            Absolute path for the new transcript file.
+        """
+        timestamp = datetime.now(timezone.utc)
+        title = "dAI-" + timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+        filename = os.path.join("conversations", f"{title}.conv")
+        self._mindspace.ensure_mindspace_dir("conversations")
+        return self._mindspace.get_absolute_path(filename)
+
+    def _get_default_temperature(self) -> float | None:
+        """
+        Return the default temperature from the current mindspace settings.
+
+        Returns:
+            Temperature value, or None if no mindspace settings are available.
+        """
+        settings = self._mindspace.settings()
+        return settings.temperature if settings is not None else None
+
+    def _open_conversation_context(
+        self,
+        child_transcript: AITranscriptConversation,
+        session_id: str,
+        parent_conversation: AIConversation
+    ) -> None:
+        """
+        Open a context for the child conversation and record its context_id.
+
+        Args:
+            child_transcript: The child transcript conversation.
+            session_id: Mindspace-relative session identifier.
+            parent_conversation: The parent AIConversation.
+        """
+        parent_context_id: str | None = None
+        for info in self._mindspace.contexts().list_all():
+            model = self._mindspace.contexts().get_model(info.context_id, ConversationContext)
+            if model is not None and model.ai_transcript_conversation().inner_conversation() is parent_conversation:
+                parent_context_id = info.context_id
+                break
+
+        try:
+            title = os.path.splitext(os.path.basename(child_transcript.path()))[0]
+            context_id = self._mindspace.contexts().open(
+                context_type="conversation",
+                path=child_transcript.path(),
+                title=title,
+                initial_model=child_transcript,
+                requester_id=parent_context_id or "",
+            )
+            self._context_ids[session_id] = context_id
+        except Exception:
+            pass
+
+    def _close_conversation_context(self, session_id: str) -> None:
+        """
+        Close the context opened for a completed child conversation.
+
+        Args:
+            session_id: Mindspace-relative session identifier.
+        """
+        context_id = self._context_ids.pop(session_id, None)
+        if context_id:
+            self._mindspace.contexts().close(context_id)

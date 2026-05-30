@@ -20,6 +20,7 @@ from ai.ai_conversation_settings import AIConversationSettings
 from ai_tool import AIToolManager
 from ai_transcript_conversation import AITranscriptConversation
 from clock_ai_tool.clock_ai_tool import ClockAITool
+from delegate_ai_tool import DelegateAITool
 from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 from help_ai_tool.help_ai_tool import HelpAITool
@@ -32,7 +33,6 @@ from mindspace.context.context_registry import ContextRegistry
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
-from humbug.delegate_ai_tool import _make_delegate_ai_tool
 from humbug.exception_notifier import get_exception_notifier
 from humbug.update_checker import UpdateChecker
 from humbug.update_dialog import UpdateDialog
@@ -550,7 +550,7 @@ class MainWindow(QMainWindow):
         )
         self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
         self._ai_tool_manager.register_tool(
-            _make_delegate_ai_tool(mindspace), "Delegate: delegates tasks to specialized AI instances"
+            DelegateAITool(mindspace), "Delegate: delegates tasks to specialized AI instances"
         )
         self._ai_tool_manager.register_tool(
             FileSystemAITool(

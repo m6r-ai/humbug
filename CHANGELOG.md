@@ -4,11 +4,15 @@
 
 New features:
 
+- When delegating a task to an AI, if the AI model is available from more than one backend provider, the tool now tells the AI
+  and asks it to select the correct one.
+
 Bug fixes:
 
 - Resolved a problem that could leave the cursor in the wrong column after the UI resized a terminal.
 - On moving tabs between columns we could end up placing the tab in the wrong position in the new column.
 - System shell and AI tool operations could end up leaving ephemeral tabs as ephemeral instead of making them permanent.
+- If a task was delegated to an AI that generated an HTTP error, the error wasn't propagated to the caller.
 
 Internal structure changes:
 
