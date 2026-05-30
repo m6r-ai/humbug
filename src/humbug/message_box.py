@@ -11,7 +11,7 @@ from PySide6.QtGui import QPixmap, QKeyEvent
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.min_height_text_edit import MinHeightTextEdit
+from humbug.widgets import MinHeightTextEdit
 from humbug.style_manager import StyleManager
 
 

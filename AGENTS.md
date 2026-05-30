@@ -104,14 +104,23 @@ AI tool implementation for tool documentation.
 Main application and GUI components.
 
 **Subdirectories:**
+- `column/` - Column manager, tab bar, and chrome widgets
+- `conversation_tab/` - Conversation tab implementation
+- `diff_tab/` - Diff tab implementation
+- `editor_tab/` - Editor tab implementation
 - `file_watcher/` - Singleton file/directory polling service
 - `icons/` - Application icon pack
 - `language/` - Localization support
-- `mindspace/` - Qt GUI for mindspace sidebar (conversations, files, preview, search, vcs)
+- `log_tab/` - Log tab implementation
+- `markdown/` - Markdown and code rendering stack
+- `mindspace/` - Qt GUI for mindspace sidebar
+- `preview_tab/` - Preview tab implementation
 - `settings/` - Application and user settings UI widgets
-- `tabs/` - Tab framework and all tab implementations (conversations, editors, terminals, preview, log, diff, shell)
+- `shell_tab/` - Shell tab implementation
+- `tab/` - Abstract tab contract
+- `terminal_tab/` - Terminal tab implementation
 - `user/` - User management
-- `widgets/` - Small reusable Qt widgets
+- `widgets/` - Reusable Qt widgets
 
 ### `src/mindspace/`
 Front-end-agnostic mindspace model. Manages the mindspace path, settings, search,

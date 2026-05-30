@@ -26,7 +26,7 @@ from ai.ai_backend import AIBackend
 from humbug.exception_notifier import get_exception_notifier
 from humbug.main_window import MainWindow
 from humbug.style_manager import StyleManager
-from humbug.tabs.tab_base import TabBase
+from humbug.tab import TabBase
 from humbug.version import CURRENT_VERSION
 
 

@@ -25,8 +25,7 @@ from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
 
-from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.column_manager_error import ColumnManagerError
+from humbug.column import ColumnManager, ColumnManagerError
 from humbug.version import CURRENT_VERSION
 
 

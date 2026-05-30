@@ -37,38 +37,38 @@ from terminal_ai_tool.terminal_ai_tool import TerminalAITool
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
+from humbug.column import ColumnManager
+from humbug.conversation_tab.conversation_tab import ConversationTab
+from humbug.diff_tab.diff_tab import DiffTab
+from humbug.editor_tab.editor_tab import EditorTab
 from humbug.exception_notifier import get_exception_notifier
-from humbug.update_checker import UpdateChecker
-from humbug.update_dialog import UpdateDialog
-from humbug.message_box import MessageBox, MessageBoxType
 from humbug.language.language_manager import LanguageManager
+from humbug.log_tab.log_tab import LogTab
+from humbug.message_box import MessageBox, MessageBoxType
 from humbug.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_view import MindspaceView
 from humbug.main_window_splitter import MainWindowSplitter
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
+from humbug.preview_tab.preview_tab import PreviewTab
+from humbug.settings_dialog import SettingsDialog, SECTION_AI_BACKENDS
+from humbug.shell_tab.commands.shell_command_clear import ShellCommandClear
+from humbug.shell_tab.commands.shell_command_conversation import ShellCommandConversation
+from humbug.shell_tab.commands.shell_command_diff import ShellCommandDiff
+from humbug.shell_tab.commands.shell_command_edit import ShellCommandEdit
+from humbug.shell_tab.commands.shell_command_help import ShellCommandHelp
+from humbug.shell_tab.commands.shell_command_log import ShellCommandLog
+from humbug.shell_tab.commands.shell_command_terminal import ShellCommandTerminal
+from humbug.shell_tab.commands.shell_command_preview import ShellCommandPreview
+from humbug.shell_tab.shell_command_registry import ShellCommandRegistry
+from humbug.shell_tab.shell_tab import ShellTab
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.status_message import StatusMessage
 from humbug.system_ai_tool import SystemAITool
-from humbug.settings_dialog import SettingsDialog, SECTION_AI_BACKENDS
-from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.conversation.conversation_tab import ConversationTab
-from humbug.tabs.shell.commands.shell_command_clear import ShellCommandClear
-from humbug.tabs.shell.commands.shell_command_conversation import ShellCommandConversation
-from humbug.tabs.shell.commands.shell_command_diff import ShellCommandDiff
-from humbug.tabs.shell.commands.shell_command_edit import ShellCommandEdit
-from humbug.tabs.shell.commands.shell_command_help import ShellCommandHelp
-from humbug.tabs.shell.commands.shell_command_log import ShellCommandLog
-from humbug.tabs.shell.commands.shell_command_terminal import ShellCommandTerminal
-from humbug.tabs.shell.commands.shell_command_preview import ShellCommandPreview
-from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
-from humbug.tabs.diff.diff_tab import DiffTab
-from humbug.tabs.editor.editor_tab import EditorTab
-from humbug.tabs.log.log_tab import LogTab
-from humbug.tabs.shell.shell_tab import ShellTab
-from humbug.tabs.terminal.terminal_tab import TerminalTab
-from humbug.tabs.preview.preview_tab import PreviewTab
+from humbug.terminal_tab.terminal_tab import TerminalTab
 from humbug.title_bar import MenuBarDragFilter, WindowControlsWidget
+from humbug.update_checker import UpdateChecker
+from humbug.update_dialog import UpdateDialog
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 

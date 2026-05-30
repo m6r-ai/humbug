@@ -8,7 +8,7 @@ setting widget.
 from typing import List
 from PySide6.QtWidgets import QWidget
 
-from humbug.min_height_plain_text_edit import MinHeightPlainTextEdit
+from humbug.widgets import MinHeightPlainTextEdit
 from humbug.settings.settings_field import SettingsField
 
 
