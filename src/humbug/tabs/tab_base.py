@@ -7,8 +7,7 @@ from PySide6.QtCore import Signal
 
 from context.context_registry import ContextRegistry
 
-from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
-from humbug.mindspace.mindspace_view_type import MindspaceViewType
+from humbug.file_watcher import FileWatcher
 from humbug.status_message import StatusMessage
 from humbug.tabs.tab_state import TabState
 
@@ -46,7 +45,7 @@ class TabBase(QFrame):
         self._logger = logging.getLogger(self.__class__.__name__)
 
         # File watching
-        self._file_watcher = MindspaceFileWatcher()
+        self._file_watcher = FileWatcher()
         self._file_exists = True
 
     def set_active(self, widget: QWidget, active: bool) -> None:
@@ -501,15 +500,6 @@ class TabBase(QFrame):
         Must be implemented by subclasses to provide their specific status.
         """
         raise NotImplementedError("Subclasses must implement update_status")
-
-    def mindspace_view_type(self) -> MindspaceViewType:
-        """Return the mindspace view panel this tab belongs to.
-
-        Used to reveal and select the correct file in the mindspace sidebar when
-        this tab becomes active.  Defaults to FILES.  Override in tab types that
-        belong to a different panel (conversations, preview, VCS).
-        """
-        return MindspaceViewType.FILES
 
     def clear_history(self) -> None:
         """Clear the tab's history if it has one.

@@ -142,6 +142,14 @@ class MainWindow(QMainWindow):
 
     _RESIZE_ZONE = 6
 
+    # Maps tool_name() to the sidebar panel that should reveal the tab's file.
+    # Tab types not listed here default to MindspaceViewType.FILES.
+    _TAB_PANEL_MAP = {
+        "conversation": MindspaceViewType.CONVERSATIONS,
+        "preview":      MindspaceViewType.PREVIEW,
+        "diff":         MindspaceViewType.VCS,
+    }
+
     def __init__(self) -> None:
         """Initialize the main window."""
         super().__init__()
@@ -829,7 +837,8 @@ class MainWindow(QMainWindow):
         if path is None:
             return
 
-        self._mindspace_view.reveal_and_select_file(current_tab.mindspace_view_type(), path)
+        panel = self._TAB_PANEL_MAP.get(current_tab.tool_name(), MindspaceViewType.FILES)
+        self._mindspace_view.reveal_and_select_file(panel, path)
 
     def _on_column_manager_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""

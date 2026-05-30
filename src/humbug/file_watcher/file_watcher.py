@@ -1,4 +1,4 @@
-"""File change detection service for mindspace preview content."""
+"""File change detection service."""
 
 import logging
 import os
@@ -17,7 +17,7 @@ class FileInfo:
     dir_contents: Set[str] | None = None  # For directories, track contents
 
 
-class MindspaceFileWatcher(QObject):
+class FileWatcher(QObject):
     """
     Polls files for changes and notifies registered callbacks.
 
@@ -34,12 +34,12 @@ class MindspaceFileWatcher(QObject):
     """
 
     _instance = None
-    _logger = logging.getLogger("MindspaceFileWatcher")
+    _logger = logging.getLogger("FileWatcher")
 
-    def __new__(cls) -> 'MindspaceFileWatcher':
+    def __new__(cls) -> 'FileWatcher':
         """Create or return singleton instance."""
         if cls._instance is None:
-            cls._instance = super(MindspaceFileWatcher, cls).__new__(cls)
+            cls._instance = super(FileWatcher, cls).__new__(cls)
 
         return cls._instance
 
@@ -204,10 +204,14 @@ class MindspaceFileWatcher(QObject):
                             callback(file_path)
 
                         except Exception as e:
-                            self._logger.error("Error in file change callback for %s: %s", file_path, str(e), exc_info=True)
+                            self._logger.error(
+                                "Error in file change callback for %s: %s", file_path, str(e), exc_info=True
+                            )
 
                 except Exception as e:
-                    self._logger.error("Unexpected error checking file %s: %s", file_path, str(e), exc_info=True)
+                    self._logger.error(
+                        "Unexpected error checking file %s: %s", file_path, str(e), exc_info=True
+                    )
 
         except Exception as e:
             self._logger.error("Error in file polling: %s", str(e), exc_info=True)

@@ -12,7 +12,6 @@ from git import GitNotFoundError, GitNotRepositoryError, find_repo_root
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
-from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
@@ -111,10 +110,6 @@ class DiffTab(TabBase):
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""
         return "diff"
-
-    def mindspace_view_type(self) -> MindspaceViewType:
-        """Return the mindspace view panel for diff tabs."""
-        return MindspaceViewType.VCS
 
     def set_active(self, widget: QWidget, active: bool) -> None:
         """

@@ -13,7 +13,7 @@ from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
+from humbug.file_watcher import FileWatcher
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.style_manager import StyleManager
 from humbug.tabs.preview.preview_content import PreviewContent, PreviewContentType
@@ -62,7 +62,7 @@ class PreviewWidget(QWidget):
         self._preview = PreviewContent(mindspace_manager.mindspace())
 
         # File watching integration
-        self._file_watcher = MindspaceFileWatcher()
+        self._file_watcher = FileWatcher()
         self._watched_paths: Set[str] = set()
 
         # Cache of the last rendered content list for change detection

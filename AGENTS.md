@@ -39,16 +39,6 @@ humbug/
 
 ## `src/` Directory
 
-### `src/humbug/`
-Main application and GUI components.
-
-**Subdirectories:**
-- `tabs/` - Tab management (conversations, editors, terminals, preview, log, diff)
-- `mindspace/` - Project workspace management (conversations, files, preview, vcs)
-- `settings/` - Application and user settings
-- `user/` - User management
-- `language/` - Localization support
-
 ### `src/ai/`
 Multi-backend AI conversation system.
 
@@ -109,6 +99,23 @@ Lightweight, GUI-free tools for git operations.
 
 ### `src/help_ai_tool/`
 AI tool implementation for tool documentation.
+
+### `src/humbug/`
+Main application and GUI components.
+
+**Subdirectories:**
+- `file_watcher/` - Singleton file/directory polling service
+- `icons/` - Application icon pack
+- `language/` - Localization support
+- `mindspace/` - Qt GUI for mindspace sidebar (conversations, files, preview, search, vcs)
+- `settings/` - Application and user settings UI widgets
+- `tabs/` - Tab framework and all tab implementations (conversations, editors, terminals, preview, log, diff, shell)
+- `user/` - User management
+- `widgets/` - Small reusable Qt widgets
+
+### `src/mindspace/`
+Front-end-agnostic mindspace model. Manages the mindspace path, settings, search,
+interactions log, and the context registry. No Qt or GUI dependencies.
 
 ### `src/menai/`
 Pure functional programming language designed for AI use. Includes lexer, parser, compiler, and virtual machine.

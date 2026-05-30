@@ -8,7 +8,7 @@ from typing import Dict, List, Set
 
 from PySide6.QtCore import QObject, Signal
 
-from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
+from humbug.file_watcher import FileWatcher
 
 
 @dataclass
@@ -33,7 +33,7 @@ class MindspaceConversationsIndex(QObject):
     Maintains a live DAG index of all conversation files in a mindspace.
 
     Scans the conversations directory on load, then stays current via the
-    MindspaceFileWatcher.  Emits changed() whenever the index is updated so
+    FileWatcher.  Emits changed() whenever the index is updated so
     that views can refresh.
 
     Two kinds of edges are tracked:
@@ -62,7 +62,7 @@ class MindspaceConversationsIndex(QObject):
         """Initialize the index."""
         super().__init__(parent)
         self._logger = logging.getLogger("MindspaceConversationsIndex")
-        self._file_watcher = MindspaceFileWatcher()
+        self._file_watcher = FileWatcher()
 
         self._conversations_dir: str = ""
 
