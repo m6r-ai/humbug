@@ -67,16 +67,25 @@ Multi-backend AI conversation system.
 Core framework for AI tools and capabilities (base classes, manager, definitions, exceptions).
 No longer contains tool subdirectories — individual tools have been hoisted to top-level packages.
 
-### `src/delegate_ai_tool/`
-AI tool implementation for task delegation to child AI instances. Contains the backend
-logic (conversation creation, session management, persistence, completion handling) and
-the `DelegateAIListener` protocol for frontend integration. GUI wiring lives in `src/humbug/`.
-
 ### `src/ai_transcript_conversation/`
 AI transcript and conversation support.
 
 ### `src/clock_ai_tool/`
 AI tool implementation for date/time operations.
+
+### `src/context/`
+Registry infrastructure for tracking open contexts within a mindspace.
+Contains `ContextRegistry`, `ContextInfo`, and `ContextType`. No dependencies on
+any other internal module. All tab packages and `mindspace` depend on this.
+
+### `src/conversation_context/`
+Context model for open conversation tabs (`ConversationContext`).
+Depends on `ai`, `ai_transcript_conversation`, and `context`. No Qt dependency.
+
+### `src/delegate_ai_tool/`
+AI tool implementation for task delegation to child AI instances. Contains the backend
+logic (conversation creation, session management, persistence, completion handling) and
+the `DelegateAIListener` protocol for frontend integration. GUI wiring lives in `src/humbug/`.
 
 ### `src/diff/`
 Unified diff parsing and application with fuzzy matching.
@@ -86,6 +95,11 @@ Advanced markdown parsing to AST.
 
 ### `src/docx/`
 DOCX file handling support.
+
+### `src/editor_context/`
+Context model for open editor tabs (`EditorContext`, `EditorDiffApplier`).
+Depends on `context`, `diff`, and PySide6. The Qt dependency exists because
+`EditorContext` operates directly on `QTextDocument`.
 
 ### `src/filesystem_ai_tool/`
 AI tool implementation for file operations.
@@ -107,6 +121,10 @@ Pure-Python PDF text extraction (stdlib only). Parses PDF structure, decodes str
 (FlateDecode, ASCII85Decode, ASCIIHexDecode), and extracts text from content streams.
 Public API: `parse(data: bytes) -> PDFDocument` and `extract_text(doc: PDFDocument) -> str`.
 
+### `src/preview_context/`
+Context model for open preview tabs (`PreviewContext`).
+Depends on `context` only. No Qt dependency.
+
 ### `src/syntax/`
 Language-specific syntax highlighting system.
 
@@ -117,6 +135,10 @@ Language-specific syntax highlighting system.
 
 ### `src/terminal/`
 Cross-platform terminal emulator with Unix and Windows implementations.
+
+### `src/terminal_context/`
+Context model for open terminal tabs (`TerminalContext`).
+Depends on `context` and `terminal`. No Qt dependency.
 
 ## `tests/` Directory
 

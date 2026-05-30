@@ -3,8 +3,7 @@ from typing import Any, Dict, List
 
 from ai import AIConversationHistory, AIMessage
 from ai_transcript_conversation import AITranscriptConversation
-
-from mindspace.context.context_type import ContextType
+from context.context_type import ContextType
 
 
 class ConversationContext:

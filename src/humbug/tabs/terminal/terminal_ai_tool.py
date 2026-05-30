@@ -16,7 +16,7 @@ from ai_tool import (
 )
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
-from mindspace.context.terminal_context import TerminalContext
+from terminal_context.terminal_context import TerminalContext
 
 
 class TerminalAITool(AITool):

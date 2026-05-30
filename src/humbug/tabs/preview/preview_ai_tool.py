@@ -14,7 +14,7 @@ from ai_tool import (
 )
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
-from mindspace.context.preview_context import PreviewContext
+from preview_context.preview_context import PreviewContext
 
 
 class PreviewAITool(AITool):

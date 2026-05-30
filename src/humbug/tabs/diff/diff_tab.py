@@ -6,11 +6,11 @@ import os
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import QRegularExpression
 
+from editor_context.editor_context import EditorContext
 from git import GitNotFoundError, GitNotRepositoryError, find_repo_root
 
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.tabs.editor.editor_context import EditorContext
 from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage

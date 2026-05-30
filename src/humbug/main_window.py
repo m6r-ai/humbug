@@ -20,6 +20,8 @@ from ai.ai_conversation_settings import AIConversationSettings
 from ai_tool import AIToolManager
 from ai_transcript_conversation import AITranscriptConversation
 from clock_ai_tool.clock_ai_tool import ClockAITool
+from context.context_info import ContextInfo
+from context.context_registry import ContextRegistry
 from delegate_ai_tool import DelegateAITool
 from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
@@ -28,8 +30,6 @@ from menai_ai_tool.menai_ai_tool import MenaiAITool
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_settings import MindspaceSettings
-from mindspace.context.context_info import ContextInfo
-from mindspace.context.context_registry import ContextRegistry
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole

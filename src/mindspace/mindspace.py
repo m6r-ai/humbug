@@ -5,9 +5,9 @@ import shutil
 from typing import Callable, Dict, List
 
 from ai_tool import AIToolManager
+from context.context_registry import ContextRegistry
 
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
-from mindspace.context.context_registry import ContextRegistry
 from mindspace.mindspace_interactions import MindspaceInteractions
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage

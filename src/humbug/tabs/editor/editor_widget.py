@@ -12,6 +12,7 @@ from PySide6.QtGui import (
 )
 
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
+from editor_context.editor_diff_applier import EditorDiffApplier
 from mindspace.mindspace_settings import MindspaceSettings
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
@@ -21,7 +22,6 @@ from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.style_manager import StyleManager
 from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
-from humbug.tabs.editor.editor_diff_applier import EditorDiffApplier
 from humbug.tabs.line_number_area import LineNumberArea
 from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 

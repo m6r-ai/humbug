@@ -13,7 +13,7 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
 )
-from mindspace.context.conversation_context import ConversationContext
+from conversation_context.conversation_context import ConversationContext
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
 

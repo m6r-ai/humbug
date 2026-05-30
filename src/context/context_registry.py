@@ -3,7 +3,7 @@ import logging
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Set, TypeVar, Type
 
-from mindspace.context.context_info import ContextInfo
+from context.context_info import ContextInfo
 
 
 class ContextEvent(Enum):

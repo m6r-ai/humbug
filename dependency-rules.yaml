@@ -27,11 +27,25 @@ modules:
     external_dependencies:
       - "standard_library"
 
+  context:
+    internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  conversation_context:
+    internal_dependencies:
+      - ai
+      - ai_transcript_conversation
+      - context
+    external_dependencies:
+      - "standard_library"
+
   delegate_ai_tool:
     internal_dependencies:
       - ai
       - ai_transcript_conversation
       - ai_tool
+      - conversation_context
       - mindspace
     external_dependencies:
       - "standard_library"
@@ -51,6 +65,14 @@ modules:
     internal_dependencies: []
     external_dependencies:
       - "standard_library"
+
+  editor_context:
+    internal_dependencies:
+      - context
+      - diff
+    external_dependencies:
+      - "standard_library"
+      - "PySide6"
 
   filesystem_ai_tool:
     internal_dependencies:
@@ -79,9 +101,12 @@ modules:
       - ai_tool
       - ai_transcript_conversation
       - clock_ai_tool
+      - context
+      - conversation_context
       - delegate_ai_tool
       - diff
       - dmarkdown
+      - editor_context
       - filesystem_ai_tool
       - git
       - help_ai_tool
@@ -89,8 +114,10 @@ modules:
       - mindspace
       - pdf
       - docx
+      - preview_context
       - syntax
       - terminal
+      - terminal_context
     external_dependencies:
       - "standard_library"
       - "aiohttp"
@@ -113,12 +140,19 @@ modules:
       - ai
       - ai_transcript_conversation
       - ai_tool
+      - context
       - terminal
     external_dependencies:
       - "standard_library"
 
   pdf:
     internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  preview_context:
+    internal_dependencies:
+      - context
     external_dependencies:
       - "standard_library"
 
@@ -129,6 +163,13 @@ modules:
 
   terminal:
     internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  terminal_context:
+    internal_dependencies:
+      - context
+      - terminal
     external_dependencies:
       - "standard_library"
 

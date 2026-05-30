@@ -5,8 +5,8 @@ from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QHBoxLayout, QStack
 from PySide6.QtCore import Signal, QTimer
 from PySide6.QtGui import QResizeEvent
 
-from mindspace.context.context_info import ContextInfo
-from mindspace.context.context_registry import ContextEvent
+from context.context_info import ContextInfo
+from context.context_registry import ContextEvent
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.status_message import StatusMessage

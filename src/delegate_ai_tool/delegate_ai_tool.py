@@ -18,9 +18,9 @@ from ai_tool import (
     AIToolResult, AIToolCall, AIToolOperationDefinition
 )
 from ai_transcript_conversation import AITranscriptConversation
+from conversation_context.conversation_context import ConversationContext
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
-from mindspace.context.conversation_context import ConversationContext
 
 
 class DelegateAITool(AITool):

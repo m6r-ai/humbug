@@ -20,10 +20,10 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
 )
+from conversation_context.conversation_context import ConversationContext
 from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
-from mindspace.context.conversation_context import ConversationContext
 
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError

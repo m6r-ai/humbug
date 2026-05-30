@@ -11,8 +11,8 @@ from PySide6.QtCore import QObject, Signal, QRegularExpression
 
 from ai import AIConversationHistory, AIConversationSettings
 from ai_transcript_conversation import AITranscriptConversation
-from mindspace.context.context_registry import ContextRegistry
-from mindspace.context.conversation_context import ConversationContext
+from context.context_registry import ContextRegistry
+from conversation_context.conversation_context import ConversationContext
 
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager

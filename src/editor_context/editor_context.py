@@ -8,7 +8,7 @@ from PySide6.QtCore import QRegularExpression
 from PySide6.QtGui import QTextCursor, QTextDocument
 
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
-from humbug.tabs.editor.editor_diff_applier import EditorDiffApplier
+from editor_context.editor_diff_applier import EditorDiffApplier
 
 
 class EditorContext:

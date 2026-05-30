@@ -8,8 +8,8 @@ from PySide6.QtCore import QUrl, QRegularExpression
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
-from mindspace.context.context_registry import ContextRegistry
-from mindspace.context.preview_context import PreviewContext
+from context.context_registry import ContextRegistry
+from preview_context.preview_context import PreviewContext
 
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType

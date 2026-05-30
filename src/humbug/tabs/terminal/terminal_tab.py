@@ -11,8 +11,8 @@ from PySide6.QtCore import QRegularExpression
 
 from terminal import TerminalBase, TerminalState, create_terminal
 
-from mindspace.context.context_registry import ContextRegistry
-from mindspace.context.terminal_context import TerminalContext
+from context.context_registry import ContextRegistry
+from terminal_context.terminal_context import TerminalContext
 
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager

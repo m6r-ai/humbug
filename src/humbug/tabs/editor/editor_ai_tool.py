@@ -13,10 +13,9 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
 )
+from editor_context.editor_context import EditorContext
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
-
-from humbug.tabs.editor.editor_context import EditorContext
 
 
 class EditorAITool(AITool):

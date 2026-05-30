@@ -5,7 +5,8 @@ import logging
 from PySide6.QtWidgets import QFrame, QWidget
 from PySide6.QtCore import Signal
 
-from mindspace.context.context_registry import ContextRegistry
+from context.context_registry import ContextRegistry
+
 from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage

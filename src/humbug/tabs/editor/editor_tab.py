@@ -7,12 +7,12 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import QTimer, QRegularExpression
 
-from mindspace.context.context_registry import ContextRegistry
+from context.context_registry import ContextRegistry
+from editor_context.editor_context import EditorContext
 
 from humbug.tabs.editor.editor_goto_line_dialog import EditorGotoLineDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
-from humbug.tabs.editor.editor_context import EditorContext
 from humbug.tabs.editor.editor_widget import EditorWidget
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase

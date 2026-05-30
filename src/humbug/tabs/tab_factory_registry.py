@@ -3,8 +3,9 @@ from typing import Callable, Dict
 
 from PySide6.QtWidgets import QWidget
 
-from mindspace.context.context_info import ContextInfo
-from mindspace.context.context_registry import ContextRegistry
+from context.context_info import ContextInfo
+from context.context_registry import ContextRegistry
+
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 
