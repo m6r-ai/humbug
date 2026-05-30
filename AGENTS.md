@@ -65,7 +65,6 @@ Multi-backend AI conversation system.
 
 ### `src/ai_tool/`
 Core framework for AI tools and capabilities (base classes, manager, definitions, exceptions).
-No longer contains tool subdirectories — individual tools have been hoisted to top-level packages.
 
 ### `src/ai_transcript_conversation/`
 AI transcript and conversation support.
@@ -75,12 +74,12 @@ AI tool implementation for date/time operations.
 
 ### `src/context/`
 Registry infrastructure for tracking open contexts within a mindspace.
-Contains `ContextRegistry`, `ContextInfo`, and `ContextType`. No dependencies on
-any other internal module. All tab packages and `mindspace` depend on this.
+
+### `src/conversation_ai_tool/`
+AI tool implementation for conversation tab operations (read, search, navigate messages).
 
 ### `src/conversation_context/`
 Context model for open conversation tabs (`ConversationContext`).
-Depends on `ai`, `ai_transcript_conversation`, and `context`. No Qt dependency.
 
 ### `src/delegate_ai_tool/`
 AI tool implementation for task delegation to child AI instances. Contains the backend
@@ -96,10 +95,11 @@ Advanced markdown parsing to AST.
 ### `src/docx/`
 DOCX file handling support.
 
+### `src/editor_ai_tool/`
+AI tool implementation for editor tab operations (read, search, diff, apply diffs, save).
+
 ### `src/editor_context/`
 Context model for open editor tabs (`EditorContext`, `EditorDiffApplier`).
-Depends on `context`, `diff`, and PySide6. The Qt dependency exists because
-`EditorContext` operates directly on `QTextDocument`.
 
 ### `src/filesystem_ai_tool/`
 AI tool implementation for file operations.
@@ -121,9 +121,11 @@ Pure-Python PDF text extraction (stdlib only). Parses PDF structure, decodes str
 (FlateDecode, ASCII85Decode, ASCIIHexDecode), and extracts text from content streams.
 Public API: `parse(data: bytes) -> PDFDocument` and `extract_text(doc: PDFDocument) -> str`.
 
+### `src/preview_ai_tool/`
+AI tool implementation for preview tab operations (search, scroll).
+
 ### `src/preview_context/`
 Context model for open preview tabs (`PreviewContext`).
-Depends on `context` only. No Qt dependency.
 
 ### `src/syntax/`
 Language-specific syntax highlighting system.
@@ -136,9 +138,11 @@ Language-specific syntax highlighting system.
 ### `src/terminal/`
 Cross-platform terminal emulator with Unix and Windows implementations.
 
+### `src/terminal_ai_tool/`
+AI tool implementation for terminal tab operations (read, write, status).
+
 ### `src/terminal_context/`
 Context model for open terminal tabs (`TerminalContext`).
-Depends on `context` and `terminal`. No Qt dependency.
 
 ## `tests/` Directory
 

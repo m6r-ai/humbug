@@ -32,6 +32,15 @@ modules:
     external_dependencies:
       - "standard_library"
 
+  conversation_ai_tool:
+    internal_dependencies:
+      - ai
+      - ai_tool
+      - conversation_context
+      - mindspace
+    external_dependencies:
+      - "standard_library"
+
   conversation_context:
     internal_dependencies:
       - ai
@@ -63,6 +72,14 @@ modules:
 
   docx:
     internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  editor_ai_tool:
+    internal_dependencies:
+      - ai_tool
+      - editor_context
+      - mindspace
     external_dependencies:
       - "standard_library"
 
@@ -102,10 +119,12 @@ modules:
       - ai_transcript_conversation
       - clock_ai_tool
       - context
+      - conversation_ai_tool
       - conversation_context
       - delegate_ai_tool
       - diff
       - dmarkdown
+      - editor_ai_tool
       - editor_context
       - filesystem_ai_tool
       - git
@@ -114,9 +133,11 @@ modules:
       - mindspace
       - pdf
       - docx
+      - preview_ai_tool
       - preview_context
       - syntax
       - terminal
+      - terminal_ai_tool
       - terminal_context
     external_dependencies:
       - "standard_library"
@@ -150,6 +171,14 @@ modules:
     external_dependencies:
       - "standard_library"
 
+  preview_ai_tool:
+    internal_dependencies:
+      - ai_tool
+      - mindspace
+      - preview_context
+    external_dependencies:
+      - "standard_library"
+
   preview_context:
     internal_dependencies:
       - context
@@ -163,6 +192,14 @@ modules:
 
   terminal:
     internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  terminal_ai_tool:
+    internal_dependencies:
+      - ai_tool
+      - mindspace
+      - terminal_context
     external_dependencies:
       - "standard_library"
 

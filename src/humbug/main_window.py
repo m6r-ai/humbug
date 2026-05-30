@@ -22,7 +22,9 @@ from ai_transcript_conversation import AITranscriptConversation
 from clock_ai_tool.clock_ai_tool import ClockAITool
 from context.context_info import ContextInfo
 from context.context_registry import ContextRegistry
+from conversation_ai_tool.conversation_ai_tool import ConversationAITool
 from delegate_ai_tool import DelegateAITool
+from editor_ai_tool.editor_ai_tool import EditorAITool
 from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 from help_ai_tool.help_ai_tool import HelpAITool
@@ -30,6 +32,8 @@ from menai_ai_tool.menai_ai_tool import MenaiAITool
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_settings import MindspaceSettings
+from preview_ai_tool.preview_ai_tool import PreviewAITool
+from terminal_ai_tool.terminal_ai_tool import TerminalAITool
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
@@ -48,10 +52,7 @@ from humbug.status_message import StatusMessage
 from humbug.system_ai_tool import SystemAITool
 from humbug.settings_dialog import SettingsDialog, SECTION_AI_BACKENDS
 from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.conversation.conversation_ai_tool import ConversationAITool
 from humbug.tabs.conversation.conversation_tab import ConversationTab
-from humbug.tabs.editor.editor_ai_tool import EditorAITool
-from humbug.tabs.preview.preview_ai_tool import PreviewAITool
 from humbug.tabs.shell.commands.shell_command_clear import ShellCommandClear
 from humbug.tabs.shell.commands.shell_command_conversation import ShellCommandConversation
 from humbug.tabs.shell.commands.shell_command_diff import ShellCommandDiff
@@ -62,7 +63,6 @@ from humbug.tabs.shell.commands.shell_command_terminal import ShellCommandTermin
 from humbug.tabs.shell.commands.shell_command_preview import ShellCommandPreview
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
 from humbug.tabs.diff.diff_tab import DiffTab
-from humbug.tabs.terminal.terminal_ai_tool import TerminalAITool
 from humbug.tabs.editor.editor_tab import EditorTab
 from humbug.tabs.log.log_tab import LogTab
 from humbug.tabs.shell.shell_tab import ShellTab

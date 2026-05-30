@@ -1,0 +1,1 @@
+from terminal_ai_tool.terminal_ai_tool import TerminalAITool
