@@ -6,6 +6,7 @@ New features:
 
 - When delegating a task to an AI, if the AI model is available from more than one backend provider, the tool now tells the AI
   and asks it to select the correct one.
+- Added Clause Opus 4.8 and removed 4.6.
 
 Bug fixes:
 
