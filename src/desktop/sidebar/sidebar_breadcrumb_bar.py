@@ -220,28 +220,28 @@ class SidebarBreadcrumbBar(QTreeView):
         expanded_icon = "arrow-down"
 
         self.setStyleSheet(f"""
-            MindspaceBreadcrumbBar {{
+            SidebarBreadcrumbBar {{
                 background: transparent;
                 color: {text};
                 outline: none;
                 margin-left: {tree_margin}px;
             }}
-            MindspaceBreadcrumbBar::item {{
+            SidebarBreadcrumbBar::item {{
                 color: {text};
                 padding: 3px 0px;
                 margin: 0px;
             }}
-            MindspaceBreadcrumbBar::item:hover {{
+            SidebarBreadcrumbBar::item:hover {{
                 background-color: {tree_hover};
             }}
-            MindspaceBreadcrumbBar::branch:has-children:!has-siblings:closed,
-            MindspaceBreadcrumbBar::branch:closed:has-children:has-siblings {{
+            SidebarBreadcrumbBar::branch:has-children:!has-siblings:closed,
+            SidebarBreadcrumbBar::branch:closed:has-children:has-siblings {{
                 image: url("{self._style_manager.get_icon_path(collapsed_icon)}");
                 width: {branch_icon_size}px;
                 height: {branch_icon_size}px;
             }}
-            MindspaceBreadcrumbBar::branch:open:has-children:!has-siblings,
-            MindspaceBreadcrumbBar::branch:open:has-children:has-siblings {{
+            SidebarBreadcrumbBar::branch:open:has-children:!has-siblings,
+            SidebarBreadcrumbBar::branch:open:has-children:has-siblings {{
                 image: url("{self._style_manager.get_icon_path(expanded_icon)}");
                 width: {branch_icon_size}px;
                 height: {branch_icon_size}px;
