@@ -25,7 +25,7 @@ from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
 
-from desktop.column import ColumnManager, ColumnManagerError
+from desktop.tab_manager import TabManager, TabManagerError
 from desktop.version import CURRENT_VERSION
 
 
@@ -39,7 +39,7 @@ class SystemAITool(AITool):
     tab content.
     """
 
-    def __init__(self, column_manager: ColumnManager, mindspace: Mindspace):
+    def __init__(self, tab_manager: TabManager, mindspace: Mindspace):
         """
         Initialize the system tool.
 
@@ -47,7 +47,7 @@ class SystemAITool(AITool):
             column_manager: Column manager for layout queries and tab protection
             mindspace: The active mindspace model
         """
-        self._column_manager = column_manager
+        self._tab_manager = tab_manager
         self._mindspace = mindspace
         self._ai_manager = AIManager()
         self._logger = logging.getLogger("SystemAITool")
@@ -275,7 +275,7 @@ class SystemAITool(AITool):
         # Return existing tab if this file is already open
         existing = self._mindspace.contexts().get_by_path(file_path)
         if existing is not None:
-            self._column_manager.make_tab_permanent(existing.context_id)
+            self._tab_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             relative_path = self._mindspace.get_relative_path(file_path)
             return AIToolResult(
@@ -355,7 +355,7 @@ class SystemAITool(AITool):
         # Return existing tab if this conversation is already open
         existing = self._mindspace.contexts().get_by_path(conversation_path)
         if existing is not None:
-            self._column_manager.make_tab_permanent(existing.context_id)
+            self._tab_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             return AIToolResult(
                 id=tool_call.id, name="system",
@@ -505,7 +505,7 @@ class SystemAITool(AITool):
                 content=", ".join(result_parts)
             )
 
-        except (MindspaceError, ColumnManagerError) as e:
+        except (MindspaceError, TabManagerError) as e:
             raise AIToolExecutionError(f"Failed to create conversation: {str(e)}") from e
 
         except Exception as e:
@@ -529,7 +529,7 @@ class SystemAITool(AITool):
         # Return existing tab if this path is already open in a preview
         existing = self._mindspace.contexts().get_by_path(preview_path)
         if existing is not None:
-            self._column_manager.make_tab_permanent(existing.context_id)
+            self._tab_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             relative_path = self._mindspace.get_relative_path(preview_path)
             location = relative_path if relative_path else "."
@@ -564,7 +564,7 @@ class SystemAITool(AITool):
                 content=f"Opened preview tab for: '{location}', tab ID: {context_id}"
             )
 
-        except ColumnManagerError as e:
+        except TabManagerError as e:
             raise AIToolExecutionError(f"Failed to open preview: {str(e)}") from e
 
         except Exception as e:
@@ -590,7 +590,7 @@ class SystemAITool(AITool):
         # Return existing tab if this file is already open in a diff tab
         existing = self._mindspace.contexts().get_by_path(file_path)
         if existing is not None:
-            self._column_manager.make_tab_permanent(existing.context_id)
+            self._tab_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             relative_path = self._mindspace.get_relative_path(file_path)
             return AIToolResult(
@@ -632,7 +632,7 @@ class SystemAITool(AITool):
         tab_id = arguments.get("tab_id")
 
         if not tab_id:
-            current_tab = self._column_manager.get_current_tab()
+            current_tab = self._tab_manager.get_current_tab()
             if not current_tab:
                 raise AIToolExecutionError("No current tab is open")
             tab_id = current_tab.tab_id()
@@ -640,7 +640,7 @@ class SystemAITool(AITool):
         if not isinstance(tab_id, str):
             raise AIToolExecutionError("'tab_id' must be a string")
 
-        tab_info = self._column_manager.get_tab_info_by_id(tab_id)
+        tab_info = self._tab_manager.get_tab_info_by_id(tab_id)
         if not tab_info:
             raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
 
@@ -673,12 +673,12 @@ class SystemAITool(AITool):
             raise AIToolExecutionError("'tab_id' must be a string")
 
         try:
-            tab = self._column_manager.get_tab_by_id(tab_id)
+            tab = self._tab_manager.get_tab_by_id(tab_id)
             if not tab:
                 raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
 
             if tab.is_modified():
-                tab_info = self._column_manager.get_tab_info_by_id(tab_id)
+                tab_info = self._tab_manager.get_tab_info_by_id(tab_id)
                 tab_title = tab_info.get('title', tab_id) if tab_info else tab_id
                 context = f"Close tab '{tab_title}' with unsaved changes? Unsaved modifications will be lost."
                 authorized = await request_authorization("system", arguments, context, None, True)
@@ -687,7 +687,7 @@ class SystemAITool(AITool):
                         f"User denied permission to close modified tab '{tab_title}'"
                     )
 
-            # Close via registry — ColumnManager._on_context_closed will close the Qt tab
+            # Close via registry — TabManager._on_context_closed will close the Qt tab
             self._mindspace.contexts().close(tab_id)
 
             self._mindspace.add_interaction(
@@ -717,7 +717,7 @@ class SystemAITool(AITool):
     ) -> AIToolResult:
         """List all currently open tabs across all columns."""
         try:
-            tab_info = self._column_manager.list_all_tabs()
+            tab_info = self._tab_manager.list_all_tabs()
 
             if not tab_info:
                 self._mindspace.add_interaction(
@@ -732,7 +732,7 @@ class SystemAITool(AITool):
 
             result = {
                 "total_tabs": len(tab_info),
-                "total_columns": self._column_manager.num_colunns(),
+                "total_columns": self._tab_manager.num_colunns(),
                 "tabs": tab_info
             }
 
@@ -777,9 +777,9 @@ class SystemAITool(AITool):
             raise AIToolExecutionError(f"Target column must be non-negative, got {target_column}")
 
         try:
-            self._column_manager.move_tab_to_column(tab_id, target_column)
+            self._tab_manager.move_tab_to_column(tab_id, target_column)
 
-        except ColumnManagerError as e:
+        except TabManagerError as e:
             raise AIToolExecutionError(str(e)) from e
 
         self._mindspace.add_interaction(

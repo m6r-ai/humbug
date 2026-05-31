@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QTabWidget, QWidget
 from PySide6.QtCore import Signal, QEvent, QObject, QPoint
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent
 
-from desktop.column.tab_bar import TabBar
+from desktop.tab_manager.tab_bar import TabBar
 
 
 class ColumnWidget(QTabWidget):

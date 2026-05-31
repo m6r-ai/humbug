@@ -37,7 +37,6 @@ from terminal_ai_tool.terminal_ai_tool import TerminalAITool
 
 from desktop.about_dialog import AboutDialog
 from desktop.color_role import ColorRole
-from desktop.column import ColumnManager
 from desktop.conversation_sidebar.conversation_sidebar_view import ConversationSidebarView
 from desktop.conversation_tab.conversation_tab import ConversationTab
 from desktop.diff_tab.diff_tab import DiffTab
@@ -69,6 +68,7 @@ from desktop.sidebar_manager import SidebarManager
 from desktop.style_manager import StyleManager, ColorMode
 from desktop.status_message import StatusMessage
 from desktop.system_ai_tool import SystemAITool
+from desktop.tab_manager import TabManager
 from desktop.terminal_tab.terminal_tab import TerminalTab
 from desktop.title_bar import MenuBarDragFilter, WindowControlsWidget
 from desktop.update_checker import UpdateChecker
@@ -528,29 +528,29 @@ class MainWindow(QMainWindow):
         self._splitter.addWidget(self._sidebar_manager)
 
         # Create tab manager in splitter
-        self._column_manager = ColumnManager(self._open_path_from_drop, self)
-        self._column_manager.tab_changed.connect(self._on_column_manager_tab_changed)
-        self._column_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
-        self._column_manager.tab_closed.connect(self._on_column_manager_tab_closed)
-        self._splitter.addWidget(self._column_manager)
+        self._tab_manager = TabManager(self._open_path_from_drop, self)
+        self._tab_manager.tab_changed.connect(self._on_tab_manager_tab_changed)
+        self._tab_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
+        self._tab_manager.tab_closed.connect(self._on_tab_manager_tab_closed)
+        self._splitter.addWidget(self._tab_manager)
 
         # Register tab factories for session restore and context-open events.
-        cm = self._column_manager
-        cm.register_tab_factory("conversation", ConversationTab.restore_from_state)
-        cm.register_tab_factory("editor", EditorTab.restore_from_state)
-        cm.register_tab_factory("log", LogTab.restore_from_state)
-        cm.register_tab_factory("shell", ShellTab.restore_from_state)
-        cm.register_tab_factory("terminal", TerminalTab.restore_from_state)
-        cm.register_tab_factory("preview", PreviewTab.restore_from_state)
-        cm.register_tab_factory("diff", DiffTab.restore_from_state)
+        tab_manager = self._tab_manager
+        tab_manager.register_tab_factory("conversation", ConversationTab.restore_from_state)
+        tab_manager.register_tab_factory("editor", EditorTab.restore_from_state)
+        tab_manager.register_tab_factory("log", LogTab.restore_from_state)
+        tab_manager.register_tab_factory("shell", ShellTab.restore_from_state)
+        tab_manager.register_tab_factory("terminal", TerminalTab.restore_from_state)
+        tab_manager.register_tab_factory("preview", PreviewTab.restore_from_state)
+        tab_manager.register_tab_factory("diff", DiffTab.restore_from_state)
 
-        cm.register_context_factory("conversation", _create_conversation_tab)
-        cm.register_context_factory("editor", _create_editor_tab)
-        cm.register_context_factory("terminal", _create_terminal_tab)
-        cm.register_context_factory("preview", _create_preview_tab)
-        cm.register_context_factory("diff", _create_diff_tab)
-        cm.register_context_factory("log", _create_log_tab)
-        cm.register_context_factory("shell", _create_shell_tab)
+        tab_manager.register_context_factory("conversation", _create_conversation_tab)
+        tab_manager.register_context_factory("editor", _create_editor_tab)
+        tab_manager.register_context_factory("terminal", _create_terminal_tab)
+        tab_manager.register_context_factory("preview", _create_preview_tab)
+        tab_manager.register_context_factory("diff", _create_diff_tab)
+        tab_manager.register_context_factory("log", _create_log_tab)
+        tab_manager.register_context_factory("shell", _create_shell_tab)
 
         # Set initial sidebar width
         self._splitter.setSizes([300, self.width() - 300])
@@ -574,7 +574,7 @@ class MainWindow(QMainWindow):
         self._status_bar.addPermanentWidget(self._status_message_label)
 
         self.setStatusBar(self._status_bar)
-        self._column_manager.status_message.connect(self._on_column_manager_status_message)
+        self._tab_manager.status_message.connect(self._on_tab_manager_status_message)
 
         # Connect to exception notifier for canary functionality
         self._canary_active = False
@@ -594,7 +594,7 @@ class MainWindow(QMainWindow):
         self._update_theme_menu()
 
         # Update welcome widget with initial user settings
-        self._column_manager.update_welcome_widget(user_settings)
+        self._tab_manager.update_welcome_widget(user_settings)
 
         self._mindspace_manager = MindspaceManager()
         mindspace = self._mindspace_manager.mindspace()
@@ -603,7 +603,7 @@ class MainWindow(QMainWindow):
         self._command_registry = ShellCommandRegistry()
 
         def _clear_shell_history() -> None:
-            for tab in self._column_manager.get_all_tabs():
+            for tab in self._tab_manager.get_all_tabs():
                 if tab.tool_name() == "shell":
                     tab.clear_history()
                     return
@@ -638,7 +638,7 @@ class MainWindow(QMainWindow):
             "FileSystem: handles file operations in the current mindspace"
         )
         self._ai_tool_manager.register_tool(
-            SystemAITool(self._column_manager, mindspace),
+            SystemAITool(self._tab_manager, mindspace),
             "System: manages UI tab lifecycle operations (create, open, close, organize tabs)"
         )
         self._ai_tool_manager.register_tool(
@@ -668,7 +668,7 @@ class MainWindow(QMainWindow):
         """Handle change events."""
         super().changeEvent(event)
         if event.type() == QEvent.Type.WindowStateChange:
-            self._column_manager.apply_style()
+            self._tab_manager.apply_style()
             if self._window_controls is not None:
                 QTimer.singleShot(0, self._update_window_controls_state)
 
@@ -700,8 +700,8 @@ class MainWindow(QMainWindow):
         self._new_terminal_action.setEnabled(has_mindspace)
 
         # Update tab-specific actions
-        column_manager = self._column_manager
-        tab = column_manager.get_current_tab()
+        tab_manager = self._tab_manager
+        tab = tab_manager.get_current_tab()
         self._save_action.setEnabled(tab is not None and tab.can_save())
         self._save_as_action.setEnabled(tab is not None and tab.can_save_as())
         self._close_tab_action.setEnabled(tab is not None)
@@ -724,13 +724,13 @@ class MainWindow(QMainWindow):
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
         self._show_system_log_action.setEnabled(has_mindspace)
         self._show_system_shell_action.setEnabled(has_mindspace)
-        self._show_all_columns_action.setEnabled(column_manager.can_show_all_columns())
-        self._split_column_left_action.setEnabled(column_manager.can_split_column())
-        self._split_column_right_action.setEnabled(column_manager.can_split_column())
-        self._merge_column_left_action.setEnabled(column_manager.can_merge_column(left_to_right))
-        self._merge_column_right_action.setEnabled(column_manager.can_merge_column(not left_to_right))
-        self._swap_column_left_action.setEnabled(column_manager.can_swap_column(left_to_right))
-        self._swap_column_right_action.setEnabled(column_manager.can_swap_column(not left_to_right))
+        self._show_all_columns_action.setEnabled(tab_manager.can_show_all_columns())
+        self._split_column_left_action.setEnabled(tab_manager.can_split_column())
+        self._split_column_right_action.setEnabled(tab_manager.can_split_column())
+        self._merge_column_left_action.setEnabled(tab_manager.can_merge_column(left_to_right))
+        self._merge_column_right_action.setEnabled(tab_manager.can_merge_column(not left_to_right))
+        self._swap_column_left_action.setEnabled(tab_manager.can_swap_column(left_to_right))
+        self._swap_column_right_action.setEnabled(tab_manager.can_swap_column(not left_to_right))
         self._next_message_action.setEnabled(tab is not None and tab.can_navigate_next_message())
         self._previous_message_action.setEnabled(tab is not None and tab.can_navigate_previous_message())
         self._update_navigation_action_text()
@@ -824,7 +824,7 @@ class MainWindow(QMainWindow):
     def _update_navigation_action_text(self) -> None:
         """Set the next/previous action labels to match the current tab type."""
         strings = self._language_manager.strings()
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None and tab.is_navigating_as_hunks():
             self._next_message_action.setText(strings.next_hunk)
             self._previous_message_action.setText(strings.previous_hunk)
@@ -897,9 +897,9 @@ class MainWindow(QMainWindow):
         """
         self._style_manager.set_color_mode(theme)
 
-    def _on_column_manager_tab_changed(self) -> None:
+    def _on_tab_manager_tab_changed(self) -> None:
         """Handle tab change events."""
-        current_tab = self._column_manager.get_current_tab()
+        current_tab = self._tab_manager.get_current_tab()
         if current_tab is None:
             return
 
@@ -910,7 +910,7 @@ class MainWindow(QMainWindow):
         panel = self._TAB_PANEL_MAP.get(current_tab.tool_name(), "files")
         self._sidebar_manager.reveal_and_select_file(panel, path)
 
-    def _on_column_manager_status_message(self, message: StatusMessage) -> None:
+    def _on_tab_manager_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
         self._status_message_label.setText(message.text)
         if message.timeout:
@@ -1066,7 +1066,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            mindspace_state = self._column_manager.save_state()
+            mindspace_state = self._tab_manager.save_state()
             self._mindspace_manager.save_mindspace_state(mindspace_state)
 
         except MindspaceError as e:
@@ -1087,7 +1087,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            self._column_manager.restore_state(saved_state)
+            self._tab_manager.restore_state(saved_state)
 
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace state: %s", str(e))
@@ -1104,45 +1104,45 @@ class MainWindow(QMainWindow):
         self._menai_tool.set_module_path([mindspace_path])
 
     def _close_all_tabs(self) -> bool:
-        return self._column_manager.close_all_tabs()
+        return self._tab_manager.close_all_tabs()
 
     def _undo(self) -> None:
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.undo()
 
     def _redo(self) -> None:
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.redo()
 
     def _cut(self) -> None:
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.cut()
 
     def _copy(self) -> None:
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.copy()
 
     def _paste(self) -> None:
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.paste()
 
     def _find(self) -> None:
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.show_find()
 
     def _find_replace(self) -> None:
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.show_find_replace()
 
     def _goto_line(self) -> None:
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.show_goto_line()
 
@@ -1230,7 +1230,7 @@ class MainWindow(QMainWindow):
         existing = contexts.get_by_path_and_type(path, "diff")
         if existing:
             if not ephemeral:
-                self._column_manager.make_tab_permanent(existing.context_id)
+                self._tab_manager.make_tab_permanent(existing.context_id)
             contexts.focus(existing.context_id)
 
         else:
@@ -1263,13 +1263,13 @@ class MainWindow(QMainWindow):
         """Open a search result and apply the same highlight without changing local find UI state."""
         context_id = self._open_by_panel_id(source, path, ephemeral)
         if context_id is not None:
-            tab = self._column_manager.get_tab_by_id(context_id)
+            tab = self._tab_manager.get_tab_by_id(context_id)
             if tab is not None:
                 tab.navigate_to_search_match(search_text, line_number, message_id, case_sensitive=case_sensitive, regexp=regexp)
 
     def _open_path_from_drop(self, source_type: str, path: str) -> str | None:
         """
-        Adapter for ColumnManager's open_path callable: maps drag-drop source strings to panel IDs.
+        Adapter for TabManager's open_path callable: maps drag-drop source strings to panel IDs.
 
         Args:
             source_type: Source view type string from mime data ('conversations', 'vcs', 'preview', 'files').
@@ -1306,7 +1306,7 @@ class MainWindow(QMainWindow):
             existing = contexts.get_by_path_and_type(path, context_type)
             if existing:
                 if not ephemeral:
-                    self._column_manager.make_tab_permanent(existing.context_id)
+                    self._tab_manager.make_tab_permanent(existing.context_id)
 
                 contexts.focus(existing.context_id)
                 return existing.context_id
@@ -1331,7 +1331,7 @@ class MainWindow(QMainWindow):
 
     def _clear_global_search_highlights(self) -> None:
         """Clear transient highlights that were applied from global search."""
-        for tab in self._column_manager.get_all_tabs():
+        for tab in self._tab_manager.get_all_tabs():
             tab.clear_search_highlight()
 
     def _on_sidebar_file_deleted(self, path: str) -> None:
@@ -1341,8 +1341,8 @@ class MainWindow(QMainWindow):
         Args:
             path: Path of file being deleted
         """
-        tabs = [t for t in self._column_manager.get_all_tabs() if t.path() == path]
-        self._column_manager.close_deleted_file(path)
+        tabs = [t for t in self._tab_manager.get_all_tabs() if t.path() == path]
+        self._tab_manager.close_deleted_file(path)
         for tab in tabs:
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -1357,7 +1357,7 @@ class MainWindow(QMainWindow):
             old_path: Original path of renamed file
             new_path: New path after renaming
         """
-        self._column_manager.handle_file_rename(old_path, new_path)
+        self._tab_manager.handle_file_rename(old_path, new_path)
 
     def _on_sidebar_file_edited(self, path: str, ephemeral: bool) -> None:
         """Handle file edited event from the sidebar."""
@@ -1387,7 +1387,7 @@ class MainWindow(QMainWindow):
             existing = contexts.get_by_path_and_type(path, "editor")
             if existing:
                 if not ephemeral:
-                    self._column_manager.make_tab_permanent(existing.context_id)
+                    self._tab_manager.make_tab_permanent(existing.context_id)
 
                 contexts.focus(existing.context_id)
                 context_id = existing.context_id
@@ -1416,7 +1416,7 @@ class MainWindow(QMainWindow):
     def _on_save_file(self) -> None:
         """Save the current file."""
         try:
-            tab = self._column_manager.get_current_tab()
+            tab = self._tab_manager.get_current_tab()
             if tab is None or not tab.can_save():
                 return
 
@@ -1436,7 +1436,7 @@ class MainWindow(QMainWindow):
     def _on_save_file_as(self) -> None:
         """Save the current file with a new name."""
         try:
-            tab = self._column_manager.get_current_tab()
+            tab = self._tab_manager.get_current_tab()
             if tab is None or not tab.can_save_as():
                 return
             tab.save_as()
@@ -1524,19 +1524,19 @@ class MainWindow(QMainWindow):
 
     def _on_show_all_columns(self) -> None:
         """Show all columns equally."""
-        self._column_manager.show_all_columns()
+        self._tab_manager.show_all_columns()
 
     def _on_split_column(self, split_left: bool) -> None:
         """Split the current column."""
-        self._column_manager.split_column(split_left)
+        self._tab_manager.split_column(split_left)
 
     def _on_merge_column(self, merge_left: bool) -> None:
         """Merge the current column."""
-        self._column_manager.merge_column(merge_left)
+        self._tab_manager.merge_column(merge_left)
 
     def _on_swap_column(self, swap_left: bool) -> None:
         """Swap the current column."""
-        self._column_manager.swap_column(swap_left)
+        self._tab_manager.swap_column(swap_left)
 
     def _on_style_changed(self) -> None:
         """Handle style changes by updating all styled widgets."""
@@ -1549,7 +1549,7 @@ class MainWindow(QMainWindow):
 
         # Apply styles to the sidebar manager and column manager
         self._sidebar_manager.apply_style()
-        self._column_manager.apply_style()
+        self._tab_manager.apply_style()
 
     def _apply_menubar_style(self) -> None:
         """Apply styling to menu bar."""
@@ -1793,12 +1793,12 @@ class MainWindow(QMainWindow):
 
     def _on_close_tab(self) -> None:
         """Close the current tab."""
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is None:
             self._logger.error("No current tab to close")
             return
 
-        self._column_manager.close_tab_by_id(tab.tab_id())
+        self._tab_manager.close_tab_by_id(tab.tab_id())
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
             f"User closed tab\nTab ID: {tab.tab_id()}"
@@ -1806,11 +1806,11 @@ class MainWindow(QMainWindow):
 
     def _on_submit_message(self) -> None:
         """Handle message submission."""
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.submit()
 
-    def _on_column_manager_tab_closed(self, tab_id: str) -> None:
+    def _on_tab_manager_tab_closed(self, tab_id: str) -> None:
         """Handle a tab closed via the tab bar close button."""
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
@@ -1819,13 +1819,13 @@ class MainWindow(QMainWindow):
 
     def _on_navigate_next_message(self) -> None:
         """Navigate to the next message in conversation."""
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.navigate_next_message()
 
     def _on_navigate_previous_message(self) -> None:
         """Navigate to the previous message in conversation."""
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.navigate_previous_message()
 
@@ -1858,7 +1858,7 @@ class MainWindow(QMainWindow):
                     self._style_manager.set_color_mode(new_theme)
                     self._update_theme_menu()
 
-                self._column_manager.update_welcome_widget(new_settings)
+                self._tab_manager.update_welcome_widget(new_settings)
                 self._logger.info("User settings saved successfully")
 
             except UserError as e:
@@ -1902,14 +1902,14 @@ class MainWindow(QMainWindow):
 
     def _on_show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
-        tab = self._column_manager.get_current_tab()
+        tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.show_conversation_settings_dialog()
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle global key events."""
         if event.key() == Qt.Key.Key_Escape:
-            tab = self._column_manager.get_current_tab()
+            tab = self._tab_manager.get_current_tab()
             if tab is not None and tab.handle_esc_key():
                 event.accept()
                 return

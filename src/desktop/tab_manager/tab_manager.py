@@ -11,22 +11,22 @@ from context.context_registry import ContextEvent, ContextRegistry
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
-from desktop.column.column_manager_error import ColumnManagerError
-from desktop.column.column_splitter import ColumnSplitter
-from desktop.column.column_widget import ColumnWidget
-from desktop.column.spacer_drop_widget import SpacerDropWidget
-from desktop.column.tab_bar import TabBar
 from desktop.tab.tab_base import TabBase
 from desktop.tab.tab_state import TabState
-from desktop.column.tab_style import build_column_manager_stylesheet, build_tab_bar_stylesheet
-from desktop.column.welcome_widget import WelcomeWidget
+from desktop.tab_manager.column_splitter import ColumnSplitter
+from desktop.tab_manager.column_widget import ColumnWidget
+from desktop.tab_manager.spacer_drop_widget import SpacerDropWidget
+from desktop.tab_manager.tab_bar import TabBar
+from desktop.tab_manager.tab_manager_error import TabManagerError
+from desktop.tab_manager.tab_style import build_tab_manager_stylesheet, build_tab_bar_stylesheet
+from desktop.tab_manager.welcome_widget import WelcomeWidget
 from desktop.user.user_settings import UserSettings
 
 TabFactory = Callable[[TabState, QWidget], "TabBase | None"]
 ContextFactory = Callable[[ContextInfo, ContextRegistry, QWidget], "TabBase | None"]
 
 
-class ColumnManager(QWidget):
+class TabManager(QWidget):
     """Manages multiple tabs across multiple columns."""
 
     status_message = Signal(StatusMessage)
@@ -43,13 +43,13 @@ class ColumnManager(QWidget):
         super().__init__(parent)
 
         self._mindspace_manager = MindspaceManager()
-        self._logger = logging.getLogger("ColumnManager")
+        self._logger = logging.getLogger("TabManager")
 
         # Subscribe to mindspace open/close so we can wire registry callbacks
         self._mindspace_manager.settings_changed.connect(self._on_mindspace_settings_changed)
         self._registry_subscribed = False
 
-        self.setObjectName("ColumnManager")
+        self.setObjectName("TabManager")
 
         self._open_path = open_path
 
@@ -253,21 +253,21 @@ class ColumnManager(QWidget):
             target_column_index: Index of the target column (0-based)
 
         Raises:
-            ColumnManagerError: If target_column_index is invalid or tab_id doesn't exist
+            TabManagerError: If target_column_index is invalid or tab_id doesn't exist
         """
         tab = self._tabs.get(tab_id)
         if not tab:
-            raise ColumnManagerError(f"Tab with ID '{tab_id}' not found")
+            raise TabManagerError(f"Tab with ID '{tab_id}' not found")
 
         source_column = self._find_column_for_tab(tab)
         if source_column is None:
-            raise ColumnManagerError(f"Could not find column for tab '{tab_id}'")
+            raise TabManagerError(f"Could not find column for tab '{tab_id}'")
 
         if target_column_index < 0:
-            raise ColumnManagerError(f"Target column index must be non-negative, got {target_column_index}")
+            raise TabManagerError(f"Target column index must be non-negative, got {target_column_index}")
 
         if target_column_index >= 6:
-            raise ColumnManagerError(f"Target column index must be less than 6, got {target_column_index}")
+            raise TabManagerError(f"Target column index must be less than 6, got {target_column_index}")
 
         if target_column_index >= len(self._tab_columns):
             self._create_column(len(self._tab_columns))
@@ -418,7 +418,7 @@ class ColumnManager(QWidget):
             self._unsubscribe_from_registry()
 
     def _subscribe_to_registry(self) -> None:
-        """Register ColumnManager as a subscriber to the active ContextRegistry."""
+        """Register TabManager as a subscriber to the active ContextRegistry."""
         if self._registry_subscribed:
             return
 
@@ -430,7 +430,7 @@ class ColumnManager(QWidget):
         self._registry_subscribed = True
 
     def _unsubscribe_from_registry(self) -> None:
-        """Unregister ColumnManager from the ContextRegistry."""
+        """Unregister TabManager from the ContextRegistry."""
         if not self._registry_subscribed:
             return
 
@@ -1559,7 +1559,7 @@ class ColumnManager(QWidget):
 
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""
-        self.setStyleSheet(build_column_manager_stylesheet(self._style_manager))
+        self.setStyleSheet(build_tab_manager_stylesheet(self._style_manager))
 
         self._update_column_splitter()
         self._apply_all_tab_bar_styles()

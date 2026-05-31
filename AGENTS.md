@@ -85,7 +85,6 @@ the front-end-agnostic modules (`mindspace`, the `*_context` modules, `ai`, the 
 modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 
 **Subdirectories:**
-- `column/` - Column manager, tab bar, and chrome widgets
 - `conversation_sidebar/` - Conversations panel implementation
 - `conversation_tab/` - Conversation tab implementation
 - `diff_tab/` - Diff tab implementation
@@ -102,8 +101,9 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `settings/` - Application and user settings UI widgets
 - `shell_tab/` - Shell tab implementation
 - `sidebar/` - Shared sidebar component infrastructure (breadcrumbs, tree views, delegates, pane styles) used by individual `*_sidebar/` panels
-- `sidebar_manager/` - SidebarManager: generic sidebar container with panel registration
+- `sidebar_manager/` - Sidebar manager: generic sidebar container with panel registration
 - `tab/` - Abstract tab contract
+- `tab_manager/` - Tab manager: generic tab container with tab factory registration
 - `terminal_tab/` - Terminal tab implementation
 - `user/` - User management
 - `vcs_sidebar/` - VCS/diff panel implementation

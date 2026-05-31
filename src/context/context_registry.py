@@ -18,10 +18,8 @@ class ContextRegistry:
     """
     Tracks all open contexts within a mindspace.
 
-    Frontend-agnostic: notifies observers via registered callbacks rather than
-    Qt signals.  The Qt ColumnManager subscribes to these events and creates or
-    destroys tabs accordingly.  A CLI or TUI would subscribe and maintain its
-    own representation.
+    Frontend-agnostic: notifies observers via registered callbacks.  A UI can
+    subscribe to these events and create or destroys visualizations accordingly.
 
     ContextInfo objects are immutable snapshots.  Mutable state lives here;
     callers should call get() again when they need a fresh view.
@@ -71,19 +69,19 @@ class ContextRegistry:
         Register a new open context and emit OPENED.
 
         Args:
-            context_type: The kind of context being opened.
-            path:         Associated file path, or empty string.
-            title:        Display title.
-            is_ephemeral: True if this context should auto-close when another
-                          context is opened in the same column.
-            context_id:   Stable ID to use (e.g. when restoring from session).
-                          A new UUID is generated if not provided.
+            context_type:  The kind of context being opened.
+            path:          Associated file path, or empty string.
+            title:         Display title.
+            is_ephemeral:  True if this context should auto-close when another
+                           context is opened in the same column.
+            context_id:    Stable ID to use (e.g. when restoring from session).
+                           A new UUID is generated if not provided.
             initial_model: Optional model object to register atomically with
                            the context.  Stored before OPENED is emitted so
                            subscribers can retrieve it immediately.
-            requester_id: Optional ID of the context that is requesting this
-                          open.  Forwarded opaquely to OPENED callbacks so the
-                          frontend can use it for tab placement decisions.
+            requester_id:  Optional ID of the context that is requesting this
+                           open.  Forwarded opaquely to OPENED callbacks so the
+                           frontend can use it for tab placement decisions.
 
         Returns:
             The context_id for the newly registered context.

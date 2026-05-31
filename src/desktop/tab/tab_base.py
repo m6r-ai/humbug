@@ -124,7 +124,7 @@ class TabBase(QFrame):
     def tool_name(self) -> str:
         """Return the registered tool name for this tab type (e.g. 'editor', 'conversation').
 
-        Used by ColumnManager for context type registration, tab info reporting, and
+        Used by TabManager for context type registration, tab info reporting, and
         icon selection.  Every concrete tab subclass must override this.
         """
         raise NotImplementedError("Subclasses must implement tool_name")
@@ -147,7 +147,7 @@ class TabBase(QFrame):
         return os.path.basename(self._path) if self._path else ""
 
     def on_modified_changed(self, modified: bool) -> None:
-        """Called by ColumnManager when this tab's modified state changes.
+        """Called by TabManager when this tab's modified state changes.
 
         Override to implement tab-type-specific behaviour such as updating the
         tab label or making an ephemeral tab permanent.
@@ -157,7 +157,7 @@ class TabBase(QFrame):
         """
 
     def on_path_renamed(self, new_path: str) -> None:
-        """Called by ColumnManager when the file at this tab's path has been renamed.
+        """Called by TabManager when the file at this tab's path has been renamed.
 
         The default implementation calls set_path() so file watching is updated.
         Override to also update the tab bar label or perform other tab-specific

@@ -1,12 +1,12 @@
-"""Exception classes for conversation operations."""
+"""Exception classes for tab manager operations."""
 
 
-class ColumnManagerError(Exception):
-    """Base class for column manager-related exceptions."""
+class TabManagerError(Exception):
+    """Base class for tab manager-related exceptions."""
 
     def __init__(self, message: str, details: dict | None = None) -> None:
         """
-        Initialize column manager error.
+        Initialize tab manager error.
 
         Args:
             message: Error message

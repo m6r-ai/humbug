@@ -4,10 +4,10 @@ from desktop.color_role import ColorRole
 from desktop.style_manager import StyleManager
 
 
-def build_column_manager_stylesheet(style_manager: StyleManager) -> str:
-    """Build the base stylesheet for the column manager."""
+def build_tab_manager_stylesheet(style_manager: StyleManager) -> str:
+    """Build the base stylesheet for the tab manager."""
     return f"""
-        #ColumnManager QWidget {{
+        #TabManager QWidget {{
             background-color: {style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
         }}
     """
