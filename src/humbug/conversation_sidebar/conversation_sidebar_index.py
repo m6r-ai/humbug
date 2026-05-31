@@ -28,7 +28,7 @@ class ForkEdge:
     fork_message_id: str
 
 
-class MindspaceConversationsIndex(QObject):
+class ConversationSidebarIndex(QObject):
     """
     Maintains a live DAG index of all conversation files in a mindspace.
 
@@ -61,7 +61,7 @@ class MindspaceConversationsIndex(QObject):
     def __init__(self, parent: QObject | None = None) -> None:
         """Initialize the index."""
         super().__init__(parent)
-        self._logger = logging.getLogger("MindspaceConversationsIndex")
+        self._logger = logging.getLogger("ConversationSidebarIndex")
         self._file_watcher = FileWatcher()
 
         self._conversations_dir: str = ""

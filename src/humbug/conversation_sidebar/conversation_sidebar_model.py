@@ -13,7 +13,7 @@ from humbug.user.user_file_sort_order import UserFileSortOrder
 from humbug.user.user_manager import UserManager
 
 
-class MindspaceConversationsModel(QSortFilterProxyModel):
+class ConversationSidebarModel(QSortFilterProxyModel):
     """Filter model for conversations directory with custom sorting."""
 
     class SortMode(Enum):

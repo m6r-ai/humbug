@@ -1,4 +1,4 @@
-"""File tree view implementation for mindspace files with drag and drop support and inline editing."""
+"""Preview tree view implementation for mindspace preview with drag and drop support and inline editing."""
 
 import os
 from typing import cast
@@ -9,11 +9,11 @@ from PySide6.QtWidgets import QWidget, QFileSystemModel
 from humbug.sidebar.sidebar_tree_view import SidebarTreeView
 
 
-class MindspaceFilesTreeView(SidebarTreeView):
-    """Custom tree view with drag and drop support, auto-scroll, and inline editing."""
+class PreviewSidebarTreeView(SidebarTreeView):
+    """Custom tree view for preview with drag and drop support, auto-scroll, and inline editing."""
 
     def __init__(self, parent: QWidget | None = None):
-        """Initialize the tree view."""
+        """Initialize the preview tree view."""
         super().__init__(parent)
         self._mindspace_path: str = ""
 
@@ -30,7 +30,7 @@ class MindspaceFilesTreeView(SidebarTreeView):
         """
         Check if a path can be dragged from this tree view.
 
-        Files tree view prevents dragging of special folders.
+        Preview tree view prevents dragging of special folders.
 
         Args:
             path: Path to check for drag validity
@@ -59,9 +59,9 @@ class MindspaceFilesTreeView(SidebarTreeView):
         Get the type identifier for this view.
 
         Returns:
-            String identifying this as the files view
+            String identifying this as the preview view
         """
-        return "files"
+        return "preview"
 
     def get_path_from_index(self, index: QModelIndex) -> str | None:
         """

@@ -7,7 +7,7 @@ from PySide6.QtCore import QModelIndex
 from humbug.sidebar.sidebar_tree_delegate import SidebarTreeDelegate
 
 
-class MindspaceConversationsTreeDelegate(SidebarTreeDelegate):
+class ConversationSidebarTreeDelegate(SidebarTreeDelegate):
     """Specialized tree delegate for conversations that handles conversation file extension preservation."""
 
     def _is_conversation_file(self, file_path: str) -> bool:

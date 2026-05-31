@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from mindspace.mindspace_content_type import MindspaceContentType
+from mindspace.mindspace_search_engine import MindspaceSearchEngine, MindspaceSearchMatch
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -25,7 +26,6 @@ from humbug.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
 from humbug.sidebar.sidebar_section_header import SidebarSectionHeader
 from humbug.sidebar.sidebar_tree_style import SidebarTreeStyle
 from humbug.sidebar.sidebar_view_type import SidebarViewType
-from humbug.search_sidebar.mindspace_search_engine import MindspaceSearchEngine, MindspaceSearchMatch
 from humbug.style_manager import StyleManager
 
 _LINE_NUMBER_ROLE = Qt.ItemDataRole.UserRole + 11
@@ -120,7 +120,7 @@ class _SearchResultDelegate(QStyledItemDelegate):
         painter.restore()
 
 
-class MindspaceSearchView(QWidget):
+class SearchSidebarView(QWidget):
     """Global search pane for searching across the current mindspace."""
 
     file_clicked = Signal(SidebarViewType, str, bool)
@@ -199,7 +199,7 @@ class MindspaceSearchView(QWidget):
         layout.addWidget(self._truncated_label)
 
         self._results_tree = QTreeWidget(self)
-        self._results_tree.setObjectName("MindspaceSearchResultsTree")
+        self._results_tree.setObjectName("SearchSidebarResultsTree")
         self._tree_style = SidebarTreeStyle()
         self._results_tree.setStyle(self._tree_style)
         self._results_tree.setHeaderHidden(True)
@@ -479,8 +479,8 @@ class MindspaceSearchView(QWidget):
         self.setStyleSheet(
             build_tree_pane_stylesheet(
                 self._style_manager,
-                "MindspaceSearchView",
-                "QTreeWidget#MindspaceSearchResultsTree",
+                "SearchSidebarView",
+                "QTreeWidget#SearchSidebarResultsTree",
                 self.layoutDirection(),
                 zoom_factor,
             )
@@ -536,20 +536,20 @@ class MindspaceSearchView(QWidget):
                 padding: 0px {round(6 * zoom_factor)}px {status_gap}px {round(6 * zoom_factor)}px;
                 min-height: {round(16 * zoom_factor)}px;
             }}
-            QTreeWidget#MindspaceSearchResultsTree {{
+            QTreeWidget#SearchSidebarResultsTree {{
                 background-color: {input_bg};
                 color: {text};
                 outline: none;
                 border: none;
             }}
-            QTreeWidget#MindspaceSearchResultsTree::item {{
+            QTreeWidget#SearchSidebarResultsTree::item {{
                 padding: 0px;
                 margin: 0px;
             }}
-            QTreeWidget#MindspaceSearchResultsTree::item:hover {{
+            QTreeWidget#SearchSidebarResultsTree::item:hover {{
                 background-color: {button_hover};
             }}
-            QTreeWidget#MindspaceSearchResultsTree::item:selected {{
+            QTreeWidget#SearchSidebarResultsTree::item:selected {{
                 background-color: {button_checked};
                 color: {text};
             }}

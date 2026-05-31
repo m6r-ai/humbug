@@ -10,7 +10,8 @@ from typing import Any, Dict, List, overload
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt, QPersistentModelIndex
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtCore import QFileInfo
-from humbug.conversation_sidebar.mindspace_conversations_index import MindspaceConversationsIndex
+
+from humbug.conversation_sidebar.conversation_sidebar_index import ConversationSidebarIndex
 from humbug.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
 from humbug.user.user_file_sort_order import UserFileSortOrder
 from humbug.user.user_manager import UserManager
@@ -31,9 +32,9 @@ class _ConvNode:
     is_shared: bool  # True when this file appears under more than one parent
 
 
-class MindspaceConversationsDAGModel(QAbstractItemModel):
+class ConversationSidebarDAGModel(QAbstractItemModel):
     """
-    Tree model for the conversations panel, driven by MindspaceConversationsIndex.
+    Tree model for the conversations panel, driven by ConversationSidebarIndex.
 
     Tree structure:
     - Top level: filesystem subdirectories of the conversations root, plus
@@ -58,7 +59,7 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
 
     def __init__(
         self,
-        index: MindspaceConversationsIndex,
+        index: ConversationSidebarIndex,
         icon_provider: SidebarTreeIconProvider,
         parent: Any = None
     ) -> None:
@@ -71,7 +72,7 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
             parent: Optional Qt parent object.
         """
         super().__init__(parent)
-        self._logger = logging.getLogger("MindspaceConversationsDAGModel")
+        self._logger = logging.getLogger("ConversationSidebarDAGModel")
         self._index = index
         self._icon_provider = icon_provider
         self._index.structure_changed.connect(self._on_index_changed)
@@ -90,7 +91,7 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
 
         self._build()
 
-    def set_index(self, index: MindspaceConversationsIndex) -> None:
+    def set_index(self, index: ConversationSidebarIndex) -> None:
         """
         Replace the backing index.
 

@@ -10,7 +10,7 @@ from humbug.user.user_file_sort_order import UserFileSortOrder
 from humbug.user.user_manager import UserManager
 
 
-class MindspacePreviewModel(QSortFilterProxyModel):
+class PreviewSidebarModel(QSortFilterProxyModel):
     """Filter model to hide .humbug directory and apply custom sorting for preview view."""
 
     def __init__(self, parent: QWidget | None = None):

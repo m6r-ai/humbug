@@ -8,7 +8,7 @@ from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 
 
-class MindspaceVCSDelegate(QStyledItemDelegate):
+class VCSSidebarDelegate(QStyledItemDelegate):
     """
     Delegate that renders each VCS status entry as two visual columns.
 

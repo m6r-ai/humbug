@@ -6,11 +6,11 @@ from typing import Callable
 from PySide6.QtCore import QModelIndex, QTimer
 from PySide6.QtWidgets import QWidget
 
-from humbug.conversation_sidebar.mindspace_conversations_dag_model import MindspaceConversationsDAGModel
+from humbug.conversation_sidebar.conversation_sidebar_dag_model import ConversationSidebarDAGModel
 from humbug.sidebar.sidebar_tree_view import SidebarTreeView
 
 
-class MindspaceConversationsTreeView(SidebarTreeView):
+class ConversationSidebarTreeView(SidebarTreeView):
     """Custom tree view for conversations with drag and drop support, auto-scroll, and inline editing."""
 
     def __init__(self, parent: QWidget | None = None):
@@ -82,7 +82,7 @@ class MindspaceConversationsTreeView(SidebarTreeView):
             return None
 
         dag_model = self.model()
-        if not isinstance(dag_model, MindspaceConversationsDAGModel):
+        if not isinstance(dag_model, ConversationSidebarDAGModel):
             return None
 
         return dag_model.path_for_index(index)
@@ -113,7 +113,7 @@ class MindspaceConversationsTreeView(SidebarTreeView):
             The model index, or an invalid index if not found.
         """
         dag_model = self.model()
-        if not isinstance(dag_model, MindspaceConversationsDAGModel):
+        if not isinstance(dag_model, ConversationSidebarDAGModel):
             return QModelIndex()
 
         return dag_model.index_for_path(path)
@@ -127,7 +127,7 @@ class MindspaceConversationsTreeView(SidebarTreeView):
             callback: Callback to execute after the item is visible
         """
         dag_model = self.model()
-        if not isinstance(dag_model, MindspaceConversationsDAGModel):
+        if not isinstance(dag_model, ConversationSidebarDAGModel):
             return
 
         index = dag_model.index_for_path(file_path)

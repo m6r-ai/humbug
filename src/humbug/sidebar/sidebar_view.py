@@ -16,16 +16,16 @@ from PySide6.QtWidgets import (
 )
 
 from humbug.color_role import ColorRole
-from humbug.conversation_sidebar.mindspace_conversations_view import MindspaceConversationsView
-from humbug.file_sidebar.mindspace_files_view import MindspaceFilesView
+from humbug.conversation_sidebar.conversation_sidebar_view import ConversationSidebarView
+from humbug.file_sidebar.file_sidebar_view import FileSidebarView
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.preview_sidebar.mindspace_preview_view import MindspacePreviewView
-from humbug.search_sidebar.mindspace_search_view import MindspaceSearchView
+from humbug.preview_sidebar.preview_sidebar_view import PreviewSidebarView
+from humbug.search_sidebar.search_sidebar_view import SearchSidebarView
 from humbug.sidebar.sidebar_view_type import SidebarViewType
 from humbug.style_manager import StyleManager
 from humbug.url_opener import open_url
-from humbug.vcs_sidebar.mindspace_vcs_view import MindspaceVCSView
+from humbug.vcs_sidebar.vcs_sidebar_view import VCSSidebarView
 
 
 class SidebarView(QWidget):
@@ -146,36 +146,36 @@ class SidebarView(QWidget):
 
         layout.addWidget(self._content_widget, 1)
 
-        self._search_view = MindspaceSearchView()
-        self._conversations_view = MindspaceConversationsView()
-        self._files_view = MindspaceFilesView()
-        self._preview_view = MindspacePreviewView()
-        self._vcs_view = MindspaceVCSView()
+        self._search_view = SearchSidebarView()
+        self._conversation_view = ConversationSidebarView()
+        self._file_view = FileSidebarView()
+        self._preview_view = PreviewSidebarView()
+        self._vcs_view = VCSSidebarView()
 
         self._register_view(SidebarViewType.SEARCH, self._search_view)
-        self._register_view(SidebarViewType.CONVERSATIONS, self._conversations_view)
-        self._register_view(SidebarViewType.FILES, self._files_view)
+        self._register_view(SidebarViewType.CONVERSATIONS, self._conversation_view)
+        self._register_view(SidebarViewType.FILES, self._file_view)
         self._register_view(SidebarViewType.PREVIEW, self._preview_view)
         self._register_view(SidebarViewType.VCS, self._vcs_view)
 
         self._search_view.file_clicked.connect(self.file_clicked.emit)
         self._search_view.result_activated.connect(self.search_result_activated.emit)
         self._search_view.highlights_cleared.connect(self.search_highlights_cleared.emit)
-        self._files_view.file_clicked.connect(self.file_clicked.emit)
-        self._files_view.file_deleted.connect(self.file_deleted.emit)
-        self._files_view.file_renamed.connect(self.file_renamed.emit)
-        self._files_view.file_moved.connect(self.file_moved.emit)
-        self._files_view.file_edited.connect(self.file_edited.emit)
-        self._files_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
-        self._files_view.file_opened_in_diff.connect(self.file_opened_in_diff.emit)
+        self._file_view.file_clicked.connect(self.file_clicked.emit)
+        self._file_view.file_deleted.connect(self.file_deleted.emit)
+        self._file_view.file_renamed.connect(self.file_renamed.emit)
+        self._file_view.file_moved.connect(self.file_moved.emit)
+        self._file_view.file_edited.connect(self.file_edited.emit)
+        self._file_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
+        self._file_view.file_opened_in_diff.connect(self.file_opened_in_diff.emit)
 
-        self._conversations_view.file_clicked.connect(self.file_clicked.emit)
-        self._conversations_view.file_deleted.connect(self.file_deleted.emit)
-        self._conversations_view.file_renamed.connect(self.file_renamed.emit)
-        self._conversations_view.file_moved.connect(self.file_moved.emit)
-        self._conversations_view.file_edited.connect(self.file_edited.emit)
-        self._conversations_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
-        self._conversations_view.new_conversation_requested.connect(self.new_conversation_requested.emit)
+        self._conversation_view.file_clicked.connect(self.file_clicked.emit)
+        self._conversation_view.file_deleted.connect(self.file_deleted.emit)
+        self._conversation_view.file_renamed.connect(self.file_renamed.emit)
+        self._conversation_view.file_moved.connect(self.file_moved.emit)
+        self._conversation_view.file_edited.connect(self.file_edited.emit)
+        self._conversation_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
+        self._conversation_view.new_conversation_requested.connect(self.new_conversation_requested.emit)
 
         self._vcs_view.file_opened_in_diff.connect(self.file_opened_in_diff.emit)
         self._vcs_view.file_clicked.connect(self.file_clicked.emit)
@@ -303,10 +303,10 @@ class SidebarView(QWidget):
                 self._search_view.focus_search()
 
             case SidebarViewType.CONVERSATIONS:
-                self._conversations_view.reveal_and_select_file(file_path)
+                self._conversation_view.reveal_and_select_file(file_path)
 
             case SidebarViewType.FILES:
-                self._files_view.reveal_and_select_file(file_path)
+                self._file_view.reveal_and_select_file(file_path)
 
             case SidebarViewType.PREVIEW:
                 self._preview_view.reveal_and_select_file(file_path)
@@ -326,8 +326,8 @@ class SidebarView(QWidget):
         else:
             self._header_widget.setText(os.path.basename(path.rstrip("\\/")))
 
-        self._files_view.set_mindspace(path)
-        self._conversations_view.set_mindspace(path)
+        self._file_view.set_mindspace(path)
+        self._conversation_view.set_mindspace(path)
         self._vcs_view.set_mindspace(path)
         self._preview_view.set_mindspace(path)
         self._search_view.set_mindspace(path)
@@ -392,6 +392,7 @@ class SidebarView(QWidget):
 
         if self.layoutDirection() == Qt.LayoutDirection.LeftToRight:
             collapse_icon = "expand-right" if self._sidebar_collapsed else "expand-left"
+
         else:
             collapse_icon = "expand-left" if self._sidebar_collapsed else "expand-right"
 
@@ -562,11 +563,11 @@ class SidebarView(QWidget):
                 color: {disabled_color};
             }}
 
-            QWidget#_content_widget MindspaceSearchView,
-            QWidget#_content_widget MindspaceConversationsView,
-            QWidget#_content_widget MindspaceFilesView,
-            QWidget#_content_widget MindspacePreviewView,
-            QWidget#_content_widget MindspaceVCSView {{
+            QWidget#_content_widget SearchSidebarView,
+            QWidget#_content_widget ConversationSidebarView,
+            QWidget#_content_widget FileSidebarView,
+            QWidget#_content_widget PreviewSidebarView,
+            QWidget#_content_widget VCSSidebarView {{
                 background-color: {content_surface};
                 border: none;
                 border-radius: {content_radius}px;
@@ -582,8 +583,8 @@ class SidebarView(QWidget):
         """)
 
         self._search_view.apply_style()
-        self._files_view.apply_style()
-        self._conversations_view.apply_style()
+        self._file_view.apply_style()
+        self._conversation_view.apply_style()
         self._vcs_view.apply_style()
         self._preview_view.apply_style()
         self._update_button_styling()

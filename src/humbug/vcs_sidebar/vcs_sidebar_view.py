@@ -16,12 +16,12 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from humbug.sidebar.sidebar_section_header import SidebarSectionHeader
 from humbug.sidebar.sidebar_pane_style import build_list_pane_stylesheet
 from humbug.sidebar.sidebar_view_type import SidebarViewType
 from humbug.style_manager import StyleManager
-from humbug.vcs_sidebar.mindspace_vcs_poller import MindspaceVCSPoller
-from humbug.vcs_sidebar.mindspace_vcs_delegate import MindspaceVCSDelegate
+from humbug.vcs_sidebar.vcs_sidebar_delegate import VCSSidebarDelegate
 
 
 _STATUS_LABELS: dict[VCSStatusCode, str] = {
@@ -88,7 +88,7 @@ class _VCSList(QListWidget):
         self._drag_start_pos = None
 
 
-class MindspaceVCSView(QWidget):
+class VCSSidebarView(QWidget):
     """Sidebar panel showing VCS-modified files for the current mindspace."""
 
     file_clicked = Signal(SidebarViewType, str, bool)   # view type, path, ephemeral
@@ -103,7 +103,7 @@ class MindspaceVCSView(QWidget):
         super().__init__(parent)
 
         self._style_manager = StyleManager()
-        self._logger = logging.getLogger("MindspaceVCSView")
+        self._logger = logging.getLogger("VCSSidebarView")
         self._mindspace_manager = MindspaceManager()
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -128,7 +128,7 @@ class MindspaceVCSView(QWidget):
         self._list_widget.customContextMenuRequested.connect(self._show_context_menu)
         self._list_widget.itemClicked.connect(self._on_item_clicked)
         self._list_widget.itemActivated.connect(self._on_item_activated)
-        self._list_widget.setItemDelegate(MindspaceVCSDelegate(self._list_widget))
+        self._list_widget.setItemDelegate(VCSSidebarDelegate(self._list_widget))
         layout.addWidget(self._list_widget)
 
         self._poller = MindspaceVCSPoller()
@@ -189,7 +189,7 @@ class MindspaceVCSView(QWidget):
         """Build and apply the widget stylesheet."""
         self.setStyleSheet(build_list_pane_stylesheet(
             self._style_manager,
-            "MindspaceVCSView",
+            "VCSSidebarView",
             "QListWidget#_list_widget",
             self.layoutDirection(),
         ))
