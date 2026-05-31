@@ -479,7 +479,8 @@ class ColumnManager(QWidget):
             return
 
         new_tab.set_ephemeral(is_ephemeral)
-        self._add_tab(new_tab, info.title, requester_id)
+        title = new_tab.tab_title_from_path() or info.title
+        self._add_tab(new_tab, title, requester_id)
         self._apply_context_models(new_tab)
 
     def _apply_context_models(self, tab: TabBase) -> None:
