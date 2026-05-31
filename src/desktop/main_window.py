@@ -37,20 +37,20 @@ from terminal_ai_tool.terminal_ai_tool import TerminalAITool
 
 from desktop.about_dialog import AboutDialog
 from desktop.color_role import ColorRole
-from desktop.conversation_sidebar.conversation_sidebar_view import ConversationSidebarView
+from desktop.conversation_sidebar.conversation_sidebar import ConversationSidebar
 from desktop.conversation_tab.conversation_tab import ConversationTab
 from desktop.diff_tab.diff_tab import DiffTab
 from desktop.editor_tab.editor_tab import EditorTab
 from desktop.exception_notifier import get_exception_notifier
-from desktop.file_sidebar.file_sidebar_view import FileSidebarView
+from desktop.file_sidebar.file_sidebar import FileSidebar
 from desktop.language.language_manager import LanguageManager
 from desktop.log_tab.log_tab import LogTab
 from desktop.message_box import MessageBox, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.main_window_splitter import MainWindowSplitter
-from desktop.preview_sidebar.preview_sidebar_view import PreviewSidebarView
+from desktop.preview_sidebar.preview_sidebar import PreviewSidebar
 from desktop.preview_tab.preview_tab import PreviewTab
-from desktop.search_sidebar.search_sidebar_view import SearchSidebarView
+from desktop.search_sidebar.search_sidebar import SearchSidebar
 from desktop.settings_dialog import SettingsDialog, SECTION_AI_BACKENDS
 from desktop.shell_tab.commands.shell_command_clear import ShellCommandClear
 from desktop.shell_tab.commands.shell_command_conversation import ShellCommandConversation
@@ -75,7 +75,7 @@ from desktop.update_checker import UpdateChecker
 from desktop.update_dialog import UpdateDialog
 from desktop.user.user_manager import UserManager, UserError
 from desktop.user.user_settings import UserSettings
-from desktop.vcs_sidebar.vcs_sidebar_view import VCSSidebarView
+from desktop.vcs_sidebar.vcs_sidebar import VCSSidebar
 
 
 def _create_conversation_tab(
@@ -143,8 +143,8 @@ def _create_shell_tab(
 
 
 def _wire_conversation_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
-    """Wire ConversationSidebarView signals to SidebarManager."""
-    assert isinstance(panel, ConversationSidebarView)
+    """Wire ConversationSidebar signals to SidebarManager."""
+    assert isinstance(panel, ConversationSidebar)
     panel.file_clicked.connect(mgr.file_clicked)
     panel.file_deleted.connect(mgr.file_deleted)
     panel.file_renamed.connect(mgr.file_renamed)
@@ -155,8 +155,8 @@ def _wire_conversation_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
 
 
 def _wire_vcs_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
-    """Wire VCSSidebarView signals to SidebarManager."""
-    assert isinstance(panel, VCSSidebarView)
+    """Wire VCSSidebar signals to SidebarManager."""
+    assert isinstance(panel, VCSSidebar)
     panel.file_clicked.connect(mgr.file_clicked)
     panel.file_deleted.connect(mgr.file_deleted)
     panel.file_edited.connect(mgr.file_edited)
@@ -165,8 +165,8 @@ def _wire_vcs_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
 
 
 def _wire_file_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
-    """Wire FileSidebarView signals to SidebarManager."""
-    assert isinstance(panel, FileSidebarView)
+    """Wire FileSidebar signals to SidebarManager."""
+    assert isinstance(panel, FileSidebar)
     panel.file_clicked.connect(mgr.file_clicked)
     panel.file_deleted.connect(mgr.file_deleted)
     panel.file_renamed.connect(mgr.file_renamed)
@@ -177,8 +177,8 @@ def _wire_file_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
 
 
 def _wire_preview_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
-    """Wire PreviewSidebarView signals to SidebarManager."""
-    assert isinstance(panel, PreviewSidebarView)
+    """Wire PreviewSidebar signals to SidebarManager."""
+    assert isinstance(panel, PreviewSidebar)
     panel.file_clicked.connect(mgr.file_clicked)
     panel.file_deleted.connect(mgr.file_deleted)
     panel.file_renamed.connect(mgr.file_renamed)
@@ -188,8 +188,8 @@ def _wire_preview_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
 
 
 def _wire_search_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
-    """Wire SearchSidebarView signals to SidebarManager."""
-    assert isinstance(panel, SearchSidebarView)
+    """Wire SearchSidebar signals to SidebarManager."""
+    assert isinstance(panel, SearchSidebar)
     panel.file_clicked.connect(mgr.file_clicked)
     panel.result_activated.connect(mgr.search_result_activated)
     panel.highlights_cleared.connect(mgr.search_highlights_cleared)
@@ -197,7 +197,7 @@ def _wire_search_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
 
 def _activate_search_sidebar(panel: SidebarBase) -> None:
     """Focus the search input when the search panel is activated."""
-    assert isinstance(panel, SearchSidebarView)
+    assert isinstance(panel, SearchSidebar)
     panel.focus_search()
 
 
@@ -506,12 +506,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._splitter)
 
         self._sidebar_manager = SidebarManager(self)
-        self._sidebar_manager.register_panel("conversations", "conversation", ConversationSidebarView, _wire_conversation_sidebar)
-        self._sidebar_manager.register_panel("vcs", "diff", VCSSidebarView, _wire_vcs_sidebar, visibility_signal="repo_available")
-        self._sidebar_manager.register_panel("files", "files", FileSidebarView, _wire_file_sidebar)
-        self._sidebar_manager.register_panel("preview", "preview", PreviewSidebarView, _wire_preview_sidebar)
+        self._sidebar_manager.register_panel("conversations", "conversation", ConversationSidebar, _wire_conversation_sidebar)
+        self._sidebar_manager.register_panel("vcs", "diff", VCSSidebar, _wire_vcs_sidebar, visibility_signal="repo_available")
+        self._sidebar_manager.register_panel("files", "files", FileSidebar, _wire_file_sidebar)
+        self._sidebar_manager.register_panel("preview", "preview", PreviewSidebar, _wire_preview_sidebar)
         self._sidebar_manager.register_panel(
-            "search", "search", SearchSidebarView, _wire_search_sidebar, on_activated=_activate_search_sidebar
+            "search", "search", SearchSidebar, _wire_search_sidebar, on_activated=_activate_search_sidebar
         )
         self._sidebar_manager.file_clicked.connect(self._on_sidebar_file_clicked)
         self._sidebar_manager.file_deleted.connect(self._on_sidebar_file_deleted)

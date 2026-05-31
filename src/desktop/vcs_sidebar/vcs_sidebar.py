@@ -88,7 +88,7 @@ class _VCSList(QListWidget):
         self._drag_start_pos = None
 
 
-class VCSSidebarView(SidebarBase):
+class VCSSidebar(SidebarBase):
     """Sidebar panel showing VCS-modified files for the current mindspace."""
 
     file_clicked = Signal(str, str, bool)                  # panel_id, path, ephemeral
@@ -103,7 +103,7 @@ class VCSSidebarView(SidebarBase):
         super().__init__(parent)
 
         self._style_manager = StyleManager()
-        self._logger = logging.getLogger("VCSSidebarView")
+        self._logger = logging.getLogger("VCSSidebar")
         self._mindspace_manager = MindspaceManager()
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -189,7 +189,7 @@ class VCSSidebarView(SidebarBase):
         """Build and apply the widget stylesheet."""
         self.setStyleSheet(build_list_pane_stylesheet(
             self._style_manager,
-            "VCSSidebarView",
+            "VCSSidebar",
             "QListWidget#_list_widget",
             self.layoutDirection(),
         ))

@@ -120,7 +120,7 @@ class _SearchResultDelegate(QStyledItemDelegate):
         painter.restore()
 
 
-class SearchSidebarView(SidebarBase):
+class SearchSidebar(SidebarBase):
     """Global search pane for searching across the current mindspace."""
 
     file_clicked = Signal(str, str, bool)               # panel_id, path, ephemeral
@@ -481,7 +481,7 @@ class SearchSidebarView(SidebarBase):
         self.setStyleSheet(
             build_tree_pane_stylesheet(
                 self._style_manager,
-                "SearchSidebarView",
+                "SearchSidebar",
                 "QTreeWidget#SearchSidebarResultsTree",
                 self.layoutDirection(),
                 zoom_factor,
