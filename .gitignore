@@ -13,6 +13,7 @@
 .coverage
 /htmlcov
 /.pytest_cache
+/.mypy_cache
 
 # Ignore virtual environment
 /venv
@@ -33,8 +34,4 @@
 
 # Ignore Cython build artefacts (compiled per-machine, not source)
 src/menai/*.so
-src/menai/*.pyd
-build/cython/
-build/.cython_stamp
-src/menai/menai_value_fast.c
-src/menai/menai_vm.c
+
