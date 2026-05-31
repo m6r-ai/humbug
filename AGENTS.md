@@ -13,7 +13,6 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
   you want to be somewhere else.
 - Terminals will not open with a python virtual environment by default.  If you want a venv then you must do that yourself.
 
-
 ## Code generation
 
 - When you help write code, do not write lengthy file-level docstrings.  These go stale very fast as the code evolves.
@@ -22,8 +21,12 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 - If you are writing tests, the tests must reflect the correct and desired behaviour.  NEVER write or patch a test to
   mask broken implementation logic.  If the logic is wrong then a test must fail.
 
+## Code restructuring
 
-## Top-Level Structure
+- When restructuring or rewriting code you MUST NOT remove comments.  If a comment is likely or definitely wrong then draw the
+  user's attention to it and seek advice.
+
+## Top-Level structure
 
 ```text
 humbug/
