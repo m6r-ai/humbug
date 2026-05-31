@@ -8,7 +8,7 @@ New features:
   `python -m desktop` to launch the application now, not `python -m humbug`.
 - When delegating a task to an AI, if the AI model is available from more than one backend provider, the tool now tells the AI
   and asks it to select the correct one.
-- Added Clause Opus 4.8 and removed 4.6.
+- Added Claude Opus 4.8 and removed 4.6.
 
 Bug fixes:
 
@@ -20,9 +20,10 @@ Bug fixes:
 Internal structure changes:
 
 - Moved the core AI tools into separate top-level modules so the dependency management is clearer.
-- Reworked the Delegate AI tool to have a clean back-end and front-end separation.
-- Switched GUI-interacting AI tools to a new context registry.
-- Separated out more functionality from the column manager into the tabs.
+- Switched GUI-interacting AI tools to use a new context registry enabling other front ends in the future.
+- Separated out more functionality from the tab manager (was the column manager) into the tabs.
+- Created a clean separation of sidebar functionality and added a new sidebar manager.
+- Hoisted all tabs and sidebars to the top of the src/desktop directory.
 
 ## v48 (2026-05-22)
 
