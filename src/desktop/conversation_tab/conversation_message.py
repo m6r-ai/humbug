@@ -1486,9 +1486,3 @@ class ConversationMessage(QFrame):
             return section.mapTo(self, pos_in_section)
 
         return QPoint(0, 0)
-
-    def sizeHint(self) -> QSize:
-        """Calculate ideal size based on content."""
-        size = super().sizeHint()
-        print(f"Base size hint: {size}")
-        return size
