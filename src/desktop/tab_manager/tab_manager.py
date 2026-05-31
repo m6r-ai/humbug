@@ -537,11 +537,16 @@ class TabManager(QWidget):
         )
         focus_widget = QApplication.focusWidget()
         column.setCurrentWidget(tab)
-        if focus_widget is not None:
-            focus_widget.setFocus()
 
+        self._update_tabs(change_focus=False)
         self._update_mru_order(tab, column)
         QTimer.singleShot(0, self.show_all_columns)
+
+        # Only restore focus to the prior widget if it was outside the target column
+        # (e.g. the sidebar).  If focus was already inside the column, let it move to the new tab.
+        if focus_widget is not None and not column.isAncestorOf(focus_widget):
+            self._activation_timer.stop()
+            QTimer.singleShot(0, focus_widget.setFocus)
 
     def _move_tab_between_columns(
         self,
@@ -1024,8 +1029,16 @@ class TabManager(QWidget):
             # If no tabs exist, we need to switch to the columns widget
             self._stack.setCurrentWidget(self._columns_widget)
 
+        prior_active_column = self._active_column
         target_column = self._get_target_column_for_new_tab(requester_id)
+
         self._add_tab_to_column(tab, title, target_column)
+
+        # If the new tab landed in a column that wasn't already active, restore the previously
+        # active column so that opening a tab doesn't implicitly steal column activation
+        if target_column != prior_active_column:
+            self._active_column = prior_active_column
+            self._update_tabs(change_focus=False)
 
         # Close any ephemeral tab in target column because we've just added a new one
         self._close_ephemeral_tab_in_column(target_column, tab)
