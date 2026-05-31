@@ -25,7 +25,7 @@ else:
 certifi_data = collect_data_files("certifi")
 
 a = Analysis(
-    ['src/humbug/__main__.py'],
+    ['src/desktop/__main__.py'],
     pathex=['src'],
     binaries=_extra_binaries,
     datas=certifi_data + [

@@ -1,0 +1,54 @@
+"""Section header widget for sidebar panes."""
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
+
+from desktop.color_role import ColorRole
+from desktop.style_manager import StyleManager
+
+
+class SidebarSectionHeader(QWidget):
+    """A simple titled header for sidebar panes."""
+
+    def __init__(self, title: str, parent: QWidget | None = None) -> None:
+        """Initialize the section header."""
+        super().__init__(parent)
+        self.setObjectName("SidebarSectionHeader")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self._style_manager = StyleManager()
+
+        layout = QHBoxLayout(self)
+        spacing = 5
+        layout.setSpacing(spacing)
+        layout.setContentsMargins(spacing + 3, spacing, spacing, spacing)
+
+        self._title_label = QLabel(title, self)
+        self._title_label.setIndent(0)
+        layout.addWidget(self._title_label)
+        layout.addStretch()
+
+    def set_title(self, title: str) -> None:
+        """Set the header title text."""
+        self._title_label.setText(title)
+
+    def apply_style(self) -> None:
+        """Update styling when application style changes."""
+        zoom_factor = self._style_manager.zoom_factor()
+        base_font_size = self._style_manager.base_font_size()
+        background = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
+        text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
+
+        font = self._title_label.font()
+        font.setPointSizeF(base_font_size * zoom_factor)
+        self._title_label.setFont(font)
+
+        self.setStyleSheet(f"""
+            QWidget#SidebarSectionHeader {{
+                background-color: {background};
+                border: none;
+            }}
+            QWidget#SidebarSectionHeader QLabel {{
+                color: {text};
+                background: transparent;
+            }}
+        """)

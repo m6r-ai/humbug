@@ -166,7 +166,7 @@ Developer dependencies (installed automatically with `.[dev]`):
 3. Launch the application:
 
    ```bash
-   python -m humbug
+   python -m desktop
    ```
 
 4. Build the Menai C extension:

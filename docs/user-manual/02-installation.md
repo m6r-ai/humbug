@@ -101,7 +101,7 @@ python setup.py build_ext --inplace
 ### 5. Launch Humbug
 
 ```text
-python -m humbug
+python -m desktop
 ```
 
 ---

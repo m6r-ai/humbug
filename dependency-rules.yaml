@@ -112,7 +112,7 @@ modules:
     external_dependencies:
       - "standard_library"
 
-  humbug:
+  desktop:
     internal_dependencies:
       - ai
       - ai_tool

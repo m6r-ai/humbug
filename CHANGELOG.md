@@ -20,6 +20,7 @@ Internal structure changes:
 - Reworked the Delegate AI tool to have a clean back-end and front-end separation.
 - Switched GUI-interacting AI tools to a new context registry.
 - Separated out more functionality from the column manager into the tabs.
+- The GUI is now in src/desktop, not src/humbug.  This allows for other (future) frontends.
 
 ## v48 (2026-05-22)
 

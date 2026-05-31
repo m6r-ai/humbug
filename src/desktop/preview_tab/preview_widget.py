@@ -1,0 +1,1277 @@
+"""Preview content widget implementation with file change detection."""
+
+import logging
+import os
+import re
+from typing import Dict, List, Any, Set, Tuple
+
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
+)
+from PySide6.QtCore import Signal, Qt, QPoint, QTimer
+from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
+
+from desktop.color_role import ColorRole
+from desktop.language.language_manager import LanguageManager
+from desktop.file_watcher import FileWatcher
+from desktop.mindspace.mindspace_manager import MindspaceManager
+from desktop.style_manager import StyleManager
+from desktop.preview_tab.preview_content import PreviewContent, PreviewContentType
+from desktop.preview_tab.preview_content_widget import PreviewContentWidget
+from desktop.preview_tab.preview_error import PreviewIOError
+from desktop.preview_tab.preview_file_content import PreviewFileContent
+from desktop.preview_tab.preview_markdown_content import PreviewMarkdownContent
+from desktop.preview_tab.preview_markdown_preview_content import PreviewMarkdownPreviewContent
+from desktop.widgets import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
+
+
+class PreviewWidget(QWidget):
+    """Widget for displaying preview content with automatic refresh capability."""
+
+    # Signal to notify tab of status changes
+    status_updated = Signal()
+
+    # Emits when a link is clicked
+    open_link = Signal(str)
+
+    # Emits when a file edit button is clicked
+    edit_file = Signal(str)
+
+    # Emits when content has been refreshed due to file changes
+    content_refreshed = Signal()
+
+    def __init__(
+        self,
+        path: str,
+        mindspace_manager: MindspaceManager,
+        parent: QWidget | None = None
+    ) -> None:
+        """
+        Initialize the preview content widget.
+
+        Args:
+            path: Full path to preview file
+            mindspace_manager: The mindspace manager, used for path resolution
+                in directory listings.
+            parent: Optional parent widget
+        """
+        super().__init__(parent)
+        self._logger = logging.getLogger("PreviewWidget")
+        self._path = path
+
+        self._preview = PreviewContent(mindspace_manager.mindspace())
+
+        # File watching integration
+        self._file_watcher = FileWatcher()
+        self._watched_paths: Set[str] = set()
+
+        # Cache of the last rendered content list for change detection
+        self._last_content_list: List[Tuple[PreviewContentType, str]] = []
+
+        # Widget tracking
+        self._content_blocks: List[PreviewContentWidget] = []
+        self._content_with_selection: PreviewContentWidget | None = None
+
+        # Initialize tracking variables
+        self._auto_scroll = True
+        self._last_scroll_maximum = 0
+
+        self._style_manager = StyleManager()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+
+        # Create layout
+        content_layout = QVBoxLayout(self)
+        self.setLayout(content_layout)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+
+        # Set up the scroll area
+        self._scroll_area = QScrollArea()
+        self._scroll_area.setFrameStyle(0)
+        self._scroll_area.setWidgetResizable(True)
+        self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        # Create content container widget
+        self._content_container = QWidget()
+        self._content_layout = QVBoxLayout(self._content_container)
+        self._content_container.setLayout(self._content_layout)
+
+        spacing = int(self._style_manager.message_bubble_spacing())
+        self._content_layout.setSpacing(spacing)
+        self._content_layout.setContentsMargins(spacing, spacing, spacing, spacing)
+        self._content_layout.addStretch()
+
+        self._content_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._scroll_area.setWidget(self._content_container)
+
+        # Add the scroll area to the main layout
+        content_layout.addWidget(self._scroll_area)
+
+        # Setup signals for search highlights
+        self._search_highlights: Dict[PreviewContentWidget, List[Tuple[int, int, int]]] = {}
+
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._on_language_changed)
+
+        # Create timer for scrolling
+        self._scroll_timer = QTimer(self)
+        self._scroll_timer.setInterval(16)  # ~60fps
+        self._scroll_timer.timeout.connect(self._update_scroll)
+        self._last_mouse_pos: QPoint | None = None
+
+        # Timer for smooth animated scrolling
+        self._smooth_scroll_timer = QTimer(self)
+        self._smooth_scroll_timer.setInterval(SMOOTH_SCROLL_INTERVAL_MS)
+        self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
+
+        self._deferred_scroll_timer = QTimer(self)
+        self._deferred_scroll_timer.setSingleShot(True)
+        self._deferred_scroll_timer.setInterval(0)
+        self._deferred_scroll_timer.timeout.connect(self._on_deferred_scroll)
+        self._deferred_scroll_position: int = 0
+        self._deferred_restore_args: tuple = ()
+        self._smooth_scroll_target: int = 0
+        self._smooth_scroll_start: int = 0
+        self._smooth_scroll_distance: int = 0
+        self._smooth_scroll_duration: int = SMOOTH_SCROLL_DURATION_MS
+        self._smooth_scroll_time: int = 0
+
+        # Setup context menu
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._show_context_menu)
+
+        # Connect to the vertical scrollbar's change signals
+        self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
+        self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
+
+        self._on_style_changed()
+
+        # Find functionality
+        self._matches: List[Tuple[PreviewContentWidget, List[Tuple[int, int, int]]]] = []
+        self._current_widget_index = -1
+        self._current_match_index = -1
+        self._last_search: tuple = ("", False, False)
+        self._highlighted_widgets: Set[PreviewContentWidget] = set()
+
+    def activate(self) -> None:
+        """Activate the preview widget."""
+        self._scroll_area.setFocus()
+
+    def _on_language_changed(self) -> None:
+        """Update language-specific elements when language changes."""
+        # Update status if needed
+        self.status_updated.emit()
+
+    def _register_file_watching(self, dependencies: Set[str]) -> None:
+        """Register current path and any dependencies for file watching."""
+        # Register each dependency with the file watcher
+        for dep_path in dependencies:
+            if dep_path not in self._watched_paths:
+                self._file_watcher.watch_file(dep_path, self._handle_file_changed)
+                self._watched_paths.add(dep_path)
+                self._logger.debug("Watching file: %s", dep_path)
+
+    def _unregister_file_watching(self) -> None:
+        """Unregister all file watching for this widget."""
+        for watched_path in self._watched_paths.copy():
+            self._file_watcher.unwatch_file(watched_path, self._handle_file_changed)
+            self._watched_paths.remove(watched_path)
+            self._logger.debug("Stopped watching file: %s", watched_path)
+
+    def _handle_file_changed(self, changed_path: str) -> None:
+        """
+        Handle notification that a watched file has changed.
+
+        Args:
+            changed_path: Path of the file that changed
+        """
+        self._logger.debug("File changed: %s", changed_path)
+
+        # Check if the main path still exists
+        if not os.path.exists(self._path):
+            self._logger.info("Main path no longer exists: %s", self._path)
+            return
+
+        # Refresh content while preserving UI state
+        self.refresh_content()
+
+    def refresh_content(self) -> None:
+        """Refresh content from disk, preserving scroll position and other UI state."""
+        try:
+            # Fetch new content first and compare against what is currently rendered.
+            # If nothing has changed (e.g. a transient lock file appeared and disappeared,
+            # or an mtime was touched without the content changing) skip the re-render
+            # entirely so we don't create a feedback loop.
+            try:
+                new_content_list, new_dependencies = self._preview.get_preview_content(self._path)
+            except Exception:
+                # If we can't read the content, fall through to the normal reload path
+                # which will handle the error properly.
+                new_content_list = None
+                new_dependencies = None
+
+            if new_content_list is not None and new_content_list == self._last_content_list:
+                # Content unchanged — update the watcher baseline without re-rendering.
+                self._unregister_file_watching()
+                self._register_file_watching(new_dependencies or set())
+                return
+
+            # Save current state
+            saved_scroll_pos = self._scroll_area.verticalScrollBar().value()
+            saved_selection = None
+            saved_find_state = {
+                'matches': self._matches.copy(),
+                'current_widget_index': self._current_widget_index,
+                'current_match_index': self._current_match_index,
+                'last_search': self._last_search
+            }
+
+            if self._content_with_selection:
+                saved_selection = self._content_with_selection.get_selected_text()
+
+            # Unregister old file watching
+            self._unregister_file_watching()
+
+            # Clear find state before reloading
+            self.clear_find()
+
+            # Reload content
+            self.load_content()
+
+            # Restore state
+            self._deferred_restore_args = (saved_scroll_pos, saved_selection, saved_find_state)
+            self._deferred_scroll_timer.start()
+
+        except Exception as e:
+            self._logger.error("Failed to refresh content: %s", str(e))
+
+    def _on_deferred_scroll(self) -> None:
+        """Fire the deferred scroll or UI state restore after layout has settled."""
+        if self._deferred_restore_args:
+            self._restore_ui_state(*self._deferred_restore_args)
+            self._deferred_restore_args = ()
+
+        else:
+            self._scroll_area.verticalScrollBar().setValue(self._deferred_scroll_position)
+
+    def _restore_ui_state(self, scroll_pos: int, selection: str | None, find_state: Dict) -> None:
+        """
+        Restore UI state after content refresh.
+
+        Args:
+            scroll_pos: Saved scroll position
+            selection: Saved text selection
+            find_state: Saved find/search state
+        """
+        # Restore scroll position
+        self._scroll_area.verticalScrollBar().setValue(scroll_pos)
+
+        # Restore selection if possible
+        if selection:
+            # Try to find and restore the same text selection
+            for content_block in self._content_blocks:
+                if selection in content_block.get_selected_text():
+                    break
+
+        # Restore find state if there was an active search
+        last_search = find_state['last_search']
+        search_text = last_search[0] if isinstance(last_search, tuple) else last_search
+        if search_text:
+            # Re-run the search to restore highlights
+            self._last_search = ("", False, False)  # Reset to force re-search
+            case_sensitive = last_search[1] if isinstance(last_search, tuple) else False
+            regexp = last_search[2] if isinstance(last_search, tuple) else False
+            _current, total, _truncated = self.find_text(search_text, True, case_sensitive, regexp)
+
+            # Try to restore the current match position
+            if (find_state['current_widget_index'] >= 0 and
+                find_state['current_match_index'] >= 0):
+                # Navigate to approximately the same match position
+                target_match = (find_state['current_widget_index'] *
+                              (find_state['current_match_index'] + 1))
+                for _ in range(min(target_match, total)):
+                    self.find_text(search_text, True, case_sensitive, regexp)
+
+        # Emit refresh signal
+        self.content_refreshed.emit()
+
+    def _add_content_block(self, content_type: PreviewContentType, content: str) -> PreviewContentWidget:
+        """
+        Add a new content block to the preview view.
+
+        Args:
+            content_type: Type of content to create
+            content: The content text
+
+        Returns:
+            The created PreviewContentWidget widget
+        """
+        if content_type == PreviewContentType.MARKDOWN:
+            content_widget: PreviewContentWidget = PreviewMarkdownContent(self)
+
+        elif content_type == PreviewContentType.MARKDOWN_PREVIEW:
+            content_widget = PreviewMarkdownPreviewContent(self)
+
+        elif content_type == PreviewContentType.FILE:
+            content_widget = PreviewFileContent(self)
+
+        else:
+            # Default to markdown for unknown types
+            self._logger.warning("Unknown content type: %s, defaulting to markdown", content_type)
+            content_widget = PreviewMarkdownContent(self)
+
+        content_widget.selection_changed.connect(
+            lambda has_selection: self._on_selection_changed(content_widget, has_selection)
+        )
+        content_widget.scroll_requested.connect(self._on_scroll_requested)
+        content_widget.mouse_released.connect(self._stop_scroll)
+        content_widget.edit_clicked.connect(self._on_edit_clicked)
+        content_widget.link_clicked.connect(self._on_link_clicked)
+
+        content_widget.set_content(content, self._path)
+
+        # Add widget before the stretch
+        self._content_layout.insertWidget(self._content_layout.count() - 1, content_widget)
+        self._content_blocks.append(content_widget)
+
+        return content_widget
+
+    def _on_edit_clicked(self) -> None:
+        """Handle edit button clicks from content blocks."""
+        # Emit the edit_file signal
+        self.edit_file.emit(self._path)
+
+    def _on_link_clicked(self, url: str) -> None:
+        """
+        Handle link clicks from content blocks.
+
+        Args:
+            url: The URL that was clicked
+        """
+        # Handle local links (anchors starting with #)
+        if url.startswith("#"):
+            # Extract the target ID without the # prefix
+            target_id = url[1:]
+            self.scroll_to_target(target_id)
+            return
+
+        self.open_link.emit(url)
+
+    def load_content(self) -> None:
+        """Load content from the mindspace preview."""
+        try:
+            # Get content and dependencies
+            content_list, dependencies = self._preview.get_preview_content(self._path)
+
+            # Clear existing content blocks
+            self.clear_content()
+
+            # Add content blocks
+            for content_type, content in content_list:
+                self._add_content_block(content_type, content)
+
+            # Cache the rendered content list for future change detection
+            self._last_content_list = content_list
+
+            # Register file watching for all dependencies
+            self._register_file_watching(dependencies)
+
+            # Ensure we're scrolled to the top
+            self._auto_scroll = True
+            self._scroll_to_top()
+
+        except Exception as e:
+            raise PreviewIOError(f"Failed to read preview file: {str(e)}") from e
+
+    def clear_content(self) -> None:
+        """Clear all content blocks."""
+        self._content_with_selection = None
+
+        for content_widget in self._content_blocks:
+            self._content_layout.removeWidget(content_widget)
+            content_widget.deleteLater()
+
+        self._content_blocks = []
+
+    def resolve_link(self, current_path: str, target_path: str) -> str | None:
+        """
+        Resolve a link to an absolute path.
+
+        Args:
+            current_path: Path of the current preview page
+            target_path: Target path from the link
+
+        Returns:
+            Absolute path to the target or None if it's an external link
+        """
+        return self._preview.resolve_link(current_path, target_path)
+
+    def get_content_blocks(self) -> List[Tuple[PreviewContentType, str]]:
+        """
+        Return the cached raw content blocks for this preview.
+
+        Returns:
+            List of (PreviewContentType, str) tuples representing the last
+            successfully loaded content.
+        """
+        return list(self._last_content_list)
+
+    def set_path(self, new_path: str) -> None:
+        """
+        Set the path for the preview file.
+
+        Args:
+            new_path: New path for the preview file
+        """
+        # Unregister old file watching
+        self._unregister_file_watching()
+
+        self._path = new_path
+        self.load_content()
+
+    def _on_scroll_value_changed(self, value: int) -> None:
+        """
+        Handle scroll value changes to detect user scrolling.
+
+        Args:
+            value (int): The new scroll value
+        """
+        # Get the vertical scrollbar
+        vbar = self._scroll_area.verticalScrollBar()
+
+        # Check if we're at the top
+        at_top = value == vbar.minimum()
+
+        # If user scrolls down, disable auto-scroll
+        if not at_top:
+            self._auto_scroll = False
+
+        # If user scrolls to top, re-enable auto-scroll
+        if at_top:
+            self._auto_scroll = True
+
+    def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
+        """Handle the scroll range changing."""
+        if self._auto_scroll:
+            self._scroll_to_top()
+
+        self._last_scroll_maximum = maximum
+
+    def _scroll_to_top(self) -> None:
+        """Scroll to the top of the content."""
+        scrollbar = self._scroll_area.verticalScrollBar()
+        scrollbar.setValue(scrollbar.minimum())
+
+    def _start_smooth_scroll(self, target_value: int) -> None:
+        """
+        Start smooth scrolling animation to target value.
+
+        Args:
+            target_value: Target scroll position
+        """
+        scrollbar = self._scroll_area.verticalScrollBar()
+
+        # If we're already scrolling or the value is out of range, do nothing
+        if self._smooth_scroll_timer.isActive():
+            self._smooth_scroll_timer.stop()
+
+        # Set up the animation parameters
+        self._smooth_scroll_start = scrollbar.value()
+        self._smooth_scroll_target = target_value
+        self._smooth_scroll_distance = target_value - self._smooth_scroll_start
+        self._smooth_scroll_time = 0
+
+        # Start the animation timer
+        self._smooth_scroll_timer.start()
+
+    def _update_smooth_scroll(self) -> None:
+        """Update the smooth scrolling animation."""
+        self._smooth_scroll_time += self._smooth_scroll_timer.interval()
+        progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
+        t = 1 - (1 - progress) ** 3
+
+        # Add 0.5 lines of bias so that int() truncation crosses each pixel boundary
+        # slightly early, avoiding a visible "jump" at the very end of the animation
+        # where the easing curve decelerates so slowly that the final line is only
+        # reached on the last tick, well after the scroll appears to have stopped.
+        new_position = min(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t + 0.5),
+        ) if self._smooth_scroll_distance > 0 else max(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t - 0.5),
+        )
+        scrollbar = self._scroll_area.verticalScrollBar()
+        scrollbar.setValue(new_position)
+        if progress >= 1.0 or new_position == self._smooth_scroll_target:
+            self._smooth_scroll_timer.stop()
+
+    def _on_scroll_requested(self, mouse_pos: QPoint) -> None:
+        """Begin scroll handling for selection drag."""
+        viewport_pos = self._scroll_area.viewport().mapFromGlobal(mouse_pos)
+
+        if not self._scroll_timer.isActive():
+            self._scroll_timer.start()
+
+        self._last_mouse_pos = viewport_pos
+
+    def _stop_scroll(self) -> None:
+        """Stop any ongoing selection scrolling."""
+        if self._scroll_timer.isActive():
+            self._scroll_timer.stop()
+
+        self._last_mouse_pos = None
+
+    def _update_scroll(self) -> None:
+        """Update scroll position based on mouse position."""
+        if self._last_mouse_pos is None:
+            self._scroll_timer.stop()
+            return
+
+        viewport = self._scroll_area.viewport()
+        scrollbar = self._scroll_area.verticalScrollBar()
+        current_val = scrollbar.value()
+        viewport_height = viewport.height()
+
+        # Calculate scroll amount based on distance from viewport edges
+        if self._last_mouse_pos.y() < 0:
+            # Above viewport
+            distance_out = -self._last_mouse_pos.y()
+            if distance_out > viewport_height * 2:
+                scrollbar.setValue(scrollbar.minimum())
+            else:
+                screen = QGuiApplication.screenAt(QCursor.pos())
+                if screen is None or QCursor.pos().y() <= screen.availableGeometry().top() + 4:
+                    distance_out = 250
+
+                scroll_amount = min(50, max(10, distance_out // 5))
+                new_val = max(scrollbar.minimum(), current_val - scroll_amount)
+                scrollbar.setValue(new_val)
+
+        elif self._last_mouse_pos.y() > viewport_height:
+            # Below viewport
+            distance_out = self._last_mouse_pos.y() - viewport_height
+            if distance_out > viewport_height * 2:
+                scrollbar.setValue(scrollbar.maximum())
+            else:
+                screen = QGuiApplication.screenAt(QCursor.pos())
+                if screen is None or QCursor.pos().y() >= screen.availableGeometry().bottom() - 4:
+                    distance_out = 250
+
+                scroll_amount = min(50, max(10, distance_out // 5))
+                new_val = min(scrollbar.maximum(), current_val + scroll_amount)
+                scrollbar.setValue(new_val)
+
+        # Update mouse position
+        self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
+
+    def _on_selection_changed(self, content_widget: PreviewContentWidget, has_selection: bool) -> None:
+        """Handle selection changes in content widgets."""
+        if not has_selection:
+            if self._content_with_selection:
+                content = self._content_with_selection
+                self._content_with_selection = None
+                content.clear_selection()
+
+            return
+
+        if self._content_with_selection and self._content_with_selection != content_widget:
+            self._content_with_selection.clear_selection()
+
+        self._content_with_selection = content_widget
+
+    def scroll_to_target(self, target_id: str) -> None:
+        """
+        Scroll to a target element by ID.
+
+        Args:
+            target_id: The ID of the target element to scroll to
+        """
+        # Normalize the target ID to handle different formats
+        target_id = self._normalize_id(target_id)
+
+        # Try to find the target in content blocks
+        for content_block in self._content_blocks:
+            target_position = content_block.find_element_by_id(target_id)
+            if target_position:
+                section_idx, _block_num, position = target_position
+
+                # Get the position to scroll to
+                target_point = content_block.select_and_scroll_to_position(section_idx, position)
+
+                # Map position to scroll area coordinates and get the target point
+                pos_in_scroll_area = content_block.mapTo(self._content_container, target_point)
+                target_scroll = pos_in_scroll_area.y() - 50  # 50px margin above target
+
+                # Smoothly scroll to the target position
+                self._start_smooth_scroll(target_scroll)
+                return
+
+    def _normalize_id(self, id_str: str) -> str:
+        """
+        Normalize an ID string to be consistent with how IDs are generated.
+
+        Args:
+            id_str: The ID string to normalize
+
+        Returns:
+            Normalized ID string
+        """
+        # Convert to lowercase
+        id_str = id_str.lower()
+
+        # Replace spaces with hyphens
+        id_str = id_str.replace(' ', '-')
+
+        # Remove special characters
+        id_str = re.sub(r'[^a-z0-9-]', '', id_str)
+
+        # Ensure it doesn't start with a number (same as in renderer)
+        if id_str and id_str[0].isdigit():
+            id_str = 'h-' + id_str
+
+        return id_str
+
+    def has_selection(self) -> bool:
+        """Check if any content has selected text."""
+        return self._content_with_selection is not None and self._content_with_selection.has_selection()
+
+    def get_selected_text(self) -> str:
+        """
+        Get current selected text if any.
+
+        Returns:
+            The selected text or empty string
+        """
+        if self._content_with_selection:
+            return self._content_with_selection.get_selected_text()
+
+        return ""
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        """Handle resize events."""
+        super().resizeEvent(event)
+
+        if self._auto_scroll:
+            self._scroll_to_top()
+
+    def _build_widget_style(self) -> str:
+        """Build styles for the conversation widget."""
+        style_manager = self._style_manager
+
+        return f"""
+            QWidget {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+
+            {style_manager.get_menu_stylesheet()}
+            {style_manager.get_scrollbar_stylesheet()}
+        """
+
+    def _build_preview_file_content_style(self) -> str:
+        """Build styles for the PreviewFileContent widget."""
+        style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
+        bubble_spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+
+        return f"""
+            #PreviewFileContent {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                margin: 0;
+                border-radius: {bubble_spacing}px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
+            }}
+
+            #PreviewFileContent #_content_container {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            #PreviewFileContent #_header_container {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            #PreviewFileContent #_syntax_header {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYNTAX)};
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            #PreviewFileContent #_text_area {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: transparent;
+            }}
+
+            {style_manager.get_scrollbar_stylesheet("#PreviewFileContent #_text_area QScrollBar")}
+
+            #PreviewFileContent #_edit_button {{
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 0;
+                padding: 0px;
+            }}
+            #PreviewFileContent #_edit_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            #PreviewFileContent #_edit_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+        """
+
+    def _build_preview_markdown_content_styles(self) -> str:
+        """Build styles for the main container."""
+        style_manager = self._style_manager
+        return f"""
+            QWidget#PreviewMarkdownContent {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            QWidget#PreviewMarkdownContent[contained="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
+            #PreviewMarkdownContent QWidget#_sections_container {{
+                background-color: transparent;
+                border: none;
+                margin: 0;
+                padding: 0;
+            }}
+        """
+
+    def _build_preview_markdown_content_section_styles(self) -> str:
+        """Build styles for language headers within sections."""
+        style_manager = self._style_manager
+        border_radius = int(style_manager.message_bubble_spacing())
+
+        return f"""
+            /* Default section styling */
+            QFrame#PreviewMarkdownContentSection {{
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 0;
+            }}
+
+            /* Text sections - normal (not contained) */
+            QFrame#PreviewMarkdownContentSection[section_type="text"][contained="false"] {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            /* Text sections - contained */
+            QFrame#PreviewMarkdownContentSection[section_type="text"][contained="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
+            /* Code sections - normal (not contained) */
+            QFrame#PreviewMarkdownContentSection[section_type="code"][contained="false"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
+            }}
+
+            /* Code sections - contained */
+            QFrame#PreviewMarkdownContentSection[section_type="code"][contained="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
+            }}
+
+            QFrame#PreviewMarkdownContentSection QLabel {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYNTAX)};
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            /* Text areas within sections */
+            #PreviewMarkdownContentSection QTextEdit {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                margin: 0;
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+            }}
+
+            /* Header containers within sections */
+            #PreviewMarkdownContentSection QWidget {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            {style_manager.get_scrollbar_stylesheet("#PreviewMarkdownContentSection QScrollBar")}
+        """
+
+    def _build_preview_markdown_preview_content_style(self) -> str:
+        """Build styles for the PreviewMarkdownPreviewContent widget."""
+        style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
+        bubble_spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+
+        return f"""
+            QFrame#PreviewMarkdownPreviewContent {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                margin: 0;
+                border-radius: {bubble_spacing}px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER )};
+            }}
+        """
+
+    def _on_style_changed(self) -> None:
+        """Handle style changes."""
+        zoom_factor = self._style_manager.zoom_factor()
+        self._content_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
+
+        # Apply style to all content blocks
+        for content_block in self._content_blocks:
+            content_block.apply_style()
+
+        stylesheet_parts = [
+            self._build_widget_style(),
+            self._build_preview_file_content_style(),
+            self._build_preview_markdown_content_styles(),
+            self._build_preview_markdown_content_section_styles(),
+            self._build_preview_markdown_preview_content_style(),
+        ]
+
+        shared_stylesheet = "\n".join(stylesheet_parts)
+        self.setStyleSheet(shared_stylesheet)
+
+    def _show_context_menu(self, pos: QPoint) -> None:
+        """
+        Create and show the context menu at the given position.
+
+        Args:
+            pos: Local coordinates for menu position
+        """
+        menu = QMenu(self)
+        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        strings = self._language_manager.strings()
+
+        # Copy action
+        copy_action = menu.addAction(strings.copy)
+        copy_action.setEnabled(self.has_selection())
+        copy_action.triggered.connect(self.copy)
+
+        # Show menu at click position
+        menu.exec_(self.mapToGlobal(pos))
+
+    def can_copy(self) -> bool:
+        """Check if copy is available."""
+        return self.has_selection()
+
+    def copy(self) -> None:
+        """Copy selected text to clipboard."""
+        if self._content_with_selection:
+            self._content_with_selection.copy_selection()
+
+    def close_widget(self) -> None:
+        """Close the preview widget and clean up resources."""
+        self._unregister_file_watching()
+
+    def find_text(
+        self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False
+    ) -> Tuple[int, int, bool]:
+        """
+        Find all instances of text and highlight them.
+
+        Args:
+            text: Text to search for
+            forward: Whether to search forward from current position
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
+
+        Returns:
+            Tuple of (current_match, total_matches)
+        """
+        # Get searchable widgets
+        widgets = self._content_blocks
+
+        # Clear existing highlights if search text changed
+        if (text, case_sensitive, regexp) != self._last_search:
+            self._clear_highlights()
+            self._matches = []
+            self._current_widget_index = -1
+            self._current_match_index = -1
+            self._last_search = (text, case_sensitive, regexp)
+
+        # Find all matches if this is a new search
+        if not self._matches and text:
+            total_so_far = 0
+            for widget in widgets:
+                widget_matches = widget.find_text(text, case_sensitive, regexp)
+                if widget_matches:
+                    remaining = 500 - total_so_far
+                    widget_matches = widget_matches[:remaining]
+                    self._matches.append((widget, widget_matches))
+                    total_so_far += len(widget_matches)
+                    if total_so_far >= 500:
+                        break
+
+        if not self._matches:
+            return 0, 0, False
+
+        # Move to next/previous match
+        if self._current_widget_index == -1:
+            # First search - start at beginning or end depending on direction
+            if forward:
+                self._current_widget_index = 0
+                self._current_match_index = 0
+
+            else:
+                self._current_widget_index = len(self._matches) - 1
+                self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
+
+        else:
+            # Move to next/previous match
+            if forward:
+                self._current_match_index += 1
+                # If we've reached the end of matches in current widget
+                if self._current_match_index >= len(self._matches[self._current_widget_index][1]):
+                    self._current_widget_index += 1
+                    # If we've reached the end of widgets, wrap around
+                    if self._current_widget_index >= len(self._matches):
+                        self._current_widget_index = 0
+
+                    self._current_match_index = 0
+
+            else:
+                self._current_match_index -= 1
+                # If we've reached the start of matches in current widget
+                if self._current_match_index < 0:
+                    self._current_widget_index -= 1
+                    # If we've reached the start of widgets, wrap around
+                    if self._current_widget_index < 0:
+                        self._current_widget_index = len(self._matches) - 1
+
+                    self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
+
+        self._highlight_matches()
+        self._scroll_to_current_match()
+        return self.get_match_status()
+
+    def _highlight_matches(self) -> None:
+        """Update the highlighting of all matches."""
+        self._clear_highlights()
+
+        # Get colors from style manager
+        highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND)
+        dim_highlight_color = self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM)
+
+        # Highlight matches in each widget
+        for widget_idx, (widget, matches) in enumerate(self._matches):
+            # Set current_match_index to highlight the current match
+            current_match_idx = self._current_match_index if widget_idx == self._current_widget_index else -1
+
+            # Highlight matches in this widget
+            widget.highlight_matches(
+                matches,
+                current_match_idx,
+                highlight_color,
+                dim_highlight_color
+            )
+
+            # Track highlighted widgets
+            self._highlighted_widgets.add(widget)
+
+    def _handle_find_scroll(self, widget: PreviewContentWidget, section_num: int, position: int) -> None:
+        """
+        Handle scroll requests from find operations.
+
+        Args:
+            widget: Widget to scroll to
+            section_num: Section number within the widget
+            position: Text position within the section
+        """
+        # Get position relative to the content widget
+        pos_in_content = widget.select_and_scroll_to_position(section_num, position)
+        if pos_in_content == QPoint(0, 0) and section_num > 0:
+            # Handle case where position wasn't found
+            return
+
+        # Map the match position to the content container coordinate system and
+        # smooth-scroll so the match sits roughly a quarter of the way down the viewport
+        pos_in_container = widget.mapTo(self._content_container, pos_in_content)
+        viewport_height = self._scroll_area.viewport().height()
+        target = pos_in_container.y() - viewport_height // 4
+        scrollbar = self._scroll_area.verticalScrollBar()
+        target = max(scrollbar.minimum(), min(scrollbar.maximum(), target))
+        self._start_smooth_scroll(target)
+
+    def _scroll_to_current_match(self) -> None:
+        """Request scroll to ensure the current match is visible."""
+        widget, matches = self._matches[self._current_widget_index]
+        section_num, start, _ = matches[self._current_match_index]
+
+        # Trigger scrolling to this position
+        self._handle_find_scroll(widget, section_num, start)
+
+    def _clear_highlights(self) -> None:
+        """Clear all search highlights."""
+        # Clear highlights from all tracked widgets
+        for widget in self._highlighted_widgets:
+            widget.clear_highlights()
+
+        self._highlighted_widgets.clear()
+
+    def get_match_status(self) -> Tuple[int, int, bool]:
+        """
+        Get the current match status.
+
+        Returns:
+            Tuple of (current_match, total_matches, truncated)
+        """
+        total_matches = sum(len(matches) for _, matches in self._matches)
+        if self._current_widget_index == -1:
+            return 0, total_matches, total_matches == 500
+
+        current_match = sum(len(matches) for _, matches in self._matches[:self._current_widget_index])
+        current_match += self._current_match_index + 1
+
+        return current_match, total_matches, total_matches == 500
+
+    def clear_find(self) -> None:
+        """Clear all find state."""
+        self._clear_highlights()
+        self._matches = []
+        self._current_widget_index = -1
+        self._current_match_index = -1
+        self._last_search = ("", False, False)
+
+    def clear_highlights(self) -> None:
+        """Remove find highlights without resetting match state."""
+        self._clear_highlights()
+
+    def create_state_metadata(self) -> Dict[str, Any]:
+        """
+        Create metadata dictionary capturing current widget state.
+
+        Returns:
+            Dictionary containing preview state metadata
+        """
+        metadata: Dict[str, Any] = {}
+
+        # Store scroll position
+        scrollbar = self._scroll_area.verticalScrollBar()
+        metadata["scroll_position"] = scrollbar.value()
+
+        return metadata
+
+    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+        """
+        Restore widget state from metadata.
+
+        Args:
+            metadata: Dictionary containing state metadata
+        """
+        if not metadata:
+            return
+
+        # Restore scroll position if specified
+        if "scroll_position" in metadata:
+            # Use a timer to ensure the scroll happens after layout is complete
+            self._deferred_scroll_position = metadata["scroll_position"]
+            self._deferred_scroll_timer.start()
+
+    # AI Tool Support Methods
+
+    def get_preview_info(self) -> Dict[str, Any]:
+        """
+        Get high-level metadata about the preview content.
+
+        Returns:
+            Dictionary containing preview metadata
+        """
+        # Determine content type from path
+        content_type = self._preview.get_file_type(self._path)
+
+        # Map to consistent type names
+        if os.path.isdir(self._path):
+            content_type = "directory"
+
+        elif content_type == "markdown":
+            content_type = "markdown"
+
+        elif content_type == "image":
+            content_type = "image"
+
+        elif content_type == "other":
+            content_type = "file"
+
+        else:
+            content_type = "unknown"
+
+        return {
+            "path": self._path,
+            "content_type": content_type,
+            "content_blocks": len(self._content_blocks),
+            "has_content": len(self._content_blocks) > 0
+        }
+
+    def search_content(
+        self,
+        search_text: str,
+        case_sensitive: bool = False,
+        max_results: int = 50,
+        regexp: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Search for text across all content blocks.
+
+        Args:
+            search_text: Text to search for
+            case_sensitive: Whether search should be case-sensitive
+            max_results: Maximum number of results to return
+            regexp: If True, treat search_text as a regular expression.
+
+        Returns:
+            Dictionary containing search results with matches and context
+
+        Raises:
+            ValueError: If regexp is True and search_text is not a valid regular expression.
+        """
+        if not search_text:
+            return {
+                "search_text": search_text,
+                "case_sensitive": case_sensitive,
+                "total_matches": 0,
+                "returned_matches": 0,
+                "matches": []
+            }
+
+        if regexp:
+            flags = 0 if case_sensitive else re.IGNORECASE
+            try:
+                re.compile(search_text, flags)
+
+            except re.error as e:
+                raise ValueError(f"Invalid regular expression: {e}") from e
+
+        # Perform search across all content blocks
+        all_matches = []
+
+        for block_idx, content_block in enumerate(self._content_blocks):
+            try:
+                widget_matches = content_block.find_text(search_text, case_sensitive, regexp)
+
+            except Exception:
+                widget_matches = []
+
+            if widget_matches:
+                # Extract match information
+                for match_tuple in widget_matches:
+                    # Match format: (section_index, start_position, end_position)
+                    section_idx, start_pos, end_pos = match_tuple
+
+                    match_info = {
+                        "block_index": block_idx,
+                        "section_index": section_idx,
+                        "start_position": start_pos,
+                        "end_position": end_pos
+                    }
+
+                    all_matches.append(match_info)
+
+                    # Stop if we've reached max results
+                    if len(all_matches) >= max_results:
+                        break
+
+                if len(all_matches) >= max_results:
+                    break
+
+        return {
+            "search_text": search_text,
+            "case_sensitive": case_sensitive,
+            "total_matches": len(all_matches),
+            "returned_matches": min(len(all_matches), max_results),
+            "matches": all_matches[:max_results]
+        }
+
+    def scroll_to_content_position(
+        self,
+        block_index: int,
+        section_index: int = 0,
+        position: int = 0,
+        viewport_position: str = "center"
+    ) -> bool:
+        """
+        Scroll to a specific position in the content.
+
+        Args:
+            block_index: Index of the content block
+            section_index: Index of the section within the block
+            position: Text position within the section
+            viewport_position: Where to position in viewport ("top", "center", "bottom")
+
+        Returns:
+            True if scroll was successful, False otherwise
+        """
+        # Validate block index
+        if block_index < 0 or block_index >= len(self._content_blocks):
+            self._logger.warning("Invalid block index: %d", block_index)
+            return False
+
+        # Get the content block
+        content_block = self._content_blocks[block_index]
+
+        try:
+            # Get position to scroll to
+            pos_in_content = content_block.select_and_scroll_to_position(
+                section_index, position
+            )
+
+            if pos_in_content == QPoint(0, 0) and section_index > 0:
+                # Position not found
+                self._logger.warning(
+                    "Could not find position: block=%d, section=%d, pos=%d",
+                    block_index, section_index, position
+                )
+                return False
+
+            # Map position to scroll area coordinates
+            pos_in_scroll_area = content_block.mapTo(
+                self._content_container, pos_in_content
+            )
+
+            # Calculate scroll position based on viewport position
+            scroll_y = pos_in_scroll_area.y()
+
+            if viewport_position == "top":
+                # Position at top with small margin
+                scroll_y -= 10
+
+            elif viewport_position == "center":
+                # Position at center of viewport
+                viewport_height = self._scroll_area.viewport().height()
+                scroll_y -= viewport_height // 2
+
+            elif viewport_position == "bottom":
+                # Position at bottom with margin
+                viewport_height = self._scroll_area.viewport().height()
+                scroll_y -= viewport_height - 50
+
+            else:
+                # Default to center
+                viewport_height = self._scroll_area.viewport().height()
+                scroll_y -= viewport_height // 2
+
+            # Perform smooth scroll
+            self._start_smooth_scroll(scroll_y)
+
+            return True
+
+        except Exception as e:
+            self._logger.error("Error scrolling to position: %s", e, exc_info=True)
+            return False

@@ -74,34 +74,12 @@ Context model for open conversation tabs (`ConversationContext`).
 ### `src/delegate_ai_tool/`
 AI tool implementation for task delegation to child AI instances. Contains the backend
 logic (conversation creation, session management, persistence, completion handling) and
-the `DelegateAIListener` protocol for frontend integration. GUI wiring lives in `src/humbug/`.
+the `DelegateAIListener` protocol for frontend integration. GUI wiring lives in `src/desktop/`.
 
-### `src/diff/`
-Unified diff parsing and application with fuzzy matching.
-
-### `src/dmarkdown/`
-Advanced markdown parsing to AST.
-
-### `src/docx/`
-DOCX file handling support.
-
-### `src/editor_ai_tool/`
-AI tool implementation for editor tab operations (read, search, diff, apply diffs, save).
-
-### `src/editor_context/`
-Context model for open editor tabs (`EditorContext`, `EditorDiffApplier`).
-
-### `src/filesystem_ai_tool/`
-AI tool implementation for file operations.
-
-### `src/git/`
-Lightweight, GUI-free tools for git operations.
-
-### `src/help_ai_tool/`
-AI tool implementation for tool documentation.
-
-### `src/humbug/`
-Main application and GUI components.
+### `src/desktop/`
+Qt desktop front-end for Humbug. This is the graphical desktop application built on top of
+the front-end-agnostic modules (`mindspace`, the `*_context` modules, `ai`, the `*_ai_tool`
+modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 
 **Subdirectories:**
 - `column/` - Column manager, tab bar, and chrome widgets
@@ -126,6 +104,30 @@ Main application and GUI components.
 - `user/` - User management
 - `vcs_sidebar/` - VCS/diff panel implementation
 - `widgets/` - Reusable Qt widgets
+
+### `src/diff/`
+Unified diff parsing and application with fuzzy matching.
+
+### `src/dmarkdown/`
+Advanced markdown parsing to AST.
+
+### `src/docx/`
+DOCX file handling support.
+
+### `src/editor_ai_tool/`
+AI tool implementation for editor tab operations (read, search, diff, apply diffs, save).
+
+### `src/editor_context/`
+Context model for open editor tabs (`EditorContext`, `EditorDiffApplier`).
+
+### `src/filesystem_ai_tool/`
+AI tool implementation for file operations.
+
+### `src/git/`
+Lightweight, GUI-free tools for git operations.
+
+### `src/help_ai_tool/`
+AI tool implementation for tool documentation.
 
 ### `src/mindspace/`
 Front-end-agnostic mindspace model. Manages the mindspace path, settings, search,

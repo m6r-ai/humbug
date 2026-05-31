@@ -26,7 +26,7 @@ dev = [
 ]
 
 [tool.coverage.run]
-source = ["metaphor"]
+source = ["src"]
 branch = true
 omit = [
     "src/menai/menai_value_c*",
@@ -46,11 +46,11 @@ exclude_lines = [
 # Package discovery configuration
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["dast*", "humbug*"]
+include = ["desktop*"]
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "src/humbug"
+    "src/desktop"
 ]
 
 [tool.mypy]

@@ -1,0 +1,22 @@
+from PySide6.QtWidgets import QProxyStyle, QStyle, QStyleOption, QWidget
+
+from desktop.style_manager import StyleManager
+
+
+class SidebarTreeStyle(QProxyStyle):
+    """
+    A custom style for the sidebar file tree that scales the pixel metrics
+    according to the current zoom factor.
+    """
+    def __init__(self) -> None:
+        super().__init__()
+        self._style_manager = StyleManager()
+
+    def pixelMetric(
+        self,
+        metric: QStyle.PixelMetric,
+        option: QStyleOption | None = None,
+        widget: QWidget | None = None
+    ) -> int:
+        base_size = super().pixelMetric(metric, option, widget)
+        return round(base_size * self._style_manager.zoom_factor())
