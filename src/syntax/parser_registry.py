@@ -64,8 +64,9 @@ class ParserRegistry:
             language: The programming language enum value indicating which parser to create
 
         Returns:
-            A parser instance appropriate for the specified language, or None if the
-            language is unknown or no parser is registered for it
+            A parser instance appropriate for the specified language. If no dedicated
+            parser is registered, falls back to the TEXT parser for any known language.
+            Returns None only if the language is UNKNOWN or no TEXT parser is registered.
 
         Example:
             >>> parser = ParserRegistry.create_parser(ProgrammingLanguage.PYTHON)
@@ -74,5 +75,12 @@ class ParserRegistry:
         parser_class = cls._parser_classes.get(language)
         if parser_class:
             return parser_class()
+
+        # Fall back to TEXT parser for known languages without a dedicated parser yet.
+        # UNKNOWN is intentionally excluded — no parser is the correct result there.
+        if language != ProgrammingLanguage.UNKNOWN:
+            text_parser_class = cls._parser_classes.get(ProgrammingLanguage.TEXT)
+            if text_parser_class:
+                return text_parser_class()
 
         return None

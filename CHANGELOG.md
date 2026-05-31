@@ -16,6 +16,7 @@ Bug fixes:
 - On moving tabs between columns we could end up placing the tab in the wrong position in the new column.
 - System shell and AI tool operations could end up leaving ephemeral tabs as ephemeral instead of making them permanent.
 - If a task was delegated to an AI that generated an HTTP error, the error wasn't propagated to the caller.
+- Fixed a problem where no syntax highlighting was applied for YAML, TOML, bash, PHP and Ruby files.
 
 Internal structure changes:
 
