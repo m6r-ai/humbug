@@ -2,9 +2,10 @@ from PySide6.QtWidgets import QProxyStyle, QStyle, QStyleOption, QWidget
 
 from humbug.style_manager import StyleManager
 
-class MindspaceTreeStyle(QProxyStyle):
+
+class SidebarTreeStyle(QProxyStyle):
     """
-    A custom style for the Mindspace file tree that scales the pixel metrics
+    A custom style for the sidebar file tree that scales the pixel metrics
     according to the current zoom factor.
     """
     def __init__(self) -> None:
@@ -15,7 +16,7 @@ class MindspaceTreeStyle(QProxyStyle):
         self,
         metric: QStyle.PixelMetric,
         option: QStyleOption | None = None,
-        widget: QWidget | None =None
+        widget: QWidget | None = None
     ) -> int:
         base_size = super().pixelMetric(metric, option, widget)
         return round(base_size * self._style_manager.zoom_factor())

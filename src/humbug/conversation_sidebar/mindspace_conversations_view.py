@@ -1,53 +1,51 @@
-"""Files view widget for mindspace."""
+"""Conversations view widget for mindspace."""
 
 import logging
 import os
 import shutil
-from typing import cast
 
-from PySide6.QtCore import Signal, QModelIndex, Qt, QPoint, QDir, QTimer
+from PySide6.QtCore import Signal, QModelIndex, Qt, QPoint, QTimer
 from PySide6.QtWidgets import (
-    QFileSystemModel, QWidget, QVBoxLayout, QMenu
+    QWidget, QVBoxLayout, QMenu
 )
 
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
-from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
-from humbug.mindspace.files.mindspace_files_model import MindspaceFilesModel
-from humbug.mindspace.files.mindspace_files_tree_view import MindspaceFilesTreeView
-from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
-from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
-from humbug.mindspace.mindspace_breadcrumb_container import MindspaceBreadcrumbContainer
-from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
-from humbug.mindspace.mindspace_tree_delegate import MindspaceTreeDelegate
-from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
-from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
-from humbug.mindspace.mindspace_view_type import MindspaceViewType
-from humbug.style_manager import StyleManager
+from humbug.conversation_sidebar.mindspace_conversations_tree_delegate import MindspaceConversationsTreeDelegate
+from humbug.conversation_sidebar.mindspace_conversations_tree_view import MindspaceConversationsTreeView
+from humbug.conversation_sidebar.mindspace_conversations_dag_model import MindspaceConversationsDAGModel
+from humbug.conversation_sidebar.mindspace_conversations_index import MindspaceConversationsIndex
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
+from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
+from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.sidebar.sidebar_breadcrumb_bar import SidebarBreadcrumbBar
+from humbug.sidebar.sidebar_section_header import SidebarSectionHeader
+from humbug.sidebar.sidebar_breadcrumb_container import SidebarBreadcrumbContainer
+from humbug.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
+from humbug.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
+from humbug.sidebar.sidebar_tree_style import SidebarTreeStyle
+from humbug.sidebar.sidebar_view_type import SidebarViewType
+from humbug.style_manager import StyleManager
 
 
-class MindspaceFilesView(QWidget):
-    """Files view widget for displaying mindspace files."""
+class MindspaceConversationsView(QWidget):
+    """Conversations view widget for displaying mindspace conversations."""
 
-    file_clicked = Signal(MindspaceViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
+    file_clicked = Signal(SidebarViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
     file_opened_in_preview = Signal(str)  # Emits path when file is opened in preview
-    file_opened_in_diff = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in diff
+    new_conversation_requested = Signal(str)  # Emits target folder path when user requests new conversation in folder
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the files view widget."""
+        """Initialize the conversations view widget."""
         super().__init__(parent)
 
         self._style_manager = StyleManager()
-        self._logger = logging.getLogger("MindspaceFilesView")
+        self._logger = logging.getLogger("MindspaceConversationsView")
         self._mindspace_manager = MindspaceManager()
-        self._vcs_poller = MindspaceVCSPoller()
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -58,46 +56,48 @@ class MindspaceFilesView(QWidget):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        self._header = MindspaceSectionHeader(
-            self._language_manager.strings().mindspace_files,
+        self._header = SidebarSectionHeader(
+            self._language_manager.strings().mindspace_conversations,
             self
         )
         layout.addWidget(self._header)
 
         # Create the three coordinated widgets and wrap them in the container.
-        self._breadcrumb_bar = MindspaceBreadcrumbBar()
+        self._breadcrumb_bar = SidebarBreadcrumbBar()
         self._breadcrumb_bar.set_drop_handler(self._on_file_dropped)
         self._breadcrumb_bar.set_context_menu_handler(self._show_breadcrumb_context_menu)
 
-        self._tree_view = MindspaceFilesTreeView()
+        self._tree_view = MindspaceConversationsTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
-        self._tree_style = MindspaceTreeStyle()
+        self._tree_style = SidebarTreeStyle()
         self._tree_view.setStyle(self._tree_style)
         self._tree_view.file_dropped.connect(self._on_file_dropped)
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
 
-        self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
+        self._bc_container = SidebarBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
 
-        # Create file system model
-        self._icon_provider = MindspaceTreeIconProvider()
-        self._fs_model = QFileSystemModel()
-        self._fs_model.setReadOnly(True)
-        self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.Hidden | QDir.Filter.NoDotDot)
+        # Create icon provider for styling
+        self._icon_provider = SidebarTreeIconProvider()
 
-        # Create filter model
-        self._filter_model = MindspaceFilesModel()
-        self._filter_model.setSourceModel(self._fs_model)
+        # Conversation DAG index and model (model created after index in set_mindspace)
+        self._conversations_index = MindspaceConversationsIndex(self)
+        self._dag_model = MindspaceConversationsDAGModel(self._conversations_index, self._icon_provider, self)
+        self._dag_model.about_to_rebuild.connect(self._save_expanded_state)
+        self._dag_model.rebuilt.connect(self._restore_expanded_state)
+        self._conversations_index.changed.connect(self._bc_container.refresh_viewport)
+        self._expanded_paths: set[str] = set()
+        self._suppress_save_expanded: bool = False
 
-        # Create and set the editable delegate
-        self._delegate = MindspaceTreeDelegate(self._tree_view, self._style_manager)
+        # Create and set the specialized conversations delegate
+        self._delegate = MindspaceConversationsTreeDelegate(self._tree_view, self._style_manager)
         self._delegate.edit_finished.connect(self._on_delegate_edit_finished)
         self._delegate.edit_cancelled.connect(self._on_delegate_edit_cancelled)
         self._tree_view.setItemDelegate(self._delegate)
 
         # Set model on tree view
-        self._tree_view.setModel(self._filter_model)
+        self._tree_view.setModel(self._dag_model)
 
         # Connect signals
         self._tree_view.clicked.connect(self._on_tree_clicked)
@@ -106,18 +106,93 @@ class MindspaceFilesView(QWidget):
         # Hide horizontal scrollbar
         self._tree_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        # Track current mindspace
+        # Track current mindspace and conversations directory
         self._mindspace_path: str | None = None
+        self._conversations_path: str | None = None
+        self._selected_path: str | None = None
 
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
+        self._pending_reveal_path: str = ""
 
-        self._deferred_reveal_timer = QTimer(self)
-        self._deferred_reveal_timer.setSingleShot(True)
-        self._deferred_reveal_timer.setInterval(0)
-        self._deferred_reveal_timer.timeout.connect(self._on_deferred_reveal)
-        self._deferred_reveal_path: str = ""
+        # Auto-scroll state for drag operations
+        self._auto_scroll_active = False
+    def _is_conversation_file(self, file_path: str) -> bool:
+        """
+        Check if a file is a conversation file based on its extension.
+
+        Args:
+            file_path: Path to check
+
+        Returns:
+            True if this is a conversation file (.conv or .json)
+        """
+        if not file_path:
+            return False
+
+        if not os.path.isfile(file_path):
+            return False
+
+        _, ext = os.path.splitext(file_path.lower())
+        return ext in ['.conv', '.json']
+
+    def _get_original_extension(self, file_path: str) -> str:
+        """
+        Get the original extension from a conversation file.
+
+        Args:
+            file_path: Path to the conversation file
+
+        Returns:
+            The extension (including the dot) or empty string if not a conversation file
+        """
+        if not self._is_conversation_file(file_path):
+            return ""
+
+        _, ext = os.path.splitext(file_path)
+        return ext
+
+    def _get_display_name_from_filename(self, filename: str, file_path: str) -> str:
+        """
+        Get the display name from a filename, removing conversation file extensions.
+
+        Args:
+            filename: The filename to process
+            file_path: Full path to the file (used to determine if it's a conversation file)
+
+        Returns:
+            Display name with conversation file extension removed if applicable
+        """
+        if not filename:
+            return filename
+
+        # Check if this is a conversation file and remove its extension for display
+        if self._is_conversation_file(file_path):
+            if filename.lower().endswith('.conv'):
+                return filename[:-5]  # Remove '.conv'
+
+            if filename.lower().endswith('.json'):
+                return filename[:-5]  # Remove '.json'
+
+        return filename
+
+    def _handle_auto_scroll(self, start_scrolling: bool) -> None:
+        """
+        Handle auto-scroll requests from the tree view during drag operations.
+
+        Args:
+            start_scrolling: Whether to start or stop auto-scrolling
+        """
+        self._auto_scroll_active = start_scrolling
+
+        if start_scrolling:
+            # Start auto-scrolling - the tree view will handle the actual scrolling
+            # We just need to ensure the tree view's scroll bars are properly configured
+            pass
+        else:
+            # Stop auto-scrolling
+            pass
 
     def _on_drop_target_changed(self) -> None:
         """
@@ -179,7 +254,17 @@ class MindspaceFilesView(QWidget):
             strings = self._language_manager.strings()
             is_folder = os.path.isdir(source_path)
             title = strings.move_folder_title if is_folder else strings.move_file_title
+
+            # For conversation files, compute the DAG scope
+            included: set = {source_path}
+            excluded: set = set()
+            if not is_folder and source_path.lower().endswith('.conv'):
+                included, excluded = self._conversations_index.compute_operation_scope({source_path})
+
+            scope_detail = self._build_scope_detail(included, excluded, source_path)
             message = self._create_move_confirmation_message(item_name, source_path, destination_path)
+            if scope_detail:
+                message += scope_detail
 
             result = MessageBox.show_message(
                 self,
@@ -193,7 +278,7 @@ class MindspaceFilesView(QWidget):
                 return
 
             # Perform the move operation
-            self._perform_move_operation(source_path, destination_path)
+            self._perform_move_operation(source_path, destination_path, included)
 
         except Exception as e:
             self._logger.error("Error handling file drop from '%s' to '%s': %s", source_path, target_path, str(e))
@@ -205,13 +290,20 @@ class MindspaceFilesView(QWidget):
                 strings.move_error_failed.format(str(e))
             )
 
-    def _perform_move_operation(self, source_path: str, destination_path: str) -> None:
+    def _perform_move_operation(
+        self,
+        source_path: str,
+        destination_path: str,
+        included: set | None = None
+    ) -> None:
         """
         Perform the actual file/folder move operation.
 
         Args:
             source_path: Source path of the item to move
             destination_path: Destination path where the item will be moved
+            included: Set of additional paths (DAG children) to move to the
+                same target directory.  If None, only source_path is moved.
 
         Raises:
             OSError: If the move operation fails
@@ -225,9 +317,61 @@ class MindspaceFilesView(QWidget):
 
             self._logger.info("Successfully moved '%s' to '%s'", source_path, destination_path)
 
+            # Move any exclusively-owned children to the same target directory
+            if included:
+                target_dir = os.path.dirname(destination_path)
+                for child_path in included:
+                    if os.path.normpath(child_path) == os.path.normpath(source_path):
+                        continue
+
+                    child_dest = os.path.join(target_dir, os.path.basename(child_path))
+                    self.file_moved.emit(child_path, child_dest)
+                    shutil.move(child_path, child_dest)
+                    self._logger.info("Successfully moved '%s' to '%s'", child_path, child_dest)
+
         except OSError as e:
             self._logger.error("Failed to move '%s' to '%s': %s", source_path, destination_path, str(e))
             raise
+
+    def _display_name(self, path: str) -> str:
+        """
+        Get a human-readable display name for a conversation file.
+
+        Args:
+            path: Absolute path to the conversation file.
+
+        Returns:
+            Display name with .conv extension removed.
+        """
+        name = os.path.basename(path)
+        if name.lower().endswith('.conv'):
+            name = name[:-5]
+
+        return name
+
+    def _build_scope_detail(self, included: set, excluded: set, original: str) -> str:
+        """
+        Build a detail string describing the operation scope.
+
+        Args:
+            included: Paths that will be included in the operation.
+            excluded: Paths that will be left behind.
+            original: The directly selected path.
+
+        Returns:
+            Detail string for the confirmation dialog, or empty string if no children.
+        """
+        children = sorted(included - {os.path.normpath(original)})
+        parts = []
+        if children:
+            bullets = "\n".join(f"  \u2022 {self._display_name(p)}" for p in children)
+            parts.append(f"\n\nRelated conversations that will also be affected:\n\n{bullets}")
+
+        if excluded:
+            bullets = "\n".join(f"  \u2022 {self._display_name(p)}" for p in sorted(excluded))
+            parts.append(f"\n\nThe following will be left in place (referenced by other conversations):\n{bullets}")
+
+        return "".join(parts)
 
     def _on_delegate_edit_finished(self, index: QModelIndex, new_name: str) -> None:
         """
@@ -277,8 +421,17 @@ class MindspaceFilesView(QWidget):
         parent_path, is_folder, temp_path = self._pending_new_item
         self._pending_new_item = None
 
+        # For conversation files, add the original extension back
+        if not is_folder and self._is_conversation_file(temp_path):
+            original_extension = self._get_original_extension(temp_path)
+            final_name = new_name + original_extension
+
+        else:
+            # Non-conversation file or folder - use the name as-is
+            final_name = new_name
+
         # Create the full path for the final item
-        new_path = os.path.join(parent_path, new_name)
+        new_path = os.path.join(parent_path, final_name)
 
         try:
             # Rename the temporary item to the final name
@@ -339,7 +492,7 @@ class MindspaceFilesView(QWidget):
 
     def _complete_rename_operation(self, index: QModelIndex, new_name: str) -> None:
         """
-        Complete a rename operation.
+        Complete a rename operation with conversation file extension preservation.
 
         Args:
             index: Model index being renamed
@@ -350,36 +503,61 @@ class MindspaceFilesView(QWidget):
         if not current_path:
             raise ValueError(self._language_manager.strings().error_invalid_path)
 
-        # Calculate the new path
+        # Calculate the new path with extension preservation for conversation files
         directory = os.path.dirname(current_path)
-        new_path = os.path.join(directory, new_name)
 
-        # For files, warn if the extension is changing
-        if os.path.isfile(current_path):
-            old_ext = os.path.splitext(current_path)[1].lower()
-            new_ext = os.path.splitext(new_name)[1].lower()
-            if old_ext != new_ext:
-                strings = self._language_manager.strings()
-                result = MessageBox.show_message(
-                    self,
-                    MessageBoxType.WARNING,
-                    strings.rename_change_extension_title,
-                    strings.rename_change_extension_message.format(
-                        old_ext or strings.error_empty_name, new_ext or strings.error_empty_name
-                    ),
-                    [MessageBoxButton.YES, MessageBoxButton.NO]
-                )
-                if result != MessageBoxButton.YES:
-                    return
+        # Check if this is a conversation file and preserve its extension
+        if self._is_conversation_file(current_path):
+            original_extension = self._get_original_extension(current_path)
+            final_name = new_name + original_extension
+
+        else:
+            # Non-conversation file - use the name as-is
+            final_name = new_name
+
+        new_path = os.path.join(directory, final_name)
 
         try:
+            # Save expansion state now with current paths, before the rename triggers
+            # a file watcher event.  The flag prevents _save_expanded_state from
+            # overwriting this with stale paths from the tree view.
+            self._expanded_paths.clear()
+            self._collect_expanded_paths(QModelIndex())
+            current = self._tree_view.currentIndex()
+            self._selected_path = self._dag_model.path_for_index(current) if current.isValid() else None
+
             # Perform the rename
             os.rename(current_path, new_path)
             self.file_renamed.emit(current_path, new_path)
 
+            # Update saved expansion state so the renamed node stays expanded
+            # after the model rebuilds in response to the file watcher firing.
+            if current_path in self._expanded_paths:
+                self._expanded_paths.discard(current_path)
+                self._expanded_paths.add(new_path)
+
+            # Update saved selection if the renamed item was selected
+            if self._selected_path == current_path:
+                self._selected_path = new_path
+
+            # For directory renames, update any child paths that were expanded
+            if os.path.isdir(new_path):
+                old_prefix = current_path + os.sep
+                new_prefix = new_path + os.sep
+                updated = {
+                    new_prefix + p[len(old_prefix):]
+                    if p.startswith(old_prefix) else p
+                    for p in self._expanded_paths
+                }
+                self._expanded_paths = updated
+
+                # Also update selected path if it was under the renamed directory
+                if self._selected_path and self._selected_path.startswith(current_path + os.sep):
+                    self._selected_path = new_path + os.sep + self._selected_path[len(current_path + os.sep):]
+
+            self._suppress_save_expanded = True
+
             self._logger.info("Successfully renamed '%s' to '%s'", current_path, new_path)
-            self._deferred_reveal_path = new_path
-            self._deferred_reveal_timer.start()
 
         except OSError as e:
             self._logger.error("Failed to rename '%s' to '%s': %s", current_path, new_path, str(e))
@@ -408,8 +586,7 @@ class MindspaceFilesView(QWidget):
             # Set up pending creation state with the duplicate path
             self._pending_new_item = (parent_path, False, duplicate_path)
 
-            # Ensure the duplicate file is visible and start editing
-            self._ensure_item_visible_and_edit(duplicate_path, select_extension=False)
+            # _restore_expanded_state will trigger editing once the DAG model rebuilds.
 
         except (OSError, shutil.Error) as e:
             self._logger.error("Failed to duplicate file '%s': %s", source_path, str(e))
@@ -423,7 +600,7 @@ class MindspaceFilesView(QWidget):
 
     def _get_duplicate_file_name(self, source_path: str) -> str:
         """
-        Generate a unique name for a duplicate file.
+        Generate a unique name for a duplicate file, conversation-aware.
 
         Args:
             source_path: Path to the original file
@@ -434,48 +611,67 @@ class MindspaceFilesView(QWidget):
         parent_path = os.path.dirname(source_path)
         original_filename = os.path.basename(source_path)
 
-        # Split filename and extension
-        name, ext = os.path.splitext(original_filename)
+        # For conversation files, work with the display name (without extension)
+        if self._is_conversation_file(source_path):
+            original_extension = self._get_original_extension(source_path)
+            display_name = self._get_display_name_from_filename(original_filename, source_path)
 
+            # Generate duplicate display name
+            duplicate_display_name = self._generate_duplicate_name(display_name, parent_path, original_extension)
+
+            # Return the full filename with extension
+            return duplicate_display_name + original_extension
+
+        # For non-conversation files, use the full filename
+        return self._generate_duplicate_name(original_filename, parent_path, "")
+
+    def _generate_duplicate_name(self, base_name: str, parent_path: str, extension: str) -> str:
+        """
+        Generate a unique duplicate name with " - copy" suffix.
+
+        Args:
+            base_name: Base name to duplicate (without extension for conversation files)
+            parent_path: Parent directory path
+            extension: File extension (empty for non-conversation files or folders)
+
+        Returns:
+            Unique duplicate name (without extension for conversation files)
+        """
         # Check if the name already ends with " - copy" or " - copy (n)"
         copy_suffix = " - copy"
-        if name.endswith(copy_suffix):
+        if base_name.endswith(copy_suffix):
             # Remove the existing " - copy" suffix to get the base name
-            base_name = name[:-len(copy_suffix)]
+            core_name = base_name[:-len(copy_suffix)]
 
-        elif " - copy (" in name and name.endswith(")"):
+        elif " - copy (" in base_name and base_name.endswith(")"):
             # Handle case like "filename - copy (2)" - extract base name
-            copy_index = name.rfind(" - copy (")
+            copy_index = base_name.rfind(" - copy (")
             if copy_index != -1:
-                base_name = name[:copy_index]
+                core_name = base_name[:copy_index]
 
             else:
-                base_name = name
+                core_name = base_name
 
         else:
             # No existing copy suffix
-            base_name = name
+            core_name = base_name
 
         # Generate unique copy name
         counter = 1
         while True:
             if counter == 1:
-                candidate_name = f"{base_name}{copy_suffix}{ext}"
+                candidate_name = f"{core_name}{copy_suffix}"
 
             else:
-                candidate_name = f"{base_name}{copy_suffix} ({counter}){ext}"
+                candidate_name = f"{core_name}{copy_suffix} ({counter})"
 
-            full_path = os.path.join(parent_path, candidate_name)
+            # Check if this name conflicts (add extension for the filesystem check)
+            test_filename = candidate_name + extension
+            full_path = os.path.join(parent_path, test_filename)
             if not os.path.exists(full_path):
                 return candidate_name
 
             counter += 1
-
-    def _on_deferred_reveal(self) -> None:
-        """Reveal and select the stored file path after layout has settled."""
-        if self._deferred_reveal_path:
-            self.reveal_and_select_file(self._deferred_reveal_path)
-            self._deferred_reveal_path = ""
 
     def reveal_and_select_file(self, file_path: str) -> None:
         """
@@ -484,81 +680,22 @@ class MindspaceFilesView(QWidget):
         Args:
             file_path: Absolute path to the file to reveal and select
         """
-        # Validate that we have a mindspace loaded
-        if not self._mindspace_path:
+        # Validate that we have a conversations directory loaded
+        if not self._conversations_path:
             return
 
-        # Normalize the file path
-        normalized_path = os.path.normpath(file_path)
-
-        # Ensure the file path is within the mindspace
-        if not normalized_path.startswith(self._mindspace_path):
+        if not os.path.exists(file_path):
             return
 
-        # Check if the file exists
-        if not os.path.exists(normalized_path):
-            return
-
-        # Expand to the file and select it
-        target_index = self._expand_to_path(normalized_path)
-        if target_index is None:
-            return
-
+        target_index = self._dag_model.index_for_path(file_path)
         if not target_index.isValid():
+            # Model hasn't rebuilt yet — defer until _restore_expanded_state fires.
+            self._pending_reveal_path = file_path
             return
 
         self._tree_view.clearSelection()
         self._tree_view.setCurrentIndex(target_index)
         self._tree_view.scrollTo(target_index, self._tree_view.ScrollHint.EnsureVisible)
-
-    def _expand_to_path(self, file_path: str) -> QModelIndex | None:
-        """
-        Expand tree nodes to reveal the given file path.
-
-        Args:
-            file_path: Absolute path to expand to
-
-        Returns:
-            QModelIndex of the target file if found, None otherwise
-        """
-        # Build list of paths from mindspace root to target file
-        paths_to_expand = []
-        current_path = file_path
-
-        while current_path and current_path != self._mindspace_path:
-            paths_to_expand.append(current_path)
-            parent_path = os.path.dirname(current_path)
-            # Prevent infinite loop if we can't go up further
-            if parent_path == current_path:
-                break
-
-            current_path = parent_path
-
-        # Reverse the list so we expand from root to leaf
-        paths_to_expand.reverse()
-
-        # Start from the mindspace root
-        current_index = QModelIndex()
-
-        # Expand each directory in the path
-        for path in paths_to_expand:
-            # Get the source index for this path
-            source_index = self._fs_model.index(path)
-            if not source_index.isValid():
-                return None
-
-            # Map to filter model
-            filter_index = self._filter_model.mapFromSource(source_index)
-            if not filter_index.isValid():
-                return None
-
-            # If this is a directory, expand it
-            if os.path.isdir(path):
-                self._tree_view.expand(filter_index)
-
-            current_index = filter_index
-
-        return current_index
 
     def _ensure_item_visible_and_edit(self, item_path: str, select_extension: bool = True) -> None:
         """
@@ -580,70 +717,121 @@ class MindspaceFilesView(QWidget):
             select_extension: Whether to select the file extension in addition to the name
         """
         # Find the item in the model
-        source_index = self._fs_model.index(item_path)
-        if not source_index.isValid():
-            self._logger.warning("Source index not valid for path: '%s'", item_path)
-            return
-
-        filter_index = self._filter_model.mapFromSource(source_index)
+        filter_index = self._dag_model.index_for_path(item_path)
         if not filter_index.isValid():
-            self._logger.warning("Filter index not valid for path: '%s'", item_path)
+            self._logger.warning("Index not valid for path: '%s'", item_path)
             return
 
         # Get the delegate and start editing
         delegate = self._tree_view.itemDelegate(filter_index)
-        if not isinstance(delegate, MindspaceTreeDelegate):
-            self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
+        if not isinstance(delegate, MindspaceConversationsTreeDelegate):
+            self._logger.error("Delegate is not an instance of MindspaceConversationsTreeDelegate")
             return
 
         delegate.start_editing(filter_index, select_extension)
 
     def _create_root_context_menu(self) -> QMenu:
         """
-        Create context menu for root-level actions.
+        Create context menu for root-level actions (conversations directory).
 
         Returns:
-            QMenu with actions appropriate for the root directory
+            QMenu with actions appropriate for the conversations directory
         """
         menu = QMenu(self)
         menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         strings = self._language_manager.strings()
 
-        # Root directory actions
+        # Conversations root actions
+        new_conversation_action = menu.addAction(strings.new_conversation)
+        new_conversation_action.triggered.connect(
+            lambda: self.new_conversation_requested.emit(self._conversations_path or "")
+        )
         new_folder_action = menu.addAction(strings.new_folder)
         new_folder_action.triggered.connect(
-            lambda: self._start_new_folder_creation(cast(str, self._mindspace_path))
-        )
-        new_file_action = menu.addAction(strings.new_file)
-        new_file_action.triggered.connect(
-            lambda: self._start_new_file_creation(cast(str, self._mindspace_path))
+            lambda: self._start_new_folder_creation(self._conversations_path or "")
         )
 
         return menu
 
+    def _collect_expanded_paths(self, parent: QModelIndex) -> None:
+        """
+        Recursively collect paths of all expanded nodes under parent.
+
+        Args:
+            parent: Parent model index to recurse from.
+        """
+        for row in range(self._dag_model.rowCount(parent)):
+            index = self._dag_model.index(row, 0, parent)
+            if not index.isValid():
+                continue
+
+            if self._tree_view.isExpanded(index):
+                path = self._dag_model.path_for_index(index)
+                if path:
+                    self._expanded_paths.add(path)
+
+                self._collect_expanded_paths(index)
+
+    def _save_expanded_state(self) -> None:
+        """Save the set of expanded node paths and current selection before a model rebuild."""
+        if self._suppress_save_expanded:
+            # Paths already updated for a rename — don't overwrite with stale tree state
+            self._suppress_save_expanded = False
+            return
+
+        self._expanded_paths.clear()
+        self._collect_expanded_paths(QModelIndex())
+
+        current = self._tree_view.currentIndex()
+        if current.isValid():
+            self._selected_path = self._dag_model.path_for_index(current)
+        else:
+            self._selected_path = None
+
+    def _restore_expanded_state(self) -> None:
+        """Restore expanded nodes and selection after a model rebuild."""
+        for path in self._expanded_paths:
+            index = self._dag_model.index_for_path(path)
+            if index.isValid():
+                self._tree_view.expand(index)
+
+        if self._selected_path:
+            index = self._dag_model.index_for_path(self._selected_path)
+            if index.isValid():
+                self._tree_view.setCurrentIndex(index)
+
+        if self._pending_new_item:
+            _parent_path, is_folder, temp_path = self._pending_new_item
+            self._ensure_item_visible_and_edit(temp_path, select_extension=is_folder)
+
+        if self._pending_reveal_path:
+            path = self._pending_reveal_path
+            self._pending_reveal_path = ""
+            target_index = self._dag_model.index_for_path(path)
+            if target_index.isValid():
+                self._tree_view.clearSelection()
+                self._tree_view.setCurrentIndex(target_index)
+                self._tree_view.scrollTo(target_index, self._tree_view.ScrollHint.EnsureVisible)
+
     def _is_current_directory_item(self, index: QModelIndex) -> bool:
         """
-        Check if the given index represents the current directory (".") item.
+        Check if the given index represents the root sentinel (".") item.
 
         Args:
             index: Model index to check
 
         Returns:
-            True if this is the current directory item
+            True if this is the root sentinel item
         """
         if not index.isValid():
             return False
 
-        source_index = self._filter_model.mapToSource(index)
-        if not source_index.isValid():
-            return False
-
-        file_name = self._fs_model.fileName(source_index)
-        return file_name == "."
+        path = self._tree_view.get_path_from_index(index)
+        return path is not None and os.path.basename(path) == "."
 
     def _get_tree_index_for_path(self, path: str) -> QModelIndex:
         """
-        Return the filter-model index for the given file system path.
+        Return the DAG model index for the given file system path.
 
         Args:
             path: Absolute file system path to look up.
@@ -651,11 +839,7 @@ class MindspaceFilesView(QWidget):
         Returns:
             A valid QModelIndex if the path is in the tree, otherwise an invalid one.
         """
-        source_index = self._fs_model.index(path)
-        if not source_index.isValid():
-            return QModelIndex()
-
-        return self._filter_model.mapFromSource(source_index)
+        return self._dag_model.index_for_path(path)
 
     def _show_breadcrumb_context_menu(self, path: str, global_pos: QPoint) -> None:
         """
@@ -665,11 +849,11 @@ class MindspaceFilesView(QWidget):
             path: Absolute file system path of the breadcrumb item that was right-clicked.
             global_pos: Screen position at which to show the menu.
         """
-        if not self._mindspace_path:
+        if not self._conversations_path:
             return
 
         strings = self._language_manager.strings()
-        is_root = os.path.normpath(path) == os.path.normpath(self._mindspace_path)
+        is_root = os.path.normpath(path) == os.path.normpath(self._conversations_path)
 
         if is_root:
             menu = self._create_root_context_menu()
@@ -677,8 +861,8 @@ class MindspaceFilesView(QWidget):
             menu = QMenu(self)
             menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
             menu.addAction(strings.preview).triggered.connect(lambda: self._handle_preview_view_file(path))
+            menu.addAction(strings.new_conversation).triggered.connect(lambda: self.new_conversation_requested.emit(path))
             menu.addAction(strings.new_folder).triggered.connect(lambda: self._start_new_folder_creation(path))
-            menu.addAction(strings.new_file).triggered.connect(lambda: self._start_new_file_creation(path))
             tree_index = self._get_tree_index_for_path(path)
             menu.addAction(strings.rename).triggered.connect(lambda: self._start_rename(tree_index))
             menu.addAction(strings.delete).triggered.connect(lambda: self._handle_delete_folder(path))
@@ -686,14 +870,13 @@ class MindspaceFilesView(QWidget):
         menu.exec_(global_pos)
 
     def _show_context_menu(self, position: QPoint) -> None:
-        """Show context menu for file tree items."""
+        """Show context menu for conversations tree items."""
         # Get the index at the clicked position
         index = self._tree_view.indexAt(position)
 
         # Create context menu
         menu = QMenu(self)
         menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        strings = self._language_manager.strings()
 
         # Determine the path and whether it's a file or directory
         if not index.isValid():
@@ -701,24 +884,27 @@ class MindspaceFilesView(QWidget):
             menu = self._create_root_context_menu()
 
         elif self._is_current_directory_item(index):
-            # Clicked on the current directory (".") item - show root context menu
             menu = self._create_root_context_menu()
 
         else:
-            # Map to source model to get actual file path
-            source_index = self._filter_model.mapToSource(index)
-            path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
+            path = self._tree_view.get_path_from_index(index)
+            if not path:
+                return
+
             is_dir = os.path.isdir(path)
+            strings = self._language_manager.strings()
 
             # Create actions based on item type
             if is_dir:
-                # Directory context menu
+                # For directories: show all options (no "New File" option)
+                edit_action = None
                 preview_view_action = menu.addAction(strings.preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
+                duplicate_action = None
+                new_conversation_action = menu.addAction(strings.new_conversation)
+                new_conversation_action.triggered.connect(lambda: self.new_conversation_requested.emit(path))
                 new_folder_action = menu.addAction(strings.new_folder)
                 new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
-                new_file_action = menu.addAction(strings.new_file)
-                new_file_action.triggered.connect(lambda: self._start_new_file_creation(path))
                 rename_action = menu.addAction(strings.rename)
                 rename_action.triggered.connect(lambda: self._start_rename(index))
                 delete_action = menu.addAction(strings.delete)
@@ -730,12 +916,9 @@ class MindspaceFilesView(QWidget):
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
                 preview_view_action = menu.addAction(strings.preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
-                if self._vcs_poller.has_vcs_changes(path):
-                    diff_action = menu.addAction(strings.diff)
-                    diff_action.triggered.connect(lambda: self._handle_diff_file(path))
-
                 duplicate_action = menu.addAction(strings.duplicate)
                 duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
+                new_folder_action = None
                 rename_action = menu.addAction(strings.rename)
                 rename_action.triggered.connect(lambda: self._start_rename(index))
                 delete_action = menu.addAction(strings.delete)
@@ -759,10 +942,8 @@ class MindspaceFilesView(QWidget):
             self._logger.info("Created temporary folder: '%s'", temp_folder_path)
 
             # Set up pending creation state with the temporary path
+            # _restore_expanded_state will trigger editing once the DAG model rebuilds.
             self._pending_new_item = (parent_path, True, temp_folder_path)
-
-            # Ensure the new folder is visible and start editing
-            self._ensure_item_visible_and_edit(temp_folder_path, select_extension=True)
 
         except OSError as e:
             self._logger.error("Failed to create temporary folder '%s': %s", temp_folder_path, str(e))
@@ -772,39 +953,6 @@ class MindspaceFilesView(QWidget):
                 MessageBoxType.CRITICAL,
                 strings.file_creation_error_title,
                 strings.error_creating_folder.format(str(e))
-            )
-
-    def _start_new_file_creation(self, parent_path: str) -> None:
-        """
-        Start the creation of a new file using inline editing.
-
-        Args:
-            parent_path: Path to the parent directory where file will be created
-        """
-        # Create a temporary file with default name
-        default_name = self._get_default_file_name(parent_path)
-        temp_file_path = os.path.join(parent_path, default_name)
-
-        try:
-            with open(temp_file_path, 'w', encoding='utf-8') as f:
-                f.write("")  # Create empty file
-
-            self._logger.info("Created temporary file: '%s'", temp_file_path)
-
-            # Set up pending creation state with the temporary path
-            self._pending_new_item = (parent_path, False, temp_file_path)
-
-            # Ensure the new file is visible and start editing
-            self._ensure_item_visible_and_edit(temp_file_path, select_extension=True)
-
-        except OSError as e:
-            self._logger.error("Failed to create temporary file '%s': %s", temp_file_path, str(e))
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.file_creation_error_title,
-                strings.file_creation_error.format(str(e))
             )
 
     def _get_default_folder_name(self, parent_path: str) -> str:
@@ -827,33 +975,6 @@ class MindspaceFilesView(QWidget):
                 return name
             counter += 1
 
-    def _get_default_file_name(self, parent_path: str) -> str:
-        """
-        Get a default name for a new file.
-
-        Args:
-            parent_path: Parent directory path
-
-        Returns:
-            Default file name that doesn't conflict with existing items
-        """
-        base_name = "New File.txt"
-        counter = 1
-
-        while True:
-            if counter == 1:
-                name = base_name
-
-            else:
-                name_part, ext = os.path.splitext(base_name)
-                name = f"{name_part} {counter}{ext}"
-
-            full_path = os.path.join(parent_path, name)
-            if not os.path.exists(full_path):
-                return name
-
-            counter += 1
-
     def _start_rename(self, index: QModelIndex) -> None:
         """
         Start inline editing to rename an item.
@@ -864,14 +985,10 @@ class MindspaceFilesView(QWidget):
         if not index.isValid():
             return
 
-        # Don't allow renaming the current directory item
-        if self._is_current_directory_item(index):
-            return
-
         # Get the delegate and start Qt-based editing (excludes extension from selection)
         delegate = self._tree_view.itemDelegate(index)
-        if not isinstance(delegate, MindspaceTreeDelegate):
-            self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
+        if not isinstance(delegate, MindspaceConversationsTreeDelegate):
+            self._logger.error("Delegate is not an instance of MindspaceConversationsTreeDelegate")
             return
 
         delegate.start_editing(index, select_extension=False)
@@ -884,52 +1001,57 @@ class MindspaceFilesView(QWidget):
         """View a file in the preview."""
         self.file_opened_in_preview.emit(path)
 
-    def _handle_diff_file(self, path: str) -> None:
-        """Open a file diff view."""
-        self.file_opened_in_diff.emit(path, False)
-
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.
 
         Args:
             path: Path to the file to delete
         """
+        # Compute which related conversations will also be deleted
+        included, excluded = self._conversations_index.compute_operation_scope({path})
+
         # Show confirmation dialog using MessageBox
         strings = self._language_manager.strings()
+        detail = self._build_scope_detail(included, excluded, path)
+        message = (
+            strings.confirm_delete_item_message.format(self._display_name(path))
+            + "\n\n" + strings.delete_warning_detail
+            + detail
+        )
         result = MessageBox.show_message(
             self,
             MessageBoxType.WARNING,
             strings.confirm_delete_title,
-            strings.confirm_delete_item_message.format(os.path.basename(path)) + "\n\n" + strings.delete_warning_detail,
+            message,
             [MessageBoxButton.YES, MessageBoxButton.NO],
             True
         )
 
         if result == MessageBoxButton.YES:
-            try:
-                # First emit signal so tabs can be closed
-                self.file_deleted.emit(path)
+            # Delete all included files — deepest paths first to avoid
+            # trying to delete a parent before its children are gone
+            for file_path in sorted(included, key=len, reverse=True):
+                try:
+                    self.file_deleted.emit(file_path)
+                    os.remove(file_path)
+                    self._mindspace_manager.add_interaction(
+                        MindspaceLogLevel.INFO,
+                        f"User deleted file '{file_path}'"
+                    )
 
-                # Then delete the file
-                os.remove(path)
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"User deleted file '{path}'"
-                )
+                except FileNotFoundError:
+                    # This can happen if the file gets auto-deleted before we get to it - ignore!
+                    pass
 
-            except FileNotFoundError:
-                # This can happen if the file gets auto-deleted before we get to it - ignore!
-                pass
-
-            except OSError as e:
-                self._logger.error("Failed to delete file '%s': %s", path, str(e))
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    strings.file_error_title,
-                    strings.error_deleting_file.format(str(e)),
-                    [MessageBoxButton.OK]
-                )
+                except OSError as e:
+                    self._logger.error("Failed to delete file '%s': %s", file_path, str(e))
+                    MessageBox.show_message(
+                        self,
+                        MessageBoxType.CRITICAL,
+                        strings.file_error_title,
+                        strings.error_deleting_file.format(str(e)),
+                        [MessageBoxButton.OK]
+                    )
 
     def _handle_delete_folder(self, path: str) -> None:
         """Handle request to delete a folder.
@@ -998,13 +1120,10 @@ class MindspaceFilesView(QWidget):
         if not index.isValid():
             return
 
-        # Don't allow renaming the current directory item
         if self._is_current_directory_item(index):
             return
 
-        # Map to source model to get actual file path
-        source_index = self._filter_model.mapToSource(index)
-        path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
+        path = self._tree_view.get_path_from_index(index)
         if not path:
             return
 
@@ -1016,62 +1135,75 @@ class MindspaceFilesView(QWidget):
             self._handle_delete_file(path)
 
     def set_mindspace(self, path: str) -> None:
-        """Set the mindspace root directory."""
+        """Set the mindspace root directory and configure for conversations."""
         self._mindspace_path = path
 
         if not path:
             # Clear the model when no mindspace is active
-            self._filter_model.set_mindspace_root("")
+            self._conversations_path = None
             self._breadcrumb_bar.set_root_path("")
             self._bc_container.set_root_path("")
+            self._conversations_index.set_conversations_dir("")
             # Configure tree view for empty path
             self._bc_container.configure_tree_for_path("")
             return
 
-        parent_path = os.path.dirname(path)
-        self._fs_model.setRootPath(parent_path)
-        self._filter_model.set_mindspace_root(path)
+        # Set conversations directory path
+        self._conversations_path = os.path.join(path, "conversations")
 
-        self._breadcrumb_bar.set_root_path(path)
-        self._breadcrumb_bar.update_from_path(path)
-        self._bc_container.set_root_path(path)
+        # Ensure conversations directory exists
+        if not os.path.exists(self._conversations_path):
+            try:
+                os.makedirs(self._conversations_path, exist_ok=True)
 
-        # Configure tree view with the mindspace path
-        self._bc_container.configure_tree_for_path(path)
+            except OSError as e:
+                self._logger.error("Failed to create conversations directory '%s': %s", self._conversations_path, str(e))
+                self._conversations_path = None
+                self._bc_container.configure_tree_for_path("")
+                self._conversations_index.set_conversations_dir("")
+                return
 
-        # Set the root index to the mindspace directory itself
-        mindspace_source_index = self._fs_model.index(path)
-        root_index = self._filter_model.mapFromSource(mindspace_source_index)
-        self._tree_view.setRootIndex(root_index)
+        # Configure tree view with the conversations path
+        self._bc_container.configure_tree_for_path(self._conversations_path)
 
-        # Hide size, type, and date columns
-        self._tree_view.header().hideSection(1)  # Size
-        self._tree_view.header().hideSection(2)  # Type
-        self._tree_view.header().hideSection(3)  # Date
+        self._breadcrumb_bar.set_root_path(self._conversations_path)
+        self._breadcrumb_bar.update_from_path(self._conversations_path)
+        self._bc_container.set_root_path(self._conversations_path)
+
+        # Start the DAG index for this conversations directory
+        self._conversations_index.set_conversations_dir(self._conversations_path)
+
+        # Schedule a repaint after the event loop processes the index scan and model reset
+        QTimer.singleShot(0, self._bc_container.refresh_viewport)
+
+    def conversations_index(self) -> MindspaceConversationsIndex:
+        """
+        Get the live DAG index for the current conversations directory.
+
+        Returns:
+            MindspaceConversationsIndex instance.
+        """
+        return self._conversations_index
 
     def _on_tree_clicked(self, index: QModelIndex) -> None:
         """Handle click events."""
-        # Get the file path from the source model
-        source_index = self._filter_model.mapToSource(index)
-        path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
+        path = self._tree_view.get_path_from_index(index)
         if not path:
             return
 
-        self.file_clicked.emit(MindspaceViewType.FILES, path, True)
+        self.file_clicked.emit(SidebarViewType.CONVERSATIONS, path, True)
 
     def _on_tree_double_clicked(self, index: QModelIndex) -> None:
         """Handle double click events."""
-        # Get the file path from the source model
-        source_index = self._filter_model.mapToSource(index)
-        path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
+        path = self._tree_view.get_path_from_index(index)
         if not path:
             return
 
-        self.file_clicked.emit(MindspaceViewType.FILES, path, False)
+        self.file_clicked.emit(SidebarViewType.CONVERSATIONS, path, False)
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
-        self._header.set_title(self._language_manager.strings().mindspace_files)
+        self._header.set_title(self._language_manager.strings().mindspace_conversations)
         self.apply_style()
 
     def apply_style(self) -> None:
@@ -1085,7 +1217,9 @@ class MindspaceFilesView(QWidget):
         self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)
         self._icon_provider.update_icons()
         self._delegate.update_icons()
-        self._fs_model.setIconProvider(self._icon_provider)
+        # Invalidate icon cache in model after icon provider refresh
+        self._dag_model.beginResetModel()
+        self._dag_model.endResetModel()
         file_icon_size = round(16 * zoom_factor)
         # Update font size for tree
         font = self.font()
@@ -1094,8 +1228,8 @@ class MindspaceFilesView(QWidget):
         self._bc_container.apply_tree_style(file_icon_size, font)
         self.setStyleSheet(build_tree_pane_stylesheet(
             self._style_manager,
-            "MindspaceFilesView",
-            "MindspaceFilesTreeView",
+            "MindspaceConversationsView",
+            "MindspaceConversationsTreeView",
             self.layoutDirection(),
             zoom_factor,
         ))

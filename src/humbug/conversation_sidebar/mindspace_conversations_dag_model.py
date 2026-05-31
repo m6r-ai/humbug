@@ -10,8 +10,8 @@ from typing import Any, Dict, List, overload
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt, QPersistentModelIndex
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtCore import QFileInfo
-from humbug.mindspace.conversations.mindspace_conversations_index import MindspaceConversationsIndex
-from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
+from humbug.conversation_sidebar.mindspace_conversations_index import MindspaceConversationsIndex
+from humbug.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
 from humbug.user.user_file_sort_order import UserFileSortOrder
 from humbug.user.user_manager import UserManager
 
@@ -59,7 +59,7 @@ class MindspaceConversationsDAGModel(QAbstractItemModel):
     def __init__(
         self,
         index: MindspaceConversationsIndex,
-        icon_provider: MindspaceTreeIconProvider,
+        icon_provider: SidebarTreeIconProvider,
         parent: Any = None
     ) -> None:
         """

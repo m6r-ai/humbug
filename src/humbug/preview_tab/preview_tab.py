@@ -14,12 +14,12 @@ from preview_context.preview_context import PreviewContext
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.status_message import StatusMessage
-from humbug.widgets import FindWidget
-from humbug.tab import TabBase, TabState
 from humbug.preview_tab.preview_error import PreviewError
 from humbug.preview_tab.preview_widget import PreviewWidget
+from humbug.status_message import StatusMessage
 from humbug.style_manager import StyleManager
+from humbug.tab import TabBase, TabState
+from humbug.widgets import FindWidget
 
 
 class PreviewTab(TabBase):

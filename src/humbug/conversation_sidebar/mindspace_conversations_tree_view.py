@@ -6,11 +6,11 @@ from typing import Callable
 from PySide6.QtCore import QModelIndex, QTimer
 from PySide6.QtWidgets import QWidget
 
-from humbug.mindspace.conversations.mindspace_conversations_dag_model import MindspaceConversationsDAGModel
-from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
+from humbug.conversation_sidebar.mindspace_conversations_dag_model import MindspaceConversationsDAGModel
+from humbug.sidebar.sidebar_tree_view import SidebarTreeView
 
 
-class MindspaceConversationsTreeView(MindspaceTreeView):
+class MindspaceConversationsTreeView(SidebarTreeView):
     """Custom tree view for conversations with drag and drop support, auto-scroll, and inline editing."""
 
     def __init__(self, parent: QWidget | None = None):

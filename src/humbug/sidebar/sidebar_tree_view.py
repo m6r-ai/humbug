@@ -11,7 +11,7 @@ from PySide6.QtGui import (
     QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent, QWheelEvent
 )
 
-class MindspaceTreeView(QTreeView):
+class SidebarTreeView(QTreeView):
     """Base tree view with drag and drop support, auto-scroll, and inline editing."""
 
     file_dropped = Signal(str, str)  # dragged_path, target_path

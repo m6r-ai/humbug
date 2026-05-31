@@ -45,11 +45,8 @@ from humbug.exception_notifier import get_exception_notifier
 from humbug.language.language_manager import LanguageManager
 from humbug.log_tab.log_tab import LogTab
 from humbug.message_box import MessageBox, MessageBoxType
-from humbug.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_view import MindspaceView
 from humbug.main_window_splitter import MainWindowSplitter
-from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.preview_tab.preview_tab import PreviewTab
 from humbug.settings_dialog import SettingsDialog, SECTION_AI_BACKENDS
 from humbug.shell_tab.commands.shell_command_clear import ShellCommandClear
@@ -62,6 +59,9 @@ from humbug.shell_tab.commands.shell_command_terminal import ShellCommandTermina
 from humbug.shell_tab.commands.shell_command_preview import ShellCommandPreview
 from humbug.shell_tab.shell_command_registry import ShellCommandRegistry
 from humbug.shell_tab.shell_tab import ShellTab
+from humbug.sidebar.sidebar_folders_dialog import SidebarFoldersDialog
+from humbug.sidebar.sidebar_view import SidebarView
+from humbug.sidebar.sidebar_view_type import SidebarViewType
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.status_message import StatusMessage
 from humbug.system_ai_tool import SystemAITool
@@ -143,11 +143,11 @@ class MainWindow(QMainWindow):
     _RESIZE_ZONE = 6
 
     # Maps tool_name() to the sidebar panel that should reveal the tab's file.
-    # Tab types not listed here default to MindspaceViewType.FILES.
+    # Tab types not listed here default to SidebarViewType.FILES.
     _TAB_PANEL_MAP = {
-        "conversation": MindspaceViewType.CONVERSATIONS,
-        "preview":      MindspaceViewType.PREVIEW,
-        "diff":         MindspaceViewType.VCS,
+        "conversation": SidebarViewType.CONVERSATIONS,
+        "preview":      SidebarViewType.PREVIEW,
+        "diff":         SidebarViewType.VCS,
     }
 
     def __init__(self) -> None:
@@ -442,7 +442,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._splitter)
 
         # Create and add mindspace view
-        self._mindspace_view = MindspaceView(self)
+        self._mindspace_view = SidebarView(self)
         self._mindspace_view.file_clicked.connect(self._on_mindspace_view_file_clicked)
         self._mindspace_view.file_deleted.connect(self._on_mindspace_view_file_deleted)
         self._mindspace_view.file_renamed.connect(self._on_mindspace_view_file_renamed)
@@ -837,7 +837,7 @@ class MainWindow(QMainWindow):
         if path is None:
             return
 
-        panel = self._TAB_PANEL_MAP.get(current_tab.tool_name(), MindspaceViewType.FILES)
+        panel = self._TAB_PANEL_MAP.get(current_tab.tool_name(), SidebarViewType.FILES)
         self._mindspace_view.reveal_and_select_file(panel, path)
 
     def _on_column_manager_status_message(self, message: StatusMessage) -> None:
@@ -897,7 +897,7 @@ class MainWindow(QMainWindow):
             return
 
         # Show folder configuration dialog
-        dialog = MindspaceFoldersDialog(dir_path, self)
+        dialog = SidebarFoldersDialog(dir_path, self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
@@ -1175,13 +1175,13 @@ class MainWindow(QMainWindow):
                 f"User opened diff: '{path}'\ntab ID: {context_id}"
             )
 
-    def _on_mindspace_view_file_clicked(self, source: MindspaceViewType, path: str, ephemeral: bool) -> None:
+    def _on_mindspace_view_file_clicked(self, source: SidebarViewType, path: str, ephemeral: bool) -> None:
         """Handle click of a file from the mindspace view."""
         self._open_by_view_type(source, path, ephemeral)
 
     def _on_mindspace_search_result_activated(
         self,
-        source: MindspaceViewType,
+        source: SidebarViewType,
         path: str,
         ephemeral: bool,
         search_text: str,
@@ -1198,7 +1198,8 @@ class MainWindow(QMainWindow):
                 tab.navigate_to_search_match(search_text, line_number, message_id, case_sensitive=case_sensitive, regexp=regexp)
 
     def _open_path_from_drop(self, source_type: str, path: str) -> str | None:
-        """Adapter for ColumnManager's open_path callable: maps drag-drop source strings to MindspaceViewType.
+        """
+        Adapter for ColumnManager's open_path callable: maps drag-drop source strings to SidebarViewType.
 
         Args:
             source_type: Source view type string from mime data ('conversations', 'vcs', 'preview', 'files').
@@ -1208,28 +1209,29 @@ class MainWindow(QMainWindow):
             The context_id of the opened or focused tab, or None if skipped/failed.
         """
         source_map = {
-            "conversations": MindspaceViewType.CONVERSATIONS,
-            "vcs": MindspaceViewType.VCS,
-            "preview": MindspaceViewType.PREVIEW,
+            "conversations": SidebarViewType.CONVERSATIONS,
+            "vcs": SidebarViewType.VCS,
+            "preview": SidebarViewType.PREVIEW,
         }
-        source = source_map.get(source_type, MindspaceViewType.FILES)
+        source = source_map.get(source_type, SidebarViewType.FILES)
         return self._open_by_view_type(source, path, ephemeral=False)
 
-    def _open_by_view_type(self, source: MindspaceViewType, path: str, ephemeral: bool) -> str | None:
-        """Open a file with the appropriate tab type based on mindspace view type.
+    def _open_by_view_type(self, source: SidebarViewType, path: str, ephemeral: bool) -> str | None:
+        """
+        Open a file with the appropriate tab type based on mindspace view type.
 
         Returns the context_id of the opened or focused tab, or None if skipped/failed.
         """
-        if os.path.isdir(path) and source not in (MindspaceViewType.PREVIEW,):
+        if os.path.isdir(path) and source not in (SidebarViewType.PREVIEW,):
             return None
 
-        if source == MindspaceViewType.VCS:
+        if source == SidebarViewType.VCS:
             context_type = "diff"
 
-        elif source == MindspaceViewType.CONVERSATIONS:
+        elif source == SidebarViewType.CONVERSATIONS:
             context_type = "conversation"
 
-        elif source == MindspaceViewType.PREVIEW:
+        elif source == SidebarViewType.PREVIEW:
             context_type = "preview"
 
         else:
@@ -1269,7 +1271,8 @@ class MainWindow(QMainWindow):
             tab.clear_search_highlight()
 
     def _on_mindspace_view_file_deleted(self, path: str) -> None:
-        """Handle deletion of a file by closing any open tab.
+        """
+        Handle deletion of a file by closing any open tab.
 
         Args:
             path: Path of file being deleted
@@ -1283,7 +1286,8 @@ class MainWindow(QMainWindow):
             )
 
     def _on_mindspace_view_file_renamed(self, old_path: str, new_path: str) -> None:
-        """Handle renaming of files.
+        """
+        Handle renaming of files.
 
         Args:
             old_path: Original path of renamed file
@@ -1323,12 +1327,14 @@ class MainWindow(QMainWindow):
 
                 contexts.focus(existing.context_id)
                 context_id = existing.context_id
+
             else:
                 context_id = contexts.open(
                     context_type="editor",
                     path=path,
                     title=os.path.basename(path),
                 )
+
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"User opened editor for file: '{path}'\nTab ID: {context_id}"
@@ -1349,9 +1355,10 @@ class MainWindow(QMainWindow):
             tab = self._column_manager.get_current_tab()
             if tab is None or not tab.can_save():
                 return
+
             tab.save()
             path = tab.path()
-            self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
+            self._mindspace_view.reveal_and_select_file(SidebarViewType.FILES, path)
 
         except Exception as e:
             strings = self._language_manager.strings()
@@ -1370,7 +1377,7 @@ class MainWindow(QMainWindow):
                 return
             tab.save_as()
             path = tab.path()
-            self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
+            self._mindspace_view.reveal_and_select_file(SidebarViewType.FILES, path)
 
         except Exception as e:
             strings = self._language_manager.strings()
@@ -1419,6 +1426,7 @@ class MainWindow(QMainWindow):
         existing = contexts.get_by_path_and_type(file_path, "diff")
         if existing:
             contexts.focus(existing.context_id)
+
         else:
             context_id = contexts.open(
                 context_type="diff",
@@ -1543,7 +1551,8 @@ class MainWindow(QMainWindow):
         self._splitter.update()
 
     def _generate_conversation_path(self, relative_folder: str | None = None) -> tuple[str, str]:
-        """Generate a timestamped title and absolute path for a new conversation file.
+        """
+        Generate a timestamped title and absolute path for a new conversation file.
 
         Args:
             relative_folder: Optional folder path relative to mindspace. Defaults to 'conversations'.
@@ -1638,7 +1647,7 @@ class MainWindow(QMainWindow):
             f"User created new conversation in folder '{folder_path}'\ntab ID: {context_id}"
         )
 
-        self._mindspace_view.reveal_and_select_file(MindspaceViewType.CONVERSATIONS, full_path)
+        self._mindspace_view.reveal_and_select_file(SidebarViewType.CONVERSATIONS, full_path)
 
     def _get_canonical_mindspace_path(self, path: str) -> str | None:
         """Get the canonical path of the current mindspace."""

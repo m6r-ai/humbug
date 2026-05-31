@@ -12,15 +12,15 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QFrame, QStyleOptionViewItem, QTreeView, QWidget
 
 from humbug.color_role import ColorRole
-from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
-from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
+from humbug.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
+from humbug.sidebar.sidebar_tree_style import SidebarTreeStyle
 from humbug.style_manager import StyleManager
 
 
 _PATH_ROLE = Qt.ItemDataRole.UserRole
 
 
-class MindspaceBreadcrumbBar(QTreeView):
+class SidebarBreadcrumbBar(QTreeView):
     """
     A compact tree view showing the ancestor chain (spine) of the folder currently
     at the top of the main tree's viewport.
@@ -53,8 +53,8 @@ class MindspaceBreadcrumbBar(QTreeView):
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self._style_manager = StyleManager()
-        self._icon_provider = MindspaceTreeIconProvider()
-        self._tree_style = MindspaceTreeStyle()
+        self._icon_provider = SidebarTreeIconProvider()
+        self._tree_style = SidebarTreeStyle()
         self.setStyle(self._tree_style)
 
         self._model = QStandardItemModel(self)

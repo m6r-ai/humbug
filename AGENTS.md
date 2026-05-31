@@ -105,21 +105,26 @@ Main application and GUI components.
 
 **Subdirectories:**
 - `column/` - Column manager, tab bar, and chrome widgets
+- `conversation_sidebar/` - Conversations panel implementation
 - `conversation_tab/` - Conversation tab implementation
 - `diff_tab/` - Diff tab implementation
 - `editor_tab/` - Editor tab implementation
+- `file_sidebar/` - Files panel implementation
 - `file_watcher/` - Singleton file/directory polling service
 - `icons/` - Application icon pack
 - `language/` - Localization support
 - `log_tab/` - Log tab implementation
 - `markdown/` - Markdown and code rendering stack
-- `mindspace/` - Qt GUI for mindspace sidebar
+- `preview_sidebar/` - Preview panel implementation
 - `preview_tab/` - Preview tab implementation
+- `search_sidebar/` - Search panel implementation
 - `settings/` - Application and user settings UI widgets
 - `shell_tab/` - Shell tab implementation
+- `sidebar/` - Sidebar container, rail, and shared sidebar infrastructure
 - `tab/` - Abstract tab contract
 - `terminal_tab/` - Terminal tab implementation
 - `user/` - User management
+- `vcs_sidebar/` - VCS/diff panel implementation
 - `widgets/` - Reusable Qt widgets
 
 ### `src/mindspace/`

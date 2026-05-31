@@ -1,4 +1,4 @@
-"""Preview view widget for mindspace."""
+"""Files view widget for mindspace."""
 
 import logging
 import os
@@ -12,39 +12,42 @@ from PySide6.QtWidgets import (
 
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
-from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
-from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
-from humbug.mindspace.mindspace_breadcrumb_container import MindspaceBreadcrumbContainer
-from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
-from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
-from humbug.mindspace.mindspace_tree_delegate import MindspaceTreeDelegate
-from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
-from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
-from humbug.mindspace.mindspace_view_type import MindspaceViewType
-from humbug.mindspace.preview.mindspace_preview_model import MindspacePreviewModel
-from humbug.mindspace.preview.mindspace_preview_tree_view import MindspacePreviewTreeView
-from humbug.style_manager import StyleManager
+from humbug.file_sidebar.mindspace_files_model import MindspaceFilesModel
+from humbug.file_sidebar.mindspace_files_tree_view import MindspaceFilesTreeView
 from humbug.language.language_manager import LanguageManager
+from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
+from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.sidebar.sidebar_section_header import SidebarSectionHeader
+from humbug.sidebar.sidebar_breadcrumb_bar import SidebarBreadcrumbBar
+from humbug.sidebar.sidebar_breadcrumb_container import SidebarBreadcrumbContainer
+from humbug.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
+from humbug.sidebar.sidebar_tree_delegate import SidebarTreeDelegate
+from humbug.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
+from humbug.sidebar.sidebar_tree_style import SidebarTreeStyle
+from humbug.sidebar.sidebar_view_type import SidebarViewType
+from humbug.style_manager import StyleManager
+from humbug.vcs_sidebar.mindspace_vcs_poller import MindspaceVCSPoller
 
 
-class MindspacePreviewView(QWidget):
-    """Preview view widget for displaying mindspace files in preview mode."""
+class MindspaceFilesView(QWidget):
+    """Files view widget for displaying mindspace files."""
 
-    file_clicked = Signal(MindspaceViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
+    file_clicked = Signal(SidebarViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
     file_opened_in_preview = Signal(str)  # Emits path when file is opened in preview
+    file_opened_in_diff = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in diff
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the preview view widget."""
+        """Initialize the files view widget."""
         super().__init__(parent)
 
         self._style_manager = StyleManager()
-        self._logger = logging.getLogger("MindspacePreviewView")
+        self._logger = logging.getLogger("MindspaceFilesView")
         self._mindspace_manager = MindspaceManager()
+        self._vcs_poller = MindspaceVCSPoller()
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -55,42 +58,40 @@ class MindspacePreviewView(QWidget):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        self._header = MindspaceSectionHeader(
-            self._language_manager.strings().mindspace_preview,
+        self._header = SidebarSectionHeader(
+            self._language_manager.strings().mindspace_files,
             self
         )
         layout.addWidget(self._header)
 
         # Create the three coordinated widgets and wrap them in the container.
-        self._breadcrumb_bar = MindspaceBreadcrumbBar()
+        self._breadcrumb_bar = SidebarBreadcrumbBar()
         self._breadcrumb_bar.set_drop_handler(self._on_file_dropped)
         self._breadcrumb_bar.set_context_menu_handler(self._show_breadcrumb_context_menu)
 
-        self._tree_view = MindspacePreviewTreeView()
+        self._tree_view = MindspaceFilesTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
-        self._tree_style = MindspaceTreeStyle()
+        self._tree_style = SidebarTreeStyle()
         self._tree_view.setStyle(self._tree_style)
         self._tree_view.file_dropped.connect(self._on_file_dropped)
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
 
-        self._bc_container = MindspaceBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
+        self._bc_container = SidebarBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
-        self._bc_container.set_dot_click_handler(self._on_breadcrumb_dot_clicked)
-        self._bc_container.set_dot_double_click_handler(self._on_breadcrumb_dot_double_clicked)
 
         # Create file system model
-        self._icon_provider = MindspaceTreeIconProvider()
+        self._icon_provider = SidebarTreeIconProvider()
         self._fs_model = QFileSystemModel()
         self._fs_model.setReadOnly(True)
         self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.Hidden | QDir.Filter.NoDotDot)
 
         # Create filter model
-        self._filter_model = MindspacePreviewModel()
+        self._filter_model = MindspaceFilesModel()
         self._filter_model.setSourceModel(self._fs_model)
 
         # Create and set the editable delegate
-        self._delegate = MindspaceTreeDelegate(self._tree_view, self._style_manager)
+        self._delegate = SidebarTreeDelegate(self._tree_view, self._style_manager)
         self._delegate.edit_finished.connect(self._on_delegate_edit_finished)
         self._delegate.edit_cancelled.connect(self._on_delegate_edit_cancelled)
         self._tree_view.setItemDelegate(self._delegate)
@@ -285,9 +286,9 @@ class MindspacePreviewView(QWidget):
             self._logger.info("Successfully renamed temporary %s from '%s' to '%s'",
                             "folder" if is_folder else "file", temp_path, new_path)
 
-            # If it's a file, signal that it should be opened in preview
+            # If it's a file, signal that it should be opened for editing
             if not is_folder:
-                self.file_opened_in_preview.emit(new_path)
+                self.file_edited.emit(new_path, False)
 
         except OSError as e:
             self._logger.error("Failed to rename temporary %s from '%s' to '%s': %s",
@@ -506,12 +507,6 @@ class MindspacePreviewView(QWidget):
         if not target_index.isValid():
             return
 
-        # If the target is a directory currently hidden behind the breadcrumb, treat
-        # it as a breadcrumb click so the breadcrumb recalculates correctly.
-        if os.path.isdir(normalized_path) and self._tree_view.visualRect(target_index).top() < 0:
-            self._bc_container.scroll_to_path(normalized_path)
-            return
-
         self._tree_view.clearSelection()
         self._tree_view.setCurrentIndex(target_index)
         self._tree_view.scrollTo(target_index, self._tree_view.ScrollHint.EnsureVisible)
@@ -597,8 +592,8 @@ class MindspacePreviewView(QWidget):
 
         # Get the delegate and start editing
         delegate = self._tree_view.itemDelegate(filter_index)
-        if not isinstance(delegate, MindspaceTreeDelegate):
-            self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
+        if not isinstance(delegate, SidebarTreeDelegate):
+            self._logger.error("Delegate is not an instance of SidebarTreeDelegate")
             return
 
         delegate.start_editing(filter_index, select_extension)
@@ -625,6 +620,26 @@ class MindspacePreviewView(QWidget):
         )
 
         return menu
+
+    def _is_current_directory_item(self, index: QModelIndex) -> bool:
+        """
+        Check if the given index represents the current directory (".") item.
+
+        Args:
+            index: Model index to check
+
+        Returns:
+            True if this is the current directory item
+        """
+        if not index.isValid():
+            return False
+
+        source_index = self._filter_model.mapToSource(index)
+        if not source_index.isValid():
+            return False
+
+        file_name = self._fs_model.fileName(source_index)
+        return file_name == "."
 
     def _get_tree_index_for_path(self, path: str) -> QModelIndex:
         """
@@ -671,7 +686,7 @@ class MindspacePreviewView(QWidget):
         menu.exec_(global_pos)
 
     def _show_context_menu(self, position: QPoint) -> None:
-        """Show context menu for preview tree items."""
+        """Show context menu for file tree items."""
         # Get the index at the clicked position
         index = self._tree_view.indexAt(position)
 
@@ -683,6 +698,10 @@ class MindspacePreviewView(QWidget):
         # Determine the path and whether it's a file or directory
         if not index.isValid():
             # Clicked on empty space - show root context menu
+            menu = self._create_root_context_menu()
+
+        elif self._is_current_directory_item(index):
+            # Clicked on the current directory (".") item - show root context menu
             menu = self._create_root_context_menu()
 
         else:
@@ -707,10 +726,14 @@ class MindspacePreviewView(QWidget):
 
             else:
                 # File context menu
-                preview_view_action = menu.addAction(strings.preview)
-                preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
                 edit_action = menu.addAction(strings.edit)
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
+                preview_view_action = menu.addAction(strings.preview)
+                preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
+                if self._vcs_poller.has_vcs_changes(path):
+                    diff_action = menu.addAction(strings.diff)
+                    diff_action.triggered.connect(lambda: self._handle_diff_file(path))
+
                 duplicate_action = menu.addAction(strings.duplicate)
                 duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
                 rename_action = menu.addAction(strings.rename)
@@ -841,10 +864,14 @@ class MindspacePreviewView(QWidget):
         if not index.isValid():
             return
 
+        # Don't allow renaming the current directory item
+        if self._is_current_directory_item(index):
+            return
+
         # Get the delegate and start Qt-based editing (excludes extension from selection)
         delegate = self._tree_view.itemDelegate(index)
-        if not isinstance(delegate, MindspaceTreeDelegate):
-            self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
+        if not isinstance(delegate, SidebarTreeDelegate):
+            self._logger.error("Delegate is not an instance of SidebarTreeDelegate")
             return
 
         delegate.start_editing(index, select_extension=False)
@@ -857,15 +884,9 @@ class MindspacePreviewView(QWidget):
         """View a file in the preview."""
         self.file_opened_in_preview.emit(path)
 
-    def _on_breadcrumb_dot_clicked(self) -> None:
-        """Handle a click on the '.' breadcrumb item — open the mindspace root in preview."""
-        if self._mindspace_path:
-            self.file_clicked.emit(MindspaceViewType.PREVIEW, os.path.normpath(self._mindspace_path), True)
-
-    def _on_breadcrumb_dot_double_clicked(self) -> None:
-        """Handle a double-click on the '.' breadcrumb item — open the mindspace root as persistent."""
-        if self._mindspace_path:
-            self.file_clicked.emit(MindspaceViewType.PREVIEW, os.path.normpath(self._mindspace_path), False)
+    def _handle_diff_file(self, path: str) -> None:
+        """Open a file diff view."""
+        self.file_opened_in_diff.emit(path, False)
 
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.
@@ -977,6 +998,10 @@ class MindspacePreviewView(QWidget):
         if not index.isValid():
             return
 
+        # Don't allow renaming the current directory item
+        if self._is_current_directory_item(index):
+            return
+
         # Map to source model to get actual file path
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
@@ -1025,30 +1050,28 @@ class MindspacePreviewView(QWidget):
         self._tree_view.header().hideSection(3)  # Date
 
     def _on_tree_clicked(self, index: QModelIndex) -> None:
-        """Handle click events - route to preview view."""
+        """Handle click events."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
 
-        # For preview view, single clicks open in preview
-        self.file_clicked.emit(MindspaceViewType.PREVIEW, path, True)
+        self.file_clicked.emit(SidebarViewType.FILES, path, True)
 
     def _on_tree_double_clicked(self, index: QModelIndex) -> None:
-        """Handle double click events - route to preview view."""
+        """Handle double click events."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
 
-        # For preview view, double clicks also open in preview (non-ephemeral)
-        self.file_clicked.emit(MindspaceViewType.PREVIEW, path, False)
+        self.file_clicked.emit(SidebarViewType.FILES, path, False)
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
-        self._header.set_title(self._language_manager.strings().mindspace_preview)
+        self._header.set_title(self._language_manager.strings().mindspace_files)
         self.apply_style()
 
     def apply_style(self) -> None:
@@ -1059,11 +1082,11 @@ class MindspacePreviewView(QWidget):
         # Apply style to header
         self._header.apply_style()
 
+        self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)
         self._icon_provider.update_icons()
         self._delegate.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)
         file_icon_size = round(16 * zoom_factor)
-        self._breadcrumb_bar.apply_style(base_font_size, zoom_factor)
         # Update font size for tree
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
@@ -1071,8 +1094,8 @@ class MindspacePreviewView(QWidget):
         self._bc_container.apply_tree_style(file_icon_size, font)
         self.setStyleSheet(build_tree_pane_stylesheet(
             self._style_manager,
-            "MindspacePreviewView",
-            "MindspacePreviewTreeView",
+            "MindspaceFilesView",
+            "MindspaceFilesTreeView",
             self.layoutDirection(),
             zoom_factor,
         ))

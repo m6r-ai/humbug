@@ -9,13 +9,13 @@ from PySide6.QtCore import QRegularExpression
 from editor_context.editor_context import EditorContext
 from git import GitNotFoundError, GitNotRepositoryError, find_repo_root
 
+from humbug.diff_tab.diff_widget import DiffWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
 from humbug.status_message import StatusMessage
 from humbug.tab import TabBase, TabState
+from humbug.vcs_sidebar.mindspace_vcs_poller import MindspaceVCSPoller
 from humbug.widgets import FindWidget
-from humbug.diff_tab.diff_widget import DiffWidget
 
 
 class DiffTab(TabBase):

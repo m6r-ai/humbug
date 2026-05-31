@@ -8,8 +8,8 @@ from typing import Dict
 @dataclass
 class MindspaceDirectoryTracking:
     """Container for tracked directory paths."""
-    file_dialog: str  # Last directory used for file dialogs
-    conversations: str  # Last directory used for conversations
+    file_dialog: str
+    conversations: str
 
     @classmethod
     def create_default(cls, mindspace_path: str) -> 'MindspaceDirectoryTracking':

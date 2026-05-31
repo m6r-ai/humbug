@@ -1,4 +1,4 @@
-"""Simplified inline editor widget for mindspace file tree items that works with Qt's editor system."""
+"""Simplified inline editor widget for sidebar file tree items that works with Qt's editor system."""
 
 import os
 from typing import Callable
@@ -11,11 +11,11 @@ from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
 
 
-class MindspaceTreeInlineEditor(QLineEdit):
+class SidebarTreeInlineEditor(QLineEdit):
     """Simplified inline editor with validation for file/folder names that works with Qt's editor system."""
 
-    edit_finished = Signal(str)  # Emits the new name when editing is confirmed
-    edit_cancelled = Signal()    # Emits when editing is cancelled
+    edit_finished = Signal(str)
+    edit_cancelled = Signal()
 
     def __init__(
         self,
@@ -41,24 +41,18 @@ class MindspaceTreeInlineEditor(QLineEdit):
         self._validation_callback = validation_callback
         self._select_extension = select_extension
 
-        # Set initial text
         self.setText(initial_text)
 
-        # Track validation state
         self._is_valid = True
         self.setProperty("is_valid", self._is_valid)
 
-        # Connect text change signal for real-time validation
         self.textChanged.connect(self._validate_input)
 
-        # Apply initial styling
         self._on_style_changed()
 
-        # Perform initial validation and selection
         self._validate_input()
         self._apply_initial_selection(initial_text, select_extension)
 
-        # Set focus
         self.setFocus()
 
     def _apply_initial_selection(self, text: str, select_extension: bool) -> None:
@@ -70,17 +64,14 @@ class MindspaceTreeInlineEditor(QLineEdit):
             select_extension: Whether to include extension in selection
         """
         if select_extension:
-            # Select all text (for new files)
             self.selectAll()
             return
 
-        # Select only the filename part (for rename/duplicate)
         name_part, ext = os.path.splitext(text)
-        if ext and name_part:  # Has extension
+        if ext and name_part:
             self.setSelection(0, len(name_part))
             return
 
-        # No extension or empty name, select all
         self.selectAll()
 
     def _validate_input(self) -> None:
@@ -88,7 +79,6 @@ class MindspaceTreeInlineEditor(QLineEdit):
         text = self.text().strip()
         strings = self._language_manager.strings()
 
-        # Check basic validation
         if not text:
             self._is_valid = False
             self.setProperty("is_valid", False)
@@ -97,7 +87,6 @@ class MindspaceTreeInlineEditor(QLineEdit):
             self.style().polish(self)
             return
 
-        # Check for invalid filesystem characters
         invalid_chars = r'\/:*?"<>|'
         if any(c in invalid_chars for c in text):
             self._is_valid = False
@@ -107,7 +96,6 @@ class MindspaceTreeInlineEditor(QLineEdit):
             self.style().polish(self)
             return
 
-        # Call additional validation callback if provided
         if self._validation_callback:
             is_valid, error_message = self._validation_callback(text)
             if not is_valid:
@@ -118,7 +106,6 @@ class MindspaceTreeInlineEditor(QLineEdit):
                 self.style().polish(self)
                 return
 
-        # All validation passed
         self._is_valid = True
         self.setProperty("is_valid", True)
         self.setToolTip("")
@@ -130,7 +117,6 @@ class MindspaceTreeInlineEditor(QLineEdit):
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
 
-        # Set scaled font
         font = QFont()
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)

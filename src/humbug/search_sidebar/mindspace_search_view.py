@@ -21,11 +21,11 @@ from mindspace.mindspace_content_type import MindspaceContentType
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_pane_style import build_tree_pane_stylesheet
-from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
-from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
-from humbug.mindspace.mindspace_view_type import MindspaceViewType
-from humbug.mindspace.search.mindspace_search_engine import MindspaceSearchEngine, MindspaceSearchMatch
+from humbug.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
+from humbug.sidebar.sidebar_section_header import SidebarSectionHeader
+from humbug.sidebar.sidebar_tree_style import SidebarTreeStyle
+from humbug.sidebar.sidebar_view_type import SidebarViewType
+from humbug.search_sidebar.mindspace_search_engine import MindspaceSearchEngine, MindspaceSearchMatch
 from humbug.style_manager import StyleManager
 
 _LINE_NUMBER_ROLE = Qt.ItemDataRole.UserRole + 11
@@ -123,8 +123,8 @@ class _SearchResultDelegate(QStyledItemDelegate):
 class MindspaceSearchView(QWidget):
     """Global search pane for searching across the current mindspace."""
 
-    file_clicked = Signal(MindspaceViewType, str, bool)
-    result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool, object, object)
+    file_clicked = Signal(SidebarViewType, str, bool)
+    result_activated = Signal(SidebarViewType, str, bool, str, bool, bool, object, object)
     highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -141,7 +141,7 @@ class MindspaceSearchView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self._header = MindspaceSectionHeader(self._language_manager.strings().mindspace_search, self)
+        self._header = SidebarSectionHeader(self._language_manager.strings().mindspace_search, self)
         layout.addWidget(self._header)
 
         search_bar = QWidget(self)
@@ -200,7 +200,7 @@ class MindspaceSearchView(QWidget):
 
         self._results_tree = QTreeWidget(self)
         self._results_tree.setObjectName("MindspaceSearchResultsTree")
-        self._tree_style = MindspaceTreeStyle()
+        self._tree_style = SidebarTreeStyle()
         self._results_tree.setStyle(self._tree_style)
         self._results_tree.setHeaderHidden(True)
         self._results_tree.setRootIsDecorated(True)
@@ -387,21 +387,21 @@ class MindspaceSearchView(QWidget):
             ranges.append((pos, len(query)))
             pos += max(1, len(query))
 
-    def _content_type_to_view_type(self, content_type: MindspaceContentType) -> MindspaceViewType:
-        """Map a MindspaceContentType to the corresponding MindspaceViewType for display."""
+    def _content_type_to_view_type(self, content_type: MindspaceContentType) -> SidebarViewType:
+        """Map a MindspaceContentType to the corresponding SidebarViewType for display."""
         if content_type == MindspaceContentType.CONVERSATIONS:
-            return MindspaceViewType.CONVERSATIONS
+            return SidebarViewType.CONVERSATIONS
 
-        return MindspaceViewType.FILES
+        return SidebarViewType.FILES
 
-    def _icon_for_view_type(self, view_type: MindspaceViewType) -> QIcon:
-        icon_name = "conversation" if view_type == MindspaceViewType.CONVERSATIONS else "files"
+    def _icon_for_view_type(self, view_type: SidebarViewType) -> QIcon:
+        icon_name = "conversation" if view_type == SidebarViewType.CONVERSATIONS else "files"
         return QIcon(self._style_manager.scale_icon(icon_name, 16))
 
     def _open_item(self, item: QTreeWidgetItem, ephemeral: bool) -> None:
         path = item.data(0, Qt.ItemDataRole.UserRole)
         view_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if not isinstance(path, str) or not isinstance(view_type, MindspaceViewType):
+        if not isinstance(path, str) or not isinstance(view_type, SidebarViewType):
             return
 
         line_number = item.data(0, _LINE_NUMBER_ROLE)

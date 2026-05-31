@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QSplitter, QSplitterHandle
 from PySide6.QtGui import QPainter
 
 from humbug.color_role import ColorRole
-from humbug.mindspace.mindspace_view import MindspaceView
+from humbug.sidebar.sidebar_view import SidebarView
 from humbug.style_manager import StyleManager
 
 
@@ -54,7 +54,7 @@ class MainWindowSplitter(QSplitter):
             return
 
         widget = self.widget(0)
-        if not isinstance(widget, MindspaceView):
+        if not isinstance(widget, SidebarView):
             return
 
         rail_width = widget.rail_width()
@@ -94,7 +94,7 @@ class MainWindowSplitter(QSplitter):
             return
 
         widget = self.widget(0)
-        if not isinstance(widget, MindspaceView):
+        if not isinstance(widget, SidebarView):
             return
 
         rail_width = widget.rail_width()

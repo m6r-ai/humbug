@@ -1,4 +1,4 @@
-"""Section header widget for mindspace panes."""
+"""Section header widget for sidebar panes."""
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
@@ -7,13 +7,13 @@ from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 
 
-class MindspaceSectionHeader(QWidget):
-    """A simple titled header for mindspace panes."""
+class SidebarSectionHeader(QWidget):
+    """A simple titled header for sidebar panes."""
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
         """Initialize the section header."""
         super().__init__(parent)
-        self.setObjectName("MindspaceSectionHeader")
+        self.setObjectName("SidebarSectionHeader")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._style_manager = StyleManager()
 
@@ -43,11 +43,11 @@ class MindspaceSectionHeader(QWidget):
         self._title_label.setFont(font)
 
         self.setStyleSheet(f"""
-            QWidget#MindspaceSectionHeader {{
+            QWidget#SidebarSectionHeader {{
                 background-color: {background};
                 border: none;
             }}
-            QWidget#MindspaceSectionHeader QLabel {{
+            QWidget#SidebarSectionHeader QLabel {{
                 color: {text};
                 background: transparent;
             }}

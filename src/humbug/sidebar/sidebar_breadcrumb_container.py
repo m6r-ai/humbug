@@ -7,11 +7,11 @@ from PySide6.QtCore import QEvent, QModelIndex, QObject, QPoint, QRect, QSize, Q
 from PySide6.QtGui import QFont, QResizeEvent
 from PySide6.QtWidgets import QApplication, QScrollBar, QSizePolicy, QWidget
 
-from humbug.mindspace.mindspace_breadcrumb_bar import MindspaceBreadcrumbBar
-from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
+from humbug.sidebar.sidebar_breadcrumb_bar import SidebarBreadcrumbBar
+from humbug.sidebar.sidebar_tree_view import SidebarTreeView
 
 
-class MindspaceBreadcrumbContainer(QWidget):
+class SidebarBreadcrumbContainer(QWidget):
     """
     A container that coordinates the breadcrumb bar and tree view as a single unit.
 
@@ -33,8 +33,8 @@ class MindspaceBreadcrumbContainer(QWidget):
 
     def __init__(
         self,
-        breadcrumb_bar: MindspaceBreadcrumbBar,
-        tree_view: MindspaceTreeView,
+        breadcrumb_bar: SidebarBreadcrumbBar,
+        tree_view: SidebarTreeView,
         parent: QWidget | None = None,
     ) -> None:
         """
@@ -50,7 +50,7 @@ class MindspaceBreadcrumbContainer(QWidget):
         self._breadcrumb_bar = breadcrumb_bar
         self._tree_view = tree_view
 
-        self._logger = logging.getLogger("MindspaceBreadcrumbContainer")
+        self._logger = logging.getLogger("SidebarBreadcrumbContainer")
 
         self._last_spine_path: str = ""
         self._breadcrumb_rows: int = 0

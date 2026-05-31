@@ -16,12 +16,12 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_section_header import MindspaceSectionHeader
-from humbug.mindspace.mindspace_pane_style import build_list_pane_stylesheet
-from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
-from humbug.mindspace.vcs.mindspace_vcs_delegate import MindspaceVCSDelegate
-from humbug.mindspace.mindspace_view_type import MindspaceViewType
+from humbug.sidebar.sidebar_section_header import SidebarSectionHeader
+from humbug.sidebar.sidebar_pane_style import build_list_pane_stylesheet
+from humbug.sidebar.sidebar_view_type import SidebarViewType
 from humbug.style_manager import StyleManager
+from humbug.vcs_sidebar.mindspace_vcs_poller import MindspaceVCSPoller
+from humbug.vcs_sidebar.mindspace_vcs_delegate import MindspaceVCSDelegate
 
 
 _STATUS_LABELS: dict[VCSStatusCode, str] = {
@@ -91,7 +91,7 @@ class _VCSList(QListWidget):
 class MindspaceVCSView(QWidget):
     """Sidebar panel showing VCS-modified files for the current mindspace."""
 
-    file_clicked = Signal(MindspaceViewType, str, bool)   # view type, path, ephemeral
+    file_clicked = Signal(SidebarViewType, str, bool)   # view type, path, ephemeral
     file_edited = Signal(str, bool)                        # path, ephemeral
     file_opened_in_preview = Signal(str)                   # path
     file_deleted = Signal(str)                             # path
@@ -115,7 +115,7 @@ class MindspaceVCSView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self._header = MindspaceSectionHeader(
+        self._header = SidebarSectionHeader(
             self._language_manager.strings().mindspace_vcs,
             self
         )

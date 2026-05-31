@@ -1,8 +1,8 @@
 from enum import Enum, auto
 
 
-class MindspaceViewType(Enum):
-    """Enumeration of available mindspace views."""
+class SidebarViewType(Enum):
+    """Enumeration of available sidebar panel views."""
     SEARCH = auto()
     CONVERSATIONS = auto()
     VCS = auto()

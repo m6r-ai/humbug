@@ -13,12 +13,12 @@ from humbug.settings.settings_factory import SettingsFactory
 from humbug.style_manager import StyleManager
 
 
-class MindspaceFoldersDialog(QDialog):
+class SidebarFoldersDialog(QDialog):
     """Dialog for selecting which folders to create in a new mindspace."""
 
     def __init__(self, mindspace_path: str, parent: QWidget | None = None) -> None:
         """
-        Initialize the mindspace folders dialog.
+        Initialize the sidebar folders dialog.
 
         Args:
             mindspace_path: Path where mindspace will be created
@@ -34,48 +34,38 @@ class MindspaceFoldersDialog(QDialog):
 
         style_manager = StyleManager()
 
-        # Main layout with proper spacing
         layout = QVBoxLayout()
         layout.setSpacing(12)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # Create a scroll area for the settings
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
 
-        # Create settings container for folder options
         self._settings_container = SettingsContainer()
 
-        # Path display
         self._path_display = SettingsFactory.create_display(
             strings.mindspace_path,
             mindspace_path
         )
         self._settings_container.add_setting(self._path_display)
 
-        # Conversations folder option (required)
         self._conversations_check = SettingsFactory.create_switch(strings.conversations_folder)
         self._conversations_check.set_value(True)
-        self._conversations_check.setEnabled(False)  # Always required
+        self._conversations_check.setEnabled(False)
         self._settings_container.add_setting(self._conversations_check)
 
-        # Source folder option
         self._src_check = SettingsFactory.create_switch(strings.src_folder)
         self._src_check.set_value(False)
         self._settings_container.add_setting(self._src_check)
 
-        # Add stretch to push everything up
         self._settings_container.add_stretch()
 
-        # Set the scroll content
         scroll_area.setWidget(self._settings_container)
         layout.addWidget(scroll_area)
 
-        # Add spacing before buttons
         layout.addSpacing(24)
 
-        # Button row
         spacing = int(style_manager.message_bubble_spacing())
         button_layout = QHBoxLayout()
         button_layout.setSpacing(spacing)
@@ -88,7 +78,6 @@ class MindspaceFoldersDialog(QDialog):
         self._cancel_button = QPushButton(strings.cancel)
         self._cancel_button.clicked.connect(self.reject)
 
-        # Set minimum button sizes
         zoom_factor = style_manager.zoom_factor()
         min_button_width = int(90 * zoom_factor)
         min_button_height = 40
@@ -102,7 +91,6 @@ class MindspaceFoldersDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
-        # Apply consistent dialog styling
         self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
     def get_selected_folders(self) -> List[str]:
@@ -112,7 +100,7 @@ class MindspaceFoldersDialog(QDialog):
         Returns:
             List of folder names to create in mindspace
         """
-        folders = ['conversations']  # Always create conversations folder
+        folders = ['conversations']
 
         if self._src_check.get_value():
             folders.append('src')

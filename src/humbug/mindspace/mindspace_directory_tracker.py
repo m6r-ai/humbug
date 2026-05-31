@@ -4,7 +4,6 @@ import json
 import logging
 import os
 
-
 from humbug.mindspace.mindspace_directory_tracking import MindspaceDirectoryTracking
 
 
@@ -15,7 +14,7 @@ class MindspaceDirectoryTracker:
 
     def __init__(self) -> None:
         """Initialize the directory tracker."""
-        self._logger = logging.getLogger("DirectoryTracker")
+        self._logger = logging.getLogger("MindspaceDirectoryTracker")
         self._tracking: MindspaceDirectoryTracking | None = None
 
     def _get_tracking_path(self, mindspace_path: str) -> str:
@@ -31,10 +30,8 @@ class MindspaceDirectoryTracker:
                 with open(tracking_path, encoding='utf-8') as f:
                     data = json.load(f)
 
-                # Validate stored paths - fall back to defaults if invalid
                 self._tracking = MindspaceDirectoryTracking.from_dict(data, mindspace_path)
 
-                # Verify paths still exist, reset to defaults if not
                 if not os.path.exists(self._tracking.file_dialog):
                     self._tracking.file_dialog = mindspace_path
 

@@ -16,24 +16,24 @@ from PySide6.QtWidgets import (
 )
 
 from humbug.color_role import ColorRole
+from humbug.conversation_sidebar.mindspace_conversations_view import MindspaceConversationsView
+from humbug.file_sidebar.mindspace_files_view import MindspaceFilesView
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.conversations.mindspace_conversations_view import MindspaceConversationsView
-from humbug.mindspace.files.mindspace_files_view import MindspaceFilesView
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_view_type import MindspaceViewType
-from humbug.mindspace.preview.mindspace_preview_view import MindspacePreviewView
-from humbug.mindspace.search.mindspace_search_view import MindspaceSearchView
-from humbug.mindspace.vcs.mindspace_vcs_view import MindspaceVCSView
+from humbug.preview_sidebar.mindspace_preview_view import MindspacePreviewView
+from humbug.search_sidebar.mindspace_search_view import MindspaceSearchView
+from humbug.sidebar.sidebar_view_type import SidebarViewType
 from humbug.style_manager import StyleManager
 from humbug.url_opener import open_url
+from humbug.vcs_sidebar.mindspace_vcs_view import MindspaceVCSView
 
 
-class MindspaceView(QWidget):
-    """Main mindspace view widget containing the sidebar rail and active pane."""
+class SidebarView(QWidget):
+    """Main sidebar view widget containing the sidebar rail and active pane."""
 
     open_mindspace_requested = Signal()
     update_check_requested = Signal()
-    file_clicked = Signal(MindspaceViewType, str, bool)
+    file_clicked = Signal(SidebarViewType, str, bool)
     toggle_requested = Signal()
     file_deleted = Signal(str)
     file_renamed = Signal(str, str)
@@ -43,11 +43,11 @@ class MindspaceView(QWidget):
     file_opened_in_diff = Signal(str, bool)
     new_conversation_requested = Signal(str)
     settings_requested = Signal()
-    search_result_activated = Signal(MindspaceViewType, str, bool, str, bool, bool, object, object)
+    search_result_activated = Signal(SidebarViewType, str, bool, str, bool, bool, object, object)
     search_highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the mindspace view widget."""
+        """Initialize the sidebar view widget."""
         super().__init__(parent)
 
         self._style_manager = StyleManager()
@@ -55,15 +55,15 @@ class MindspaceView(QWidget):
         self._mindspace_manager = MindspaceManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        self._active_view_type = MindspaceViewType.CONVERSATIONS
+        self._active_view_type = SidebarViewType.CONVERSATIONS
         self._vcs_available = False
         self._sidebar_collapsed = False
         self._update_release_url: str | None = None
         self._expanded_sidebar_width = 320
         self._rail_collapsed_width = 48
         self._content_min_width = 240
-        self._view_buttons: dict[MindspaceViewType, QToolButton] = {}
-        self._view_widgets: dict[MindspaceViewType, QWidget] = {}
+        self._view_buttons: dict[SidebarViewType, QToolButton] = {}
+        self._view_widgets: dict[SidebarViewType, QWidget] = {}
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -88,20 +88,20 @@ class MindspaceView(QWidget):
         self._sidebar_toggle_button.installEventFilter(self)
         rail_layout.addWidget(self._sidebar_toggle_button)
 
-        self._conversations_button = self._create_view_button(MindspaceViewType.CONVERSATIONS, "conversation")
+        self._conversations_button = self._create_view_button(SidebarViewType.CONVERSATIONS, "conversation")
         rail_layout.addWidget(self._conversations_button)
 
-        self._vcs_button = self._create_view_button(MindspaceViewType.VCS, "diff")
+        self._vcs_button = self._create_view_button(SidebarViewType.VCS, "diff")
         self._vcs_button.hide()
         rail_layout.addWidget(self._vcs_button)
 
-        self._files_button = self._create_view_button(MindspaceViewType.FILES, "files")
+        self._files_button = self._create_view_button(SidebarViewType.FILES, "files")
         rail_layout.addWidget(self._files_button)
 
-        self._preview_button = self._create_view_button(MindspaceViewType.PREVIEW, "preview")
+        self._preview_button = self._create_view_button(SidebarViewType.PREVIEW, "preview")
         rail_layout.addWidget(self._preview_button)
 
-        self._search_button = self._create_view_button(MindspaceViewType.SEARCH, "search")
+        self._search_button = self._create_view_button(SidebarViewType.SEARCH, "search")
         rail_layout.addWidget(self._search_button)
 
         rail_layout.addStretch()
@@ -152,11 +152,11 @@ class MindspaceView(QWidget):
         self._preview_view = MindspacePreviewView()
         self._vcs_view = MindspaceVCSView()
 
-        self._register_view(MindspaceViewType.SEARCH, self._search_view)
-        self._register_view(MindspaceViewType.CONVERSATIONS, self._conversations_view)
-        self._register_view(MindspaceViewType.FILES, self._files_view)
-        self._register_view(MindspaceViewType.PREVIEW, self._preview_view)
-        self._register_view(MindspaceViewType.VCS, self._vcs_view)
+        self._register_view(SidebarViewType.SEARCH, self._search_view)
+        self._register_view(SidebarViewType.CONVERSATIONS, self._conversations_view)
+        self._register_view(SidebarViewType.FILES, self._files_view)
+        self._register_view(SidebarViewType.PREVIEW, self._preview_view)
+        self._register_view(SidebarViewType.VCS, self._vcs_view)
 
         self._search_view.file_clicked.connect(self.file_clicked.emit)
         self._search_view.result_activated.connect(self.search_result_activated.emit)
@@ -192,10 +192,10 @@ class MindspaceView(QWidget):
         self._preview_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
 
         self._header_widget.setText(self._language_manager.strings().mindspace_label_none)
-        self._set_active_view(MindspaceViewType.CONVERSATIONS)
+        self._set_active_view(SidebarViewType.CONVERSATIONS)
         self._on_language_changed()
 
-    def _create_view_button(self, view_type: MindspaceViewType, icon_name: str) -> QToolButton:
+    def _create_view_button(self, view_type: SidebarViewType, icon_name: str) -> QToolButton:
         """Create a left-rail button for a view."""
         button = QToolButton(self._rail_widget)
         button.setObjectName(f"_view_button_{view_type.name.lower()}")
@@ -210,22 +210,22 @@ class MindspaceView(QWidget):
         self._view_buttons[view_type] = button
         return button
 
-    def _register_view(self, view_type: MindspaceViewType, view: QWidget) -> None:
+    def _register_view(self, view_type: SidebarViewType, view: QWidget) -> None:
         """Register a view in the stacked content area."""
         self._view_widgets[view_type] = view
         self._pane_stack.addWidget(view)
 
-    def _on_view_button_clicked(self, view_type: MindspaceViewType, checked: bool) -> None:
+    def _on_view_button_clicked(self, view_type: SidebarViewType, checked: bool) -> None:
         """Switch active pane from rail selection."""
         if checked:
             self._set_active_view(view_type)
             if self._sidebar_collapsed:
                 self._toggle_sidebar()
 
-    def _set_active_view(self, view_type: MindspaceViewType) -> None:
+    def _set_active_view(self, view_type: SidebarViewType) -> None:
         """Set the active view in the stacked pane."""
-        if view_type == MindspaceViewType.VCS and not self._vcs_available:
-            view_type = MindspaceViewType.CONVERSATIONS
+        if view_type == SidebarViewType.VCS and not self._vcs_available:
+            view_type = SidebarViewType.CONVERSATIONS
 
         widget = self._view_widgets[view_type]
         self._pane_stack.setCurrentWidget(widget)
@@ -235,7 +235,7 @@ class MindspaceView(QWidget):
         if not button.isChecked():
             button.setChecked(True)
 
-        if view_type == MindspaceViewType.SEARCH:
+        if view_type == SidebarViewType.SEARCH:
             QTimer.singleShot(0, self._search_view.focus_search)
 
         self._update_button_styling()
@@ -280,38 +280,38 @@ class MindspaceView(QWidget):
         self._vcs_available = has_repo
         self._vcs_button.setVisible(has_repo)
 
-        if not has_repo and self._active_view_type == MindspaceViewType.VCS:
-            self._set_active_view(MindspaceViewType.CONVERSATIONS)
+        if not has_repo and self._active_view_type == SidebarViewType.VCS:
+            self._set_active_view(SidebarViewType.CONVERSATIONS)
 
         else:
             self._update_button_styling()
 
-    def reveal_and_select_file(self, view_type: MindspaceViewType, file_path: str) -> None:
+    def reveal_and_select_file(self, view_type: SidebarViewType, file_path: str) -> None:
         """
         Reveal and select a file in the appropriate view.
 
         Args:
-            view_type: The mindspace view type the file belongs to.
+            view_type: The sidebar view type the file belongs to.
             file_path: Absolute path to the file to reveal and select.
         """
         if not file_path or not self._mindspace_manager.has_mindspace():
             return
 
         match view_type:
-            case MindspaceViewType.SEARCH:
-                self._set_active_view(MindspaceViewType.SEARCH)
+            case SidebarViewType.SEARCH:
+                self._set_active_view(SidebarViewType.SEARCH)
                 self._search_view.focus_search()
 
-            case MindspaceViewType.CONVERSATIONS:
+            case SidebarViewType.CONVERSATIONS:
                 self._conversations_view.reveal_and_select_file(file_path)
 
-            case MindspaceViewType.FILES:
+            case SidebarViewType.FILES:
                 self._files_view.reveal_and_select_file(file_path)
 
-            case MindspaceViewType.PREVIEW:
+            case SidebarViewType.PREVIEW:
                 self._preview_view.reveal_and_select_file(file_path)
 
-            case MindspaceViewType.VCS:
+            case SidebarViewType.VCS:
                 self._vcs_view.reveal_and_select_file(file_path)
 
     def set_mindspace(self, path: str) -> None:
@@ -334,7 +334,7 @@ class MindspaceView(QWidget):
 
     def show_search(self) -> None:
         """Activate the global-search pane and focus its input."""
-        self._set_active_view(MindspaceViewType.SEARCH)
+        self._set_active_view(SidebarViewType.SEARCH)
         if self._sidebar_collapsed:
             self.toggle_requested.emit()
 

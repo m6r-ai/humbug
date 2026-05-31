@@ -23,13 +23,13 @@ from pdf import PDFUnsupportedError, PDFError, extract_text, parse as parse_pdf
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
+from humbug.conversation_tab.conversation_error import ConversationError
+from humbug.conversation_tab.conversation_input import ConversationInput
+from humbug.conversation_tab.conversation_message import ConversationMessage
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.style_manager import StyleManager
-from humbug.conversation_tab.conversation_error import ConversationError
-from humbug.conversation_tab.conversation_input import ConversationInput
-from humbug.conversation_tab.conversation_message import ConversationMessage
 from humbug.widgets import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 from humbug.markdown import MarkdownTextEdit
 
