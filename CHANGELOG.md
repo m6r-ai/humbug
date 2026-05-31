@@ -4,6 +4,8 @@
 
 New features:
 
+- The GUI is now in src/desktop, not src/humbug.  This allows for other (future) frontends.  This means you must use
+  `python -m desktop` to launch the application now, not `python -m humbug`.
 - When delegating a task to an AI, if the AI model is available from more than one backend provider, the tool now tells the AI
   and asks it to select the correct one.
 - Added Clause Opus 4.8 and removed 4.6.
@@ -21,7 +23,6 @@ Internal structure changes:
 - Reworked the Delegate AI tool to have a clean back-end and front-end separation.
 - Switched GUI-interacting AI tools to a new context registry.
 - Separated out more functionality from the column manager into the tabs.
-- The GUI is now in src/desktop, not src/humbug.  This allows for other (future) frontends.
 
 ## v48 (2026-05-22)
 
