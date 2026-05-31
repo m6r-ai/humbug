@@ -6,7 +6,7 @@ from PySide6.QtCore import Signal, QTimer
 from PySide6.QtGui import QResizeEvent
 
 from context.context_info import ContextInfo
-from context.context_registry import ContextEvent
+from context.context_registry import ContextEvent, ContextRegistry
 
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
@@ -16,10 +16,14 @@ from desktop.column.column_splitter import ColumnSplitter
 from desktop.column.column_widget import ColumnWidget
 from desktop.column.spacer_drop_widget import SpacerDropWidget
 from desktop.column.tab_bar import TabBar
-from desktop.tab import TabBase, ContextFactory, TabFactory, TabFactoryRegistry, TabState
+from desktop.tab.tab_base import TabBase
+from desktop.tab.tab_state import TabState
 from desktop.column.tab_style import build_column_manager_stylesheet, build_tab_bar_stylesheet
 from desktop.column.welcome_widget import WelcomeWidget
 from desktop.user.user_settings import UserSettings
+
+TabFactory = Callable[[TabState, QWidget], "TabBase | None"]
+ContextFactory = Callable[[ContextInfo, ContextRegistry, QWidget], "TabBase | None"]
 
 
 class ColumnManager(QWidget):
@@ -117,9 +121,8 @@ class ColumnManager(QWidget):
         # Track tabs
         self._tabs: Dict[str, TabBase] = {}
 
-        # Factory registry for session restore
-        self._tab_factory_registry = TabFactoryRegistry()
-
+        self._tab_factories: Dict[str, TabFactory] = {}
+        self._context_factories: Dict[str, ContextFactory] = {}
         self._current_status_tab: TabBase | None = None
 
     def register_tab_factory(self, tool_name: str, factory: TabFactory) -> None:
@@ -129,7 +132,7 @@ class ColumnManager(QWidget):
             tool_name: The tool name string (e.g. 'editor', 'conversation').
             factory: Callable(state, parent) -> TabBase | None.
         """
-        self._tab_factory_registry.register(tool_name, factory)
+        self._tab_factories[tool_name] = factory
 
     def register_context_factory(self, tool_name: str, factory: ContextFactory) -> None:
         """Register a context factory for live context-open events.
@@ -138,7 +141,7 @@ class ColumnManager(QWidget):
             tool_name: The tool name string (e.g. 'editor', 'conversation').
             factory: Callable(info, registry, parent) -> TabBase | None.
         """
-        self._tab_factory_registry.register_context_factory(tool_name, factory)
+        self._context_factories[tool_name] = factory
 
     def num_colunns(self) -> int:
         """Get the number of columns currently in use."""
@@ -459,7 +462,12 @@ class ColumnManager(QWidget):
 
         registry = self._mindspace_manager.mindspace().contexts()
         try:
-            new_tab = self._tab_factory_registry.create_from_context(info, registry, self)
+            factory = self._context_factories.get(info.context_type)
+            if factory is None:
+                self._logger.warning("No context factory registered for type '%s'", info.context_type)
+                return
+
+            new_tab = factory(info, registry, self)
 
         except Exception:
             self._logger.exception(
@@ -1433,8 +1441,13 @@ class ColumnManager(QWidget):
         }
 
     def _restore_tab_from_state(self, state: TabState) -> TabBase | None:
-        """Create a tab from state using the factory registry."""
-        return self._tab_factory_registry.restore(state, self)
+        """Create a tab from a saved state using the registered factory."""
+        factory = self._tab_factories.get(state.type)
+        if factory is None:
+            self._logger.warning("No factory registered for tool '%s'", state.type)
+            return None
+
+        return factory(state, self)
 
     def _restore_column_state(self, column_index: int, tab_states: List[Dict]) -> None:
         """
@@ -1449,7 +1462,15 @@ class ColumnManager(QWidget):
                 state = TabState.from_dict(state_dict)
                 state.path = self._mindspace_manager.get_absolute_path(state.path)
 
-                if not self._tab_factory_registry.can_restore(state):
+                factory = self._tab_factories.get(state.type)
+                if factory is None:
+                    self._logger.info(
+                        "Skipping tab restore for type '%s', path: %s", state.type, state.path
+                    )
+                    continue
+
+                cls = getattr(factory, '__self__', None)
+                if cls is not None and callable(getattr(cls, 'can_restore', None)) and not cls.can_restore(state.path):
                     self._logger.info(
                         "Skipping tab restore for type '%s', path: %s", state.type, state.path
                     )

@@ -22,10 +22,10 @@ from mindspace.mindspace_search_engine import MindspaceSearchEngine, MindspaceSe
 
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
+from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.sidebar.sidebar_tree_style import SidebarTreeStyle
-from desktop.sidebar.sidebar_view_type import SidebarViewType
 from desktop.style_manager import StyleManager
 
 _LINE_NUMBER_ROLE = Qt.ItemDataRole.UserRole + 11
@@ -120,11 +120,13 @@ class _SearchResultDelegate(QStyledItemDelegate):
         painter.restore()
 
 
-class SearchSidebarView(QWidget):
+class SearchSidebarView(SidebarBase):
     """Global search pane for searching across the current mindspace."""
 
-    file_clicked = Signal(SidebarViewType, str, bool)
-    result_activated = Signal(SidebarViewType, str, bool, str, bool, bool, object, object)
+    file_clicked = Signal(str, str, bool)               # panel_id, path, ephemeral
+
+    # panel_id, path, ephemeral, query, case_sensitive, regexp, line_number, message_id
+    result_activated = Signal(str, str, bool, str, bool, bool, object, object)
     highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -294,17 +296,17 @@ class SearchSidebarView(QWidget):
             first_match = path_matches[0]
             top_level = QTreeWidgetItem([first_match.relative_path])
             top_level.setData(0, Qt.ItemDataRole.UserRole, first_match.path)
-            first_view_type = self._content_type_to_view_type(first_match.content_type)
-            top_level.setData(0, Qt.ItemDataRole.UserRole + 1, first_view_type)
+            first_panel_id = self._content_type_to_panel_id(first_match.content_type)
+            top_level.setData(0, Qt.ItemDataRole.UserRole + 1, first_panel_id)
             top_level.setData(0, _HIGHLIGHT_RANGES_ROLE, self._highlight_ranges_for_text(first_match.relative_path))
             top_level.setToolTip(0, first_match.relative_path)
-            top_level.setIcon(0, self._icon_for_view_type(first_view_type))
+            top_level.setIcon(0, self._icon_for_panel_id(first_panel_id))
 
             for match in path_matches:
                 child_text = self._describe_match(match)
                 child = QTreeWidgetItem([child_text])
                 child.setData(0, Qt.ItemDataRole.UserRole, match.path)
-                child.setData(0, Qt.ItemDataRole.UserRole + 1, self._content_type_to_view_type(match.content_type))
+                child.setData(0, Qt.ItemDataRole.UserRole + 1, self._content_type_to_panel_id(match.content_type))
                 child.setData(0, _LINE_NUMBER_ROLE, match.line_number)
                 child.setData(0, _MESSAGE_ID_ROLE, match.message_id)
                 child.setData(0, _HIGHLIGHT_RANGES_ROLE, self._highlight_ranges_for_match(match, child_text))
@@ -387,31 +389,31 @@ class SearchSidebarView(QWidget):
             ranges.append((pos, len(query)))
             pos += max(1, len(query))
 
-    def _content_type_to_view_type(self, content_type: MindspaceContentType) -> SidebarViewType:
-        """Map a MindspaceContentType to the corresponding SidebarViewType for display."""
+    def _content_type_to_panel_id(self, content_type: MindspaceContentType) -> str:
+        """Map a MindspaceContentType to the corresponding panel ID for display."""
         if content_type == MindspaceContentType.CONVERSATIONS:
-            return SidebarViewType.CONVERSATIONS
+            return "conversations"
 
-        return SidebarViewType.FILES
+        return "files"
 
-    def _icon_for_view_type(self, view_type: SidebarViewType) -> QIcon:
-        icon_name = "conversation" if view_type == SidebarViewType.CONVERSATIONS else "files"
+    def _icon_for_panel_id(self, panel_id: str) -> QIcon:
+        icon_name = "conversation" if panel_id == "conversations" else "files"
         return QIcon(self._style_manager.scale_icon(icon_name, 16))
 
     def _open_item(self, item: QTreeWidgetItem, ephemeral: bool) -> None:
         path = item.data(0, Qt.ItemDataRole.UserRole)
-        view_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if not isinstance(path, str) or not isinstance(view_type, SidebarViewType):
+        panel_id = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if not isinstance(path, str) or not isinstance(panel_id, str):
             return
 
         line_number = item.data(0, _LINE_NUMBER_ROLE)
         message_id = item.data(0, _MESSAGE_ID_ROLE)
         query, case_sensitive, regexp = self.current_find_request()
         if query:
-            self.result_activated.emit(view_type, path, ephemeral, query, case_sensitive, regexp, line_number, message_id)
+            self.result_activated.emit(panel_id, path, ephemeral, query, case_sensitive, regexp, line_number, message_id)
 
         else:
-            self.file_clicked.emit(view_type, path, ephemeral)
+            self.file_clicked.emit(panel_id, path, ephemeral)
 
     def current_find_request(self) -> tuple[str, bool, bool]:
         """Return the query and effective find options for reuse in opened tabs."""

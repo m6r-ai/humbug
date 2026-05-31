@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QSplitter, QSplitterHandle
 from PySide6.QtGui import QPainter
 
 from desktop.color_role import ColorRole
-from desktop.sidebar.sidebar_view import SidebarView
+from desktop.sidebar_manager import SidebarManager
 from desktop.style_manager import StyleManager
 
 
@@ -54,7 +54,7 @@ class MainWindowSplitter(QSplitter):
             return
 
         widget = self.widget(0)
-        if not isinstance(widget, SidebarView):
+        if not isinstance(widget, SidebarManager):
             return
 
         rail_width = widget.rail_width()
@@ -94,7 +94,7 @@ class MainWindowSplitter(QSplitter):
             return
 
         widget = self.widget(0)
-        if not isinstance(widget, SidebarView):
+        if not isinstance(widget, SidebarManager):
             return
 
         rail_width = widget.rail_width()

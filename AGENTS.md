@@ -98,7 +98,8 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `search_sidebar/` - Search panel implementation
 - `settings/` - Application and user settings UI widgets
 - `shell_tab/` - Shell tab implementation
-- `sidebar/` - Sidebar container, rail, and shared sidebar infrastructure
+- `sidebar/` - Shared sidebar component infrastructure (breadcrumbs, tree views, delegates, pane styles) used by individual `*_sidebar/` panels
+- `sidebar_manager/` - SidebarManager: generic sidebar container with panel registration
 - `tab/` - Abstract tab contract
 - `terminal_tab/` - Terminal tab implementation
 - `user/` - User management

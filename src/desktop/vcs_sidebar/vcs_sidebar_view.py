@@ -17,9 +17,9 @@ from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
+from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.sidebar.sidebar_pane_style import build_list_pane_stylesheet
-from desktop.sidebar.sidebar_view_type import SidebarViewType
 from desktop.style_manager import StyleManager
 from desktop.vcs_sidebar.vcs_sidebar_delegate import VCSSidebarDelegate
 
@@ -88,10 +88,10 @@ class _VCSList(QListWidget):
         self._drag_start_pos = None
 
 
-class VCSSidebarView(QWidget):
+class VCSSidebarView(SidebarBase):
     """Sidebar panel showing VCS-modified files for the current mindspace."""
 
-    file_clicked = Signal(SidebarViewType, str, bool)   # view type, path, ephemeral
+    file_clicked = Signal(str, str, bool)                  # panel_id, path, ephemeral
     file_edited = Signal(str, bool)                        # path, ephemeral
     file_opened_in_preview = Signal(str)                   # path
     file_deleted = Signal(str)                             # path

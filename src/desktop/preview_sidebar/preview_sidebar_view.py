@@ -17,6 +17,7 @@ from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.preview_sidebar.preview_sidebar_model import PreviewSidebarModel
 from desktop.preview_sidebar.preview_sidebar_tree_view import PreviewSidebarTreeView
+from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_breadcrumb_bar import SidebarBreadcrumbBar
 from desktop.sidebar.sidebar_breadcrumb_container import SidebarBreadcrumbContainer
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
@@ -24,14 +25,13 @@ from desktop.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
 from desktop.sidebar.sidebar_tree_delegate import SidebarTreeDelegate
 from desktop.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
 from desktop.sidebar.sidebar_tree_style import SidebarTreeStyle
-from desktop.sidebar.sidebar_view_type import SidebarViewType
 from desktop.style_manager import StyleManager
 
 
-class PreviewSidebarView(QWidget):
+class PreviewSidebarView(SidebarBase):
     """Preview view widget for displaying mindspace files in preview mode."""
 
-    file_clicked = Signal(SidebarViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
+    file_clicked = Signal(str, str, bool)  # Emits panel_id, path, and ephemeral flag when any file is clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
@@ -860,12 +860,12 @@ class PreviewSidebarView(QWidget):
     def _on_breadcrumb_dot_clicked(self) -> None:
         """Handle a click on the '.' breadcrumb item — open the mindspace root in preview."""
         if self._mindspace_path:
-            self.file_clicked.emit(SidebarViewType.PREVIEW, os.path.normpath(self._mindspace_path), True)
+            self.file_clicked.emit("preview", os.path.normpath(self._mindspace_path), True)
 
     def _on_breadcrumb_dot_double_clicked(self) -> None:
         """Handle a double-click on the '.' breadcrumb item — open the mindspace root as persistent."""
         if self._mindspace_path:
-            self.file_clicked.emit(SidebarViewType.PREVIEW, os.path.normpath(self._mindspace_path), False)
+            self.file_clicked.emit("preview", os.path.normpath(self._mindspace_path), False)
 
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.
@@ -1033,7 +1033,7 @@ class PreviewSidebarView(QWidget):
             return
 
         # For preview view, single clicks open in preview
-        self.file_clicked.emit(SidebarViewType.PREVIEW, path, True)
+        self.file_clicked.emit("preview", path, True)
 
     def _on_tree_double_clicked(self, index: QModelIndex) -> None:
         """Handle double click events - route to preview view."""
@@ -1044,7 +1044,7 @@ class PreviewSidebarView(QWidget):
             return
 
         # For preview view, double clicks also open in preview (non-ephemeral)
-        self.file_clicked.emit(SidebarViewType.PREVIEW, path, False)
+        self.file_clicked.emit("preview", path, False)
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""

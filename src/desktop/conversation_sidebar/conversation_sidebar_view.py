@@ -18,20 +18,20 @@ from desktop.conversation_sidebar.conversation_sidebar_index import Conversation
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_breadcrumb_bar import SidebarBreadcrumbBar
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.sidebar.sidebar_breadcrumb_container import SidebarBreadcrumbContainer
 from desktop.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
 from desktop.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
 from desktop.sidebar.sidebar_tree_style import SidebarTreeStyle
-from desktop.sidebar.sidebar_view_type import SidebarViewType
 from desktop.style_manager import StyleManager
 
 
-class ConversationSidebarView(QWidget):
+class ConversationSidebarView(SidebarBase):
     """Conversations view widget for displaying mindspace conversations."""
 
-    file_clicked = Signal(SidebarViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
+    file_clicked = Signal(str, str, bool)  # Emits panel_id, path, and ephemeral flag when any file is clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
@@ -1191,7 +1191,7 @@ class ConversationSidebarView(QWidget):
         if not path:
             return
 
-        self.file_clicked.emit(SidebarViewType.CONVERSATIONS, path, True)
+        self.file_clicked.emit("conversations", path, True)
 
     def _on_tree_double_clicked(self, index: QModelIndex) -> None:
         """Handle double click events."""
@@ -1199,7 +1199,7 @@ class ConversationSidebarView(QWidget):
         if not path:
             return
 
-        self.file_clicked.emit(SidebarViewType.CONVERSATIONS, path, False)
+        self.file_clicked.emit("conversations", path, False)
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""

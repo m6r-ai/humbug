@@ -1,8 +1,7 @@
-"""Main mindspace view widget containing files, conversations, and preview views."""
-
 import os
+from typing import Callable
 
-from PySide6.QtCore import Qt, Signal, QSize, QEvent, QObject, QTimer
+from PySide6.QtCore import Qt, Signal, QSize, QEvent, QObject
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -16,24 +15,24 @@ from PySide6.QtWidgets import (
 )
 
 from desktop.color_role import ColorRole
-from desktop.conversation_sidebar.conversation_sidebar_view import ConversationSidebarView
-from desktop.file_sidebar.file_sidebar_view import FileSidebarView
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
-from desktop.preview_sidebar.preview_sidebar_view import PreviewSidebarView
-from desktop.search_sidebar.search_sidebar_view import SearchSidebarView
-from desktop.sidebar.sidebar_view_type import SidebarViewType
+from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.style_manager import StyleManager
 from desktop.url_opener import open_url
-from desktop.vcs_sidebar.vcs_sidebar_view import VCSSidebarView
 
 
-class SidebarView(QWidget):
-    """Main sidebar view widget containing the sidebar rail and active pane."""
+class SidebarManager(QWidget):
+    """Sidebar container: manages the icon rail and the active panel pane.
+
+    The manager is generic — it has no knowledge of individual panel types.
+    Panels are registered via ``register_panel`` after construction.
+    ``main_window.py`` is the wiring point.
+    """
 
     open_mindspace_requested = Signal()
     update_check_requested = Signal()
-    file_clicked = Signal(SidebarViewType, str, bool)
+    file_clicked = Signal(str, str, bool)           # panel_id, path, ephemeral
     toggle_requested = Signal()
     file_deleted = Signal(str)
     file_renamed = Signal(str, str)
@@ -43,11 +42,13 @@ class SidebarView(QWidget):
     file_opened_in_diff = Signal(str, bool)
     new_conversation_requested = Signal(str)
     settings_requested = Signal()
-    search_result_activated = Signal(SidebarViewType, str, bool, str, bool, bool, object, object)
+
+    # panel_id, path, ephemeral, query, case_sensitive, regexp, line_number, message_id
+    search_result_activated = Signal(str, str, bool, str, bool, bool, object, object)
     search_highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the sidebar view widget."""
+        """Initialise the sidebar manager."""
         super().__init__(parent)
 
         self._style_manager = StyleManager()
@@ -55,15 +56,17 @@ class SidebarView(QWidget):
         self._mindspace_manager = MindspaceManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        self._active_view_type = SidebarViewType.CONVERSATIONS
-        self._vcs_available = False
+        self._active_panel_id: str = ""
         self._sidebar_collapsed = False
         self._update_release_url: str | None = None
         self._expanded_sidebar_width = 320
         self._rail_collapsed_width = 48
         self._content_min_width = 240
-        self._view_buttons: dict[SidebarViewType, QToolButton] = {}
-        self._view_widgets: dict[SidebarViewType, QWidget] = {}
+
+        # Keyed by panel_id
+        self._panel_buttons: dict[str, QToolButton] = {}
+        self._panel_widgets: dict[str, SidebarBase] = {}
+        self._panel_insert_index: int = 1  # index in rail_layout after toggle button
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -72,9 +75,9 @@ class SidebarView(QWidget):
         self._rail_widget = QWidget(self)
         self._rail_widget.setObjectName("_rail_widget")
         self._rail_widget.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-        rail_layout = QVBoxLayout(self._rail_widget)
-        rail_layout.setContentsMargins(0, 0, 0, 0)
-        rail_layout.setSpacing(0)
+        self._rail_layout = QVBoxLayout(self._rail_widget)
+        self._rail_layout.setContentsMargins(0, 0, 0, 0)
+        self._rail_layout.setSpacing(0)
 
         self._view_button_group = QButtonGroup(self)
         self._view_button_group.setExclusive(True)
@@ -86,46 +89,7 @@ class SidebarView(QWidget):
         self._sidebar_toggle_button.clicked.connect(self._toggle_sidebar)
         self._sidebar_toggle_button.setProperty("icon_name", "expand-right")
         self._sidebar_toggle_button.installEventFilter(self)
-        rail_layout.addWidget(self._sidebar_toggle_button)
-
-        self._conversations_button = self._create_view_button(SidebarViewType.CONVERSATIONS, "conversation")
-        rail_layout.addWidget(self._conversations_button)
-
-        self._vcs_button = self._create_view_button(SidebarViewType.VCS, "diff")
-        self._vcs_button.hide()
-        rail_layout.addWidget(self._vcs_button)
-
-        self._files_button = self._create_view_button(SidebarViewType.FILES, "files")
-        rail_layout.addWidget(self._files_button)
-
-        self._preview_button = self._create_view_button(SidebarViewType.PREVIEW, "preview")
-        rail_layout.addWidget(self._preview_button)
-
-        self._search_button = self._create_view_button(SidebarViewType.SEARCH, "search")
-        rail_layout.addWidget(self._search_button)
-
-        rail_layout.addStretch()
-
-        self._update_button = QToolButton(self._rail_widget)
-        self._update_button.setObjectName("_update_button")
-        self._update_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-        self._update_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self._update_button.clicked.connect(self._on_update_button_clicked)
-        self._update_button.setProperty("icon_name", "update")
-        self._update_button.installEventFilter(self)
-        self._update_button.hide()
-        rail_layout.addWidget(self._update_button)
-
-        self._settings_button = QToolButton(self._rail_widget)
-        self._settings_button.setObjectName("_settings_button")
-        self._settings_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-        self._settings_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self._settings_button.clicked.connect(self._on_settings_button_clicked)
-        self._settings_button.setProperty("icon_name", "cog")
-        self._settings_button.installEventFilter(self)
-        rail_layout.addWidget(self._settings_button)
-
-        layout.addWidget(self._rail_widget)
+        self._rail_layout.addWidget(self._sidebar_toggle_button)
 
         self._content_widget = QWidget(self)
         self._content_widget.setObjectName("_content_widget")
@@ -137,121 +101,202 @@ class SidebarView(QWidget):
         self._header_widget = QPushButton(self._content_widget)
         self._header_widget.setObjectName("_header_widget")
         self._header_widget.clicked.connect(self.open_mindspace_requested.emit)
-
         content_layout.addWidget(self._header_widget)
 
         self._pane_stack = QStackedWidget(self._content_widget)
         self._pane_stack.setObjectName("_pane_stack")
         content_layout.addWidget(self._pane_stack)
 
+        self._panel_class_names: list[str] = []
+        self._rail_layout.addStretch()
+
+        self._update_button = QToolButton(self._rail_widget)
+        self._update_button.setObjectName("_update_button")
+        self._update_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._update_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._update_button.clicked.connect(self._on_update_button_clicked)
+        self._update_button.setProperty("icon_name", "update")
+        self._update_button.installEventFilter(self)
+        self._update_button.hide()
+        self._rail_layout.addWidget(self._update_button)
+
+        self._settings_button = QToolButton(self._rail_widget)
+        self._settings_button.setObjectName("_settings_button")
+        self._settings_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._settings_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._settings_button.clicked.connect(self._on_settings_button_clicked)
+        self._settings_button.setProperty("icon_name", "cog")
+        self._settings_button.installEventFilter(self)
+        self._rail_layout.addWidget(self._settings_button)
+
+        layout.addWidget(self._rail_widget)
         layout.addWidget(self._content_widget, 1)
 
-        self._search_view = SearchSidebarView()
-        self._conversation_view = ConversationSidebarView()
-        self._file_view = FileSidebarView()
-        self._preview_view = PreviewSidebarView()
-        self._vcs_view = VCSSidebarView()
-
-        self._register_view(SidebarViewType.SEARCH, self._search_view)
-        self._register_view(SidebarViewType.CONVERSATIONS, self._conversation_view)
-        self._register_view(SidebarViewType.FILES, self._file_view)
-        self._register_view(SidebarViewType.PREVIEW, self._preview_view)
-        self._register_view(SidebarViewType.VCS, self._vcs_view)
-
-        self._search_view.file_clicked.connect(self.file_clicked.emit)
-        self._search_view.result_activated.connect(self.search_result_activated.emit)
-        self._search_view.highlights_cleared.connect(self.search_highlights_cleared.emit)
-        self._file_view.file_clicked.connect(self.file_clicked.emit)
-        self._file_view.file_deleted.connect(self.file_deleted.emit)
-        self._file_view.file_renamed.connect(self.file_renamed.emit)
-        self._file_view.file_moved.connect(self.file_moved.emit)
-        self._file_view.file_edited.connect(self.file_edited.emit)
-        self._file_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
-        self._file_view.file_opened_in_diff.connect(self.file_opened_in_diff.emit)
-
-        self._conversation_view.file_clicked.connect(self.file_clicked.emit)
-        self._conversation_view.file_deleted.connect(self.file_deleted.emit)
-        self._conversation_view.file_renamed.connect(self.file_renamed.emit)
-        self._conversation_view.file_moved.connect(self.file_moved.emit)
-        self._conversation_view.file_edited.connect(self.file_edited.emit)
-        self._conversation_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
-        self._conversation_view.new_conversation_requested.connect(self.new_conversation_requested.emit)
-
-        self._vcs_view.file_opened_in_diff.connect(self.file_opened_in_diff.emit)
-        self._vcs_view.file_clicked.connect(self.file_clicked.emit)
-        self._vcs_view.file_deleted.connect(self.file_deleted.emit)
-        self._vcs_view.file_edited.connect(self.file_edited.emit)
-        self._vcs_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
-        self._vcs_view.repo_available.connect(self._on_vcs_repo_available)
-
-        self._preview_view.file_clicked.connect(self.file_clicked.emit)
-        self._preview_view.file_deleted.connect(self.file_deleted.emit)
-        self._preview_view.file_renamed.connect(self.file_renamed.emit)
-        self._preview_view.file_moved.connect(self.file_moved.emit)
-        self._preview_view.file_edited.connect(self.file_edited.emit)
-        self._preview_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
-
         self._header_widget.setText(self._language_manager.strings().mindspace_label_none)
-        self._set_active_view(SidebarViewType.CONVERSATIONS)
         self._on_language_changed()
 
-    def _create_view_button(self, view_type: SidebarViewType, icon_name: str) -> QToolButton:
-        """Create a left-rail button for a view."""
+    def register_panel(
+        self,
+        panel_id: str,
+        icon_name: str,
+        factory: "Callable[[QWidget], SidebarBase]",
+        wire_signals: "Callable[[SidebarBase, SidebarManager], None]",
+        visibility_signal: str | None = None,
+        on_activated: "Callable[[SidebarBase], None] | None" = None,
+    ) -> None:
+        """Register a sidebar panel.
+
+        Must be called before the sidebar is shown.  Panels appear in the rail
+        in registration order.
+
+        Args:
+            panel_id: Unique string identifier for this panel (e.g. ``"files"``).
+            icon_name: Base icon name for the rail button.
+            factory: Callable that constructs the panel widget given a parent.
+            wire_signals: Callable that connects panel-specific signals to this
+                manager after the panel is constructed.
+            visibility_signal: Optional name of a ``bool``-carrying signal on the
+                panel that controls rail button visibility.  The button starts
+                hidden when this is set.
+            on_activated: Optional callback invoked each time this panel's rail
+                button is clicked and the panel becomes active.
+        """
+        panel = factory(self)
+        assert isinstance(panel, SidebarBase)
+
+        button = self._create_panel_button(panel_id, icon_name)
+
+        if visibility_signal is not None:
+            sig = getattr(panel, visibility_signal, None)
+            if sig is not None:
+                sig.connect(lambda visible, pid=panel_id: self._on_panel_visibility_changed(pid, visible))
+            button.hide()
+
+        if on_activated is not None:
+            on_act = on_activated
+            button.clicked.connect(
+                lambda checked, pid=panel_id, cb=on_act: self._on_panel_button_clicked(pid, checked, cb)
+            )
+        else:
+            button.clicked.connect(
+                lambda checked, pid=panel_id: self._on_panel_button_clicked(pid, checked, None)
+            )
+
+        self._rail_layout.insertWidget(self._panel_insert_index, button)
+        self._panel_insert_index += 1
+
+        self._panel_buttons[panel_id] = button
+        self._panel_widgets[panel_id] = panel
+        self._pane_stack.addWidget(panel)
+        self._panel_class_names.append(type(panel).__name__)
+
+        wire_signals(panel, self)
+
+        if len(self._panel_widgets) == 1:
+            self._set_active_panel(panel_id)
+
+    def _create_panel_button(self, panel_id: str, icon_name: str) -> QToolButton:
+        """Create a rail button for a panel without connecting its click signal.
+
+        Args:
+            panel_id: The panel identifier string.
+            icon_name: Base icon name for the button.
+        """
         button = QToolButton(self._rail_widget)
-        button.setObjectName(f"_view_button_{view_type.name.lower()}")
-        button.setProperty("view_type", view_type.name.lower())
+        button.setObjectName(f"_panel_button_{panel_id}")
+        button.setProperty("panel_id", panel_id)
         button.setProperty("icon_name", icon_name)
         button.setCheckable(True)
         button.setAutoRaise(False)
         button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        button.clicked.connect(lambda checked, vt=view_type: self._on_view_button_clicked(vt, checked))
         button.installEventFilter(self)
         self._view_button_group.addButton(button)
-        self._view_buttons[view_type] = button
         return button
 
-    def _register_view(self, view_type: SidebarViewType, view: QWidget) -> None:
-        """Register a view in the stacked content area."""
-        self._view_widgets[view_type] = view
-        self._pane_stack.addWidget(view)
+    def _on_panel_button_clicked(
+        self,
+        panel_id: str,
+        checked: bool,
+        on_activated: "Callable[[SidebarBase], None] | None",
+    ) -> None:
+        """Handle rail button click: switch active panel and expand if collapsed.
 
-    def _on_view_button_clicked(self, view_type: SidebarViewType, checked: bool) -> None:
-        """Switch active pane from rail selection."""
-        if checked:
-            self._set_active_view(view_type)
-            if self._sidebar_collapsed:
-                self._toggle_sidebar()
+        Args:
+            panel_id: The panel to activate.
+            checked: Whether the button is now checked.
+            on_activated: Optional callback to invoke on the panel after activation.
+        """
+        if not checked:
+            return
 
-    def _set_active_view(self, view_type: SidebarViewType) -> None:
-        """Set the active view in the stacked pane."""
-        if view_type == SidebarViewType.VCS and not self._vcs_available:
-            view_type = SidebarViewType.CONVERSATIONS
+        self._set_active_panel(panel_id)
+        if self._sidebar_collapsed:
+            self._toggle_sidebar()
 
-        widget = self._view_widgets[view_type]
+        if on_activated is not None:
+            panel = self._panel_widgets.get(panel_id)
+            if panel is not None:
+                on_activated(panel)
+
+    def _set_active_panel(self, panel_id: str) -> None:
+        """Make the given panel current in the stacked pane.
+
+        Args:
+            panel_id: ID of the panel to activate.
+        """
+        widget = self._panel_widgets.get(panel_id)
+        if widget is None:
+            return
+
         self._pane_stack.setCurrentWidget(widget)
-        self._active_view_type = view_type
+        self._active_panel_id = panel_id
 
-        button = self._view_buttons[view_type]
-        if not button.isChecked():
+        button = self._panel_buttons.get(panel_id)
+        if button is not None and not button.isChecked():
             button.setChecked(True)
-
-        if view_type == SidebarViewType.SEARCH:
-            QTimer.singleShot(0, self._search_view.focus_search)
 
         self._update_button_styling()
 
+    def _on_panel_visibility_changed(self, panel_id: str, visible: bool) -> None:
+        """Show or hide a panel's rail button based on its visibility signal.
+
+        If the panel being hidden is currently active, fall back to the first
+        visible panel.
+
+        Args:
+            panel_id: The panel whose visibility changed.
+            visible: Whether the panel should now be visible.
+        """
+        button = self._panel_buttons.get(panel_id)
+        if button is None:
+            return
+
+        button.setVisible(visible)
+
+        if not visible and self._active_panel_id == panel_id:
+            for pid, btn in self._panel_buttons.items():
+                if btn.isVisible() and pid != panel_id:
+                    self._set_active_panel(pid)
+                    break
+        else:
+            self._update_button_styling()
+
     def _toggle_sidebar(self) -> None:
-        """Toggle the mindspace sidebar between expanded and collapsed states."""
+        """Emit toggle_requested to let the splitter collapse/expand the sidebar."""
         self.toggle_requested.emit()
 
     def set_collapsed(self, collapsed: bool) -> None:
-        """Set the collapsed state, called by the splitter after it has moved."""
+        """Record the collapsed state after the splitter has moved.
+
+        Args:
+            collapsed: Whether the sidebar content pane is now hidden.
+        """
         self._sidebar_collapsed = collapsed
         self._update_button_styling()
         self.apply_style()
 
     def rail_width(self) -> int:
-        """Return the fixed width of the icon rail."""
+        """Return the fixed pixel width of the icon rail."""
         return self._rail_collapsed_width
 
     def sidebar_collapsed(self) -> bool:
@@ -259,15 +304,14 @@ class SidebarView(QWidget):
         return self._sidebar_collapsed
 
     def expanded_sidebar_width(self) -> int:
-        """Return the last known expanded width of the sidebar."""
+        """Return the last recorded expanded width of the sidebar."""
         return self._expanded_sidebar_width
 
     def set_expanded_sidebar_width(self, width: int) -> None:
-        """
-        Record the expanded sidebar width.
+        """Record the expanded sidebar width.
 
         Args:
-            width: Width in pixels to store as the expanded sidebar width.
+            width: Width in pixels.
         """
         self._expanded_sidebar_width = width
 
@@ -275,77 +319,53 @@ class SidebarView(QWidget):
         """Return the minimum width of the sidebar content pane."""
         return self._content_min_width
 
-    def _on_vcs_repo_available(self, has_repo: bool) -> None:
-        """Show or hide the VCS rail button when repository state changes."""
-        self._vcs_available = has_repo
-        self._vcs_button.setVisible(has_repo)
-
-        if not has_repo and self._active_view_type == SidebarViewType.VCS:
-            self._set_active_view(SidebarViewType.CONVERSATIONS)
-
-        else:
-            self._update_button_styling()
-
-    def reveal_and_select_file(self, view_type: SidebarViewType, file_path: str) -> None:
-        """
-        Reveal and select a file in the appropriate view.
+    def reveal_and_select_file(self, panel_id: str, file_path: str) -> None:
+        """Reveal and select a file in the named panel.
 
         Args:
-            view_type: The sidebar view type the file belongs to.
+            panel_id: ID of the panel that should handle the reveal.
             file_path: Absolute path to the file to reveal and select.
         """
         if not file_path or not self._mindspace_manager.has_mindspace():
             return
 
-        match view_type:
-            case SidebarViewType.SEARCH:
-                self._set_active_view(SidebarViewType.SEARCH)
-                self._search_view.focus_search()
+        panel = self._panel_widgets.get(panel_id)
+        if panel is None:
+            return
 
-            case SidebarViewType.CONVERSATIONS:
-                self._conversation_view.reveal_and_select_file(file_path)
+        self._set_active_panel(panel_id)
+        panel.reveal_and_select_file(file_path)
 
-            case SidebarViewType.FILES:
-                self._file_view.reveal_and_select_file(file_path)
-
-            case SidebarViewType.PREVIEW:
-                self._preview_view.reveal_and_select_file(file_path)
-
-            case SidebarViewType.VCS:
-                self._vcs_view.reveal_and_select_file(file_path)
-
-    def set_mindspace(self, path: str) -> None:
-        """
-        Set the mindspace root directory.
+    def show_panel(self, panel_id: str) -> None:
+        """Activate a panel by ID and expand the sidebar if collapsed.
 
         Args:
-            path: Path to the mindspace directory, or empty string to clear
+            panel_id: ID of the panel to show.
+        """
+        self._set_active_panel(panel_id)
+        if self._sidebar_collapsed:
+            self.toggle_requested.emit()
+
+    def set_mindspace(self, path: str) -> None:
+        """Propagate a mindspace change to all registered panels.
+
+        Args:
+            path: Absolute path to the new mindspace root, or empty string to clear.
         """
         if not path:
             self._header_widget.setText(self._language_manager.strings().mindspace_label_none)
         else:
             self._header_widget.setText(os.path.basename(path.rstrip("\\/")))
 
-        self._file_view.set_mindspace(path)
-        self._conversation_view.set_mindspace(path)
-        self._vcs_view.set_mindspace(path)
-        self._preview_view.set_mindspace(path)
-        self._search_view.set_mindspace(path)
-
-    def show_search(self) -> None:
-        """Activate the global-search pane and focus its input."""
-        self._set_active_view(SidebarViewType.SEARCH)
-        if self._sidebar_collapsed:
-            self.toggle_requested.emit()
-
-        self._search_view.focus_search()
+        for panel in self._panel_widgets.values():
+            panel.set_mindspace(path)
 
     def show_update_available(self, version: str, release_url: str) -> None:
-        """Show the update button with the given version and release URL.
+        """Show the update rail button.
 
         Args:
-            version: Latest version string, e.g. "v47".
-            release_url: URL to the GitHub release page.
+            version: Latest version string, e.g. ``"v49"``.
+            release_url: URL to the release page.
         """
         self._update_release_url = release_url
         strings = self._language_manager.strings()
@@ -359,11 +379,11 @@ class SidebarView(QWidget):
             open_url(self._update_release_url)
 
     def _on_settings_button_clicked(self) -> None:
-        """Handle settings button click."""
+        """Forward settings button click."""
         self.settings_requested.emit()
 
     def _on_language_changed(self) -> None:
-        """Update when the language changes."""
+        """Refresh localised strings on all rail controls."""
         current_text = self._header_widget.text()
         none_text = self._language_manager.strings().mindspace_label_none
         if current_text == none_text or not current_text:
@@ -372,12 +392,7 @@ class SidebarView(QWidget):
         strings = self._language_manager.strings()
         self._header_widget.setToolTip(strings.mindspace_name_tooltip)
         self._settings_button.setToolTip(strings.mindspace_settings)
-        self._search_button.setToolTip(strings.mindspace_search)
         self._settings_button.setToolTip(strings.settings)
-        self._conversations_button.setToolTip(strings.mindspace_conversations)
-        self._files_button.setToolTip(strings.mindspace_files)
-        self._preview_button.setToolTip(strings.mindspace_preview)
-        self._vcs_button.setToolTip(strings.mindspace_vcs)
         self._sidebar_toggle_button.setToolTip(
             strings.mindspace_collapse_sidebar if not self._sidebar_collapsed else strings.mindspace_expand_sidebar
         )
@@ -385,14 +400,13 @@ class SidebarView(QWidget):
         self.apply_style()
 
     def _update_button_styling(self) -> None:
-        """Update button icons and sizes."""
+        """Refresh icons and sizes on all rail buttons."""
         zoom_factor = self._style_manager.zoom_factor()
         icon_base_size = 22
         icon_size = QSize(round(icon_base_size * zoom_factor), round(icon_base_size * zoom_factor))
 
         if self.layoutDirection() == Qt.LayoutDirection.LeftToRight:
             collapse_icon = "expand-right" if self._sidebar_collapsed else "expand-left"
-
         else:
             collapse_icon = "expand-left" if self._sidebar_collapsed else "expand-right"
 
@@ -401,17 +415,14 @@ class SidebarView(QWidget):
         self._sidebar_toggle_button.setIconSize(QSize(toggle_icon_size, toggle_icon_size))
         self._sidebar_toggle_button.setProperty("icon_name", collapse_icon)
 
-        for view_type, button in self._view_buttons.items():
+        for panel_id, button in self._panel_buttons.items():
             icon_name = button.property("icon_name")
             assert isinstance(icon_name, str)
-
-            is_checked = view_type == self._active_view_type
+            is_checked = panel_id == self._active_panel_id
             if is_checked:
                 button.setIcon(QIcon(self._style_manager.scale_icon(f"bright-{icon_name}", icon_base_size)))
-
             else:
                 button.setIcon(QIcon(self._style_manager.scale_icon(f"inactive-{icon_name}", icon_base_size)))
-
             button.setIconSize(icon_size)
             button.setChecked(is_checked)
 
@@ -425,7 +436,12 @@ class SidebarView(QWidget):
             self._update_button.setIconSize(QSize(update_icon_size, update_icon_size))
 
     def _set_button_hover_icon(self, button: QToolButton, hovered: bool) -> None:
-        """Update a rail button's icon to reflect hover state."""
+        """Update a rail button's icon for hover state.
+
+        Args:
+            button: The button whose icon should change.
+            hovered: Whether the cursor is currently over the button.
+        """
         icon_name = button.property("icon_name")
         if not isinstance(icon_name, str):
             return
@@ -435,28 +451,25 @@ class SidebarView(QWidget):
         if hovered:
             size = 20 if button in (self._sidebar_toggle_button, self._settings_button, self._update_button) else 22
             button.setIcon(QIcon(self._style_manager.scale_icon(icon_name, size)))
-
         elif is_checked:
             button.setIcon(QIcon(self._style_manager.scale_icon(f"bright-{icon_name}", 22)))
-
         else:
             size = 20 if button in (self._sidebar_toggle_button, self._settings_button, self._update_button) else 22
             prefix = "" if is_update_button else "inactive-"
             button.setIcon(QIcon(self._style_manager.scale_icon(f"{prefix}{icon_name}", size)))
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        """Handle hover events on rail buttons to update icon brightness."""
+        """Update rail button icons on hover enter/leave."""
         if isinstance(obj, QToolButton) and obj.parent() is self._rail_widget:
             if event.type() == QEvent.Type.Enter:
                 self._set_button_hover_icon(obj, hovered=True)
-
             elif event.type() == QEvent.Type.Leave:
                 self._set_button_hover_icon(obj, hovered=False)
 
         return super().eventFilter(obj, event)
 
     def apply_style(self) -> None:
-        """Update styling when application style changes."""
+        """Apply current application style to the manager and all panels."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
         base_font_size = style_manager.base_font_size()
@@ -496,18 +509,19 @@ class SidebarView(QWidget):
         self._rail_widget.setFixedWidth(rail_width)
         self.setMinimumWidth(rail_width)
         self._sidebar_toggle_button.setFixedHeight(rail_button_height)
-        for button in self._view_buttons.values():
+        for button in self._panel_buttons.values():
             button.setFixedHeight(rail_button_height)
 
         self._settings_button.setFixedHeight(rail_button_height)
 
+        # Build a CSS selector that matches all registered panel widget class names
+        panel_selectors = ",\n            ".join(
+            f"QWidget#_content_widget {name}" for name in self._panel_class_names
+        )
+
         self.setStyleSheet(f"""
             {self._style_manager.get_menu_stylesheet()}
             {self._style_manager.get_scrollbar_stylesheet()}
-
-            MindspaceView {{
-                background-color: {panel_background};
-            }}
 
             QWidget#_rail_widget {{
                 background-color: {rail_background};
@@ -545,7 +559,7 @@ class SidebarView(QWidget):
 
             QToolButton#_settings_button,
             QToolButton#_update_button,
-            QToolButton[view_type] {{
+            QToolButton[panel_id] {{
                 color: {text_color};
                 background-color: transparent;
                 border: none;
@@ -553,21 +567,17 @@ class SidebarView(QWidget):
                 margin: 2px 0px;
             }}
 
-            QToolButton[view_type]:checked {{
+            QToolButton[panel_id]:checked {{
                 {indicator_side}: {rail_indicator}px solid {accent_color};
                 {indicator_padding_side}: {rail_padding - rail_indicator}px;
             }}
 
-            QToolButton[view_type]:disabled,
+            QToolButton[panel_id]:disabled,
             QToolButton#_settings_button:disabled {{
                 color: {disabled_color};
             }}
 
-            QWidget#_content_widget SearchSidebarView,
-            QWidget#_content_widget ConversationSidebarView,
-            QWidget#_content_widget FileSidebarView,
-            QWidget#_content_widget PreviewSidebarView,
-            QWidget#_content_widget VCSSidebarView {{
+            {panel_selectors} {{
                 background-color: {content_surface};
                 border: none;
                 border-radius: {content_radius}px;
@@ -582,9 +592,5 @@ class SidebarView(QWidget):
             }}
         """)
 
-        self._search_view.apply_style()
-        self._file_view.apply_style()
-        self._conversation_view.apply_style()
-        self._vcs_view.apply_style()
-        self._preview_view.apply_style()
-        self._update_button_styling()
+        for panel in self._panel_widgets.values():
+            panel.apply_style()
