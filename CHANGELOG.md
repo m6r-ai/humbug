@@ -17,6 +17,7 @@ Bug fixes:
 - System shell and AI tool operations could end up leaving ephemeral tabs as ephemeral instead of making them permanent.
 - If a task was delegated to an AI that generated an HTTP error, the error wasn't propagated to the caller.
 - Fixed a problem where no syntax highlighting was applied for YAML, TOML, bash, PHP and Ruby files.
+- Resolved a problem where new tabs might not have the correct focus.
 
 Internal structure changes:
 
