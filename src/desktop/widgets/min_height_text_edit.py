@@ -134,7 +134,7 @@ class MinHeightTextEdit(QTextEdit):
     def _size_hint_height(self) -> int:
         """Calculate the height of the widget including scrollbar if visible."""
         document_size = self.document().size()
-        height = int(document_size.height())
+        height = document_size.height()
         if self.horizontalScrollBar().isVisible():
             # Additional space for scrollbar with gap
             height += 14
@@ -142,7 +142,7 @@ class MinHeightTextEdit(QTextEdit):
         # Adjust for margins
         height += self.contentsMargins().top() + self.contentsMargins().bottom()
 
-        return height
+        return int(height + 0.99)
 
     def minimumSizeHint(self) -> QSize:
         """Calculate minimum size based on content."""

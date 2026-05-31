@@ -948,6 +948,7 @@ class ConversationMessage(QFrame):
         self.setUpdatesEnabled(False)
         try:
             self._render_content(text, self._context, update_all=True)
+
         finally:
             self.setUpdatesEnabled(True)
             self.update()
@@ -1149,6 +1150,7 @@ class ConversationMessage(QFrame):
         ):
             if btn is not None:
                 btn.show()
+
         if self._expand_button is not None:
             self._expand_button.setEnabled(True)
 
@@ -1484,3 +1486,9 @@ class ConversationMessage(QFrame):
             return section.mapTo(self, pos_in_section)
 
         return QPoint(0, 0)
+
+    def sizeHint(self) -> QSize:
+        """Calculate ideal size based on content."""
+        size = super().sizeHint()
+        print(f"Base size hint: {size}")
+        return size

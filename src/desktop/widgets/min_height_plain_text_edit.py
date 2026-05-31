@@ -2,7 +2,7 @@
 
 import logging
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QResizeEvent, QTextOption, QTextCursor, QWheelEvent
+from PySide6.QtGui import QTextOption, QTextCursor, QWheelEvent
 from PySide6.QtWidgets import (
     QFrame, QPlainTextEdit, QSizePolicy, QWidget
 )
@@ -39,7 +39,7 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         self.setFrameStyle(QFrame.Shape.NoFrame)
 
         # Force the widget to always use the width of its container
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         # Set word wrap mode
         self.setWordWrapMode(word_wrap_mode)
@@ -48,12 +48,8 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
 
     def _on_content_resized(self) -> None:
         """Handle resizing this widget based on the document content."""
+        self.setFixedHeight(self._size_hint_height())
         self.updateGeometry()
-
-    def resizeEvent(self, e: QResizeEvent) -> None:
-        """Handle resize events."""
-        self.updateGeometry()
-        return super().resizeEvent(e)
 
     def scroll_changed(self, _min: int, _max: int) -> None:
         """Handle scrollbar range changes."""
@@ -129,7 +125,6 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
 
         # Update our cached text
         self._current_text = text
-        self.updateGeometry()
 
     def clear(self) -> None:
         """Override clear to reset current text."""
@@ -138,11 +133,6 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
 
     def _size_hint_height(self) -> int:
         """Calculate the height of the widget including scrollbar if visible."""
-        # This is a bit of a bizarre workaround.  When text wraps around there is a short window where our
-        # height is actually too small to show all the text and despite us saying not to use a vertical scrollbar,
-        # Qt will adjust it anyway!  We reset it back so things render correctly.
-        self.verticalScrollBar().setValue(0)
-
         doc = self.document()
         layout = doc.documentLayout()
 
@@ -159,7 +149,7 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         # Adjust for margins
         height += self.contentsMargins().top() + self.contentsMargins().bottom()
 
-        return int(height)
+        return int(height + 0.99)
 
     def minimumSizeHint(self) -> QSize:
         """Calculate minimum size based on content."""
