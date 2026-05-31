@@ -322,6 +322,10 @@ class SidebarManager(QWidget):
     def reveal_and_select_file(self, panel_id: str, file_path: str) -> None:
         """Reveal and select a file in the named panel.
 
+        The panel must already be the active panel — this method never switches
+        the sidebar view.  Callers that want to force a panel switch first should
+        call show_panel() explicitly before calling this method.
+
         Args:
             panel_id: ID of the panel that should handle the reveal.
             file_path: Absolute path to the file to reveal and select.
@@ -333,7 +337,9 @@ class SidebarManager(QWidget):
         if panel is None:
             return
 
-        self._set_active_panel(panel_id)
+        if self._active_panel_id != panel_id:
+            return
+
         panel.reveal_and_select_file(file_path)
 
     def show_panel(self, panel_id: str) -> None:
