@@ -36,6 +36,17 @@ class AIConversationSettings:
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
             temperature_incompatible_efforts={AIReasoningEffort.HIGH},
         ),
+        ("claude-opus-4-8", "anthropic"): AIModel(
+            name="claude-opus-4-8",
+            provider="anthropic",
+            display_name="Claude Opus 4.8",
+            context_window=1000000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+        ),
         ("claude-opus-4-7", "anthropic"): AIModel(
             name="claude-opus-4-7",
             provider="anthropic",
@@ -46,18 +57,6 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
-        ),
-        ("claude-opus-4-6", "anthropic"): AIModel(
-            name="claude-opus-4-6",
-            provider="anthropic",
-            display_name="Claude Opus 4.6",
-            context_window=1000000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
-            temperature_incompatible_efforts={AIReasoningEffort.HIGH},
         ),
 
         # Deepseek models
