@@ -166,7 +166,6 @@ class ConversationWidget(QWidget):
 
         # Initialize tracking variables
         self._auto_scroll = True
-        self._input_chrome_height = 0
         self._input_spacer: QWidget | None = None
 
         # Create layout
@@ -233,7 +232,7 @@ class ConversationWidget(QWidget):
         input_text_area = cast(MarkdownTextEdit, self._input._text_area)
         input_text_area.size_hint_changed.connect(self._on_input_size_hint_changed)
         input_text_area.set_allow_vertical_scroll(True)
-        self._update_input_chrome_height()
+        self._input.chrome_height_changed.connect(self._on_input_size_hint_changed)
         self._scroll_area.viewport().installEventFilter(self)
         self._messages_container.installEventFilter(self)
         self._input.raise_()
@@ -1734,31 +1733,19 @@ class ConversationWidget(QWidget):
 
         return super().eventFilter(obj, event)
 
-    def _update_input_chrome_height(self) -> None:
-        """Cache the fixed chrome height of the floating input.
-
-        Computed from layout metrics after apply_style() has run so it is
-        always correct regardless of the current widget geometry.
-        """
-        layout = self._input.layout()
-        assert layout is not None
-        margins = layout.contentsMargins()
-        chrome = margins.top() + margins.bottom() + layout.spacing()
-        chrome += self._input.banner().sizeHint().height() + 1
-        self._input_chrome_height = chrome
-
     def _on_input_size_hint_changed(self) -> None:
         """Update the spacer and floating input height when the input content changes."""
         text_area = self._input.text_area()
         max_height = self._scroll_area.viewport().height() // 2
-        uncapped_height = text_area.sizeHint().height() + self._input_chrome_height
+        chrome_height = self._input.chrome_height()
+        uncapped_height = text_area.sizeHint().height() + chrome_height
         capped = uncapped_height > max_height
         new_height = max_height if capped else uncapped_height
         text_area.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAsNeeded if capped else Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
         if capped:
-            text_area.setFixedHeight(max_height - self._input_chrome_height)
+            text_area.setFixedHeight(max_height - chrome_height)
 
         assert self._input_spacer is not None
         self._input_spacer.setFixedHeight(new_height)
@@ -2545,7 +2532,6 @@ class ConversationWidget(QWidget):
                 message.apply_style()
 
         self._input.apply_style()
-        self._update_input_chrome_height()
         if self._input_spacer is not None:
             self._update_input_width()
             self._on_input_size_hint_changed()

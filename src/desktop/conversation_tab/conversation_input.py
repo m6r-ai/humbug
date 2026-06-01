@@ -24,6 +24,7 @@ class ConversationInput(ConversationMessage):
     settings_requested = Signal()
     attach_requested = Signal()
     modified = Signal()
+    chrome_height_changed = Signal()
 
     def __init__(self, style: AIMessageSource, parent: QWidget | None = None) -> None:
         """Initialize the conversation input widget."""
@@ -171,6 +172,7 @@ class ConversationInput(ConversationMessage):
 
     def _update_banner_text(self) -> None:
         """Update the header text based on current state."""
+
         strings = self._language_manager.strings()
         submit_key = self._get_submit_key_text()
         if self._is_streaming:
@@ -183,6 +185,21 @@ class ConversationInput(ConversationMessage):
 
         self._role_label.style().unpolish(self._role_label)
         self._role_label.style().polish(self._role_label)
+
+    def chrome_height(self) -> int:
+        """Return the height of all chrome in the input widget except the text area.
+
+        This accounts for layout margins, inter-widget spacing, the 1px top spacing
+        item, the banner, and the attachments bar when it is visible.
+        """
+        margins = self._layout.contentsMargins()
+        chrome = margins.top() + margins.bottom() + self._layout.spacing()
+        chrome += 1  # addSpacing(1) at the top of the layout, see __init__
+        chrome += self._banner.sizeHint().height()
+        if self._attachments_bar is not None and self._attachments_bar.isVisible():
+            chrome += self._attachments_bar.sizeHint().height() + self._layout.spacing()
+
+        return chrome
 
     def _on_text_changed(self) -> None:
         """Handle text changes in the input area."""
@@ -276,7 +293,10 @@ class ConversationInput(ConversationMessage):
 
             self._attachments_layout.insertWidget(self._attachments_layout.count() - 1, attachment_widget)
 
+        previous_chrome_height = self.chrome_height()
         self._attachments_bar.setVisible(bool(self._attachments))
+        if self.chrome_height() != previous_chrome_height:
+            self.chrome_height_changed.emit()
 
     def _remove_attachment(self, index: int) -> None:
         """Remove the attachment at the given index."""

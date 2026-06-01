@@ -18,6 +18,7 @@ Bug fixes:
 - If a task was delegated to an AI that generated an HTTP error, the error wasn't propagated to the caller.
 - Fixed a problem where no syntax highlighting was applied for YAML, TOML, bash, PHP and Ruby files.
 - Resolved a problem where new tabs might not have the correct focus.
+- Fixed a regression related to file attachments in conversations.
 
 Internal structure changes:
 
