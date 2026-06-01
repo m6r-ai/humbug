@@ -2078,7 +2078,6 @@ class ConversationWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
-            {style_manager.get_menu_stylesheet()}
             {style_manager.get_scrollbar_stylesheet()}
         """
 
@@ -2544,8 +2543,7 @@ class ConversationWidget(QWidget):
         Args:
             pos: Local coordinates for menu position
         """
-        menu = QMenu(self)
-        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        menu = self._style_manager.create_menu(self)
         strings = self._language_manager.strings()
 
         # Copy action

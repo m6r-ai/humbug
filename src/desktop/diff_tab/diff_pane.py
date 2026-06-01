@@ -240,7 +240,6 @@ class DiffPane(QPlainTextEdit):
                 selection-background-color: {sel};
                 selection-color: none;
             }}
-            {self._style_manager.get_menu_stylesheet()}
         """)
 
         self._update_gutter_width()
@@ -263,8 +262,7 @@ class DiffPane(QPlainTextEdit):
         block = cursor.block()
         block_number = block.blockNumber()
         column = cursor.positionInBlock() + 1
-        menu = QMenu(self)
-        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        menu = self._style_manager.create_menu(self)
         strings = self._language_manager.strings()
         copy_action = menu.addAction(strings.copy)
         copy_action.setEnabled(self.textCursor().hasSelection())

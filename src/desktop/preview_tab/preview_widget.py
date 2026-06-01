@@ -668,7 +668,6 @@ class PreviewWidget(QWidget):
                 border: none;
             }}
 
-            {style_manager.get_menu_stylesheet()}
             {style_manager.get_scrollbar_stylesheet()}
         """
 
@@ -856,8 +855,7 @@ class PreviewWidget(QWidget):
         Args:
             pos: Local coordinates for menu position
         """
-        menu = QMenu(self)
-        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        menu = self._style_manager.create_menu(self)
         strings = self._language_manager.strings()
 
         # Copy action

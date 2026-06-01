@@ -196,8 +196,6 @@ class TerminalWidget(QAbstractScrollArea):
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
-            {self._style_manager.get_menu_stylesheet()}
-
             QAbstractScrollArea {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 border: none;
@@ -1252,8 +1250,7 @@ class TerminalWidget(QAbstractScrollArea):
 
     def _show_terminal_context_menu(self, pos: QPoint) -> None:
         """Show context menu for terminal operations."""
-        menu = QMenu(self)
-        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        menu = self._style_manager.create_menu(self)
 
         # Copy action
         copy_action = menu.addAction("Copy")

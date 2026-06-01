@@ -235,8 +235,7 @@ class VCSSidebar(SidebarBase):
             return
 
         strings = self._language_manager.strings()
-        menu = QMenu(self)
-        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        menu = self._style_manager.create_menu(self)
 
         diff_action = menu.addAction(strings.diff)
         diff_action.triggered.connect(lambda: self.file_opened_in_diff.emit(path, False))

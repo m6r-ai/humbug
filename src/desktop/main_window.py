@@ -843,8 +843,8 @@ class MainWindow(QMainWindow):
         strings = self._language_manager.strings()
 
         # Create the theme menu
-        theme_menu = QMenu(strings.display_theme, self)
-        theme_menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        theme_menu = self._style_manager.create_menu(self)
+        theme_menu.setTitle(strings.display_theme)
 
         # Create an action group so only one theme can be selected at a time
         theme_action_group = QActionGroup(self)

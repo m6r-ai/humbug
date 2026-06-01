@@ -605,8 +605,7 @@ class FileSidebar(SidebarBase):
         Returns:
             QMenu with actions appropriate for the root directory
         """
-        menu = QMenu(self)
-        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        menu = self._style_manager.create_menu(self)
         strings = self._language_manager.strings()
 
         # Root directory actions
@@ -673,9 +672,9 @@ class FileSidebar(SidebarBase):
 
         if is_root:
             menu = self._create_root_context_menu()
+
         else:
-            menu = QMenu(self)
-            menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+            menu = self._style_manager.create_menu(self)
             menu.addAction(strings.preview).triggered.connect(lambda: self._handle_preview_view_file(path))
             menu.addAction(strings.new_folder).triggered.connect(lambda: self._start_new_folder_creation(path))
             menu.addAction(strings.new_file).triggered.connect(lambda: self._start_new_file_creation(path))
@@ -691,8 +690,7 @@ class FileSidebar(SidebarBase):
         index = self._tree_view.indexAt(position)
 
         # Create context menu
-        menu = QMenu(self)
-        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        menu = self._style_manager.create_menu(self)
         strings = self._language_manager.strings()
 
         # Determine the path and whether it's a file or directory

@@ -521,12 +521,20 @@ class SidebarManager(QWidget):
         self._settings_button.setFixedHeight(rail_button_height)
 
         # Build a CSS selector that matches all registered panel widget class names
-        panel_selectors = ",\n            ".join(
-            f"QWidget#_content_widget {name}" for name in self._panel_class_names
-        )
+        panel_selectors_rule = ""
+        if self._panel_class_names:
+            panel_selectors = ",\n            ".join(
+                f"QWidget#_content_widget {name}" for name in self._panel_class_names
+            )
+            panel_selectors_rule = f"""
+            {panel_selectors} {{
+                background-color: {content_surface};
+                border: none;
+                border-radius: {content_radius}px;
+                margin: {round(4 * zoom_factor)}px;
+            }}"""
 
         self.setStyleSheet(f"""
-            {self._style_manager.get_menu_stylesheet()}
             {self._style_manager.get_scrollbar_stylesheet()}
 
             QWidget#_rail_widget {{
@@ -583,12 +591,7 @@ class SidebarManager(QWidget):
                 color: {disabled_color};
             }}
 
-            {panel_selectors} {{
-                background-color: {content_surface};
-                border: none;
-                border-radius: {content_radius}px;
-                margin: {round(4 * zoom_factor)}px;
-            }}
+            {panel_selectors_rule}
 
             QToolTip {{
                 background-color: {rail_hover};

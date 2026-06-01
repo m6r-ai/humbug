@@ -615,7 +615,6 @@ class LogWidget(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
-            {self._style_manager.get_menu_stylesheet()}
             {self._style_manager.get_scrollbar_stylesheet()}
         """
 
@@ -704,8 +703,7 @@ class LogWidget(QWidget):
         Args:
             pos: Local coordinates for menu position
         """
-        menu = QMenu(self)
-        menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        menu = self._style_manager.create_menu(self)
         strings = self._language_manager.strings()
 
         # Copy action
