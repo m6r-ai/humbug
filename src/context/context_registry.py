@@ -118,7 +118,7 @@ class ContextRegistry:
         """
         Update mutable fields on a context and emit UPDATED.
 
-        Only title and is_modified may be updated.
+        Only title, path, and is_modified may be updated.
         Unknown keys are silently ignored.
 
         Args:
@@ -129,7 +129,7 @@ class ContextRegistry:
         if info is None:
             return
 
-        allowed = {"title", "is_modified"}
+        allowed = {"title", "path", "is_modified"}
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
             return
@@ -137,7 +137,7 @@ class ContextRegistry:
         self._contexts[context_id] = ContextInfo(
             context_id=info.context_id,
             context_type=info.context_type,
-            path=info.path,
+            path=updates.get("path", info.path),
             title=updates.get("title", info.title),
             is_modified=updates.get("is_modified", info.is_modified),
         )

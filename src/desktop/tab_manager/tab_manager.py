@@ -1,3 +1,4 @@
+import os
 import logging
 from typing import Callable, Dict, List, cast
 
@@ -822,6 +823,12 @@ class TabManager(QWidget):
         for tab in self._tabs.values():
             if tab.path() == old_path:
                 tab.on_path_renamed(new_path)
+                contexts = self._mindspace_manager.mindspace().contexts()
+                contexts.update(
+                    tab.tab_id(),
+                    path=new_path,
+                    title=os.path.basename(new_path),
+                )
 
     def _create_column(self, index: int) -> ColumnWidget:
         """Create a new tab column."""
