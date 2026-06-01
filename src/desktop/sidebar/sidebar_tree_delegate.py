@@ -2,7 +2,7 @@
 
 import os
 
-from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget, QAbstractItemDelegate
+from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget, QAbstractItemDelegate, QStyle
 from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect, QSize, QAbstractItemModel
 from PySide6.QtGui import QPainter, QPen
 
@@ -155,23 +155,14 @@ class SidebarTreeDelegate(QStyledItemDelegate):
 
     def _calculate_text_rect_from_option(self, option: QStyleOptionViewItem) -> QRect:
         """Calculate the rectangle that contains only the text portion of the item."""
-        full_rect = option.rect  # type: ignore
-
-        icon_size = self._tree_view.iconSize()
-        icon_width = icon_size.width()
-
-        zoom_factor = self._style_manager.zoom_factor()
-        icon_text_spacing = round(10 * zoom_factor)
-
-        icon_offset = icon_width + icon_text_spacing
-
-        text_rect = QRect(
-            full_rect.left() + icon_offset,
-            full_rect.top(),
-            full_rect.width() - icon_offset,
-            full_rect.height()
+        self.initStyleOption(option, option.index)
+        text_rect = option.widget.style().subElementRect(
+            QStyle.SubElement.SE_ItemViewItemText,
+            option,
+            option.widget
         )
 
+        zoom_factor = self._style_manager.zoom_factor()
         min_width = round(50 * zoom_factor)
         if text_rect.width() < min_width:
             text_rect.setWidth(min_width)
