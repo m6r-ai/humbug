@@ -19,6 +19,9 @@ def build_tree_pane_stylesheet(
     tree_hover = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
     tree_selected = style_manager.get_color_str(ColorRole.TEXT_SELECTED)
     text = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+    edit_bg = style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)
+    edit_border = style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)
+    edit_error = style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)
     branch_icon_size = round(12 * zoom_factor)
     tree_margin = round(6 * zoom_factor)
     collapsed_icon = "arrow-right" if layout_direction == Qt.LayoutDirection.LeftToRight else "arrow-left"
@@ -60,6 +63,17 @@ def build_tree_pane_stylesheet(
             image: url("{style_manager.get_icon_path(expanded_icon)}");
             width: {branch_icon_size}px;
             height: {branch_icon_size}px;
+        }}
+        {tree_selector} QLineEdit {{
+            padding: 0px 0px 0px 2px;
+            margin: 0px;
+            background-color: {edit_bg};
+            color: {text};
+            border: 1px solid {edit_border};
+            border-radius: 2px;
+        }}
+        {tree_selector} QLineEdit[is_valid="false"] {{
+            background-color: {edit_error};
         }}
     """
 
