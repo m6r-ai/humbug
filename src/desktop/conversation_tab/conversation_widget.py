@@ -1062,7 +1062,7 @@ class ConversationWidget(QWidget):
             rendered = ""
             self._response_reveal_rendered[message_id] = rendered
             if target:
-                widget.set_streaming_content("")
+                widget.set_content("")
 
         self._response_reveal_targets[message_id] = target
         self._response_reveal_widgets[message_id] = widget
@@ -1114,7 +1114,7 @@ class ConversationWidget(QWidget):
                     if last_break > 0:
                         next_text = rendered + new_portion[:last_break + 1]
 
-            widget.set_streaming_content(next_text)
+            widget.set_content(next_text)
             if next_text and not rendered and widget.is_rendered():
                 newly_visible_widget = widget
 
@@ -1129,7 +1129,7 @@ class ConversationWidget(QWidget):
             widget = self._response_reveal_widgets.get(message_id)
             final_target = self._response_reveal_targets.get(message_id)
             if widget is not None and final_target is not None:
-                widget.set_final_content(final_target)
+                widget.set_content(final_target)
 
         for message_id in caught_up_ids:
             self._response_reveal_targets.pop(message_id, None)

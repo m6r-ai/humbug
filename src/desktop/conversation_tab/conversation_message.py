@@ -870,11 +870,6 @@ class ConversationMessage(QFrame):
         # Input widgets don't have multiple sections so handle them as a special case.
         if self._is_input:
             self._sections[0].set_content(MarkdownASTTextNode(text))
-            if text:
-                if not self._message_rendered:
-                    self._message_rendered = True
-                    self.show()
-
             return
 
         # Check if we should defer rendering
@@ -883,93 +878,21 @@ class ConversationMessage(QFrame):
             self._pending_content = text
             self._pending_context = self._context
 
-            # Show the message widget (even if collapsed)
-            if text and not self._message_rendered:
-                self._message_rendered = True
-                self.show()
-
-            return
-
-        # Expanded - render immediately
-        self._render_content(text, self._context)
-
-    def set_streaming_content(self, text: str) -> None:
-        """Render response text while a message is still streaming."""
-        self._message_content = text
-
-        if self._is_input:
-            self._sections[0].set_content(MarkdownASTTextNode(text))
-            return
-
-        if not self._is_expanded:
-            self._pending_content = text
-            self._pending_context = self._context
-            if text and not self._message_rendered:
-                self._message_rendered = True
-                self.show()
-
-            return
-
-        self._sections_container.setUpdatesEnabled(False)
-        try:
+        else:
             self._render_content(text, self._context)
 
-        finally:
-            self._sections_container.setUpdatesEnabled(True)
-            self._sections_container.update()
-
+        # Show the message widget (even if collapsed)
         if text and not self._message_rendered:
             self._message_rendered = True
             self.show()
 
-    def set_final_content(self, text: str) -> None:
-        """Render completed response text with full markdown/code formatting."""
-        self._message_content = text
-        self._pending_content = None
-        self._pending_context = None
-
-        if self._is_input:
-            self._sections[0].set_content(MarkdownASTTextNode(text))
-            return
-
-        if not self._is_expanded:
-            self._clear_sections()
-            self._pending_content = text
-            self._pending_context = self._context
-            if text and not self._message_rendered:
-                self._message_rendered = True
-            return
-
-        # Update every section in place — avoids the clear→shrink→rebuild→grow
-        # layout cycle that fires two scroll-range changes and causes a visible flash.
-        self.setUpdatesEnabled(False)
-        try:
-            self._render_content(text, self._context, update_all=True)
-
-        finally:
-            self.setUpdatesEnabled(True)
-            self.update()
-
-        if text and not self._message_rendered:
-            self._message_rendered = True
-            self.show()
-
-    def _clear_sections(self) -> None:
-        """Remove all rendered content sections."""
-        while self._sections:
-            section = self._sections.pop()
-            self._sections_layout.removeWidget(section)
-            section.deleteLater()
-
-    def _render_content(self, text: str, context: str | None, update_all: bool = False) -> None:
+    def _render_content(self, text: str, context: str | None) -> None:
         """
         Actually render the content into sections.
 
         Args:
             text: The message text content
             context: Optional context to append to the message
-            update_all: When True, update every existing section (used for final render).
-                        When False (default), only the last section is updated (streaming).
         """
         # If we were given context, append it to the message for section extraction
         if context:
@@ -989,7 +912,7 @@ class ConversationMessage(QFrame):
                 self._sections_layout.addWidget(section)
                 continue
 
-            if update_all or i == len(self._sections) - 1:
+            if i == len(self._sections) - 1:
                 section = self._sections[i]
                 section.set_syntax(syntax)
                 section.set_content(node)
@@ -999,12 +922,6 @@ class ConversationMessage(QFrame):
             section = self._sections.pop()
             self._sections_layout.removeWidget(section)
             section.deleteLater()
-
-        # Show the message if it has text
-        if text:
-            if not self._message_rendered:
-                self._message_rendered = True
-                self.show()
 
     def message_id(self) -> str | None:
         """Get the unique message ID."""

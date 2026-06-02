@@ -86,7 +86,6 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         if not old_text:
             self.setPlainText(text)
             self._current_text = text
-            self.updateGeometry()
             return
 
         # Find common prefix
