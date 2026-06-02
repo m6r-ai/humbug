@@ -219,7 +219,6 @@ class ConversationWidget(QWidget):
         self._messages_layout.addStretch()
         self._messages_layout.addWidget(self._input_spacer)
 
-        self._messages_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setWidget(self._messages_container)
 
         # Add the scroll area to the main layout

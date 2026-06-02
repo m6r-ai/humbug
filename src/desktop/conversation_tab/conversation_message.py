@@ -5,7 +5,7 @@ import re
 from typing import Dict, List, Tuple, Any, cast
 
 from PySide6.QtWidgets import (
-    QFrame, QSizePolicy, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
+    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
 )
 from PySide6.QtCore import Signal, QPoint, QSize, Qt, QEvent, QObject
 from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QKeyEvent
@@ -201,7 +201,6 @@ class ConversationMessage(QFrame):
         # Container for message sections
         self._sections_container = QWidget(self)
         self._sections_container.setObjectName("_sections_container")
-        self._sections_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
         if not default_expanded:
