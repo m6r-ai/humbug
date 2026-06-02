@@ -260,7 +260,7 @@ class ConversationMessage(QFrame):
                 self._layout.addWidget(self._chips_bar)
 
         else:
-            # Add a couple of pixels because the other non-input boxes push their text down slightly because of the buttons
+            # Add a pixel because the other non-input boxes push their text down slightly because of the buttons
             # and we want to keep things balanced.
             self._layout.addSpacing(1)
             self._layout.addWidget(self._sections_container)

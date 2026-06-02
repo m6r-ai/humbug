@@ -45,6 +45,7 @@ class MinHeightTextEdit(QTextEdit):
     def _on_content_resized(self) -> None:
         """Handle resizing this widget based on the document content."""
         self.setFixedHeight(self._size_hint_height())
+        self.updateGeometry()
         self.size_hint_changed.emit()
 
     def set_allow_vertical_scroll(self, allow: bool) -> None:
