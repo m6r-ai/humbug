@@ -90,6 +90,24 @@ class TestUnsupportedFilter:
             decode_stream(b"data", "SomeFutureFilter")
 
 
+class TestImageOnlyFilters:
+    def test_jbig2decode_returns_raw(self) -> None:
+        raw = b"\x00\x01\x02\x03some image data"
+        assert decode_stream(raw, "JBIG2Decode") == raw
+
+    def test_ccittfaxdecode_returns_raw(self) -> None:
+        raw = b"\xff\xd8\xff some fax data"
+        assert decode_stream(raw, "CCITTFaxDecode") == raw
+
+    def test_dctdecode_returns_raw(self) -> None:
+        raw = b"\xff\xd8\xff\xe0 jpeg data"
+        assert decode_stream(raw, "DCTDecode") == raw
+
+    def test_jpxdecode_returns_raw(self) -> None:
+        raw = b"\x00\x00\x00\x0cjP  jpeg2000 data"
+        assert decode_stream(raw, "JPXDecode") == raw
+
+
 class TestDecodeStreamFilters:
     def test_single_filter(self) -> None:
         original = b"test data"

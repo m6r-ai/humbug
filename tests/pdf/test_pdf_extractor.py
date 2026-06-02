@@ -4,7 +4,7 @@ from pdf.pdf_errors import PDFExtractionError
 from pdf.pdf_extractor import extract_text
 from pdf.pdf_parser import parse
 
-from .conftest import make_pdf, make_compressed_pdf
+from .conftest import make_pdf, make_compressed_pdf, make_form_xobject_pdf
 
 
 class TestExtractText:
@@ -64,3 +64,34 @@ class TestExtractText:
         assert "Beta" in text
         assert "Gamma" in text
         assert text.count("\f") == 2
+
+
+class TestFormXObjectExtraction:
+    def test_text_in_form_xobject_is_extracted(self) -> None:
+        pdf = make_form_xobject_pdf("Form text here")
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "Form text here" in text
+
+    def test_form_xobject_and_page_text_combined(self) -> None:
+        pdf = make_form_xobject_pdf("From the form", page_text="From the page")
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "From the form" in text
+        assert "From the page" in text
+
+    def test_image_xobject_do_does_not_raise(self) -> None:
+        # A Do referencing an Image XObject (not a Form) must be silently ignored,
+        # not raise an exception.
+        pdf = make_pdf(["Page with image Do"])
+        # Patch in a Do call for a non-existent XObject name — extractor must not crash.
+        doc = parse(pdf)
+        from pdf.pdf_types import PDFStream
+        page_stream = PDFStream(data=b"/NonExistent Do BT /F1 12 Tf (Safe) Tj ET", attrs={"Length": 42})
+        # Replace the content stream of the first page's object
+        for obj_num, obj in doc.objects.items():
+            if isinstance(obj, PDFStream) and b"BT" in obj.data:
+                doc.objects[obj_num] = page_stream
+                break
+        text = extract_text(doc)
+        assert isinstance(text, str)

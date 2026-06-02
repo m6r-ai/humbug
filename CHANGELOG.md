@@ -19,6 +19,7 @@ Bug fixes:
 - Fixed a problem where no syntax highlighting was applied for YAML, TOML, bash, PHP and Ruby files.
 - Resolved a problem where new tabs might not have the correct focus.
 - Fixed a regression related to file attachments in conversations.
+- Improved text extraction from PDF files.
 
 Internal structure changes:
 

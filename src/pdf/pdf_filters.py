@@ -15,6 +15,13 @@ def decode_stream(data: bytes, filter_name: str, decode_parms: dict[str, Any] | 
     if filter_name == "FlateDecode":
         return _decode_flate(data, decode_parms)
 
+    if filter_name in ("JBIG2Decode", "CCITTFaxDecode", "DCTDecode", "JPXDecode"):
+        # Image-only filters. We cannot decode the image data, but we must not
+        # raise here: doing so would cause the entire containing object to be
+        # silently dropped by the parser, which can prevent Form XObjects and
+        # other non-image objects from loading. Return the raw bytes unchanged.
+        return data
+
     if filter_name == "ASCIIHexDecode":
         return _decode_ascii_hex(data)
 

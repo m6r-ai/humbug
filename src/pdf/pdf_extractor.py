@@ -171,6 +171,31 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
             operand_stack.clear()
             continue
 
+        if op == "Do":
+            # Invoke a named XObject. If it is a Form XObject (Subtype == Form)
+            # recursively interpret its content stream to extract any text it contains.
+            if operand_stack:
+                xobject_name = str(operand_stack[-1])
+                xobjects = resources.get("XObject", {})
+                if isinstance(xobjects, PDFObjectRef):
+                    xobjects = doc.get_object(xobjects)
+
+                if isinstance(xobjects, dict):
+                    xobj_ref = xobjects.get(xobject_name)
+                    xobj = doc.get_object(xobj_ref) if isinstance(xobj_ref, PDFObjectRef) else xobj_ref
+                    if isinstance(xobj, PDFStream) and xobj.attrs.get("Subtype") == "Form":
+                        form_resources = xobj.attrs.get("Resources", {})
+                        if isinstance(form_resources, PDFObjectRef):
+                            form_resources = doc.get_object(form_resources)
+
+                        if not isinstance(form_resources, dict):
+                            form_resources = resources
+
+                        text_parts.append(_interpret_content_stream(xobj.data, form_resources, doc))
+
+            operand_stack.clear()
+            continue
+
         if not in_text_block:
             operand_stack.clear()
             continue

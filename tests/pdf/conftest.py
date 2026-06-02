@@ -127,3 +127,75 @@ def make_compressed_pdf(text: str) -> bytes:
 def _escape_pdf_string(text: str) -> str:
     """Escape special characters for use inside a PDF literal string."""
     return text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def make_form_xobject_pdf(form_text: str, page_text: str = "") -> bytes:
+    """Build a PDF where text lives inside a Form XObject invoked via the Do operator.
+
+    This mirrors the structure used by OCR-over-image PDFs: the page content
+    stream contains only a Do call, and the actual text operators live inside
+    the referenced Form XObject.  An optional page_text string is also placed
+    directly in the page stream to verify both sources are combined.
+    """
+    form_stream_body = (
+        f"BT /F1 12 Tf ({_escape_pdf_string(form_text)}) Tj ET"
+    ).encode("latin-1")
+
+    font_dict = (
+        b"<< /F1 << /Type /Font /Subtype /Type1 "
+        b"/BaseFont /Helvetica /Encoding /WinAnsiEncoding >> >>"
+    )
+
+    body = b"%PDF-1.4\n"
+    offsets: dict[int, int] = {}
+
+    # Object layout:
+    #   1 = Catalog
+    #   2 = Pages
+    #   3 = Form XObject stream
+    #   4 = Page content stream (invokes /Frm via Do, plus optional page_text)
+    #   5 = Page
+    # 3: Form XObject
+    form_obj = (
+        f"<< /Type /XObject /Subtype /Form /Length {len(form_stream_body)}"
+        f" /Resources << /Font {font_dict.decode()} >> >>\nstream\n"
+    ).encode() + form_stream_body + b"\nendstream"
+
+    # 4: Page content stream — invoke the form, then optionally emit page_text
+    if page_text:
+        page_stream_body = (
+            f"/Frm Do BT /F1 12 Tf ({_escape_pdf_string(page_text)}) Tj ET"
+        ).encode("latin-1")
+    else:
+        page_stream_body = b"/Frm Do"
+
+    page_content_obj = (
+        f"<< /Length {len(page_stream_body)} >>\nstream\n".encode()
+        + page_stream_body
+        + b"\nendstream"
+    )
+
+    objects: list[tuple[int, bytes]] = [
+        (1, b"<< /Type /Catalog /Pages 2 0 R >>"),
+        (2, b"<< /Type /Pages /Kids [5 0 R] /Count 1 >>"),
+        (3, form_obj),
+        (4, page_content_obj),
+        (5, (
+            b"<< /Type /Page /Parent 2 0 R /Contents 4 0 R"
+            b" /Resources << /Font " + font_dict +
+            b" /XObject << /Frm 3 0 R >> >> >>"
+        )),
+    ]
+
+    for num, obj_body in objects:
+        offsets[num] = len(body)
+        body += f"{num} 0 obj\n".encode() + obj_body + b"\nendobj\n"
+
+    xref_offset = len(body)
+    xref = "xref\n0 6\n"
+    xref += "0000000000 65535 f \n"
+    for i in range(1, 6):
+        xref += f"{offsets[i]:010d} 00000 n \n"
+
+    trailer = f"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
+    return body + xref.encode() + trailer.encode()
