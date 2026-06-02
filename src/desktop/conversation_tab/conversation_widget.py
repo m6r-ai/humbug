@@ -300,6 +300,11 @@ class ConversationWidget(QWidget):
         Args:
             widget: The widget that was activated
         """
+        # If the content is short enough that no scrolling is needed, the last message
+        # is already fully visible, so treat activation as "seen".
+        if self._scroll_area.verticalScrollBar().maximum() == 0:
+            self.has_seen_latest_update_changed.emit(True)
+
         # Find the ConversationMessage that contains this widget
         message_widget = self._find_conversation_message(widget)
         if message_widget is None:
