@@ -70,9 +70,6 @@ class ConversationMessage(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.setMinimumWidth(0)
-
         self.setObjectName("ConversationMessage")
 
         self._is_input = is_input
@@ -204,6 +201,7 @@ class ConversationMessage(QFrame):
         # Container for message sections
         self._sections_container = QWidget(self)
         self._sections_container.setObjectName("_sections_container")
+        self._sections_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
         if not default_expanded:

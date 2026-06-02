@@ -7,7 +7,7 @@ import re
 from typing import Callable, cast, Dict, List, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
-    QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
+    QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QFileDialog
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QEvent
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
@@ -130,11 +130,6 @@ class ConversationWidget(QWidget):
         self._deferred_scroll_timer.setInterval(0)
         self._deferred_scroll_timer_slot: Callable[..., Any] | None = None
 
-        self._scroll_range_settle_timer = QTimer(self)
-        self._scroll_range_settle_timer.setSingleShot(True)
-        self._scroll_range_settle_timer.setInterval(20)
-        self._scroll_range_settle_timer.timeout.connect(self._on_scroll_range_settled)
-
         # Message border animation state (moved from ConversationInput)
         self._animated_message: ConversationMessage | None = None
         self._animation_frame = 0
@@ -191,6 +186,7 @@ class ConversationWidget(QWidget):
 
         # Create messages container widget
         self._messages_container = QWidget()
+        self._messages_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._messages_layout = QVBoxLayout(self._messages_container)
         self._messages_container.setLayout(self._messages_layout)
 
@@ -223,7 +219,7 @@ class ConversationWidget(QWidget):
         self._messages_layout.addStretch()
         self._messages_layout.addWidget(self._input_spacer)
 
-        self._messages_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self._messages_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setWidget(self._messages_container)
 
         # Add the scroll area to the main layout
@@ -1385,20 +1381,8 @@ class ConversationWidget(QWidget):
 
     def _on_scroll_range_changed(self, _minimum: int, _maximum: int) -> None:
         """Handle the scroll range changing."""
-        if self._load_scroll_offset is not None:
-            self._scroll_range_settle_timer.start()
-
-        elif self._auto_scroll:
+        if self._auto_scroll:
             self._scroll_to_bottom()
-
-    def _on_scroll_range_settled(self) -> None:
-        """Apply the pending load scroll offset once the scroll range has stopped changing."""
-        if self._load_scroll_offset is None:
-            return
-
-        vbar = self._scroll_area.verticalScrollBar()
-        vbar.setValue(vbar.maximum() - self._load_scroll_offset)
-        self._load_scroll_offset = None
 
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""

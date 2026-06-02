@@ -5,7 +5,7 @@ from typing import List, Tuple, cast
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout,
-    QToolButton, QFileDialog, QWidget
+    QToolButton, QFileDialog, QWidget, QSizePolicy
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QSize, QRegularExpression
 from PySide6.QtGui import (
@@ -45,6 +45,8 @@ class ConversationMessageSection(QFrame):
         """
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
+
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         self.setObjectName("ConversationMessageSection")
 

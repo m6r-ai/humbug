@@ -34,7 +34,7 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
 
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(horizontal_scrollbar_policy)
-        self.horizontalScrollBar().rangeChanged.connect(self.scroll_changed)
+        self.horizontalScrollBar().rangeChanged.connect(self._scroll_changed)
 
         self.setFrameStyle(QFrame.Shape.NoFrame)
 
@@ -51,9 +51,9 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         self.setFixedHeight(self._size_hint_height())
         self.updateGeometry()
 
-    def scroll_changed(self, _min: int, _max: int) -> None:
+    def _scroll_changed(self, _min: int, _max: int) -> None:
         """Handle scrollbar range changes."""
-        self.updateGeometry()
+        self._on_content_resized()
 
     def wheelEvent(self, e: QWheelEvent) -> None:
         """Handle wheel events for horizontal scrolling."""
