@@ -41,12 +41,33 @@ class MinHeightTextEdit(QTextEdit):
 
         self._current_text = ""
         self._allow_vertical_scroll = False
+        self._height_cap: int | None = None
 
     def _on_content_resized(self) -> None:
         """Handle resizing this widget based on the document content."""
-        self.setFixedHeight(self._size_hint_height())
+        new_height = self._size_hint_height()
+        sb = self.verticalScrollBar()
+        if self._height_cap is None:
+            self.setFixedHeight(new_height)
+
+        else:
+            self.setFixedHeight(self._height_cap)
+
         self.updateGeometry()
         self.size_hint_changed.emit()
+
+    def set_height_cap(self, cap: int | None) -> None:
+        """Set a maximum height cap, or None to remove it."""
+        self._height_cap = cap
+        if cap is None:
+            self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.setFixedHeight(self._size_hint_height())
+
+        else:
+            self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            self.setFixedHeight(cap)
+
+        self.updateGeometry()
 
     def set_allow_vertical_scroll(self, allow: bool) -> None:
         """Enable or disable vertical wheel scrolling when content exceeds widget height."""
