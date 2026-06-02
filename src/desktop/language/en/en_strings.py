@@ -290,7 +290,7 @@ def get_english_strings() -> LanguageStrings:
         # Status bar
         editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}",
         conversation_status=(
-            "Model: {model}  |  {reasoning}  |  {temperature}  |  "
+            "Model: {model}  |  Provider: {provider}  |  {reasoning}  |  {temperature}  |  "
             "Input Tokens: {input_tokens} / {max_input_tokens}  |  "
             "Input Total: {total_input_tokens}  |  "
             "Output Tokens: {output_tokens} / {max_output_tokens}  |  "

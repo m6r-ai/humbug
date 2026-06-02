@@ -14,14 +14,15 @@ from ai_transcript_conversation import AITranscriptConversation
 from context.context_registry import ContextRegistry
 from conversation_context.conversation_context import ConversationContext
 
+from desktop.ai_backend_display import get_backend_display_name
+from desktop.conversation_tab.conversation_settings_dialog import ConversationSettingsDialog
+from desktop.conversation_tab.conversation_widget import ConversationWidget
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
-from desktop.conversation_tab.conversation_settings_dialog import ConversationSettingsDialog
-from desktop.conversation_tab.conversation_widget import ConversationWidget
-from desktop.widgets import FindWidget
-from desktop.tab import TabBase, TabState
 from desktop.style_manager import StyleManager
+from desktop.tab import TabBase, TabState
+from desktop.widgets import FindWidget
 
 
 class ConversationTab(TabBase):
@@ -336,8 +337,11 @@ class ConversationTab(TabBase):
         else:
             reasoning_display = strings.conversation_status_no_reasoning
 
+        provider_display = get_backend_display_name(settings.provider, strings)
+
         status = strings.conversation_status.format(
             model=AIConversationSettings.get_display_name(settings.model, settings.provider),
+            provider=provider_display,
             temperature=temp_display,
             reasoning=reasoning_display,
             input_tokens=counts['input'],

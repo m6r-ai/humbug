@@ -290,7 +290,7 @@ def get_french_strings() -> LanguageStrings:
         # Status bar
         editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}",
         conversation_status=(
-            "Modèle : {model}  |  {reasoning}  |  {temperature}  |  "
+            "Modèle : {model}  |  Fournisseur : {provider}  |  {reasoning}  |  {temperature}  |  "
             "Jetons d'Entrée : {input_tokens} / {max_input_tokens}  |  "
             "Total Entrée : {total_input_tokens}  |  "
             "Jetons de Sortie : {output_tokens} / {max_output_tokens}  |  "

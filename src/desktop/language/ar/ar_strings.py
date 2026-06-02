@@ -291,7 +291,7 @@ def get_arabic_strings() -> LanguageStrings:
         # Status bar
         editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}",
         conversation_status=(
-            "النموذج: {model}  |  {reasoning}  |  {temperature}  |  "
+            "النموذج: {model}  |  المزود: {provider}  |  {reasoning}  |  {temperature}  |  "
             "رموز الإدخال: {input_tokens} / {max_input_tokens}  |  "
             "إجمالي الإدخال: {total_input_tokens}  |  "
             "رموز الإخراج: {output_tokens} / {max_output_tokens}  |  "
