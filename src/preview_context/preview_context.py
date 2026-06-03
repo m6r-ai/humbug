@@ -1,10 +1,7 @@
-"""Preview context model."""
-
 import os
 import re
 from typing import Any, Callable, Dict, List, Tuple
 
-from context.context_type import ContextType
 
 
 class PreviewContext:
@@ -19,7 +16,7 @@ class PreviewContext:
     needing to know about widgets.
     """
 
-    context_type = ContextType.PREVIEW
+    context_type = "preview"
 
     def __init__(
         self,

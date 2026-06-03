@@ -3,7 +3,6 @@ from typing import Any, Dict, List
 
 from ai import AIConversationHistory, AIMessage
 from ai_transcript_conversation import AITranscriptConversation
-from context.context_type import ContextType
 
 
 class ConversationContext:
@@ -18,7 +17,7 @@ class ConversationContext:
     context needing to know about widgets.
     """
 
-    context_type = ContextType.CONVERSATION
+    context_type = "conversation"
 
     def __init__(
         self,
