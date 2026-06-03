@@ -233,10 +233,6 @@ class ShellMessage(QFrame):
         cursor.clearSelection()
         self._text_area.setTextCursor(cursor)
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        """Handle resize events."""
-        super().resizeEvent(event)
-
     def apply_style(self) -> None:
         """Apply style changes."""
         factor = self._style_manager.zoom_factor()
