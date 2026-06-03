@@ -516,6 +516,7 @@ class MainWindow(QMainWindow):
         self._sidebar_manager.file_clicked.connect(self._on_sidebar_file_clicked)
         self._sidebar_manager.file_deleted.connect(self._on_sidebar_file_deleted)
         self._sidebar_manager.file_renamed.connect(self._on_sidebar_file_renamed)
+        self._sidebar_manager.file_moved.connect(self._on_sidebar_file_moved)
         self._sidebar_manager.file_edited.connect(self._on_sidebar_file_edited)
         self._sidebar_manager.file_opened_in_preview.connect(self._on_sidebar_file_opened_in_preview)
         self._sidebar_manager.file_opened_in_diff.connect(self._on_sidebar_file_opened_in_diff)
@@ -1356,6 +1357,16 @@ class MainWindow(QMainWindow):
         Args:
             old_path: Original path of renamed file
             new_path: New path after renaming
+        """
+        self._tab_manager.handle_file_rename(old_path, new_path)
+
+    def _on_sidebar_file_moved(self, old_path: str, new_path: str) -> None:
+        """
+        Handle moving of files.
+
+        Args:
+            old_path: Original path of moved file
+            new_path: New path after moving
         """
         self._tab_manager.handle_file_rename(old_path, new_path)
 

@@ -21,6 +21,7 @@ Bug fixes:
 - Fixed a regression related to file attachments in conversations.
 - Improved text extraction from PDF files.
 - The tab label for "File Save As" did not automatically update to reflect the new name.
+- If a file is moved and had an open tab then the new location is picked up and the tab is updated to the new path.
 
 Internal structure changes:
 
