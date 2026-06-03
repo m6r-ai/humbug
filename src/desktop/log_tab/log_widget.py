@@ -4,7 +4,7 @@ import logging
 from typing import Dict, List, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
+    QWidget, QVBoxLayout, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent

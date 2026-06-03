@@ -5,7 +5,7 @@ import logging
 import re
 from typing import Tuple, Dict, List, cast
 
-from PySide6.QtWidgets import QWidget, QAbstractScrollArea, QMenu
+from PySide6.QtWidgets import QWidget, QAbstractScrollArea
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer, QPointF, QRectF
 from PySide6.QtGui import (
     QPainter, QPaintEvent, QColor, QFontMetricsF,

@@ -3,7 +3,7 @@
 import logging
 from typing import List
 
-from PySide6.QtWidgets import QMenu, QPlainTextEdit, QWidget
+from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Qt, QRect, QRegularExpression, Signal
 from PySide6.QtGui import (
     QColor, QContextMenuEvent, QKeyEvent, QPainter, QPaintEvent, QResizeEvent, QTextBlockUserData, QTextBlock,

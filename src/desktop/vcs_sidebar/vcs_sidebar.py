@@ -6,7 +6,7 @@ import logging
 from PySide6.QtCore import Qt, QMimeData, QPoint, Signal
 from PySide6.QtGui import QColor, QDrag, QMouseEvent
 from PySide6.QtWidgets import (
-    QApplication, QFrame, QListWidget, QListWidgetItem, QMenu, QVBoxLayout, QWidget
+    QApplication, QFrame, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 )
 
 from git import VCSFileStatus, VCSStatusCode

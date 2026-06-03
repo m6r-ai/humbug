@@ -1175,7 +1175,11 @@ class ConversationWidget(QWidget):
             self._response_reveal_timer.stop()
 
         if rendered_widgets:
-            QTimer.singleShot(5, lambda: [w.setUpdatesEnabled(True) for w in rendered_widgets])
+            def _re_enable_updates(widgets: list) -> None:
+                for w in widgets:
+                    w.setUpdatesEnabled(True)
+
+            QTimer.singleShot(5, lambda: _re_enable_updates(rendered_widgets))
 
     def _response_reveal_chunk_size(self, remaining: int, completed: bool) -> int:
         """Choose a reveal chunk size that stays smooth but catches up quickly."""

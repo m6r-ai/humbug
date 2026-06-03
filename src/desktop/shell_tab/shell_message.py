@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, QPoint, Qt, QRegularExpression
 from PySide6.QtGui import (
-    QResizeEvent, QColor, QCursor, QMouseEvent, QTextCursor,
+    QColor, QCursor, QMouseEvent, QTextCursor,
     QTextCharFormat, QTextDocument
 )
 

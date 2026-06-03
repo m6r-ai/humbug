@@ -6,7 +6,7 @@ import re
 from typing import Dict, List, Any, Set, Tuple
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
+    QWidget, QVBoxLayout, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QTimer
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
