@@ -13,7 +13,7 @@ from desktop.settings.settings_factory import SettingsFactory
 from desktop.style_manager import StyleManager
 
 
-class SidebarFoldersDialog(QDialog):
+class MindspaceFoldersDialog(QDialog):
     """Dialog for selecting which folders to create in a new mindspace."""
 
     def __init__(self, mindspace_path: str, parent: QWidget | None = None) -> None:

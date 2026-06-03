@@ -46,6 +46,7 @@ from desktop.file_sidebar.file_sidebar import FileSidebar
 from desktop.language.language_manager import LanguageManager
 from desktop.log_tab.log_tab import LogTab
 from desktop.message_box import MessageBox, MessageBoxType
+from desktop.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.main_window_splitter import MainWindowSplitter
 from desktop.preview_sidebar.preview_sidebar import PreviewSidebar
@@ -63,7 +64,6 @@ from desktop.shell_tab.commands.shell_command_preview import ShellCommandPreview
 from desktop.shell_tab.shell_command_registry import ShellCommandRegistry
 from desktop.shell_tab.shell_tab import ShellTab
 from desktop.sidebar.sidebar_base import SidebarBase
-from desktop.sidebar.sidebar_folders_dialog import SidebarFoldersDialog
 from desktop.sidebar_manager import SidebarManager
 from desktop.style_manager import StyleManager, ColorMode
 from desktop.status_message import StatusMessage
@@ -967,7 +967,7 @@ class MainWindow(QMainWindow):
             return
 
         # Show folder configuration dialog
-        dialog = SidebarFoldersDialog(dir_path, self)
+        dialog = MindspaceFoldersDialog(dir_path, self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
