@@ -1752,7 +1752,6 @@ class ConversationWidget(QWidget):
         uncapped_height = text_area.sizeHint().height() + chrome_height
         capped = uncapped_height > max_height
         new_height = max_height if capped else uncapped_height
-        sb = text_area.verticalScrollBar()
         text_area.set_height_cap(max_height - chrome_height if capped else None)
 
         assert self._input_spacer is not None

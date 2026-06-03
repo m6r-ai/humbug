@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy, QWidget
 )
 from PySide6.QtCore import Qt, QSize, Signal
-from PySide6.QtGui import QTextOption, QTextCursor, QWheelEvent
+from PySide6.QtGui import QTextOption, QTextCursor, QWheelEvent, QResizeEvent
 
 
 class MinHeightTextEdit(QTextEdit):
@@ -43,10 +43,13 @@ class MinHeightTextEdit(QTextEdit):
         self._allow_vertical_scroll = False
         self._height_cap: int | None = None
 
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        self._on_content_resized()
+        super().resizeEvent(event)
+
     def _on_content_resized(self) -> None:
         """Handle resizing this widget based on the document content."""
         new_height = self._size_hint_height()
-        sb = self.verticalScrollBar()
         if self._height_cap is None:
             self.setFixedHeight(new_height)
 
@@ -155,6 +158,10 @@ class MinHeightTextEdit(QTextEdit):
 
     def _size_hint_height(self) -> int:
         """Calculate the height of the widget including scrollbar if visible."""
+        # This is a bit of a bizarre workaround.  When text wraps around there is a short window where our
+        # height is actually too small to show all the text and despite us saying not to use a vertical scrollbar,
+        # Qt will adjust it anyway!  We reset it back so things render correctly.
+        self.verticalScrollBar().setValue(0)
         document_size = self.document().size()
         height = document_size.height()
         if self.horizontalScrollBar().isVisible():
