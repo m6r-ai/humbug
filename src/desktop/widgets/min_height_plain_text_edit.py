@@ -149,7 +149,11 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
             height += layout.blockBoundingRect(block).height()
             block = block.next()
 
-        if self.horizontalScrollBar().isVisible():
+        # When we first render we might have an horizontal scroll bar that is set, but hasn't yet been rendered
+        hbar = self.horizontalScrollBar()
+        hbar_policy = self.horizontalScrollBarPolicy()
+        hbar_needed = hbar_policy != Qt.ScrollBarPolicy.ScrollBarAlwaysOff and hbar.maximum() > 0
+        if hbar_needed:
             # Additional space for scrollbar with gap
             height += 14
 
