@@ -877,6 +877,7 @@ class SettingsDialog(QDialog):
             AIReasoningEffort.MEDIUM: strings.settings_effort_medium,
             AIReasoningEffort.HIGH: strings.settings_effort_high,
             AIReasoningEffort.XHIGH: strings.settings_effort_xhigh,
+            AIReasoningEffort.MAX: strings.settings_effort_max,
         }
         efforts = AIConversationSettings.get_supported_reasoning_efforts(model, provider)
         if efforts:

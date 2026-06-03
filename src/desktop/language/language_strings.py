@@ -224,6 +224,7 @@ class LanguageStrings:
     settings_effort_medium: str
     settings_effort_high: str
     settings_effort_xhigh: str
+    settings_effort_max: str
 
     # File dialog titles
     file_dialog_open_conversation: str

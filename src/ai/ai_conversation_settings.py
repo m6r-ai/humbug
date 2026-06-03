@@ -33,7 +33,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE, AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH, AIReasoningEffort.MAX,
+            ],
             temperature_incompatible_efforts={AIReasoningEffort.HIGH},
         ),
         ("claude-opus-4-8", "anthropic"): AIModel(
@@ -45,7 +48,11 @@ class AIConversationSettings:
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE, AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH, AIReasoningEffort.XHIGH, AIReasoningEffort.MAX,
+            ],
+            adaptive_thinking_only=True,
         ),
         ("claude-opus-4-7", "anthropic"): AIModel(
             name="claude-opus-4-7",
@@ -56,7 +63,11 @@ class AIConversationSettings:
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE, AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH, AIReasoningEffort.XHIGH, AIReasoningEffort.MAX,
+            ],
+            adaptive_thinking_only=True,
         ),
 
         # Deepseek models

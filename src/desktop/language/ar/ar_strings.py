@@ -236,7 +236,8 @@ def get_arabic_strings() -> LanguageStrings:
         settings_effort_low="منخفض",
         settings_effort_medium="متوسط",
         settings_effort_high="عالٍ",
-        settings_effort_xhigh="الحد الأقصى",
+        settings_effort_xhigh="مرتفع جداً",
+        settings_effort_max="الحد الأقصى",
 
         # File dialog titles
         file_dialog_open_conversation="فتح محادثة",

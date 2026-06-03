@@ -306,10 +306,20 @@ class AnthropicBackend(AIBackend):
         thinking = False
         if settings.reasoning_effort not in (None, AIReasoningEffort.NONE):
             thinking = True
-            data["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": int(settings.max_output_tokens * 0.9)
-            }
+            model_config = AIConversationSettings.find_by_model_and_provider(settings.model, settings.provider)
+            if model_config and model_config.adaptive_thinking_only:
+                # Models like Opus 4.8 and 4.7 only accept adaptive thinking; manual budget_tokens
+                # is not supported and returns a 400 error on these models.  display defaults to
+                # "omitted" on these models so we must explicitly request "summarized" to receive
+                # thinking content.
+                data["thinking"] = {"type": "adaptive", "display": "summarized"}
+                data["output_config"] = {"effort": settings.reasoning_effort}
+
+            else:
+                data["thinking"] = {
+                    "type": "enabled",
+                    "budget_tokens": int(settings.max_output_tokens * 0.9)
+                }
 
         # Only include temperature if supported by model
         if not thinking and AIConversationSettings.supports_temperature(settings.model, settings.provider):

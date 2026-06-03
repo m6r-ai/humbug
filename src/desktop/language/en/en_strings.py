@@ -235,7 +235,8 @@ def get_english_strings() -> LanguageStrings:
         settings_effort_low="Low",
         settings_effort_medium="Medium",
         settings_effort_high="High",
-        settings_effort_xhigh="Maximum",
+        settings_effort_xhigh="Extra High",
+        settings_effort_max="Maximum",
 
         # File dialog titles
         file_dialog_open_conversation="Open Conversation",

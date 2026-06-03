@@ -218,6 +218,7 @@ class ConversationSettingsDialog(QDialog):
             AIReasoningEffort.MEDIUM: strings.settings_effort_medium,
             AIReasoningEffort.HIGH: strings.settings_effort_high,
             AIReasoningEffort.XHIGH: strings.settings_effort_xhigh,
+            AIReasoningEffort.MAX: strings.settings_effort_max,
         }
         return effort_labels.get(effort, effort)
 

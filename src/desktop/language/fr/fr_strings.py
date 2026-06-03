@@ -235,7 +235,8 @@ def get_french_strings() -> LanguageStrings:
         settings_effort_low="Faible",
         settings_effort_medium="Moyen",
         settings_effort_high="Élevé",
-        settings_effort_xhigh="Maximum",
+        settings_effort_xhigh="Très élevé",
+        settings_effort_max="Maximum",
 
         # File dialog titles
         file_dialog_open_conversation="Ouvrir une conversation",

@@ -9,7 +9,7 @@ class AIReasoningEffort:
     Reasoning effort level constants for models that support variable reasoning intensity.
 
     Values map directly to API parameter strings.  The ordering from lowest to highest
-    is: NONE, MINIMAL, LOW, MEDIUM, HIGH, XHIGH.
+    is: NONE, MINIMAL, LOW, MEDIUM, HIGH, XHIGH, MAX.
     """
 
     NONE = "none"
@@ -18,8 +18,9 @@ class AIReasoningEffort:
     MEDIUM = "medium"
     HIGH = "high"
     XHIGH = "xhigh"
+    MAX = "max"
 
-    _VALUES = [NONE, MINIMAL, LOW, MEDIUM, HIGH, XHIGH]
+    _VALUES = [NONE, MINIMAL, LOW, MEDIUM, HIGH, XHIGH, MAX]
 
     @classmethod
     def values(cls) -> List[str]:
@@ -63,6 +64,7 @@ class AIModel:
         tool_capabilities: ToolCapability = ToolCapability.NO_TOOLS,
         supported_reasoning_efforts: List[str] | None = None,
         temperature_incompatible_efforts: Set[str] | None = None,
+        adaptive_thinking_only: bool = False,
     ):
         """
         Initialize an AI model configuration.
@@ -81,6 +83,8 @@ class AIModel:
                 By convention the first entry is the default (lowest/off) level.
             temperature_incompatible_efforts: Set of effort levels that disable temperature
                 support (e.g. Anthropic thinking mode disables temperature).
+            adaptive_thinking_only: If True, the model only supports adaptive thinking
+                (thinking: {type: "adaptive"}) and rejects manual budget-based thinking.
         """
         self.name = name
         self.provider = provider
@@ -92,6 +96,7 @@ class AIModel:
         self.tool_capabilities = tool_capabilities
         self.supported_reasoning_efforts: List[str] = supported_reasoning_efforts or []
         self.temperature_incompatible_efforts: Set[str] = temperature_incompatible_efforts or set()
+        self.adaptive_thinking_only: bool = adaptive_thinking_only
 
     def supports_tools(self) -> bool:
         """Check if this model supports any tool calling capabilities."""
