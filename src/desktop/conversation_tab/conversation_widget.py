@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import re
+import time
 from typing import Callable, cast, Dict, List, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
@@ -105,6 +106,7 @@ class ConversationWidget(QWidget):
         self._response_reveal_rendered: Dict[str, str] = {}
         self._response_reveal_widgets: Dict[str, ConversationMessage] = {}
         self._response_reveal_completed: Set[str] = set()
+        self._response_reveal_last_render: Dict[str, float] = {}
 
         # Widget tracking
         self._messages: List[ConversationMessage] = []
@@ -1088,6 +1090,7 @@ class ConversationWidget(QWidget):
         final_render_ids: list[str] = []
         did_render = False
         newly_visible_widget: ConversationMessage | None = None
+        rendered_widgets: list[ConversationMessage] = []
         for message_id, target in list(self._response_reveal_targets.items()):
             widget = self._response_reveal_widgets.get(message_id)
             if widget is None:
@@ -1102,8 +1105,15 @@ class ConversationWidget(QWidget):
                 caught_up_ids.append(message_id)
                 continue
 
+            # When scrolled away, throttle renders to ~500ms intervals to reduce
+            # layout churn, but always render immediately when the stream completes.
+            if not self._auto_scroll and message_id not in self._response_reveal_completed:
+                last_render = self._response_reveal_last_render.get(message_id, 0.0)
+                if time.monotonic() - last_render < 0.5:
+                    continue
+
             remaining = len(target) - len(rendered)
-            if remaining <= 0 or not target.startswith(rendered):
+            if remaining <= 0 or not target.startswith(rendered) or not self._auto_scroll:
                 next_text = target
 
             else:
@@ -1120,6 +1130,10 @@ class ConversationWidget(QWidget):
                         next_text = rendered + new_portion[:last_break + 1]
 
             widget.set_content(next_text)
+            if not self._auto_scroll:
+                rendered_widgets.append(widget)
+
+            self._response_reveal_last_render[message_id] = time.monotonic()
             if next_text and not rendered and widget.is_rendered():
                 newly_visible_widget = widget
 
@@ -1134,6 +1148,10 @@ class ConversationWidget(QWidget):
             widget = self._response_reveal_widgets.get(message_id)
             final_target = self._response_reveal_targets.get(message_id)
             if widget is not None and final_target is not None:
+                if not self._auto_scroll and widget not in rendered_widgets:
+                    rendered_widgets.append(widget)
+                    widget.setUpdatesEnabled(False)
+
                 widget.set_content(final_target)
 
         for message_id in caught_up_ids:
@@ -1142,6 +1160,7 @@ class ConversationWidget(QWidget):
                 self._response_reveal_rendered.pop(message_id, None)
                 self._response_reveal_widgets.pop(message_id, None)
                 self._response_reveal_completed.discard(message_id)
+                self._response_reveal_last_render.pop(message_id, None)
 
         if did_render and self._auto_scroll:
             self._scroll_to_bottom()
@@ -1154,6 +1173,9 @@ class ConversationWidget(QWidget):
 
         if not self._response_reveal_targets:
             self._response_reveal_timer.stop()
+
+        if rendered_widgets:
+            QTimer.singleShot(5, lambda: [w.setUpdatesEnabled(True) for w in rendered_widgets])
 
     def _response_reveal_chunk_size(self, remaining: int, completed: bool) -> int:
         """Choose a reveal chunk size that stays smooth but catches up quickly."""
@@ -1172,6 +1194,7 @@ class ConversationWidget(QWidget):
         self._response_reveal_rendered.pop(message_id, None)
         self._response_reveal_widgets.pop(message_id, None)
         self._response_reveal_completed.discard(message_id)
+        self._response_reveal_last_render.pop(message_id, None)
 
         if not self._response_reveal_targets:
             self._response_reveal_timer.stop()
