@@ -20,6 +20,7 @@ Bug fixes:
 - Resolved a problem where new tabs might not have the correct focus.
 - Fixed a regression related to file attachments in conversations.
 - Improved text extraction from PDF files.
+- The tab label for "File Save As" did not automatically update to reflect the new name.
 
 Internal structure changes:
 

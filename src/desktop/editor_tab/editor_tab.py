@@ -101,19 +101,21 @@ class EditorTab(TabBase):
 
     def on_modified_changed(self, modified: bool) -> None:
         """Update the tab bar label to show or hide the unsaved-changes marker."""
-        title = os.path.basename(self._path) if self._path else (
-            f"Untitled-{self._untitled_number}" if self._untitled_number else "Untitled"
-        )
-        if modified:
-            title += "*"
-        self.tab_label_changed.emit(self._tab_id, title)
+        self._update_tab_label()
 
     def on_path_renamed(self, new_path: str) -> None:
         """Update path and emit a new tab bar label after a file rename."""
         self.set_path(new_path)
-        title = os.path.basename(new_path) if new_path else (
+        self._update_tab_label()
+
+    def _update_tab_label(self) -> None:
+        """Compute the current tab label from path and modified state, and emit tab_label_changed."""
+        title = os.path.basename(self._path) if self._path else (
             f"Untitled-{self._untitled_number}" if self._untitled_number else "Untitled"
         )
+        if self.is_modified():
+            title += "*"
+
         self.tab_label_changed.emit(self._tab_id, title)
 
     def register_context_models(self, registry: ContextRegistry) -> None:
@@ -160,6 +162,7 @@ class EditorTab(TabBase):
     def _on_file_saved(self, path: str) -> None:
         """Handle file being saved."""
         self.set_path(path)
+        self._update_tab_label()
 
     def _on_language_changed(self) -> None:
         """Update language-specific elements."""
