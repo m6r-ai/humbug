@@ -16,12 +16,12 @@ from editor_context.editor_diff_applier import EditorDiffApplier
 from mindspace.mindspace_settings import MindspaceSettings
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
+from desktop.code_block_highlighter import CodeBlockHighlighter
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
-from desktop.markdown import CodeBlockHighlighter
 from desktop.widgets import LineNumberArea, SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
 

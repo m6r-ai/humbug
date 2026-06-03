@@ -16,10 +16,11 @@ from dmarkdown import MarkdownASTTextNode, MarkdownConverter
 from syntax import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
+from desktop.code_block_highlighter import CodeBlockHighlighter
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
-from desktop.markdown import CodeBlockHighlighter, CodeBlockTextEdit, MarkdownTextEdit
+from desktop.markdown import MarkdownCodeBlockTextEdit, MarkdownTextEdit
 from desktop.style_manager import StyleManager, ColorMode
 from desktop.conversation_tab.conversation_message_section import ConversationMessageSection
 from desktop.widgets.elided_label import ElidedLabel
@@ -220,7 +221,7 @@ class ConversationMessage(QFrame):
                 section = self._create_section_widget(syntax)
                 section.set_filename_label(filename)
                 text_area = section.text_area()
-                if isinstance(text_area, CodeBlockTextEdit):
+                if isinstance(text_area, MarkdownCodeBlockTextEdit):
                     text_area.set_text_with_highlighting(file_content, [], [])
 
                 section.apply_style()

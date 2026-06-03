@@ -13,7 +13,7 @@ from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
-from desktop.markdown import CodeBlockTextEdit, HeadingBlockData, MarkdownRenderer, MarkdownTextEdit
+from desktop.markdown import MarkdownCodeBlockTextEdit, HeadingBlockData, MarkdownRenderer, MarkdownTextEdit
 
 
 class PreviewMarkdownContentSection(QFrame):
@@ -58,8 +58,8 @@ class PreviewMarkdownContentSection(QFrame):
         self._syntax_header = None
         self._header_container = None
 
-        # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for markdown
-        self._text_area: MarkdownTextEdit | CodeBlockTextEdit
+        # Create text area - use MarkdownCodeBlockTextEdit for code blocks, MarkdownTextEdit for markdown
+        self._text_area: MarkdownTextEdit | MarkdownCodeBlockTextEdit
         self._renderer: MarkdownRenderer | None
 
         if syntax is None:
@@ -91,7 +91,7 @@ class PreviewMarkdownContentSection(QFrame):
             self._layout.addWidget(self._header_container)
 
             # Code block - use code block text widget
-            self._text_area = CodeBlockTextEdit(self)
+            self._text_area = MarkdownCodeBlockTextEdit(self)
             self._text_area.set_syntax(syntax)
             self._renderer = None
 
@@ -119,7 +119,7 @@ class PreviewMarkdownContentSection(QFrame):
 
         self._on_language_changed()
 
-    def text_area(self) -> MarkdownTextEdit | CodeBlockTextEdit:
+    def text_area(self) -> MarkdownTextEdit | MarkdownCodeBlockTextEdit:
         """Get the text area widget."""
         return self._text_area
 
@@ -133,7 +133,7 @@ class PreviewMarkdownContentSection(QFrame):
 
         if syntax is not None:
             # Initialize highlighter for code blocks lazily
-            if isinstance(self._text_area, CodeBlockTextEdit):
+            if isinstance(self._text_area, MarkdownCodeBlockTextEdit):
                 self._text_area.set_syntax(syntax)
 
         strings = self._language_manager.strings()
@@ -221,7 +221,7 @@ class PreviewMarkdownContentSection(QFrame):
         """
         self._content_node = content
 
-        if isinstance(self._text_area, CodeBlockTextEdit):
+        if isinstance(self._text_area, MarkdownCodeBlockTextEdit):
             assert isinstance(content, MarkdownASTCodeBlockNode), "Content must be code block node"
             self._text_area.set_text_with_highlighting(content.content, content.tokens_by_line, content.states_by_line)
             return

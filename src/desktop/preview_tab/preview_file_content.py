@@ -12,7 +12,7 @@ from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
-from desktop.markdown import CodeBlockTextEdit
+from desktop.markdown import MarkdownCodeBlockTextEdit
 from desktop.preview_tab.preview_content_widget import PreviewContentWidget
 
 
@@ -75,7 +75,7 @@ class PreviewFileContent(PreviewContentWidget):
         self._content_layout.addWidget(self._header_container)
 
         # Create text area for source code
-        self._text_area = CodeBlockTextEdit()
+        self._text_area = MarkdownCodeBlockTextEdit()
         self._text_area.setObjectName("_text_area")
 
         # Disable the standard context menu as our parent widget will handle that

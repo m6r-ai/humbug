@@ -9,12 +9,12 @@ from PySide6.QtGui import QTextOption, QMouseEvent, QKeyEvent, QPalette, QBrush
 
 from syntax import ProgrammingLanguage, Token, ParserState
 
-from desktop.widgets.min_height_plain_text_edit import MinHeightPlainTextEdit
+from desktop.code_block_highlighter import CodeBlockHighlighter
 from desktop.style_manager import StyleManager
-from desktop.markdown.code_block_highlighter import CodeBlockHighlighter
+from desktop.widgets.min_height_plain_text_edit import MinHeightPlainTextEdit
 
 
-class CodeBlockTextEdit(MinHeightPlainTextEdit):
+class MarkdownCodeBlockTextEdit(MinHeightPlainTextEdit):
     """Plain text edit widget optimized for displaying code blocks."""
 
     mouse_pressed = Signal(QMouseEvent)
@@ -23,7 +23,7 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """
-        Initialize the CodeBlockTextEdit widget.
+        Initialize the MarkdownCodeBlockTextEdit widget.
 
         Args:
             parent: Parent widget
@@ -39,7 +39,7 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
         self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode()
 
-        self._logger = logging.getLogger("CodeBlockTextEdit")
+        self._logger = logging.getLogger("MarkdownCodeBlockTextEdit")
 
         # Highlighted text should retain any underlying colours (e.g. syntax highlighting)
         palette = self.palette()

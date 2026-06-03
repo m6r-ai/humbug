@@ -19,7 +19,7 @@ from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType
 from desktop.style_manager import StyleManager
-from desktop.markdown import CodeBlockTextEdit, MarkdownRenderer, MarkdownTextEdit
+from desktop.markdown import MarkdownCodeBlockTextEdit, MarkdownRenderer, MarkdownTextEdit
 
 
 class ConversationMessageSection(QFrame):
@@ -72,8 +72,8 @@ class ConversationMessageSection(QFrame):
 
         self._is_input = is_input
 
-        # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for everything else
-        self._text_area: MarkdownTextEdit | CodeBlockTextEdit
+        # Create text area - use MarkdownCodeBlockTextEdit for code blocks, MarkdownTextEdit for everything else
+        self._text_area: MarkdownTextEdit | MarkdownCodeBlockTextEdit
         self._renderer: MarkdownRenderer | None = None
 
         if syntax is None:
@@ -116,7 +116,7 @@ class ConversationMessageSection(QFrame):
             self._layout.addWidget(self._header_container)
 
             # Code block - use code block text widget
-            self._text_area = CodeBlockTextEdit(self)
+            self._text_area = MarkdownCodeBlockTextEdit(self)
             self._text_area.set_syntax(syntax)
 
         # Disable the standard context menu as our parent widget will handle that
@@ -147,7 +147,7 @@ class ConversationMessageSection(QFrame):
         if self._syntax_header is not None:
             self._syntax_header.setText(filename)
 
-    def text_area(self) -> MarkdownTextEdit | CodeBlockTextEdit:
+    def text_area(self) -> MarkdownTextEdit | MarkdownCodeBlockTextEdit:
         """Get the text area widget."""
         return self._text_area
 
@@ -163,7 +163,7 @@ class ConversationMessageSection(QFrame):
         self._syntax = syntax
 
         if syntax is not None:
-            if isinstance(self._text_area, CodeBlockTextEdit):
+            if isinstance(self._text_area, MarkdownCodeBlockTextEdit):
                 self._text_area.set_syntax(syntax)
 
         if self._syntax_header:
@@ -280,7 +280,7 @@ class ConversationMessageSection(QFrame):
         """
         self._content_node = content
 
-        if isinstance(self._text_area, CodeBlockTextEdit):
+        if isinstance(self._text_area, MarkdownCodeBlockTextEdit):
             assert isinstance(content, MarkdownASTCodeBlockNode), "Content must be code block node"
             self._text_area.set_text_with_highlighting(content.content, content.tokens_by_line, content.states_by_line)
             return
