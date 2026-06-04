@@ -9,6 +9,7 @@ New features:
 - When delegating a task to an AI, if the AI model is available from more than one backend provider, the tool now tells the AI
   and asks it to select the correct one.
 - Added Claude Opus 4.8 and removed 4.6.
+- Markdown rendering (including in AI conversations) now supports blockquotes.
 
 Bug fixes:
 
@@ -22,6 +23,7 @@ Bug fixes:
 - Improved text extraction from PDF files.
 - The tab label for "File Save As" did not automatically update to reflect the new name.
 - If a file is moved and had an open tab then the new location is picked up and the tab is updated to the new path.
+- Markdown indentation for embedded code blocks could end up incorrect.
 
 Internal structure changes:
 

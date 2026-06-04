@@ -1103,14 +1103,17 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         If the block already has a MarkdownBlockData (e.g. HeadingBlockData), the depth
         is written onto it directly.  Otherwise a plain MarkdownBlockData is created.
+        Always writes the depth, including zero, so that blocks pre-stamped by a
+        previous blockquote visitor are correctly cleared when rendered outside one.
         """
-        if self._blockquote_depth == 0:
-            return
-
         existing = self._cursor.block().userData()
         if isinstance(existing, MarkdownBlockData):
             existing.blockquote_depth = self._blockquote_depth
+
         else:
+            if self._blockquote_depth == 0:
+                return
+
             data = MarkdownBlockData()
             data.blockquote_depth = self._blockquote_depth
             self._cursor.block().setUserData(data)
