@@ -199,3 +199,89 @@ def make_form_xobject_pdf(form_text: str, page_text: str = "") -> bytes:
 
     trailer = f"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
     return body + xref.encode() + trailer.encode()
+
+
+def make_tounicode_pdf(cmap_entries: list[tuple[int, str]], glyph_bytes: bytes) -> bytes:
+    """Build a minimal PDF whose font uses a ToUnicode CMap.
+
+    cmap_entries is a list of (src_byte_value, unicode_string) pairs that are
+    written as bfchar entries in the CMap stream.  glyph_bytes is the raw byte
+    sequence placed inside the Tj string operator; the CMap is the sole source
+    of truth for how those bytes decode to text.
+    """
+    bfchar_lines = "\n".join(
+        f"<{src:02X}> <{''.join(f'{ord(ch):04X}' for ch in dst)}>"
+        for src, dst in cmap_entries
+    )
+    cmap_stream = (
+        "/CIDInit /ProcSet findresource begin\n"
+        "12 dict begin\n"
+        "begincmap\n"
+        "/CMapType 2 def\n"
+        f"1 beginbfchar\n"
+        f"{len(cmap_entries)} beginbfchar\n"
+        f"{bfchar_lines}\n"
+        "endbfchar\n"
+        "endcmap\n"
+        "CMapName currentdict /CMap defineresource pop\n"
+        "end\nend\n"
+    ).encode("latin-1")
+
+    # Escape the raw glyph bytes for use in a PDF literal string
+    escaped = b""
+    for b in glyph_bytes:
+        if b in (ord("("), ord(")"), ord("\\")):
+            escaped += b"\\" + bytes([b])
+        else:
+            escaped += bytes([b])
+
+    content_stream = b"BT /F1 12 Tf (" + escaped + b") Tj ET"
+
+    body = b"%PDF-1.4\n"
+    offsets: dict[int, int] = {}
+
+    # Object layout:
+    #   1 = Catalog
+    #   2 = Pages
+    #   3 = ToUnicode CMap stream
+    #   4 = Font dictionary
+    #   5 = Content stream
+    #   6 = Page
+
+    cmap_obj = (
+        f"<< /Length {len(cmap_stream)} >>\nstream\n".encode()
+        + cmap_stream
+        + b"\nendstream"
+    )
+    font_obj = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /ToUnicode 3 0 R >>"
+    content_obj = (
+        f"<< /Length {len(content_stream)} >>\nstream\n".encode()
+        + content_stream
+        + b"\nendstream"
+    )
+    page_obj = (
+        b"<< /Type /Page /Parent 2 0 R /Contents 5 0 R"
+        b" /Resources << /Font << /F1 4 0 R >> >> >>"
+    )
+
+    objects: list[tuple[int, bytes]] = [
+        (1, b"<< /Type /Catalog /Pages 2 0 R >>"),
+        (2, b"<< /Type /Pages /Kids [6 0 R] /Count 1 >>"),
+        (3, cmap_obj),
+        (4, font_obj),
+        (5, content_obj),
+        (6, page_obj),
+    ]
+
+    for num, obj_body in objects:
+        offsets[num] = len(body)
+        body += f"{num} 0 obj\n".encode() + obj_body + b"\nendobj\n"
+
+    xref_offset = len(body)
+    xref = "xref\n0 7\n"
+    xref += "0000000000 65535 f \n"
+    for i in range(1, 7):
+        xref += f"{offsets[i]:010d} 00000 n \n"
+
+    trailer = f"trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
+    return body + xref.encode() + trailer.encode()

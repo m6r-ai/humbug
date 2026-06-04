@@ -4,6 +4,21 @@ from typing import Any
 from pdf.pdf_errors import PDFExtractionError
 from pdf.pdf_tokenizer import PDFTokenizer, TokenType
 from pdf.pdf_types import PDFDocument, PDFObjectRef, PDFStream
+from pdf.pdf_parser import _parse_value
+
+
+# Unicode Alphabetic Presentation Forms (U+FB00–U+FB06) that PDF fonts commonly
+# encode as single ligature glyphs.  Expand them to their ASCII equivalents so
+# downstream consumers see plain text.
+_LIGATURE_MAP: dict[str, str] = {
+    "\uFB00": "ff",
+    "\uFB01": "fi",
+    "\uFB02": "fl",
+    "\uFB03": "ffi",
+    "\uFB04": "ffl",
+    "\uFB05": "st",
+    "\uFB06": "st",
+}
 
 
 def extract_text(doc: PDFDocument) -> str:
@@ -76,8 +91,10 @@ def _extract_page_text(doc: PDFDocument, page: dict[str, Any]) -> str:
     # Contents can be a single ref or an array of refs
     if isinstance(contents, (PDFObjectRef, PDFStream)):
         content_streams = [contents]
+
     elif isinstance(contents, list):
         content_streams = contents
+
     else:
         return ""
 
@@ -135,13 +152,11 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
 
         if token.type == TokenType.ARRAY_START:
             tokenizer.pos = saved
-            from pdf.pdf_parser import _parse_value  # pylint: disable=import-outside-toplevel
             operand_stack.append(_parse_value(tokenizer))
             continue
 
         if token.type == TokenType.DICT_START:
             tokenizer.pos = saved
-            from pdf.pdf_parser import _parse_value  # pylint: disable=import-outside-toplevel
             operand_stack.append(_parse_value(tokenizer))
             continue
 
@@ -167,6 +182,7 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
             ei_pos = data.find(b"EI", tokenizer.pos)
             if ei_pos == -1:
                 break
+
             tokenizer.pos = ei_pos + 2
             operand_stack.clear()
             continue
@@ -206,11 +222,14 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
                 current_font_name = str(operand_stack[-2]) if len(operand_stack) >= 2 else ""
                 try:
                     current_font_size = float(operand_stack[-1])
+
                 except (TypeError, ValueError):
                     pass
+
                 font_cache_key = current_font_name
                 if font_cache_key not in font_cache:
                     font_cache[font_cache_key] = _resolve_font(doc, resources, current_font_name)
+
             operand_stack.clear()
             continue
 
@@ -218,6 +237,7 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
             if operand_stack:
                 text = _decode_string(operand_stack[-1], _get_font(font_cache, current_font_name))
                 text_parts.append(text)
+
             operand_stack.clear()
             continue
 
@@ -226,6 +246,7 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
             if operand_stack:
                 text = _decode_string(operand_stack[-1], _get_font(font_cache, current_font_name))
                 text_parts.append(text)
+
             operand_stack.clear()
             continue
 
@@ -237,9 +258,12 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
                 for item in operand_stack[-1]:
                     if isinstance(item, (bytes, str)):
                         parts.append(_decode_string(item, font))
+
                     elif isinstance(item, (int, float)) and item < -100:
                         parts.append(" ")
+
                 text_parts.append("".join(parts))
+
             operand_stack.clear()
             continue
 
@@ -311,6 +335,7 @@ def _decode_string(value: Any, font: dict[str, Any]) -> str:
     encoding = font.get("Encoding")
     if encoding == "MacRomanEncoding":
         return value.decode("mac_roman", errors="replace")
+
     if encoding in ("WinAnsiEncoding", "StandardEncoding", None):
         return _decode_pdf_doc_encoding(value)
 
@@ -324,7 +349,11 @@ def _decode_pdf_doc_encoding(data: bytes) -> str:
 
 
 def _apply_to_unicode(data: bytes, cmap: dict[bytes, str]) -> str:
-    """Apply a ToUnicode CMap to decode a byte string."""
+    """Apply a ToUnicode CMap to decode a byte string.
+
+    Bytes that have no CMap entry are replaced with U+FFFD (REPLACEMENT CHARACTER)
+    rather than being passed through as raw ASCII, since their true value is unknown.
+    """
     result: list[str] = []
     i = 0
     while i < len(data):
@@ -335,11 +364,14 @@ def _apply_to_unicode(data: bytes, cmap: dict[bytes, str]) -> str:
                 result.append(cmap[two])
                 i += 2
                 continue
+
         one = data[i:i + 1]
         if one in cmap:
             result.append(cmap[one])
+
         else:
-            result.append(chr(data[i]))
+            result.append("\uFFFD")
+
         i += 1
 
     return "".join(result)
@@ -356,6 +388,7 @@ def _parse_to_unicode_cmap(data: bytes) -> dict[bytes, str]:
             try:
                 src = bytes.fromhex(match.group(1))
                 cmap[src] = _hex_to_unicode_str(match.group(2))
+
             except (ValueError, OverflowError):
                 pass
 
@@ -369,7 +402,8 @@ def _parse_to_unicode_cmap(data: bytes) -> dict[bytes, str]:
                 src_len = len(match.group(1)) // 2
                 for offset in range(end - start + 1):
                     src = (start + offset).to_bytes(src_len, "big")
-                    cmap[src] = chr(dst_start + offset)
+                    cmap[src] = _LIGATURE_MAP.get(chr(dst_start + offset), chr(dst_start + offset))
+
             except (ValueError, OverflowError):
                 pass
 
@@ -388,7 +422,8 @@ def _hex_to_unicode_str(hex_str: str) -> str:
     result = []
     for i in range(0, len(raw), 2):
         cp = (raw[i] << 8) | raw[i + 1]
-        result.append(chr(cp))
+        ch = chr(cp)
+        result.append(_LIGATURE_MAP.get(ch, ch))
     return "".join(result)
 
 
