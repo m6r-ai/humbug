@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt, Signal, QObject, QMimeData
 from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
 )
+from PySide6.QtGui import QPainter, QPaintEvent, QColor
 
 from mindspace.mindspace_settings import MindspaceSettings
 
@@ -15,6 +16,8 @@ from desktop.widgets.min_height_text_edit import MinHeightTextEdit
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
 from desktop.markdown.markdown_highlighter import MarkdownHighlighter
+from desktop.color_role import ColorRole
+from desktop.markdown.markdown_block_data import MarkdownBlockData
 
 
 class MarkdownTextEdit(MinHeightTextEdit):
@@ -439,6 +442,82 @@ class MarkdownTextEdit(MinHeightTextEdit):
             return
 
         super().keyPressEvent(e)
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """
+        Paint the widget, adding blockquote border bars after Qt's normal rendering.
+
+        For each visible text block that carries a non-zero blockquote_depth, one
+        coloured vertical bar is drawn per nesting level in the left margin.  The
+        bars are painted after the normal text so they appear on top of any
+        background fills.
+
+        Args:
+            event: The paint event
+        """
+        super().paintEvent(event)
+
+        if self._is_input:
+            return
+
+        bar_width = 3
+        color: QColor = self._style_manager.get_color(ColorRole.BLOCKQUOTE_BORDER)
+
+        painter = QPainter(self.viewport())
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(color)
+
+        doc = self.document()
+        layout = doc.documentLayout()
+        indent_width = doc.indentWidth()
+        content_offset_x = -self.horizontalScrollBar().value()
+        content_offset_y = -self.verticalScrollBar().value()
+
+        block = doc.begin()
+        while block.isValid():
+            user_data = block.userData()
+            if isinstance(user_data, MarkdownBlockData) and user_data.blockquote_depth > 0:
+                block_rect = layout.blockBoundingRect(block).translated(content_offset_x, content_offset_y)
+
+                # blockBoundingRect excludes top and bottom margins.  We extend the bar
+                # upward through the top margin and downward through the bottom margin so
+                # adjacent blocks produce a seamless bar.  round() rather than int() is
+                # used throughout to avoid sub-pixel gaps from truncation.  Each bar level
+                # is extended independently: a bar at depth N extends into the margin only
+                # if the adjacent block also reaches depth N.
+                fmt = block.blockFormat()
+                bottom_margin = fmt.bottomMargin()
+                top_margin = fmt.topMargin()
+
+                prev_block = block.previous()
+                prev_depth = 0
+                if prev_block.isValid():
+                    prev_data = prev_block.userData()
+                    if isinstance(prev_data, MarkdownBlockData):
+                        prev_depth = prev_data.blockquote_depth
+
+                next_block = block.next()
+                next_depth = 0
+                if next_block.isValid():
+                    next_data = next_block.userData()
+                    if isinstance(next_data, MarkdownBlockData):
+                        next_depth = next_data.blockquote_depth
+
+                # Only paint bars for blocks that intersect the dirty region
+                if block_rect.bottom() >= event.rect().top() and block_rect.top() <= event.rect().bottom():
+                    for level in range(user_data.blockquote_depth):
+                        # Bar at depth (level+1): extend into margins only if the
+                        # adjacent block also reaches this depth level.
+                        effective_top = top_margin if prev_depth >= level + 1 else 0.0
+                        effective_bottom = bottom_margin if next_depth >= level + 1 else 0.0
+                        bar_top = round(block_rect.top() - effective_top)
+                        bar_height = round(block_rect.height() + effective_top + effective_bottom)
+                        x = round(level * indent_width) + content_offset_x
+                        painter.drawRect(x, bar_top, bar_width, bar_height)
+
+            block = block.next()
+
+        painter.end()
 
     def find_text(self, text: str) -> bool:
         """Find text in the widget.

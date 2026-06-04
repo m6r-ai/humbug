@@ -2840,6 +2840,53 @@ def test_nested_blockquote_exit_with_list(ast_builder):
     assert outer.children[2].children[0].content == "Back to outer"
 
 
+def test_nested_blockquote_after_list_in_blockquote(ast_builder):
+    """
+    Test nested blockquote appearing after a list inside an outer blockquote.
+
+    This tests the specific bug where > > after a list inside a blockquote was
+    incorrectly parented to the last list item rather than to the outer blockquote.
+    The fix ensures non-blockquote containers (list_item, list) are popped before
+    entering a new nested blockquote when the new blockquote's indent is less than
+    those containers' indent levels.
+    """
+    markdown = """> - list item one
+> - list item two
+>
+> > Nested blockquote
+> > second line"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    assert len(doc.children) == 1
+    outer = doc.children[0]
+    assert outer.__class__.__name__ == "MarkdownASTBlockquoteNode"
+
+    # Outer blockquote should have: list, nested blockquote
+    assert len(outer.children) == 2
+
+    # First child: the list
+    list_node = outer.children[0]
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert len(list_node.children) == 2
+
+    # The list items should have no blockquote children - the nested blockquote
+    # must NOT be parented to the last list item
+    for item in list_node.children:
+        for child in item.children:
+            assert child.__class__.__name__ != "MarkdownASTBlockquoteNode", \
+                "Nested blockquote was incorrectly parented to a list item"
+
+    # Second child: the nested blockquote as a direct child of the outer blockquote
+    inner = outer.children[1]
+    assert inner.__class__.__name__ == "MarkdownASTBlockquoteNode"
+
+    # Inner blockquote should have one paragraph with both lines merged
+    assert len(inner.children) == 1
+    assert inner.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert inner.children[0].children[0].content == "Nested blockquote"
+
+
 def test_fenced_code_block_in_loose_list(ast_builder):
     """
     Test parsing a fenced code block within a loose list item.

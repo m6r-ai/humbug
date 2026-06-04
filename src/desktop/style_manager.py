@@ -391,6 +391,12 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#808080",
                 ColorMode.LIGHT: "#a0a0a0"
             },
+
+            # Blockquote elements
+            ColorRole.BLOCKQUOTE_BORDER: {
+                ColorMode.DARK: "#4a90d9",
+                ColorMode.LIGHT: "#4a90d9"
+            },
             ColorRole.TABLE_HEADER_BACKGROUND: {
                 ColorMode.DARK: "#484838",
                 ColorMode.LIGHT: "#d0d0e0"

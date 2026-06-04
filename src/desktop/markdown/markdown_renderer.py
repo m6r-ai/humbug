@@ -22,13 +22,13 @@ from dmarkdown import (
     MarkdownASTCodeBlockNode, MarkdownASTListItemNode, MarkdownASTOrderedListNode,
     MarkdownASTUnorderedListNode, MarkdownASTLineBreakNode, MarkdownASTTableNode, MarkdownASTTableHeaderNode,
     MarkdownASTTableBodyNode, MarkdownASTTableRowNode, MarkdownASTTableCellNode, MarkdownASTHorizontalRuleNode,
-    MarkdownASTLinkNode, MarkdownASTImageNode
+    MarkdownASTLinkNode, MarkdownASTImageNode, MarkdownASTBlockquoteNode
 )
 
 from desktop.color_role import ColorRole
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
-from desktop.markdown.markdown_block_data import HeadingBlockData
+from desktop.markdown.markdown_block_data import HeadingBlockData, MarkdownBlockData
 
 
 class MarkdownRenderer(MarkdownASTVisitor):
@@ -63,6 +63,9 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Table state variables
         self._current_table: QTextTable | None = None
         self._current_row: int = 0
+
+        # Blockquote nesting depth (0 = not in a blockquote)
+        self._blockquote_depth: int = 0
 
     def apply_style(self) -> None:
         """Apply style changes."""
@@ -148,6 +151,15 @@ class MarkdownRenderer(MarkdownASTVisitor):
         ):
             block_format.setTopMargin(self._default_font_height)
 
+        # If this is the first child of a blockquote whose previous sibling is a list,
+        # we also need a top margin to produce spacing after the list.
+        elif (not previous_sibling and
+                node.parent and isinstance(node.parent, MarkdownASTBlockquoteNode) and
+                node.parent.previous_sibling() and isinstance(
+                    node.parent.previous_sibling(),
+                    (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode))):
+            block_format.setTopMargin(self._default_font_height)
+
         # If there is no previous sibling, check if our parent is a list item.  If it is, we also need to add a top margin.
         elif not previous_sibling and node.parent and isinstance(node.parent, MarkdownASTListItemNode):
             if not tight:
@@ -165,7 +177,9 @@ class MarkdownRenderer(MarkdownASTVisitor):
         else:
             block_format.setBottomMargin(self._default_font_height)
 
+        block_format.setIndent(self._blockquote_depth)
         self._cursor.setBlockFormat(block_format)
+        self._stamp_blockquote_data()
 
         # Are we in a list?  If yes, we need to potentially do some tricks to ensure
         # paragraphs are rendered correctly.
@@ -184,6 +198,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         if not self._cursor.atBlockStart():
             self._cursor.insertBlock()
+            self._stamp_blockquote_data()
 
         self._cursor.setBlockFormat(orig_block_format)
 
@@ -223,10 +238,13 @@ class MarkdownRenderer(MarkdownASTVisitor):
             block_format.setTopMargin(self._default_font_height * multipliers[level])
 
         block_format.setBottomMargin(self._default_font_height)
+        block_format.setIndent(self._blockquote_depth)
         self._cursor.setBlockFormat(block_format)
 
         # Store the ID as block user data
-        self._cursor.block().setUserData(HeadingBlockData(node.anchor_id))
+        heading_data = HeadingBlockData(node.anchor_id)
+        heading_data.blockquote_depth = self._blockquote_depth
+        self._cursor.block().setUserData(heading_data)
 
         # Process all inline content for the heading
         for child in node.children:
@@ -236,6 +254,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         if not self._cursor.atBlockStart():
             self._cursor.insertBlock()
+            self._stamp_blockquote_data()
 
         self._cursor.setBlockFormat(orig_block_format)
 
@@ -599,10 +618,23 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         # Create a code block format with monospace font and background
         block_format = QTextBlockFormat()
-        block_format.setIndent(1)  # Indent the block
+        block_format.setIndent(self._blockquote_depth)
 
         # Apply the block format
         self._cursor.setBlockFormat(block_format)
+        self._stamp_blockquote_data()
+
+        # If we're inside a list, attach each code block line to a ListStyleUndefined
+        # list at the same indent level so it aligns with the surrounding list content.
+        # A code block inside a list item is always a non-first sibling, so we always
+        # need this indentation.
+        list_for_code: QTextList | None = None
+        if self._lists:
+            list_fmt = QTextListFormat(self._lists[-1].format())
+            list_fmt.setStyle(QTextListFormat.Style.ListStyleUndefined)
+            list_for_code = self._cursor.createList(list_fmt)
+            list_for_code.setFormat(list_fmt)
+            list_for_code.add(self._cursor.block())
 
         # Apply code formatting and insert text
         code_format = QTextCharFormat(orig_char_format)
@@ -617,6 +649,9 @@ class MarkdownRenderer(MarkdownASTVisitor):
         for i, line in enumerate(lines):
             if i > 0:
                 self._cursor.insertBlock(block_format)
+                self._stamp_blockquote_data()
+                if list_for_code:
+                    list_for_code.add(self._cursor.block())
 
             # Apply syntax highlighting if we have pre-computed tokens
             if i < len(node.tokens_by_line) and node.tokens_by_line[i]:
@@ -656,6 +691,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         if not self._cursor.atBlockStart():
             self._cursor.insertBlock()
+            self._stamp_blockquote_data()
 
         self._cursor.setBlockFormat(orig_block_format)
 
@@ -1060,6 +1096,41 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Process all inline content (text, bold, etc.)
         for child in node.children:
             self.visit(child)
+
+    def _stamp_blockquote_data(self) -> None:
+        """
+        Stamp blockquote_depth onto the current block's MarkdownBlockData.
+
+        If the block already has a MarkdownBlockData (e.g. HeadingBlockData), the depth
+        is written onto it directly.  Otherwise a plain MarkdownBlockData is created.
+        """
+        if self._blockquote_depth == 0:
+            return
+
+        existing = self._cursor.block().userData()
+        if isinstance(existing, MarkdownBlockData):
+            existing.blockquote_depth = self._blockquote_depth
+        else:
+            data = MarkdownBlockData()
+            data.blockquote_depth = self._blockquote_depth
+            self._cursor.block().setUserData(data)
+
+    def visit_MarkdownASTBlockquoteNode(self, node: MarkdownASTBlockquoteNode) -> None:  # pylint: disable=invalid-name
+        """
+        Render a blockquote node to the QTextDocument.
+
+        Args:
+            node: The blockquote node to render
+
+        Returns:
+            None
+        """
+        self._blockquote_depth += 1
+
+        for child in node.children:
+            self.visit(child)
+
+        self._blockquote_depth -= 1
 
     def visit_MarkdownASTHorizontalRuleNode(self, node: MarkdownASTHorizontalRuleNode) -> None:  # pylint: disable=invalid-name
         """

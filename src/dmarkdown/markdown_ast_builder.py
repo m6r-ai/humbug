@@ -1052,6 +1052,26 @@ class MarkdownASTBuilder:
 
         # Enter new blockquotes that we need
         for i in range(len(current_blockquotes), len(blockquote_indents)):
+            # Before entering a new nested blockquote, pop any non-blockquote containers
+            # (list_item, list) when the new blockquote belongs outside those containers.
+            # We scan the stack to find the highest list node whose indent_level is >=
+            # the new blockquote's indent — if found, everything from that list node up
+            # to the top of the stack is popped.  A blockquote can legitimately live
+            # inside a list_item (indented blockquote-in-list), so we only pop when the
+            # list itself (not just a list_item) is at or above the blockquote indent.
+            pop_to_index = None
+            for j in range(len(self._container_stack) - 1, -1, -1):
+                ctx = self._container_stack[j]
+                if ctx.container_type in ('blockquote', 'document'):
+                    break
+
+                if (ctx.container_type in ('unordered_list', 'ordered_list') and
+                        blockquote_indents[i] <= ctx.indent_level):
+                    pop_to_index = j
+
+            if pop_to_index is not None:
+                self._container_stack = self._container_stack[:pop_to_index]
+
             self._enter_blockquote(blockquote_indents[i], line_num)
 
     def _parse_table_separator(self, separator_line: str) -> List[str]:

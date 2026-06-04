@@ -114,6 +114,9 @@ class ColorRole(Enum):
     # Code block border
     CODE_BORDER = auto()                # Code block border
 
+    # Blockquote elements
+    BLOCKQUOTE_BORDER = auto()          # Blockquote left border bar
+
     # Table elements
     TABLE_BORDER = auto()               # Table border
     TABLE_HEADER_BACKGROUND = auto()    # Table header background
