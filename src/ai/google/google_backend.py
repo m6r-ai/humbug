@@ -5,7 +5,7 @@ import aiohttp
 
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
-from ai.ai_model import AIReasoningEffort
+from ai.ai_model import AIReasoningCapability, AIReasoningEffort
 from ai.ai_message import AIMessageSource
 from ai.ai_conversation_history import AIConversationHistory
 from ai.google.google_stream_response import GoogleStreamResponse
@@ -285,7 +285,14 @@ class GoogleBackend(AIBackend):
             }
             level = thinking_level_map.get(settings.reasoning_effort)
             if level is not None:
-                generation_config["thinkingConfig"] = {"thinkingLevel": level}
+                thinking_config: dict = {"thinkingLevel": level}
+                reasoning_capability = AIConversationSettings.get_reasoning_capability(
+                    settings.model, settings.provider
+                )
+                if reasoning_capability == AIReasoningCapability.VISIBLE_REASONING:
+                    thinking_config["includeThoughts"] = True
+
+                generation_config["thinkingConfig"] = thinking_config
 
         # Build request data
         data = {

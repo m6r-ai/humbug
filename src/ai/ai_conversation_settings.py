@@ -102,7 +102,7 @@ class AIConversationSettings:
             context_window=1048576,
             max_output_tokens=65536,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.MINIMAL,
@@ -118,7 +118,7 @@ class AIConversationSettings:
             context_window=1048576,
             max_output_tokens=65536,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.MINIMAL,
@@ -134,7 +134,7 @@ class AIConversationSettings:
             context_window=1048576,
             max_output_tokens=65536,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.LOW,

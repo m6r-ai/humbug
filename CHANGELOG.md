@@ -10,6 +10,7 @@ New features:
   and asks it to select the correct one.
 - Added Claude Opus 4.8 and removed 4.6.
 - Markdown rendering (including in AI conversations) now supports blockquotes.
+- Google Gemini models now show their reasoning.
 
 Bug fixes:
 

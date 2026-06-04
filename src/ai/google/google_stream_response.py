@@ -25,7 +25,11 @@ class GoogleStreamResponse(AIStreamResponse):
                 if "text" in part:
                     text = part["text"]
                     if text:
-                        self.content += text
+                        if part.get("thought"):
+                            self.reasoning += text
+
+                        else:
+                            self.content += text
 
                 # Handle function calls
                 if "functionCall" in part:
