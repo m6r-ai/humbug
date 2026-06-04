@@ -64,7 +64,7 @@ Humbug now has a full [user manual](./docs/user-manual/index.md).
   It supports higher-order functions and tail-call optimizations.
   It supports simple calculations and string processing, all the way through to highly complex algorithmic tasks.
   Being side-effect free, Menai is intrinsically safe for AIs to use and does not require any user approvals.
-  The Menai implementation offers detailed exception handling to allow AIs to debug any issues in their own code.
+  The Menai tool implementation has detailed error reporting to make it easier for AIs to debug any issues in their own code.
 
 - **Open and extensible**  
 
