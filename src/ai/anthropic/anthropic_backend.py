@@ -119,7 +119,8 @@ class AnthropicBackend(AIBackend):
             reasoning: str,
             signature: str,
             content: str,
-            tool_calls: List[AIToolCall] | None = None
+            tool_calls: List[AIToolCall] | None = None,
+            redacted_reasoning: str | None = None
         ) -> Dict[str, Any]:
         """
         Build assistant message for Anthropic format.
@@ -129,6 +130,7 @@ class AnthropicBackend(AIBackend):
             signature: Signature of the assistant on any reasoning content
             content: Assistant message content
             tool_calls: Optional tool calls made by the assistant
+            redacted_reasoning: Optional redacted thinking data to round-trip unchanged
 
         Returns:
             Assistant message dictionary with structured content
@@ -140,6 +142,10 @@ class AnthropicBackend(AIBackend):
             # Add reasoning content if present
             if reasoning:
                 content_parts.append({"type": "thinking", "thinking": reasoning, "signature": signature})
+
+            # Add redacted thinking block if present — must be passed back unchanged for multi-turn continuity
+            if redacted_reasoning:
+                content_parts.append({"type": "redacted_thinking", "data": redacted_reasoning})
 
             # Add text content if present
             if content:
@@ -200,7 +206,8 @@ class AnthropicBackend(AIBackend):
                     reasoning=last_reasoning_message.content,
                     signature=signature,
                     content="",
-                    tool_calls=last_reasoning_message.tool_calls
+                    tool_calls=last_reasoning_message.tool_calls,
+                    redacted_reasoning=last_reasoning_message.redacted_reasoning,
                 )
                 result.append(assistant_msg)
                 last_reasoning_message = None
@@ -220,7 +227,8 @@ class AnthropicBackend(AIBackend):
                     reasoning=last_reasoning_message.content if last_reasoning_message else "",
                     signature=signature,
                     content=message.content if message.content else "...",  # Never send empty content
-                    tool_calls=message.tool_calls
+                    tool_calls=message.tool_calls,
+                    redacted_reasoning=last_reasoning_message.redacted_reasoning if last_reasoning_message else None,
                 )
                 result.append(assistant_msg)
                 last_reasoning_message = None
