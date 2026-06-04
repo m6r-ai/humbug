@@ -1,3 +1,5 @@
+import asyncio
+import difflib
 import json
 import logging
 from typing import Any, Dict, cast
@@ -12,7 +14,10 @@ from ai_tool import (
     AIToolOperationDefinition,
     AIToolParameter,
     AIToolResult,
+    AIToolTimeoutError,
 )
+from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
+from menai import MenaiBufferingTraceWatcher
 from editor_context.editor_context import EditorContext
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
@@ -35,6 +40,7 @@ class EditorAITool(AITool):
         """
         self._mindspace = mindspace
         self._logger = logging.getLogger("EditorAITool")
+        self._menai = Menai()
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -109,6 +115,24 @@ class EditorAITool(AITool):
                     name="context_lines",
                     type="integer",
                     description="Number of context lines for get_diff operation (default 3)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="program",
+                    type="string",
+                    description=(
+                        "Menai expression for the transform operation. "
+                        "May reference 'input-text' (full buffer content as a string) "
+                        "and 'input-lines' (buffer lines as a list of strings). "
+                        "Must evaluate to a string (new content) or a list of strings (new lines). "
+                        "Changes are applied to the buffer; use save_file to persist."
+                    ),
+                    required=False
+                ),
+                AIToolParameter(
+                    name="dry_run",
+                    type="boolean",
+                    description="If True, return the diff without applying changes to the buffer (for transform operation)",
                     required=False
                 ),
             ]
@@ -212,6 +236,22 @@ class EditorAITool(AITool):
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Save the current editor content to file. Requires user authorization"
+            ),
+            "transform": AIToolOperationDefinition(
+                name="transform",
+                handler=self._transform,
+                extract_context=self._transform_context,
+                allowed_parameters={"tab_id", "program", "dry_run"},
+                required_parameters={"tab_id", "program"},
+                description=(
+                    "Apply a Menai program to the full editor buffer content and write the result "
+                    "back to the buffer. The program may reference 'input-text' (full content as a "
+                    "string) and 'input-lines' (content split on newlines as a list of strings). "
+                    "It must return a string or a list of strings. "
+                    "A unified diff is shown for user approval before the buffer is modified. "
+                    "If dry_run is True, returns the diff without requesting authorisation or applying anything. "
+                    "Use save_file afterward to persist the changes."
+                )
             ),
         }
 
@@ -643,3 +683,176 @@ class EditorAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to apply diff: {str(e)}") from e
+
+    def _transform_context(self, arguments: Dict[str, Any]) -> str | None:
+        """Extract context for transform operation."""
+        tab_id = arguments.get("tab_id", "")
+        program = arguments.get("program", "")
+        return (
+            f"`tab_id` is: {tab_id}\n"
+            f"`program` is:\n```menai\n{program}\n```"
+        )
+
+    def _transform_sync(
+        self,
+        content: str,
+        expression: str
+    ) -> tuple[str, list[str], bool]:
+        """Apply a Menai transform to buffer content synchronously.
+
+        Args:
+            content: The current buffer text.
+            expression: Menai expression referencing 'input-text' and 'input-lines'.
+
+        Returns:
+            Tuple of (new_content, traces, traces_clipped).
+
+        Raises:
+            AIToolExecutionError: If the program returns an invalid type.
+            Various Menai exceptions: Propagated to the async caller.
+        """
+        lines = content.split('\n')
+        bindings: Dict[str, MenaiValue] = {
+            'input-text': MenaiString(content),
+            'input-lines': MenaiList(tuple(MenaiString(line) for line in lines)),
+        }
+
+        watcher = MenaiBufferingTraceWatcher(max_traces=200)
+        self._menai.set_trace_watcher(watcher)
+        try:
+            raw_result = self._menai.evaluate_raw_with_bindings(expression, bindings)
+            traces = watcher.get_traces()
+            was_clipped = watcher.is_clipped()
+
+        finally:
+            self._menai.set_trace_watcher(None)
+
+        if isinstance(raw_result, MenaiString):
+            new_content = raw_result.value
+
+        elif isinstance(raw_result, MenaiList):
+            if not all(isinstance(e, MenaiString) for e in raw_result.elements):
+                raise AIToolExecutionError(
+                    "Transform program returned a list containing non-string elements"
+                )
+            new_content = '\n'.join(cast(MenaiString, e).value for e in raw_result.elements)
+
+        else:
+            raise AIToolExecutionError(
+                f"Transform program must return a string or list of strings, "
+                f"got {raw_result.type_name()}"
+            )
+
+        return new_content, traces, was_clipped
+
+    async def _transform(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Apply a Menai transform program to the editor buffer."""
+        arguments = tool_call.arguments
+        context = self._get_editor_context(arguments)
+        context_id = context.context_id()
+        program = self._get_required_str_value("program", arguments)
+        dry_run = self._get_optional_bool_value("dry_run", arguments, False)
+
+        if not program.strip():
+            raise AIToolExecutionError("'program' must not be empty")
+
+        original_content = context.get_text_range(None, None)
+
+        try:
+            task = asyncio.create_task(
+                asyncio.to_thread(self._transform_sync, original_content, program)
+            )
+            try:
+                new_content, traces, watcher_clipped = await asyncio.wait_for(task, timeout=30.0)
+
+            except asyncio.TimeoutError:
+                self._logger.warning("Menai transform timed out for tab '%s'", context_id)
+                self._menai.vm.cancel()
+                if not task.done():
+                    try:
+                        await asyncio.wait_for(task, timeout=1.0)
+
+                    except (asyncio.TimeoutError, asyncio.CancelledError, MenaiCancelledException):
+                        pass
+
+                    except Exception as e:
+                        self._logger.debug("Exception during transform cancellation: %s", e)
+
+                raise AIToolTimeoutError("Menai transform timed out", 30.0)  # pylint: disable=raise-missing-from
+
+        except AIToolTimeoutError:
+            raise
+
+        except AIToolExecutionError:
+            raise
+
+        except MenaiCancelledException as e:
+            raise AIToolTimeoutError("Menai transform timed out", 30.0) from e
+
+        except MenaiError as e:
+            raise AIToolExecutionError(str(e)) from e
+
+        except Exception as e:
+            self._logger.error("Unexpected error in transform for tab '%s': %s", context_id, str(e), exc_info=True)
+            raise AIToolExecutionError(f"Transform failed: {str(e)}") from e
+
+        if original_content == new_content:
+            return AIToolResult(
+                id=tool_call.id,
+                name="editor",
+                content="Transform produced no changes."
+            )
+
+        diff_lines = list(difflib.unified_diff(
+            original_content.splitlines(keepends=True),
+            new_content.splitlines(keepends=True),
+            lineterm=''
+        ))
+        diff_str = '\n'.join(diff_lines)
+
+        if dry_run:
+            return AIToolResult(
+                id=tool_call.id,
+                name="editor",
+                content=(
+                    f"Dry run: transform would modify the buffer "
+                    f"({len(diff_lines)} diff lines). No changes applied.\n\n{diff_str}"
+                )
+            )
+
+        editor_info = context.get_editor_info()
+        file_path = editor_info.get('file_path', f'tab {context_id}')
+        context_str = f"Apply Menai transform to editor buffer: {file_path} (tab {context_id})"
+        authorized = await request_authorization("editor", arguments, context_str, diff_str, True)
+        if not authorized:
+            raise AIToolAuthorizationDenied("User denied permission to apply Menai transform")
+
+        result = context.apply_diff(diff_str)
+        if not result['success']:
+            raise AIToolExecutionError(f"Failed to apply transform: {result['message']}")
+
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI applied Menai transform to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {context_id}"
+        )
+
+        trace_str = '\n'.join(traces) if traces else ''
+        result_obj: Dict[str, Any] = {
+            "message": (
+                f"Transform applied to buffer ({result.get('hunks_applied', 0)} hunks). "
+                "Use save_file to persist."
+            ),
+            "trace_data": trace_str,
+            "trace_data_clipped": "yes" if watcher_clipped else "no"
+        }
+        return AIToolResult(
+            id=tool_call.id,
+            name="editor",
+            content=json.dumps(result_obj, indent=2),
+            context="json"
+        )

@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from menai.menai_bytecode import CodeObject
 from menai.menai_compiler import MenaiCompiler
 from menai.menai_ast import MenaiASTNode
-from menai.menai_value import MenaiFunction, MenaiValue
+from menai.menai_value import MenaiFunction, MenaiValue, MenaiDict
 from menai.menai_vm import MenaiVM, MenaiTraceWatcher
 from menai.menai_error import MenaiModuleNotFoundError, MenaiModuleError, MenaiCircularImportError
 
@@ -1085,6 +1085,7 @@ class Menai:
 """
 
     _prelude_code: CodeObject | None = None
+    _prelude_dict: Dict[str, MenaiValue] | None = None
 
     def __init__(self, module_path: List[str] | None = None):
         """
@@ -1192,6 +1193,69 @@ class Menai:
         """
         result = self._evaluate_raw(expression)
         return result.describe()
+
+    def _get_prelude_dict(self) -> Dict[str, MenaiValue]:
+        """Return the prelude bindings as a plain dict, executing and caching if necessary.
+
+        The result is cached at the class level so the prelude is only evaluated once
+        per process, consistent with how _prelude_code itself is cached.
+        """
+        if Menai._prelude_dict is None:
+            result = self.vm.execute(self._prelude, None)
+            if not isinstance(result, MenaiDict):
+                raise RuntimeError("Prelude must evaluate to a dict")
+            Menai._prelude_dict = {k.to_python(): v for k, v in result.pairs}
+        return Menai._prelude_dict
+
+    def evaluate_raw_with_bindings(
+        self,
+        expression: str,
+        bindings: Dict[str, MenaiValue]
+    ) -> MenaiValue:
+        """Evaluate a Menai expression with additional pre-bound name bindings.
+
+        The bindings are merged with the prelude globals so the expression can
+        reference both prelude functions and the injected names.  Bindings shadow
+        prelude names on collision.
+
+        This is the primary engine entry point for the transform harness.  The
+        caller reads file content, constructs MenaiValue bindings (e.g.
+        MenaiString for 'input-text', MenaiList of MenaiString for
+        'input-lines'), then passes a Menai expression that transforms them.
+
+        Args:
+            expression: Menai source expression to compile and evaluate.
+            bindings: Extra name-to-value bindings available to the expression
+                      as top-level globals alongside the prelude.
+
+        Returns:
+            The raw MenaiValue result (caller inspects type and extracts value).
+        """
+        code = self.compiler.compile(expression)
+        prelude_globals = self._get_prelude_dict()
+        combined: Dict[str, MenaiValue] = {**prelude_globals, **bindings}
+        return self.vm.execute(code, combined)
+
+    def evaluate_and_format_with_bindings(
+        self,
+        expression: str,
+        bindings: Dict[str, MenaiValue]
+    ) -> str:
+        """Evaluate a Menai expression with pre-bound bindings, returning a formatted string.
+
+        Equivalent to evaluate_raw_with_bindings but returns the Menai describe()
+        string representation of the result, matching the format returned by
+        evaluate_and_format.
+
+        Args:
+            expression: Menai source expression to compile and evaluate.
+            bindings: Extra name-to-value bindings available to the expression
+                      as top-level globals alongside the prelude.
+
+        Returns:
+            String representation of the result using Menai describe() conventions.
+        """
+        return self.evaluate_raw_with_bindings(expression, bindings).describe()
 
     # Module System Implementation (MenaiASTModuleLoader interface)
 

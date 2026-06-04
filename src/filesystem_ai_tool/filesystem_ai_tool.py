@@ -1,3 +1,5 @@
+import asyncio
+import difflib
 import json
 import logging
 import os
@@ -12,8 +14,10 @@ from typing import Dict, Any, List, Callable, Tuple, cast
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
-    AIToolResult, AIToolCall
+    AIToolResult, AIToolCall, AIToolTimeoutError
 )
+from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
+from menai import MenaiBufferingTraceWatcher
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
@@ -49,6 +53,7 @@ class FileSystemAITool(AITool):
         self._get_access_settings = get_access_settings
         self._max_file_size_bytes = max_file_size_mb * 1024 * 1024
         self._logger = logging.getLogger("FileSystemAITool")
+        self._menai = Menai()
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -121,7 +126,7 @@ class FileSystemAITool(AITool):
                 AIToolParameter(
                     name="dry_run",
                     type="boolean",
-                    description="If True, validate diff without applying changes (apply_diff operation)",
+                    description="If True, validate or preview changes without writing anything (apply_diff_to_file and transform_file operations)",
                     required=False
                 ),
                 AIToolParameter(
@@ -162,7 +167,18 @@ class FileSystemAITool(AITool):
                     type="integer",
                     description="Maximum number of matching lines to return (search_file and search_files operations)",
                     required=False
-                )
+                ),
+                AIToolParameter(
+                    name="program",
+                    type="string",
+                    description=(
+                        "Menai expression for the transform_file operation. "
+                        "May reference 'input-text' (full file content as a string) "
+                        "and 'input-lines' (file lines as a list of strings). "
+                        "Must evaluate to a string (new file content) or a list of strings (new lines)."
+                    ),
+                    required=False
+                ),
             ]
         )
 
@@ -354,6 +370,22 @@ class FileSystemAITool(AITool):
                     "If name is omitted, all files are returned. "
                     "Returns a list of matching relative paths."
             )
+        ,
+            "transform_file": AIToolOperationDefinition(
+                name="transform_file",
+                handler=self._transform_file,
+                extract_context=self._transform_file_context,
+                allowed_parameters={"path", "program", "encoding", "dry_run"},
+                required_parameters={"path", "program"},
+                description=(
+                    "Read a file, apply a Menai program to its content, and write the result back. "
+                    "The program may reference 'input-text' (full content as a string) and "
+                    "'input-lines' (content split on newlines as a list of strings). "
+                    "It must return a string or a list of strings. "
+                    "A unified diff is shown for user approval before any write occurs. "
+                    "If dry_run is True, returns the diff without requesting authorisation or writing anything."
+                )
+            ),
         }
 
     async def _validate_and_resolve_path(
@@ -1910,4 +1942,200 @@ class FileSystemAITool(AITool):
             id=tool_call.id,
             name="filesystem",
             content=f"Diff applied successfully to '{display_path}': {result.hunks_applied} hunk(s) applied"
+        )
+
+    def _transform_file_context(self, arguments: Dict[str, Any]) -> str | None:
+        """Extract context for transform_file operation."""
+        path_arg = arguments.get("path", "")
+        program = arguments.get("program", "")
+        return (
+            f"`path` is: {path_arg}\n"
+            f"`program` is:\n```menai\n{program}\n```"
+        )
+
+    def _transform_file_sync(
+        self,
+        path: Path,
+        expression: str,
+        encoding: str
+    ) -> tuple[str, str, List[str], bool]:
+        """Read a file, run a Menai transform program, return results synchronously.
+
+        Args:
+            path: Resolved path to the file.
+            expression: Menai expression referencing 'input-text' and 'input-lines'.
+            encoding: File encoding to use for reading.
+
+        Returns:
+            Tuple of (original_content, new_content, traces, traces_clipped).
+
+        Raises:
+            AIToolExecutionError: If the file cannot be read or the program returns
+                                  an invalid type.
+            Various Menai exceptions: Propagated to the async caller.
+        """
+        try:
+            with open(path, encoding=encoding) as f:
+                original_content = f.read()
+        except OSError as e:
+            raise AIToolExecutionError(f"Cannot read file: {e}") from e
+
+        lines = original_content.split('\n')
+        bindings: Dict[str, MenaiValue] = {
+            'input-text': MenaiString(original_content),
+            'input-lines': MenaiList(tuple(MenaiString(line) for line in lines)),
+        }
+
+        watcher = MenaiBufferingTraceWatcher(max_traces=200)
+        self._menai.set_trace_watcher(watcher)
+        try:
+            raw_result = self._menai.evaluate_raw_with_bindings(expression, bindings)
+            traces = watcher.get_traces()
+            was_clipped = watcher.is_clipped()
+        finally:
+            self._menai.set_trace_watcher(None)
+
+        if isinstance(raw_result, MenaiString):
+            new_content = raw_result.value
+        elif isinstance(raw_result, MenaiList):
+            if not all(isinstance(e, MenaiString) for e in raw_result.elements):
+                raise AIToolExecutionError(
+                    "Transform program returned a list containing non-string elements"
+                )
+            new_content = '\n'.join(cast(MenaiString, e).value for e in raw_result.elements)
+        else:
+            raise AIToolExecutionError(
+                f"Transform program must return a string or list of strings, "
+                f"got {raw_result.type_name()}"
+            )
+
+        return original_content, new_content, traces, was_clipped
+
+    async def _transform_file(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Apply a Menai transform program to a file."""
+        arguments = tool_call.arguments
+        path_arg = self._get_required_str_value("path", arguments)
+        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
+        program = self._get_required_str_value("program", arguments)
+        encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
+        dry_run = self._get_optional_bool_value("dry_run", arguments, False)
+
+        if not path.exists():
+            raise AIToolExecutionError(f"File does not exist: {path_arg}")
+
+        if not path.is_file():
+            raise AIToolExecutionError(f"Path is not a file: {path_arg}")
+
+        if path.stat().st_size > self._max_file_size_bytes:
+            size_mb = path.stat().st_size / (1024 * 1024)
+            max_mb = self._max_file_size_bytes / (1024 * 1024)
+            raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
+
+        if not program.strip():
+            raise AIToolExecutionError("'program' must not be empty")
+
+        try:
+            task = asyncio.create_task(
+                asyncio.to_thread(self._transform_file_sync, path, program, encoding)
+            )
+            try:
+                original_content, new_content, traces, watcher_clipped = await asyncio.wait_for(
+                    task, timeout=30.0
+                )
+            except asyncio.TimeoutError:
+                self._logger.warning("Menai transform timed out for '%s'", display_path)
+                self._menai.vm.cancel()
+                if not task.done():
+                    try:
+                        await asyncio.wait_for(task, timeout=1.0)
+                    except (asyncio.TimeoutError, asyncio.CancelledError, MenaiCancelledException):
+                        pass
+                    except Exception as e:
+                        self._logger.debug("Exception during transform cancellation: %s", e)
+                raise AIToolTimeoutError("Menai transform timed out", 30.0)  # pylint: disable=raise-missing-from
+
+        except AIToolTimeoutError:
+            raise
+
+        except AIToolExecutionError:
+            raise
+
+        except MenaiCancelledException as e:
+            raise AIToolTimeoutError("Menai transform timed out", 30.0) from e
+
+        except MenaiError as e:
+            raise AIToolExecutionError(str(e)) from e
+
+        except Exception as e:
+            self._logger.error("Unexpected error in transform_file '%s': %s", display_path, str(e), exc_info=True)
+            raise AIToolExecutionError(f"Transform failed: {str(e)}") from e
+
+        if original_content == new_content:
+            return AIToolResult(
+                id=tool_call.id,
+                name="filesystem",
+                content=f"Transform produced no changes to '{display_path}'."
+            )
+
+        diff_lines = list(difflib.unified_diff(
+            original_content.splitlines(keepends=True),
+            new_content.splitlines(keepends=True),
+            fromfile=display_path,
+            tofile=display_path,
+            lineterm=''
+        ))
+        diff_str = '\n'.join(diff_lines)
+
+        if dry_run:
+            return AIToolResult(
+                id=tool_call.id,
+                name="filesystem",
+                content=(
+                    f"Dry run: transform would modify '{display_path}' "
+                    f"({len(diff_lines)} diff lines). No changes written.\n\n{diff_str}"
+                )
+            )
+
+        context_str = f"Apply Menai transform to '{display_path}'. This will overwrite the existing file."
+        authorized = await request_authorization("filesystem", arguments, context_str, diff_str, True)
+        if not authorized:
+            raise AIToolAuthorizationDenied(f"User denied permission to transform file: {path_arg}")
+
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode='w',
+                encoding=encoding,
+                dir=path.parent,
+                delete=False,
+                suffix='.tmp'
+            ) as tmp_file:
+                tmp_file.write(new_content)
+                tmp_path = Path(tmp_file.name)
+            tmp_path.replace(path)
+            umask = os.umask(0)
+            os.umask(umask)
+            path.chmod(0o666 & ~umask)
+        except PermissionError as e:
+            raise AIToolExecutionError(f"Permission denied writing file: {str(e)}") from e
+        except OSError as e:
+            raise AIToolExecutionError(f"Failed to write file: {str(e)}") from e
+
+        self._logger.info("Menai transform applied to '%s' (%d diff lines)", display_path, len(diff_lines))
+
+        trace_str = '\n'.join(traces) if traces else ''
+        result_obj: Dict[str, Any] = {
+            "message": f"Transform applied to '{display_path}' ({len(diff_lines)} diff lines).",
+            "trace_data": trace_str,
+            "trace_data_clipped": "yes" if watcher_clipped else "no"
+        }
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=json.dumps(result_obj, indent=2),
+            context="json"
         )
