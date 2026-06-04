@@ -2950,3 +2950,75 @@ More!"""
     para2 = doc.children[3]
     assert para2.__class__.__name__ == "MarkdownASTParagraphNode"
     assert para2.children[0].content == "More!"
+
+
+def test_code_block_with_gt_content(ast_builder):
+    """Test that > characters inside a code block are preserved as literal content."""
+    markdown = """\
+```text
+> this is not a blockquote
+> it is code content
+```"""
+
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+
+    code_block = doc.children[0]
+    assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
+    assert "> this is not a blockquote" in code_block.content
+    assert "> it is code content" in code_block.content
+
+
+def test_code_block_with_gt_content_multiple_levels(ast_builder):
+    """Test that multiple leading > characters inside a code block are preserved."""
+    markdown = """\
+```text
+>> double gt
+>>> triple gt
+```"""
+
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+
+    code_block = doc.children[0]
+    assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
+    assert ">> double gt" in code_block.content
+    assert ">>> triple gt" in code_block.content
+
+
+def test_blockquote_code_block_with_gt_content(ast_builder):
+    """Test that > characters inside a code block inside a blockquote are preserved."""
+    markdown = """\
+> ```text
+> > this is literal code content
+> ```"""
+
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+
+    blockquote = doc.children[0]
+    assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(blockquote.children) == 1
+
+    code_block = blockquote.children[0]
+    assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
+    assert "> this is literal code content" in code_block.content
+
+
+def test_code_block_with_gt_mixed_content(ast_builder):
+    """Test a code block containing both > and non-> lines."""
+    markdown = """\
+```python
+x = 1
+> y = 2
+z = 3
+```"""
+
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+
+    code_block = doc.children[0]
+    assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
+    assert "x = 1" in code_block.content
+    assert "> y = 2" in code_block.content
+    assert "z = 3" in code_block.content

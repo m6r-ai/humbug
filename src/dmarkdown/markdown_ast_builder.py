@@ -154,6 +154,7 @@ class MarkdownASTBuilder:
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0
         self._code_block_indents: List[int] = []
+        self._code_block_blockquote_depth: int = 0
         self._embedded_parser_state: Any = None
         self._embedded_language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
         self._tokens_by_line: List[List[Token]] = []
@@ -774,6 +775,7 @@ class MarkdownASTBuilder:
             language_name = code_block_match.group(1) or ""
             self._in_code_block = True
             self._code_block_start_container = item
+            self._code_block_blockquote_depth = self._current_blockquote_depth()
             self._code_block_language_name = language_name
             self._embedded_language = ProgrammingLanguageUtils.from_name(language_name)
             self._code_block_content = []
@@ -899,6 +901,7 @@ class MarkdownASTBuilder:
             language_name = code_block_match.group(1) or ""
             self._in_code_block = True
             self._code_block_start_container = item
+            self._code_block_blockquote_depth = self._current_blockquote_depth()
             self._code_block_language_name = language_name
             self._embedded_language = ProgrammingLanguageUtils.from_name(language_name)
             self._code_block_content = []
@@ -1019,6 +1022,39 @@ class MarkdownASTBuilder:
         """
         assert self._container_stack, "Container stack should never be empty"
         return self._container_stack[-1].container_type == 'blockquote'
+
+    def _current_blockquote_depth(self) -> int:
+        """Return the number of blockquote containers currently on the stack."""
+        return sum(1 for ctx in self._container_stack if ctx.container_type == 'blockquote')
+
+    def _strip_n_blockquote_markers(self, line: str, depth: int) -> str:
+        """
+        Strip exactly *depth* blockquote markers (``>``) from the start of *line*,
+        using the same whitespace-aware logic as ``_identify_line_type``.
+
+        This is used when processing lines that fall inside a fenced code block so
+        that only the structural blockquote prefixes (those that were present when
+        the code block was opened) are removed.  Any additional ``>`` characters are
+        literal code content and must be preserved.
+
+        Args:
+            line: The raw source line.
+            depth: How many blockquote markers to strip.
+
+        Returns:
+            The line with exactly *depth* leading blockquote markers removed.
+        """
+        remaining = line
+        for _ in range(depth):
+            stripped = remaining.lstrip()
+            if not stripped.startswith('>'):
+                break
+
+            remaining = stripped[1:]
+            if remaining.startswith(' '):
+                remaining = remaining[1:]
+
+        return remaining
 
     def _adjust_blockquote_contexts(self, blockquote_indents: List[int], line_num: int) -> None:
         """
@@ -1316,6 +1352,7 @@ class MarkdownASTBuilder:
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0
         self._code_block_indents = []
+        self._code_block_blockquote_depth = 0
         self._embedded_parser_state = None
         self._embedded_language = ProgrammingLanguage.UNKNOWN
         self._tokens_by_line = []
@@ -1538,8 +1575,8 @@ class MarkdownASTBuilder:
                 # Check if embedded parser says we're in a string/comment
                 if (self._embedded_parser_state and self._embedded_parser_state.parsing_continuation):
                     # ``` is inside a string/comment, treat as content
-                    # Extract the text after stripping blockquotes
-                    text_content = line_data['container_text']
+                    # Extract the text after stripping only the structural blockquote markers
+                    text_content = self._strip_n_blockquote_markers(line, self._code_block_blockquote_depth)
                     code_indent = self._code_block_indents[-1]
                     text_content = text_content[code_indent:]
                     self._code_block_content.append(text_content)
@@ -1554,7 +1591,7 @@ class MarkdownASTBuilder:
                     # Nested fence
                     self._code_block_nesting_level += 1
                     self._code_block_indents.append(code_indent)
-                    text_content = line_data['container_text']
+                    text_content = self._strip_n_blockquote_markers(line, self._code_block_blockquote_depth)
                     self._code_block_content.append(text_content)
                     self._parse_code_line(text_content)
                     self._last_processed_line_type = 'code_block_content'
@@ -1572,7 +1609,7 @@ class MarkdownASTBuilder:
                 # Close a nested fence
                 self._code_block_indents.pop()
                 self._code_block_nesting_level -= 1
-                text_content = line_data['container_text']
+                text_content = self._strip_n_blockquote_markers(line, self._code_block_blockquote_depth)
                 self._code_block_content.append(text_content)
                 self._parse_code_line(text_content)
                 self._last_processed_line_type = 'code_block_content'
@@ -1580,7 +1617,7 @@ class MarkdownASTBuilder:
                 return
 
             # Not a fence - accumulate as content
-            text_content = line_data['container_text']
+            text_content = self._strip_n_blockquote_markers(line, self._code_block_blockquote_depth)
             code_indent = self._code_block_indents[-1]
             text_content = text_content[code_indent:]
             self._code_block_content.append(text_content)
@@ -1630,6 +1667,7 @@ class MarkdownASTBuilder:
         if line_type == 'code_block_fence':
             # Starting a new code block
             self._in_code_block = True
+            self._code_block_blockquote_depth = self._current_blockquote_depth()
             self._code_block_start_container = self._current_container()
             self._code_block_language_name = line_data['language']
             self._embedded_language = ProgrammingLanguageUtils.from_name(line_data['language'])
@@ -1713,6 +1751,7 @@ class MarkdownASTBuilder:
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0
         self._code_block_indents = []
+        self._code_block_blockquote_depth = 0
 
         # Reset table buffer
         self._table_buffer.reset()

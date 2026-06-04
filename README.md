@@ -7,24 +7,6 @@ Think of it as an operating system for human-AI collaboration.
 
 Humbug now has a full [user manual](./docs/user-manual/index.md).
 
-> Hello
->
-> blockquote
-> ```python
-> for i in range(0,10):
-> ```
->
-> More text
->
-> ## heading
->
-> - list
-> - another entry
->
-> > Nest block quotes
-> > Here
-
-
 ## What are the core ideas?
 
 - **Human–AI collaboration at the heart of the design**  
