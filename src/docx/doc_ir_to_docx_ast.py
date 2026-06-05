@@ -252,10 +252,10 @@ class _DocIRToDocxASTMapper:
             self._map_code_block(node, parent)
 
         elif isinstance(node, DocIRUnorderedListNode):
-            self._map_list(node, parent, num_id=_NUM_ID_BULLET, depth=0)
+            self._map_list(node, parent, num_id=_NUM_ID_BULLET, depth=0, tight=node.tight)
 
         elif isinstance(node, DocIROrderedListNode):
-            self._map_list(node, parent, num_id=_NUM_ID_ORDERED, depth=0)
+            self._map_list(node, parent, num_id=_NUM_ID_ORDERED, depth=0, tight=node.tight)
 
         elif isinstance(node, DocIRTableNode):
             parent.add_child(self._map_table(node))
@@ -318,11 +318,11 @@ class _DocIRToDocxASTMapper:
 
             elif isinstance(child, DocIRUnorderedListNode):
                 self._map_list(child, cell_body, num_id=_NUM_ID_BULLET, depth=0,
-                               indent_base=_BLOCKQUOTE_INDENT)
+                               indent_base=_BLOCKQUOTE_INDENT, tight=child.tight)
 
             elif isinstance(child, DocIROrderedListNode):
                 self._map_list(child, cell_body, num_id=_NUM_ID_ORDERED, depth=0,
-                               indent_base=_BLOCKQUOTE_INDENT)
+                               indent_base=_BLOCKQUOTE_INDENT, tight=child.tight)
 
             elif isinstance(child, DocIRCodeBlockNode):
                 self._map_code_block(child, cell_body, indent_left=_BLOCKQUOTE_INDENT)
@@ -410,6 +410,7 @@ class _DocIRToDocxASTMapper:
         depth: int,
         indent_base: int = 0,
         shading: Optional[str] = None,
+        tight: bool = True,
     ) -> None:
         """Recursively map a list node, emitting paragraphs with numPr.
 
@@ -421,11 +422,12 @@ class _DocIRToDocxASTMapper:
             indent_base: Extra left indent in twips added to all levels (used
                 when the list is nested inside a blockquote).
             shading: Background shading hex colour, or None.
+            tight: Whether to suppress inter-item spacing.
         """
         for child in node.children:
             if isinstance(child, DocIRListItemNode):
                 self._map_list_item(child, parent, num_id=num_id, depth=depth,
-                                    indent_base=indent_base, shading=shading)
+                                    indent_base=indent_base, shading=shading, tight=tight)
 
     def _map_list_item(
         self,
@@ -435,6 +437,7 @@ class _DocIRToDocxASTMapper:
         depth: int,
         indent_base: int = 0,
         shading: Optional[str] = None,
+        tight: bool = True,
     ) -> None:
         """Map a list item.
 
@@ -459,6 +462,7 @@ class _DocIRToDocxASTMapper:
                         indent_left=indent_left,
                         indent_hanging=360,
                         shading=shading,
+                        spacing_after=0 if tight else None,
                     )
                     num_pr = DocxASTNumberingPropertiesNode(
                         num_id=num_id,
@@ -474,6 +478,7 @@ class _DocIRToDocxASTMapper:
                         style_id=_STYLE_NORMAL,
                         indent_left=indent_left,
                         shading=shading,
+                        spacing_after=0 if tight else None,
                     )
                 para.add_child(ppr)
                 for run in runs:
@@ -484,12 +489,14 @@ class _DocIRToDocxASTMapper:
             elif isinstance(child, DocIRUnorderedListNode):
                 is_first_para = False
                 self._map_list(child, parent, num_id=_NUM_ID_BULLET, depth=depth + 1,
-                               indent_base=indent_base, shading=shading)
+                               indent_base=indent_base, shading=shading,
+                               tight=child.tight)
 
             elif isinstance(child, DocIROrderedListNode):
                 is_first_para = False
                 self._map_list(child, parent, num_id=_NUM_ID_ORDERED, depth=depth + 1,
-                               indent_base=indent_base, shading=shading)
+                               indent_base=indent_base, shading=shading,
+                               tight=child.tight)
 
             else:
                 # Other block children inside a list item — handle with list

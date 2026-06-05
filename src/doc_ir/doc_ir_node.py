@@ -129,18 +129,29 @@ class DocIRCodeBlockNode(DocIRNode):
 class DocIRUnorderedListNode(DocIRNode):
     """Node representing an unordered (bullet) list."""
 
+    def __init__(self, tight: bool = True) -> None:
+        """Initialise an unordered list node.
+
+        Args:
+            tight: Whether the list is tight (no spacing between items).
+        """
+        super().__init__()
+        self.tight = tight
+
 
 class DocIROrderedListNode(DocIRNode):
     """Node representing an ordered (numbered) list."""
 
-    def __init__(self, start: int = 1) -> None:
+    def __init__(self, start: int = 1, tight: bool = True) -> None:
         """Initialise an ordered list node.
 
         Args:
             start: The starting number for the list.
+            tight: Whether the list is tight (no spacing between items).
         """
         super().__init__()
         self.start = start
+        self.tight = tight
 
 
 class DocIRListItemNode(DocIRNode):

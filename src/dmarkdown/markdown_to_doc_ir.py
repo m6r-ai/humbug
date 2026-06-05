@@ -214,7 +214,7 @@ class _MarkdownToDocIRMapper:
         Returns:
             A DocIRUnorderedListNode with list item children mapped.
         """
-        ul = DocIRUnorderedListNode()
+        ul = DocIRUnorderedListNode(tight=node.tight)
         for child in node.children:
             if isinstance(child, MarkdownASTListItemNode):
                 ul.add_child(self._map_list_item(child))
@@ -232,7 +232,7 @@ class _MarkdownToDocIRMapper:
         Returns:
             A DocIROrderedListNode with list item children mapped.
         """
-        ol = DocIROrderedListNode(start=node.start)
+        ol = DocIROrderedListNode(start=node.start, tight=node.tight)
         for child in node.children:
             if isinstance(child, MarkdownASTListItemNode):
                 ol.add_child(self._map_list_item(child))
