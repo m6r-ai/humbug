@@ -9,7 +9,7 @@ Humbug now has a full [user manual](./docs/user-manual/index.md).
 
 ## What are the core ideas?
 
-- **Human–AI collaboration at the heart of the design**  
+- **Human–AI collaboration at the heart of the design**
 
   When you're using AI, you're no longer working alone.
   Humbug treats both humans and AIs as first-class actors.
@@ -35,7 +35,7 @@ Humbug now has a full [user manual](./docs/user-manual/index.md).
   While other AI frameworks hide what's going on, Humbug's approach is to give you visibility of everything.
   You get to see potential problems and apply course-corrections before they lead to expensive mistakes.
 
-- **Bootstrapped: built using itself**  
+- **Bootstrapped: built using itself**
 
   Each version of Humbug has been built using the previous version.
   This has meant over 90% of the code has been built by LLMs.
@@ -43,7 +43,7 @@ Humbug now has a full [user manual](./docs/user-manual/index.md).
   Using each ever more capable version of Humbug to help design and build its successor has freed up huge amounts of human time to think about bigger design problems.
   The tireless ability of LLMs to morph software into new forms also means the software has a clean, highly modular architecture.
 
-- **LLMs, lots of LLMs**  
+- **LLMs, lots of LLMs**
 
   Humbug lets you work with multiple large language models (LLMs) simultaneously, supporting local, cloud-based, or hybrids of both.
   Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama (local and cloud), OpenAI, vLLM, xAI, and Z.ai, so you're not tied to any one provider.
@@ -56,7 +56,7 @@ Humbug now has a full [user manual](./docs/user-manual/index.md).
   It also features git version control integration with a sidebar and side-by-side diff tabs so your work need never be lost.
   UI orchestration means your AI can drive these tools the same way you do, enabling a fully agentic experience.
 
-- **Menai: a programming language designed for AIs**  
+- **Menai: a programming language designed for AIs**
 
   Previously, programming languages were designed to meet the needs of human developers.
   While AIs are proficient with most of these languages, they risk being unsafe because they support potentially dangerous I/O operations.
@@ -66,28 +66,28 @@ Humbug now has a full [user manual](./docs/user-manual/index.md).
   Being side-effect free, Menai is intrinsically safe for AIs to use and does not require any user approvals.
   The Menai tool implementation has detailed error reporting to make it easier for AIs to debug any issues in their own code.
 
-- **Open and extensible**  
+- **Open and extensible**
 
   Add new AI backends, tools, or integrations with minimal friction.
   Humbug is open-source and highly modular.
   You don't need to worry about being locked into a vendor tool and can add new features if you want them.  
 
-- **Mindspaces: project-centric workspaces**  
+- **Mindspaces: project-centric workspaces**
 
   Every project lives in its own mindspace: a persistent, context-rich environment with isolated files, settings, and conversations.
 
-- **OS-agnostic**  
+- **OS-agnostic**
 
   Humbug provides OS-like concepts but doesn't try to replace your computer's operating system.
   It runs on top of Windows, macOS, or Linux, and provides a unified experience on all of them.
 
-- **Minimal dependencies**  
+- **Minimal dependencies**
 
   Humbug follows the pattern of most operating system kernels.
   It aims to be simple and largely self-contained.
   The code has only 4 external package dependencies other than the standard Python library, so both you and your LLMs can understand almost every part from the one git repo.
 
-- **Not just a platform for developers**  
+- **Not just a platform for developers**
 
   It's designed to help with any activities where you and your AIs need to work together on a problem.
   While it has a lot of tools for software developers, it has been designed to support a much wider set of needs.

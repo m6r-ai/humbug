@@ -413,6 +413,24 @@ class DocxASTDrawingNode(DocxASTNode):
         self.height_emu = height_emu
 
 
+class DocxASTHyperlinkNode(DocxASTNode):
+    """Node representing an external hyperlink (<w:hyperlink r:id="...">).
+
+    The URL is stored directly on the node; the serialiser resolves it to a
+    relationship ID when assembling the ZIP.  Children are DocxASTRunNode
+    instances that form the visible link text.
+    """
+
+    def __init__(self, url: str) -> None:
+        """Initialise a hyperlink node.
+
+        Args:
+            url: The target URL for the hyperlink.
+        """
+        super().__init__()
+        self.url = url
+
+
 class DocxASTTableNode(DocxASTNode):
     """Node representing a table (<w:tbl>).
 

@@ -27,6 +27,7 @@ from docx.docx_ast_node import (
     DocxASTBreakNode,
     DocxASTDocumentNode,
     DocxASTDrawingNode,
+    DocxASTHyperlinkNode,
     DocxASTNumLevelNode,
     DocxASTNumNode,
     DocxASTNumberingNode,
@@ -308,7 +309,8 @@ class _DocIRToDocxASTMapper:
                 self._map_block(child, parent)
 
     def _map_code_block(
-        self, node: DocIRCodeBlockNode, parent: DocxASTBodyNode
+        self, node: DocIRCodeBlockNode, parent: DocxASTBodyNode,
+        indent_left: Optional[int] = None,
     ) -> None:
         """Map a code block — one paragraph per line, all with CodeBlock style."""
         lines = node.content.split("\n")
@@ -320,15 +322,26 @@ class _DocIRToDocxASTMapper:
             # Emit one empty code paragraph to preserve the block
             lines = [""]
 
+        paras: List[DocxASTParagraphNode] = []
         for line in lines:
             para = DocxASTParagraphNode()
-            ppr = DocxASTParagraphPropertiesNode(style_id=_STYLE_CODE_BLOCK)
+            ppr = DocxASTParagraphPropertiesNode(
+                style_id=_STYLE_CODE_BLOCK,
+                indent_left=indent_left,
+            )
             para.add_child(ppr)
             if line:
                 run = DocxASTRunNode()
                 run.add_child(DocxASTTextNode(content=line, preserve_space=True))
                 para.add_child(run)
+            paras.append(para)
 
+        # Add spacing after the last line so there is a visible gap between the
+        # code block and whatever follows it (the CodeBlock style sets after=0)
+        last_ppr = next(c for c in paras[-1].children if isinstance(c, DocxASTParagraphPropertiesNode))
+        last_ppr.spacing_after = 160
+
+        for para in paras:
             parent.add_child(para)
 
     def _map_list(
@@ -360,19 +373,34 @@ class _DocIRToDocxASTMapper:
         """Map a list item.
 
         Inline content (wrapped in an implicit paragraph) is emitted as a
-        numbered paragraph.  Nested lists are recursed with depth+1.
+        numbered paragraph.  Subsequent paragraphs within the same list item
+        (continuation paragraphs) are indented to the same level but carry no
+        list marker.  Nested lists are recursed with depth+1.
         """
+        is_first_para = True
+        indent_left = 720 * (depth + 1)
+
         for child in item.children:
             if isinstance(child, DocIRParagraphNode):
-                # The inline content paragraph
                 runs = self._build_runs(child.children)
                 para = DocxASTParagraphNode()
-                ppr = DocxASTParagraphPropertiesNode(style_id=_STYLE_NORMAL)
-                num_pr = DocxASTNumberingPropertiesNode(
-                    num_id=num_id,
-                    ilvl=min(depth, _MAX_LIST_DEPTH - 1),
-                )
-                ppr.add_child(num_pr)
+                if is_first_para:
+                    # First paragraph: carries the bullet/number marker
+                    ppr = DocxASTParagraphPropertiesNode(style_id=_STYLE_NORMAL)
+                    num_pr = DocxASTNumberingPropertiesNode(
+                        num_id=num_id,
+                        ilvl=min(depth, _MAX_LIST_DEPTH - 1),
+                    )
+                    ppr.add_child(num_pr)
+                    is_first_para = False
+
+                else:
+                    # Continuation paragraph: indented to match the list level,
+                    # no bullet/number marker
+                    ppr = DocxASTParagraphPropertiesNode(
+                        style_id=_STYLE_NORMAL,
+                        indent_left=indent_left,
+                    )
                 para.add_child(ppr)
                 for run in runs:
                     para.add_child(run)
@@ -380,14 +408,24 @@ class _DocIRToDocxASTMapper:
                 parent.add_child(para)
 
             elif isinstance(child, DocIRUnorderedListNode):
+                is_first_para = False
                 self._map_list(child, parent, num_id=_NUM_ID_BULLET, depth=depth + 1)
 
             elif isinstance(child, DocIROrderedListNode):
+                is_first_para = False
                 self._map_list(child, parent, num_id=_NUM_ID_ORDERED, depth=depth + 1)
 
             else:
-                # Other block children (code blocks, etc.) inside a list item
-                self._map_block(child, parent)
+                # Other block children inside a list item — handle with list
+                # context so indentation is preserved
+                is_first_para = False
+                if isinstance(child, DocIRCodeBlockNode):
+                    # Use the list text indent directly — explicit indent_left
+                    # overrides the CodeBlock style's own indent entirely
+                    self._map_code_block(child, parent, indent_left=indent_left)
+
+                else:
+                    self._map_block(child, parent)
 
     def _map_table(self, node: DocIRTableNode) -> DocxASTTableNode:
         """Map a table node."""
@@ -497,7 +535,7 @@ class _DocIRToDocxASTMapper:
         for run in self._build_runs(children):
             para.add_child(run)
 
-    def _build_runs(self, children: List[DocIRNode]) -> List[DocxASTRunNode]:
+    def _build_runs(self, children: List[DocIRNode]) -> List[DocxASTNode]:
         """Convert a list of inline doc_ir nodes to DocxASTRunNode instances.
 
         Consecutive text spans with identical formatting are merged into a
@@ -507,7 +545,7 @@ class _DocIRToDocxASTMapper:
             children: Inline doc_ir nodes (spans, links, images, line breaks).
 
         Returns:
-            List of DocxASTRunNode instances.
+            List of DocxASTNode instances (runs and hyperlinks interleaved).
         """
         # Collect (bold, italic, strike, code, content_or_special) tuples
         # where content_or_special is either a string or a special marker
@@ -548,33 +586,31 @@ class _DocIRToDocxASTMapper:
                 items.append(("image", child.url, child.alt_text or ""))
 
             elif isinstance(child, DocIRLinkNode):
-                # Collect display text from link children, then append URL
+                # Build a hyperlink node carrying its display runs
+                hyperlink = DocxASTHyperlinkNode(url=child.url)
                 for link_child in child.children:
                     if isinstance(link_child, DocIRTextSpanNode) and link_child.content:
-                        items.append((
-                            "link_text",
-                            link_child.bold,
-                            link_child.italic,
-                            link_child.strikethrough,
-                            link_child.code,
-                            link_child.content,
-                            child.url,
-                        ))
+                        run = DocxASTRunNode()
+                        rpr = DocxASTRunPropertiesNode(
+                            bold=link_child.bold,
+                            italic=link_child.italic,
+                            strike=link_child.strikethrough,
+                            style_id="Hyperlink",
+                        )
+                        run.add_child(rpr)
+                        run.add_child(DocxASTTextNode(content=link_child.content))
+                        hyperlink.add_child(run)
 
-                if child.url:
-                    items.append((
-                        "text", False, False, False, False,
-                        f" ({child.url})",
-                    ))
+                items.append(("hyperlink", hyperlink))
 
             # Other inline types are silently skipped
 
-    def _items_to_runs(self, items: List[Tuple]) -> List[DocxASTRunNode]:
+    def _items_to_runs(self, items: List[Tuple]) -> List[DocxASTNode]:
         """Convert collected run items to DocxASTRunNode instances.
 
         Consecutive text items with the same formatting are merged.
         """
-        runs: List[DocxASTRunNode] = []
+        runs: List[DocxASTNode] = []
 
         i = 0
         while i < len(items):
@@ -613,20 +649,9 @@ class _DocIRToDocxASTMapper:
                 ))
                 runs.append(run)
 
-            elif kind == "link_text":
-                _, bold, italic, strike, code, content, _url = item
-                run = DocxASTRunNode()
-                rpr = DocxASTRunPropertiesNode(
-                    bold=bold,
-                    italic=italic,
-                    strike=strike,
-                    underline="single",
-                    font_ascii="Courier New" if code else None,
-                    font_hAnsi="Courier New" if code else None,
-                )
-                run.add_child(rpr)
-                run.add_child(DocxASTTextNode(content=content))
-                runs.append(run)
+            elif kind == "hyperlink":
+                _, hyperlink_node = item
+                runs.append(hyperlink_node)
 
             elif kind == "break":
                 run = DocxASTRunNode()

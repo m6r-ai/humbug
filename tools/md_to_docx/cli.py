@@ -1,16 +1,15 @@
-"""
-Command-line interface for the Markdown to DOCX converter.
-"""
+"""Command-line interface for the Markdown to DOCX converter."""
 
 import argparse
 import os
 import sys
 
 from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
+from dmarkdown.markdown_to_doc_ir import markdown_ast_to_doc_ir
+from docx.doc_ir_to_docx_ast import doc_ir_to_docx_ast
+from docx.docx_ast_serialiser import serialise_docx
 
 import syntax.parser_imports  # noqa: F401  registers all syntax parsers in ParserRegistry
-from .docx_builder import build_docx
-from .xml_writer import DocxXmlVisitor
 
 
 def main() -> int:
@@ -53,14 +52,20 @@ Examples:
     try:
         builder = MarkdownASTBuilder(True)
         builder.update_ast(md_text, "", input_path)
-        document = builder.document()
+        md_ast = builder.document()
 
-        visitor = DocxXmlVisitor()
-        visitor.visit(document)
-
-        build_docx(visitor.body_parts, output_path)
+        doc_ir = markdown_ast_to_doc_ir(md_ast)
+        docx_ast = doc_ir_to_docx_ast(doc_ir)
+        docx_bytes = serialise_docx(docx_ast)
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"Error during conversion: {e}", file=sys.stderr)
+        return 1
+
+    try:
+        with open(output_path, "wb") as f:
+            f.write(docx_bytes)
+    except OSError as e:
+        print(f"Error writing output file: {e}", file=sys.stderr)
         return 1
 
     print(f"Written: {output_path}")

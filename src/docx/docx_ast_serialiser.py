@@ -16,6 +16,7 @@ from docx.docx_ast_node import (
     DocxASTBreakNode,
     DocxASTDocumentNode,
     DocxASTDrawingNode,
+    DocxASTHyperlinkNode,
     DocxASTLastRenderedPageBreakNode,
     DocxASTNode,
     DocxASTNumLevelNode,
@@ -52,6 +53,7 @@ _R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 _REL_STYLES = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"
 _REL_NUMBERING = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering"
 _REL_OFFICE_DOC = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+_REL_HYPERLINK = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
 _CT_RELS = "application/vnd.openxmlformats-package.relationships+xml"
 _CT_XML = "application/xml"
 _CT_DOCUMENT = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
@@ -108,6 +110,15 @@ _STYLE_VISUALS = {
     },
 }
 
+# Hyperlink character style visual definition (not in _STYLE_VISUALS since it
+# is a character style emitted separately in _serialise_styles)
+_HYPERLINK_STYLE_XML = (
+    '<w:style w:type="character" w:styleId="Hyperlink">'
+    '<w:name w:val="Hyperlink"/>'
+    '<w:rPr><w:color w:val="0563C1"/><w:u w:val="single"/></w:rPr>'
+    '</w:style>'
+)
+
 
 def _esc(text: str) -> str:
     """Escape a string for safe embedding in XML character data."""
@@ -135,6 +146,10 @@ class _DocxASTSerialiser:
     def __init__(self, document: DocxASTDocumentNode) -> None:
         self._document = document
         self._has_numbering = False
+        # Maps URL → rId, populated during document body serialisation
+        self._hyperlink_rels: dict[str, str] = {}
+        # Fixed relationship IDs: rId1=styles, rId2=numbering
+        self._next_rel_id: int = 3
 
     def serialise(self) -> bytes:
         """Perform the full serialisation and return raw bytes."""
@@ -213,11 +228,17 @@ class _DocxASTSerialiser:
             if include_numbering
             else ""
         )
+        hyperlink_rels = "".join(
+            f'\n  <Relationship Id="{rid}" Type="{_REL_HYPERLINK}"'
+            f' Target="{_esc(url)}" TargetMode="External"/>'
+            for url, rid in self._hyperlink_rels.items()
+        )
         return (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
             f'  <Relationship Id="rId1" Type="{_REL_STYLES}" Target="styles.xml"/>'
-            f'{numbering_rel}\n'
+            f'{numbering_rel}'
+            f'{hyperlink_rels}\n'
             '</Relationships>'
         )
 
@@ -274,8 +295,22 @@ class _DocxASTSerialiser:
             elif isinstance(child, DocxASTRunNode):
                 run_parts.append(self._serialise_run(child))
 
+            elif isinstance(child, DocxASTHyperlinkNode):
+                run_parts.append(self._serialise_hyperlink(child))
+
         runs_xml = "".join(run_parts)
         return f"<w:p>{ppr_xml}{runs_xml}</w:p>"
+
+    def _serialise_hyperlink(self, node: DocxASTHyperlinkNode) -> str:
+        """Serialise a <w:hyperlink> element, registering the URL as a relationship."""
+        rid = self._hyperlink_rels.get(node.url)
+        if rid is None:
+            rid = f"rId{self._next_rel_id}"
+            self._next_rel_id += 1
+            self._hyperlink_rels[node.url] = rid
+
+        runs_xml = "".join(self._serialise_run(c) for c in node.children if isinstance(c, DocxASTRunNode))
+        return f'<w:hyperlink r:id="{_esc(rid)}">{runs_xml}</w:hyperlink>'
 
     def _serialise_ppr(self, node: DocxASTParagraphPropertiesNode) -> str:
         """Serialise a <w:pPr> element."""
@@ -596,6 +631,9 @@ class _DocxASTSerialiser:
             for child in node.children:
                 if isinstance(child, DocxASTStyleNode):
                     style_parts.append(self._serialise_style(child))
+
+            # Always include the Hyperlink character style
+            style_parts.append(_HYPERLINK_STYLE_XML)
 
         else:
             # Emit a minimal Normal style so the document is valid

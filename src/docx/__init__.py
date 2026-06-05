@@ -27,6 +27,8 @@ from docx.docx_ast_node import (
     DocxASTBookmarkEndNode,
     # Drawing
     DocxASTDrawingNode,
+    # Hyperlinks
+    DocxASTHyperlinkNode,
     # Tables
     DocxASTTableNode,
     DocxASTTablePropertiesNode,
@@ -83,6 +85,7 @@ __all__ = [
     "DocxASTBookmarkEndNode",
     # Drawing
     "DocxASTDrawingNode",
+    "DocxASTHyperlinkNode",
     # Tables
     "DocxASTTableNode",
     "DocxASTTablePropertiesNode",

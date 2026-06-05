@@ -113,10 +113,13 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 Unified diff parsing and application with fuzzy matching.
 
 ### `src/dmarkdown/`
-Advanced markdown parsing to AST.
+Advanced markdown support, including converting to/form a markdown AST.
+
+### `src/doc_ir`
+Abstract document IR.
 
 ### `src/docx/`
-DOCX file handling support.
+DOCX file handling support, including converting to/from a DOCX AST.
 
 ### `src/editor_ai_tool/`
 AI tool implementation for editor tab operations (read, search, diff, apply diffs, save).
