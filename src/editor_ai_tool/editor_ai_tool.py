@@ -678,11 +678,19 @@ class EditorAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="editor",
-                content=f"Failed to apply diff: {result['message']} No changes were applied - the operation is atomic and all hunks must succeed for any changes to take effect.\n\nError details:\n{error_details}"
+                content=(
+                    f"Failed to apply diff: {result['message']} No changes were applied"
+                    " - the operation is atomic and all hunks must succeed for any"
+                    f" changes to take effect.\n\nError details:\n{error_details}"
+                )
             )
 
         except Exception as e:
-            raise AIToolExecutionError(f"Failed to apply diff: {str(e)} No changes were applied - the operation is atomic and all hunks must succeed for any changes to take effect.") from e
+            raise AIToolExecutionError(
+                f"Failed to apply diff: {str(e)} No changes were applied"
+                " - the operation is atomic and all hunks must succeed for any"
+                " changes to take effect."
+            ) from e
 
     def _transform_context(self, arguments: Dict[str, Any]) -> str | None:
         """Extract context for transform operation."""

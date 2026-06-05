@@ -12,7 +12,6 @@ from docx.docx_ast_node import (
     DocxASTDocumentNode,
     DocxASTDrawingNode,
     DocxASTLastRenderedPageBreakNode,
-    DocxASTNode,
     DocxASTNumLevelNode,
     DocxASTNumNode,
     DocxASTNumberingNode,
@@ -200,7 +199,6 @@ class DocxASTParser:
             directory.
         """
         relationships: Dict[str, str] = {}
-        rel_ns = _R_PKG
 
         for rel in root:
             rel_type = rel.get("Type", "")
@@ -383,13 +381,13 @@ class DocxASTParser:
 
         # Font for bullet character from <w:rPr><w:rFonts>
         font_ascii: Optional[str] = None
-        font_hAnsi: Optional[str] = None
+        font_h_ansi: Optional[str] = None
         rpr_elem = elem.find(_w("rPr"))
         if rpr_elem is not None:
             fonts_elem = rpr_elem.find(_w("rFonts"))
             if fonts_elem is not None:
                 font_ascii = _wattr(fonts_elem, "ascii")
-                font_hAnsi = _wattr(fonts_elem, "hAnsi")
+                font_h_ansi = _wattr(fonts_elem, "hAnsi")
 
         return DocxASTNumLevelNode(
             ilvl=ilvl,
@@ -400,7 +398,7 @@ class DocxASTParser:
             indent_left=indent_left,
             indent_hanging=indent_hanging,
             font_ascii=font_ascii,
-            font_hAnsi=font_hAnsi,
+            font_h_ansi=font_h_ansi,
         )
 
     def _parse_num(self, elem: ET.Element) -> DocxASTNumNode:
@@ -646,7 +644,7 @@ class DocxASTParser:
         vertical_align: Optional[str] = None
         style_id: Optional[str] = None
         font_ascii: Optional[str] = None
-        font_hAnsi: Optional[str] = None
+        font_h_ansi: Optional[str] = None
         font_cs: Optional[str] = None
         sz: Optional[int] = None
         sz_cs: Optional[int] = None
@@ -689,7 +687,7 @@ class DocxASTParser:
 
             elif local == "rFonts":
                 font_ascii = _wattr(child, "ascii")
-                font_hAnsi = _wattr(child, "hAnsi")
+                font_h_ansi = _wattr(child, "hAnsi")
                 font_cs = _wattr(child, "cs")
 
             elif local == "sz":
@@ -716,7 +714,7 @@ class DocxASTParser:
             vertical_align=vertical_align,
             style_id=style_id,
             font_ascii=font_ascii,
-            font_hAnsi=font_hAnsi,
+            font_h_ansi=font_h_ansi,
             font_cs=font_cs,
             sz=sz,
             sz_cs=sz_cs,

@@ -7,6 +7,7 @@ from docx.docx_ast_node import (
     DocxASTBreakNode,
     DocxASTDocumentNode,
     DocxASTDrawingNode,
+    DocxASTHyperlinkNode,
     DocxASTNumLevelNode,
     DocxASTNumNode,
     DocxASTNumberingNode,
@@ -18,6 +19,7 @@ from docx.docx_ast_node import (
     DocxASTStyleNode,
     DocxASTStylesNode,
     DocxASTTableCellNode,
+    DocxASTTableCellPropertiesNode,
     DocxASTTableNode,
     DocxASTTableRowNode,
     DocxASTTableRowPropertiesNode,
@@ -384,24 +386,58 @@ class TestBlockquoteMapping:
         bq = DocIRBlockquoteNode()
         bq.add_child(_para(_span("Quoted")))
         result = _map(_doc(bq))
-        para = _first_para(result)
+        # Blockquote maps to a table wrapping a shaded cell; paragraphs live
+        # inside the cell, not directly in the body.
+        table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
+        row = next(c for c in table.children if isinstance(c, DocxASTTableRowNode))
+        cell = next(c for c in row.children if isinstance(c, DocxASTTableCellNode))
+        para = next(c for c in cell.children if isinstance(c, DocxASTParagraphNode))
         assert _ppr(para).style_id == "Blockquote"
 
     def test_blockquote_text(self):
         bq = DocIRBlockquoteNode()
         bq.add_child(_para(_span("Quote text")))
         result = _map(_doc(bq))
-        assert _text_of(_first_para(result)) == "Quote text"
+        table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
+        row = next(c for c in table.children if isinstance(c, DocxASTTableRowNode))
+        cell = next(c for c in row.children if isinstance(c, DocxASTTableCellNode))
+        para = next(c for c in cell.children if isinstance(c, DocxASTParagraphNode))
+        assert _text_of(para) == "Quote text"
+
+    def test_blockquote_shading(self):
+        bq = DocIRBlockquoteNode()
+        bq.add_child(_para(_span("Quoted")))
+        result = _map(_doc(bq))
+        table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
+        row = next(c for c in table.children if isinstance(c, DocxASTTableRowNode))
+        cell = next(c for c in row.children if isinstance(c, DocxASTTableCellNode))
+        tcp = next(c for c in cell.children if isinstance(c, DocxASTTableCellPropertiesNode))
+        assert tcp.shading_fill == "E8F0F8"
 
     def test_blockquote_multiple_paragraphs(self):
         bq = DocIRBlockquoteNode()
         bq.add_child(_para(_span("First")))
         bq.add_child(_para(_span("Second")))
         result = _map(_doc(bq))
-        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
+        table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
+        row = next(c for c in table.children if isinstance(c, DocxASTTableRowNode))
+        cell = next(c for c in row.children if isinstance(c, DocxASTTableCellNode))
+        paras = [c for c in cell.children if isinstance(c, DocxASTParagraphNode)]
         assert len(paras) == 2
         for para in paras:
             assert _ppr(para).style_id == "Blockquote"
+
+    def test_blockquote_followed_by_spacer(self):
+        # A spacer paragraph is emitted after the table so subsequent content
+        # has visible separation.
+        bq = DocIRBlockquoteNode()
+        bq.add_child(_para(_span("Quoted")))
+        result = _map(_doc(bq))
+        body_children = list(_body(result).children)
+        table_idx = next(i for i, c in enumerate(body_children) if isinstance(c, DocxASTTableNode))
+        spacer = body_children[table_idx + 1]
+        assert isinstance(spacer, DocxASTParagraphNode)
+        assert _ppr(spacer).style_id == "Normal"
 
 
 # ---------------------------------------------------------------------------
@@ -665,12 +701,14 @@ class TestInlineSpecialContent:
         link.add_child(_span("click here"))
         p.add_child(link)
         result = _map(_doc(p))
-        runs = _runs(_first_para(result))
-        # Link text run + URL text run
-        assert len(runs) == 2
-        link_run = runs[0]
-        rpr = next(c for c in link_run.children if isinstance(c, DocxASTRunPropertiesNode))
-        assert rpr.underline == "single"
+        # Links map to a DocxASTHyperlinkNode, not plain runs.  The hyperlink
+        # carries runs inside it; each run uses the "Hyperlink" character style.
+        para = _first_para(result)
+        hyperlink = next(c for c in para.children if isinstance(c, DocxASTHyperlinkNode))
+        assert hyperlink.url == "https://example.com"
+        run = next(c for c in hyperlink.children if isinstance(c, DocxASTRunNode))
+        rpr = next(c for c in run.children if isinstance(c, DocxASTRunPropertiesNode))
+        assert rpr.style_id == "Hyperlink"
 
     def test_link_url_appended(self):
         p = DocIRParagraphNode()
@@ -678,10 +716,14 @@ class TestInlineSpecialContent:
         link.add_child(_span("text"))
         p.add_child(link)
         result = _map(_doc(p))
-        runs = _runs(_first_para(result))
-        url_run = runs[1]
-        text_node = next(c for c in url_run.children if isinstance(c, DocxASTTextNode))
-        assert "https://example.com" in text_node.content
+        # The URL is carried on the hyperlink node itself; the paragraph child
+        # is a DocxASTHyperlinkNode, not a separate URL run.
+        para = _first_para(result)
+        hyperlink = next(c for c in para.children if isinstance(c, DocxASTHyperlinkNode))
+        assert hyperlink.url == "https://example.com"
+        run = next(c for c in hyperlink.children if isinstance(c, DocxASTRunNode))
+        text_node = next(c for c in run.children if isinstance(c, DocxASTTextNode))
+        assert text_node.content == "text"
 
     def test_link_no_url_no_url_run(self):
         p = DocIRParagraphNode()
@@ -689,9 +731,13 @@ class TestInlineSpecialContent:
         link.add_child(_span("text"))
         p.add_child(link)
         result = _map(_doc(p))
-        runs = _runs(_first_para(result))
-        # No URL → only one run (the underlined link text)
-        assert len(runs) == 1
+        # Even with an empty URL the hyperlink node is still emitted; the run
+        # inside it carries the link text.
+        para = _first_para(result)
+        hyperlink = next(c for c in para.children if isinstance(c, DocxASTHyperlinkNode))
+        run = next(c for c in hyperlink.children if isinstance(c, DocxASTRunNode))
+        text_node = next(c for c in run.children if isinstance(c, DocxASTTextNode))
+        assert text_node.content == "text"
 
 
 # ---------------------------------------------------------------------------

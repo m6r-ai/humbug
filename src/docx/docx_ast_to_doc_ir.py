@@ -20,7 +20,6 @@ from docx.docx_ast_node import (
     DocxASTStylesNode,
     DocxASTTabNode,
     DocxASTTableCellNode,
-    DocxASTTableCellPropertiesNode,
     DocxASTTableNode,
     DocxASTTableRowNode,
     DocxASTTableRowPropertiesNode,
@@ -31,10 +30,8 @@ from doc_ir import (
     DocIRCodeBlockNode,
     DocIRDocumentNode,
     DocIRHeadingNode,
-    DocIRHorizontalRuleNode,
     DocIRImageNode,
     DocIRLineBreakNode,
-    DocIRLinkNode,
     DocIRListItemNode,
     DocIRNode,
     DocIROrderedListNode,
@@ -242,7 +239,7 @@ class _DocxToDocIRMapper:
 
         # Heading level from name/id
         for key, level in _HEADING_STYLE_NAMES.items():
-            if key == name_lower or key == id_lower:
+            if key in (name_lower, id_lower):
                 resolved.heading_level = level
                 break
 
@@ -258,8 +255,7 @@ class _DocxToDocIRMapper:
                 break
 
         # Run properties from this style's <w:rPr>
-        from docx.docx_ast_node import DocxASTRunPropertiesNode as RPRN
-        rpr = next((c for c in node.children if isinstance(c, RPRN)), None)
+        rpr = next((c for c in node.children if isinstance(c, DocxASTRunPropertiesNode)), None)
         if rpr is not None:
             if rpr.bold:
                 resolved.bold = True
@@ -274,8 +270,7 @@ class _DocxToDocIRMapper:
                 resolved.font_ascii = rpr.font_ascii
 
         # Paragraph outline_level from <w:pPr>
-        from docx.docx_ast_node import DocxASTParagraphPropertiesNode as PPRN
-        ppr = next((c for c in node.children if isinstance(c, PPRN)), None)
+        ppr = next((c for c in node.children if isinstance(c, DocxASTParagraphPropertiesNode)), None)
         if ppr is not None and ppr.outline_level is not None:
             # outline_level 0-5 → heading 1-6
             resolved.heading_level = ppr.outline_level + 1
@@ -714,10 +709,6 @@ class _DocxToDocIRMapper:
         """
         # Determine alignment from cell properties or first paragraph
         alignment = "left"
-        cpr = next(
-            (c for c in cell.children if isinstance(c, DocxASTTableCellPropertiesNode)),
-            None,
-        )
 
         # Try to get alignment from first paragraph's pPr
         first_para = next(

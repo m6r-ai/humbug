@@ -10,7 +10,8 @@ class DocxASTNode:
         self.children: List["DocxASTNode"] = []
 
     def add_child(self, child: "DocxASTNode") -> "DocxASTNode":
-        """Add a child node to this node.
+        """
+        Add a child node to this node.
 
         Args:
             child: The child node to add.
@@ -23,7 +24,8 @@ class DocxASTNode:
         return child
 
     def remove_child(self, child: "DocxASTNode") -> None:
-        """Remove a child node from this node.
+        """
+        Remove a child node from this node.
 
         Args:
             child: The child node to remove.
@@ -49,7 +51,8 @@ class DocxASTVisitor:
     """Base visitor class for DOCX AST traversal."""
 
     def visit(self, node: DocxASTNode) -> Any:
-        """Visit a node and dispatch to the appropriate visit method.
+        """
+        Visit a node and dispatch to the appropriate visit method.
 
         Args:
             node: The node to visit.
@@ -62,7 +65,8 @@ class DocxASTVisitor:
         return visitor(node)
 
     def generic_visit(self, node: DocxASTNode) -> List[Any]:
-        """Default visit method for nodes without specific handlers.
+        """
+        Default visit method for nodes without specific handlers.
 
         Args:
             node: The node to visit.
@@ -78,7 +82,8 @@ class DocxASTVisitor:
 
 
 class DocxASTDocumentNode(DocxASTNode):
-    """Root node representing a complete DOCX document.
+    """
+    Root node representing a complete DOCX document.
 
     Holds the parsed body and the supporting data loaded from the ZIP
     (styles, numbering, relationships).  Children are:
@@ -88,7 +93,8 @@ class DocxASTDocumentNode(DocxASTNode):
     """
 
     def __init__(self, source_path: Optional[str] = None) -> None:
-        """Initialise a document node.
+        """
+        Initialise a document node.
 
         Args:
             source_path: Optional path to the source .docx file.
@@ -101,7 +107,8 @@ class DocxASTDocumentNode(DocxASTNode):
 
 
 class DocxASTBodyNode(DocxASTNode):
-    """Node representing the document body (<w:body>).
+    """
+    Node representing the document body (<w:body>).
 
     Children are block-level nodes: paragraphs, tables, and a final
     optional DocxASTSectionPropertiesNode.
@@ -109,7 +116,8 @@ class DocxASTBodyNode(DocxASTNode):
 
 
 class DocxASTSectionPropertiesNode(DocxASTNode):
-    """Node representing section properties (<w:sectPr>).
+    """
+    Node representing section properties (<w:sectPr>).
 
     Captures page size, margins and orientation.  Stored as raw
     attribute dicts since we preserve but do not deeply interpret them.
@@ -124,7 +132,8 @@ class DocxASTSectionPropertiesNode(DocxASTNode):
         margin_bottom: Optional[int] = None,
         margin_left: Optional[int] = None,
     ) -> None:
-        """Initialise section properties.
+        """
+        Initialise section properties.
 
         All measurements are in twentieths of a point (twips).
 
@@ -146,7 +155,8 @@ class DocxASTSectionPropertiesNode(DocxASTNode):
 
 
 class DocxASTParagraphNode(DocxASTNode):
-    """Node representing a paragraph (<w:p>).
+    """
+    Node representing a paragraph (<w:p>).
 
     Children may include:
       - DocxASTParagraphPropertiesNode (at most one, first child)
@@ -157,7 +167,8 @@ class DocxASTParagraphNode(DocxASTNode):
 
 
 class DocxASTParagraphPropertiesNode(DocxASTNode):
-    """Node representing paragraph properties (<w:pPr>).
+    """
+    Node representing paragraph properties (<w:pPr>).
 
     Captures the semantic properties needed for conversion.  Raw XML
     attributes that are not modelled explicitly are stored in ``extra``
@@ -180,7 +191,8 @@ class DocxASTParagraphPropertiesNode(DocxASTNode):
         page_break_before: bool = False,
         shading: Optional[str] = None,
     ) -> None:
-        """Initialise paragraph properties.
+        """
+        Initialise paragraph properties.
 
         Args:
             style_id: The w:styleId referenced by <w:pStyle w:val="...">.
@@ -215,13 +227,15 @@ class DocxASTParagraphPropertiesNode(DocxASTNode):
 
 
 class DocxASTNumberingPropertiesNode(DocxASTNode):
-    """Node representing list numbering properties (<w:numPr>).
+    """
+    Node representing list numbering properties (<w:numPr>).
 
     Links a paragraph to a numbering definition.
     """
 
     def __init__(self, num_id: str, ilvl: int) -> None:
-        """Initialise numbering properties.
+        """
+        Initialise numbering properties.
 
         Args:
             num_id: The w:numId value referencing a <w:num> in numbering.xml.
@@ -233,7 +247,8 @@ class DocxASTNumberingPropertiesNode(DocxASTNode):
 
 
 class DocxASTRunNode(DocxASTNode):
-    """Node representing a text run (<w:r>).
+    """
+    Node representing a text run (<w:r>).
 
     Children may include:
       - DocxASTRunPropertiesNode (at most one, first child)
@@ -260,7 +275,7 @@ class DocxASTRunPropertiesNode(DocxASTNode):
         vertical_align: Optional[str] = None,
         style_id: Optional[str] = None,
         font_ascii: Optional[str] = None,
-        font_hAnsi: Optional[str] = None,
+        font_h_ansi: Optional[str] = None,
         font_cs: Optional[str] = None,
         sz: Optional[int] = None,
         sz_cs: Optional[int] = None,
@@ -268,7 +283,8 @@ class DocxASTRunPropertiesNode(DocxASTNode):
         highlight: Optional[str] = None,
         lang: Optional[str] = None,
     ) -> None:
-        """Initialise run properties.
+        """
+        Initialise run properties.
 
         Args:
             bold: Whether the run is bold (<w:b/>).
@@ -279,7 +295,7 @@ class DocxASTRunPropertiesNode(DocxASTNode):
             vertical_align: Superscript/subscript ('superscript', 'subscript').
             style_id: Character style ID from <w:rStyle w:val="...">.
             font_ascii: ASCII font name.
-            font_hAnsi: High-ANSI font name.
+            font_h_ansi: High-ANSI font name.
             font_cs: Complex-script font name.
             sz: Font size in half-points.
             sz_cs: Complex-script font size in half-points.
@@ -296,7 +312,7 @@ class DocxASTRunPropertiesNode(DocxASTNode):
         self.vertical_align = vertical_align
         self.style_id = style_id
         self.font_ascii = font_ascii
-        self.font_hAnsi = font_hAnsi
+        self.font_h_ansi = font_h_ansi
         self.font_cs = font_cs
         self.sz = sz
         self.sz_cs = sz_cs
@@ -309,7 +325,8 @@ class DocxASTTextNode(DocxASTNode):
     """Node representing text content (<w:t>)."""
 
     def __init__(self, content: str, preserve_space: bool = False) -> None:
-        """Initialise a text node.
+        """
+        Initialise a text node.
 
         Args:
             content: The text content.
@@ -325,7 +342,8 @@ class DocxASTTabNode(DocxASTNode):
 
 
 class DocxASTBreakNode(DocxASTNode):
-    """Node representing a break (<w:br/>).
+    """
+    Node representing a break (<w:br/>).
 
     The break type determines whether this is a line break, page break,
     or column break.
@@ -344,7 +362,8 @@ class DocxASTBreakNode(DocxASTNode):
 
 
 class DocxASTLastRenderedPageBreakNode(DocxASTNode):
-    """Node representing a last-rendered page break (<w:lastRenderedPageBreak/>).
+    """
+    Node representing a last-rendered page break (<w:lastRenderedPageBreak/>).
 
     This is a hint from Word about where a page break was rendered and is
     preserved in the AST but ignored by converters.
@@ -379,12 +398,9 @@ class DocxASTBookmarkEndNode(DocxASTNode):
         self.bookmark_id = bookmark_id
 
 
-# ---------------------------------------------------------------------------
-# Drawing / image nodes
-# ---------------------------------------------------------------------------
-
 class DocxASTDrawingNode(DocxASTNode):
-    """Node representing an inline or anchored drawing (<w:drawing>).
+    """
+    Node representing an inline or anchored drawing (<w:drawing>).
 
     Images in DOCX are embedded as relationships.  The relationship ID
     is resolved to a path within the ZIP by the parser and stored here.
@@ -398,7 +414,8 @@ class DocxASTDrawingNode(DocxASTNode):
         width_emu: Optional[int] = None,
         height_emu: Optional[int] = None,
     ) -> None:
-        """Initialise a drawing node.
+        """
+        Initialise a drawing node.
 
         Args:
             relationship_id: The r:embed relationship ID (e.g. 'rId6').
@@ -417,7 +434,8 @@ class DocxASTDrawingNode(DocxASTNode):
 
 
 class DocxASTHyperlinkNode(DocxASTNode):
-    """Node representing an external hyperlink (<w:hyperlink r:id="...">).
+    """
+    Node representing an external hyperlink (<w:hyperlink r:id="...">).
 
     The URL is stored directly on the node; the serialiser resolves it to a
     relationship ID when assembling the ZIP.  Children are DocxASTRunNode
@@ -425,7 +443,8 @@ class DocxASTHyperlinkNode(DocxASTNode):
     """
 
     def __init__(self, url: str) -> None:
-        """Initialise a hyperlink node.
+        """
+        Initialise a hyperlink node.
 
         Args:
             url: The target URL for the hyperlink.
@@ -435,7 +454,8 @@ class DocxASTHyperlinkNode(DocxASTNode):
 
 
 class DocxASTTableNode(DocxASTNode):
-    """Node representing a table (<w:tbl>).
+    """
+    Node representing a table (<w:tbl>).
 
     Children:
       - DocxASTTablePropertiesNode (optional)
@@ -445,7 +465,8 @@ class DocxASTTableNode(DocxASTNode):
 
 
 class DocxASTTablePropertiesNode(DocxASTNode):
-    """Node representing table properties (<w:tblPr>).
+    """
+    Node representing table properties (<w:tblPr>).
 
     Captures table-level formatting.
     """
@@ -459,7 +480,8 @@ class DocxASTTablePropertiesNode(DocxASTNode):
         layout: Optional[str] = None,
         no_borders: bool = False,
     ) -> None:
-        """Initialise table properties.
+        """
+        Initialise table properties.
 
         Args:
             style_id: Table style ID from <w:tblStyle w:val="...">.
@@ -479,13 +501,15 @@ class DocxASTTablePropertiesNode(DocxASTNode):
 
 
 class DocxASTTableGridNode(DocxASTNode):
-    """Node representing the table grid (<w:tblGrid>).
+    """
+    Node representing the table grid (<w:tblGrid>).
 
     Holds the column width definitions.
     """
 
     def __init__(self, column_widths: Optional[List[int]] = None) -> None:
-        """Initialise a table grid node.
+        """
+        Initialise a table grid node.
 
         Args:
             column_widths: List of column widths in twips, one per
@@ -496,7 +520,8 @@ class DocxASTTableGridNode(DocxASTNode):
 
 
 class DocxASTTableRowNode(DocxASTNode):
-    """Node representing a table row (<w:tr>).
+    """
+    Node representing a table row (<w:tr>).
 
     Children:
       - DocxASTTableRowPropertiesNode (optional)
@@ -514,7 +539,8 @@ class DocxASTTableRowPropertiesNode(DocxASTNode):
         height: Optional[int] = None,
         height_rule: Optional[str] = None,
     ) -> None:
-        """Initialise table row properties.
+        """
+        Initialise table row properties.
 
         Args:
             is_header: Whether this row is a header row (<w:tblHeader/>).
@@ -530,7 +556,8 @@ class DocxASTTableRowPropertiesNode(DocxASTNode):
 
 
 class DocxASTTableCellNode(DocxASTNode):
-    """Node representing a table cell (<w:tc>).
+    """
+    Node representing a table cell (<w:tc>).
 
     Children:
       - DocxASTTableCellPropertiesNode (optional)
@@ -551,7 +578,8 @@ class DocxASTTableCellPropertiesNode(DocxASTNode):
         vertical_alignment: Optional[str] = None,
         shading_fill: Optional[str] = None,
     ) -> None:
-        """Initialise table cell properties.
+        """
+        Initialise table cell properties.
 
         Args:
             width: Cell width value.
@@ -571,7 +599,8 @@ class DocxASTTableCellPropertiesNode(DocxASTNode):
 
 
 class DocxASTStylesNode(DocxASTNode):
-    """Root node for the styles.xml content.
+    """
+    Root node for the styles.xml content.
 
     Children are DocxASTStyleNode instances.
     """
@@ -585,7 +614,8 @@ class DocxASTStylesNode(DocxASTNode):
 
 
 class DocxASTStyleNode(DocxASTNode):
-    """Node representing a single style definition (<w:style>).
+    """
+    Node representing a single style definition (<w:style>).
 
     Children:
       - DocxASTParagraphPropertiesNode (optional)
@@ -602,7 +632,8 @@ class DocxASTStyleNode(DocxASTNode):
         is_default: bool = False,
         is_custom: bool = False,
     ) -> None:
-        """Initialise a style node.
+        """
+        Initialise a style node.
 
         Args:
             style_type: Style type ('paragraph', 'character', 'table', 'numbering').
@@ -623,12 +654,9 @@ class DocxASTStyleNode(DocxASTNode):
         self.is_custom = is_custom
 
 
-# ---------------------------------------------------------------------------
-# Numbering (from numbering.xml)
-# ---------------------------------------------------------------------------
-
 class DocxASTNumberingNode(DocxASTNode):
-    """Root node for the numbering.xml content.
+    """
+    Root node for the numbering.xml content.
 
     Children:
       - DocxASTAbstractNumNode (zero or more)
@@ -637,13 +665,15 @@ class DocxASTNumberingNode(DocxASTNode):
 
 
 class DocxASTAbstractNumNode(DocxASTNode):
-    """Node representing an abstract numbering definition (<w:abstractNum>).
+    """
+    Node representing an abstract numbering definition (<w:abstractNum>).
 
     Children are DocxASTNumLevelNode instances, one per indent level.
     """
 
     def __init__(self, abstract_num_id: str) -> None:
-        """Initialise an abstract numbering definition.
+        """
+        Initialise an abstract numbering definition.
 
         Args:
             abstract_num_id: The w:abstractNumId attribute value.
@@ -654,13 +684,15 @@ class DocxASTAbstractNumNode(DocxASTNode):
 
 
 class DocxASTNumNode(DocxASTNode):
-    """Node representing a numbering instance (<w:num>).
+    """
+    Node representing a numbering instance (<w:num>).
 
     Links a concrete numId to an abstractNum definition.
     """
 
     def __init__(self, num_id: str, abstract_num_id: str) -> None:
-        """Initialise a numbering instance.
+        """
+        Initialise a numbering instance.
 
         Args:
             num_id: The w:numId attribute value referenced by paragraphs.
@@ -672,7 +704,8 @@ class DocxASTNumNode(DocxASTNode):
 
 
 class DocxASTNumLevelNode(DocxASTNode):
-    """Node representing one level of a numbering definition (<w:lvl>).
+    """
+    Node representing one level of a numbering definition (<w:lvl>).
 
     Holds the format, text pattern and indent for one list level.
     """
@@ -687,9 +720,10 @@ class DocxASTNumLevelNode(DocxASTNode):
         indent_left: Optional[int] = None,
         indent_hanging: Optional[int] = None,
         font_ascii: Optional[str] = None,
-        font_hAnsi: Optional[str] = None,
+        font_h_ansi: Optional[str] = None,
     ) -> None:
-        """Initialise a numbering level.
+        """
+        Initialise a numbering level.
 
         Args:
             ilvl: The indent level (0-based).
@@ -702,7 +736,7 @@ class DocxASTNumLevelNode(DocxASTNode):
             indent_hanging: Hanging indent in twips.
             font_ascii: ASCII font for the level marker (relevant for bullet
                 characters that require specific fonts like Symbol/Wingdings).
-            font_hAnsi: High-ANSI font for the level marker.
+            font_h_ansi: High-ANSI font for the level marker.
         """
         super().__init__()
         self.ilvl = ilvl
@@ -713,4 +747,4 @@ class DocxASTNumLevelNode(DocxASTNode):
         self.indent_left = indent_left
         self.indent_hanging = indent_hanging
         self.font_ascii = font_ascii
-        self.font_hAnsi = font_hAnsi
+        self.font_h_ansi = font_h_ansi

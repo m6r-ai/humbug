@@ -456,7 +456,7 @@ class TestRunParsing:
         ))
         rpr = _rpr(_first_run(_first_para(doc)))
         assert rpr.font_ascii == "Courier New"
-        assert rpr.font_hAnsi == "Courier New"
+        assert rpr.font_h_ansi == "Courier New"
 
     def test_tab_node(self):
         body_xml = (
@@ -1090,4 +1090,4 @@ class TestNumberingParsing:
         abstract_num = next(c for c in numbering_node.children if isinstance(c, DocxASTAbstractNumNode))
         lvl = next(c for c in abstract_num.children if isinstance(c, DocxASTNumLevelNode))
         assert lvl.font_ascii == "Symbol"
-        assert lvl.font_hAnsi == "Symbol"
+        assert lvl.font_h_ansi == "Symbol"

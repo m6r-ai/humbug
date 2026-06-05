@@ -363,7 +363,7 @@ class TestDocxASTNumLevelNode:
             num_fmt="bullet",
             lvl_text="\uf0b7",
             font_ascii="Symbol",
-            font_hAnsi="Symbol",
+            font_h_ansi="Symbol",
         )
         assert node.font_ascii == "Symbol"
-        assert node.font_hAnsi == "Symbol"
+        assert node.font_h_ansi == "Symbol"

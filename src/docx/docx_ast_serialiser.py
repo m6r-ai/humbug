@@ -6,7 +6,7 @@ standard library.
 """
 
 import io
-import xml.sax.saxutils as saxutils
+from xml.sax import saxutils
 import zipfile
 from typing import List, Optional
 
@@ -439,9 +439,9 @@ class _DocxASTSerialiser:
         if node.vertical_align:
             parts.append(f'<w:vertAlign w:val="{_esc(node.vertical_align)}"/>')
 
-        if node.font_ascii or node.font_hAnsi or node.font_cs:
+        if node.font_ascii or node.font_h_ansi or node.font_cs:
             ascii_attr = f' w:ascii="{_esc(node.font_ascii)}"' if node.font_ascii else ""
-            hansi_attr = f' w:hAnsi="{_esc(node.font_hAnsi)}"' if node.font_hAnsi else ""
+            hansi_attr = f' w:hAnsi="{_esc(node.font_h_ansi)}"' if node.font_h_ansi else ""
             cs_attr = f' w:cs="{_esc(node.font_cs)}"' if node.font_cs else ""
             parts.append(f"<w:rFonts{ascii_attr}{hansi_attr}{cs_attr}/>")
 
@@ -534,11 +534,11 @@ class _DocxASTSerialiser:
             parts.append(f'<w:tblLayout w:type="{_esc(node.layout)}"/>')
 
         if node.no_borders:
-            no_border = '<w:tblBorders>'
-            for side in ("top", "left", "bottom", "right", "insideH", "insideV"):
-                no_border += f'<w:{side} w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
-            no_border += '</w:tblBorders>'
-            parts.append(no_border)
+            border_parts = "".join(
+                f'<w:{side} w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+                for side in ("top", "left", "bottom", "right", "insideH", "insideV")
+            )
+            parts.append(f'<w:tblBorders>{border_parts}</w:tblBorders>')
 
         return "<w:tblPr>" + "".join(parts) + "</w:tblPr>"
 
@@ -786,9 +786,9 @@ class _DocxASTSerialiser:
             parts.append(f"<w:pPr><w:ind{left}{hanging}/></w:pPr>")
 
         # Font for bullet character
-        if node.font_ascii or node.font_hAnsi:
+        if node.font_ascii or node.font_h_ansi:
             ascii_attr = f' w:ascii="{_esc(node.font_ascii)}"' if node.font_ascii else ""
-            hansi_attr = f' w:hAnsi="{_esc(node.font_hAnsi)}"' if node.font_hAnsi else ""
+            hansi_attr = f' w:hAnsi="{_esc(node.font_h_ansi)}"' if node.font_h_ansi else ""
             parts.append(f"<w:rPr><w:rFonts{ascii_attr}{hansi_attr}/></w:rPr>")
 
         inner_xml = "".join(parts)

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from doc_ir import (
     DocIRBlockquoteNode,
@@ -158,7 +158,7 @@ class _DocIRToDocxASTMapper:
             name="Code Block",
             based_on=_STYLE_NORMAL,
         )
-        code_rpr = DocxASTRunPropertiesNode(font_ascii="Courier New", font_hAnsi="Courier New")
+        code_rpr = DocxASTRunPropertiesNode(font_ascii="Courier New", font_h_ansi="Courier New")
         code.add_child(code_rpr)
         styles.add_child(code)
 
@@ -306,7 +306,7 @@ class _DocIRToDocxASTMapper:
         blockquote region regardless of content indentation, which paragraph-level
         shading cannot achieve.
         """
-        _BLOCKQUOTE_INDENT = 720
+        blockquote_indent = 720
 
         # Map content into a temporary body so we can transfer children to the cell
         cell_body = DocxASTBodyNode()
@@ -319,14 +319,14 @@ class _DocIRToDocxASTMapper:
 
             elif isinstance(child, DocIRUnorderedListNode):
                 self._map_list(child, cell_body, num_id=_NUM_ID_BULLET, depth=0,
-                               indent_base=_BLOCKQUOTE_INDENT, tight=child.tight)
+                               indent_base=blockquote_indent, tight=child.tight)
 
             elif isinstance(child, DocIROrderedListNode):
                 self._map_list(child, cell_body, num_id=_NUM_ID_ORDERED, depth=0,
-                               indent_base=_BLOCKQUOTE_INDENT, tight=child.tight)
+                               indent_base=blockquote_indent, tight=child.tight)
 
             elif isinstance(child, DocIRCodeBlockNode):
-                self._map_code_block(child, cell_body, indent_left=_BLOCKQUOTE_INDENT)
+                self._map_code_block(child, cell_body, indent_left=blockquote_indent)
 
             else:
                 self._map_block(child, cell_body)
@@ -544,15 +544,14 @@ class _DocIRToDocxASTMapper:
 
         for child in node.children:
             if isinstance(child, DocIRTableCellNode):
-                row.add_child(self._map_table_cell(child, is_header=is_header))
+                row.add_child(self._map_table_cell(child, is_header))
 
         return row
 
     def _map_table_cell(
-        self, node: DocIRTableCellNode, is_header: bool
+        self, node: DocIRTableCellNode, _is_header: bool
     ) -> DocxASTTableCellNode:
         """Map a table cell."""
-        from docx.docx_ast_node import DocxASTTableCellPropertiesNode
         cell = DocxASTTableCellNode()
         cpr = DocxASTTableCellPropertiesNode(width_type="auto")
         cell.add_child(cpr)
@@ -724,7 +723,7 @@ class _DocIRToDocxASTMapper:
                         italic=italic,
                         strike=strike,
                         font_ascii="Courier New" if code else None,
-                        font_hAnsi="Courier New" if code else None,
+                        font_h_ansi="Courier New" if code else None,
                     )
                     run.add_child(rpr)
 

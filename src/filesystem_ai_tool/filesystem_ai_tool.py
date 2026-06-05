@@ -126,7 +126,9 @@ class FileSystemAITool(AITool):
                 AIToolParameter(
                     name="dry_run",
                     type="boolean",
-                    description="If True, validate or preview changes without writing anything (apply_diff_to_file and transform_file operations)",
+                    description=(
+                        "If True, validate or preview changes without writing anything"
+                        " (apply_diff_to_file and transform_file operations)"),
                     required=False
                 ),
                 AIToolParameter(
@@ -1870,7 +1872,11 @@ class FileSystemAITool(AITool):
 
         except DiffMatchError as e:
             error_details = getattr(e, 'error_details', None)
-            error_msg = f"Failed to match diff hunks: {str(e)} No changes were applied - the operation is atomic and all hunks must succeed for any changes to take effect."
+            error_msg = (
+                f"Failed to match diff hunks: {str(e)} No changes were applied"
+                " - the operation is atomic and all hunks must succeed for any"
+                " changes to take effect."
+            )
             if error_details:
                 error_msg += f"\n\nError details:\n{error_details}"
 
