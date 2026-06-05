@@ -11,7 +11,7 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
   tabs.  They can get pretty cluttered though so if you don't need the tab again then close it.
 - If you open a terminal it will automatically be in the root of the mindspace directory.  Don't change directory unless
   you want to be somewhere else.
-- Terminals will not open with a python virtual environment by default.  If you want a venv then you must do that yourself.
+- Terminals will not open with a python virtual environment by default.  The venv is at `venv/` in the mindspace root — activate with `source venv/bin/activate`.
 
 ## Code generation
 

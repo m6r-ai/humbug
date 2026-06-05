@@ -1,0 +1,741 @@
+"""Serialises a DocxASTDocumentNode to a .docx file (ZIP/OOXML).
+
+The serialiser walks the AST and produces XML strings for each component,
+then assembles them into a valid .docx ZIP archive using only the Python
+standard library.
+"""
+
+import io
+import xml.sax.saxutils as saxutils
+import zipfile
+from typing import List, Optional
+
+from docx.docx_ast_node import (
+    DocxASTAbstractNumNode,
+    DocxASTBodyNode,
+    DocxASTBreakNode,
+    DocxASTDocumentNode,
+    DocxASTDrawingNode,
+    DocxASTLastRenderedPageBreakNode,
+    DocxASTNode,
+    DocxASTNumLevelNode,
+    DocxASTNumNode,
+    DocxASTNumberingNode,
+    DocxASTNumberingPropertiesNode,
+    DocxASTParagraphNode,
+    DocxASTParagraphPropertiesNode,
+    DocxASTRunNode,
+    DocxASTRunPropertiesNode,
+    DocxASTStyleNode,
+    DocxASTStylesNode,
+    DocxASTTabNode,
+    DocxASTTableCellNode,
+    DocxASTTableCellPropertiesNode,
+    DocxASTTableNode,
+    DocxASTTablePropertiesNode,
+    DocxASTTableRowNode,
+    DocxASTTableRowPropertiesNode,
+    DocxASTTextNode,
+)
+
+# ZIP entry paths
+_CONTENT_TYPES_PATH = "[Content_Types].xml"
+_RELS_PATH = "_rels/.rels"
+_DOCUMENT_PATH = "word/document.xml"
+_DOCUMENT_RELS_PATH = "word/_rels/document.xml.rels"
+_STYLES_PATH = "word/styles.xml"
+_NUMBERING_PATH = "word/numbering.xml"
+
+# XML namespace URIs
+_W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+_REL_STYLES = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"
+_REL_NUMBERING = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering"
+_REL_OFFICE_DOC = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+_CT_RELS = "application/vnd.openxmlformats-package.relationships+xml"
+_CT_XML = "application/xml"
+_CT_DOCUMENT = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+_CT_STYLES = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"
+_CT_NUMBERING = "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"
+
+# Per-style visual overrides: style_id → dict of extra XML to inject into
+# the serialised <w:style> element.  These carry the visual presentation
+# that isn't modelled in the AST (fonts, spacing, shading).
+_STYLE_VISUALS = {
+    "Normal": {
+        "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/>',
+    },
+    "Heading1": {
+        "ppr_extra": '<w:spacing w:before="240" w:after="120"/>',
+        "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="40"/>',
+    },
+    "Heading2": {
+        "ppr_extra": '<w:spacing w:before="200" w:after="100"/>',
+        "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="32"/>',
+    },
+    "Heading3": {
+        "ppr_extra": '<w:spacing w:before="160" w:after="80"/>',
+        "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="28"/>',
+    },
+    "Heading4": {
+        "ppr_extra": '<w:spacing w:before="120" w:after="60"/>',
+        "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/>',
+    },
+    "Heading5": {
+        "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/>',
+    },
+    "Heading6": {
+        "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/>',
+    },
+    "CodeBlock": {
+        "ppr_extra": (
+            '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="exact"/>'
+            '<w:ind w:left="360"/>'
+            '<w:shd w:val="clear" w:color="auto" w:fill="F2F2F2"/>'
+        ),
+        "rpr_extra": (
+            '<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New" w:cs="Courier New"/>'
+            '<w:sz w:val="20"/>'
+        ),
+    },
+    "Blockquote": {
+        "ppr_extra": '<w:ind w:left="720"/><w:spacing w:before="80" w:after="80"/>',
+        "rpr_extra": (
+            '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'
+            '<w:i/>'
+            '<w:color w:val="444444"/>'
+        ),
+    },
+}
+
+
+def _esc(text: str) -> str:
+    """Escape a string for safe embedding in XML character data."""
+    return saxutils.escape(text)
+
+
+def serialise_docx(document: DocxASTDocumentNode) -> bytes:
+    """Serialise a DocxASTDocumentNode to raw .docx bytes.
+
+    Args:
+        document: The DocxASTDocumentNode to serialise.  Should contain
+            a DocxASTStylesNode, DocxASTNumberingNode, and DocxASTBodyNode
+            as children (as produced by doc_ir_to_docx_ast).
+
+    Returns:
+        Raw bytes of a valid .docx file.
+    """
+    serialiser = _DocxASTSerialiser(document)
+    return serialiser.serialise()
+
+
+class _DocxASTSerialiser:
+    """Walks a DocxASTDocumentNode and produces a .docx ZIP archive."""
+
+    def __init__(self, document: DocxASTDocumentNode) -> None:
+        self._document = document
+        self._has_numbering = False
+
+    def serialise(self) -> bytes:
+        """Perform the full serialisation and return raw bytes."""
+        styles_node = next(
+            (c for c in self._document.children if isinstance(c, DocxASTStylesNode)),
+            None,
+        )
+        numbering_node = next(
+            (c for c in self._document.children if isinstance(c, DocxASTNumberingNode)),
+            None,
+        )
+        body_node = next(
+            (c for c in self._document.children if isinstance(c, DocxASTBodyNode)),
+            None,
+        )
+
+        self._has_numbering = numbering_node is not None
+
+        styles_xml = self._serialise_styles(styles_node)
+        numbering_xml = self._serialise_numbering(numbering_node) if numbering_node else None
+        document_xml = self._serialise_document(body_node)
+
+        return self._build_zip(
+            document_xml=document_xml,
+            styles_xml=styles_xml,
+            numbering_xml=numbering_xml,
+        )
+
+    def _build_zip(
+        self,
+        document_xml: str,
+        styles_xml: str,
+        numbering_xml: Optional[str],
+    ) -> bytes:
+        """Assemble all XML parts into a .docx ZIP archive."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr(_CONTENT_TYPES_PATH, self._content_types_xml(numbering_xml is not None))
+            zf.writestr(_RELS_PATH, self._root_rels_xml())
+            zf.writestr(_DOCUMENT_PATH, document_xml)
+            zf.writestr(_DOCUMENT_RELS_PATH, self._document_rels_xml(numbering_xml is not None))
+            zf.writestr(_STYLES_PATH, styles_xml)
+            if numbering_xml is not None:
+                zf.writestr(_NUMBERING_PATH, numbering_xml)
+
+        return buf.getvalue()
+
+    def _content_types_xml(self, include_numbering: bool) -> str:
+        numbering_override = (
+            f'\n  <Override PartName="/{_NUMBERING_PATH}" ContentType="{_CT_NUMBERING}"/>'
+            if include_numbering
+            else ""
+        )
+        return (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">\n'
+            f'  <Default Extension="rels" ContentType="{_CT_RELS}"/>\n'
+            f'  <Default Extension="xml" ContentType="{_CT_XML}"/>\n'
+            f'  <Override PartName="/{_DOCUMENT_PATH}" ContentType="{_CT_DOCUMENT}"/>\n'
+            f'  <Override PartName="/{_STYLES_PATH}" ContentType="{_CT_STYLES}"/>'
+            f'{numbering_override}\n'
+            '</Types>'
+        )
+
+    def _root_rels_xml(self) -> str:
+        return (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+            f'  <Relationship Id="rId1" Type="{_REL_OFFICE_DOC}" Target="word/document.xml"/>\n'
+            '</Relationships>'
+        )
+
+    def _document_rels_xml(self, include_numbering: bool) -> str:
+        numbering_rel = (
+            f'\n  <Relationship Id="rId2" Type="{_REL_NUMBERING}" Target="numbering.xml"/>'
+            if include_numbering
+            else ""
+        )
+        return (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+            f'  <Relationship Id="rId1" Type="{_REL_STYLES}" Target="styles.xml"/>'
+            f'{numbering_rel}\n'
+            '</Relationships>'
+        )
+
+    # ------------------------------------------------------------------
+    # document.xml
+    # ------------------------------------------------------------------
+
+    def _serialise_document(self, body_node: Optional[DocxASTBodyNode]) -> str:
+        """Produce the full document.xml string."""
+        body_parts: List[str] = []
+        if body_node is not None:
+            for child in body_node.children:
+                body_parts.append(self._serialise_block(child))
+
+        body_content = "\n".join(body_parts)
+
+        return (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            f'<w:document xmlns:w="{_W}" xmlns:r="{_R}">\n'
+            '  <w:body>\n'
+            f'{body_content}\n'
+            '    <w:sectPr>\n'
+            '      <w:pgSz w:w="12240" w:h="15840"/>\n'
+            '      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"'
+            ' w:header="720" w:footer="720" w:gutter="0"/>\n'
+            '    </w:sectPr>\n'
+            '  </w:body>\n'
+            '</w:document>'
+        )
+
+    def _serialise_block(self, node: DocxASTNode) -> str:
+        """Dispatch a block-level AST node to its XML serialiser."""
+        if isinstance(node, DocxASTParagraphNode):
+            return self._serialise_paragraph(node)
+
+        if isinstance(node, DocxASTTableNode):
+            return self._serialise_table(node)
+
+        return ""
+
+    # ------------------------------------------------------------------
+    # Paragraph serialisation
+    # ------------------------------------------------------------------
+
+    def _serialise_paragraph(self, node: DocxASTParagraphNode) -> str:
+        """Serialise a <w:p> element."""
+        ppr_xml = ""
+        run_parts: List[str] = []
+
+        for child in node.children:
+            if isinstance(child, DocxASTParagraphPropertiesNode):
+                ppr_xml = self._serialise_ppr(child)
+
+            elif isinstance(child, DocxASTRunNode):
+                run_parts.append(self._serialise_run(child))
+
+        runs_xml = "".join(run_parts)
+        return f"<w:p>{ppr_xml}{runs_xml}</w:p>"
+
+    def _serialise_ppr(self, node: DocxASTParagraphPropertiesNode) -> str:
+        """Serialise a <w:pPr> element."""
+        parts: List[str] = []
+
+        if node.style_id:
+            parts.append(f'<w:pStyle w:val="{_esc(node.style_id)}"/>')
+
+        if node.justification:
+            parts.append(f'<w:jc w:val="{_esc(node.justification)}"/>')
+
+        if node.outline_level is not None:
+            parts.append(f'<w:outlineLvl w:val="{node.outline_level}"/>')
+
+        if node.keep_next:
+            parts.append("<w:keepNext/>")
+
+        if node.keep_lines:
+            parts.append("<w:keepLines/>")
+
+        if node.page_break_before:
+            parts.append("<w:pageBreakBefore/>")
+
+        if node.spacing_before is not None or node.spacing_after is not None:
+            before = f' w:before="{node.spacing_before}"' if node.spacing_before is not None else ""
+            after = f' w:after="{node.spacing_after}"' if node.spacing_after is not None else ""
+            parts.append(f"<w:spacing{before}{after}/>")
+
+        if any(v is not None for v in (
+            node.indent_left, node.indent_right,
+            node.indent_hanging, node.indent_first_line,
+        )):
+            left = f' w:left="{node.indent_left}"' if node.indent_left is not None else ""
+            right = f' w:right="{node.indent_right}"' if node.indent_right is not None else ""
+            hanging = f' w:hanging="{node.indent_hanging}"' if node.indent_hanging is not None else ""
+            first = f' w:firstLine="{node.indent_first_line}"' if node.indent_first_line is not None else ""
+            parts.append(f"<w:ind{left}{right}{hanging}{first}/>")
+
+        # Numbering properties
+        num_pr = next(
+            (c for c in node.children if isinstance(c, DocxASTNumberingPropertiesNode)),
+            None,
+        )
+        if num_pr is not None:
+            parts.append(
+                f'<w:numPr>'
+                f'<w:ilvl w:val="{num_pr.ilvl}"/>'
+                f'<w:numId w:val="{_esc(num_pr.num_id)}"/>'
+                f'</w:numPr>'
+            )
+
+        if not parts:
+            return ""
+
+        return "<w:pPr>" + "".join(parts) + "</w:pPr>"
+
+    # ------------------------------------------------------------------
+    # Run serialisation
+    # ------------------------------------------------------------------
+
+    def _serialise_run(self, node: DocxASTRunNode) -> str:
+        """Serialise a <w:r> element."""
+        rpr_xml = ""
+        content_parts: List[str] = []
+
+        for child in node.children:
+            if isinstance(child, DocxASTRunPropertiesNode):
+                rpr_xml = self._serialise_rpr(child)
+
+            elif isinstance(child, DocxASTTextNode):
+                content_parts.append(self._serialise_text(child))
+
+            elif isinstance(child, DocxASTTabNode):
+                content_parts.append("<w:tab/>")
+
+            elif isinstance(child, DocxASTBreakNode):
+                if child.break_type and child.break_type != "textWrapping":
+                    content_parts.append(f'<w:br w:type="{_esc(child.break_type)}"/>')
+
+                else:
+                    content_parts.append("<w:br/>")
+
+            elif isinstance(child, DocxASTLastRenderedPageBreakNode):
+                content_parts.append("<w:lastRenderedPageBreak/>")
+
+            elif isinstance(child, DocxASTDrawingNode):
+                content_parts.append(self._serialise_drawing(child))
+
+        if not content_parts and not rpr_xml:
+            return ""
+
+        content_xml = "".join(content_parts)
+        return f"<w:r>{rpr_xml}{content_xml}</w:r>"
+
+    def _serialise_rpr(self, node: DocxASTRunPropertiesNode) -> str:
+        """Serialise a <w:rPr> element."""
+        parts: List[str] = []
+
+        if node.style_id:
+            parts.append(f'<w:rStyle w:val="{_esc(node.style_id)}"/>')
+
+        if node.bold:
+            parts.append("<w:b/>")
+
+        if node.italic:
+            parts.append("<w:i/>")
+
+        if node.underline:
+            parts.append(f'<w:u w:val="{_esc(node.underline)}"/>')
+
+        if node.strike:
+            parts.append("<w:strike/>")
+
+        if node.double_strike:
+            parts.append("<w:dstrike/>")
+
+        if node.vertical_align:
+            parts.append(f'<w:vertAlign w:val="{_esc(node.vertical_align)}"/>')
+
+        if node.font_ascii or node.font_hAnsi or node.font_cs:
+            ascii_attr = f' w:ascii="{_esc(node.font_ascii)}"' if node.font_ascii else ""
+            hansi_attr = f' w:hAnsi="{_esc(node.font_hAnsi)}"' if node.font_hAnsi else ""
+            cs_attr = f' w:cs="{_esc(node.font_cs)}"' if node.font_cs else ""
+            parts.append(f"<w:rFonts{ascii_attr}{hansi_attr}{cs_attr}/>")
+
+        if node.sz is not None:
+            parts.append(f'<w:sz w:val="{node.sz}"/>')
+
+        if node.sz_cs is not None:
+            parts.append(f'<w:szCs w:val="{node.sz_cs}"/>')
+
+        if node.color:
+            parts.append(f'<w:color w:val="{_esc(node.color)}"/>')
+
+        if node.highlight:
+            parts.append(f'<w:highlight w:val="{_esc(node.highlight)}"/>')
+
+        if node.lang:
+            parts.append(f'<w:lang w:val="{_esc(node.lang)}"/>')
+
+        if not parts:
+            return ""
+
+        return "<w:rPr>" + "".join(parts) + "</w:rPr>"
+
+    def _serialise_text(self, node: DocxASTTextNode) -> str:
+        """Serialise a <w:t> element."""
+        space_attr = ' xml:space="preserve"' if node.preserve_space else ""
+        return f"<w:t{space_attr}>{_esc(node.content)}</w:t>"
+
+    def _serialise_drawing(self, node: DocxASTDrawingNode) -> str:
+        """Serialise a drawing as an alt-text placeholder.
+
+        Full drawing serialisation (embedding image bytes, generating
+        relationship IDs) requires ZIP-level coordination that is beyond
+        the scope of a pure AST serialiser.  We emit a text placeholder
+        so content is not silently lost.
+        """
+        alt = node.description or node.resolved_path or node.relationship_id or "image"
+        return (
+            f'<w:t xml:space="preserve">[Image: {_esc(alt)}]</w:t>'
+        )
+
+    def _serialise_table(self, node: DocxASTTableNode) -> str:
+        """Serialise a <w:tbl> element."""
+        tbl_pr_xml = ""
+        row_parts: List[str] = []
+
+        for child in node.children:
+            if isinstance(child, DocxASTTablePropertiesNode):
+                tbl_pr_xml = self._serialise_tbl_pr(child)
+
+            elif isinstance(child, DocxASTTableRowNode):
+                row_parts.append(self._serialise_table_row(child))
+
+        # Default table properties if none provided
+        if not tbl_pr_xml:
+            tbl_pr_xml = (
+                "<w:tblPr>"
+                '<w:tblW w:w="0" w:type="auto"/>'
+                "<w:tblBorders>"
+                '<w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
+                '<w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
+                '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
+                '<w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
+                '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
+                '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
+                "</w:tblBorders>"
+                "</w:tblPr>"
+            )
+
+        rows_xml = "".join(row_parts)
+        return f"<w:tbl>{tbl_pr_xml}{rows_xml}</w:tbl>"
+
+    def _serialise_tbl_pr(self, node: DocxASTTablePropertiesNode) -> str:
+        """Serialise <w:tblPr>."""
+        parts: List[str] = []
+
+        if node.style_id:
+            parts.append(f'<w:tblStyle w:val="{_esc(node.style_id)}"/>')
+
+        if node.width is not None and node.width_type:
+            parts.append(f'<w:tblW w:w="{node.width}" w:type="{_esc(node.width_type)}"/>')
+
+        else:
+            parts.append('<w:tblW w:w="0" w:type="auto"/>')
+
+        if node.indent is not None:
+            parts.append(f'<w:tblInd w:w="{node.indent}" w:type="dxa"/>')
+
+        if node.layout:
+            parts.append(f'<w:tblLayout w:type="{_esc(node.layout)}"/>')
+
+        return "<w:tblPr>" + "".join(parts) + "</w:tblPr>"
+
+    def _serialise_table_row(self, node: DocxASTTableRowNode) -> str:
+        """Serialise a <w:tr> element."""
+        trpr_xml = ""
+        cell_parts: List[str] = []
+
+        for child in node.children:
+            if isinstance(child, DocxASTTableRowPropertiesNode):
+                trpr_xml = self._serialise_trpr(child)
+
+            elif isinstance(child, DocxASTTableCellNode):
+                cell_parts.append(self._serialise_table_cell(child))
+
+        cells_xml = "".join(cell_parts)
+        return f"<w:tr>{trpr_xml}{cells_xml}</w:tr>"
+
+    def _serialise_trpr(self, node: DocxASTTableRowPropertiesNode) -> str:
+        """Serialise <w:trPr>."""
+        parts: List[str] = []
+
+        if node.is_header:
+            parts.append("<w:tblHeader/>")
+
+        if node.cant_split:
+            parts.append("<w:cantSplit/>")
+
+        if node.height is not None:
+            rule = f' w:hRule="{_esc(node.height_rule)}"' if node.height_rule else ""
+            parts.append(f'<w:trHeight w:val="{node.height}"{rule}/>')
+
+        if not parts:
+            return ""
+
+        return "<w:trPr>" + "".join(parts) + "</w:trPr>"
+
+    def _serialise_table_cell(self, node: DocxASTTableCellNode) -> str:
+        """Serialise a <w:tc> element."""
+        tcpr_xml = ""
+        content_parts: List[str] = []
+
+        for child in node.children:
+            if isinstance(child, DocxASTTableCellPropertiesNode):
+                tcpr_xml = self._serialise_tcpr(child)
+
+            elif isinstance(child, DocxASTParagraphNode):
+                content_parts.append(self._serialise_paragraph(child))
+
+            elif isinstance(child, DocxASTTableNode):
+                content_parts.append(self._serialise_table(child))
+
+        # OOXML requires at least one paragraph in every cell
+        if not any("<w:p" in p for p in content_parts):
+            content_parts.append("<w:p/>")
+
+        # Default tcPr if none provided
+        if not tcpr_xml:
+            tcpr_xml = '<w:tcPr><w:tcW w:w="0" w:type="auto"/></w:tcPr>'
+
+        content_xml = "".join(content_parts)
+        return f"<w:tc>{tcpr_xml}{content_xml}</w:tc>"
+
+    def _serialise_tcpr(self, node: DocxASTTableCellPropertiesNode) -> str:
+        """Serialise <w:tcPr>."""
+        parts: List[str] = []
+
+        if node.width is not None and node.width_type:
+            parts.append(f'<w:tcW w:w="{node.width}" w:type="{_esc(node.width_type)}"/>')
+
+        else:
+            parts.append('<w:tcW w:w="0" w:type="auto"/>')
+
+        if node.grid_span > 1:
+            parts.append(f'<w:gridSpan w:val="{node.grid_span}"/>')
+
+        if node.vertical_merge:
+            val_attr = f' w:val="{_esc(node.vertical_merge)}"' if node.vertical_merge != "continue" else ""
+            parts.append(f"<w:vMerge{val_attr}/>")
+
+        if node.vertical_alignment:
+            parts.append(f'<w:vAlign w:val="{_esc(node.vertical_alignment)}"/>')
+
+        if node.shading_fill:
+            parts.append(
+                f'<w:shd w:val="clear" w:color="auto" w:fill="{_esc(node.shading_fill)}"/>'
+            )
+
+        return "<w:tcPr>" + "".join(parts) + "</w:tcPr>"
+
+    def _serialise_styles(self, node: Optional[DocxASTStylesNode]) -> str:
+        """Produce the styles.xml string."""
+        style_parts: List[str] = []
+
+        if node is not None:
+            # Default run properties from docDefaults
+            if node.default_run_properties is not None:
+                rpr_xml = self._serialise_rpr(node.default_run_properties)
+                if rpr_xml:
+                    style_parts.append(
+                        f"<w:docDefaults>"
+                        f"<w:rPrDefault><w:rPr>{rpr_xml[len('<w:rPr>'):-len('</w:rPr>')]}</w:rPr></w:rPrDefault>"
+                        f"</w:docDefaults>"
+                    )
+
+            for child in node.children:
+                if isinstance(child, DocxASTStyleNode):
+                    style_parts.append(self._serialise_style(child))
+
+        else:
+            # Emit a minimal Normal style so the document is valid
+            style_parts.append(
+                '<w:style w:type="paragraph" w:default="1" w:styleId="Normal">'
+                '<w:name w:val="Normal"/>'
+                "</w:style>"
+            )
+
+        styles_xml = "\n".join(style_parts)
+        return (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            f'<w:styles xmlns:w="{_W}">\n'
+            f'{styles_xml}\n'
+            '</w:styles>'
+        )
+
+    def _serialise_style(self, node: DocxASTStyleNode) -> str:
+        """Serialise a single <w:style> element with visual defaults applied."""
+        attrs = f'w:type="{_esc(node.style_type)}" w:styleId="{_esc(node.style_id)}"'
+        if node.is_default:
+            attrs += ' w:default="1"'
+
+        if node.is_custom:
+            attrs += ' w:customStyle="1"'
+
+        parts: List[str] = [f'<w:name w:val="{_esc(node.name)}"/>']
+
+        if node.based_on:
+            parts.append(f'<w:basedOn w:val="{_esc(node.based_on)}"/>')
+
+        if node.next_style:
+            parts.append(f'<w:next w:val="{_esc(node.next_style)}"/>')
+
+        # Get visual overrides for this style
+        visuals = _STYLE_VISUALS.get(node.style_id, {})
+        ppr_extra = visuals.get("ppr_extra", "")
+        rpr_extra = visuals.get("rpr_extra", "")
+
+        # Paragraph properties
+        ppr_node = next(
+            (c for c in node.children if isinstance(c, DocxASTParagraphPropertiesNode)),
+            None,
+        )
+        ppr_parts: List[str] = []
+        if ppr_node:
+            ppr_inner = self._serialise_ppr(ppr_node)
+            # Strip outer <w:pPr>...</w:pPr> tags to get the inner content
+            if ppr_inner.startswith("<w:pPr>") and ppr_inner.endswith("</w:pPr>"):
+                ppr_parts.append(ppr_inner[len("<w:pPr>"):-len("</w:pPr>")])
+
+        if ppr_extra:
+            ppr_parts.append(ppr_extra)
+
+        if ppr_parts:
+            parts.append("<w:pPr>" + "".join(ppr_parts) + "</w:pPr>")
+
+        # Run properties
+        rpr_node = next(
+            (c for c in node.children if isinstance(c, DocxASTRunPropertiesNode)),
+            None,
+        )
+        rpr_parts: List[str] = []
+        if rpr_node:
+            rpr_inner = self._serialise_rpr(rpr_node)
+            if rpr_inner.startswith("<w:rPr>") and rpr_inner.endswith("</w:rPr>"):
+                rpr_parts.append(rpr_inner[len("<w:rPr>"):-len("</w:rPr>")])
+
+        if rpr_extra:
+            rpr_parts.append(rpr_extra)
+
+        if rpr_parts:
+            parts.append("<w:rPr>" + "".join(rpr_parts) + "</w:rPr>")
+
+        inner_xml = "".join(parts)
+        return f"<w:style {attrs}>{inner_xml}</w:style>"
+
+    def _serialise_numbering(self, node: DocxASTNumberingNode) -> str:
+        """Produce the numbering.xml string."""
+        parts: List[str] = []
+
+        for child in node.children:
+            if isinstance(child, DocxASTAbstractNumNode):
+                parts.append(self._serialise_abstract_num(child))
+
+            elif isinstance(child, DocxASTNumNode):
+                parts.append(
+                    f'<w:num w:numId="{_esc(child.num_id)}">'
+                    f'<w:abstractNumId w:val="{_esc(child.abstract_num_id)}"/>'
+                    f'</w:num>'
+                )
+
+        inner_xml = "\n".join(parts)
+        return (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            f'<w:numbering xmlns:w="{_W}">\n'
+            f'{inner_xml}\n'
+            '</w:numbering>'
+        )
+
+    def _serialise_abstract_num(self, node: DocxASTAbstractNumNode) -> str:
+        """Serialise a <w:abstractNum> element."""
+        level_parts: List[str] = []
+
+        for child in node.children:
+            if isinstance(child, DocxASTNumLevelNode):
+                level_parts.append(self._serialise_num_level(child))
+
+        multi_level = ""
+        if node.multi_level_type:
+            multi_level = f'<w:multiLevelType w:val="{_esc(node.multi_level_type)}"/>\n'
+
+        levels_xml = "\n".join(level_parts)
+        return (
+            f'<w:abstractNum w:abstractNumId="{_esc(node.abstract_num_id)}">\n'
+            f'{multi_level}'
+            f'{levels_xml}\n'
+            f'</w:abstractNum>'
+        )
+
+    def _serialise_num_level(self, node: DocxASTNumLevelNode) -> str:
+        """Serialise a <w:lvl> element."""
+        parts: List[str] = [
+            f'<w:start w:val="{node.start}"/>',
+            f'<w:numFmt w:val="{_esc(node.num_fmt)}"/>',
+            f'<w:lvlText w:val="{_esc(node.lvl_text)}"/>',
+            f'<w:lvlJc w:val="{_esc(node.lvl_jc)}"/>',
+        ]
+
+        # Indent properties
+        if node.indent_left is not None or node.indent_hanging is not None:
+            left = f' w:left="{node.indent_left}"' if node.indent_left is not None else ""
+            hanging = f' w:hanging="{node.indent_hanging}"' if node.indent_hanging is not None else ""
+            parts.append(f"<w:pPr><w:ind{left}{hanging}/></w:pPr>")
+
+        # Font for bullet character
+        if node.font_ascii or node.font_hAnsi:
+            ascii_attr = f' w:ascii="{_esc(node.font_ascii)}"' if node.font_ascii else ""
+            hansi_attr = f' w:hAnsi="{_esc(node.font_hAnsi)}"' if node.font_hAnsi else ""
+            parts.append(f"<w:rPr><w:rFonts{ascii_attr}{hansi_attr}/></w:rPr>")
+
+        inner_xml = "".join(parts)
+        return f'<w:lvl w:ilvl="{node.ilvl}">{inner_xml}</w:lvl>'

@@ -66,12 +66,19 @@ modules:
 
   dmarkdown:
     internal_dependencies:
+      - doc_ir
       - syntax
     external_dependencies:
       - "standard_library"
 
-  docx:
+  doc_ir:
     internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  docx:
+    internal_dependencies:
+      - doc_ir
     external_dependencies:
       - "standard_library"
 
