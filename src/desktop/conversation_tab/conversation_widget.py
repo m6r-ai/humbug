@@ -2837,6 +2837,15 @@ class ConversationWidget(QWidget):
         if not loop.is_running():
             return
 
+        if requester is None and self._mindspace_manager.has_mindspace():
+            preview = sanitized_content[:120].replace('\n', ' ')
+            attachment_note = f"\nattachments: {len(attachment_guids)}" if attachment_guids else ""
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Human submitted prompt: '{preview}{'...' if len(sanitized_content) > 120 else ''}'"
+                f"{attachment_note}"
+            )
+
         loop.create_task(self._ai_conversation.submit_message(
             requester,
             sanitized_content,
@@ -2921,6 +2930,11 @@ class ConversationWidget(QWidget):
                 return
 
         self._input.add_attachment(filename, content)
+        if self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Human attached file to conversation: '{path}'"
+            )
 
     def _extract_pdf_text(self, path: str) -> str | None:
         """Extract text from a PDF file, showing an error dialog on failure.

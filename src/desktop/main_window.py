@@ -1361,6 +1361,11 @@ class MainWindow(QMainWindow):
             new_path: New path after renaming
         """
         self._tab_manager.handle_file_rename(old_path, new_path)
+        if self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Human renamed file: '{old_path}' -> '{new_path}'"
+            )
 
     def _on_sidebar_file_moved(self, old_path: str, new_path: str) -> None:
         """
@@ -1371,6 +1376,11 @@ class MainWindow(QMainWindow):
             new_path: New path after moving
         """
         self._tab_manager.handle_file_rename(old_path, new_path)
+        if self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Human moved file: '{old_path}' -> '{new_path}'"
+            )
 
     def _on_sidebar_file_edited(self, path: str, ephemeral: bool) -> None:
         """Handle file edited event from the sidebar."""
@@ -1436,6 +1446,11 @@ class MainWindow(QMainWindow):
             tab.save()
             path = tab.path()
             self._sidebar_manager.reveal_and_select_file("files", path)
+            if self._mindspace_manager.has_mindspace():
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"Human saved file: '{path}'"
+                )
 
         except Exception as e:
             strings = self._language_manager.strings()
@@ -1455,6 +1470,11 @@ class MainWindow(QMainWindow):
             tab.save_as()
             path = tab.path()
             self._sidebar_manager.reveal_and_select_file("files", path)
+            if self._mindspace_manager.has_mindspace():
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"Human saved file as: '{path}'"
+                )
 
         except Exception as e:
             strings = self._language_manager.strings()
@@ -1880,6 +1900,15 @@ class MainWindow(QMainWindow):
                 self._tab_manager.update_welcome_widget(new_settings)
                 self._logger.info("User settings saved successfully")
 
+                if self._mindspace_manager.has_mindspace():
+                    self._mindspace_manager.add_interaction(
+                        MindspaceLogLevel.INFO,
+                        f"User settings changed\n"
+                        f"external file access: {new_settings.allow_external_file_access}\n"
+                        f"allowlist entries: {len(new_settings.external_file_allowlist)}\n"
+                        f"denylist entries: {len(new_settings.external_file_denylist)}"
+                    )
+
             except UserError as e:
                 self._logger.error("Failed to save user settings: %s", str(e))
                 strings = self._language_manager.strings()
@@ -1893,6 +1922,12 @@ class MainWindow(QMainWindow):
         def _on_mindspace_settings_changed(new_settings: MindspaceSettings) -> None:
             try:
                 self._mindspace_manager.update_settings(new_settings)
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"Mindspace settings changed\n"
+                    f"enabled tools: {', '.join(k for k, v in new_settings.enabled_tools.items() if v)}\n"
+                    f"disabled tools: {', '.join(k for k, v in new_settings.enabled_tools.items() if not v)}"
+                )
 
             except MindspaceError as e:
                 self._logger.error("Failed to save mindspace settings: %s", str(e))
