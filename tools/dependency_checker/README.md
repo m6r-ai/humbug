@@ -584,7 +584,3 @@ The tool is designed to be extensible. Key areas for enhancement:
 - Performance optimizations
 - Enhanced pattern matching
 - IDE integrations
-
-## License
-
-This tool is part of your project and follows the same license terms.
