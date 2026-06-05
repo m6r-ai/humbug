@@ -101,7 +101,11 @@ _STYLE_VISUALS = {
         ),
     },
     "Blockquote": {
-        "ppr_extra": '<w:ind w:left="720"/><w:spacing w:before="80" w:after="80"/>',
+        "ppr_extra": (
+            '<w:shd w:val="clear" w:color="auto" w:fill="E8F0F8"/>'
+            '<w:ind w:left="720"/>'
+            '<w:spacing w:before="80" w:after="80"/>'
+        ),
         "rpr_extra": (
             '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'
             '<w:i/>'
@@ -334,6 +338,11 @@ class _DocxASTSerialiser:
         if node.page_break_before:
             parts.append("<w:pageBreakBefore/>")
 
+        if node.shading:
+            parts.append(
+                f'<w:shd w:val="clear" w:color="auto" w:fill="{_esc(node.shading)}"/>'
+            )
+
         if node.spacing_before is not None or node.spacing_after is not None:
             before = f' w:before="{node.spacing_before}"' if node.spacing_before is not None else ""
             after = f' w:after="{node.spacing_after}"' if node.spacing_after is not None else ""
@@ -523,6 +532,13 @@ class _DocxASTSerialiser:
 
         if node.layout:
             parts.append(f'<w:tblLayout w:type="{_esc(node.layout)}"/>')
+
+        if node.no_borders:
+            no_border = '<w:tblBorders>'
+            for side in ("top", "left", "bottom", "right", "insideH", "insideV"):
+                no_border += f'<w:{side} w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+            no_border += '</w:tblBorders>'
+            parts.append(no_border)
 
         return "<w:tblPr>" + "".join(parts) + "</w:tblPr>"
 

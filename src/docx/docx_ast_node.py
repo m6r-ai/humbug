@@ -178,6 +178,7 @@ class DocxASTParagraphPropertiesNode(DocxASTNode):
         keep_next: bool = False,
         keep_lines: bool = False,
         page_break_before: bool = False,
+        shading: Optional[str] = None,
     ) -> None:
         """Initialise paragraph properties.
 
@@ -194,6 +195,7 @@ class DocxASTParagraphPropertiesNode(DocxASTNode):
             keep_next: Whether to keep with next paragraph.
             keep_lines: Whether to keep lines together.
             page_break_before: Whether to force a page break before.
+            shading: Hex fill colour for paragraph background shading, or None.
         """
         super().__init__()
         self.style_id = style_id
@@ -208,6 +210,7 @@ class DocxASTParagraphPropertiesNode(DocxASTNode):
         self.keep_next = keep_next
         self.keep_lines = keep_lines
         self.page_break_before = page_break_before
+        self.shading = shading
         # Child: DocxASTNumberingPropertiesNode (optional)
 
 
@@ -454,6 +457,7 @@ class DocxASTTablePropertiesNode(DocxASTNode):
         width_type: Optional[str] = None,
         indent: Optional[int] = None,
         layout: Optional[str] = None,
+        no_borders: bool = False,
     ) -> None:
         """Initialise table properties.
 
@@ -463,6 +467,7 @@ class DocxASTTablePropertiesNode(DocxASTNode):
             width_type: Table width type ('dxa', 'pct', 'auto').
             indent: Table indent from left margin in twips.
             layout: Table layout type ('fixed', 'autofit').
+            no_borders: Whether to explicitly suppress all table borders.
         """
         super().__init__()
         self.style_id = style_id
@@ -470,6 +475,7 @@ class DocxASTTablePropertiesNode(DocxASTNode):
         self.width_type = width_type
         self.indent = indent
         self.layout = layout
+        self.no_borders = no_borders
 
 
 class DocxASTTableGridNode(DocxASTNode):

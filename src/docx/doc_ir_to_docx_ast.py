@@ -39,7 +39,9 @@ from docx.docx_ast_node import (
     DocxASTStyleNode,
     DocxASTStylesNode,
     DocxASTTableCellNode,
+    DocxASTTableCellPropertiesNode,
     DocxASTTableNode,
+    DocxASTTablePropertiesNode,
     DocxASTTableRowNode,
     DocxASTTableRowPropertiesNode,
     DocxASTTextNode,
@@ -63,6 +65,9 @@ _NUM_ID_ORDERED = "2"
 
 # Maximum nesting depth supported for lists
 _MAX_LIST_DEPTH = 9
+
+# Background shading colour for blockquote paragraphs
+_BLOCKQUOTE_SHADING = "E8F0F8"
 
 
 def doc_ir_to_docx_ast(document: DocIRDocumentNode) -> DocxASTDocumentNode:
@@ -191,8 +196,6 @@ class _DocIRToDocxASTMapper:
                 num_fmt="bullet",
                 lvl_text=bullet_chars[i % 3],
                 lvl_jc="left",
-                indent_left=720 * (i + 1),
-                indent_hanging=360,
             )
             bullet_abstract.add_child(lvl)
 
@@ -214,8 +217,6 @@ class _DocIRToDocxASTMapper:
                 num_fmt=fmt,
                 lvl_text=text,
                 lvl_jc="left",
-                indent_left=720 * (i + 1),
-                indent_hanging=360,
             )
             ordered_abstract.add_child(lvl)
 
@@ -277,6 +278,7 @@ class _DocIRToDocxASTMapper:
         self,
         node: DocIRParagraphNode,
         style_id: str = _STYLE_NORMAL,
+        shading: Optional[str] = None,
     ) -> Optional[DocxASTParagraphNode]:
         """Map a paragraph to a styled paragraph.
 
@@ -287,7 +289,7 @@ class _DocIRToDocxASTMapper:
             return None
 
         para = DocxASTParagraphNode()
-        ppr = DocxASTParagraphPropertiesNode(style_id=style_id)
+        ppr = DocxASTParagraphPropertiesNode(style_id=style_id, shading=shading)
         para.add_child(ppr)
         for run in runs:
             para.add_child(run)
@@ -297,20 +299,75 @@ class _DocIRToDocxASTMapper:
     def _map_blockquote(
         self, node: DocIRBlockquoteNode, parent: DocxASTBodyNode
     ) -> None:
-        """Map a blockquote — each child paragraph gets the Blockquote style."""
+        """Map a blockquote as a borderless table with a shaded cell.
+
+        Using a table cell background gives a full-width fill across the entire
+        blockquote region regardless of content indentation, which paragraph-level
+        shading cannot achieve.
+        """
+        _BLOCKQUOTE_INDENT = 720
+
+        # Map content into a temporary body so we can transfer children to the cell
+        cell_body = DocxASTBodyNode()
+
         for child in node.children:
             if isinstance(child, DocIRParagraphNode):
                 para = self._map_paragraph_node(child, style_id=_STYLE_BLOCKQUOTE)
                 if para is not None:
-                    parent.add_child(para)
+                    cell_body.add_child(para)
+
+            elif isinstance(child, DocIRUnorderedListNode):
+                self._map_list(child, cell_body, num_id=_NUM_ID_BULLET, depth=0,
+                               indent_base=_BLOCKQUOTE_INDENT)
+
+            elif isinstance(child, DocIROrderedListNode):
+                self._map_list(child, cell_body, num_id=_NUM_ID_ORDERED, depth=0,
+                               indent_base=_BLOCKQUOTE_INDENT)
+
+            elif isinstance(child, DocIRCodeBlockNode):
+                self._map_code_block(child, cell_body, indent_left=_BLOCKQUOTE_INDENT)
 
             else:
-                # Nested blocks inside blockquote: recurse
-                self._map_block(child, parent)
+                self._map_block(child, cell_body)
+
+        # Build the table wrapper
+        table = DocxASTTableNode()
+
+        tbl_pr = DocxASTTablePropertiesNode(width=5000, width_type="pct", no_borders=True)
+        table.add_child(tbl_pr)
+
+        row = DocxASTTableRowNode()
+        table.add_child(row)
+
+        cell = DocxASTTableCellNode()
+        tcp = DocxASTTableCellPropertiesNode(
+            width=5000,
+            width_type="pct",
+            shading_fill=_BLOCKQUOTE_SHADING,
+        )
+        cell.add_child(tcp)
+
+        for content_node in cell_body.children:
+            cell.add_child(content_node)
+
+        row.add_child(cell)
+        parent.add_child(table)
+
+        # Word provides no spacing mechanism on tables equivalent to paragraph
+        # spacing_after, so insert an empty paragraph to create the gap that the
+        # markdown blank line implies.
+        spacer = DocxASTParagraphNode()
+        spacer.add_child(DocxASTParagraphPropertiesNode(
+            style_id=_STYLE_NORMAL,
+            spacing_before=0,
+            spacing_after=0,
+        ))
+        parent.add_child(spacer)
 
     def _map_code_block(
         self, node: DocIRCodeBlockNode, parent: DocxASTBodyNode,
         indent_left: Optional[int] = None,
+        shading: Optional[str] = None,
     ) -> None:
         """Map a code block — one paragraph per line, all with CodeBlock style."""
         lines = node.content.split("\n")
@@ -328,6 +385,7 @@ class _DocIRToDocxASTMapper:
             ppr = DocxASTParagraphPropertiesNode(
                 style_id=_STYLE_CODE_BLOCK,
                 indent_left=indent_left,
+                shading=shading,
             )
             para.add_child(ppr)
             if line:
@@ -350,6 +408,8 @@ class _DocIRToDocxASTMapper:
         parent: DocxASTBodyNode,
         num_id: str,
         depth: int,
+        indent_base: int = 0,
+        shading: Optional[str] = None,
     ) -> None:
         """Recursively map a list node, emitting paragraphs with numPr.
 
@@ -358,10 +418,14 @@ class _DocIRToDocxASTMapper:
             parent: The body node to append paragraphs to.
             num_id: The numId to reference in numPr.
             depth: Current nesting depth (0-based ilvl).
+            indent_base: Extra left indent in twips added to all levels (used
+                when the list is nested inside a blockquote).
+            shading: Background shading hex colour, or None.
         """
         for child in node.children:
             if isinstance(child, DocIRListItemNode):
-                self._map_list_item(child, parent, num_id=num_id, depth=depth)
+                self._map_list_item(child, parent, num_id=num_id, depth=depth,
+                                    indent_base=indent_base, shading=shading)
 
     def _map_list_item(
         self,
@@ -369,6 +433,8 @@ class _DocIRToDocxASTMapper:
         parent: DocxASTBodyNode,
         num_id: str,
         depth: int,
+        indent_base: int = 0,
+        shading: Optional[str] = None,
     ) -> None:
         """Map a list item.
 
@@ -378,15 +444,22 @@ class _DocIRToDocxASTMapper:
         list marker.  Nested lists are recursed with depth+1.
         """
         is_first_para = True
-        indent_left = 720 * (depth + 1)
+        indent_left = indent_base + 720 * (depth + 1)  # text/continuation indent
 
         for child in item.children:
             if isinstance(child, DocIRParagraphNode):
                 runs = self._build_runs(child.children)
                 para = DocxASTParagraphNode()
                 if is_first_para:
-                    # First paragraph: carries the bullet/number marker
-                    ppr = DocxASTParagraphPropertiesNode(style_id=_STYLE_NORMAL)
+                    # First paragraph: carries the bullet/number marker.
+                    # The numbering definition carries no indent; paragraph-level
+                    # indent is the sole source of positioning.
+                    ppr = DocxASTParagraphPropertiesNode(
+                        style_id=_STYLE_NORMAL,
+                        indent_left=indent_left,
+                        indent_hanging=360,
+                        shading=shading,
+                    )
                     num_pr = DocxASTNumberingPropertiesNode(
                         num_id=num_id,
                         ilvl=min(depth, _MAX_LIST_DEPTH - 1),
@@ -400,6 +473,7 @@ class _DocIRToDocxASTMapper:
                     ppr = DocxASTParagraphPropertiesNode(
                         style_id=_STYLE_NORMAL,
                         indent_left=indent_left,
+                        shading=shading,
                     )
                 para.add_child(ppr)
                 for run in runs:
@@ -409,11 +483,13 @@ class _DocIRToDocxASTMapper:
 
             elif isinstance(child, DocIRUnorderedListNode):
                 is_first_para = False
-                self._map_list(child, parent, num_id=_NUM_ID_BULLET, depth=depth + 1)
+                self._map_list(child, parent, num_id=_NUM_ID_BULLET, depth=depth + 1,
+                               indent_base=indent_base, shading=shading)
 
             elif isinstance(child, DocIROrderedListNode):
                 is_first_para = False
-                self._map_list(child, parent, num_id=_NUM_ID_ORDERED, depth=depth + 1)
+                self._map_list(child, parent, num_id=_NUM_ID_ORDERED, depth=depth + 1,
+                               indent_base=indent_base, shading=shading)
 
             else:
                 # Other block children inside a list item — handle with list
@@ -422,7 +498,8 @@ class _DocIRToDocxASTMapper:
                 if isinstance(child, DocIRCodeBlockNode):
                     # Use the list text indent directly — explicit indent_left
                     # overrides the CodeBlock style's own indent entirely
-                    self._map_code_block(child, parent, indent_left=indent_left)
+                    self._map_code_block(child, parent, indent_left=indent_left,
+                                         shading=shading)
 
                 else:
                     self._map_block(child, parent)

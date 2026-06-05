@@ -12,6 +12,8 @@ New features:
   and asks it to select the correct one.
 - Google Gemini models now show their reasoning.
 - Added Claude Opus 4.8 and removed 4.6.
+- Added a new abstract document IR and conversion logic to convert markdown and DOCX format files into/out-of this format.
+- Added a new DOCX AST and code to read/write DOCX format using it.
 
 Bug fixes:
 
@@ -26,6 +28,8 @@ Bug fixes:
 - The tab label for "File Save As" did not automatically update to reflect the new name.
 - If a file is moved and had an open tab then the new location is picked up and the tab is updated to the new path.
 - Markdown indentation for embedded code blocks could end up incorrect.
+- When applying diffs via the filesystem or an editor buffer, if any hunk fails to apply then none apply.  Updated
+  the error responses to make this clear so the AI never assumes some did apply.
 
 Internal structure changes:
 
