@@ -23,6 +23,7 @@ from doc_ir import (
 )
 from docx.docx_ast_node import (
     DocxASTAbstractNumNode,
+    DocxASTNode,
     DocxASTBodyNode,
     DocxASTBreakNode,
     DocxASTDocumentNode,
