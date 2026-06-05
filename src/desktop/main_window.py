@@ -624,6 +624,7 @@ class MainWindow(QMainWindow):
 
         # Store Menai tool instance so we can update its module path when mindspace changes
         self._menai_tool = MenaiAITool()
+        self._menai_tool.set_mindspace(mindspace)
         self._ai_tool_manager.register_tool(
             self._menai_tool, "Menai: evaluates expressions using AI Functional Programming Language syntax"
         )
@@ -634,7 +635,8 @@ class MainWindow(QMainWindow):
         self._ai_tool_manager.register_tool(
             FileSystemAITool(
                 self._resolve_mindspace_path,
-                self._get_filesystem_access_settings
+                self._get_filesystem_access_settings,
+                mindspace
             ),
             "FileSystem: handles file operations in the current mindspace"
         )

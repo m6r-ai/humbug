@@ -137,7 +137,7 @@ class TestFileSystemAIToolCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -178,7 +178,7 @@ class TestFileSystemAIToolCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -271,7 +271,7 @@ class TestFileSystemAIToolCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -307,7 +307,7 @@ class TestFileSystemAIToolCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -346,7 +346,7 @@ class TestFileSystemAIToolCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -389,7 +389,7 @@ class TestFileSystemAIToolMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -419,7 +419,7 @@ class TestFileSystemAIToolMove:
             "dest_dir": ("/test/sandbox/dest_dir", "dest_dir")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -469,7 +469,7 @@ class TestFileSystemAIToolMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists:
             mock_exists.return_value = True
@@ -489,7 +489,7 @@ class TestFileSystemAIToolMove:
             "new_dir/dest.txt": ("/test/sandbox/new_dir/dest.txt", "new_dir/dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.mkdir') as mock_mkdir, \
@@ -512,7 +512,7 @@ class TestFileSystemAIToolMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.mkdir'), \
@@ -536,7 +536,7 @@ class TestFileSystemAIToolMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.mkdir'), \

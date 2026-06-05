@@ -110,7 +110,7 @@ class TestFileSystemAIToolAuthorizationContext:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -172,7 +172,7 @@ class TestFileSystemAIToolParametrized:
     ])
     def test_supported_operations_in_definition(self, operation, mock_path_resolver, mock_access_settings):
         """Test that all supported operations are included in definition."""
-        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
         definition = filesystem_tool.get_definition()
         operation_param = definition.parameters[0]
 
@@ -181,7 +181,7 @@ class TestFileSystemAIToolParametrized:
     @pytest.mark.parametrize("encoding", ["utf-8", "utf-16", "ascii", "latin-1"])
     def test_supported_encodings_in_definition(self, encoding, mock_path_resolver, mock_access_settings):
         """Test that all supported encodings are included in definition."""
-        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
         definition = filesystem_tool.get_definition()
         encoding_param = next(p for p in definition.parameters if p.name == "encoding")
 
@@ -195,7 +195,7 @@ class TestFileSystemAIToolParametrized:
     ])
     def test_custom_max_file_sizes(self, max_size_mb, expected_bytes, mock_path_resolver, mock_access_settings):
         """Test filesystem tool with different max file sizes."""
-        tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, max_file_size_mb=max_size_mb)
+        tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock(), max_file_size_mb=max_size_mb)
 
         assert tool._max_file_size_bytes == expected_bytes
 
@@ -349,7 +349,7 @@ class TestFileSystemAIToolPathResolverIntegration:
                 raise ValueError("Access to this path is forbidden")
             return Path(f"/test/sandbox/{path}"), path
 
-        filesystem_tool = FileSystemAITool(resolve_path=failing_resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=failing_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "forbidden"})
         with pytest.raises(AIToolExecutionError) as exc_info:
@@ -367,7 +367,7 @@ class TestFileSystemAIToolPathResolverIntegration:
             display_path = f"custom_prefix/{path}"
             return abs_path, display_path
 
-        filesystem_tool = FileSystemAITool(resolve_path=custom_resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=custom_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -402,7 +402,7 @@ class TestFileSystemAIToolPathResolverIntegration:
 
             return abs_path, display_path
 
-        filesystem_tool = FileSystemAITool(resolve_path=flexible_resolver, get_access_settings=mock_access_settings)
+        filesystem_tool = FileSystemAITool(resolve_path=flexible_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
 
         test_cases = [
             ("file.txt", "file.txt"),

@@ -39,7 +39,8 @@ def transform_tool(real_path_resolver, real_access_settings):
     """FileSystemAITool with a real path resolver for transform tests."""
     return FileSystemAITool(
         resolve_path=real_path_resolver,
-        get_access_settings=real_access_settings
+        get_access_settings=real_access_settings,
+        mindspace=MagicMock()
     )
 
 

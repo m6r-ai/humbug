@@ -30,6 +30,7 @@ from desktop.conversation_tab.conversation_message import ConversationMessage
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from mindspace.mindspace_log_level import MindspaceLogLevel
 from desktop.style_manager import StyleManager
 from desktop.widgets import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 from desktop.markdown import MarkdownTextEdit
@@ -925,6 +926,17 @@ class ConversationWidget(QWidget):
 
     def _on_tool_call_approved(self, _tool_call: AIToolCall) -> None:
         """Handle user approval of tool calls."""
+        if self._pending_tool_call_approval and self._mindspace_manager.has_mindspace():
+            info = self._pending_tool_call_approval.get_tool_approval_info()
+            if info and info.get("tool_call"):
+                tc = info["tool_call"]
+                op = tc.arguments.get("operation", "")
+                label = f"{tc.name}.{op}" if op else tc.name
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"Human approved tool call: {label}"
+                )
+
         self._pending_tool_call_approval = None
         loop = asyncio.get_event_loop()
         loop.create_task(self._ai_conversation.approve_pending_tool_calls())
@@ -933,6 +945,16 @@ class ConversationWidget(QWidget):
         """Handle user indicating uncertainty about tool calls."""
         # Clean up the tool approval UI
         if self._pending_tool_call_approval:
+            if self._mindspace_manager.has_mindspace():
+                info = self._pending_tool_call_approval.get_tool_approval_info()
+                if info and info.get("tool_call"):
+                    tc = info["tool_call"]
+                    op = tc.arguments.get("operation", "")
+                    label = f"{tc.name}.{op}" if op else tc.name
+                    self._mindspace_manager.add_interaction(
+                        MindspaceLogLevel.INFO,
+                        f"Human indicated uncertainty about tool call: {label}"
+                    )
             self._pending_tool_call_approval.remove_tool_approval_ui()
             self._pending_tool_call_approval = None
 
@@ -948,6 +970,17 @@ class ConversationWidget(QWidget):
 
     def _on_tool_call_rejected(self, reason: str) -> None:
         """Handle user rejection of tool calls."""
+        if self._pending_tool_call_approval and self._mindspace_manager.has_mindspace():
+            info = self._pending_tool_call_approval.get_tool_approval_info()
+            if info and info.get("tool_call"):
+                tc = info["tool_call"]
+                op = tc.arguments.get("operation", "")
+                label = f"{tc.name}.{op}" if op else tc.name
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"Human denied tool call: {label}\nreason: {reason}"
+                )
+
         self._pending_tool_call_approval = None
         loop = asyncio.get_event_loop()
         loop.create_task(self._ai_conversation.reject_pending_tool_calls(reason))

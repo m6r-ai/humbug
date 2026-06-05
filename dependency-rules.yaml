@@ -105,6 +105,7 @@ modules:
       - diff
       - docx
       - menai
+      - mindspace
       - pdf
       - syntax
     external_dependencies:
@@ -162,6 +163,7 @@ modules:
     internal_dependencies:
       - ai_tool
       - menai
+      - mindspace
     external_dependencies:
       - "standard_library"
 

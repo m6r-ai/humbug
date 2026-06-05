@@ -77,9 +77,21 @@ def mock_access_settings_with_external_access():
 
 
 @pytest.fixture
+def mock_mindspace():
+    """Fixture providing a mock mindspace that silently accepts add_interaction calls."""
+    mock = MagicMock()
+    mock.has_mindspace.return_value = True
+    mock.add_interaction.return_value = None
+    return mock
+
+
+@pytest.fixture
 def filesystem_tool(mock_path_resolver, mock_access_settings):
     """Fixture providing a filesystem tool instance with mocked path resolver."""
-    return FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings)
+    mock = MagicMock()
+    mock.has_mindspace.return_value = True
+    mock.add_interaction.return_value = None
+    return FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=mock)
 
 
 @pytest.fixture

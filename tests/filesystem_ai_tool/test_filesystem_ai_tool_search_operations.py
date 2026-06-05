@@ -24,7 +24,7 @@ def make_tool_with_tmp(tmp_path):
         external_allowlist=[],
         external_denylist=[]
     )
-    return FileSystemAITool(resolve_path=resolver, get_access_settings=lambda: settings)
+    return FileSystemAITool(resolve_path=resolver, get_access_settings=lambda: settings, mindspace=MagicMock())
 
 
 class TestSearchFile:
@@ -789,7 +789,7 @@ class TestSearchFiles:
             external_allowlist=[],
             external_denylist=[]
         )
-        tool = FileSystemAITool(resolve_path=resolver, get_access_settings=lambda: settings)
+        tool = FileSystemAITool(resolve_path=resolver, get_access_settings=lambda: settings, mindspace=MagicMock())
 
         tool_call = make_tool_call("filesystem", {
             "operation": "search_files",

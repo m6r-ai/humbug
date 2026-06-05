@@ -13,6 +13,8 @@ from ai_tool import (
     AIToolExecutionError, AIToolTimeoutError, AIToolAuthorizationCallback,
     AIToolOperationDefinition
 )
+from mindspace.mindspace import Mindspace
+from mindspace.mindspace_log_level import MindspaceLogLevel
 
 
 class MenaiAITool(AITool):
@@ -21,10 +23,14 @@ class MenaiAITool(AITool):
     def __init__(self) -> None:
         """
         Initialize the Menai tool.
+
+        Args:
+            mindspace: The active mindspace, used for audit logging
         """
         self._tool = Menai()
         self._logger = logging.getLogger("MenaiAITool")
         self._module_path: List[str] = []
+        self._mindspace: Mindspace | None = None
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -70,6 +76,15 @@ class MenaiAITool(AITool):
             )
         }
 
+    def set_mindspace(self, mindspace: Mindspace) -> None:
+        """
+        Set the mindspace for audit logging.
+
+        Args:
+            mindspace: The active mindspace
+        """
+        self._mindspace = mindspace
+
     def set_module_path(self, module_path: list[str]) -> None:
         """
         Update the module search path.
@@ -82,6 +97,7 @@ class MenaiAITool(AITool):
             module_path: List of directories to search for modules.
                         Paths will be expanded and resolved.
         """
+
         # Expand path
         expanded_path = []
         for path in module_path:
@@ -611,6 +627,12 @@ Syntax: (operator arg1 arg2 ...)
                 raise AIToolTimeoutError("Menai calculation timed out", 10.0)  # pylint: disable=raise-missing-from
 
             self._logger.debug("Menai evaluation successful: %s = %s", expression, result)
+
+            if self._mindspace is not None:
+                self._mindspace.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"AI evaluated Menai expression: '{expression[:80]}{'...' if len(expression) > 80 else ''}'"
+                )
 
             # Build context only if traces exist
             trace_str = ""

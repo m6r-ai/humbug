@@ -22,6 +22,8 @@ from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplic
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
 from syntax.programming_language_utils import ProgrammingLanguageUtils
+from mindspace.mindspace import Mindspace
+from mindspace.mindspace_log_level import MindspaceLogLevel
 
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 from filesystem_ai_tool.filesystem_diff_applier import FilesystemDiffApplier
@@ -39,6 +41,7 @@ class FileSystemAITool(AITool):
         self,
         resolve_path: Callable[[str], Tuple[Path, str]],
         get_access_settings: Callable[[], FilesystemAccessSettings],
+        mindspace: Mindspace,
         max_file_size_mb: int = 10
     ):
         """
@@ -47,10 +50,12 @@ class FileSystemAITool(AITool):
         Args:
             resolve_path: Callback to resolve and validate paths, returns (absolute_path, display_path)
             get_access_settings: Callback to get current filesystem access settings
+            mindspace: The active mindspace, used for audit logging
             max_file_size_mb: Maximum file size in MB for read/write operations
         """
         self._resolve_path = resolve_path
         self._get_access_settings = get_access_settings
+        self._mindspace = mindspace
         self._max_file_size_bytes = max_file_size_mb * 1024 * 1024
         self._logger = logging.getLogger("FileSystemAITool")
         self._menai = Menai()
@@ -665,7 +670,7 @@ class FileSystemAITool(AITool):
         """Read file contents."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, _ = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization, allow_external=True)
+        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization, allow_external=True)
 
         # Validate file exists and is readable
         if not path.exists():
@@ -697,6 +702,10 @@ class FileSystemAITool(AITool):
             except OSError as e:
                 raise AIToolExecutionError(f"Failed to read file: {e}") from e
 
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI read file (PDF): '{display_path}'"
+            )
             return AIToolResult(id=tool_call.id, name="filesystem", content=content, context="PDF")
 
         if path.suffix.lower() == ".docx":
@@ -714,6 +723,10 @@ class FileSystemAITool(AITool):
             except OSError as e:
                 raise AIToolExecutionError(f"Failed to read file: {e}") from e
 
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI read file (DOCX): '{display_path}'"
+            )
             return AIToolResult(id=tool_call.id, name="filesystem", content=content, context="DOCX")
 
         encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
@@ -737,6 +750,10 @@ class FileSystemAITool(AITool):
         language = ProgrammingLanguageUtils.from_file_extension(path.name)
         language_str = ProgrammingLanguageUtils.get_name(language)
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI read file: '{display_path}'"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -753,7 +770,7 @@ class FileSystemAITool(AITool):
         """Read file contents with line numbers."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, _ = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization, allow_external=True)
+        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization, allow_external=True)
 
         # Validate file exists and is readable
         if not path.exists():
@@ -827,6 +844,10 @@ class FileSystemAITool(AITool):
             "lines": context_object
         }
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI read file lines: '{display_path}' ({range_value})"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -921,6 +942,10 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to write file: {str(e)}") from e
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI wrote file: '{display_path}' ({content_size:,} bytes)"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -990,6 +1015,10 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to append to file: {str(e)}") from e
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI appended to file: '{display_path}' (+{content_size:,} bytes)"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -1111,6 +1140,10 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to create directory: {str(e)}") from e
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI created directory: '{display_path}'"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -1160,6 +1193,10 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to remove directory: {str(e)}") from e
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI removed directory: '{display_path}'"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -1201,6 +1238,10 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to delete file: {str(e)}") from e
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI deleted file: '{display_path}'"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -1267,6 +1308,10 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to copy file: {str(e)}") from e
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI copied file: '{source_display_path}' -> '{dest_display_path}'"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -1328,6 +1373,10 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to move: {str(e)}") from e
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI moved: '{source_display_path}' -> '{dest_display_path}'"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -1543,6 +1592,10 @@ class FileSystemAITool(AITool):
         if warning is not None:
             result["warning"] = warning
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI searched file: '{display_path}' for '{search_text}' ({len(matches)} matches)"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -1725,6 +1778,10 @@ class FileSystemAITool(AITool):
         if warning is not None:
             result["warning"] = warning
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI searched files in: '{display_path}' for '{search_text}' ({total_matches} matches in {len(files_with_matches)} files)"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -1806,6 +1863,10 @@ class FileSystemAITool(AITool):
             "matches": matches
         }
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI searched for files matching '{name}' in: '{display_path}' ({len(matches)} matches)"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -1944,6 +2005,10 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to write file: {str(e)}") from e
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI applied diff to file: '{display_path}' ({result.hunks_applied} hunk(s))"
+        )
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
@@ -2133,6 +2198,10 @@ class FileSystemAITool(AITool):
 
         self._logger.info("Menai transform applied to '%s' (%d diff lines)", display_path, len(diff_lines))
 
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI transformed file: '{display_path}' ({len(diff_lines)} diff lines)"
+        )
         trace_str = '\n'.join(traces) if traces else ''
         result_obj: Dict[str, Any] = {
             "message": f"Transform applied to '{display_path}' ({len(diff_lines)} diff lines).",
