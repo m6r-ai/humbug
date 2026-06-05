@@ -583,6 +583,11 @@ class ConversationSidebar(SidebarBase):
             shutil.copy2(source_path, duplicate_path)
             self._logger.info("Created duplicate file: '%s'", duplicate_path)
 
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Human duplicated file: '{source_path}' -> '{duplicate_path}'"
+            )
+
             # Set up pending creation state with the duplicate path
             self._pending_new_item = (parent_path, False, duplicate_path)
 
