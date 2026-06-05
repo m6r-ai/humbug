@@ -244,6 +244,24 @@ class TestBuiltInNumbering:
                     if isinstance(c, DocxASTNumLevelNode) and c.ilvl == 0)
         assert lvl0.num_fmt == "decimal"
 
+    def test_ordered_abstract_all_levels_decimal(self):
+        result = _map(_doc())
+        num = _numbering(result)
+        ordered = next(c for c in num.children
+                       if isinstance(c, DocxASTAbstractNumNode) and c.abstract_num_id == "1")
+        levels = [c for c in ordered.children if isinstance(c, DocxASTNumLevelNode)]
+        for lvl in levels:
+            assert lvl.num_fmt == "decimal"
+
+    def test_ordered_abstract_lvl_text_references_own_level(self):
+        result = _map(_doc())
+        num = _numbering(result)
+        ordered = next(c for c in num.children
+                       if isinstance(c, DocxASTAbstractNumNode) and c.abstract_num_id == "1")
+        levels = [c for c in ordered.children if isinstance(c, DocxASTNumLevelNode)]
+        for lvl in levels:
+            assert lvl.lvl_text == f"%{lvl.ilvl + 1}."
+
 
 # ---------------------------------------------------------------------------
 # Paragraph mapping
@@ -547,6 +565,90 @@ class TestOrderedListMapping:
         result = _map(_doc(ol))
         paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
         assert len(paras) == 3
+
+    def test_tight_ordered_list_items_have_spacing_after_zero(self):
+        ol = DocIROrderedListNode(start=1, tight=True)
+        for text in ["One", "Two", "Three"]:
+            ol.add_child(self._item(text))
+        result = _map(_doc(ol))
+        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
+        for para in paras:
+            assert _ppr(para).spacing_after == 0
+
+    def test_loose_ordered_list_items_have_default_spacing(self):
+        ol = DocIROrderedListNode(start=1, tight=False)
+        for text in ["One", "Two", "Three"]:
+            ol.add_child(self._item(text))
+        result = _map(_doc(ol))
+        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
+        for para in paras:
+            assert _ppr(para).spacing_after is None
+
+
+# ---------------------------------------------------------------------------
+# Loose/tight list spacing interactions
+# ---------------------------------------------------------------------------
+
+class TestListSpacingInteractions:
+    def test_loose_bullet_item_ending_with_tight_nested_ordered_has_loose_spacing(self):
+        """Last para of a tight nested ordered list inside a loose bullet item
+        must have spacing_after restored to None so the loose gap between outer
+        items is preserved."""
+        nested_ol = DocIROrderedListNode(start=1, tight=True)
+        for text in ["a", "b", "c"]:
+            ni = DocIRListItemNode()
+            ni.add_child(_para(_span(text)))
+            nested_ol.add_child(ni)
+
+        outer_item = DocIRListItemNode()
+        outer_item.add_child(_para(_span("Outer")))
+        outer_item.add_child(nested_ol)
+
+        outer_ul = DocIRUnorderedListNode(tight=False)
+        outer_ul.add_child(outer_item)
+
+        result = _map(_doc(outer_ul))
+        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
+        # Last paragraph emitted belongs to the nested list; spacing must be None
+        assert _ppr(paras[-1]).spacing_after is None
+
+    def test_loose_bullet_item_ending_with_tight_nested_bullet_has_loose_spacing(self):
+        """Same as above but the nested list is also unordered."""
+        nested_ul = DocIRUnorderedListNode(tight=True)
+        for text in ["x", "y"]:
+            ni = DocIRListItemNode()
+            ni.add_child(_para(_span(text)))
+            nested_ul.add_child(ni)
+
+        outer_item = DocIRListItemNode()
+        outer_item.add_child(_para(_span("Outer")))
+        outer_item.add_child(nested_ul)
+
+        outer_ul = DocIRUnorderedListNode(tight=False)
+        outer_ul.add_child(outer_item)
+
+        result = _map(_doc(outer_ul))
+        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
+        assert _ppr(paras[-1]).spacing_after is None
+
+    def test_tight_outer_item_ending_with_tight_nested_list_stays_tight(self):
+        """When the outer item is itself tight, the nested list's tight spacing
+        must not be overridden."""
+        nested_ol = DocIROrderedListNode(start=1, tight=True)
+        ni = DocIRListItemNode()
+        ni.add_child(_para(_span("inner")))
+        nested_ol.add_child(ni)
+
+        outer_item = DocIRListItemNode()
+        outer_item.add_child(_para(_span("Outer")))
+        outer_item.add_child(nested_ol)
+
+        outer_ul = DocIRUnorderedListNode(tight=True)
+        outer_ul.add_child(outer_item)
+
+        result = _map(_doc(outer_ul))
+        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
+        assert _ppr(paras[-1]).spacing_after == 0
 
 
 # ---------------------------------------------------------------------------

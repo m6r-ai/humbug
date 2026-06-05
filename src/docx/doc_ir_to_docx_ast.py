@@ -205,18 +205,12 @@ class _DocIRToDocxASTMapper:
         # abstractNum 1: decimal (ordered) list
         ordered_abstract = DocxASTAbstractNumNode(abstract_num_id="1")
         ordered_abstract.multi_level_type = "multilevel"
-        ordered_fmts = [
-            ("decimal", "%1."),
-            ("lowerLetter", "%2."),
-            ("lowerRoman", "%3."),
-        ]
         for i in range(_MAX_LIST_DEPTH):
-            fmt, text = ordered_fmts[i % 3]
             lvl = DocxASTNumLevelNode(
                 ilvl=i,
                 start=1,
-                num_fmt=fmt,
-                lvl_text=text,
+                num_fmt="decimal",
+                lvl_text=f"%{i + 1}.",
                 lvl_jc="left",
             )
             ordered_abstract.add_child(lvl)
@@ -445,10 +439,14 @@ class _DocIRToDocxASTMapper:
         Inline content (wrapped in an implicit paragraph) is emitted as a
         numbered paragraph.  Subsequent paragraphs within the same list item
         (continuation paragraphs) are indented to the same level but carry no
-        list marker.  Nested lists are recursed with depth+1.
+        list marker.  Nested lists are recursed with depth+1.  When the outer
+        item is loose, the last paragraph emitted (which may belong to a nested
+        sub-list) has its spacing_after restored to the default so the loose
+        spacing is preserved after the item.
         """
         is_first_para = True
         indent_left = indent_base + 720 * (depth + 1)  # text/continuation indent
+        para_count_before = len(parent.children)
 
         for child in item.children:
             if isinstance(child, DocIRParagraphNode):
@@ -511,6 +509,23 @@ class _DocIRToDocxASTMapper:
 
                 else:
                     self._map_block(child, parent)
+
+        # If the outer item is loose and the last paragraph added to parent
+        # came from a tight nested list, its spacing_after will be 0.  Patch
+        # it back to None (i.e. inherit the style default) so the loose
+        # spacing between outer items is preserved.
+        if not tight:
+            added = parent.children[para_count_before:]
+            for node in reversed(added):
+                if isinstance(node, DocxASTParagraphNode):
+                    last_ppr: Optional[DocxASTParagraphPropertiesNode] = next(
+                        (c for c in node.children if isinstance(c, DocxASTParagraphPropertiesNode)),
+                        None,
+                    )
+                    if last_ppr is not None:
+                        last_ppr.spacing_after = None
+
+                    break
 
     def _map_table(self, node: DocIRTableNode) -> DocxASTTableNode:
         """Map a table node."""
