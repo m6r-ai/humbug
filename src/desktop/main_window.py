@@ -1733,15 +1733,21 @@ class MainWindow(QMainWindow):
         return self._mindspace_manager.get_relative_path(path)
 
     def _resolve_mindspace_path(self, path: str) -> Tuple[Path, str]:
-        # Check if our path starts with a separator.  If it does we'll assume it's for the root of the mindspace.
         if not self._mindspace_manager.has_mindspace():
             raise ValueError("No mindspace open")
 
-        if path.startswith(os.sep):
-            path = path[1:]
+        # If the path is absolute and already resolves within the mindspace, use it directly.
+        # Otherwise, if it starts with a separator, treat it as mindspace-root-relative by
+        # stripping the leading separator before joining to the mindspace root.
+        if os.path.isabs(path):
+            abs_path = os.path.abspath(path)
 
-        # Convert to absolute path via mindspace manager
-        abs_path = self._mindspace_manager.get_absolute_path(path)
+        elif path.startswith(os.sep):
+            abs_path = self._mindspace_manager.get_absolute_path(path[1:])
+
+        else:
+            abs_path = self._mindspace_manager.get_absolute_path(path)
+
         resolved_path = Path(abs_path).resolve()
 
         # Verify the resolved path is still within mindspace
