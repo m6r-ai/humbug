@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent, QPainter, QPaintEvent, QPixmap
 
 from desktop.color_role import ColorRole
+from desktop.gradient_label import GradientBorderLabel, GradientLabel
 from desktop.style_manager import StyleManager
 from desktop.language.language_manager import LanguageManager
 from desktop.user.user_settings import UserSettings
@@ -33,16 +34,29 @@ class WelcomeWidget(QFrame):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        # Add application icon
-        self._icon_label = QLabel()
+        # Style manager created early so gradient colours are available immediately
+        self._style_manager = StyleManager()
+
+        # Add application icon with gradient border
+        self._icon_label = GradientBorderLabel(
+            self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_START),
+            self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END),
+            radius=16.0,
+            border_width=2.0,
+        )
         self._icon_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
         layout.addStretch()
         layout.addSpacing(30)
         layout.addWidget(self._icon_label)
-        layout.addSpacing(20)  # Space between icon and title
+        layout.addSpacing(0)
 
-        # Application name
-        self._title_label = QLabel(f"Humbug v{CURRENT_VERSION}")
+        # Application name + version — gradient matches the logo colours
+        self._title_label = GradientLabel(
+            f"Humbug v{CURRENT_VERSION}",
+            self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_START),
+            self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END),
+        )
+        self._title_label.setObjectName("titleLabel")
         self._title_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
 
         # Add message and button for AI configuration
@@ -72,8 +86,7 @@ class WelcomeWidget(QFrame):
         # Set margins for dialog-style spacing
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # Get style manager and connect to changes
-        self._style_manager = StyleManager()
+        # Connect style manager signals (already created above)
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
         self._on_language_changed()
@@ -210,10 +223,15 @@ class WelcomeWidget(QFrame):
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
 
-        # Update icon size
-        icon_path = self._style_manager.get_icon_path("app-icon-disabled")
-        icon_pixmap = QPixmap(icon_path)
-        scaled_size = int(240 * zoom_factor)  # 240px base size for welcome screen
+        # Keep gradient colours in sync with theme
+        grad_start = self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_START)
+        grad_end = self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END)
+        self._icon_label.update_colors(grad_start, grad_end)
+        self._title_label.update_colors(grad_start, grad_end)
+
+        # Update icon
+        icon_pixmap = QPixmap(self._style_manager.get_app_icon_path())
+        scaled_size = int(200 * zoom_factor)
         self._icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,
@@ -248,7 +266,11 @@ class WelcomeWidget(QFrame):
             QFrame > QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
                 background: none;
-                font-size: {base_font_size * 1.5}pt;
+                font-size: {base_font_size}pt;
+            }}
+            QLabel#titleLabel {{
+                background: none;
+                font-size: {base_font_size * 1.8}pt;
                 font-weight: bold;
             }}
             #message_label {{

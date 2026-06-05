@@ -1,12 +1,11 @@
 """Dialog box for About Humbug."""
 
-import os
-
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QWidget
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 
 from desktop.color_role import ColorRole
+from desktop.gradient_label import GradientLabel
 from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
 from desktop.url_opener import open_url
@@ -36,11 +35,12 @@ class AboutDialog(QDialog):
         layout.setSpacing(8)
         layout.addSpacing(24)  # Space at the top
 
-        # Add application icon
+        # Add application icon — transparent background so PNG blends with dialog bg
         icon_label = QLabel()
-        icon_path = os.path.expanduser("~/.humbug/icons/app-icon.svg")
-        icon_pixmap = QPixmap(icon_path)
-        scaled_size = int(160 * zoom_factor)  # 160px base size
+        icon_label.setAutoFillBackground(False)
+        icon_label.setStyleSheet("background: transparent;")
+        icon_pixmap = QPixmap(style_manager.get_app_icon_path())
+        scaled_size = int(160 * zoom_factor)
         icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,
@@ -48,10 +48,14 @@ class AboutDialog(QDialog):
         ))
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(icon_label)
-        layout.addSpacing(8)  # Space between icon and title
+        layout.addSpacing(4)
 
-        # Title with version
-        title_label = QLabel(f"Humbug v{CURRENT_VERSION}")
+        # Title with version — gradient matches the logo colours
+        title_label = GradientLabel(
+            f"Humbug v{CURRENT_VERSION}",
+            style_manager.get_color_str(ColorRole.BRAND_GRADIENT_START),
+            style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END),
+        )
         title_label.setObjectName("titleLabel")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setMinimumHeight(40)

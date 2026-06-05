@@ -30,6 +30,7 @@ a = Analysis(
     binaries=_extra_binaries,
     datas=certifi_data + [
         ('resources/fonts', 'resources/fonts'),
+        ('resources/icons', 'resources/icons'),
     ],
     hiddenimports=[],
     hookspath=[],

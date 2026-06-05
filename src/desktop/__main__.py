@@ -13,7 +13,7 @@ from types import TracebackType
 from typing import List
 
 from PySide6.QtCore import QObject, QEvent
-from PySide6.QtGui import QFont, QFontDatabase
+from PySide6.QtGui import QFont, QFontDatabase, QIcon
 from PySide6.QtWidgets import QWidget
 from qasync import QEventLoop, QApplication  # type: ignore[import-untyped]
 
@@ -209,6 +209,7 @@ def main() -> int:
     app_font = QFont(style_manager.proportional_font_families()[0], int(style_manager.base_font_size()))
     app_font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
     app.setFont(app_font)
+    app.setWindowIcon(QIcon(style_manager.get_app_icon_path()))
 
     # Create and set event loop
     loop = QEventLoop(app)
