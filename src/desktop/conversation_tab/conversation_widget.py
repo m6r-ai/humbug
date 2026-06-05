@@ -30,10 +30,10 @@ from desktop.conversation_tab.conversation_message import ConversationMessage
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
-from mindspace.mindspace_log_level import MindspaceLogLevel
 from desktop.style_manager import StyleManager
 from desktop.widgets import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 from desktop.markdown import MarkdownTextEdit
+from mindspace.mindspace_log_level import MindspaceLogLevel
 
 
 class ConversationWidget(QWidget):

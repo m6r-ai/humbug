@@ -217,12 +217,10 @@ class FileSidebar(SidebarBase):
             OSError: If the move operation fails
         """
         try:
-            # Emit signal first so tabs can be updated
-            self.file_moved.emit(source_path, destination_path)
-
-            # Perform the actual move
+            # Perform the actual move first, then notify on success
             shutil.move(source_path, destination_path)
 
+            self.file_moved.emit(source_path, destination_path)
             self._logger.info("Successfully moved '%s' to '%s'", source_path, destination_path)
 
         except OSError as e:

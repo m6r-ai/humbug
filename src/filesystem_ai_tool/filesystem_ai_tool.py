@@ -670,7 +670,8 @@ class FileSystemAITool(AITool):
         """Read file contents."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization, allow_external=True)
+        path, display_path = await self._validate_and_resolve_path(
+            "path", path_arg, tool_call, request_authorization, allow_external=True)
 
         # Validate file exists and is readable
         if not path.exists():
@@ -770,7 +771,8 @@ class FileSystemAITool(AITool):
         """Read file contents with line numbers."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization, allow_external=True)
+        path, display_path = await self._validate_and_resolve_path(
+            "path", path_arg, tool_call, request_authorization, allow_external=True)
 
         # Validate file exists and is readable
         if not path.exists():
@@ -1780,7 +1782,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI searched files in: '{display_path}' for '{search_text}' ({total_matches} matches in {len(files_with_matches)} files)"
+            f"AI searched files in: '{display_path}' for '{search_text}'"
+            f" ({total_matches} matches in {len(files_with_matches)} files)"
         )
         return AIToolResult(
             id=tool_call.id,
