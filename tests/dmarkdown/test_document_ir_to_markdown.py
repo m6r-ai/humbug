@@ -383,3 +383,63 @@ class TestTables:
         table.add_child(body)
         result = _md(_doc(table))
         assert "a\\|b" in result
+
+    def test_table_col_count_from_widest_row(self):
+        """All columns appear when a body row has more cells than the header row."""
+        table = DocumentIRTableNode()
+
+        header = DocumentIRTableHeaderNode()
+        hrow = DocumentIRTableRowNode()
+        for text in ("A", "B"):
+            cell = DocumentIRTableCellNode(is_header=True, alignment="left")
+            cell.add_child(_span(text))
+            hrow.add_child(cell)
+        header.add_child(hrow)
+        table.add_child(header)
+
+        body = DocumentIRTableBodyNode()
+        brow = DocumentIRTableRowNode()
+        for text in ("1", "2", "3", "4"):
+            cell = DocumentIRTableCellNode(is_header=False, alignment="left")
+            cell.add_child(_span(text))
+            brow.add_child(cell)
+        body.add_child(brow)
+        table.add_child(body)
+
+        result = _md(_doc(table))
+        assert "1" in result
+        assert "2" in result
+        assert "3" in result
+        assert "4" in result
+
+    def test_multi_row_header_uses_max_col_count(self):
+        """All columns appear when a later header row has more cells than the first."""
+        table = DocumentIRTableNode()
+
+        header = DocumentIRTableHeaderNode()
+        hrow1 = DocumentIRTableRowNode()
+        for text in ("A", "B"):
+            cell = DocumentIRTableCellNode(is_header=True, alignment="left")
+            cell.add_child(_span(text))
+            hrow1.add_child(cell)
+        header.add_child(hrow1)
+        hrow2 = DocumentIRTableRowNode()
+        for text in ("C", "D", "E", "F"):
+            cell = DocumentIRTableCellNode(is_header=True, alignment="left")
+            cell.add_child(_span(text))
+            hrow2.add_child(cell)
+        header.add_child(hrow2)
+        table.add_child(header)
+
+        body = DocumentIRTableBodyNode()
+        brow = DocumentIRTableRowNode()
+        for text in ("1", "2", "3", "4"):
+            cell = DocumentIRTableCellNode(is_header=False, alignment="left")
+            cell.add_child(_span(text))
+            brow.add_child(cell)
+        body.add_child(brow)
+        table.add_child(body)
+
+        result = _md(_doc(table))
+        for text in ("C", "D", "E", "F", "1", "2", "3", "4"):
+            assert text in result

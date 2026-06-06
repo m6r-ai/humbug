@@ -286,6 +286,40 @@ class TestTable:
         cell = body.children[0].children[0]
         assert cell.alignment == "left"
 
+    def test_colspan_expands_cells(self) -> None:
+        """A th with colspan=3 produces 3 cells in the row."""
+        result = _convert(
+            "<table><thead><tr><th colspan=\"3\">Header</th></tr></thead></table>"
+        )
+        table = result.children[0]
+        header = next(c for c in table.children if isinstance(c, DocumentIRTableHeaderNode))
+        row = header.children[0]
+        cells = [c for c in row.children if isinstance(c, DocumentIRTableCellNode)]
+        assert len(cells) == 3
+
+    def test_colspan_1_is_normal(self) -> None:
+        """A td with colspan=1 produces exactly 1 cell in the row."""
+        result = _convert(
+            "<table><tr><td colspan=\"1\">Data</td></tr></table>"
+        )
+        table = result.children[0]
+        body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
+        row = body.children[0]
+        cells = [c for c in row.children if isinstance(c, DocumentIRTableCellNode)]
+        assert len(cells) == 1
+
+    def test_colspan_extra_cells_empty(self) -> None:
+        """The 2nd and 3rd cells expanded from colspan=3 have no children."""
+        result = _convert(
+            "<table><thead><tr><th colspan=\"3\">Header</th></tr></thead></table>"
+        )
+        table = result.children[0]
+        header = next(c for c in table.children if isinstance(c, DocumentIRTableHeaderNode))
+        row = header.children[0]
+        cells = [c for c in row.children if isinstance(c, DocumentIRTableCellNode)]
+        assert cells[1].children == []
+        assert cells[2].children == []
+
 
 class TestHorizontalRule:
     """hr maps to DocumentIRHorizontalRuleNode."""

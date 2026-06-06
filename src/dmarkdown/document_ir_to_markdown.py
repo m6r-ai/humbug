@@ -251,7 +251,18 @@ class _DocumentIRToMarkdownSerialiser:
 
         # Collect cell alignments from the header row
         alignments = self._row_alignments(effective_header)
-        col_count = len(alignments)
+
+        # col_count is the maximum cell count across all rows so that no body
+        # cells are silently truncated when a header row has fewer cells.
+        all_rows = [effective_header] + list(effective_body)
+        col_count = max(
+            len(alignments),
+            max((self._row_cell_count(r) for r in all_rows), default=0),
+        )
+
+        # Pad alignments with "left" for any columns beyond the header row.
+        while len(alignments) < col_count:
+            alignments.append("left")
 
         # Render all rows to lists of cell strings
         header_cells = self._render_row_cells(effective_header, col_count)
@@ -291,6 +302,10 @@ class _DocumentIRToMarkdownSerialiser:
             if isinstance(child, DocumentIRTableCellNode):
                 alignments.append(child.alignment or "left")
         return alignments
+
+    def _row_cell_count(self, row: DocumentIRTableRowNode) -> int:
+        """Return the number of cells in a row."""
+        return sum(1 for child in row.children if isinstance(child, DocumentIRTableCellNode))
 
     def _render_row_cells(
         self, row: DocumentIRTableRowNode, col_count: int

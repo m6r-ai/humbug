@@ -322,6 +322,20 @@ def _convert_table_row(
             row.add_child(cell)
             _convert_inline_children(child, cell)
 
+            try:
+                colspan = max(1, int(child.attributes.get("colspan", "1")))
+
+            except ValueError:
+                colspan = 1
+
+            for _ in range(colspan - 1):
+                row.add_child(
+                    DocumentIRTableCellNode(
+                        is_header=cell_is_header,
+                        alignment=align_str,
+                    )
+                )
+
 
 def _convert_img(node: HtmlASTElementNode, ir_parent: DocumentIRNode) -> None:
     """Convert an <img> element."""
