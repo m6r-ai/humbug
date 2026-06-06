@@ -8,6 +8,7 @@ Provides signals for style changes and utilities for scaled size calculations.
 from enum import Enum, auto
 import os
 from pathlib import Path
+import sys
 from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
@@ -83,6 +84,28 @@ class StyleManager(QObject):
     def _initialize_colors(self) -> Dict[ColorRole, Dict[ColorMode, str]]:
         """Initialize the application colours for both light and dark modes."""
         return {
+            # Brand colours
+            ColorRole.BRAND_PRIMARY: {
+                ColorMode.DARK: "#9b87f5",
+                ColorMode.LIGHT: "#6248e8"
+            },
+            ColorRole.BRAND_GRADIENT_START: {
+                ColorMode.DARK: "#29c5ff",
+                ColorMode.LIGHT: "#29c5ff"
+            },
+            ColorRole.BRAND_GRADIENT_END: {
+                ColorMode.DARK: "#c050ff",
+                ColorMode.LIGHT: "#c050ff"
+            },
+            ColorRole.BRAND_ICON_BG_START: {
+                ColorMode.DARK: "#1e0e50",
+                ColorMode.LIGHT: "#1e0e50"
+            },
+            ColorRole.BRAND_ICON_BG_END: {
+                ColorMode.DARK: "#060612",
+                ColorMode.LIGHT: "#060612"
+            },
+
             # Background colours
             ColorRole.BACKGROUND_PRIMARY: {
                 ColorMode.DARK: "#080808",
@@ -932,14 +955,26 @@ class StyleManager(QObject):
             for icon_name in ("find-match-case", "find-whole-word", "find-regexp", "find-hidden"):
                 self._write_icon(f'{icon_name}-{suffix}.svg', theme_icon_svg(icon_name, color))
 
-        # Create the standard application icon for about dialog
-        self._write_icon('app-icon.svg', app_icon_svg('#4040c0', '#ffffff'))
+        # SVG fallback for when the PNG is unavailable — gradient container, brand H
+        brand_color = self._colors[ColorRole.BRAND_PRIMARY][ColorMode.DARK]
+        bg_start = self._colors[ColorRole.BRAND_ICON_BG_START][ColorMode.DARK]
+        bg_end = self._colors[ColorRole.BRAND_ICON_BG_END][ColorMode.DARK]
+        self._write_icon('app-icon.svg', app_icon_svg(brand_color, bg_start, bg_end))
 
-        # Create light mode disabled version
-        self._write_icon('app-icon-disabled-light.svg', app_icon_svg('#a0a0e0', '#ffffff'))
+        # Composite the transparent source logo onto themed backgrounds
+        if getattr(sys, 'frozen', False):
+            resources_base = Path(getattr(sys, '_MEIPASS'))
+        else:
+            resources_base = Path(__file__).parent.parent.parent
 
-        # Create dark mode disabled version
-        self._write_icon('app-icon-disabled-dark.svg', app_icon_svg('#404080', '#c0c0c0'))
+        self._write_themed_app_icons(icon_dir, str(resources_base / 'resources' / 'icons'))
+
+    def _write_themed_app_icons(self, icon_dir: str, resources_icons: str) -> None:
+        """Copy app-icon.png from bundled resources to ~/.humbug/icons/."""
+        import shutil
+        src = Path(resources_icons) / 'app-icon.png'
+        if src.exists():
+            shutil.copy2(str(src), os.path.join(icon_dir, 'app-icon.png'))
 
     def get_icon_path(self, name: str) -> str:
         """
@@ -954,6 +989,14 @@ class StyleManager(QObject):
         icon_dir = os.path.expanduser("~/.humbug/icons")
         theme = "dark" if self._resolve_color_mode() == ColorMode.DARK else "light"
         return Path(os.path.join(icon_dir, f"{name}-{theme}.svg")).as_posix()
+
+    def get_app_icon_path(self) -> str:
+        """Return the app icon PNG path, falling back to SVG."""
+        icon_dir = os.path.expanduser("~/.humbug/icons")
+        png = os.path.join(icon_dir, "app-icon.png")
+        if os.path.exists(png):
+            return Path(png).as_posix()
+        return Path(os.path.join(icon_dir, "app-icon.svg")).as_posix()
 
     def scale_icon(self, icon_name: str, target_size: int) -> QPixmap:
         """

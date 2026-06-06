@@ -5,6 +5,13 @@ from enum import Enum, auto
 
 class ColorRole(Enum):
     """Enumeration of color roles in the application."""
+    # Brand colours
+    BRAND_PRIMARY = auto()              # Primary brand colour (matches logo blue-purple gradient)
+    BRAND_GRADIENT_START = auto()       # Logo gradient left colour (cyan-blue)
+    BRAND_GRADIENT_END = auto()         # Logo gradient right colour (purple-magenta)
+    BRAND_ICON_BG_START = auto()        # Icon container gradient start (top-left)
+    BRAND_ICON_BG_END = auto()          # Icon container gradient end (bottom-right)
+
     # Background colours
     BACKGROUND_PRIMARY = auto()         # Main window background
     BACKGROUND_SECONDARY = auto()       # Secondary elements background

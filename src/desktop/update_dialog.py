@@ -1,7 +1,5 @@
 """Dialog for displaying version and update information."""
 
-import os
-
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QPushButton, QVBoxLayout, QWidget
@@ -41,8 +39,9 @@ class UpdateDialog(QDialog):
         layout.addSpacing(24)
 
         icon_label = QLabel()
-        icon_path = os.path.expanduser("~/.humbug/icons/app-icon.svg")
-        icon_pixmap = QPixmap(icon_path)
+        icon_label.setAutoFillBackground(False)
+        icon_label.setStyleSheet("background: transparent;")
+        icon_pixmap = QPixmap(self._style_manager.get_app_icon_path())
         zoom_factor = self._style_manager.zoom_factor()
         scaled_size = int(160 * zoom_factor)
         icon_label.setPixmap(icon_pixmap.scaled(

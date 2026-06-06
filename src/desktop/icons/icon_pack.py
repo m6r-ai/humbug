@@ -3,9 +3,11 @@
 from typing import Final, Dict, Tuple
 
 
-def app_icon_svg(bg_color: str, text_color: str) -> str:
-    """Return the application icon SVG rendered with the supplied colours."""
-    return APP_ICON_TEMPLATE.format(bg_color=bg_color, text_color=text_color)
+def app_icon_svg(text_color: str, bg_start: str, bg_end: str) -> str:
+    """Return the application icon SVG with a gradient container background."""
+    return APP_ICON_TEMPLATE.format(
+        text_color=text_color, bg_start=bg_start, bg_end=bg_end
+    )
 
 
 def theme_icon_svg(icon_name: str, color: str) -> str:
@@ -24,17 +26,17 @@ def active_inactive_icon_names() -> Tuple[str, ...]:
 
 
 APP_ICON_TEMPLATE: Final[str] = '''
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" zoomAndPan="magnify" viewBox="0 0 384 384" height="512" preserveAspectRatio="xMidYMid meet" version="1.0"><defs><g/></defs>
-        <rect x="0" y="0" width="384" height="384" rx="76" ry="76" fill="{bg_color}" fill-opacity="1"/>
-        <g fill="{text_color}" fill-opacity="1">
-            <g transform="translate(94.464843, 294.75626)">
-                <g>
-                    <path d="M 63.484375 -84.734375 L 63.484375 0 L 15.359375 0 L 15.359375 -211.203125 L 63.484375 -211.203125
-                        L 63.484375 -126.96875 L 131.578125 -126.96875 L 131.578125 -211.203125 L 179.71875 -211.203125 L 179.71875 0
-                        L 131.578125 0 L 131.578125 -84.734375 Z M 63.484375 -84.734375 "/>
-                </g>
-            </g>
-        </g>
+    <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+        <defs>
+            <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%"   stop-color="{bg_start}"/>
+                <stop offset="100%" stop-color="{bg_end}"/>
+            </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="512" height="512" rx="64" ry="64" fill="url(#bgGrad)"/>
+        <rect x="72"  y="72" width="112" height="368" rx="56" ry="56" fill="{text_color}"/>
+        <rect x="328" y="72" width="112" height="368" rx="56" ry="56" fill="{text_color}"/>
+        <rect x="184" y="200" width="144" height="112"               fill="{text_color}"/>
     </svg>
 '''
 
