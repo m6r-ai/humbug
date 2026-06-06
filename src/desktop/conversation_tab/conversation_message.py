@@ -16,7 +16,6 @@ from dmarkdown import MarkdownASTTextNode, MarkdownConverter
 from syntax import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
-from desktop.code_block_highlighter import CodeBlockHighlighter
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
@@ -271,7 +270,7 @@ class ConversationMessage(QFrame):
         self._approval_widget: QWidget | None = None
         self._approval_context_widget: QWidget | None = None
         self._approval_text_edit: MarkdownTextEdit | None = None
-        self._approval_context_text_edit: MarkdownTextEdit | None = None
+        self._approval_context_text_edit: MarkdownCodeBlockTextEdit | None = None
         self._approval_approve_button: QPushButton | None = None
         self._approval_i_am_unsure_button: QPushButton | None = None
         self._approval_reject_button: QPushButton | None = None
@@ -692,12 +691,10 @@ class ConversationMessage(QFrame):
             layout2 = QVBoxLayout(self._approval_context_widget)
             layout2.setContentsMargins(spacing, spacing, spacing, spacing)
             layout2.setSpacing(spacing)
-            self._approval_context_text_edit = MarkdownTextEdit(False)
+            self._approval_context_text_edit = MarkdownCodeBlockTextEdit()
             self._approval_context_text_edit.setObjectName("_approval_context_text_edit")
             self._approval_context_text_edit.set_text(context)
-            self._approval_context_text_edit.setReadOnly(True)
-            highlighter = CodeBlockHighlighter(self._approval_context_text_edit.document())
-            highlighter.set_syntax(ProgrammingLanguage.DIFF)
+            self._approval_context_text_edit.set_syntax(ProgrammingLanguage.DIFF)
             layout2.addWidget(self._approval_context_text_edit)
             layout.addWidget(self._approval_context_widget)
 
