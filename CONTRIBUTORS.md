@@ -21,6 +21,7 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Smoothed AI response streaming.
 * Implemented a new AI provider and model selection UI.
 * Implemented support for dynamically fetching the model lists from the AI providers.
+* Designed the new Humbug logo and icons.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 

@@ -16,6 +16,7 @@ New features:
 - Added a new DOCX AST and code to read/write DOCX format using it.
 - Added support for strikethrough in the markdown parser.
 - Added a tool to convert docs to markdown.
+- Replaced the app icon!
 
 Bug fixes:
 
