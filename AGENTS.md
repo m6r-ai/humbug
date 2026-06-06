@@ -119,6 +119,13 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `vcs_sidebar/` - VCS/diff panel implementation
 - `widgets/` - Reusable Qt widgets
 
+### `src/dhtml/`
+HTML document processing. Includes a self-contained lexer and DOM-building parser
+(no external dependencies), a plain-text extractor, and converters to/from the
+`document_ir` intermediate representation. Supports HTML5 implied-close rules and
+void elements. Used by the filesystem tool (transparent text extraction on read)
+and the document converter tool (HTML ↔ other formats).
+
 ### `src/diff/`
 Unified diff parsing and application with fuzzy matching.
 

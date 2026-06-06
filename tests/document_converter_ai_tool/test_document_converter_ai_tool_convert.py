@@ -142,7 +142,7 @@ class TestConvertFormatDetection:
             tool_call = make_tool_call("document_converter", {
                 "operation": "convert",
                 "input_path": "doc.md",
-                "output_path": "out.html",
+                "output_path": "out.xyz",
             })
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(converter_tool.execute(tool_call, "", mock_authorization))

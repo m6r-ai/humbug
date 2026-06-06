@@ -9,6 +9,9 @@ from ai_tool import (
     AIToolCall, AIToolDefinition, AIToolExecutionError,
     AIToolOperationDefinition, AIToolParameter, AIToolResult
 )
+from dhtml import (
+    HtmlError, HtmlParseError, document_ir_to_html, html_ast_to_document_ir, parse_html
+)
 from dmarkdown.document_ir_to_markdown import document_ir_to_markdown
 from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
 from dmarkdown.markdown_to_document_ir import markdown_ast_to_document_ir
@@ -23,6 +26,7 @@ from mindspace.mindspace_log_level import MindspaceLogLevel
 # Map each supported format name to its canonical file extension.
 _FORMAT_EXTENSIONS: Dict[str, str] = {
     "docx": ".docx",
+    "html": ".html",
     "md": ".md",
 }
 
@@ -43,6 +47,22 @@ def _import_md(input_path: Path) -> DocumentIRDocumentNode:
     builder = MarkdownASTBuilder(True)
     builder.update_ast(md_text, "", str(input_path))
     return markdown_ast_to_document_ir(builder.document())
+
+
+def _import_html(input_path: Path) -> DocumentIRDocumentNode:
+    """Import an HTML file to document_ir."""
+    try:
+        source = input_path.read_text(encoding="utf-8")
+
+    except OSError as e:
+        raise AIToolExecutionError(f"Failed to read input file: {e}") from e
+
+    try:
+        html_doc = parse_html(source, source_path=str(input_path))
+        return html_ast_to_document_ir(html_doc)
+
+    except (HtmlParseError, HtmlError) as e:
+        raise AIToolExecutionError(f"Failed to parse HTML: {e}") from e
 
 
 def _import_docx(input_path: Path) -> DocumentIRDocumentNode:
@@ -70,6 +90,11 @@ def _export_md(document_ir: DocumentIRDocumentNode) -> str:
     return document_ir_to_markdown(document_ir)
 
 
+def _export_html(document_ir: DocumentIRDocumentNode) -> str:
+    """Export document_ir to HTML text."""
+    return document_ir_to_html(document_ir)
+
+
 def _export_docx(document_ir: DocumentIRDocumentNode) -> bytes:
     """Export document_ir to DOCX bytes."""
     return serialise_docx(document_ir_to_docx_ast(document_ir))
@@ -78,12 +103,14 @@ def _export_docx(document_ir: DocumentIRDocumentNode) -> bytes:
 # Importers: format name → callable that reads a file and returns a DocumentIRDocumentNode.
 _IMPORTERS: Dict[str, Callable[[Path], DocumentIRDocumentNode]] = {
     "docx": _import_docx,
+    "html": _import_html,
     "md": _import_md,
 }
 
 # Exporters: format name → callable that serialises a DocumentIRDocumentNode to bytes or str.
 _EXPORTERS: Dict[str, Callable[[DocumentIRDocumentNode], bytes | str]] = {
     "docx": _export_docx,
+    "html": _export_html,
     "md": _export_md,
 }
 

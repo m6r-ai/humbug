@@ -59,6 +59,41 @@ modules:
     external_dependencies:
       - "standard_library"
 
+  desktop:
+    internal_dependencies:
+      - ai
+      - ai_tool
+      - ai_transcript_conversation
+      - clock_ai_tool
+      - dhtml
+      - context
+      - conversation_ai_tool
+      - conversation_context
+      - delegate_ai_tool
+      - diff
+      - dmarkdown
+      - document_converter_ai_tool
+      - editor_ai_tool
+      - editor_context
+      - filesystem_ai_tool
+      - git
+      - help_ai_tool
+      - menai_ai_tool
+      - mindspace
+      - pdf
+      - docx
+      - preview_ai_tool
+      - preview_context
+      - syntax
+      - terminal
+      - terminal_ai_tool
+      - terminal_context
+    external_dependencies:
+      - "standard_library"
+      - "aiohttp"
+      - "PySide6"
+      - "qasync"
+
   diff:
     internal_dependencies: []
     external_dependencies:
@@ -79,10 +114,17 @@ modules:
   document_converter_ai_tool:
     internal_dependencies:
       - ai_tool
+      - dhtml
       - dmarkdown
       - docx
       - mindspace
       - syntax
+    external_dependencies:
+      - "standard_library"
+
+  dhtml:
+    internal_dependencies:
+      - doc_ir
     external_dependencies:
       - "standard_library"
 
@@ -113,6 +155,7 @@ modules:
     internal_dependencies:
       - ai_tool
       - diff
+      - dhtml
       - docx
       - menai
       - mindspace
@@ -131,40 +174,6 @@ modules:
       - ai_tool
     external_dependencies:
       - "standard_library"
-
-  desktop:
-    internal_dependencies:
-      - ai
-      - ai_tool
-      - ai_transcript_conversation
-      - clock_ai_tool
-      - context
-      - conversation_ai_tool
-      - conversation_context
-      - delegate_ai_tool
-      - diff
-      - dmarkdown
-      - document_converter_ai_tool
-      - editor_ai_tool
-      - editor_context
-      - filesystem_ai_tool
-      - git
-      - help_ai_tool
-      - menai_ai_tool
-      - mindspace
-      - pdf
-      - docx
-      - preview_ai_tool
-      - preview_context
-      - syntax
-      - terminal
-      - terminal_ai_tool
-      - terminal_context
-    external_dependencies:
-      - "standard_library"
-      - "aiohttp"
-      - "PySide6"
-      - "qasync"
 
   menai:
     external_dependencies:
