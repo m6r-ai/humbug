@@ -147,6 +147,25 @@ class ConversationMessageSection(QFrame):
         if self._syntax_header is not None:
             self._syntax_header.setText(filename)
 
+    def prime_width(self, container_width: int) -> None:
+        """
+        Prime the text area document width before content is set.
+
+        Subtracts this section's own content margins so the document lays out
+        at the correct width from the very first paint, preventing a resize bounce.
+        Only applies to MarkdownTextEdit (rich-text sections); code block sections
+        use QPlainTextEdit which manages its own layout width via widget geometry.
+
+        Args:
+            container_width: Width of the parent sections container in pixels
+        """
+        if not isinstance(self._text_area, MarkdownTextEdit):
+            return
+
+        margins = self._layout.contentsMargins()
+        effective_width = container_width - margins.left() - margins.right()
+        self._text_area.prime_document_width(effective_width)
+
     def text_area(self) -> MarkdownTextEdit | MarkdownCodeBlockTextEdit:
         """Get the text area widget."""
         return self._text_area

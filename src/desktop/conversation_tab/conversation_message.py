@@ -904,8 +904,9 @@ class ConversationMessage(QFrame):
             # Create new section if needed
             if i >= len(self._sections):
                 section = self._create_section_widget(syntax)
-                section.set_content(node)
                 section.apply_style()
+                section.prime_width(self._sections_container.width())
+                section.set_content(node)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
                 continue

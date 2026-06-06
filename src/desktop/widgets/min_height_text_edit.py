@@ -59,6 +59,18 @@ class MinHeightTextEdit(QTextEdit):
         self.updateGeometry()
         self.size_hint_changed.emit()
 
+    def prime_document_width(self, width: int) -> None:
+        """
+        Prime the document layout width before content is set.
+
+        This prevents the bounce that occurs when a widget is added to a layout
+        at its default size and then immediately resizes once content is set.
+
+        Args:
+            width: The expected display width in pixels
+        """
+        self.document().setTextWidth(width)
+
     def set_height_cap(self, cap: int | None) -> None:
         """Set a maximum height cap, or None to remove it."""
         self._height_cap = cap

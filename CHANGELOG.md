@@ -6,7 +6,7 @@ New features:
 
 - The GUI is now in src/desktop, not src/humbug.  This allows for other (future) frontends.  This means you must use
   `python -m desktop` to launch the application now, not `python -m humbug`.
-- The filesystem and editor tools now have the ability to use Menai programs to modify files/editor buffers.
+- The filesystem and editor tools now have the ability for an AI to use Menai programs to modify files/editor buffers.
 - Markdown rendering (including in AI conversations) now supports blockquotes.
 - When delegating a task to an AI, if the AI model is available from more than one backend provider, the tool now tells the AI
   and asks it to select the correct one.
