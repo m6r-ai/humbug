@@ -24,6 +24,7 @@ from context.context_info import ContextInfo
 from context.context_registry import ContextRegistry
 from conversation_ai_tool.conversation_ai_tool import ConversationAITool
 from delegate_ai_tool import DelegateAITool
+from document_converter_ai_tool.document_converter_ai_tool import DocumentConverterAITool
 from editor_ai_tool.editor_ai_tool import EditorAITool
 from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
@@ -639,6 +640,10 @@ class MainWindow(QMainWindow):
                 mindspace
             ),
             "FileSystem: handles file operations in the current mindspace"
+        )
+        self._ai_tool_manager.register_tool(
+            DocumentConverterAITool(self._resolve_mindspace_path, mindspace),
+            "DocumentConverter: converts documents between supported formats in the current mindspace"
         )
         self._ai_tool_manager.register_tool(
             SystemAITool(self._tab_manager, mindspace),

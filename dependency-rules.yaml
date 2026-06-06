@@ -76,6 +76,16 @@ modules:
     external_dependencies:
       - "standard_library"
 
+  document_converter_ai_tool:
+    internal_dependencies:
+      - ai_tool
+      - dmarkdown
+      - docx
+      - mindspace
+      - syntax
+    external_dependencies:
+      - "standard_library"
+
   docx:
     internal_dependencies:
       - doc_ir
@@ -134,6 +144,7 @@ modules:
       - delegate_ai_tool
       - diff
       - dmarkdown
+      - document_converter_ai_tool
       - editor_ai_tool
       - editor_context
       - filesystem_ai_tool
