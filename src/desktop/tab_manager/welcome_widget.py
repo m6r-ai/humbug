@@ -37,17 +37,17 @@ class WelcomeWidget(QFrame):
         # Style manager created early so gradient colours are available immediately
         self._style_manager = StyleManager()
 
-        # Add application icon with gradient border
-        self._icon_label = GradientBorderLabel(
+        # Add application logo with gradient border
+        self._logo_label = GradientBorderLabel(
             self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_START),
             self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END),
             radius=16.0,
             border_width=2.0,
         )
-        self._icon_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
+        self._logo_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
         layout.addStretch()
         layout.addSpacing(30)
-        layout.addWidget(self._icon_label)
+        layout.addWidget(self._logo_label)
         layout.addSpacing(30)
 
         # Application name + version — gradient matches the logo colours
@@ -226,13 +226,13 @@ class WelcomeWidget(QFrame):
         # Keep gradient colours in sync with theme
         grad_start = self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_START)
         grad_end = self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END)
-        self._icon_label.update_colors(grad_start, grad_end)
+        self._logo_label.update_colors(grad_start, grad_end)
         self._title_label.update_colors(grad_start, grad_end)
 
-        # Update icon
-        icon_pixmap = QPixmap(self._style_manager.get_app_icon_path())
+        # Update logo
+        logo_pixmap = QPixmap(self._style_manager.get_app_logo_path())
         scaled_size = int(300 * zoom_factor)
-        self._icon_label.setPixmap(icon_pixmap.scaled(
+        self._logo_label.setPixmap(logo_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation

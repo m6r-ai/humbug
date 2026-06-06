@@ -965,16 +965,21 @@ class StyleManager(QObject):
         # Composite the transparent source logo onto themed backgrounds
         if getattr(sys, 'frozen', False):
             resources_base = Path(getattr(sys, '_MEIPASS'))
+
         else:
             resources_base = Path(__file__).parent.parent.parent
 
-        self._write_themed_app_icons(icon_dir, str(resources_base / 'resources' / 'icons'))
-
-    def _write_themed_app_icons(self, icon_dir: str, resources_icons: str) -> None:
-        """Copy app-icon.png from bundled resources to ~/.humbug/icons/."""
-        src = Path(resources_icons) / 'app-icon.png'
+        # Copy app-icon.png from bundled resources to ~/.humbug/icons
+        src = Path(resources_base / 'resources' / 'icons' / 'app-icon.png')
         if src.exists():
             shutil.copy2(str(src), os.path.join(icon_dir, 'app-icon.png'))
+
+        # Copy app-logo.png from bundled resources to ~/.humbug/logos
+        logo_dir = os.path.expanduser("~/.humbug/logos")
+        os.makedirs(logo_dir, exist_ok=True)
+        src = Path(resources_base / 'resources' / 'logos' / 'app-logo.png')
+        if src.exists():
+            shutil.copy2(str(src), os.path.join(logo_dir, 'app-logo.png'))
 
     def get_icon_path(self, name: str) -> str:
         """
@@ -996,6 +1001,16 @@ class StyleManager(QObject):
         png = os.path.join(icon_dir, "app-icon.png")
         if os.path.exists(png):
             return Path(png).as_posix()
+
+        return Path(os.path.join(icon_dir, "app-icon.svg")).as_posix()
+
+    def get_app_logo_path(self) -> str:
+        """Return the app logo PNG path, falling back to SVG."""
+        icon_dir = os.path.expanduser("~/.humbug/logos")
+        png = os.path.join(icon_dir, "app-logo.png")
+        if os.path.exists(png):
+            return Path(png).as_posix()
+
         return Path(os.path.join(icon_dir, "app-icon.svg")).as_posix()
 
     def scale_icon(self, icon_name: str, target_size: int) -> QPixmap:

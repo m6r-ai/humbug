@@ -38,19 +38,19 @@ class UpdateDialog(QDialog):
         layout.setSpacing(8)
         layout.addSpacing(24)
 
-        icon_label = QLabel()
-        icon_label.setAutoFillBackground(False)
-        icon_label.setStyleSheet("background: transparent;")
-        icon_pixmap = QPixmap(self._style_manager.get_app_icon_path())
+        logo_label = QLabel()
+        logo_label.setAutoFillBackground(False)
+        logo_label.setStyleSheet("background: transparent;")
+        logo_pixmap = QPixmap(self._style_manager.get_app_logo_path())
         zoom_factor = self._style_manager.zoom_factor()
         scaled_size = int(160 * zoom_factor)
-        icon_label.setPixmap(icon_pixmap.scaled(
+        logo_label.setPixmap(logo_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
         ))
-        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(icon_label)
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(logo_label)
         layout.addSpacing(8)
 
         self._current_version_label = QLabel()

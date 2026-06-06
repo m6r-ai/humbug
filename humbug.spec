@@ -31,6 +31,7 @@ a = Analysis(
     datas=certifi_data + [
         ('resources/fonts', 'resources/fonts'),
         ('resources/icons', 'resources/icons'),
+        ('resources/logos', 'resources/logos'),
     ],
     hiddenimports=[],
     hookspath=[],

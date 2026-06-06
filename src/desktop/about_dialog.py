@@ -35,23 +35,23 @@ class AboutDialog(QDialog):
         layout.setSpacing(8)
         layout.addSpacing(24)  # Space at the top
 
-        # Add application icon with animated gradient border
-        icon_label = GradientBorderLabel(
+        # Add application logo with animated gradient border
+        logo_label = GradientBorderLabel(
             style_manager.get_color_str(ColorRole.BRAND_GRADIENT_START),
             style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END),
             radius=16.0,
             border_width=2.0,
         )
-        icon_pixmap = QPixmap(style_manager.get_app_icon_path())
+        logo_pixmap = QPixmap(style_manager.get_app_logo_path())
         scaled_size = int(200 * zoom_factor)
-        icon_label.setPixmap(icon_pixmap.scaled(
+        logo_label.setPixmap(logo_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         ))
-        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignHCenter)
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        logo_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        layout.addWidget(logo_label, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addSpacing(4)
 
         # Title with version — gradient matches the logo colours
