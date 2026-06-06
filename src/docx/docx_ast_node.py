@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 
 class DocxASTNode:
@@ -6,7 +6,7 @@ class DocxASTNode:
 
     def __init__(self) -> None:
         """Initialise a node with no parent and no children."""
-        self.parent: Optional["DocxASTNode"] = None
+        self.parent: "DocxASTNode | None" = None
         self.children: List["DocxASTNode"] = []
 
     def add_child(self, child: "DocxASTNode") -> "DocxASTNode":
@@ -92,7 +92,7 @@ class DocxASTDocumentNode(DocxASTNode):
       - DocxASTNumberingNode (optional)
     """
 
-    def __init__(self, source_path: Optional[str] = None) -> None:
+    def __init__(self, source_path: str | None = None) -> None:
         """
         Initialise a document node.
 
@@ -125,12 +125,12 @@ class DocxASTSectionPropertiesNode(DocxASTNode):
 
     def __init__(
         self,
-        page_width: Optional[int] = None,
-        page_height: Optional[int] = None,
-        margin_top: Optional[int] = None,
-        margin_right: Optional[int] = None,
-        margin_bottom: Optional[int] = None,
-        margin_left: Optional[int] = None,
+        page_width: int | None = None,
+        page_height: int | None = None,
+        margin_top: int | None = None,
+        margin_right: int | None = None,
+        margin_bottom: int | None = None,
+        margin_left: int | None = None,
     ) -> None:
         """
         Initialise section properties.
@@ -177,19 +177,19 @@ class DocxASTParagraphPropertiesNode(DocxASTNode):
 
     def __init__(
         self,
-        style_id: Optional[str] = None,
-        justification: Optional[str] = None,
-        outline_level: Optional[int] = None,
-        spacing_before: Optional[int] = None,
-        spacing_after: Optional[int] = None,
-        indent_left: Optional[int] = None,
-        indent_right: Optional[int] = None,
-        indent_hanging: Optional[int] = None,
-        indent_first_line: Optional[int] = None,
+        style_id: str | None = None,
+        justification: str | None = None,
+        outline_level: int | None = None,
+        spacing_before: int | None = None,
+        spacing_after: int | None = None,
+        indent_left: int | None = None,
+        indent_right: int | None = None,
+        indent_hanging: int | None = None,
+        indent_first_line: int | None = None,
         keep_next: bool = False,
         keep_lines: bool = False,
         page_break_before: bool = False,
-        shading: Optional[str] = None,
+        shading: str | None = None,
     ) -> None:
         """
         Initialise paragraph properties.
@@ -269,19 +269,19 @@ class DocxASTRunPropertiesNode(DocxASTNode):
         self,
         bold: bool = False,
         italic: bool = False,
-        underline: Optional[str] = None,
+        underline: str | None = None,
         strike: bool = False,
         double_strike: bool = False,
-        vertical_align: Optional[str] = None,
-        style_id: Optional[str] = None,
-        font_ascii: Optional[str] = None,
-        font_h_ansi: Optional[str] = None,
-        font_cs: Optional[str] = None,
-        sz: Optional[int] = None,
-        sz_cs: Optional[int] = None,
-        color: Optional[str] = None,
-        highlight: Optional[str] = None,
-        lang: Optional[str] = None,
+        vertical_align: str | None = None,
+        style_id: str | None = None,
+        font_ascii: str | None = None,
+        font_h_ansi: str | None = None,
+        font_cs: str | None = None,
+        sz: int | None = None,
+        sz_cs: int | None = None,
+        color: str | None = None,
+        highlight: str | None = None,
+        lang: str | None = None,
     ) -> None:
         """
         Initialise run properties.
@@ -408,11 +408,11 @@ class DocxASTDrawingNode(DocxASTNode):
 
     def __init__(
         self,
-        relationship_id: Optional[str] = None,
-        resolved_path: Optional[str] = None,
-        description: Optional[str] = None,
-        width_emu: Optional[int] = None,
-        height_emu: Optional[int] = None,
+        relationship_id: str | None = None,
+        resolved_path: str | None = None,
+        description: str | None = None,
+        width_emu: int | None = None,
+        height_emu: int | None = None,
     ) -> None:
         """
         Initialise a drawing node.
@@ -473,11 +473,11 @@ class DocxASTTablePropertiesNode(DocxASTNode):
 
     def __init__(
         self,
-        style_id: Optional[str] = None,
-        width: Optional[int] = None,
-        width_type: Optional[str] = None,
-        indent: Optional[int] = None,
-        layout: Optional[str] = None,
+        style_id: str | None = None,
+        width: int | None = None,
+        width_type: str | None = None,
+        indent: int | None = None,
+        layout: str | None = None,
         no_borders: bool = False,
     ) -> None:
         """
@@ -507,7 +507,7 @@ class DocxASTTableGridNode(DocxASTNode):
     Holds the column width definitions.
     """
 
-    def __init__(self, column_widths: Optional[List[int]] = None) -> None:
+    def __init__(self, column_widths: List[int] | None = None) -> None:
         """
         Initialise a table grid node.
 
@@ -536,8 +536,8 @@ class DocxASTTableRowPropertiesNode(DocxASTNode):
         self,
         is_header: bool = False,
         cant_split: bool = False,
-        height: Optional[int] = None,
-        height_rule: Optional[str] = None,
+        height: int | None = None,
+        height_rule: str | None = None,
     ) -> None:
         """
         Initialise table row properties.
@@ -571,12 +571,12 @@ class DocxASTTableCellPropertiesNode(DocxASTNode):
 
     def __init__(
         self,
-        width: Optional[int] = None,
-        width_type: Optional[str] = None,
+        width: int | None = None,
+        width_type: str | None = None,
         grid_span: int = 1,
-        vertical_merge: Optional[str] = None,
-        vertical_alignment: Optional[str] = None,
-        shading_fill: Optional[str] = None,
+        vertical_merge: str | None = None,
+        vertical_alignment: str | None = None,
+        shading_fill: str | None = None,
     ) -> None:
         """
         Initialise table cell properties.
@@ -609,8 +609,8 @@ class DocxASTStylesNode(DocxASTNode):
         """Initialise the styles root node."""
         super().__init__()
         # Default run and paragraph properties from <w:docDefaults>
-        self.default_run_properties: Optional[DocxASTRunPropertiesNode] = None
-        self.default_paragraph_properties: Optional[DocxASTParagraphPropertiesNode] = None
+        self.default_run_properties: DocxASTRunPropertiesNode | None = None
+        self.default_paragraph_properties: DocxASTParagraphPropertiesNode | None = None
 
 
 class DocxASTStyleNode(DocxASTNode):
@@ -627,8 +627,8 @@ class DocxASTStyleNode(DocxASTNode):
         style_type: str,
         style_id: str,
         name: str,
-        based_on: Optional[str] = None,
-        next_style: Optional[str] = None,
+        based_on: str | None = None,
+        next_style: str | None = None,
         is_default: bool = False,
         is_custom: bool = False,
     ) -> None:
@@ -680,7 +680,7 @@ class DocxASTAbstractNumNode(DocxASTNode):
         """
         super().__init__()
         self.abstract_num_id = abstract_num_id
-        self.multi_level_type: Optional[str] = None
+        self.multi_level_type: str | None = None
 
 
 class DocxASTNumNode(DocxASTNode):
@@ -717,10 +717,10 @@ class DocxASTNumLevelNode(DocxASTNode):
         num_fmt: str = "bullet",
         lvl_text: str = "",
         lvl_jc: str = "left",
-        indent_left: Optional[int] = None,
-        indent_hanging: Optional[int] = None,
-        font_ascii: Optional[str] = None,
-        font_h_ansi: Optional[str] = None,
+        indent_left: int | None = None,
+        indent_hanging: int | None = None,
+        font_ascii: str | None = None,
+        font_h_ansi: str | None = None,
     ) -> None:
         """
         Initialise a numbering level.

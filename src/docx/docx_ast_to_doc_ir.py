@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 from docx.docx_ast_node import (
     DocxASTAbstractNumNode,
@@ -114,13 +114,13 @@ class _ResolvedStyle:
         self.style_id: str = ""
         self.style_type: str = "paragraph"
         self.name: str = ""
-        self.heading_level: Optional[int] = None
+        self.heading_level: int | None = None
         self.is_code: bool = False
         self.is_blockquote: bool = False
         self.bold: bool = False
         self.italic: bool = False
-        self.sz: Optional[int] = None
-        self.font_ascii: Optional[str] = None
+        self.sz: int | None = None
+        self.font_ascii: str | None = None
 
 
 class _NumLevel:
@@ -278,7 +278,7 @@ class _DocxToDocIRMapper:
         self._styles[style_id] = resolved
         return resolved
 
-    def _get_style(self, style_id: Optional[str]) -> Optional[_ResolvedStyle]:
+    def _get_style(self, style_id: str | None) -> _ResolvedStyle | None:
         """Look up a resolved style by ID, returning None if not found."""
         if not style_id:
             return None
@@ -315,7 +315,7 @@ class _DocxToDocIRMapper:
 
     def _get_num_level(
         self, num_id: str, ilvl: int
-    ) -> Optional[_NumLevel]:
+    ) -> _NumLevel | None:
         """Look up a resolved numbering level."""
         return self._num_levels.get((num_id, ilvl))
 
@@ -368,7 +368,7 @@ class _DocxToDocIRMapper:
 
     def _get_num_pr(
         self, para: DocxASTParagraphNode
-    ) -> Optional[DocxASTNumberingPropertiesNode]:
+    ) -> DocxASTNumberingPropertiesNode | None:
         """Return the numbering properties of a paragraph, or None."""
         ppr = next(
             (c for c in para.children if isinstance(c, DocxASTParagraphPropertiesNode)),
@@ -384,7 +384,7 @@ class _DocxToDocIRMapper:
 
     def _build_list_tree(
         self, paras: List[DocxASTParagraphNode]
-    ) -> Optional[DocIRNode]:
+    ) -> DocIRNode | None:
         """Build a nested list tree from a flat sequence of list paragraphs.
 
         The paragraphs are grouped by ilvl (indent level).  When ilvl
@@ -481,13 +481,9 @@ class _DocxToDocIRMapper:
         if para_node.children:
             item.add_child(para_node)
 
-    # ------------------------------------------------------------------
-    # Paragraph mapping
-    # ------------------------------------------------------------------
-
     def _map_paragraph(
         self, para: DocxASTParagraphNode
-    ) -> Optional[DocIRNode]:
+    ) -> DocIRNode | None:
         """Map a single paragraph to the appropriate doc_ir node.
 
         Classification order:
@@ -559,7 +555,7 @@ class _DocxToDocIRMapper:
     def _para_is_monospace(
         self,
         para: DocxASTParagraphNode,
-        resolved: Optional[_ResolvedStyle],
+        resolved: _ResolvedStyle | None,
     ) -> bool:
         """Return True if all text runs in the paragraph use a monospace font."""
         # Check style-level font first
@@ -589,15 +585,15 @@ class _DocxToDocIRMapper:
     def _infer_heading_level(
         self,
         para: DocxASTParagraphNode,
-        resolved: Optional[_ResolvedStyle],
-    ) -> Optional[int]:
+        resolved: _ResolvedStyle | None,
+    ) -> int | None:
         """Infer a heading level from direct formatting (bold + large font).
 
         Returns None if the paragraph doesn't look like a heading.
         """
         # Collect run properties across all runs
         all_bold = True
-        max_sz: Optional[int] = None
+        max_sz: int | None = None
 
         runs = [c for c in para.children if isinstance(c, DocxASTRunNode)]
         if not runs:
@@ -819,7 +815,7 @@ class _DocxToDocIRMapper:
 
         return result
 
-    def _map_drawing(self, drawing: DocxASTDrawingNode) -> Optional[DocIRNode]:
+    def _map_drawing(self, drawing: DocxASTDrawingNode) -> DocIRNode | None:
         """Map a drawing node to a DocIRImageNode."""
         url = drawing.resolved_path or drawing.relationship_id or ""
         if not url:

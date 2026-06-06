@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from dmarkdown.markdown_ast_node import (
     MarkdownASTBlockquoteNode,
@@ -92,7 +92,7 @@ class _MarkdownToDocIRMapper:
 
         return doc_ir
 
-    def _map_block(self, node: MarkdownASTNode) -> Optional[DocIRNode]:
+    def _map_block(self, node: MarkdownASTNode) -> DocIRNode | None:
         """Dispatch a block-level markdown node to the appropriate mapper.
 
         Args:

@@ -8,7 +8,7 @@ standard library.
 import io
 from xml.sax import saxutils
 import zipfile
-from typing import List, Optional
+from typing import List
 
 from docx.docx_ast_node import (
     DocxASTAbstractNumNode,
@@ -186,7 +186,7 @@ class _DocxASTSerialiser:
         self,
         document_xml: str,
         styles_xml: str,
-        numbering_xml: Optional[str],
+        numbering_xml: str | None,
     ) -> bytes:
         """Assemble all XML parts into a .docx ZIP archive."""
         buf = io.BytesIO()
@@ -246,11 +246,7 @@ class _DocxASTSerialiser:
             '</Relationships>'
         )
 
-    # ------------------------------------------------------------------
-    # document.xml
-    # ------------------------------------------------------------------
-
-    def _serialise_document(self, body_node: Optional[DocxASTBodyNode]) -> str:
+    def _serialise_document(self, body_node: DocxASTBodyNode | None) -> str:
         """Produce the full document.xml string."""
         body_parts: List[str] = []
         if body_node is not None:
@@ -282,10 +278,6 @@ class _DocxASTSerialiser:
             return self._serialise_table(node)
 
         return ""
-
-    # ------------------------------------------------------------------
-    # Paragraph serialisation
-    # ------------------------------------------------------------------
 
     def _serialise_paragraph(self, node: DocxASTParagraphNode) -> str:
         """Serialise a <w:p> element."""
@@ -375,10 +367,6 @@ class _DocxASTSerialiser:
             return ""
 
         return "<w:pPr>" + "".join(parts) + "</w:pPr>"
-
-    # ------------------------------------------------------------------
-    # Run serialisation
-    # ------------------------------------------------------------------
 
     def _serialise_run(self, node: DocxASTRunNode) -> str:
         """Serialise a <w:r> element."""
@@ -636,7 +624,7 @@ class _DocxASTSerialiser:
 
         return "<w:tcPr>" + "".join(parts) + "</w:tcPr>"
 
-    def _serialise_styles(self, node: Optional[DocxASTStylesNode]) -> str:
+    def _serialise_styles(self, node: DocxASTStylesNode | None) -> str:
         """Produce the styles.xml string."""
         style_parts: List[str] = []
 

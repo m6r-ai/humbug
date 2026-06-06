@@ -22,6 +22,14 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
   mask broken implementation logic.  If the logic is wrong then a test must fail.
 - Test docstrings must describe the expected correct behaviour only.  They must not reference previously broken
   behaviour, historical bugs, or implementation details of past fixes.  A test is a specification, not a changelog.
+- Never write block comments using lines of dashes.  E.g never do this:
+  ```python
+  # -----------------------------------------------------------
+  # This is a block level comment because I like wasting tokens
+  # -----------------------------------------------------------
+  ```
+  Functions/methods have doc strings and we don't need comments about grouping of things because they go stale.
+- We use modern Python, so never use `Optional`, always use `type | None`.
 
 ## Code restructuring
 

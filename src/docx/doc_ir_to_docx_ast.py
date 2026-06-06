@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Sequence, Tuple
 
 from doc_ir import (
     DocIRBlockquoteNode,
@@ -273,8 +273,8 @@ class _DocIRToDocxASTMapper:
         self,
         node: DocIRParagraphNode,
         style_id: str = _STYLE_NORMAL,
-        shading: Optional[str] = None,
-    ) -> Optional[DocxASTParagraphNode]:
+        shading: str | None = None,
+    ) -> DocxASTParagraphNode | None:
         """Map a paragraph to a styled paragraph.
 
         Returns None if the paragraph would be empty.
@@ -361,8 +361,8 @@ class _DocIRToDocxASTMapper:
 
     def _map_code_block(
         self, node: DocIRCodeBlockNode, parent: DocxASTBodyNode,
-        indent_left: Optional[int] = None,
-        shading: Optional[str] = None,
+        indent_left: int | None = None,
+        shading: str | None = None,
     ) -> None:
         """Map a code block — one paragraph per line, all with CodeBlock style."""
         lines = node.content.split("\n")
@@ -404,7 +404,7 @@ class _DocIRToDocxASTMapper:
         num_id: str,
         depth: int,
         indent_base: int = 0,
-        shading: Optional[str] = None,
+        shading: str | None = None,
         tight: bool = True,
     ) -> None:
         """Recursively map a list node, emitting paragraphs with numPr.
@@ -431,7 +431,7 @@ class _DocIRToDocxASTMapper:
         num_id: str,
         depth: int,
         indent_base: int = 0,
-        shading: Optional[str] = None,
+        shading: str | None = None,
         tight: bool = True,
     ) -> None:
         """Map a list item.
@@ -518,7 +518,7 @@ class _DocIRToDocxASTMapper:
             added = parent.children[para_count_before:]
             for node in reversed(added):
                 if isinstance(node, DocxASTParagraphNode):
-                    last_ppr: Optional[DocxASTParagraphPropertiesNode] = next(
+                    last_ppr: DocxASTParagraphPropertiesNode | None = next(
                         (c for c in node.children if isinstance(c, DocxASTParagraphPropertiesNode)),
                         None,
                     )
@@ -634,7 +634,7 @@ class _DocIRToDocxASTMapper:
         return cell
 
     @staticmethod
-    def _alignment_to_jc(alignment: str) -> Optional[str]:
+    def _alignment_to_jc(alignment: str) -> str | None:
         """Convert a doc_ir alignment string to a DOCX justification value."""
         mapping = {"left": "left", "center": "center", "right": "right"}
         return mapping.get(alignment)

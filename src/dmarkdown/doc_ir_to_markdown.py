@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence
+from typing import List, Sequence
 
 from doc_ir import (
     DocIRBlockquoteNode,
@@ -60,8 +60,8 @@ class _DocIRToMarkdownSerialiser:
         self,
         node: DocIRNode,
         depth: int,
-        ordered_index: Optional[int],  # pylint: disable=unused-argument
-    ) -> Optional[str]:
+        ordered_index: int | None,  # pylint: disable=unused-argument
+    ) -> str | None:
         """Serialise a single block node to a Markdown string.
 
         Args:
@@ -105,12 +105,12 @@ class _DocIRToMarkdownSerialiser:
         text = self._serialise_inline_children(node.children)
         return f"{prefix} {text}"
 
-    def _serialise_paragraph(self, node: DocIRParagraphNode) -> Optional[str]:
+    def _serialise_paragraph(self, node: DocIRParagraphNode) -> str | None:
         """Serialise a paragraph node."""
         text = self._serialise_inline_children(node.children)
         return text if text else None
 
-    def _serialise_blockquote(self, node: DocIRBlockquoteNode) -> Optional[str]:
+    def _serialise_blockquote(self, node: DocIRBlockquoteNode) -> str | None:
         """Serialise a blockquote by prefixing each block line with '> '."""
         inner_blocks: List[str] = []
         for child in node.children:
@@ -132,7 +132,7 @@ class _DocIRToMarkdownSerialiser:
 
     def _serialise_unordered_list(
         self, node: DocIRUnorderedListNode, depth: int
-    ) -> Optional[str]:
+    ) -> str | None:
         """Serialise an unordered list."""
         lines: List[str] = []
         for child in node.children:
@@ -144,7 +144,7 @@ class _DocIRToMarkdownSerialiser:
 
     def _serialise_ordered_list(
         self, node: DocIROrderedListNode, depth: int
-    ) -> Optional[str]:
+    ) -> str | None:
         """Serialise an ordered list."""
         lines: List[str] = []
         index = node.start
@@ -160,7 +160,7 @@ class _DocIRToMarkdownSerialiser:
         self,
         item: DocIRListItemNode,
         depth: int,
-        ordered_index: Optional[int],
+        ordered_index: int | None,
     ) -> List[str]:
         """Serialise a list item, returning a list of output lines.
 
@@ -217,7 +217,7 @@ class _DocIRToMarkdownSerialiser:
 
         return lines
 
-    def _serialise_table(self, node: DocIRTableNode) -> Optional[str]:
+    def _serialise_table(self, node: DocIRTableNode) -> str | None:
         """Serialise a table to GFM pipe-table syntax.
 
         If a header section is present it is emitted first with a separator

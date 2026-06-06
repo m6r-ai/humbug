@@ -1,7 +1,7 @@
 import io
 import zipfile
 import xml.etree.ElementTree as ET
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from docx.docx_ast_node import (
     DocxASTAbstractNumNode,
@@ -64,17 +64,17 @@ def _w(local: str) -> str:
     return f"{{{_W}}}{local}"
 
 
-def _attr(element: ET.Element, ns: str, local: str) -> Optional[str]:
+def _attr(element: ET.Element, ns: str, local: str) -> str | None:
     """Return a namespaced attribute value or None."""
     return element.get(f"{{{ns}}}{local}")
 
 
-def _wattr(element: ET.Element, local: str) -> Optional[str]:
+def _wattr(element: ET.Element, local: str) -> str | None:
     """Return a w: namespaced attribute value or None."""
     return element.get(f"{{{_W}}}{local}")
 
 
-def _int_or_none(value: Optional[str]) -> Optional[int]:
+def _int_or_none(value: str | None) -> int | None:
     """Convert a string to int, returning None if conversion fails or value is None."""
     if value is None:
         return None
@@ -103,7 +103,7 @@ class DocxASTParser:
     def parse(
         self,
         data: bytes,
-        source_path: Optional[str] = None,
+        source_path: str | None = None,
     ) -> DocxASTDocumentNode:
         """Parse DOCX bytes into a document AST.
 
@@ -370,8 +370,8 @@ class DocxASTParser:
         ) or "left"
 
         # Indent properties from <w:pPr><w:ind>
-        indent_left: Optional[int] = None
-        indent_hanging: Optional[int] = None
+        indent_left: int | None = None
+        indent_hanging: int | None = None
         ppr_elem = elem.find(_w("pPr"))
         if ppr_elem is not None:
             ind_elem = ppr_elem.find(_w("ind"))
@@ -380,8 +380,8 @@ class DocxASTParser:
                 indent_hanging = _int_or_none(_wattr(ind_elem, "hanging"))
 
         # Font for bullet character from <w:rPr><w:rFonts>
-        font_ascii: Optional[str] = None
-        font_h_ansi: Optional[str] = None
+        font_ascii: str | None = None
+        font_h_ansi: str | None = None
         rpr_elem = elem.find(_w("rPr"))
         if rpr_elem is not None:
             fonts_elem = rpr_elem.find(_w("rFonts"))
@@ -506,15 +506,15 @@ class DocxASTParser:
         Returns:
             A DocxASTParagraphPropertiesNode.
         """
-        style_id: Optional[str] = None
-        justification: Optional[str] = None
-        outline_level: Optional[int] = None
-        spacing_before: Optional[int] = None
-        spacing_after: Optional[int] = None
-        indent_left: Optional[int] = None
-        indent_right: Optional[int] = None
-        indent_hanging: Optional[int] = None
-        indent_first_line: Optional[int] = None
+        style_id: str | None = None
+        justification: str | None = None
+        outline_level: int | None = None
+        spacing_before: int | None = None
+        spacing_after: int | None = None
+        indent_left: int | None = None
+        indent_right: int | None = None
+        indent_hanging: int | None = None
+        indent_first_line: int | None = None
         keep_next = False
         keep_lines = False
         page_break_before = False
@@ -638,19 +638,19 @@ class DocxASTParser:
         """
         bold = False
         italic = False
-        underline: Optional[str] = None
+        underline: str | None = None
         strike = False
         double_strike = False
-        vertical_align: Optional[str] = None
-        style_id: Optional[str] = None
-        font_ascii: Optional[str] = None
-        font_h_ansi: Optional[str] = None
-        font_cs: Optional[str] = None
-        sz: Optional[int] = None
-        sz_cs: Optional[int] = None
-        color: Optional[str] = None
-        highlight: Optional[str] = None
-        lang: Optional[str] = None
+        vertical_align: str | None = None
+        style_id: str | None = None
+        font_ascii: str | None = None
+        font_h_ansi: str | None = None
+        font_cs: str | None = None
+        sz: int | None = None
+        sz_cs: int | None = None
+        color: str | None = None
+        highlight: str | None = None
+        lang: str | None = None
 
         for child in elem:
             local = child.tag.split("}")[-1]
@@ -738,7 +738,7 @@ class DocxASTParser:
         self,
         elem: ET.Element,
         relationships: Dict[str, str],
-    ) -> Optional[DocxASTDrawingNode]:
+    ) -> DocxASTDrawingNode | None:
         """Parse a <w:drawing> element and return a DocxASTDrawingNode.
 
         Extracts the relationship ID (for image lookup), dimensions, and
@@ -751,10 +751,10 @@ class DocxASTParser:
         Returns:
             A DocxASTDrawingNode, or None if no image relationship is found.
         """
-        relationship_id: Optional[str] = None
-        description: Optional[str] = None
-        width_emu: Optional[int] = None
-        height_emu: Optional[int] = None
+        relationship_id: str | None = None
+        description: str | None = None
+        width_emu: int | None = None
+        height_emu: int | None = None
 
         # Look in both <wp:inline> and <wp:anchor>
         for container_tag in (
@@ -843,11 +843,11 @@ class DocxASTParser:
 
     def _parse_table_properties(self, elem: ET.Element) -> DocxASTTablePropertiesNode:
         """Parse a <w:tblPr> element."""
-        style_id: Optional[str] = None
-        width: Optional[int] = None
-        width_type: Optional[str] = None
-        indent: Optional[int] = None
-        layout: Optional[str] = None
+        style_id: str | None = None
+        width: int | None = None
+        width_type: str | None = None
+        indent: int | None = None
+        layout: str | None = None
 
         for child in elem:
             local = child.tag.split("}")[-1]
@@ -912,8 +912,8 @@ class DocxASTParser:
         """Parse a <w:trPr> element."""
         is_header = False
         cant_split = False
-        height: Optional[int] = None
-        height_rule: Optional[str] = None
+        height: int | None = None
+        height_rule: str | None = None
 
         for child in elem:
             local = child.tag.split("}")[-1]
@@ -962,12 +962,12 @@ class DocxASTParser:
         self, elem: ET.Element
     ) -> DocxASTTableCellPropertiesNode:
         """Parse a <w:tcPr> element."""
-        width: Optional[int] = None
-        width_type: Optional[str] = None
+        width: int | None = None
+        width_type: str | None = None
         grid_span = 1
-        vertical_merge: Optional[str] = None
-        vertical_alignment: Optional[str] = None
-        shading_fill: Optional[str] = None
+        vertical_merge: str | None = None
+        vertical_alignment: str | None = None
+        shading_fill: str | None = None
 
         for child in elem:
             local = child.tag.split("}")[-1]
@@ -1003,12 +1003,12 @@ class DocxASTParser:
         self, elem: ET.Element
     ) -> DocxASTSectionPropertiesNode:
         """Parse a <w:sectPr> element."""
-        page_width: Optional[int] = None
-        page_height: Optional[int] = None
-        margin_top: Optional[int] = None
-        margin_right: Optional[int] = None
-        margin_bottom: Optional[int] = None
-        margin_left: Optional[int] = None
+        page_width: int | None = None
+        page_height: int | None = None
+        margin_top: int | None = None
+        margin_right: int | None = None
+        margin_bottom: int | None = None
+        margin_left: int | None = None
 
         pg_sz = elem.find(_w("pgSz"))
         if pg_sz is not None:
@@ -1034,7 +1034,7 @@ class DocxASTParser:
 
 def parse_docx(
     data: bytes,
-    source_path: Optional[str] = None,
+    source_path: str | None = None,
 ) -> DocxASTDocumentNode:
     """Parse a DOCX file from raw bytes into a document AST.
 
