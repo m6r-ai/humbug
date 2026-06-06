@@ -452,7 +452,8 @@ class MarkdownASTBuilder:
 
         while i < len(text):
             # Handle backslash escapes
-            if text[i] == '\\' and i + 1 < len(text) and text[i + 1] in ('\\', '`', '*', '_', '~', '[', ']', '(', ')', '!', '#', '+', '-', '.', '|'):
+            if (text[i] == '\\' and i + 1 < len(text) and
+                    text[i + 1] in ('\\', '`', '*', '_', '~', '[', ']', '(', ')', '!', '#', '+', '-', '.', '|')):
                 current_text += text[i + 1]
                 i += 2
                 continue
