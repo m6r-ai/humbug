@@ -20,7 +20,7 @@ from dmarkdown import (
     MarkdownASTVisitor, MarkdownASTDocumentNode, MarkdownASTParagraphNode, MarkdownASTHeadingNode,
     MarkdownASTTextNode, MarkdownASTBoldNode, MarkdownASTEmphasisNode, MarkdownASTInlineCodeNode,
     MarkdownASTCodeBlockNode, MarkdownASTListItemNode, MarkdownASTOrderedListNode,
-    MarkdownASTUnorderedListNode, MarkdownASTLineBreakNode, MarkdownASTTableNode, MarkdownASTTableHeaderNode,
+    MarkdownASTUnorderedListNode, MarkdownASTLineBreakNode, MarkdownASTStrikethroughNode, MarkdownASTTableNode, MarkdownASTTableHeaderNode,
     MarkdownASTTableBodyNode, MarkdownASTTableRowNode, MarkdownASTTableCellNode, MarkdownASTHorizontalRuleNode,
     MarkdownASTLinkNode, MarkdownASTImageNode, MarkdownASTBlockquoteNode
 )
@@ -347,6 +347,30 @@ class MarkdownRenderer(MarkdownASTVisitor):
         italic_format = QTextCharFormat(orig_char_format)
         italic_format.setFontItalic(True)
         self._cursor.setCharFormat(italic_format)
+
+        for child in node.children:
+            self.visit(child)
+
+        # Restore previous format
+        self._cursor.setCharFormat(orig_char_format)
+
+    def visit_MarkdownASTStrikethroughNode(self, node: MarkdownASTStrikethroughNode) -> None:  # pylint: disable=invalid-name
+        """
+        Render a strikethrough node to the QTextDocument.
+
+        Args:
+            node: The strikethrough node to render
+
+        Returns:
+            None
+        """
+        # Save current format, apply strikethrough format, then process children
+        orig_char_format = self._cursor.charFormat()
+
+        # Create a new format based on the current one but with strikethrough
+        strikethrough_format = QTextCharFormat(orig_char_format)
+        strikethrough_format.setFontStrikeOut(True)
+        self._cursor.setCharFormat(strikethrough_format)
 
         for child in node.children:
             self.visit(child)

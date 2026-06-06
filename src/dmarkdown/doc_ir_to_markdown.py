@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from doc_ir import (
     DocIRBlockquoteNode,
@@ -342,7 +342,7 @@ class _DocIRToMarkdownSerialiser:
         padded = [cell.ljust(col_widths[i]) for i, cell in enumerate(cells)]
         return "| " + " | ".join(padded) + " |"
 
-    def _serialise_inline_children(self, children: List[DocIRNode]) -> str:
+    def _serialise_inline_children(self, children: Sequence[DocIRNode]) -> str:
         """Serialise a list of inline nodes to a Markdown string."""
         parts: List[str] = []
         for child in children:

@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 from doc_ir import (
     DocIRBlockquoteNode,
@@ -648,14 +648,14 @@ class _DocIRToDocxASTMapper:
 
     def _append_inline_children(
         self,
-        children: List[DocIRNode],
+        children: Sequence[DocIRNode],
         para: DocxASTParagraphNode,
     ) -> None:
         """Build runs from inline children and append to a paragraph."""
         for run in self._build_runs(children):
             para.add_child(run)
 
-    def _build_runs(self, children: List[DocIRNode]) -> List[DocxASTNode]:
+    def _build_runs(self, children: Sequence[DocIRNode]) -> List[DocxASTNode]:
         """Convert a list of inline doc_ir nodes to DocxASTRunNode instances.
 
         Consecutive text spans with identical formatting are merged into a
@@ -676,7 +676,7 @@ class _DocIRToDocxASTMapper:
 
     def _collect_run_items(
         self,
-        children: List[DocIRNode],
+        children: Sequence[DocIRNode],
         items: List[Tuple],
     ) -> None:
         """Recursively collect run items from inline nodes.
