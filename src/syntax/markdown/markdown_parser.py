@@ -98,7 +98,6 @@ class MarkdownParser(Parser):
 
             # Emit a BLOCKQUOTE token for this '>' (plus the leading spaces and
             # the optional single space that follows the '>').
-            marker_start = offset + spaces_before
             after_marker = stripped[1:]
             if after_marker.startswith(' '):
                 consumed = spaces_before + 2   # "> "
@@ -479,7 +478,7 @@ class MarkdownParser(Parser):
         while i < len(text) and text[i].isdigit():
             i += 1
 
-        if i > 0 and i < len(text) and text[i] in ('.', ')') and i + 1 < len(text) and text[i + 1] == ' ':
+        if 0 < i < len(text) and text[i] in ('.', ')') and i + 1 < len(text) and text[i + 1] == ' ':
             return True
 
         return False
