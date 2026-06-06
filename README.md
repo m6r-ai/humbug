@@ -69,6 +69,9 @@ This is an incredibly powerful forensic tool.
 
 Every project lives in its own mindspace: a persistent, context-rich environment with isolated files, settings, and conversations.
 
+Within each mindspace your AIs can automatically manage `AGENTS.md` files that tell new AI sessions how to navigate the code.
+The can also manage `blueprint.md` files that allow AI sessions to understand important what the mindspace is for, and important decisions that have been made about it.
+
 ### OS-agnostic
 
 Humbug provides OS-like concepts but doesn't try to replace your computer's operating system.
