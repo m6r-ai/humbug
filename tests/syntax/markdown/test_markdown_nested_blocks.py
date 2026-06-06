@@ -154,6 +154,134 @@ class TestFenceInsideBlockquote:
         assert TokenType.BLOCKQUOTE in types(all_tokens[3])
         assert state.in_fence_block is False
 
+    def test_fence_content_blockquote_prefix_token_emitted(self):
+        """A BLOCKQUOTE token is emitted for the '> ' prefix on each content line inside a blockquote fence."""
+        lines = ["> ```python", "> x = 1", "> ```"]
+        all_tokens, _ = parse_lines(lines)
+        content_token_types = types(all_tokens[1])
+        assert TokenType.BLOCKQUOTE in content_token_types
+        blockquote_token = next(t for t in all_tokens[1] if t.type == TokenType.BLOCKQUOTE)
+        assert blockquote_token.value == "> "
+        assert blockquote_token.start == 0
+
+    def test_fence_content_embedded_tokens_have_correct_offsets(self):
+        """Embedded language tokens inside a blockquote fence have start offsets relative to the full line."""
+        lines = ["> ```python", "> x = 1", "> ```"]
+        all_tokens, _ = parse_lines(lines)
+        # The content line is '> x = 1'. After the '> ' prefix (2 chars), the embedded
+        # parser sees 'x = 1'. All embedded tokens must have start >= 2.
+        embedded_tokens = [t for t in all_tokens[1] if t.type != TokenType.BLOCKQUOTE]
+        assert len(embedded_tokens) > 0
+        for token in embedded_tokens:
+            assert token.start >= 2, (
+                f"Token {token.type!r} value={token.value!r} has start={token.start}, expected >= 2"
+            )
+
+
+# ---------------------------------------------------------------------------
+# TestListInsideBlockquote — list items nested inside blockquoted content
+# ---------------------------------------------------------------------------
+
+class TestListInsideBlockquote:
+
+    def test_blockquote_list_item_produces_list_marker_token(self):
+        """A list item inside a blockquote produces a LIST_MARKER token, not a plain BLOCKQUOTE token."""
+        lines = ["> - item"]
+        all_tokens, _ = parse_lines(lines)
+        token_types = types(all_tokens[0])
+        assert TokenType.LIST_MARKER in token_types
+
+    def test_blockquote_list_item_prefix_is_blockquote_token(self):
+        """The '> ' prefix of a blockquote list item is emitted as a BLOCKQUOTE token."""
+        lines = ["> - item"]
+        all_tokens, _ = parse_lines(lines)
+        assert all_tokens[0][0].type == TokenType.BLOCKQUOTE
+        assert all_tokens[0][0].value == "> "
+        assert all_tokens[0][0].start == 0
+
+    def test_blockquote_list_item_content_has_correct_offset(self):
+        """The LIST_MARKER token for a blockquote list item has a start offset past the '> ' prefix."""
+        lines = ["> - item"]
+        all_tokens, _ = parse_lines(lines)
+        list_token = next(t for t in all_tokens[0] if t.type == TokenType.LIST_MARKER)
+        assert list_token.start >= 2
+
+    def test_blockquote_plain_text_content_is_not_list_marker(self):
+        """A plain text blockquote line does not produce a LIST_MARKER token."""
+        lines = ["> some text"]
+        all_tokens, _ = parse_lines(lines)
+        assert TokenType.LIST_MARKER not in types(all_tokens[0])
+
+    def test_blockquote_multiple_list_items(self):
+        """Multiple consecutive blockquote list items each produce BLOCKQUOTE + LIST_MARKER tokens."""
+        lines = ["> - first", "> - second"]
+        all_tokens, _ = parse_lines(lines)
+        for line_tokens in all_tokens:
+            token_types = types(line_tokens)
+            assert TokenType.BLOCKQUOTE in token_types
+            assert TokenType.LIST_MARKER in token_types
+
+
+# ---------------------------------------------------------------------------
+# TestBlockquoteInsideList — blockquote as the content of a list item
+# ---------------------------------------------------------------------------
+
+class TestBlockquoteInsideList:
+
+    def test_list_item_blockquote_produces_list_marker_token(self):
+        """'- > quote' produces a LIST_MARKER token for the '- ' prefix."""
+        lines = ["- > quote"]
+        all_tokens, _ = parse_lines(lines)
+        assert TokenType.LIST_MARKER in types(all_tokens[0])
+
+    def test_list_item_blockquote_produces_blockquote_token(self):
+        """'- > quote' produces a BLOCKQUOTE token for the '> quote' part."""
+        lines = ["- > quote"]
+        all_tokens, _ = parse_lines(lines)
+        assert TokenType.BLOCKQUOTE in types(all_tokens[0])
+
+    def test_list_item_blockquote_prefix_value_and_offset(self):
+        """The LIST_MARKER token covers only the '- ' prefix; the BLOCKQUOTE starts after it."""
+        lines = ["- > quote"]
+        all_tokens, _ = parse_lines(lines)
+        list_token = next(t for t in all_tokens[0] if t.type == TokenType.LIST_MARKER)
+        bq_token = next(t for t in all_tokens[0] if t.type == TokenType.BLOCKQUOTE)
+        # LIST_MARKER covers '- ' (starts at 0)
+        assert list_token.start == 0
+        assert list_token.value == "- "
+        # BLOCKQUOTE starts immediately after the list marker prefix
+        assert bq_token.start == 2
+        assert bq_token.value.startswith('>')
+
+    def test_list_item_blockquote_asterisk_marker(self):
+        """'* > quote' also produces LIST_MARKER + BLOCKQUOTE tokens."""
+        lines = ["* > quote"]
+        all_tokens, _ = parse_lines(lines)
+        assert TokenType.LIST_MARKER in types(all_tokens[0])
+        assert TokenType.BLOCKQUOTE in types(all_tokens[0])
+
+    def test_list_item_blockquote_plus_marker(self):
+        """'+ > quote' also produces LIST_MARKER + BLOCKQUOTE tokens."""
+        lines = ["+ > quote"]
+        all_tokens, _ = parse_lines(lines)
+        assert TokenType.LIST_MARKER in types(all_tokens[0])
+        assert TokenType.BLOCKQUOTE in types(all_tokens[0])
+
+    def test_list_item_blockquote_inline_formatting_recognised(self):
+        """Inline formatting inside the blockquote part of a list item is recognised."""
+        lines = ["- > **bold** text"]
+        all_tokens, _ = parse_lines(lines)
+        assert TokenType.BOLD_START in types(all_tokens[0])
+        assert TokenType.BOLD in types(all_tokens[0])
+        assert TokenType.BOLD_END in types(all_tokens[0])
+
+    def test_list_item_plain_content_not_split(self):
+        """A list item whose content does not start with '>' is not split."""
+        lines = ["- normal item"]
+        all_tokens, _ = parse_lines(lines)
+        assert TokenType.BLOCKQUOTE not in types(all_tokens[0])
+        assert TokenType.LIST_MARKER in types(all_tokens[0])
+
 
 # ---------------------------------------------------------------------------
 # TestBlockquoteStructure — multi-line and transitional blockquote behaviour

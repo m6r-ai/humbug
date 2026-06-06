@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
 import re
+from dataclasses import dataclass, field
 from typing import List, cast
 
 from syntax.lexer import TokenType, Token
@@ -19,7 +19,9 @@ class MarkdownParserState(ParserState):
         in_fence_block: Indicates if we're currently in a code fence block
         fence_depth: Indentation of the current fence block (if we are in one)
         nested_fence_depth: Counter for nested fence blocks within the current fence
-        in_blockquote_fence: Indicates if the current fence block is inside a blockquote
+        blockquote_depth: Number of '>' prefixes that were present when the current
+            fence block was opened; used to strip the same number of prefixes from
+            each subsequent content line before delegating to the embedded parser
         language: The current programming language being parsed
         embedded_parser_state: State of the embedded language parser
         in_list_item: Indicates if we're currently in a list item
@@ -32,7 +34,7 @@ class MarkdownParserState(ParserState):
     in_fence_block: bool = False
     fence_depth: int = 0
     nested_fence_depth: int = 0
-    in_blockquote_fence: bool = False
+    blockquote_depth: int = 0
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
     embedded_parser_state: ParserState | None = None
     in_list_item: bool = False
@@ -51,17 +53,73 @@ class MarkdownParserState(ParserState):
 @ParserRegistry.register_parser(ProgrammingLanguage.MARKDOWN)
 class MarkdownParser(Parser):
     """
-    Parser for conversation content with embedded code blocks.
+    Parser for Markdown content with embedded code blocks.
 
-    This parser processes conversation content and delegates embedded code blocks to
-    appropriate language-specific parsers.
+    Each call to parse() handles one line.  The broad structure is:
+
+    1. Strip leading blockquote prefixes ('> ') from the line, emitting a
+       BLOCKQUOTE token for each one and recording the total character offset.
+    2. If we are inside a fence block, delegate the stripped content to the
+       embedded language parser (adjusting token offsets back to the original
+       line's coordinate space).
+    3. Otherwise, lex the stripped content and classify it: fence open/close,
+       list marker, heading, or plain text.
+    4. Run inline-formatting detection over any TEXT / HEADING / BLOCKQUOTE /
+       LIST_MARKER tokens to emit bold, italic, link, etc. sub-tokens.
     """
+
+    def _strip_blockquote_prefixes(self, input_str: str) -> tuple[list[Token], str, int]:
+        """
+        Strip all leading blockquote markers from a line.
+
+        Mirrors dmarkdown's _identify_line_type blockquote-stripping loop so that
+        the rest of the parser always works on the innermost content regardless of
+        how many levels of '>' nesting are present.
+
+        Args:
+            input_str: The raw input line.
+
+        Returns:
+            A tuple of:
+            - list of BLOCKQUOTE tokens, one per '>' marker found
+            - the remaining string after all markers have been removed
+            - the total number of characters consumed (== offset of remaining in input_str)
+        """
+        bq_tokens: list[Token] = []
+        remaining = input_str
+        offset = 0
+
+        while True:
+            stripped = remaining.lstrip()
+            spaces_before = len(remaining) - len(stripped)
+
+            if not stripped.startswith('>'):
+                break
+
+            # Emit a BLOCKQUOTE token for this '>' (plus the leading spaces and
+            # the optional single space that follows the '>').
+            marker_start = offset + spaces_before
+            after_marker = stripped[1:]
+            if after_marker.startswith(' '):
+                consumed = spaces_before + 2   # "> "
+                token_value = remaining[:consumed]
+
+            else:
+                consumed = spaces_before + 1   # ">"
+                token_value = remaining[:consumed]
+
+            bq_tokens.append(Token(type=TokenType.BLOCKQUOTE, value=token_value, start=offset))
+            offset += consumed
+            remaining = remaining[consumed:]
+
+        return bq_tokens, remaining, offset
 
     def _embedded_parse(
         self,
         language: ProgrammingLanguage,
         prev_embedded_parser_state: ParserState | None,
-        input_str: str
+        input_str: str,
+        token_offset: int = 0
     ) -> ParserState | None:
         """
         Parse embedded code content using an appropriate language parser.
@@ -69,20 +127,20 @@ class MarkdownParser(Parser):
         Args:
             language: The programming language to use for parsing
             prev_embedded_parser_state: Previous parser state if any
-            input_str: The input string to parse
+            input_str: The input string to parse (already stripped of blockquote prefixes)
+            token_offset: Characters removed from the start of the original line before
+                input_str was produced.  Every token's start position is shifted by this
+                amount so that offsets are relative to the original line.
 
         Returns:
-            Updated parser state after parsing
-
-        Note:
-            Uses ParserFactory to instantiate appropriate parser for the language.
-            Returns None if no parser is available for the language.
+            Updated parser state after parsing, or None if no parser is available.
         """
         embedded_parser = ParserRegistry.create_parser(language)
         if not embedded_parser:
             return None
 
-        # We apply a per-parser offset to any continuation value in case we switched language!
+        # Apply a per-language offset to continuation values to avoid collisions
+        # when the embedded language changes between lines.
         continuation_offset = int(language) * 0x1000
         embedded_parser_state = embedded_parser.parse(prev_embedded_parser_state, input_str)
         if embedded_parser_state is not None:
@@ -93,23 +151,9 @@ class MarkdownParser(Parser):
             if token is None:
                 break
 
-            self._tokens.append(token)
+            self._tokens.append(Token(type=token.type, value=token.value, start=token.start + token_offset))
 
         return embedded_parser_state
-
-    def _apply_block_style(self, tokens: List[Token], block_type: TokenType) -> None:
-        """
-        Apply a block style to all tokens that aren't already block elements.
-
-        Args:
-            tokens: List of tokens to modify
-            block_type: The token type to apply
-        """
-        for i, token in enumerate(tokens):
-            if token.type not in (TokenType.FENCE, TokenType.FENCE_START, TokenType.FENCE_END,
-                                  TokenType.LANGUAGE, TokenType.HEADING,
-                                  TokenType.BLOCKQUOTE, TokenType.LIST_MARKER):
-                tokens[i] = Token(type=block_type, value=token.value, start=token.start)
 
     def _find_closing_paren(self, text: str, start_pos: int) -> int:
         """
@@ -227,18 +271,14 @@ class MarkdownParser(Parser):
         while i < len(text):
             # Check for image (highest precedence due to '!' prefix)
             if text[i] == '!' and i + 1 < len(text) and text[i + 1] == '[':
-                # Add any accumulated text
                 add_text_token(current_text_start, i)
 
-                # Parse image: ![alt](url)
                 alt_end = text.find('](', i + 2)
                 if alt_end != -1:
                     url_end = self._find_closing_paren(text, alt_end + 2)
                     if url_end != -1:
-                        # Image start
                         tokens.append(Token(TokenType.IMAGE_START, '![', base_position + i))
 
-                        # Alt text
                         alt_text = text[i + 2:alt_end]
                         if alt_text:
                             alt_tokens = self._parse_inline_formatting_in_text(
@@ -247,14 +287,11 @@ class MarkdownParser(Parser):
                             )
                             tokens.extend(alt_tokens)
 
-                        # Alt end / URL start
                         tokens.append(Token(TokenType.IMAGE_ALT_END, '](', base_position + alt_end))
 
-                        # URL
                         url_text = text[alt_end + 2:url_end]
                         tokens.append(Token(TokenType.IMAGE_URL, url_text, base_position + alt_end + 2))
 
-                        # Image end
                         tokens.append(Token(TokenType.IMAGE_END, ')', base_position + url_end))
 
                         i = url_end + 1
@@ -268,18 +305,14 @@ class MarkdownParser(Parser):
 
             # Check for link
             if text[i] == '[':
-                # Add any accumulated text
                 add_text_token(current_text_start, i)
 
-                # Parse link: [text](url)
                 text_end = text.find('](', i + 1)
                 if text_end != -1:
                     url_end = self._find_closing_paren(text, text_end + 2)
                     if url_end != -1:
-                        # Link start
                         tokens.append(Token(TokenType.LINK_START, '[', base_position + i))
 
-                        # Link text (may contain nested formatting)
                         link_text = text[i + 1:text_end]
                         if link_text:
                             link_tokens = self._parse_inline_formatting_in_text(
@@ -288,14 +321,11 @@ class MarkdownParser(Parser):
                             )
                             tokens.extend(link_tokens)
 
-                        # Link text end / URL start
                         tokens.append(Token(TokenType.LINK_TEXT_END, '](', base_position + text_end))
 
-                        # URL
                         url_text = text[text_end + 2:url_end]
                         tokens.append(Token(TokenType.LINK_URL, url_text, base_position + text_end + 2))
 
-                        # Link end
                         tokens.append(Token(TokenType.LINK_END, ')', base_position + url_end))
 
                         i = url_end + 1
@@ -307,21 +337,16 @@ class MarkdownParser(Parser):
 
             # Check for inline code
             elif text[i] == '`':
-                # Add any accumulated text
                 add_text_token(current_text_start, i)
 
-                # Find closing backtick
                 code_end = text.find('`', i + 1)
                 if code_end != -1:
-                    # Code start
                     tokens.append(Token(TokenType.INLINE_CODE_START, '`', base_position + i))
 
-                    # Code content
                     code_content = text[i + 1:code_end]
                     if code_content:
                         tokens.append(Token(TokenType.INLINE_CODE, code_content, base_position + i + 1))
 
-                    # Code end
                     tokens.append(Token(TokenType.INLINE_CODE_END, '`', base_position + code_end))
 
                     i = code_end + 1
@@ -333,16 +358,13 @@ class MarkdownParser(Parser):
 
             # Check for bold (**text** or __text__)
             elif self._is_bold_marker(text, i):
-                # Add any accumulated text
                 add_text_token(current_text_start, i)
 
                 marker = text[i:i+2]
                 bold_end = text.find(marker, i + 2)
                 if bold_end != -1:
-                    # Bold start
                     tokens.append(Token(TokenType.BOLD_START, marker, base_position + i))
 
-                    # Bold content (may contain nested formatting)
                     bold_content = text[i + 2:bold_end]
                     if bold_content:
                         bold_tokens = self._parse_inline_formatting_in_text(
@@ -351,7 +373,6 @@ class MarkdownParser(Parser):
                         )
                         tokens.extend(bold_tokens)
 
-                    # Bold end
                     tokens.append(Token(TokenType.BOLD_END, marker, base_position + bold_end))
 
                     i = bold_end + 2
@@ -363,11 +384,9 @@ class MarkdownParser(Parser):
 
             # Check for italic (*text* or _text_)
             elif self._is_italic_marker(text, i):
-                # Add any accumulated text
                 add_text_token(current_text_start, i)
 
                 marker = text[i]
-                # Search for a closing marker that is not part of a ** pair
                 search_from = i + 1
                 italic_end = -1
                 while True:
@@ -383,10 +402,8 @@ class MarkdownParser(Parser):
                     search_from = candidate + 2
 
                 if italic_end != -1:
-                    # Italic start
                     tokens.append(Token(TokenType.ITALIC_START, marker, base_position + i))
 
-                    # Italic content (may contain nested formatting)
                     italic_content = text[i + 1:italic_end]
                     if italic_content:
                         italic_tokens = self._parse_inline_formatting_in_text(
@@ -395,7 +412,6 @@ class MarkdownParser(Parser):
                         )
                         tokens.extend(italic_tokens)
 
-                    # Italic end
                     tokens.append(Token(TokenType.ITALIC_END, marker, base_position + italic_end))
 
                     i = italic_end + 1
@@ -407,15 +423,12 @@ class MarkdownParser(Parser):
 
             # Check for strikethrough (~~text~~)
             elif self._is_strikethrough_marker(text, i):
-                # Add any accumulated text
                 add_text_token(current_text_start, i)
 
                 strike_end = text.find('~~', i + 2)
                 if strike_end != -1:
-                    # Strikethrough start
                     tokens.append(Token(TokenType.STRIKETHROUGH_START, '~~', base_position + i))
 
-                    # Strikethrough content (may contain nested formatting)
                     strike_content = text[i + 2:strike_end]
                     if strike_content:
                         strike_tokens = self._parse_inline_formatting_in_text(
@@ -424,7 +437,6 @@ class MarkdownParser(Parser):
                         )
                         tokens.extend(strike_tokens)
 
-                    # Strikethrough end
                     tokens.append(Token(TokenType.STRIKETHROUGH_END, '~~', base_position + strike_end))
 
                     i = strike_end + 2
@@ -442,16 +454,54 @@ class MarkdownParser(Parser):
 
         return tokens
 
-    def _create_parser_state(self, in_fence_block: bool, fence_depth: int, nested_fence_depth: int,
-                            language: ProgrammingLanguage, in_list_item: bool, list_indent_stack: List[int],
-                            block_type: TokenType | None, embedded_parser_state: ParserState | None,
-                            in_blockquote_fence: bool = False) -> MarkdownParserState:
-        """Helper to create parser state."""
+    def _is_list_marker(self, text: str) -> bool:
+        """
+        Return True if text begins with a valid unordered or ordered list marker.
+
+        Mirrors the detection logic in MarkdownLexer so that content lines that
+        contain a list item are recognised consistently regardless of surrounding
+        blockquote context.
+
+        Args:
+            text: The content string to test (leading whitespace already stripped)
+
+        Returns:
+            True if the text starts with a list marker followed by whitespace
+        """
+        if not text:
+            return False
+
+        if text[0] in ('-', '*', '+') and len(text) > 1 and text[1] == ' ':
+            return True
+
+        # Ordered list: one or more digits followed by '.' or ')' then a space
+        i = 0
+        while i < len(text) and text[i].isdigit():
+            i += 1
+
+        if i > 0 and i < len(text) and text[i] in ('.', ')') and i + 1 < len(text) and text[i + 1] == ' ':
+            return True
+
+        return False
+
+    def _create_parser_state(
+        self,
+        in_fence_block: bool,
+        fence_depth: int,
+        nested_fence_depth: int,
+        blockquote_depth: int,
+        language: ProgrammingLanguage,
+        in_list_item: bool,
+        list_indent_stack: List[int],
+        block_type: TokenType | None,
+        embedded_parser_state: ParserState | None,
+    ) -> MarkdownParserState:
+        """Helper to create a MarkdownParserState from individual fields."""
         parser_state = MarkdownParserState()
         parser_state.in_fence_block = in_fence_block
         parser_state.fence_depth = fence_depth
         parser_state.nested_fence_depth = nested_fence_depth
-        parser_state.in_blockquote_fence = in_blockquote_fence
+        parser_state.blockquote_depth = blockquote_depth
         parser_state.language = language
         parser_state.in_list_item = in_list_item
         parser_state.list_indent_stack = list_indent_stack
@@ -461,28 +511,24 @@ class MarkdownParser(Parser):
 
     def parse(self, prev_parser_state: ParserState | None, input_str: str) -> MarkdownParserState:
         """
-        Parse conversation content including embedded code blocks.
+        Parse one line of Markdown content.
 
         Args:
-            prev_parser_state: Optional previous parser state
-            input_str: The input string to parse
+            prev_parser_state: Parser state carried over from the previous line,
+                or None for the first line.
+            input_str: The line to parse (no trailing newline expected).
 
         Returns:
-            The updated parser state after parsing
-
-        Note:
-            Handles transitions between regular conversation content and code fence blocks,
-            delegating code blocks to appropriate language parsers.
-            Supports nested list items by maintaining a stack of indentation levels.
+            The updated parser state after parsing this line.
         """
-        # Reset token buffer for this parse call
         self._tokens = []
         self._next_token = 0
 
+        # Unpack previous state
         in_fence_block = False
         fence_depth = 0
         nested_fence_depth = 0
-        in_blockquote_fence = False
+        blockquote_depth = 0
         language = ProgrammingLanguage.UNKNOWN
         embedded_parser_state = None
         parsing_continuation = False
@@ -496,332 +542,317 @@ class MarkdownParser(Parser):
             in_fence_block = prev_parser_state.in_fence_block
             fence_depth = prev_parser_state.fence_depth
             nested_fence_depth = prev_parser_state.nested_fence_depth
-            in_blockquote_fence = prev_parser_state.in_blockquote_fence
+            blockquote_depth = prev_parser_state.blockquote_depth
             language = prev_parser_state.language
             embedded_parser_state = prev_parser_state.embedded_parser_state
             parsing_continuation = prev_parser_state.parsing_continuation
             in_list_item = prev_parser_state.in_list_item
-            list_indent_stack = cast(List[int], prev_parser_state.list_indent_stack).copy()  # Copy to avoid reference issues
+            list_indent_stack = cast(List[int], prev_parser_state.list_indent_stack).copy()
             block_type = prev_parser_state.block_type
 
-        parse_embedded = language != ProgrammingLanguage.UNKNOWN
+        # Step 1: strip leading blockquote prefixes and emit BLOCKQUOTE tokens.
+        #
+        # We always do this, even when inside a fence block, so that the '> '
+        # markers that were present when the fence opened are removed before the
+        # content is handed to the embedded parser.  We only strip as many levels
+        # as were present when the fence was opened (blockquote_depth) so that
+        # any '>' characters that are genuine code content are preserved.
+        if in_fence_block and blockquote_depth > 0:
+            # Strip exactly the number of blockquote levels that were active when
+            # the fence opened, preserving any deeper '>' as code content.
+            bq_tokens: list[Token] = []
+            remaining = input_str
+            bq_offset = 0
+            for _ in range(blockquote_depth):
+                stripped = remaining.lstrip()
+                spaces_before = len(remaining) - len(stripped)
+                if not stripped.startswith('>'):
+                    break
 
-        if not parsing_continuation:
-            # Before delegating to embedded parser, check if this line is a fence
-            # and whether the embedded parser can handle it
+                after_marker = stripped[1:]
+                if after_marker.startswith(' '):
+                    consumed = spaces_before + 2
 
-            # For blockquote fences, content lines are prefixed with '> '.
-            # Strip the prefix so the embedded parser sees plain content.
-            if parse_embedded and in_fence_block and in_blockquote_fence:
-                bq_stripped = input_str
-                if bq_stripped.startswith('> '):
-                    bq_stripped = bq_stripped[2:]
+                else:
+                    consumed = spaces_before + 1
 
-                elif bq_stripped.startswith('>'):
-                    bq_stripped = bq_stripped[1:]
+                token_value = remaining[:consumed]
+                self._tokens.append(Token(type=TokenType.BLOCKQUOTE, value=token_value, start=bq_offset))
+                bq_offset += consumed
+                remaining = remaining[consumed:]
 
-                if bq_stripped.lstrip().startswith('```') and not bq_stripped.lstrip()[3:].strip():
-                    # This is a blockquote-prefixed fence close
-                    prefix_len = len(input_str) - len(bq_stripped)
-                    prefix_value = input_str[:prefix_len]
-                    self._tokens.append(Token(type=TokenType.BLOCKQUOTE, value=prefix_value, start=0))
-                    fence_start_pos = prefix_len + (len(bq_stripped) - len(bq_stripped.lstrip()))
-                    self._tokens.append(Token(type=TokenType.FENCE_END, value='```', start=fence_start_pos))
+            bq_tokens_count = len(bq_tokens)
+            content_offset = bq_offset
+
+        else:
+            bq_tokens, remaining, content_offset = self._strip_blockquote_prefixes(input_str)
+            self._tokens.extend(bq_tokens)
+            bq_tokens_count = len(bq_tokens)
+
+        # Step 2: if we are inside a fence block, delegate to the embedded parser.
+        if in_fence_block and not parsing_continuation:
+            # Check whether this line closes the fence.  A closing fence is '```'
+            # (optionally indented) with nothing else on the line, at an indentation
+            # no greater than the opening fence.
+            content_stripped = remaining.lstrip()
+            content_indent = content_offset + (len(remaining) - len(content_stripped))
+            relative_indent = len(remaining) - len(content_stripped)
+
+            if content_stripped.startswith('```'):
+                rest = content_stripped[3:].strip()
+                if not rest:
+                    # Candidate closing fence — check against nested depth and indent.
+                    embedded_in_fence = False
+                    if embedded_parser_state and isinstance(embedded_parser_state, MarkdownParserState):
+                        embedded_in_fence = embedded_parser_state.in_fence_block
+
+                    if not embedded_in_fence:
+                        if relative_indent <= fence_depth:
+                            # This closes our fence.
+                            self._tokens.append(Token(type=TokenType.FENCE_END, value='```', start=content_indent))
+                            return self._create_parser_state(
+                                False, 0, 0, 0,
+                                ProgrammingLanguage.UNKNOWN,
+                                in_list_item, list_indent_stack,
+                                block_type, None
+                            )
+
+                        # More indented than the opening fence — treat as content.
+
+                    elif nested_fence_depth > 0:
+                        nested_fence_depth -= 1
+                        # Fall through to delegate as content.
+
+                elif nested_fence_depth > 0 or rest:
+                    # Has a language tag or we're tracking nested fences — content.
+                    if rest:
+                        nested_fence_depth += 1
+
+            # Delegate remaining content to the embedded parser.
+            new_embedded_state = self._embedded_parse(language, embedded_parser_state, remaining, content_offset)
+            parser_state = self._create_parser_state(
+                in_fence_block, fence_depth, nested_fence_depth, blockquote_depth,
+                language, in_list_item, list_indent_stack,
+                block_type, embedded_parser_state
+            )
+            parser_state.embedded_parser_state = new_embedded_state
+            if new_embedded_state is not None:
+                parser_state.continuation_state = new_embedded_state.continuation_state
+                parser_state.parsing_continuation = new_embedded_state.parsing_continuation
+
+            return parser_state
+
+        # Step 3: handle multi-line continuation inside the embedded parser
+        # (e.g. a string literal that spans lines).
+        if parsing_continuation:
+            new_embedded_state = self._embedded_parse(language, embedded_parser_state, remaining, content_offset)
+            parser_state = self._create_parser_state(
+                in_fence_block, fence_depth, nested_fence_depth, blockquote_depth,
+                language, in_list_item, list_indent_stack,
+                block_type, embedded_parser_state
+            )
+            parser_state.embedded_parser_state = new_embedded_state
+            if new_embedded_state is not None:
+                parser_state.continuation_state = new_embedded_state.continuation_state
+                parser_state.parsing_continuation = new_embedded_state.parsing_continuation
+
+            return parser_state
+
+        # Step 4: not in a fence block — lex and classify the stripped content.
+        lexer = MarkdownLexer()
+        lexer.lex(None, remaining)
+
+        # Collect tokens from the lexer, processing fence opens/closes and
+        # list markers inline; plain text tokens are accumulated for the
+        # inline-formatting pass at the end.
+        parse_embedded = False
+        fence_just_opened = False
+
+        # A top-level blockquote line resets list state — a blockquote is not a
+        # continuation of a preceding list.
+        if bq_tokens_count > 0:
+            in_list_item = False
+            list_indent_stack.clear()
+            block_type = None
+
+        while True:
+            token = lexer.get_next_token()
+            if token is None:
+                break
+
+            # Adjust token positions to be relative to the original line.
+            token = Token(type=token.type, value=token.value, start=token.start + content_offset)
+
+            if token.type == TokenType.FENCE:
+                if in_fence_block:
+                    # Check if this opens a nested fence (has a language tag following).
+                    next_token = lexer.peek_next_token()
+                    if next_token and next_token.type == TokenType.TEXT:
+                        nested_fence_depth += 1
+                        break  # delegate to embedded parser
+
+                    if nested_fence_depth > 0:
+                        nested_fence_depth -= 1
+                        break  # delegate to embedded parser
+
+                    if token.start - content_offset > fence_depth:
+                        # More indented than opening fence — treat as content.
+                        token = Token(type=TokenType.TEXT, value=token.value, start=token.start)
+                        self._tokens.append(token)
+                        continue
+
+                    # Close the fence.
+                    token = Token(type=TokenType.FENCE_END, value=token.value, start=token.start)
+                    self._tokens.append(token)
                     in_fence_block = False
-                    in_blockquote_fence = False
+                    blockquote_depth = 0
                     fence_depth = 0
                     nested_fence_depth = 0
                     language = ProgrammingLanguage.UNKNOWN
                     embedded_parser_state = None
-                    return self._create_parser_state(
-                        in_fence_block, fence_depth, nested_fence_depth,
-                        language, in_list_item, list_indent_stack,
-                        block_type, embedded_parser_state,
-                        in_blockquote_fence
-                    )
-
-                # Content line — delegate stripped content to the embedded parser
-                new_embedded_state = self._embedded_parse(language, embedded_parser_state, bq_stripped)
-                parser_state = self._create_parser_state(
-                    in_fence_block, fence_depth, nested_fence_depth,
-                    language, in_list_item, list_indent_stack,
-                    block_type, embedded_parser_state, in_blockquote_fence
-                )
-                parser_state.embedded_parser_state = new_embedded_state
-                if new_embedded_state is not None:
-                    parser_state.continuation_state = new_embedded_state.continuation_state
-                    parser_state.parsing_continuation = new_embedded_state.parsing_continuation
-
-                return parser_state
-
-            if parse_embedded and in_fence_block:
-                # Quick check: does this line look like a fence?
-                stripped = input_str.lstrip()
-                if stripped.startswith('```'):
-                    # Check if it has a language tag
-                    rest = stripped[3:].strip()
-                    if not rest:
-                        # No language tag - check if the embedded parser is in a fence block
-                        embedded_in_fence = False
-                        if embedded_parser_state and isinstance(embedded_parser_state, MarkdownParserState):
-                            embedded_in_fence = embedded_parser_state.in_fence_block
-
-                        # If embedded parser is NOT in a fence block, this fence is for US to handle
-                        if not embedded_in_fence:
-                            indent = len(input_str) - len(stripped)
-                            # Only close if not indented deeper than the opening fence;
-                            # a more-indented ``` is content inside the block
-                            if indent <= fence_depth:
-                                # This fence closes OUR block
-                                parse_embedded = False
-                                in_fence_block = False
-                                in_blockquote_fence = False
-                                fence_depth = 0
-                                nested_fence_depth = 0
-                                language = ProgrammingLanguage.UNKNOWN
-                                embedded_parser_state = None
-                                self._tokens.append(Token(type=TokenType.FENCE_END, value='```', start=indent))
-                                return self._create_parser_state(
-                                    in_fence_block, fence_depth, nested_fence_depth,
-                                    language, in_list_item, list_indent_stack,
-                                    block_type, embedded_parser_state,
-                                    in_blockquote_fence
-                                )
-
-            lexer = MarkdownLexer()
-            lexer.lex(None, input_str)
-
-            # Collect all tokens from the lexer
-            while True:
-                token = lexer.get_next_token()
-                if not token:
+                    parse_embedded = False
                     break
 
-                if token.type == TokenType.FENCE:
-                    if in_fence_block:
-                        # Check if this fence has a language tag (indicating it's opening a nested block)
-                        next_token = lexer.peek_next_token()
-                        if next_token and next_token.type == TokenType.TEXT:
-                            # This fence has a language tag, so it's opening a nested block
-                            # Increment the nested fence depth counter
-                            nested_fence_depth += 1
-                            # Don't add tokens here - let the embedded parser handle it
-                            break  # Exit lexer loop and delegate to embedded parser
+                # Open a new fence.
+                in_fence_block = True
+                fence_depth = token.start - content_offset
+                fence_just_opened = True
+                blockquote_depth = bq_tokens_count
+                embedded_parser_state = None
 
-                        # Check if this is closing a nested fence block
-                        if nested_fence_depth > 0:
-                            # This fence is closing a nested block, not the outer block
-                            nested_fence_depth -= 1
-                            # Don't add tokens here - let the embedded parser handle it
-                            break  # Exit lexer loop and delegate to embedded parser
-
-                        # Only close the fence if indentation is less than or equal to opening fence
-                        if token.start > fence_depth:
-                            # This fence is indented more than the opening fence
-                            # Treat it as regular text within the current fence block
-                            token.type = TokenType.TEXT
-                            self._tokens.append(token)
-                            continue
-
-                        token.type = TokenType.FENCE_END
-                        self._tokens.append(token)
-                        in_fence_block = False
-                        in_blockquote_fence = False
-                        fence_depth = 0
-                        nested_fence_depth = 0
-                        language = ProgrammingLanguage.UNKNOWN
-                        embedded_parser_state = None
-                        parse_embedded = False
-                        break
-
-                    in_fence_block = True
-                    fence_depth = token.start
-                    embedded_parser_state = None
-
-                    # A fence that starts at or outside the current list indent
-                    # is not a list continuation — reset list state
-                    if not list_indent_stack or token.start < list_indent_stack[-1]:
-                        in_list_item = False
-                        list_indent_stack.clear()
-                        block_type = None
-
-                    token.type = TokenType.FENCE_START
-                    self._tokens.append(token)
-
-                    next_token = lexer.peek_next_token()
-                    if next_token and (next_token.type == TokenType.TEXT):
-                        lexer.get_next_token()  # Consume the text token
-                        next_token.type = TokenType.LANGUAGE
-                        self._tokens.append(next_token)
-                        language = ProgrammingLanguageUtils.from_name(next_token.value)
-                        break
-
-                    language = ProgrammingLanguage.TEXT
-                    break
-
-                if parse_embedded:
-                    break
-
-                if token.type in (TokenType.HEADING, TokenType.BLOCKQUOTE):
-                    if token.type == TokenType.HEADING:
-                        in_list_item = False
-                        block_type = token.type
-                        list_indent_stack.clear()
-                        self._tokens.append(token)
-                        continue
-
-                    # BLOCKQUOTE: check if the content after '> ' contains a fence marker
-                    assert token.type == TokenType.BLOCKQUOTE
-                    bq_value = token.value  # e.g. '> ```python' or '> x = 1'
-                    # Strip the leading '>' and optional space to get the content
-                    bq_content = bq_value[1:]
-                    if bq_content.startswith(' '):
-                        bq_content = bq_content[1:]
-                    bq_content_stripped = bq_content.lstrip()
-
-                    if bq_content_stripped.startswith('```'):
-                        # Emit the blockquote prefix token (just the '> ' part)
-                        prefix_len = len(bq_value) - len(bq_content)
-                        prefix_value = bq_value[:prefix_len]
-                        self._tokens.append(Token(type=TokenType.BLOCKQUOTE, value=prefix_value, start=token.start))
-
-                        fence_rest = bq_content_stripped[3:].strip()
-                        fence_start_pos = token.start + (len(bq_value) - len(bq_content_stripped))
-
-                        if in_fence_block:
-                            # Close the fence if not indented deeper than opening
-                            if fence_start_pos <= fence_depth:
-                                fence_token = Token(type=TokenType.FENCE_END, value='```', start=fence_start_pos)
-                                self._tokens.append(fence_token)
-                                in_fence_block = False
-                                in_blockquote_fence = False
-                                fence_depth = 0
-                                nested_fence_depth = 0
-                                language = ProgrammingLanguage.UNKNOWN
-                                embedded_parser_state = None
-                                parse_embedded = False
-
-                        else:
-                            # Open a new fence
-                            in_fence_block = True
-                            in_blockquote_fence = True
-                            fence_depth = fence_start_pos
-                            embedded_parser_state = None
-                            fence_token = Token(type=TokenType.FENCE_START, value='```', start=fence_start_pos)
-                            self._tokens.append(fence_token)
-                            if fence_rest:
-                                lang_token = Token(type=TokenType.LANGUAGE, value=fence_rest, start=fence_start_pos + 3)
-                                self._tokens.append(lang_token)
-                                language = ProgrammingLanguageUtils.from_name(fence_rest)
-
-                            else:
-                                language = ProgrammingLanguage.TEXT
-
-                    else:
-                        # Plain blockquote line — reset list state as before
-                        in_list_item = False
-                        block_type = token.type
-                        list_indent_stack.clear()
-                        self._tokens.append(token)
-
-                    continue
-
-                if token.type == TokenType.LIST_MARKER:
-                    # We've found a list marker - determine its nesting level
-                    matches = list(re.finditer(r'\S+', token.value))
-                    assert len(matches) > 0, "Cannot have zero matches"
-                    if len(matches) == 1:
-                        # Only whitespace in the token - ignore!
-                        current_indent = matches[0].end() + token.start
-
-                    else:
-                        # Normal case: marker followed by text
-                        current_indent = matches[1].start() + token.start
-
-                    # Handle nesting level logic
-                    if not in_list_item:
-                        # Starting a new list
-                        in_list_item = True
-                        list_indent_stack.append(current_indent)
-
-                    else:
-                        # We're already in a list, check if this is a nested list or continuation
-                        if list_indent_stack and current_indent > list_indent_stack[-1]:
-                            # This is a nested list with deeper indentation
-                            list_indent_stack.append(current_indent)
-
-                        elif list_indent_stack:
-                            # Check if we need to pop out of nested lists
-                            while list_indent_stack and current_indent < list_indent_stack[-1]:
-                                list_indent_stack.pop()
-
-                            # If we popped everything, we're at a new list
-                            if not list_indent_stack:
-                                list_indent_stack.append(current_indent)
-
-                            # If at same level as an existing indent, we're continuing that list
-                            elif current_indent != list_indent_stack[-1]:
-                                list_indent_stack.append(current_indent)
-
-                    block_type = token.type
-                    self._tokens.append(token)
-                    continue
-
-                if in_list_item and list_indent_stack:
-                    # Check if this is a continuation of the current list item
-                    if token.start >= list_indent_stack[-1]:
-                        token.type = TokenType.LIST_MARKER
-                        self._tokens.append(token)
-                        continue
-
-                    # Not enough indentation, pop out of nested lists as needed
-                    while list_indent_stack and token.start < list_indent_stack[-1]:
-                        list_indent_stack.pop()
-
-                    if not list_indent_stack:
-                        # We've exited all lists
-                        in_list_item = False
-                        block_type = None
-
-                    else:
-                        # We're still in a list, but at a higher level
-                        token.type = TokenType.LIST_MARKER
-                        self._tokens.append(token)
-                        continue
-
-                # Not in a list anymore or never were
-                if not list_indent_stack:
-                    block_type = None
+                # A fence that starts at or outside the current list indent resets list state.
+                if not list_indent_stack or (token.start - content_offset) < list_indent_stack[-1]:
                     in_list_item = False
+                    list_indent_stack.clear()
+                    block_type = None
 
+                token = Token(type=TokenType.FENCE_START, value=token.value, start=token.start)
                 self._tokens.append(token)
 
-            # After collecting all tokens from lexer, process inline formatting
-            if not parse_embedded:
-                processed_tokens = []
-                for token in self._tokens:
-                    if token.type  in (TokenType.TEXT, TokenType.HEADING, TokenType.BLOCKQUOTE, TokenType.LIST_MARKER):
-                        # Parse inline formatting in this token
-                        inline_tokens = self._parse_inline_formatting_in_text(token, token.type)
-                        processed_tokens.extend(inline_tokens)
+                next_token = lexer.peek_next_token()
+                if next_token and next_token.type == TokenType.TEXT:
+                    lexer.get_next_token()  # consume
+                    lang_token = Token(
+                        type=TokenType.LANGUAGE,
+                        value=next_token.value,
+                        start=next_token.start + content_offset
+                    )
+                    self._tokens.append(lang_token)
+                    language = ProgrammingLanguageUtils.from_name(next_token.value)
 
-                    else:
-                        processed_tokens.append(token)
+                else:
+                    language = ProgrammingLanguage.TEXT
 
-                self._tokens = processed_tokens
+                parse_embedded = True
+                break
 
-        # Create and return parser state
+            if token.type == TokenType.HEADING:
+                in_list_item = False
+                block_type = TokenType.HEADING
+                list_indent_stack.clear()
+                self._tokens.append(token)
+                continue
+
+            if token.type == TokenType.LIST_MARKER:
+                matches = list(re.finditer(r'\S+', token.value))
+                assert len(matches) > 0, "Cannot have zero matches in a LIST_MARKER token"
+
+                if len(matches) == 1:
+                    current_indent = matches[0].end() + token.start
+
+                else:
+                    current_indent = matches[1].start() + token.start
+
+                # Update list nesting stack.
+                if not in_list_item:
+                    in_list_item = True
+                    list_indent_stack.append(current_indent)
+                else:
+                    if list_indent_stack and current_indent > list_indent_stack[-1]:
+                        list_indent_stack.append(current_indent)
+
+                    elif list_indent_stack:
+                        while list_indent_stack and current_indent < list_indent_stack[-1]:
+                            list_indent_stack.pop()
+
+                        if not list_indent_stack:
+                            list_indent_stack.append(current_indent)
+
+                        elif current_indent != list_indent_stack[-1]:
+                            list_indent_stack.append(current_indent)
+
+                block_type = TokenType.LIST_MARKER
+
+                # Check whether the list item content starts with a blockquote marker,
+                # e.g. '- > quote'.  If so, split into a LIST_MARKER prefix token and
+                # a BLOCKQUOTE token for the remainder.
+                if len(matches) >= 2 and matches[1].group().startswith('>'):
+                    content_offset_in_token = matches[1].start()
+                    self._tokens.append(Token(
+                        type=TokenType.LIST_MARKER,
+                        value=token.value[:content_offset_in_token],
+                        start=token.start
+                    ))
+                    self._tokens.append(Token(
+                        type=TokenType.BLOCKQUOTE,
+                        value=token.value[content_offset_in_token:],
+                        start=token.start + content_offset_in_token
+                    ))
+
+                else:
+                    self._tokens.append(token)
+
+                continue
+
+            if in_list_item and list_indent_stack:
+                if token.start >= list_indent_stack[-1]:
+                    token = Token(type=TokenType.LIST_MARKER, value=token.value, start=token.start)
+                    self._tokens.append(token)
+                    continue
+
+                while list_indent_stack and token.start < list_indent_stack[-1]:
+                    list_indent_stack.pop()
+
+                if not list_indent_stack:
+                    in_list_item = False
+                    block_type = None
+
+                else:
+                    token = Token(type=TokenType.LIST_MARKER, value=token.value, start=token.start)
+                    self._tokens.append(token)
+                    continue
+
+            if not list_indent_stack:
+                block_type = None
+                in_list_item = False
+
+            self._tokens.append(token)
+
+        # Step 5: inline formatting pass over non-fence tokens.
+        if not parse_embedded:
+            processed_tokens: List[Token] = []
+            for token in self._tokens:
+                if token.type in (TokenType.TEXT, TokenType.HEADING, TokenType.BLOCKQUOTE, TokenType.LIST_MARKER):
+                    inline_tokens = self._parse_inline_formatting_in_text(token, token.type)
+                    processed_tokens.extend(inline_tokens)
+
+                else:
+                    processed_tokens.append(token)
+
+            self._tokens = processed_tokens
+
+        # Step 6: build and return the new parser state.
         parser_state = self._create_parser_state(
-            in_fence_block, fence_depth, nested_fence_depth,
+            in_fence_block, fence_depth, nested_fence_depth, blockquote_depth,
             language, in_list_item, list_indent_stack,
-            block_type, embedded_parser_state, in_blockquote_fence
+            block_type, embedded_parser_state
         )
 
-        if parse_embedded:
-            new_embedded_parser_state = self._embedded_parse(parser_state.language, embedded_parser_state, input_str)
-            parser_state.embedded_parser_state = new_embedded_parser_state
-            if new_embedded_parser_state is not None:
-                parser_state.continuation_state = new_embedded_parser_state.continuation_state
-                parser_state.parsing_continuation = new_embedded_parser_state.parsing_continuation
+        if parse_embedded and not fence_just_opened:
+            new_embedded_state = self._embedded_parse(language, embedded_parser_state, remaining, content_offset)
+            parser_state.embedded_parser_state = new_embedded_state
+            if new_embedded_state is not None:
+                parser_state.continuation_state = new_embedded_state.continuation_state
+                parser_state.parsing_continuation = new_embedded_state.parsing_continuation
 
         return parser_state
