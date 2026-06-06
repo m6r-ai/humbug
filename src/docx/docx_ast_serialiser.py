@@ -46,12 +46,14 @@ _DOCUMENT_PATH = "word/document.xml"
 _DOCUMENT_RELS_PATH = "word/_rels/document.xml.rels"
 _STYLES_PATH = "word/styles.xml"
 _NUMBERING_PATH = "word/numbering.xml"
+_SETTINGS_PATH = "word/settings.xml"
 
 # XML namespace URIs
 _W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 _REL_STYLES = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"
 _REL_NUMBERING = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering"
+_REL_SETTINGS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings"
 _REL_OFFICE_DOC = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
 _REL_HYPERLINK = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
 _CT_RELS = "application/vnd.openxmlformats-package.relationships+xml"
@@ -59,6 +61,11 @@ _CT_XML = "application/xml"
 _CT_DOCUMENT = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
 _CT_STYLES = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"
 _CT_NUMBERING = "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"
+_CT_SETTINGS = "application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"
+
+# Word 2013+ compatibility mode value — prevents MS Word from opening the
+# document in compatibility mode.
+_COMPAT_MODE_VAL = "15"
 
 # Per-style visual overrides: style_id → dict of extra XML to inject into
 # the serialised <w:style> element.  These carry the visual presentation
@@ -151,8 +158,8 @@ class _DocxASTSerialiser:
         self._has_numbering = False
         # Maps URL → rId, populated during document body serialisation
         self._hyperlink_rels: dict[str, str] = {}
-        # Fixed relationship IDs: rId1=styles, rId2=numbering
-        self._next_rel_id: int = 3
+        # Fixed relationship IDs: rId1=styles, rId2=numbering, rId3=settings
+        self._next_rel_id: int = 4
 
     def serialise(self) -> bytes:
         """Perform the full serialisation and return raw bytes."""
@@ -174,11 +181,13 @@ class _DocxASTSerialiser:
         styles_xml = self._serialise_styles(styles_node)
         numbering_xml = self._serialise_numbering(numbering_node) if numbering_node else None
         document_xml = self._serialise_document(body_node)
+        settings_xml = self._serialise_settings()
 
         return self._build_zip(
             document_xml=document_xml,
             styles_xml=styles_xml,
             numbering_xml=numbering_xml,
+            settings_xml=settings_xml,
         )
 
     def _build_zip(
@@ -186,6 +195,7 @@ class _DocxASTSerialiser:
         document_xml: str,
         styles_xml: str,
         numbering_xml: str | None,
+        settings_xml: str,
     ) -> bytes:
         """Assemble all XML parts into a .docx ZIP archive."""
         buf = io.BytesIO()
@@ -197,6 +207,7 @@ class _DocxASTSerialiser:
             zf.writestr(_STYLES_PATH, styles_xml)
             if numbering_xml is not None:
                 zf.writestr(_NUMBERING_PATH, numbering_xml)
+            zf.writestr(_SETTINGS_PATH, settings_xml)
 
         return buf.getvalue()
 
@@ -214,6 +225,7 @@ class _DocxASTSerialiser:
             f'  <Override PartName="/{_DOCUMENT_PATH}" ContentType="{_CT_DOCUMENT}"/>\n'
             f'  <Override PartName="/{_STYLES_PATH}" ContentType="{_CT_STYLES}"/>'
             f'{numbering_override}\n'
+            f'  <Override PartName="/{_SETTINGS_PATH}" ContentType="{_CT_SETTINGS}"/>\n'
             '</Types>'
         )
 
@@ -241,6 +253,7 @@ class _DocxASTSerialiser:
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
             f'  <Relationship Id="rId1" Type="{_REL_STYLES}" Target="styles.xml"/>'
             f'{numbering_rel}'
+            f'\n  <Relationship Id="rId3" Type="{_REL_SETTINGS}" Target="settings.xml"/>'
             f'{hyperlink_rels}\n'
             '</Relationships>'
         )
@@ -622,6 +635,20 @@ class _DocxASTSerialiser:
             )
 
         return "<w:tcPr>" + "".join(parts) + "</w:tcPr>"
+
+    def _serialise_settings(self) -> str:
+        """Produce the settings.xml string declaring Word 2013+ compatibility."""
+        return (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            f'<w:settings xmlns:w="{_W}">\n'
+            '  <w:compat>\n'
+            '    <w:compatSetting'
+            ' w:name="compatibilityMode"'
+            ' w:uri="http://schemas.microsoft.com/office/word"'
+            f' w:val="{_COMPAT_MODE_VAL}"/>\n'
+            '  </w:compat>\n'
+            '</w:settings>'
+        )
 
     def _serialise_styles(self, node: DocxASTStylesNode | None) -> str:
         """Produce the styles.xml string."""

@@ -153,6 +153,11 @@ class TestZIPStructure:
         with _open_zip(result) as zf:
             assert "word/numbering.xml" in zf.namelist()
 
+    def test_contains_settings(self):
+        result = serialise_docx(_build_minimal_docx_ast())
+        with _open_zip(result) as zf:
+            assert "word/settings.xml" in zf.namelist()
+
 
 # ---------------------------------------------------------------------------
 # XML validity
@@ -184,6 +189,49 @@ class TestXMLValidity:
         result = serialise_docx(_build_minimal_docx_ast())
         root = _parse_xml(result, "word/_rels/document.xml.rels")
         assert root is not None
+
+    def test_settings_xml_is_valid(self):
+        result = serialise_docx(_build_minimal_docx_ast())
+        root = _parse_xml(result, "word/settings.xml")
+        assert root is not None
+
+
+# ---------------------------------------------------------------------------
+# document.xml structure
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# settings.xml
+# ---------------------------------------------------------------------------
+
+_W_COMPAT_URI = "http://schemas.microsoft.com/office/word"
+
+
+class TestSettingsXML:
+    def test_settings_root_element(self):
+        result = serialise_docx(_build_minimal_docx_ast())
+        root = _parse_xml(result, "word/settings.xml")
+        assert root.tag == _w("settings")
+
+    def test_compat_element_present(self):
+        result = serialise_docx(_build_minimal_docx_ast())
+        root = _parse_xml(result, "word/settings.xml")
+        compat = root.find(_w("compat"))
+        assert compat is not None
+
+    def test_compat_setting_present(self):
+        result = serialise_docx(_build_minimal_docx_ast())
+        root = _parse_xml(result, "word/settings.xml")
+        setting = root.find(f".//{_w('compatSetting')}")
+        assert setting is not None
+
+    def test_compat_setting_declares_word_2013(self):
+        result = serialise_docx(_build_minimal_docx_ast())
+        root = _parse_xml(result, "word/settings.xml")
+        setting = root.find(f".//{_w('compatSetting')}")
+        assert setting.get(_w("name")) == "compatibilityMode"
+        assert setting.get(_w("uri")) == _W_COMPAT_URI
+        assert setting.get(_w("val")) == "15"
 
 
 # ---------------------------------------------------------------------------
