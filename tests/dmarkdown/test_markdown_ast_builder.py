@@ -165,6 +165,58 @@ def test_underscore_formatting(ast_builder, ast_builder_no_underscores):
     assert doc.children[0].children[0].content == "_italic_ and __bold__"
 
 
+def test_backslash_escape_underscore(ast_builder):
+    """Backslash-escaped underscores are rendered as literal underscore characters, not italic markers."""
+    doc = ast_builder.build_ast(r"\_not italic\_")
+    paragraph = doc.children[0]
+    assert len(paragraph.children) == 1
+    node = paragraph.children[0]
+    assert node.__class__.__name__ == "MarkdownASTTextNode"
+    assert node.content == "_not italic_"
+
+
+def test_backslash_escape_signature_line(ast_builder):
+    """A run of backslash-escaped underscores, as produced by doc_ir_to_markdown for signature lines, renders as literal underscores."""
+    doc = ast_builder.build_ast(r"Signature: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ Date: \_\_\_\_\_\_\_\_")
+    paragraph = doc.children[0]
+    full_text = "".join(
+        child.content
+        for child in paragraph.children
+        if child.__class__.__name__ == "MarkdownASTTextNode"
+    )
+    assert "Signature: _________________________ Date: ________" == full_text
+
+
+def test_backslash_escape_asterisk(ast_builder):
+    """Backslash-escaped asterisks are rendered as literal asterisk characters, not bold/italic markers."""
+    doc = ast_builder.build_ast(r"\*not italic\*")
+    paragraph = doc.children[0]
+    assert len(paragraph.children) == 1
+    node = paragraph.children[0]
+    assert node.__class__.__name__ == "MarkdownASTTextNode"
+    assert node.content == "*not italic*"
+
+
+def test_backslash_escape_backtick(ast_builder):
+    """Backslash-escaped backticks are rendered as literal backtick characters, not code span markers."""
+    doc = ast_builder.build_ast(r"\`not code\`")
+    paragraph = doc.children[0]
+    assert len(paragraph.children) == 1
+    node = paragraph.children[0]
+    assert node.__class__.__name__ == "MarkdownASTTextNode"
+    assert node.content == "`not code`"
+
+
+def test_backslash_escape_tilde(ast_builder):
+    """Backslash-escaped tildes are rendered as literal tilde characters, not strikethrough markers."""
+    doc = ast_builder.build_ast(r"\~\~not struck\~\~")
+    paragraph = doc.children[0]
+    assert len(paragraph.children) == 1
+    node = paragraph.children[0]
+    assert node.__class__.__name__ == "MarkdownASTTextNode"
+    assert node.content == "~~not struck~~"
+
+
 def test_nested_formatting(ast_builder):
     """Test nested formatting."""
     doc = ast_builder.build_ast("This is **bold with *italic* inside**.")

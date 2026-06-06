@@ -451,6 +451,12 @@ class MarkdownASTBuilder:
         current_text = ""
 
         while i < len(text):
+            # Handle backslash escapes
+            if text[i] == '\\' and i + 1 < len(text) and text[i + 1] in ('\\', '`', '*', '_', '~', '[', ']', '(', ')', '!', '#', '+', '-', '.', '|'):
+                current_text += text[i + 1]
+                i += 2
+                continue
+
             # Check for image (highest precedence due to the '!' prefix)
             if text[i] == '!' and i + 1 < len(text) and text[i+1] == '[':
                 # Look for the closing '](' pattern
