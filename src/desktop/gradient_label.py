@@ -1,6 +1,8 @@
 """Gradient-aware QLabel widgets."""
 
-from PySide6.QtCore import Qt, QRectF
+import math
+
+from PySide6.QtCore import Qt, QPointF, QRectF, QTimer
 from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QLabel, QWidget
 
@@ -54,8 +56,18 @@ class GradientBorderLabel(QLabel):
         self._end = QColor(end_color)
         self._radius = radius
         self._bw = border_width
+        self._angle = 0.0
         self.setAutoFillBackground(False)
         self.setStyleSheet("background: transparent;")
+
+        # Rotate the gradient ~60 times per second
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._tick)
+        self._timer.start(16)
+
+    def _tick(self) -> None:
+        self._angle = (self._angle + 1.5) % 360.0
+        self.update()
 
     def update_colors(self, start_color: str, end_color: str) -> None:
         self._start = QColor(start_color)
@@ -85,7 +97,7 @@ class GradientBorderLabel(QLabel):
         py = (self.rect().height() - scaled.height()) // 2
         painter.drawPixmap(px, py, scaled)
 
-        # Draw the border tightly around the actual pixmap — not the full label
+        # Border rect tightly around the pixmap
         half = self._bw / 2.0
         border_rect = QRectF(
             px - half - 1,
@@ -93,12 +105,23 @@ class GradientBorderLabel(QLabel):
             scaled.width() + self._bw + 2,
             scaled.height() + self._bw + 2,
         )
+
+        # Rotating gradient: project start/end points from centre along _angle
+        cx = border_rect.x() + border_rect.width() / 2.0
+        cy = border_rect.y() + border_rect.height() / 2.0
+        diag = math.hypot(border_rect.width(), border_rect.height()) / 2.0
+        rad = math.radians(self._angle)
+        cos_a, sin_a = math.cos(rad), math.sin(rad)
+        g_start = QPointF(cx - diag * cos_a, cy - diag * sin_a)
+        g_end   = QPointF(cx + diag * cos_a, cy + diag * sin_a)
+
+        gradient = QLinearGradient(g_start, g_end)
+        gradient.setColorAt(0.0, self._start)
+        gradient.setColorAt(0.5, self._end)
+        gradient.setColorAt(1.0, self._start)   # wrap for smooth loop
+
         path = QPainterPath()
         path.addRoundedRect(border_rect, self._radius, self._radius)
-
-        gradient = QLinearGradient(border_rect.topLeft(), border_rect.topRight())
-        gradient.setColorAt(0.0, self._start)
-        gradient.setColorAt(1.0, self._end)
 
         pen = QPen(QBrush(gradient), self._bw)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
