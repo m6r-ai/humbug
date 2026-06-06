@@ -14,6 +14,8 @@ New features:
 - Added Claude Opus 4.8 and removed 4.6.
 - Added a new abstract document IR and conversion logic to convert markdown and DOCX format files into/out-of this format.
 - Added a new DOCX AST and code to read/write DOCX format using it.
+- Added support for strikethrough in the markdown parser.
+- Added a tool to convert docs to markdown.
 
 Bug fixes:
 
