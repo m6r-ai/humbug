@@ -60,7 +60,7 @@ class _DocIRToMarkdownSerialiser:
         self,
         node: DocIRNode,
         depth: int,
-        ordered_index: Optional[int],
+        ordered_index: Optional[int],  # pylint: disable=unused-argument
     ) -> Optional[str]:
         """Serialise a single block node to a Markdown string.
 

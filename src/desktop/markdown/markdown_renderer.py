@@ -20,7 +20,8 @@ from dmarkdown import (
     MarkdownASTVisitor, MarkdownASTDocumentNode, MarkdownASTParagraphNode, MarkdownASTHeadingNode,
     MarkdownASTTextNode, MarkdownASTBoldNode, MarkdownASTEmphasisNode, MarkdownASTInlineCodeNode,
     MarkdownASTCodeBlockNode, MarkdownASTListItemNode, MarkdownASTOrderedListNode,
-    MarkdownASTUnorderedListNode, MarkdownASTLineBreakNode, MarkdownASTStrikethroughNode, MarkdownASTTableNode, MarkdownASTTableHeaderNode,
+    MarkdownASTUnorderedListNode, MarkdownASTLineBreakNode, MarkdownASTStrikethroughNode,
+    MarkdownASTTableNode, MarkdownASTTableHeaderNode,
     MarkdownASTTableBodyNode, MarkdownASTTableRowNode, MarkdownASTTableCellNode, MarkdownASTHorizontalRuleNode,
     MarkdownASTLinkNode, MarkdownASTImageNode, MarkdownASTBlockquoteNode
 )
