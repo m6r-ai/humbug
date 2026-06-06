@@ -48,7 +48,7 @@ class WelcomeWidget(QFrame):
         layout.addStretch()
         layout.addSpacing(30)
         layout.addWidget(self._icon_label)
-        layout.addSpacing(0)
+        layout.addSpacing(30)
 
         # Application name + version — gradient matches the logo colours
         self._title_label = GradientLabel(
@@ -231,7 +231,7 @@ class WelcomeWidget(QFrame):
 
         # Update icon
         icon_pixmap = QPixmap(self._style_manager.get_app_icon_path())
-        scaled_size = int(200 * zoom_factor)
+        scaled_size = int(300 * zoom_factor)
         self._icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,

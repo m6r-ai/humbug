@@ -4,6 +4,7 @@ import math
 
 from PySide6.QtCore import Qt, QPointF, QRectF, QTimer
 from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPen
+from PySide6.QtGui import QPaintEvent
 from PySide6.QtWidgets import QLabel, QWidget
 
 
@@ -22,11 +23,12 @@ class GradientLabel(QLabel):
         self._end = QColor(end_color)
 
     def update_colors(self, start_color: str, end_color: str) -> None:
+        """Update the gradient start and end colours and trigger a repaint."""
         self._start = QColor(start_color)
         self._end = QColor(end_color)
         self.update()
 
-    def paintEvent(self, event) -> None:
+    def paintEvent(self, _event: QPaintEvent) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setFont(self.font())
@@ -70,11 +72,12 @@ class GradientBorderLabel(QLabel):
         self.update()
 
     def update_colors(self, start_color: str, end_color: str) -> None:
+        """Update the gradient start and end colours and trigger a repaint."""
         self._start = QColor(start_color)
         self._end = QColor(end_color)
         self.update()
 
-    def paintEvent(self, event) -> None:
+    def paintEvent(self, _event: QPaintEvent) -> None:
         pixmap = self.pixmap()
         if not pixmap or pixmap.isNull():
             return

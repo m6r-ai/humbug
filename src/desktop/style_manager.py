@@ -8,6 +8,7 @@ Provides signals for style changes and utilities for scaled size calculations.
 from enum import Enum, auto
 import os
 from pathlib import Path
+import shutil
 import sys
 from typing import Dict, List
 
@@ -971,7 +972,6 @@ class StyleManager(QObject):
 
     def _write_themed_app_icons(self, icon_dir: str, resources_icons: str) -> None:
         """Copy app-icon.png from bundled resources to ~/.humbug/icons/."""
-        import shutil
         src = Path(resources_icons) / 'app-icon.png'
         if src.exists():
             shutil.copy2(str(src), os.path.join(icon_dir, 'app-icon.png'))

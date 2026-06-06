@@ -1,11 +1,11 @@
 """Dialog box for About Humbug."""
 
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QWidget
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QWidget, QSizePolicy
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 
 from desktop.color_role import ColorRole
-from desktop.gradient_label import GradientLabel
+from desktop.gradient_label import GradientBorderLabel, GradientLabel
 from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
 from desktop.url_opener import open_url
@@ -35,19 +35,23 @@ class AboutDialog(QDialog):
         layout.setSpacing(8)
         layout.addSpacing(24)  # Space at the top
 
-        # Add application icon — transparent background so PNG blends with dialog bg
-        icon_label = QLabel()
-        icon_label.setAutoFillBackground(False)
-        icon_label.setStyleSheet("background: transparent;")
+        # Add application icon with animated gradient border
+        icon_label = GradientBorderLabel(
+            style_manager.get_color_str(ColorRole.BRAND_GRADIENT_START),
+            style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END),
+            radius=16.0,
+            border_width=2.0,
+        )
         icon_pixmap = QPixmap(style_manager.get_app_icon_path())
-        scaled_size = int(160 * zoom_factor)
+        scaled_size = int(200 * zoom_factor)
         icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         ))
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(icon_label)
+        icon_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addSpacing(4)
 
         # Title with version — gradient matches the logo colours
@@ -65,7 +69,7 @@ class AboutDialog(QDialog):
         desc_label = QLabel(
             f"Visit the <a href='https://github.com/m6r-ai/humbug'"
             f" style='color: {link_color}; text-decoration: none;'>"
-            f"Humbug</a> project to learn more."
+            f"Humbug</a> project website to learn more."
         )
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -80,7 +84,7 @@ class AboutDialog(QDialog):
         close_button.clicked.connect(self.accept)
         close_button.setMinimumWidth(min_button_width)
         close_button.setContentsMargins(8, 8, 8, 8)
-        layout.addSpacing(24)  # Add spacing before button
+        layout.addSpacing(30)  # Add spacing before button
         layout.addWidget(close_button, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addSpacing(16)  # Space at the bottom
 
