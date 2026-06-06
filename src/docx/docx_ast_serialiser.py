@@ -92,7 +92,6 @@ _STYLE_VISUALS = {
     "CodeBlock": {
         "ppr_extra": (
             '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="exact"/>'
-            '<w:ind w:left="360"/>'
             '<w:shd w:val="clear" w:color="auto" w:fill="F2F2F2"/>'
         ),
         "rpr_extra": (
