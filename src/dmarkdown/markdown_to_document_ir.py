@@ -25,33 +25,33 @@ from dmarkdown.markdown_ast_node import (
     MarkdownASTTextNode,
     MarkdownASTUnorderedListNode,
 )
-from doc_ir import (
-    DocIRBlockquoteNode,
-    DocIRCodeBlockNode,
-    DocIRDocumentNode,
-    DocIRHeadingNode,
-    DocIRHorizontalRuleNode,
-    DocIRImageNode,
-    DocIRLineBreakNode,
-    DocIRLinkNode,
-    DocIRListItemNode,
-    DocIRNode,
-    DocIROrderedListNode,
-    DocIRParagraphNode,
-    DocIRTableBodyNode,
-    DocIRTableCellNode,
-    DocIRTableHeaderNode,
-    DocIRTableNode,
-    DocIRTableRowNode,
-    DocIRTextSpanNode,
-    DocIRUnorderedListNode,
+from document_ir import (
+    DocumentIRBlockquoteNode,
+    DocumentIRCodeBlockNode,
+    DocumentIRDocumentNode,
+    DocumentIRHeadingNode,
+    DocumentIRHorizontalRuleNode,
+    DocumentIRImageNode,
+    DocumentIRLineBreakNode,
+    DocumentIRLinkNode,
+    DocumentIRListItemNode,
+    DocumentIRNode,
+    DocumentIROrderedListNode,
+    DocumentIRParagraphNode,
+    DocumentIRTableBodyNode,
+    DocumentIRTableCellNode,
+    DocumentIRTableHeaderNode,
+    DocumentIRTableNode,
+    DocumentIRTableRowNode,
+    DocumentIRTextSpanNode,
+    DocumentIRUnorderedListNode,
 )
 
 
-def markdown_ast_to_doc_ir(
+def markdown_ast_to_document_ir(
     document: MarkdownASTDocumentNode,
-) -> DocIRDocumentNode:
-    """Convert a dmarkdown AST document into a doc_ir document.
+) -> DocumentIRDocumentNode:
+    """Convert a dmarkdown AST document into a document_ir document.
 
     This is the public entry point for the mapper.
 
@@ -59,15 +59,15 @@ def markdown_ast_to_doc_ir(
         document: The root MarkdownASTDocumentNode produced by the dmarkdown parser.
 
     Returns:
-        A DocIRDocumentNode containing the format-agnostic intermediate
+        A DocumentIRDocumentNode containing the format-agnostic intermediate
         representation of the document content.
     """
-    mapper = _MarkdownToDocIRMapper()
+    mapper = _MarkdownToDocumentIRMapper()
     return mapper.map_document(document)
 
 
-class _MarkdownToDocIRMapper:
-    """Maps a dmarkdown AST to a doc_ir tree.
+class _MarkdownToDocumentIRMapper:
+    """Maps a dmarkdown AST to a document_ir tree.
 
     Implements the visitor pattern manually rather than using
     MarkdownASTVisitor, because several mapping decisions require
@@ -75,31 +75,31 @@ class _MarkdownToDocIRMapper:
     than just the node type.
     """
 
-    def map_document(self, node: MarkdownASTDocumentNode) -> DocIRDocumentNode:
+    def map_document(self, node: MarkdownASTDocumentNode) -> DocumentIRDocumentNode:
         """Map the root document node.
 
         Args:
             node: The MarkdownASTDocumentNode to map.
 
         Returns:
-            A DocIRDocumentNode with all block children mapped.
+            A DocumentIRDocumentNode with all block children mapped.
         """
-        doc_ir = DocIRDocumentNode(source_path=node.source_path)
+        document_ir = DocumentIRDocumentNode(source_path=node.source_path)
         for child in node.children:
             mapped = self._map_block(child)
             if mapped is not None:
-                doc_ir.add_child(mapped)
+                document_ir.add_child(mapped)
 
-        return doc_ir
+        return document_ir
 
-    def _map_block(self, node: MarkdownASTNode) -> DocIRNode | None:
+    def _map_block(self, node: MarkdownASTNode) -> DocumentIRNode | None:
         """Dispatch a block-level markdown node to the appropriate mapper.
 
         Args:
             node: A block-level MarkdownASTNode.
 
         Returns:
-            The corresponding DocIRNode, or None if the node type is not
+            The corresponding DocumentIRNode, or None if the node type is not
             mapped (silently skipped).
         """
         if isinstance(node, MarkdownASTHeadingNode):
@@ -124,11 +124,11 @@ class _MarkdownToDocIRMapper:
             return self._map_table(node)
 
         if isinstance(node, MarkdownASTHorizontalRuleNode):
-            return DocIRHorizontalRuleNode()
+            return DocumentIRHorizontalRuleNode()
 
         if isinstance(node, MarkdownASTDocumentNode):
             # Nested document (e.g. from extract_sections container) — flatten
-            container = DocIRParagraphNode()
+            container = DocumentIRParagraphNode()
             for child in node.children:
                 mapped = self._map_block(child)
                 if mapped is not None:
@@ -140,33 +140,33 @@ class _MarkdownToDocIRMapper:
 
         return None
 
-    def _map_heading(self, node: MarkdownASTHeadingNode) -> DocIRHeadingNode:
+    def _map_heading(self, node: MarkdownASTHeadingNode) -> DocumentIRHeadingNode:
         """Map a heading node.
 
         Args:
             node: The MarkdownASTHeadingNode.
 
         Returns:
-            A DocIRHeadingNode with inline children mapped as text spans.
+            A DocumentIRHeadingNode with inline children mapped as text spans.
         """
-        heading = DocIRHeadingNode(level=node.level)
+        heading = DocumentIRHeadingNode(level=node.level)
         self._append_inline_children(node, heading)
         return heading
 
-    def _map_paragraph(self, node: MarkdownASTParagraphNode) -> DocIRParagraphNode:
+    def _map_paragraph(self, node: MarkdownASTParagraphNode) -> DocumentIRParagraphNode:
         """Map a paragraph node.
 
         Args:
             node: The MarkdownASTParagraphNode.
 
         Returns:
-            A DocIRParagraphNode with inline children mapped as text spans.
+            A DocumentIRParagraphNode with inline children mapped as text spans.
         """
-        para = DocIRParagraphNode()
+        para = DocumentIRParagraphNode()
         self._append_inline_children(node, para)
         return para
 
-    def _map_blockquote(self, node: MarkdownASTBlockquoteNode) -> DocIRBlockquoteNode:
+    def _map_blockquote(self, node: MarkdownASTBlockquoteNode) -> DocumentIRBlockquoteNode:
         """Map a blockquote node.
 
         Blockquote children are block-level nodes (paragraphs, nested
@@ -176,9 +176,9 @@ class _MarkdownToDocIRMapper:
             node: The MarkdownASTBlockquoteNode.
 
         Returns:
-            A DocIRBlockquoteNode with block children mapped.
+            A DocumentIRBlockquoteNode with block children mapped.
         """
-        blockquote = DocIRBlockquoteNode()
+        blockquote = DocumentIRBlockquoteNode()
         for child in node.children:
             mapped = self._map_block(child)
             if mapped is not None:
@@ -186,7 +186,7 @@ class _MarkdownToDocIRMapper:
 
         return blockquote
 
-    def _map_code_block(self, node: MarkdownASTCodeBlockNode) -> DocIRCodeBlockNode:
+    def _map_code_block(self, node: MarkdownASTCodeBlockNode) -> DocumentIRCodeBlockNode:
         """Map a fenced code block.
 
         The syntax token information (tokens_by_line, states_by_line) is
@@ -197,25 +197,25 @@ class _MarkdownToDocIRMapper:
             node: The MarkdownASTCodeBlockNode.
 
         Returns:
-            A DocIRCodeBlockNode with language and raw content.
+            A DocumentIRCodeBlockNode with language and raw content.
         """
-        return DocIRCodeBlockNode(
+        return DocumentIRCodeBlockNode(
             language=node.language_name,
             content=node.content,
         )
 
     def _map_unordered_list(
         self, node: MarkdownASTUnorderedListNode
-    ) -> DocIRUnorderedListNode:
+    ) -> DocumentIRUnorderedListNode:
         """Map an unordered list.
 
         Args:
             node: The MarkdownASTUnorderedListNode.
 
         Returns:
-            A DocIRUnorderedListNode with list item children mapped.
+            A DocumentIRUnorderedListNode with list item children mapped.
         """
-        ul = DocIRUnorderedListNode(tight=node.tight)
+        ul = DocumentIRUnorderedListNode(tight=node.tight)
         for child in node.children:
             if isinstance(child, MarkdownASTListItemNode):
                 ul.add_child(self._map_list_item(child))
@@ -224,23 +224,23 @@ class _MarkdownToDocIRMapper:
 
     def _map_ordered_list(
         self, node: MarkdownASTOrderedListNode
-    ) -> DocIROrderedListNode:
+    ) -> DocumentIROrderedListNode:
         """Map an ordered list.
 
         Args:
             node: The MarkdownASTOrderedListNode.
 
         Returns:
-            A DocIROrderedListNode with list item children mapped.
+            A DocumentIROrderedListNode with list item children mapped.
         """
-        ol = DocIROrderedListNode(start=node.start, tight=node.tight)
+        ol = DocumentIROrderedListNode(start=node.start, tight=node.tight)
         for child in node.children:
             if isinstance(child, MarkdownASTListItemNode):
                 ol.add_child(self._map_list_item(child))
 
         return ol
 
-    def _map_list_item(self, node: MarkdownASTListItemNode) -> DocIRListItemNode:
+    def _map_list_item(self, node: MarkdownASTListItemNode) -> DocumentIRListItemNode:
         """Map a list item.
 
         A list item may contain inline content and/or nested lists.
@@ -251,9 +251,9 @@ class _MarkdownToDocIRMapper:
             node: The MarkdownASTListItemNode.
 
         Returns:
-            A DocIRListItemNode with its content mapped.
+            A DocumentIRListItemNode with its content mapped.
         """
-        item = DocIRListItemNode()
+        item = DocumentIRListItemNode()
 
         # Separate inline children from nested block children (sub-lists,
         # paragraphs, blockquotes, etc.)
@@ -278,7 +278,7 @@ class _MarkdownToDocIRMapper:
 
         # If there are inline nodes, wrap them in an implicit paragraph
         if inline_nodes:
-            para = DocIRParagraphNode()
+            para = DocumentIRParagraphNode()
             for inline in inline_nodes:
                 spans = self._collect_spans(inline, bold=False, italic=False, strikethrough=False, code=False)
                 for span in spans:
@@ -294,16 +294,16 @@ class _MarkdownToDocIRMapper:
 
         return item
 
-    def _map_table(self, node: MarkdownASTTableNode) -> DocIRTableNode:
+    def _map_table(self, node: MarkdownASTTableNode) -> DocumentIRTableNode:
         """Map a table node.
 
         Args:
             node: The MarkdownASTTableNode.
 
         Returns:
-            A DocIRTableNode with header and body sections mapped.
+            A DocumentIRTableNode with header and body sections mapped.
         """
-        table = DocIRTableNode()
+        table = DocumentIRTableNode()
         for child in node.children:
             if isinstance(child, MarkdownASTTableHeaderNode):
                 table.add_child(self._map_table_header(child))
@@ -315,36 +315,36 @@ class _MarkdownToDocIRMapper:
 
     def _map_table_header(
         self, node: MarkdownASTTableHeaderNode
-    ) -> DocIRTableHeaderNode:
+    ) -> DocumentIRTableHeaderNode:
         """Map a table header section."""
-        header = DocIRTableHeaderNode()
+        header = DocumentIRTableHeaderNode()
         for child in node.children:
             if isinstance(child, MarkdownASTTableRowNode):
                 header.add_child(self._map_table_row(child))
 
         return header
 
-    def _map_table_body(self, node: MarkdownASTTableBodyNode) -> DocIRTableBodyNode:
+    def _map_table_body(self, node: MarkdownASTTableBodyNode) -> DocumentIRTableBodyNode:
         """Map a table body section."""
-        body = DocIRTableBodyNode()
+        body = DocumentIRTableBodyNode()
         for child in node.children:
             if isinstance(child, MarkdownASTTableRowNode):
                 body.add_child(self._map_table_row(child))
 
         return body
 
-    def _map_table_row(self, node: MarkdownASTTableRowNode) -> DocIRTableRowNode:
+    def _map_table_row(self, node: MarkdownASTTableRowNode) -> DocumentIRTableRowNode:
         """Map a table row."""
-        row = DocIRTableRowNode()
+        row = DocumentIRTableRowNode()
         for child in node.children:
             if isinstance(child, MarkdownASTTableCellNode):
                 row.add_child(self._map_table_cell(child))
 
         return row
 
-    def _map_table_cell(self, node: MarkdownASTTableCellNode) -> DocIRTableCellNode:
+    def _map_table_cell(self, node: MarkdownASTTableCellNode) -> DocumentIRTableCellNode:
         """Map a table cell, collecting its inline content as text spans."""
-        cell = DocIRTableCellNode(
+        cell = DocumentIRTableCellNode(
             is_header=node.is_header,
             alignment=node.alignment,
         )
@@ -352,17 +352,17 @@ class _MarkdownToDocIRMapper:
         return cell
 
     def _append_inline_children(
-        self, source: MarkdownASTNode, target: DocIRNode
+        self, source: MarkdownASTNode, target: DocumentIRNode
     ) -> None:
         """Walk the inline children of source and append spans/links/images
         to target.
 
         This is the bridge between the nested bold/italic/code structure of
-        the markdown AST and the flat DocIRTextSpanNode model.
+        the markdown AST and the flat DocumentIRTextSpanNode model.
 
         Args:
             source: The markdown AST node whose children are inline content.
-            target: The doc_ir node to append the mapped inline nodes to.
+            target: The document_ir node to append the mapped inline nodes to.
         """
         for child in source.children:
             nodes = self._collect_inline(child, bold=False, italic=False, strikethrough=False, code=False)
@@ -376,15 +376,15 @@ class _MarkdownToDocIRMapper:
         italic: bool,
         strikethrough: bool,
         code: bool,
-    ) -> List[DocIRNode]:
-        """Recursively collect inline doc_ir nodes from a markdown AST node.
+    ) -> List[DocumentIRNode]:
+        """Recursively collect inline document_ir nodes from a markdown AST node.
 
         Formatting flags are accumulated as we descend through Bold/Emphasis/
         InlineCode wrappers, so that a bold-italic run correctly produces a
-        DocIRTextSpanNode with both flags set.
+        DocumentIRTextSpanNode with both flags set.
 
-        Link and image nodes are returned as DocIRLinkNode/DocIRImageNode
-        respectively.  Line breaks become DocIRLineBreakNode.
+        Link and image nodes are returned as DocumentIRLinkNode/DocIRImageNode
+        respectively.  Line breaks become DocumentIRLineBreakNode.
 
         Args:
             node: The markdown AST inline node to process.
@@ -394,13 +394,13 @@ class _MarkdownToDocIRMapper:
             code: Whether inline-code formatting is currently active.
 
         Returns:
-            A list of DocIRNode instances representing the inline content.
+            A list of DocumentIRNode instances representing the inline content.
         """
         if isinstance(node, MarkdownASTTextNode):
             if not node.content:
                 return []
 
-            return [DocIRTextSpanNode(
+            return [DocumentIRTextSpanNode(
                 content=node.content,
                 bold=bold,
                 italic=italic,
@@ -409,7 +409,7 @@ class _MarkdownToDocIRMapper:
             )]
 
         if isinstance(node, MarkdownASTBoldNode):
-            result: List[DocIRNode] = []
+            result: List[DocumentIRNode] = []
             for child in node.children:
                 result.extend(self._collect_inline(child, bold=True, italic=italic, strikethrough=strikethrough, code=code))
 
@@ -432,7 +432,7 @@ class _MarkdownToDocIRMapper:
             if not node.content:
                 return []
 
-            return [DocIRTextSpanNode(
+            return [DocumentIRTextSpanNode(
                 content=node.content,
                 bold=bold,
                 italic=italic,
@@ -440,7 +440,7 @@ class _MarkdownToDocIRMapper:
             )]
 
         if isinstance(node, MarkdownASTLinkNode):
-            link = DocIRLinkNode(url=node.url, title=node.title)
+            link = DocumentIRLinkNode(url=node.url, title=node.title)
             for child in node.children:
                 result = self._collect_inline(child, bold=bold, italic=italic, strikethrough=strikethrough, code=code)
                 for item in result:
@@ -449,14 +449,14 @@ class _MarkdownToDocIRMapper:
             return [link]
 
         if isinstance(node, MarkdownASTImageNode):
-            return [DocIRImageNode(
+            return [DocumentIRImageNode(
                 url=node.url,
                 alt_text=node.alt_text,
                 title=node.title,
             )]
 
         if isinstance(node, MarkdownASTLineBreakNode):
-            return [DocIRLineBreakNode()]
+            return [DocumentIRLineBreakNode()]
 
         # Any other node type: recurse into children with current formatting
         result = []
@@ -472,6 +472,6 @@ class _MarkdownToDocIRMapper:
         italic: bool,
         strikethrough: bool,
         code: bool,
-    ) -> List[DocIRNode]:
+    ) -> List[DocumentIRNode]:
         """Alias for _collect_inline used in list item mapping for clarity."""
         return self._collect_inline(node, bold=bold, italic=italic, strikethrough=strikethrough, code=code)

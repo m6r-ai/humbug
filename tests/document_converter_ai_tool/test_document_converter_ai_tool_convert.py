@@ -26,8 +26,8 @@ class TestConvertFormatDetection:
              patch("pathlib.Path.replace"), \
              patch("pathlib.Path.chmod"):
 
-            mock_doc_ir = MagicMock()
-            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_doc_ir)
+            mock_document_ir = MagicMock()
+            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_document_ir)
             mock_importers.__contains__ = lambda self, k: True
             mock_exporters.__getitem__ = lambda self, k: (lambda d: b"fake docx")
             mock_exporters.__contains__ = lambda self, k: True
@@ -60,8 +60,8 @@ class TestConvertFormatDetection:
              patch("pathlib.Path.replace"), \
              patch("pathlib.Path.chmod"):
 
-            mock_doc_ir = MagicMock()
-            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_doc_ir)
+            mock_document_ir = MagicMock()
+            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_document_ir)
             mock_importers.__contains__ = lambda self, k: True
             mock_exporters.__getitem__ = lambda self, k: (lambda d: "fake md")
             mock_exporters.__contains__ = lambda self, k: True
@@ -94,8 +94,8 @@ class TestConvertFormatDetection:
              patch("pathlib.Path.replace"), \
              patch("pathlib.Path.chmod"):
 
-            mock_doc_ir = MagicMock()
-            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_doc_ir)
+            mock_document_ir = MagicMock()
+            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_document_ir)
             mock_importers.__contains__ = lambda self, k: True
             mock_exporters.__getitem__ = lambda self, k: (lambda d: b"fake docx")
             mock_exporters.__contains__ = lambda self, k: True
@@ -196,8 +196,8 @@ class TestConvertFormatDetection:
              patch("pathlib.Path.replace"), \
              patch("pathlib.Path.chmod"):
 
-            mock_doc_ir = MagicMock()
-            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_doc_ir)
+            mock_document_ir = MagicMock()
+            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_document_ir)
             mock_importers.__contains__ = lambda self, k: True
             mock_exporters.__getitem__ = lambda self, k: (lambda d: b"fake docx")
             mock_exporters.__contains__ = lambda self, k: True
@@ -317,8 +317,8 @@ class TestConvertAuthorization:
              patch("pathlib.Path.replace"), \
              patch("pathlib.Path.chmod"):
 
-            mock_doc_ir = MagicMock()
-            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_doc_ir)
+            mock_document_ir = MagicMock()
+            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_document_ir)
             mock_importers.__contains__ = lambda self, k: True
             mock_exporters.__getitem__ = lambda self, k: (lambda d: b"data")
             mock_exporters.__contains__ = lambda self, k: True
@@ -375,8 +375,8 @@ class TestConvertAuthorization:
              patch("pathlib.Path.replace"), \
              patch("pathlib.Path.chmod"):
 
-            mock_doc_ir = MagicMock()
-            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_doc_ir)
+            mock_document_ir = MagicMock()
+            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_document_ir)
             mock_importers.__contains__ = lambda self, k: True
             mock_exporters.__getitem__ = lambda self, k: (lambda d: b"data")
             mock_exporters.__contains__ = lambda self, k: True
@@ -418,8 +418,8 @@ class TestConvertAuthorization:
              patch("pathlib.Path.replace"), \
              patch("pathlib.Path.chmod"):
 
-            mock_doc_ir = MagicMock()
-            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_doc_ir)
+            mock_document_ir = MagicMock()
+            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_document_ir)
             mock_importers.__contains__ = lambda self, k: True
             mock_exporters.__getitem__ = lambda self, k: (lambda d: b"data")
             mock_exporters.__contains__ = lambda self, k: True
@@ -456,8 +456,8 @@ class TestConvertLoggingAndResult:
              patch("pathlib.Path.replace"), \
              patch("pathlib.Path.chmod"):
 
-            mock_doc_ir = MagicMock()
-            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_doc_ir)
+            mock_document_ir = MagicMock()
+            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_document_ir)
             mock_importers.__contains__ = lambda self, k: True
             mock_exporters.__getitem__ = lambda self, k: (lambda d: b"output")
             mock_exporters.__contains__ = lambda self, k: True
@@ -494,8 +494,8 @@ class TestConvertLoggingAndResult:
              patch("pathlib.Path.replace"), \
              patch("pathlib.Path.chmod"):
 
-            mock_doc_ir = MagicMock()
-            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_doc_ir)
+            mock_document_ir = MagicMock()
+            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_document_ir)
             mock_importers.__contains__ = lambda self, k: True
             mock_exporters.__getitem__ = lambda self, k: (lambda d: b"output")
             mock_exporters.__contains__ = lambda self, k: True
@@ -530,8 +530,8 @@ class TestConvertLoggingAndResult:
              patch("pathlib.Path.replace"), \
              patch("pathlib.Path.chmod"):
 
-            mock_doc_ir = MagicMock()
-            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_doc_ir)
+            mock_document_ir = MagicMock()
+            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_document_ir)
             mock_importers.__contains__ = lambda self, k: True
             mock_exporters.__getitem__ = lambda self, k: (lambda d: b"output")
             mock_exporters.__contains__ = lambda self, k: True

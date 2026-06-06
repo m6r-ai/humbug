@@ -126,13 +126,13 @@ Unified diff parsing and application with fuzzy matching.
 Advanced markdown support, including converting to/from a markdown AST.
 Includes `doc_ir_to_markdown.py` for serialising a doc_ir tree to Markdown text.
 
-### `src/doc_ir`
-Abstract document IR.
-
 ### `src/document_converter_ai_tool/`
 AI tool implementation for converting documents between supported formats (e.g. Markdown ↔ DOCX).
 Both input and output paths must be inside the mindspace. Write operations require user authorization
 and are audit-logged. Conversion pipelines are built on `src/dmarkdown/` and `src/docx/`.
+
+### `src/document_ir`
+Abstract document IR.
 
 ### `src/docx/`
 DOCX file handling support, including converting to/from a DOCX AST.

@@ -10,7 +10,7 @@ import zipfile
 
 import pytest
 
-from docx import serialise_docx, parse_docx, doc_ir_to_docx_ast
+from docx import serialise_docx, parse_docx, document_ir_to_docx_ast
 from docx.docx_ast_node import (
     DocxASTAbstractNumNode,
     DocxASTBodyNode,
@@ -34,20 +34,20 @@ from docx.docx_ast_node import (
     DocxASTTableRowPropertiesNode,
     DocxASTTextNode,
 )
-from doc_ir import (
-    DocIRDocumentNode,
-    DocIRHeadingNode,
-    DocIRParagraphNode,
-    DocIRTextSpanNode,
-    DocIRCodeBlockNode,
-    DocIRUnorderedListNode,
-    DocIROrderedListNode,
-    DocIRListItemNode,
-    DocIRTableNode,
-    DocIRTableBodyNode,
-    DocIRTableRowNode,
-    DocIRTableCellNode,
-    DocIRBlockquoteNode,
+from document_ir import (
+    DocumentIRDocumentNode,
+    DocumentIRHeadingNode,
+    DocumentIRParagraphNode,
+    DocumentIRTextSpanNode,
+    DocumentIRCodeBlockNode,
+    DocumentIRUnorderedListNode,
+    DocumentIROrderedListNode,
+    DocumentIRListItemNode,
+    DocumentIRTableNode,
+    DocumentIRTableBodyNode,
+    DocumentIRTableRowNode,
+    DocumentIRTableCellNode,
+    DocumentIRBlockquoteNode,
 )
 
 
@@ -571,22 +571,22 @@ class TestNumberingXML:
 
 
 # ---------------------------------------------------------------------------
-# Round-trip: doc_ir → DOCX AST → serialise → parse → doc_ir
+# Round-trip: document_ir → DOCX AST → serialise → parse → document_ir
 # ---------------------------------------------------------------------------
 
 class TestRoundTrip:
     """Verify that serialised output can be parsed back by the DOCX parser."""
 
-    def _round_trip(self, ir_doc: DocIRDocumentNode) -> DocxASTDocumentNode:
-        """Convert doc_ir → DOCX AST → bytes → parsed DOCX AST."""
-        docx_ast = doc_ir_to_docx_ast(ir_doc)
+    def _round_trip(self, ir_doc: DocumentIRDocumentNode) -> DocxASTDocumentNode:
+        """Convert document_ir → DOCX AST → bytes → parsed DOCX AST."""
+        docx_ast = document_ir_to_docx_ast(ir_doc)
         docx_bytes = serialise_docx(docx_ast)
         return parse_docx(docx_bytes)
 
     def test_simple_paragraph_round_trips(self):
-        ir = DocIRDocumentNode()
-        p = DocIRParagraphNode()
-        p.add_child(DocIRTextSpanNode("Hello world"))
+        ir = DocumentIRDocumentNode()
+        p = DocumentIRParagraphNode()
+        p.add_child(DocumentIRTextSpanNode("Hello world"))
         ir.add_child(p)
 
         parsed = self._round_trip(ir)
@@ -600,9 +600,9 @@ class TestRoundTrip:
         assert "Hello world" in texts
 
     def test_heading_round_trips(self):
-        ir = DocIRDocumentNode()
-        h = DocIRHeadingNode(level=1)
-        h.add_child(DocIRTextSpanNode("My Title"))
+        ir = DocumentIRDocumentNode()
+        h = DocumentIRHeadingNode(level=1)
+        h.add_child(DocumentIRTextSpanNode("My Title"))
         ir.add_child(h)
 
         parsed = self._round_trip(ir)
@@ -616,8 +616,8 @@ class TestRoundTrip:
         assert ppr.style_id == "Heading1"
 
     def test_code_block_round_trips(self):
-        ir = DocIRDocumentNode()
-        ir.add_child(DocIRCodeBlockNode(language="python", content="x = 1"))
+        ir = DocumentIRDocumentNode()
+        ir.add_child(DocumentIRCodeBlockNode(language="python", content="x = 1"))
 
         parsed = self._round_trip(ir)
         from docx.docx_ast_node import (
@@ -635,13 +635,13 @@ class TestRoundTrip:
         assert "x = 1" in texts
 
     def test_table_round_trips(self):
-        ir = DocIRDocumentNode()
-        table = DocIRTableNode()
-        body_section = DocIRTableBodyNode()
-        row = DocIRTableRowNode()
-        cell = DocIRTableCellNode(is_header=False, alignment="left")
-        p = DocIRParagraphNode()
-        p.add_child(DocIRTextSpanNode("CellText"))
+        ir = DocumentIRDocumentNode()
+        table = DocumentIRTableNode()
+        body_section = DocumentIRTableBodyNode()
+        row = DocumentIRTableRowNode()
+        cell = DocumentIRTableCellNode(is_header=False, alignment="left")
+        p = DocumentIRParagraphNode()
+        p.add_child(DocumentIRTextSpanNode("CellText"))
         cell.add_child(p)
         row.add_child(cell)
         body_section.add_child(row)
@@ -655,11 +655,11 @@ class TestRoundTrip:
         assert len(tables) == 1
 
     def test_bullet_list_round_trips(self):
-        ir = DocIRDocumentNode()
-        ul = DocIRUnorderedListNode()
-        item = DocIRListItemNode()
-        p = DocIRParagraphNode()
-        p.add_child(DocIRTextSpanNode("List item"))
+        ir = DocumentIRDocumentNode()
+        ul = DocumentIRUnorderedListNode()
+        item = DocumentIRListItemNode()
+        p = DocumentIRParagraphNode()
+        p.add_child(DocumentIRTextSpanNode("List item"))
         item.add_child(p)
         ul.add_child(item)
         ir.add_child(ul)
@@ -680,9 +680,9 @@ class TestRoundTrip:
         assert num_pr.num_id == "1"
 
     def test_xml_special_characters_escaped(self):
-        ir = DocIRDocumentNode()
-        p = DocIRParagraphNode()
-        p.add_child(DocIRTextSpanNode("a < b & c > d"))
+        ir = DocumentIRDocumentNode()
+        p = DocumentIRParagraphNode()
+        p.add_child(DocumentIRTextSpanNode("a < b & c > d"))
         ir.add_child(p)
 
         # Should not raise (would fail if XML is malformed)

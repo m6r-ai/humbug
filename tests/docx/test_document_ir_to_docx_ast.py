@@ -1,6 +1,6 @@
-"""Tests for the doc_ir → DOCX AST mapper."""
+"""Tests for the document_ir → DOCX AST mapper."""
 
-from docx import doc_ir_to_docx_ast
+from docx import document_ir_to_docx_ast
 from docx.docx_ast_node import (
     DocxASTAbstractNumNode,
     DocxASTBodyNode,
@@ -26,25 +26,25 @@ from docx.docx_ast_node import (
     DocxASTTableRowPropertiesNode,
     DocxASTTextNode,
 )
-from doc_ir import (
-    DocIRBlockquoteNode,
-    DocIRCodeBlockNode,
-    DocIRDocumentNode,
-    DocIRHeadingNode,
-    DocIRHorizontalRuleNode,
-    DocIRImageNode,
-    DocIRLineBreakNode,
-    DocIRLinkNode,
-    DocIRListItemNode,
-    DocIROrderedListNode,
-    DocIRParagraphNode,
-    DocIRTableBodyNode,
-    DocIRTableCellNode,
-    DocIRTableHeaderNode,
-    DocIRTableNode,
-    DocIRTableRowNode,
-    DocIRTextSpanNode,
-    DocIRUnorderedListNode,
+from document_ir import (
+    DocumentIRBlockquoteNode,
+    DocumentIRCodeBlockNode,
+    DocumentIRDocumentNode,
+    DocumentIRHeadingNode,
+    DocumentIRHorizontalRuleNode,
+    DocumentIRImageNode,
+    DocumentIRLineBreakNode,
+    DocumentIRLinkNode,
+    DocumentIRListItemNode,
+    DocumentIROrderedListNode,
+    DocumentIRParagraphNode,
+    DocumentIRTableBodyNode,
+    DocumentIRTableCellNode,
+    DocumentIRTableHeaderNode,
+    DocumentIRTableNode,
+    DocumentIRTableRowNode,
+    DocumentIRTextSpanNode,
+    DocumentIRUnorderedListNode,
 )
 
 
@@ -52,35 +52,35 @@ from doc_ir import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _doc(*children) -> DocIRDocumentNode:
-    doc = DocIRDocumentNode()
+def _doc(*children) -> DocumentIRDocumentNode:
+    doc = DocumentIRDocumentNode()
     for child in children:
         doc.add_child(child)
     return doc
 
 
-def _para(*spans) -> DocIRParagraphNode:
-    p = DocIRParagraphNode()
+def _para(*spans) -> DocumentIRParagraphNode:
+    p = DocumentIRParagraphNode()
     for s in spans:
         p.add_child(s)
     return p
 
 
-def _span(text: str, bold=False, italic=False, strike=False, code=False) -> DocIRTextSpanNode:
-    return DocIRTextSpanNode(
+def _span(text: str, bold=False, italic=False, strike=False, code=False) -> DocumentIRTextSpanNode:
+    return DocumentIRTextSpanNode(
         content=text, bold=bold, italic=italic, strikethrough=strike, code=code
     )
 
 
-def _heading(level: int, *spans) -> DocIRHeadingNode:
-    h = DocIRHeadingNode(level=level)
+def _heading(level: int, *spans) -> DocumentIRHeadingNode:
+    h = DocumentIRHeadingNode(level=level)
     for s in spans:
         h.add_child(s)
     return h
 
 
-def _map(doc: DocIRDocumentNode) -> DocxASTDocumentNode:
-    return doc_ir_to_docx_ast(doc)
+def _map(doc: DocumentIRDocumentNode) -> DocxASTDocumentNode:
+    return document_ir_to_docx_ast(doc)
 
 
 def _body(doc: DocxASTDocumentNode) -> DocxASTBodyNode:
@@ -126,7 +126,7 @@ class TestDocumentStructure:
         assert isinstance(result, DocxASTDocumentNode)
 
     def test_source_path_preserved(self):
-        doc = DocIRDocumentNode(source_path="/path/to/file.md")
+        doc = DocumentIRDocumentNode(source_path="/path/to/file.md")
         result = _map(doc)
         assert result.source_path == "/path/to/file.md"
 
@@ -365,32 +365,32 @@ class TestHeadingMapping:
 
 class TestCodeBlockMapping:
     def test_single_line_code(self):
-        result = _map(_doc(DocIRCodeBlockNode(language="python", content="x = 1")))
+        result = _map(_doc(DocumentIRCodeBlockNode(language="python", content="x = 1")))
         body = _body(result)
         paras = [c for c in body.children if isinstance(c, DocxASTParagraphNode)]
         assert len(paras) == 1
         assert _ppr(paras[0]).style_id == "CodeBlock"
 
     def test_multiline_code_one_para_per_line(self):
-        result = _map(_doc(DocIRCodeBlockNode(language="", content="line1\nline2\nline3")))
+        result = _map(_doc(DocumentIRCodeBlockNode(language="", content="line1\nline2\nline3")))
         body = _body(result)
         paras = [c for c in body.children if isinstance(c, DocxASTParagraphNode)]
         assert len(paras) == 3
 
     def test_code_content_preserved(self):
-        result = _map(_doc(DocIRCodeBlockNode(language="", content="print('hello')")))
+        result = _map(_doc(DocumentIRCodeBlockNode(language="", content="print('hello')")))
         body = _body(result)
         para = next(c for c in body.children if isinstance(c, DocxASTParagraphNode))
         assert _text_of(para) == "print('hello')"
 
     def test_empty_code_block_emits_one_para(self):
-        result = _map(_doc(DocIRCodeBlockNode(language="", content="")))
+        result = _map(_doc(DocumentIRCodeBlockNode(language="", content="")))
         body = _body(result)
         paras = [c for c in body.children if isinstance(c, DocxASTParagraphNode)]
         assert len(paras) == 1
 
     def test_trailing_newline_not_extra_para(self):
-        result = _map(_doc(DocIRCodeBlockNode(language="", content="code\n")))
+        result = _map(_doc(DocumentIRCodeBlockNode(language="", content="code\n")))
         body = _body(result)
         paras = [c for c in body.children if isinstance(c, DocxASTParagraphNode)]
         assert len(paras) == 1
@@ -402,7 +402,7 @@ class TestCodeBlockMapping:
 
 class TestBlockquoteMapping:
     def test_blockquote_style(self):
-        bq = DocIRBlockquoteNode()
+        bq = DocumentIRBlockquoteNode()
         bq.add_child(_para(_span("Quoted")))
         result = _map(_doc(bq))
         # Blockquote maps to a table wrapping a shaded cell; paragraphs live
@@ -414,7 +414,7 @@ class TestBlockquoteMapping:
         assert _ppr(para).style_id == "Blockquote"
 
     def test_blockquote_text(self):
-        bq = DocIRBlockquoteNode()
+        bq = DocumentIRBlockquoteNode()
         bq.add_child(_para(_span("Quote text")))
         result = _map(_doc(bq))
         table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
@@ -424,7 +424,7 @@ class TestBlockquoteMapping:
         assert _text_of(para) == "Quote text"
 
     def test_blockquote_shading(self):
-        bq = DocIRBlockquoteNode()
+        bq = DocumentIRBlockquoteNode()
         bq.add_child(_para(_span("Quoted")))
         result = _map(_doc(bq))
         table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
@@ -434,7 +434,7 @@ class TestBlockquoteMapping:
         assert tcp.shading_fill == "E8F0F8"
 
     def test_blockquote_multiple_paragraphs(self):
-        bq = DocIRBlockquoteNode()
+        bq = DocumentIRBlockquoteNode()
         bq.add_child(_para(_span("First")))
         bq.add_child(_para(_span("Second")))
         result = _map(_doc(bq))
@@ -449,7 +449,7 @@ class TestBlockquoteMapping:
     def test_blockquote_followed_by_spacer(self):
         # A spacer paragraph is emitted after the table so subsequent content
         # has visible separation.
-        bq = DocIRBlockquoteNode()
+        bq = DocumentIRBlockquoteNode()
         bq.add_child(_para(_span("Quoted")))
         result = _map(_doc(bq))
         body_children = list(_body(result).children)
@@ -464,13 +464,13 @@ class TestBlockquoteMapping:
 # ---------------------------------------------------------------------------
 
 class TestUnorderedListMapping:
-    def _item(self, text: str) -> DocIRListItemNode:
-        item = DocIRListItemNode()
+    def _item(self, text: str) -> DocumentIRListItemNode:
+        item = DocumentIRListItemNode()
         item.add_child(_para(_span(text)))
         return item
 
     def test_bullet_list_paragraph(self):
-        ul = DocIRUnorderedListNode()
+        ul = DocumentIRUnorderedListNode()
         ul.add_child(self._item("Item"))
         result = _map(_doc(ul))
         para = _first_para(result)
@@ -483,7 +483,7 @@ class TestUnorderedListMapping:
         assert num_pr.num_id == "1"  # bullet numId
 
     def test_bullet_list_ilvl_0(self):
-        ul = DocIRUnorderedListNode()
+        ul = DocumentIRUnorderedListNode()
         ul.add_child(self._item("Item"))
         result = _map(_doc(ul))
         ppr = _ppr(_first_para(result))
@@ -491,7 +491,7 @@ class TestUnorderedListMapping:
         assert num_pr.ilvl == 0
 
     def test_multiple_bullet_items(self):
-        ul = DocIRUnorderedListNode()
+        ul = DocumentIRUnorderedListNode()
         for text in ["A", "B", "C"]:
             ul.add_child(self._item(text))
         result = _map(_doc(ul))
@@ -499,23 +499,23 @@ class TestUnorderedListMapping:
         assert len(paras) == 3
 
     def test_bullet_item_text(self):
-        ul = DocIRUnorderedListNode()
+        ul = DocumentIRUnorderedListNode()
         ul.add_child(self._item("Hello"))
         result = _map(_doc(ul))
         assert _text_of(_first_para(result)) == "Hello"
 
     def test_nested_list_ilvl(self):
-        inner_item = DocIRListItemNode()
+        inner_item = DocumentIRListItemNode()
         inner_item.add_child(_para(_span("Inner")))
 
-        inner_ul = DocIRUnorderedListNode()
+        inner_ul = DocumentIRUnorderedListNode()
         inner_ul.add_child(inner_item)
 
-        outer_item = DocIRListItemNode()
+        outer_item = DocumentIRListItemNode()
         outer_item.add_child(_para(_span("Outer")))
         outer_item.add_child(inner_ul)
 
-        outer_ul = DocIRUnorderedListNode()
+        outer_ul = DocumentIRUnorderedListNode()
         outer_ul.add_child(outer_item)
 
         result = _map(_doc(outer_ul))
@@ -538,13 +538,13 @@ class TestUnorderedListMapping:
 # ---------------------------------------------------------------------------
 
 class TestOrderedListMapping:
-    def _item(self, text: str) -> DocIRListItemNode:
-        item = DocIRListItemNode()
+    def _item(self, text: str) -> DocumentIRListItemNode:
+        item = DocumentIRListItemNode()
         item.add_child(_para(_span(text)))
         return item
 
     def test_ordered_list_num_id(self):
-        ol = DocIROrderedListNode(start=1)
+        ol = DocumentIROrderedListNode(start=1)
         ol.add_child(self._item("First"))
         result = _map(_doc(ol))
         ppr = _ppr(_first_para(result))
@@ -552,7 +552,7 @@ class TestOrderedListMapping:
         assert num_pr.num_id == "2"  # ordered numId
 
     def test_ordered_list_ilvl_0(self):
-        ol = DocIROrderedListNode(start=1)
+        ol = DocumentIROrderedListNode(start=1)
         ol.add_child(self._item("First"))
         result = _map(_doc(ol))
         ppr = _ppr(_first_para(result))
@@ -560,7 +560,7 @@ class TestOrderedListMapping:
         assert num_pr.ilvl == 0
 
     def test_multiple_ordered_items(self):
-        ol = DocIROrderedListNode(start=1)
+        ol = DocumentIROrderedListNode(start=1)
         for text in ["One", "Two", "Three"]:
             ol.add_child(self._item(text))
         result = _map(_doc(ol))
@@ -568,7 +568,7 @@ class TestOrderedListMapping:
         assert len(paras) == 3
 
     def test_tight_ordered_list_items_have_spacing_after_zero(self):
-        ol = DocIROrderedListNode(start=1, tight=True)
+        ol = DocumentIROrderedListNode(start=1, tight=True)
         for text in ["One", "Two", "Three"]:
             ol.add_child(self._item(text))
         result = _map(_doc(ol))
@@ -577,7 +577,7 @@ class TestOrderedListMapping:
             assert _ppr(para).spacing_after == 0
 
     def test_loose_ordered_list_items_have_default_spacing(self):
-        ol = DocIROrderedListNode(start=1, tight=False)
+        ol = DocumentIROrderedListNode(start=1, tight=False)
         for text in ["One", "Two", "Three"]:
             ol.add_child(self._item(text))
         result = _map(_doc(ol))
@@ -595,17 +595,17 @@ class TestListSpacingInteractions:
         """Last para of a tight nested ordered list inside a loose bullet item
         must have spacing_after restored to None so the loose gap between outer
         items is preserved."""
-        nested_ol = DocIROrderedListNode(start=1, tight=True)
+        nested_ol = DocumentIROrderedListNode(start=1, tight=True)
         for text in ["a", "b", "c"]:
-            ni = DocIRListItemNode()
+            ni = DocumentIRListItemNode()
             ni.add_child(_para(_span(text)))
             nested_ol.add_child(ni)
 
-        outer_item = DocIRListItemNode()
+        outer_item = DocumentIRListItemNode()
         outer_item.add_child(_para(_span("Outer")))
         outer_item.add_child(nested_ol)
 
-        outer_ul = DocIRUnorderedListNode(tight=False)
+        outer_ul = DocumentIRUnorderedListNode(tight=False)
         outer_ul.add_child(outer_item)
 
         result = _map(_doc(outer_ul))
@@ -615,17 +615,17 @@ class TestListSpacingInteractions:
 
     def test_loose_bullet_item_ending_with_tight_nested_bullet_has_loose_spacing(self):
         """Same as above but the nested list is also unordered."""
-        nested_ul = DocIRUnorderedListNode(tight=True)
+        nested_ul = DocumentIRUnorderedListNode(tight=True)
         for text in ["x", "y"]:
-            ni = DocIRListItemNode()
+            ni = DocumentIRListItemNode()
             ni.add_child(_para(_span(text)))
             nested_ul.add_child(ni)
 
-        outer_item = DocIRListItemNode()
+        outer_item = DocumentIRListItemNode()
         outer_item.add_child(_para(_span("Outer")))
         outer_item.add_child(nested_ul)
 
-        outer_ul = DocIRUnorderedListNode(tight=False)
+        outer_ul = DocumentIRUnorderedListNode(tight=False)
         outer_ul.add_child(outer_item)
 
         result = _map(_doc(outer_ul))
@@ -635,16 +635,16 @@ class TestListSpacingInteractions:
     def test_tight_outer_item_ending_with_tight_nested_list_stays_tight(self):
         """When the outer item is itself tight, the nested list's tight spacing
         must not be overridden."""
-        nested_ol = DocIROrderedListNode(start=1, tight=True)
-        ni = DocIRListItemNode()
+        nested_ol = DocumentIROrderedListNode(start=1, tight=True)
+        ni = DocumentIRListItemNode()
         ni.add_child(_para(_span("inner")))
         nested_ol.add_child(ni)
 
-        outer_item = DocIRListItemNode()
+        outer_item = DocumentIRListItemNode()
         outer_item.add_child(_para(_span("Outer")))
         outer_item.add_child(nested_ol)
 
-        outer_ul = DocIRUnorderedListNode(tight=True)
+        outer_ul = DocumentIRUnorderedListNode(tight=True)
         outer_ul.add_child(outer_item)
 
         result = _map(_doc(outer_ul))
@@ -656,26 +656,26 @@ class TestListSpacingInteractions:
 # Table mapping
 # ---------------------------------------------------------------------------
 
-def _ir_table(rows: list, header_count: int = 0) -> DocIRTableNode:
-    """Build a DocIRTableNode from a list of lists of cell texts."""
-    table = DocIRTableNode()
+def _ir_table(rows: list, header_count: int = 0) -> DocumentIRTableNode:
+    """Build a DocumentIRTableNode from a list of lists of cell texts."""
+    table = DocumentIRTableNode()
 
     if header_count > 0:
-        header = DocIRTableHeaderNode()
+        header = DocumentIRTableHeaderNode()
         for row_texts in rows[:header_count]:
-            row = DocIRTableRowNode()
+            row = DocumentIRTableRowNode()
             for text in row_texts:
-                cell = DocIRTableCellNode(is_header=True, alignment="left")
+                cell = DocumentIRTableCellNode(is_header=True, alignment="left")
                 cell.add_child(_para(_span(text)))
                 row.add_child(cell)
             header.add_child(row)
         table.add_child(header)
 
-    body = DocIRTableBodyNode()
+    body = DocumentIRTableBodyNode()
     for row_texts in rows[header_count:]:
-        row = DocIRTableRowNode()
+        row = DocumentIRTableRowNode()
         for text in row_texts:
-            cell = DocIRTableCellNode(is_header=False, alignment="left")
+            cell = DocumentIRTableCellNode(is_header=False, alignment="left")
             cell.add_child(_para(_span(text)))
             row.add_child(cell)
         body.add_child(row)
@@ -735,10 +735,10 @@ class TestTableMapping:
 
     def test_cell_always_has_paragraph(self):
         # Even an empty cell must have at least one paragraph
-        table = DocIRTableNode()
-        body = DocIRTableBodyNode()
-        row = DocIRTableRowNode()
-        cell = DocIRTableCellNode(is_header=False, alignment="left")
+        table = DocumentIRTableNode()
+        body = DocumentIRTableBodyNode()
+        row = DocumentIRTableRowNode()
+        cell = DocumentIRTableCellNode(is_header=False, alignment="left")
         # No children added to cell
         row.add_child(cell)
         body.add_child(row)
@@ -751,10 +751,10 @@ class TestTableMapping:
         assert len(paras) >= 1
 
     def test_cell_alignment_center(self):
-        table = DocIRTableNode()
-        body = DocIRTableBodyNode()
-        row = DocIRTableRowNode()
-        cell = DocIRTableCellNode(is_header=False, alignment="center")
+        table = DocumentIRTableNode()
+        body = DocumentIRTableBodyNode()
+        row = DocumentIRTableRowNode()
+        cell = DocumentIRTableCellNode(is_header=False, alignment="center")
         cell.add_child(_para(_span("Centered")))
         row.add_child(cell)
         body.add_child(row)
@@ -784,10 +784,10 @@ class TestTableMapping:
         assert tbl_pr.width_type == "pct"
 
     def test_cell_with_inline_children_has_paragraph(self):
-        table = DocIRTableNode()
-        body = DocIRTableBodyNode()
-        row = DocIRTableRowNode()
-        cell = DocIRTableCellNode(is_header=False, alignment="left")
+        table = DocumentIRTableNode()
+        body = DocumentIRTableBodyNode()
+        row = DocumentIRTableRowNode()
+        cell = DocumentIRTableCellNode(is_header=False, alignment="left")
         cell.add_child(_span("Hello"))
         row.add_child(cell)
         body.add_child(row)
@@ -800,10 +800,10 @@ class TestTableMapping:
         assert len(paras) == 1
 
     def test_cell_with_inline_children_has_correct_text(self):
-        table = DocIRTableNode()
-        body = DocIRTableBodyNode()
-        row = DocIRTableRowNode()
-        cell = DocIRTableCellNode(is_header=False, alignment="left")
+        table = DocumentIRTableNode()
+        body = DocumentIRTableBodyNode()
+        row = DocumentIRTableRowNode()
+        cell = DocumentIRTableCellNode(is_header=False, alignment="left")
         cell.add_child(_span("Hello"))
         row.add_child(cell)
         body.add_child(row)
@@ -816,10 +816,10 @@ class TestTableMapping:
         assert _text_of(para) == "Hello"
 
     def test_cell_with_inline_bold_span(self):
-        table = DocIRTableNode()
-        body = DocIRTableBodyNode()
-        row = DocIRTableRowNode()
-        cell = DocIRTableCellNode(is_header=False, alignment="left")
+        table = DocumentIRTableNode()
+        body = DocumentIRTableBodyNode()
+        row = DocumentIRTableRowNode()
+        cell = DocumentIRTableCellNode(is_header=False, alignment="left")
         cell.add_child(_span("Bold", bold=True))
         row.add_child(cell)
         body.add_child(row)
@@ -834,10 +834,10 @@ class TestTableMapping:
         assert rpr.bold is True
 
     def test_cell_with_mixed_inline_and_block_children(self):
-        table = DocIRTableNode()
-        body = DocIRTableBodyNode()
-        row = DocIRTableRowNode()
-        cell = DocIRTableCellNode(is_header=False, alignment="left")
+        table = DocumentIRTableNode()
+        body = DocumentIRTableBodyNode()
+        row = DocumentIRTableRowNode()
+        cell = DocumentIRTableCellNode(is_header=False, alignment="left")
         cell.add_child(_span("Inline"))
         cell.add_child(_para(_span("Block")))
         row.add_child(cell)
@@ -851,10 +851,10 @@ class TestTableMapping:
         assert len(paras) == 2
 
     def test_cell_alignment_respected_for_inline_children(self):
-        table = DocIRTableNode()
-        body = DocIRTableBodyNode()
-        row = DocIRTableRowNode()
-        cell = DocIRTableCellNode(is_header=False, alignment="right")
+        table = DocumentIRTableNode()
+        body = DocumentIRTableBodyNode()
+        row = DocumentIRTableRowNode()
+        cell = DocumentIRTableCellNode(is_header=False, alignment="right")
         cell.add_child(_span("Right"))
         row.add_child(cell)
         body.add_child(row)
@@ -874,9 +874,9 @@ class TestTableMapping:
 
 class TestInlineSpecialContent:
     def test_line_break(self):
-        p = DocIRParagraphNode()
+        p = DocumentIRParagraphNode()
         p.add_child(_span("Before"))
-        p.add_child(DocIRLineBreakNode())
+        p.add_child(DocumentIRLineBreakNode())
         p.add_child(_span("After"))
         result = _map(_doc(p))
         runs = _runs(_first_para(result))
@@ -888,8 +888,8 @@ class TestInlineSpecialContent:
         assert breaks[0].break_type == "textWrapping"
 
     def test_image(self):
-        p = DocIRParagraphNode()
-        img = DocIRImageNode(url="image.png", alt_text="A photo")
+        p = DocumentIRParagraphNode()
+        img = DocumentIRImageNode(url="image.png", alt_text="A photo")
         p.add_child(img)
         result = _map(_doc(p))
         runs = _runs(_first_para(result))
@@ -899,8 +899,8 @@ class TestInlineSpecialContent:
         assert drawing.description == "A photo"
 
     def test_link_text_underlined(self):
-        p = DocIRParagraphNode()
-        link = DocIRLinkNode(url="https://example.com")
+        p = DocumentIRParagraphNode()
+        link = DocumentIRLinkNode(url="https://example.com")
         link.add_child(_span("click here"))
         p.add_child(link)
         result = _map(_doc(p))
@@ -914,8 +914,8 @@ class TestInlineSpecialContent:
         assert rpr.style_id == "Hyperlink"
 
     def test_link_url_appended(self):
-        p = DocIRParagraphNode()
-        link = DocIRLinkNode(url="https://example.com")
+        p = DocumentIRParagraphNode()
+        link = DocumentIRLinkNode(url="https://example.com")
         link.add_child(_span("text"))
         p.add_child(link)
         result = _map(_doc(p))
@@ -929,8 +929,8 @@ class TestInlineSpecialContent:
         assert text_node.content == "text"
 
     def test_link_no_url_no_url_run(self):
-        p = DocIRParagraphNode()
-        link = DocIRLinkNode(url="")
+        p = DocumentIRParagraphNode()
+        link = DocumentIRLinkNode(url="")
         link.add_child(_span("text"))
         p.add_child(link)
         result = _map(_doc(p))
@@ -949,12 +949,12 @@ class TestInlineSpecialContent:
 
 class TestHorizontalRule:
     def test_horizontal_rule_emits_paragraph(self):
-        result = _map(_doc(DocIRHorizontalRuleNode()))
+        result = _map(_doc(DocumentIRHorizontalRuleNode()))
         paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
         assert len(paras) == 1
 
     def test_horizontal_rule_uses_normal_style(self):
-        result = _map(_doc(DocIRHorizontalRuleNode()))
+        result = _map(_doc(DocumentIRHorizontalRuleNode()))
         para = _first_para(result)
         assert _ppr(para).style_id == "Normal"
 
@@ -975,8 +975,8 @@ class TestMixedDocument:
         assert _ppr(paras[1]).style_id == "Normal"
 
     def test_paragraph_then_list_then_paragraph(self):
-        ul = DocIRUnorderedListNode()
-        item = DocIRListItemNode()
+        ul = DocumentIRUnorderedListNode()
+        item = DocumentIRListItemNode()
         item.add_child(_para(_span("Item")))
         ul.add_child(item)
 

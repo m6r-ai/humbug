@@ -1,4 +1,4 @@
-"""Tests for the dmarkdown AST → doc_ir mapper."""
+"""Tests for the dmarkdown AST → document_ir mapper."""
 
 from dmarkdown.markdown_ast_node import (
     MarkdownASTBlockquoteNode,
@@ -24,26 +24,26 @@ from dmarkdown.markdown_ast_node import (
     MarkdownASTTextNode,
     MarkdownASTUnorderedListNode,
 )
-from dmarkdown.markdown_to_doc_ir import markdown_ast_to_doc_ir
-from doc_ir import (
-    DocIRBlockquoteNode,
-    DocIRCodeBlockNode,
-    DocIRDocumentNode,
-    DocIRHeadingNode,
-    DocIRHorizontalRuleNode,
-    DocIRImageNode,
-    DocIRLineBreakNode,
-    DocIRLinkNode,
-    DocIRListItemNode,
-    DocIROrderedListNode,
-    DocIRParagraphNode,
-    DocIRTableBodyNode,
-    DocIRTableCellNode,
-    DocIRTableHeaderNode,
-    DocIRTableNode,
-    DocIRTableRowNode,
-    DocIRTextSpanNode,
-    DocIRUnorderedListNode,
+from dmarkdown.markdown_to_document_ir import markdown_ast_to_document_ir
+from document_ir import (
+    DocumentIRBlockquoteNode,
+    DocumentIRCodeBlockNode,
+    DocumentIRDocumentNode,
+    DocumentIRHeadingNode,
+    DocumentIRHorizontalRuleNode,
+    DocumentIRImageNode,
+    DocumentIRLineBreakNode,
+    DocumentIRLinkNode,
+    DocumentIRListItemNode,
+    DocumentIROrderedListNode,
+    DocumentIRParagraphNode,
+    DocumentIRTableBodyNode,
+    DocumentIRTableCellNode,
+    DocumentIRTableHeaderNode,
+    DocumentIRTableNode,
+    DocumentIRTableRowNode,
+    DocumentIRTextSpanNode,
+    DocumentIRUnorderedListNode,
 )
 
 
@@ -103,8 +103,8 @@ def _heading(level: int, *children) -> MarkdownASTHeadingNode:
     return node
 
 
-def _map(doc: MarkdownASTDocumentNode) -> DocIRDocumentNode:
-    return markdown_ast_to_doc_ir(doc)
+def _map(doc: MarkdownASTDocumentNode) -> DocumentIRDocumentNode:
+    return markdown_ast_to_document_ir(doc)
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +114,7 @@ def _map(doc: MarkdownASTDocumentNode) -> DocIRDocumentNode:
 class TestDocumentMapping:
     def test_empty_document(self):
         result = _map(_doc())
-        assert isinstance(result, DocIRDocumentNode)
+        assert isinstance(result, DocumentIRDocumentNode)
         assert result.children == []
 
     def test_source_path_preserved(self):
@@ -135,7 +135,7 @@ class TestHeadingMapping:
     def test_heading_level_1(self):
         result = _map(_doc(_heading(1, _text("Title"))))
         h = result.children[0]
-        assert isinstance(h, DocIRHeadingNode)
+        assert isinstance(h, DocumentIRHeadingNode)
         assert h.level == 1
 
     def test_heading_level_3(self):
@@ -147,14 +147,14 @@ class TestHeadingMapping:
         result = _map(_doc(_heading(2, _text("Hello"))))
         h = result.children[0]
         span = h.children[0]
-        assert isinstance(span, DocIRTextSpanNode)
+        assert isinstance(span, DocumentIRTextSpanNode)
         assert span.content == "Hello"
 
     def test_heading_with_bold(self):
         result = _map(_doc(_heading(1, _bold(_text("Bold Title")))))
         h = result.children[0]
         span = h.children[0]
-        assert isinstance(span, DocIRTextSpanNode)
+        assert isinstance(span, DocumentIRTextSpanNode)
         assert span.bold is True
         assert span.content == "Bold Title"
 
@@ -176,13 +176,13 @@ class TestParagraphMapping:
     def test_simple_paragraph(self):
         result = _map(_doc(_para(_text("Hello"))))
         para = result.children[0]
-        assert isinstance(para, DocIRParagraphNode)
+        assert isinstance(para, DocumentIRParagraphNode)
 
     def test_paragraph_text(self):
         result = _map(_doc(_para(_text("Hello world"))))
         para = result.children[0]
         span = para.children[0]
-        assert isinstance(span, DocIRTextSpanNode)
+        assert isinstance(span, DocumentIRTextSpanNode)
         assert span.content == "Hello world"
 
     def test_multiple_paragraphs(self):
@@ -191,8 +191,8 @@ class TestParagraphMapping:
             _para(_text("Second")),
         ))
         assert len(result.children) == 2
-        assert isinstance(result.children[0], DocIRParagraphNode)
-        assert isinstance(result.children[1], DocIRParagraphNode)
+        assert isinstance(result.children[0], DocumentIRParagraphNode)
+        assert isinstance(result.children[1], DocumentIRParagraphNode)
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +203,7 @@ class TestInlineFormatting:
     def test_plain_text_span(self):
         result = _map(_doc(_para(_text("plain"))))
         span = result.children[0].children[0]
-        assert isinstance(span, DocIRTextSpanNode)
+        assert isinstance(span, DocumentIRTextSpanNode)
         assert span.content == "plain"
         assert span.bold is False
         assert span.italic is False
@@ -240,7 +240,7 @@ class TestInlineFormatting:
     def test_inline_code(self):
         result = _map(_doc(_para(_code("some_func()"))))
         span = result.children[0].children[0]
-        assert isinstance(span, DocIRTextSpanNode)
+        assert isinstance(span, DocumentIRTextSpanNode)
         assert span.code is True
         assert span.content == "some_func()"
 
@@ -282,7 +282,7 @@ class TestInlineFormatting:
         result = _map(_doc(_para(_text("before"), lb, _text("after"))))
         para = result.children[0]
         assert len(para.children) == 3
-        assert isinstance(para.children[1], DocIRLineBreakNode)
+        assert isinstance(para.children[1], DocumentIRLineBreakNode)
 
     def test_deeply_nested_bold_italic(self):
         # bold > italic > bold > text — all three flags should be set
@@ -305,7 +305,7 @@ class TestInlineFormatting:
     def test_strikethrough_span(self):
         result = _map(_doc(_para(_strike(_text("struck")))))
         span = result.children[0].children[0]
-        assert isinstance(span, DocIRTextSpanNode)
+        assert isinstance(span, DocumentIRTextSpanNode)
         assert span.strikethrough is True
         assert span.bold is False
         assert span.italic is False
@@ -342,7 +342,7 @@ class TestLinksAndImages:
         result = _map(_doc(_para(link)))
         para = result.children[0]
         link_node = para.children[0]
-        assert isinstance(link_node, DocIRLinkNode)
+        assert isinstance(link_node, DocumentIRLinkNode)
         assert link_node.url == "https://example.com"
         assert link_node.title == "Example"
 
@@ -353,7 +353,7 @@ class TestLinksAndImages:
         link_node = result.children[0].children[0]
         assert len(link_node.children) == 1
         span = link_node.children[0]
-        assert isinstance(span, DocIRTextSpanNode)
+        assert isinstance(span, DocumentIRTextSpanNode)
         assert span.content == "click here"
 
     def test_link_with_bold_text(self):
@@ -381,7 +381,7 @@ class TestLinksAndImages:
         result = _map(_doc(_para(img)))
         para = result.children[0]
         img_node = para.children[0]
-        assert isinstance(img_node, DocIRImageNode)
+        assert isinstance(img_node, DocumentIRImageNode)
         assert img_node.url == "image.png"
         assert img_node.alt_text == "A photo"
         assert img_node.title == "Photo title"
@@ -402,7 +402,7 @@ class TestBlockquoteMapping:
         bq = MarkdownASTBlockquoteNode()
         bq.add_child(_para(_text("Quoted text")))
         result = _map(_doc(bq))
-        assert isinstance(result.children[0], DocIRBlockquoteNode)
+        assert isinstance(result.children[0], DocumentIRBlockquoteNode)
 
     def test_blockquote_contains_paragraph(self):
         bq = MarkdownASTBlockquoteNode()
@@ -410,7 +410,7 @@ class TestBlockquoteMapping:
         result = _map(_doc(bq))
         bq_node = result.children[0]
         assert len(bq_node.children) == 1
-        assert isinstance(bq_node.children[0], DocIRParagraphNode)
+        assert isinstance(bq_node.children[0], DocumentIRParagraphNode)
 
     def test_blockquote_text_content(self):
         bq = MarkdownASTBlockquoteNode()
@@ -426,7 +426,7 @@ class TestBlockquoteMapping:
         outer.add_child(inner)
         result = _map(_doc(outer))
         outer_node = result.children[0]
-        assert isinstance(outer_node.children[0], DocIRBlockquoteNode)
+        assert isinstance(outer_node.children[0], DocumentIRBlockquoteNode)
 
 
 # ---------------------------------------------------------------------------
@@ -447,7 +447,7 @@ class TestCodeBlockMapping:
 
     def test_code_block_node(self):
         result = _map(_doc(self._code_block("python", "print('hello')")))
-        assert isinstance(result.children[0], DocIRCodeBlockNode)
+        assert isinstance(result.children[0], DocumentIRCodeBlockNode)
 
     def test_code_block_language(self):
         result = _map(_doc(self._code_block("python", "x = 1")))
@@ -478,7 +478,7 @@ class TestHorizontalRule:
     def test_horizontal_rule(self):
         hr = MarkdownASTHorizontalRuleNode()
         result = _map(_doc(hr))
-        assert isinstance(result.children[0], DocIRHorizontalRuleNode)
+        assert isinstance(result.children[0], DocumentIRHorizontalRuleNode)
 
 
 # ---------------------------------------------------------------------------
@@ -496,7 +496,7 @@ class TestUnorderedListMapping:
         ul = MarkdownASTUnorderedListNode()
         ul.add_child(self._item(_text("Item")))
         result = _map(_doc(ul))
-        assert isinstance(result.children[0], DocIRUnorderedListNode)
+        assert isinstance(result.children[0], DocumentIRUnorderedListNode)
 
     def test_list_item_node(self):
         ul = MarkdownASTUnorderedListNode()
@@ -504,7 +504,7 @@ class TestUnorderedListMapping:
         result = _map(_doc(ul))
         ul_node = result.children[0]
         assert len(ul_node.children) == 1
-        assert isinstance(ul_node.children[0], DocIRListItemNode)
+        assert isinstance(ul_node.children[0], DocumentIRListItemNode)
 
     def test_list_item_text(self):
         ul = MarkdownASTUnorderedListNode()
@@ -513,7 +513,7 @@ class TestUnorderedListMapping:
         item = result.children[0].children[0]
         # Inline content is wrapped in an implicit paragraph
         para = item.children[0]
-        assert isinstance(para, DocIRParagraphNode)
+        assert isinstance(para, DocumentIRParagraphNode)
         assert para.children[0].content == "Hello"
 
     def test_multiple_list_items(self):
@@ -540,8 +540,8 @@ class TestUnorderedListMapping:
         outer_item_node = result.children[0].children[0]
         # Should have implicit paragraph + nested list
         assert len(outer_item_node.children) == 2
-        assert isinstance(outer_item_node.children[0], DocIRParagraphNode)
-        assert isinstance(outer_item_node.children[1], DocIRUnorderedListNode)
+        assert isinstance(outer_item_node.children[0], DocumentIRParagraphNode)
+        assert isinstance(outer_item_node.children[1], DocumentIRUnorderedListNode)
 
     def test_list_item_bold_text(self):
         ul = MarkdownASTUnorderedListNode()
@@ -568,7 +568,7 @@ class TestOrderedListMapping:
         ol = MarkdownASTOrderedListNode(start=1)
         ol.add_child(self._item(_text("First")))
         result = _map(_doc(ol))
-        assert isinstance(result.children[0], DocIROrderedListNode)
+        assert isinstance(result.children[0], DocumentIROrderedListNode)
 
     def test_ordered_list_start_preserved(self):
         ol = MarkdownASTOrderedListNode(start=3)
@@ -629,44 +629,44 @@ def _table_with_header_and_body() -> MarkdownASTTableNode:
 class TestTableMapping:
     def test_table_node(self):
         result = _map(_doc(_table_with_header_and_body()))
-        assert isinstance(result.children[0], DocIRTableNode)
+        assert isinstance(result.children[0], DocumentIRTableNode)
 
     def test_table_has_header(self):
         result = _map(_doc(_table_with_header_and_body()))
         table = result.children[0]
-        headers = [c for c in table.children if isinstance(c, DocIRTableHeaderNode)]
+        headers = [c for c in table.children if isinstance(c, DocumentIRTableHeaderNode)]
         assert len(headers) == 1
 
     def test_table_has_body(self):
         result = _map(_doc(_table_with_header_and_body()))
         table = result.children[0]
-        bodies = [c for c in table.children if isinstance(c, DocIRTableBodyNode)]
+        bodies = [c for c in table.children if isinstance(c, DocumentIRTableBodyNode)]
         assert len(bodies) == 1
 
     def test_header_row(self):
         result = _map(_doc(_table_with_header_and_body()))
         header = next(
             c for c in result.children[0].children
-            if isinstance(c, DocIRTableHeaderNode)
+            if isinstance(c, DocumentIRTableHeaderNode)
         )
-        rows = [c for c in header.children if isinstance(c, DocIRTableRowNode)]
+        rows = [c for c in header.children if isinstance(c, DocumentIRTableRowNode)]
         assert len(rows) == 1
 
     def test_header_cells(self):
         result = _map(_doc(_table_with_header_and_body()))
         header = next(
             c for c in result.children[0].children
-            if isinstance(c, DocIRTableHeaderNode)
+            if isinstance(c, DocumentIRTableHeaderNode)
         )
         row = header.children[0]
-        cells = [c for c in row.children if isinstance(c, DocIRTableCellNode)]
+        cells = [c for c in row.children if isinstance(c, DocumentIRTableCellNode)]
         assert len(cells) == 2
 
     def test_header_cell_is_header_flag(self):
         result = _map(_doc(_table_with_header_and_body()))
         header = next(
             c for c in result.children[0].children
-            if isinstance(c, DocIRTableHeaderNode)
+            if isinstance(c, DocumentIRTableHeaderNode)
         )
         cell = header.children[0].children[0]
         assert cell.is_header is True
@@ -675,7 +675,7 @@ class TestTableMapping:
         result = _map(_doc(_table_with_header_and_body()))
         header = next(
             c for c in result.children[0].children
-            if isinstance(c, DocIRTableHeaderNode)
+            if isinstance(c, DocumentIRTableHeaderNode)
         )
         row = header.children[0]
         assert row.children[0].alignment == "left"
@@ -685,7 +685,7 @@ class TestTableMapping:
         result = _map(_doc(_table_with_header_and_body()))
         header = next(
             c for c in result.children[0].children
-            if isinstance(c, DocIRTableHeaderNode)
+            if isinstance(c, DocumentIRTableHeaderNode)
         )
         cell = header.children[0].children[0]
         assert cell.children[0].content == "Name"
@@ -694,7 +694,7 @@ class TestTableMapping:
         result = _map(_doc(_table_with_header_and_body()))
         body = next(
             c for c in result.children[0].children
-            if isinstance(c, DocIRTableBodyNode)
+            if isinstance(c, DocumentIRTableBodyNode)
         )
         cell = body.children[0].children[0]
         assert cell.is_header is False
@@ -703,7 +703,7 @@ class TestTableMapping:
         result = _map(_doc(_table_with_header_and_body()))
         body = next(
             c for c in result.children[0].children
-            if isinstance(c, DocIRTableBodyNode)
+            if isinstance(c, DocumentIRTableBodyNode)
         )
         cells = body.children[0].children
         assert cells[0].children[0].content == "foo"
@@ -722,7 +722,7 @@ class TestTableMapping:
         result = _map(_doc(table))
         ir_cell = result.children[0].children[0].children[0].children[0]
         span = ir_cell.children[0]
-        assert isinstance(span, DocIRTextSpanNode)
+        assert isinstance(span, DocumentIRTextSpanNode)
         assert span.bold is True
         assert span.content == "Bold Header"
 
@@ -737,8 +737,8 @@ class TestMixedDocument:
             _heading(1, _text("Title")),
             _para(_text("Body text")),
         ))
-        assert isinstance(result.children[0], DocIRHeadingNode)
-        assert isinstance(result.children[1], DocIRParagraphNode)
+        assert isinstance(result.children[0], DocumentIRHeadingNode)
+        assert isinstance(result.children[1], DocumentIRParagraphNode)
 
     def test_paragraph_then_code_block(self):
         from syntax import ProgrammingLanguage
@@ -751,8 +751,8 @@ class TestMixedDocument:
             total_lines=0,
         )
         result = _map(_doc(_para(_text("Intro")), cb))
-        assert isinstance(result.children[0], DocIRParagraphNode)
-        assert isinstance(result.children[1], DocIRCodeBlockNode)
+        assert isinstance(result.children[0], DocumentIRParagraphNode)
+        assert isinstance(result.children[1], DocumentIRCodeBlockNode)
 
     def test_all_block_types_present(self):
         from syntax import ProgrammingLanguage
@@ -786,9 +786,9 @@ class TestMixedDocument:
         ))
 
         assert len(result.children) == 6
-        assert isinstance(result.children[0], DocIRHeadingNode)
-        assert isinstance(result.children[1], DocIRParagraphNode)
-        assert isinstance(result.children[2], DocIRBlockquoteNode)
-        assert isinstance(result.children[3], DocIRUnorderedListNode)
-        assert isinstance(result.children[4], DocIRCodeBlockNode)
-        assert isinstance(result.children[5], DocIRHorizontalRuleNode)
+        assert isinstance(result.children[0], DocumentIRHeadingNode)
+        assert isinstance(result.children[1], DocumentIRParagraphNode)
+        assert isinstance(result.children[2], DocumentIRBlockquoteNode)
+        assert isinstance(result.children[3], DocumentIRUnorderedListNode)
+        assert isinstance(result.children[4], DocumentIRCodeBlockNode)
+        assert isinstance(result.children[5], DocumentIRHorizontalRuleNode)

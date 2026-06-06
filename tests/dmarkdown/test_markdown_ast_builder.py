@@ -176,7 +176,7 @@ def test_backslash_escape_underscore(ast_builder):
 
 
 def test_backslash_escape_signature_line(ast_builder):
-    """A run of backslash-escaped underscores, as produced by doc_ir_to_markdown for signature lines, renders as literal underscores."""
+    """A run of backslash-escaped underscores, as produced by document_ir_to_markdown for signature lines, renders as literal underscores."""
     doc = ast_builder.build_ast(r"Signature: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ Date: \_\_\_\_\_\_\_\_")
     paragraph = doc.children[0]
     full_text = "".join(

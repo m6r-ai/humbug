@@ -9,13 +9,13 @@ from ai_tool import (
     AIToolCall, AIToolDefinition, AIToolExecutionError,
     AIToolOperationDefinition, AIToolParameter, AIToolResult
 )
-from dmarkdown.doc_ir_to_markdown import doc_ir_to_markdown
+from dmarkdown.document_ir_to_markdown import document_ir_to_markdown
 from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
-from dmarkdown.markdown_to_doc_ir import markdown_ast_to_doc_ir
-from doc_ir.doc_ir_node import DocIRDocumentNode
+from dmarkdown.markdown_to_document_ir import markdown_ast_to_document_ir
+from document_ir.document_ir_node import DocumentIRDocumentNode
 from docx import (
     DocxError, DocxUnsupportedError,
-    docx_ast_to_doc_ir, doc_ir_to_docx_ast, parse_docx, serialise_docx
+    docx_ast_to_document_ir, document_ir_to_docx_ast, parse_docx, serialise_docx
 )
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
@@ -32,8 +32,8 @@ _EXTENSION_FORMATS: Dict[str, str] = {v: k for k, v in _FORMAT_EXTENSIONS.items(
 _SUPPORTED_FORMAT_NAMES = sorted(_FORMAT_EXTENSIONS.keys())
 
 
-def _import_md(input_path: Path) -> DocIRDocumentNode:
-    """Import a Markdown file to doc_ir."""
+def _import_md(input_path: Path) -> DocumentIRDocumentNode:
+    """Import a Markdown file to document_ir."""
     try:
         md_text = input_path.read_text(encoding="utf-8")
 
@@ -42,11 +42,11 @@ def _import_md(input_path: Path) -> DocIRDocumentNode:
 
     builder = MarkdownASTBuilder(True)
     builder.update_ast(md_text, "", str(input_path))
-    return markdown_ast_to_doc_ir(builder.document())
+    return markdown_ast_to_document_ir(builder.document())
 
 
-def _import_docx(input_path: Path) -> DocIRDocumentNode:
-    """Import a DOCX file to doc_ir."""
+def _import_docx(input_path: Path) -> DocumentIRDocumentNode:
+    """Import a DOCX file to document_ir."""
     try:
         docx_bytes = input_path.read_bytes()
 
@@ -62,27 +62,27 @@ def _import_docx(input_path: Path) -> DocIRDocumentNode:
     except DocxError as e:
         raise AIToolExecutionError(f"Failed to parse DOCX: {e}") from e
 
-    return docx_ast_to_doc_ir(docx_ast)
+    return docx_ast_to_document_ir(docx_ast)
 
 
-def _export_md(doc_ir: DocIRDocumentNode) -> str:
-    """Export doc_ir to Markdown text."""
-    return doc_ir_to_markdown(doc_ir)
+def _export_md(document_ir: DocumentIRDocumentNode) -> str:
+    """Export document_ir to Markdown text."""
+    return document_ir_to_markdown(document_ir)
 
 
-def _export_docx(doc_ir: DocIRDocumentNode) -> bytes:
-    """Export doc_ir to DOCX bytes."""
-    return serialise_docx(doc_ir_to_docx_ast(doc_ir))
+def _export_docx(document_ir: DocumentIRDocumentNode) -> bytes:
+    """Export document_ir to DOCX bytes."""
+    return serialise_docx(document_ir_to_docx_ast(document_ir))
 
 
-# Importers: format name → callable that reads a file and returns a DocIRDocumentNode.
-_IMPORTERS: Dict[str, Callable[[Path], DocIRDocumentNode]] = {
+# Importers: format name → callable that reads a file and returns a DocumentIRDocumentNode.
+_IMPORTERS: Dict[str, Callable[[Path], DocumentIRDocumentNode]] = {
     "docx": _import_docx,
     "md": _import_md,
 }
 
-# Exporters: format name → callable that serialises a DocIRDocumentNode to bytes or str.
-_EXPORTERS: Dict[str, Callable[[DocIRDocumentNode], bytes | str]] = {
+# Exporters: format name → callable that serialises a DocumentIRDocumentNode to bytes or str.
+_EXPORTERS: Dict[str, Callable[[DocumentIRDocumentNode], bytes | str]] = {
     "docx": _export_docx,
     "md": _export_md,
 }
@@ -95,11 +95,11 @@ def _resolve_format_from_extension(path: Path) -> str | None:
 
 class DocumentConverterAITool(AITool):
     """
-    AI tool for converting documents between supported formats via the doc_ir intermediate
+    AI tool for converting documents between supported formats via the document_ir intermediate
     representation.
 
-    Every supported format provides an importer (source → doc_ir) and an exporter
-    (doc_ir → target), so any pair of formats is automatically supported without
+    Every supported format provides an importer (source → document_ir) and an exporter
+    (document_ir → target), so any pair of formats is automatically supported without
     writing per-pair conversion code.
 
     Write operations are restricted to the current mindspace and require user
@@ -404,8 +404,8 @@ class DocumentConverterAITool(AITool):
             )
 
         try:
-            doc_ir = _IMPORTERS[from_format](input_path)
-            content = _EXPORTERS[to_format](doc_ir)
+            document_ir = _IMPORTERS[from_format](input_path)
+            content = _EXPORTERS[to_format](document_ir)
 
         except AIToolExecutionError:
             raise

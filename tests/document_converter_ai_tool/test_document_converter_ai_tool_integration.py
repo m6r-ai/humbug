@@ -2,7 +2,7 @@
 Integration tests for DocumentConverterAITool using real temporary files.
 
 These tests exercise the full conversion pipeline end-to-end: real Markdown and
-DOCX content is read, converted through doc_ir, and written to disk.  They verify
+DOCX content is read, converted through document_ir, and written to disk.  They verify
 that the tool produces non-empty output and that the round-trip is coherent, without
 asserting exact byte-for-byte equality (which is the responsibility of the dmarkdown
 and docx module tests).

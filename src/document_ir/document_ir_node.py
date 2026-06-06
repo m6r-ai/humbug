@@ -1,15 +1,15 @@
 from typing import Any, List
 
 
-class DocIRNode:
+class DocumentIRNode:
     """Base class for all document IR nodes."""
 
     def __init__(self) -> None:
         """Initialise a node with no parent and no children."""
-        self.parent: "DocIRNode | None" = None
-        self.children: List["DocIRNode"] = []
+        self.parent: "DocumentIRNode | None" = None
+        self.children: List["DocumentIRNode"] = []
 
-    def add_child(self, child: "DocIRNode") -> "DocIRNode":
+    def add_child(self, child: "DocumentIRNode") -> "DocumentIRNode":
         """Add a child node to this node.
 
         Args:
@@ -22,7 +22,7 @@ class DocIRNode:
         self.children.append(child)
         return child
 
-    def remove_child(self, child: "DocIRNode") -> None:
+    def remove_child(self, child: "DocumentIRNode") -> None:
         """Remove a child node from this node.
 
         Args:
@@ -45,10 +45,10 @@ class DocIRNode:
         self.children = []
 
 
-class DocIRVisitor:
+class DocumentIRVisitor:
     """Base visitor class for document IR tree traversal."""
 
-    def visit(self, node: DocIRNode) -> Any:
+    def visit(self, node: DocumentIRNode) -> Any:
         """Visit a node and dispatch to the appropriate visit method.
 
         Args:
@@ -61,7 +61,7 @@ class DocIRVisitor:
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
 
-    def generic_visit(self, node: DocIRNode) -> List[Any]:
+    def generic_visit(self, node: DocumentIRNode) -> List[Any]:
         """Default visit method for nodes without specific handlers.
 
         Args:
@@ -77,7 +77,7 @@ class DocIRVisitor:
         return results
 
 
-class DocIRDocumentNode(DocIRNode):
+class DocumentIRDocumentNode(DocumentIRNode):
     """Root node representing an entire document."""
 
     def __init__(self, source_path: str | None = None) -> None:
@@ -90,7 +90,7 @@ class DocIRDocumentNode(DocIRNode):
         self.source_path = source_path
 
 
-class DocIRHeadingNode(DocIRNode):
+class DocumentIRHeadingNode(DocumentIRNode):
     """Node representing a heading at a given level (1-6)."""
 
     def __init__(self, level: int) -> None:
@@ -103,15 +103,15 @@ class DocIRHeadingNode(DocIRNode):
         self.level = max(1, min(6, level))
 
 
-class DocIRParagraphNode(DocIRNode):
+class DocumentIRParagraphNode(DocumentIRNode):
     """Node representing a paragraph of body text."""
 
 
-class DocIRBlockquoteNode(DocIRNode):
+class DocumentIRBlockquoteNode(DocumentIRNode):
     """Node representing a blockquote."""
 
 
-class DocIRCodeBlockNode(DocIRNode):
+class DocumentIRCodeBlockNode(DocumentIRNode):
     """Node representing a fenced code block."""
 
     def __init__(self, language: str, content: str) -> None:
@@ -126,7 +126,7 @@ class DocIRCodeBlockNode(DocIRNode):
         self.content = content
 
 
-class DocIRUnorderedListNode(DocIRNode):
+class DocumentIRUnorderedListNode(DocumentIRNode):
     """Node representing an unordered (bullet) list."""
 
     def __init__(self, tight: bool = True) -> None:
@@ -139,7 +139,7 @@ class DocIRUnorderedListNode(DocIRNode):
         self.tight = tight
 
 
-class DocIROrderedListNode(DocIRNode):
+class DocumentIROrderedListNode(DocumentIRNode):
     """Node representing an ordered (numbered) list."""
 
     def __init__(self, start: int = 1, tight: bool = True) -> None:
@@ -154,27 +154,27 @@ class DocIROrderedListNode(DocIRNode):
         self.tight = tight
 
 
-class DocIRListItemNode(DocIRNode):
+class DocumentIRListItemNode(DocumentIRNode):
     """Node representing a single item within a list."""
 
 
-class DocIRTableNode(DocIRNode):
+class DocumentIRTableNode(DocumentIRNode):
     """Node representing a table."""
 
 
-class DocIRTableHeaderNode(DocIRNode):
+class DocumentIRTableHeaderNode(DocumentIRNode):
     """Node representing the header section of a table."""
 
 
-class DocIRTableBodyNode(DocIRNode):
+class DocumentIRTableBodyNode(DocumentIRNode):
     """Node representing the body section of a table."""
 
 
-class DocIRTableRowNode(DocIRNode):
+class DocumentIRTableRowNode(DocumentIRNode):
     """Node representing a single row within a table."""
 
 
-class DocIRTableCellNode(DocIRNode):
+class DocumentIRTableCellNode(DocumentIRNode):
     """Node representing a single cell within a table row."""
 
     def __init__(self, is_header: bool = False, alignment: str = "left") -> None:
@@ -189,11 +189,11 @@ class DocIRTableCellNode(DocIRNode):
         self.alignment = alignment
 
 
-class DocIRHorizontalRuleNode(DocIRNode):
+class DocumentIRHorizontalRuleNode(DocumentIRNode):
     """Node representing a horizontal rule."""
 
 
-class DocIRTextSpanNode(DocIRNode):
+class DocumentIRTextSpanNode(DocumentIRNode):
     """Node representing a run of inline text with optional formatting.
 
     Formatting properties are held as flags rather than through nesting,
@@ -226,7 +226,7 @@ class DocIRTextSpanNode(DocIRNode):
         self.code = code
 
 
-class DocIRLinkNode(DocIRNode):
+class DocumentIRLinkNode(DocumentIRNode):
     """Node representing a hyperlink.
 
     Children are the inline nodes forming the display text.
@@ -244,7 +244,7 @@ class DocIRLinkNode(DocIRNode):
         self.title = title
 
 
-class DocIRImageNode(DocIRNode):
+class DocumentIRImageNode(DocumentIRNode):
     """Node representing an image."""
 
     def __init__(self, url: str, alt_text: str = "", title: str | None = None) -> None:
@@ -261,5 +261,5 @@ class DocIRImageNode(DocIRNode):
         self.title = title
 
 
-class DocIRLineBreakNode(DocIRNode):
+class DocumentIRLineBreakNode(DocumentIRNode):
     """Node representing an explicit line break within a block."""

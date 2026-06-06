@@ -1,25 +1,25 @@
-"""Tests for the doc_ir → Markdown serialiser."""
+"""Tests for the document_ir → Markdown serialiser."""
 
-from dmarkdown.doc_ir_to_markdown import doc_ir_to_markdown
-from doc_ir import (
-    DocIRBlockquoteNode,
-    DocIRCodeBlockNode,
-    DocIRDocumentNode,
-    DocIRHeadingNode,
-    DocIRHorizontalRuleNode,
-    DocIRImageNode,
-    DocIRLineBreakNode,
-    DocIRLinkNode,
-    DocIRListItemNode,
-    DocIROrderedListNode,
-    DocIRParagraphNode,
-    DocIRTableBodyNode,
-    DocIRTableCellNode,
-    DocIRTableHeaderNode,
-    DocIRTableNode,
-    DocIRTableRowNode,
-    DocIRTextSpanNode,
-    DocIRUnorderedListNode,
+from dmarkdown.document_ir_to_markdown import document_ir_to_markdown
+from document_ir import (
+    DocumentIRBlockquoteNode,
+    DocumentIRCodeBlockNode,
+    DocumentIRDocumentNode,
+    DocumentIRHeadingNode,
+    DocumentIRHorizontalRuleNode,
+    DocumentIRImageNode,
+    DocumentIRLineBreakNode,
+    DocumentIRLinkNode,
+    DocumentIRListItemNode,
+    DocumentIROrderedListNode,
+    DocumentIRParagraphNode,
+    DocumentIRTableBodyNode,
+    DocumentIRTableCellNode,
+    DocumentIRTableHeaderNode,
+    DocumentIRTableNode,
+    DocumentIRTableRowNode,
+    DocumentIRTextSpanNode,
+    DocumentIRUnorderedListNode,
 )
 
 
@@ -27,40 +27,40 @@ from doc_ir import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _doc(*children) -> DocIRDocumentNode:
-    doc = DocIRDocumentNode()
+def _doc(*children) -> DocumentIRDocumentNode:
+    doc = DocumentIRDocumentNode()
     for child in children:
         doc.add_child(child)
     return doc
 
 
-def _para(*children) -> DocIRParagraphNode:
-    p = DocIRParagraphNode()
+def _para(*children) -> DocumentIRParagraphNode:
+    p = DocumentIRParagraphNode()
     for child in children:
         p.add_child(child)
     return p
 
 
-def _span(text, bold=False, italic=False, strike=False, code=False) -> DocIRTextSpanNode:
-    return DocIRTextSpanNode(content=text, bold=bold, italic=italic, strikethrough=strike, code=code)
+def _span(text, bold=False, italic=False, strike=False, code=False) -> DocumentIRTextSpanNode:
+    return DocumentIRTextSpanNode(content=text, bold=bold, italic=italic, strikethrough=strike, code=code)
 
 
-def _heading(level, *children) -> DocIRHeadingNode:
-    h = DocIRHeadingNode(level=level)
+def _heading(level, *children) -> DocumentIRHeadingNode:
+    h = DocumentIRHeadingNode(level=level)
     for child in children:
         h.add_child(child)
     return h
 
 
-def _item(*children) -> DocIRListItemNode:
-    item = DocIRListItemNode()
+def _item(*children) -> DocumentIRListItemNode:
+    item = DocumentIRListItemNode()
     for child in children:
         item.add_child(child)
     return item
 
 
-def _md(doc: DocIRDocumentNode) -> str:
-    return doc_ir_to_markdown(doc)
+def _md(doc: DocumentIRDocumentNode) -> str:
+    return document_ir_to_markdown(doc)
 
 
 # ---------------------------------------------------------------------------
@@ -186,12 +186,12 @@ class TestMarkdownEscaping:
 
 class TestHorizontalRule:
     def test_horizontal_rule(self):
-        assert _md(_doc(DocIRHorizontalRuleNode())) == "---\n"
+        assert _md(_doc(DocumentIRHorizontalRuleNode())) == "---\n"
 
     def test_horizontal_rule_between_paragraphs(self):
         result = _md(_doc(
             _para(_span("before")),
-            DocIRHorizontalRuleNode(),
+            DocumentIRHorizontalRuleNode(),
             _para(_span("after")),
         ))
         assert "---" in result
@@ -205,15 +205,15 @@ class TestHorizontalRule:
 
 class TestCodeBlocks:
     def test_fenced_code_block_no_language(self):
-        result = _md(_doc(DocIRCodeBlockNode(language="", content="x = 1")))
+        result = _md(_doc(DocumentIRCodeBlockNode(language="", content="x = 1")))
         assert result == "```\nx = 1\n```\n"
 
     def test_fenced_code_block_with_language(self):
-        result = _md(_doc(DocIRCodeBlockNode(language="python", content="x = 1")))
+        result = _md(_doc(DocumentIRCodeBlockNode(language="python", content="x = 1")))
         assert result == "```python\nx = 1\n```\n"
 
     def test_multiline_code_block(self):
-        result = _md(_doc(DocIRCodeBlockNode(language="", content="a\nb\nc")))
+        result = _md(_doc(DocumentIRCodeBlockNode(language="", content="a\nb\nc")))
         assert result == "```\na\nb\nc\n```\n"
 
 
@@ -223,13 +223,13 @@ class TestCodeBlocks:
 
 class TestBlockquotes:
     def test_simple_blockquote(self):
-        bq = DocIRBlockquoteNode()
+        bq = DocumentIRBlockquoteNode()
         bq.add_child(_para(_span("Quoted")))
         result = _md(_doc(bq))
         assert result == "> Quoted\n"
 
     def test_multiline_blockquote(self):
-        bq = DocIRBlockquoteNode()
+        bq = DocumentIRBlockquoteNode()
         bq.add_child(_para(_span("First")))
         bq.add_child(_para(_span("Second")))
         result = _md(_doc(bq))
@@ -243,7 +243,7 @@ class TestBlockquotes:
 
 class TestUnorderedLists:
     def test_simple_list(self):
-        ul = DocIRUnorderedListNode()
+        ul = DocumentIRUnorderedListNode()
         ul.add_child(_item(_para(_span("Alpha"))))
         ul.add_child(_item(_para(_span("Beta"))))
         result = _md(_doc(ul))
@@ -251,12 +251,12 @@ class TestUnorderedLists:
         assert "- Beta" in result
 
     def test_nested_list(self):
-        inner = DocIRUnorderedListNode()
+        inner = DocumentIRUnorderedListNode()
         inner.add_child(_item(_para(_span("Inner"))))
-        outer_item = DocIRListItemNode()
+        outer_item = DocumentIRListItemNode()
         outer_item.add_child(_para(_span("Outer")))
         outer_item.add_child(inner)
-        ul = DocIRUnorderedListNode()
+        ul = DocumentIRUnorderedListNode()
         ul.add_child(outer_item)
         result = _md(_doc(ul))
         lines = result.splitlines()
@@ -272,7 +272,7 @@ class TestUnorderedLists:
 
 class TestOrderedLists:
     def test_simple_ordered_list(self):
-        ol = DocIROrderedListNode(start=1)
+        ol = DocumentIROrderedListNode(start=1)
         ol.add_child(_item(_para(_span("First"))))
         ol.add_child(_item(_para(_span("Second"))))
         result = _md(_doc(ol))
@@ -280,7 +280,7 @@ class TestOrderedLists:
         assert "2. Second" in result
 
     def test_ordered_list_custom_start(self):
-        ol = DocIROrderedListNode(start=3)
+        ol = DocumentIROrderedListNode(start=3)
         ol.add_child(_item(_para(_span("Three"))))
         result = _md(_doc(ol))
         assert "3. Three" in result
@@ -292,18 +292,18 @@ class TestOrderedLists:
 
 class TestLinksAndImages:
     def test_link(self):
-        link = DocIRLinkNode(url="https://example.com")
+        link = DocumentIRLinkNode(url="https://example.com")
         link.add_child(_span("click here"))
         result = _md(_doc(_para(link)))
         assert "[click here](https://example.com)" in result
 
     def test_image(self):
-        img = DocIRImageNode(url="photo.png", alt_text="A photo")
+        img = DocumentIRImageNode(url="photo.png", alt_text="A photo")
         result = _md(_doc(_para(img)))
         assert "![A photo](photo.png)" in result
 
     def test_line_break(self):
-        result = _md(_doc(_para(_span("before"), DocIRLineBreakNode(), _span("after"))))
+        result = _md(_doc(_para(_span("before"), DocumentIRLineBreakNode(), _span("after"))))
         assert "before" in result
         assert "after" in result
 
@@ -312,20 +312,20 @@ class TestLinksAndImages:
 # Tables
 # ---------------------------------------------------------------------------
 
-def _table_with_header() -> DocIRTableNode:
-    table = DocIRTableNode()
-    header = DocIRTableHeaderNode()
-    hrow = DocIRTableRowNode()
+def _table_with_header() -> DocumentIRTableNode:
+    table = DocumentIRTableNode()
+    header = DocumentIRTableHeaderNode()
+    hrow = DocumentIRTableRowNode()
     for text, alignment in [("Name", "left"), ("Score", "right")]:
-        cell = DocIRTableCellNode(is_header=True, alignment=alignment)
+        cell = DocumentIRTableCellNode(is_header=True, alignment=alignment)
         cell.add_child(_para(_span(text)))
         hrow.add_child(cell)
     header.add_child(hrow)
     table.add_child(header)
-    body = DocIRTableBodyNode()
-    brow = DocIRTableRowNode()
+    body = DocumentIRTableBodyNode()
+    brow = DocumentIRTableRowNode()
     for text, alignment in [("Alice", "left"), ("42", "right")]:
-        cell = DocIRTableCellNode(is_header=False, alignment=alignment)
+        cell = DocumentIRTableCellNode(is_header=False, alignment=alignment)
         cell.add_child(_para(_span(text)))
         brow.add_child(cell)
     body.add_child(brow)
@@ -361,10 +361,10 @@ class TestTables:
             assert line.startswith("|") and line.endswith("|")
 
     def test_cell_with_inline_children(self):
-        table = DocIRTableNode()
-        body = DocIRTableBodyNode()
-        row = DocIRTableRowNode()
-        cell = DocIRTableCellNode(is_header=False, alignment="left")
+        table = DocumentIRTableNode()
+        body = DocumentIRTableBodyNode()
+        row = DocumentIRTableRowNode()
+        cell = DocumentIRTableCellNode(is_header=False, alignment="left")
         cell.add_child(_span("inline"))
         row.add_child(cell)
         body.add_child(row)
@@ -373,10 +373,10 @@ class TestTables:
         assert "inline" in result
 
     def test_pipe_in_cell_escaped(self):
-        table = DocIRTableNode()
-        body = DocIRTableBodyNode()
-        row = DocIRTableRowNode()
-        cell = DocIRTableCellNode(is_header=False, alignment="left")
+        table = DocumentIRTableNode()
+        body = DocumentIRTableBodyNode()
+        row = DocumentIRTableRowNode()
+        cell = DocumentIRTableCellNode(is_header=False, alignment="left")
         cell.add_child(_para(_span("a|b")))
         row.add_child(cell)
         body.add_child(row)

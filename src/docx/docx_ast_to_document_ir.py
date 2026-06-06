@@ -25,24 +25,24 @@ from docx.docx_ast_node import (
     DocxASTTableRowPropertiesNode,
     DocxASTTextNode,
 )
-from doc_ir import (
-    DocIRBlockquoteNode,
-    DocIRCodeBlockNode,
-    DocIRDocumentNode,
-    DocIRHeadingNode,
-    DocIRImageNode,
-    DocIRLineBreakNode,
-    DocIRListItemNode,
-    DocIRNode,
-    DocIROrderedListNode,
-    DocIRParagraphNode,
-    DocIRTableBodyNode,
-    DocIRTableCellNode,
-    DocIRTableHeaderNode,
-    DocIRTableNode,
-    DocIRTableRowNode,
-    DocIRTextSpanNode,
-    DocIRUnorderedListNode,
+from document_ir import (
+    DocumentIRBlockquoteNode,
+    DocumentIRCodeBlockNode,
+    DocumentIRDocumentNode,
+    DocumentIRHeadingNode,
+    DocumentIRImageNode,
+    DocumentIRLineBreakNode,
+    DocumentIRListItemNode,
+    DocumentIRNode,
+    DocumentIROrderedListNode,
+    DocumentIRParagraphNode,
+    DocumentIRTableBodyNode,
+    DocumentIRTableCellNode,
+    DocumentIRTableHeaderNode,
+    DocumentIRTableNode,
+    DocumentIRTableRowNode,
+    DocumentIRTextSpanNode,
+    DocumentIRUnorderedListNode,
 )
 
 # Style IDs / names that map to heading levels 1-6.
@@ -83,8 +83,8 @@ _SIZE_TO_HEADING_LEVEL: List[Tuple[int, int]] = [
 ]
 
 
-def docx_ast_to_doc_ir(document: DocxASTDocumentNode) -> DocIRDocumentNode:
-    """Convert a DOCX AST document into a doc_ir document.
+def docx_ast_to_document_ir(document: DocxASTDocumentNode) -> DocumentIRDocumentNode:
+    """Convert a DOCX AST document into a document_ir document.
 
     This is the public entry point for the mapper.
 
@@ -92,10 +92,10 @@ def docx_ast_to_doc_ir(document: DocxASTDocumentNode) -> DocIRDocumentNode:
         document: The root DocxASTDocumentNode produced by DocxASTParser.
 
     Returns:
-        A DocIRDocumentNode containing the format-agnostic intermediate
+        A DocumentIRDocumentNode containing the format-agnostic intermediate
         representation of the document content.
     """
-    mapper = _DocxToDocIRMapper(document)
+    mapper = _DocxToDocumentIRMapper(document)
     return mapper.map()
 
 
@@ -133,8 +133,8 @@ class _NumLevel:
         self.start = start
 
 
-class _DocxToDocIRMapper:
-    """Maps a DOCX AST to a doc_ir tree.
+class _DocxToDocumentIRMapper:
+    """Maps a DOCX AST to a document_ir tree.
 
     Handles:
     - Style resolution with inheritance chains
@@ -152,8 +152,8 @@ class _DocxToDocIRMapper:
         # Built during map(): (num_id, ilvl) → _NumLevel
         self._num_levels: Dict[Tuple[str, int], _NumLevel] = {}
 
-    def map(self) -> DocIRDocumentNode:
-        """Perform the full mapping and return the doc_ir document."""
+    def map(self) -> DocumentIRDocumentNode:
+        """Perform the full mapping and return the document_ir document."""
         # Build supporting indexes from styles and numbering children
         for child in self._document.children:
             if isinstance(child, DocxASTStylesNode):
@@ -162,17 +162,17 @@ class _DocxToDocIRMapper:
             elif isinstance(child, DocxASTNumberingNode):
                 self._build_numbering_index(child)
 
-        doc_ir = DocIRDocumentNode(source_path=self._document.source_path)
+        document_ir = DocumentIRDocumentNode(source_path=self._document.source_path)
 
         body = next(
             (c for c in self._document.children if isinstance(c, DocxASTBodyNode)),
             None,
         )
         if body is None:
-            return doc_ir
+            return document_ir
 
-        self._map_block_sequence(list(body.children), doc_ir)
-        return doc_ir
+        self._map_block_sequence(list(body.children), document_ir)
+        return document_ir
 
     def _build_style_index(self, styles_node: DocxASTStylesNode) -> None:
         """Build a flat map of style_id → _ResolvedStyle from the styles tree.
@@ -322,7 +322,7 @@ class _DocxToDocIRMapper:
     def _map_block_sequence(
         self,
         nodes: List[DocxASTNode],
-        target: DocIRNode,
+        target: DocumentIRNode,
     ) -> None:
         """Map a sequence of block-level DOCX nodes into target.
 
@@ -331,7 +331,7 @@ class _DocxToDocIRMapper:
 
         Args:
             nodes: Sequence of DocxASTNode (paragraphs, tables, etc.).
-            target: The doc_ir node to append mapped children to.
+            target: The document_ir node to append mapped children to.
         """
         i = 0
         while i < len(nodes):
@@ -384,7 +384,7 @@ class _DocxToDocIRMapper:
 
     def _build_list_tree(
         self, paras: List[DocxASTParagraphNode]
-    ) -> DocIRNode | None:
+    ) -> DocumentIRNode | None:
         """Build a nested list tree from a flat sequence of list paragraphs.
 
         The paragraphs are grouped by ilvl (indent level).  When ilvl
@@ -395,28 +395,28 @@ class _DocxToDocIRMapper:
             paras: Flat list of paragraphs all having numPr set.
 
         Returns:
-            The root list node (DocIRUnorderedListNode or DocIROrderedListNode),
+            The root list node (DocumentIRUnorderedListNode or DocumentIROrderedListNode),
             or None if paras is empty.
         """
         if not paras:
             return None
 
         # Stack of (list_node, current_item_node) pairs.
-        # list_node is the DocIRUnorderedListNode/DocIROrderedListNode.
-        # current_item_node is the DocIRListItemNode currently being built.
-        stack: List[Tuple[DocIRNode, DocIRListItemNode]] = []
+        # list_node is the DocumentIRUnorderedListNode/DocumentIROrderedListNode.
+        # current_item_node is the DocumentIRListItemNode currently being built.
+        stack: List[Tuple[DocumentIRNode, DocumentIRListItemNode]] = []
 
-        def _make_list(num_id: str, ilvl: int) -> DocIRNode:
+        def _make_list(num_id: str, ilvl: int) -> DocumentIRNode:
             num_level = self._get_num_level(num_id, ilvl)
             if num_level and num_level.num_fmt == "decimal":
-                return DocIROrderedListNode(start=num_level.start)
+                return DocumentIROrderedListNode(start=num_level.start)
 
             if num_level and num_level.num_fmt in (
                 "lowerLetter", "upperLetter", "lowerRoman", "upperRoman",
             ):
-                return DocIROrderedListNode(start=num_level.start)
+                return DocumentIROrderedListNode(start=num_level.start)
 
-            return DocIRUnorderedListNode()
+            return DocumentIRUnorderedListNode()
 
         for para in paras:
             num_pr = self._get_num_pr(para)
@@ -429,7 +429,7 @@ class _DocxToDocIRMapper:
             if not stack:
                 # Start the root list
                 root_list = _make_list(num_id, ilvl)
-                item = DocIRListItemNode()
+                item = DocumentIRListItemNode()
                 root_list.add_child(item)
                 stack.append((root_list, item))
                 self._fill_list_item(item, para)
@@ -442,7 +442,7 @@ class _DocxToDocIRMapper:
                 _, parent_item = stack[-1]
                 sub_list = _make_list(num_id, ilvl)
                 parent_item.add_child(sub_list)
-                item = DocIRListItemNode()
+                item = DocumentIRListItemNode()
                 sub_list.add_child(item)
                 stack.append((sub_list, item))
                 self._fill_list_item(item, para)
@@ -454,7 +454,7 @@ class _DocxToDocIRMapper:
 
                 # Add a new item to the list at this level
                 current_list, _ = stack[-1]
-                item = DocIRListItemNode()
+                item = DocumentIRListItemNode()
                 current_list.add_child(item)
                 stack[-1] = (current_list, item)
                 self._fill_list_item(item, para)
@@ -462,7 +462,7 @@ class _DocxToDocIRMapper:
             else:
                 # Same level: add a new sibling item
                 current_list, _ = stack[-1]
-                item = DocIRListItemNode()
+                item = DocumentIRListItemNode()
                 current_list.add_child(item)
                 stack[-1] = (current_list, item)
                 self._fill_list_item(item, para)
@@ -473,18 +473,18 @@ class _DocxToDocIRMapper:
         return stack[0][0]
 
     def _fill_list_item(
-        self, item: DocIRListItemNode, para: DocxASTParagraphNode
+        self, item: DocumentIRListItemNode, para: DocxASTParagraphNode
     ) -> None:
-        """Fill a DocIRListItemNode with the inline content of a paragraph."""
-        para_node = DocIRParagraphNode()
+        """Fill a DocumentIRListItemNode with the inline content of a paragraph."""
+        para_node = DocumentIRParagraphNode()
         self._append_inline_content(para, para_node)
         if para_node.children:
             item.add_child(para_node)
 
     def _map_paragraph(
         self, para: DocxASTParagraphNode
-    ) -> DocIRNode | None:
-        """Map a single paragraph to the appropriate doc_ir node.
+    ) -> DocumentIRNode | None:
+        """Map a single paragraph to the appropriate document_ir node.
 
         Classification order:
         1. Style-based: heading, code, blockquote
@@ -497,7 +497,7 @@ class _DocxToDocIRMapper:
             para: The DocxASTParagraphNode to map.
 
         Returns:
-            A doc_ir node, or None if the paragraph is empty and would
+            A document_ir node, or None if the paragraph is empty and would
             produce no content.
         """
         ppr = next(
@@ -510,26 +510,26 @@ class _DocxToDocIRMapper:
 
         # Heading via style
         if resolved and resolved.heading_level is not None:
-            heading = DocIRHeadingNode(level=resolved.heading_level)
+            heading = DocumentIRHeadingNode(level=resolved.heading_level)
             self._append_inline_content(para, heading)
             return heading if heading.children else None
 
         # Heading via outline_level in paragraph properties
         if ppr and ppr.outline_level is not None:
             level = ppr.outline_level + 1  # outline 0 → H1
-            heading = DocIRHeadingNode(level=level)
+            heading = DocumentIRHeadingNode(level=level)
             self._append_inline_content(para, heading)
             return heading if heading.children else None
 
         # Code block via style
         if resolved and resolved.is_code:
             content = self._extract_plain_text(para)
-            return DocIRCodeBlockNode(language="", content=content)
+            return DocumentIRCodeBlockNode(language="", content=content)
 
         # Blockquote via style
         if resolved and resolved.is_blockquote:
-            bq = DocIRBlockquoteNode()
-            inner = DocIRParagraphNode()
+            bq = DocumentIRBlockquoteNode()
+            inner = DocumentIRParagraphNode()
             self._append_inline_content(para, inner)
             if inner.children:
                 bq.add_child(inner)
@@ -538,17 +538,17 @@ class _DocxToDocIRMapper:
         # Heuristic: monospace font → code
         if self._para_is_monospace(para, resolved):
             content = self._extract_plain_text(para)
-            return DocIRCodeBlockNode(language="", content=content)
+            return DocumentIRCodeBlockNode(language="", content=content)
 
         # Heuristic: bold + large font → heading
         heading_level = self._infer_heading_level(para, resolved)
         if heading_level is not None:
-            heading = DocIRHeadingNode(level=heading_level)
+            heading = DocumentIRHeadingNode(level=heading_level)
             self._append_inline_content(para, heading)
             return heading if heading.children else None
 
         # Default: paragraph
-        node = DocIRParagraphNode()
+        node = DocumentIRParagraphNode()
         self._append_inline_content(para, node)
         return node if node.children else None
 
@@ -641,13 +641,13 @@ class _DocxToDocIRMapper:
 
         return None
 
-    def _map_table(self, table: DocxASTTableNode) -> DocIRTableNode:
-        """Map a DOCX table to a DocIRTableNode.
+    def _map_table(self, table: DocxASTTableNode) -> DocumentIRTableNode:
+        """Map a DOCX table to a DocumentIRTableNode.
 
         Rows marked as header rows (via tblHeader) go into a
-        DocIRTableHeaderNode; all others go into a DocIRTableBodyNode.
+        DocumentIRTableHeaderNode; all others go into a DocumentIRTableBodyNode.
         """
-        ir_table = DocIRTableNode()
+        ir_table = DocumentIRTableNode()
         header_rows: List[DocxASTTableRowNode] = []
         body_rows: List[DocxASTTableRowNode] = []
 
@@ -664,14 +664,14 @@ class _DocxToDocIRMapper:
                     body_rows.append(child)
 
         if header_rows:
-            ir_header = DocIRTableHeaderNode()
+            ir_header = DocumentIRTableHeaderNode()
             for row in header_rows:
                 ir_header.add_child(self._map_table_row(row, is_header=True))
 
             ir_table.add_child(ir_header)
 
         if body_rows:
-            ir_body = DocIRTableBodyNode()
+            ir_body = DocumentIRTableBodyNode()
             for row in body_rows:
                 ir_body.add_child(self._map_table_row(row, is_header=False))
 
@@ -679,16 +679,16 @@ class _DocxToDocIRMapper:
 
         # If no rows were classified as header, put everything in body
         if not header_rows and not body_rows:
-            ir_body = DocIRTableBodyNode()
+            ir_body = DocumentIRTableBodyNode()
             ir_table.add_child(ir_body)
 
         return ir_table
 
     def _map_table_row(
         self, row: DocxASTTableRowNode, is_header: bool
-    ) -> DocIRTableRowNode:
+    ) -> DocumentIRTableRowNode:
         """Map a table row."""
-        ir_row = DocIRTableRowNode()
+        ir_row = DocumentIRTableRowNode()
         for child in row.children:
             if isinstance(child, DocxASTTableCellNode):
                 ir_row.add_child(self._map_table_cell(child, is_header=is_header))
@@ -697,7 +697,7 @@ class _DocxToDocIRMapper:
 
     def _map_table_cell(
         self, cell: DocxASTTableCellNode, is_header: bool
-    ) -> DocIRTableCellNode:
+    ) -> DocumentIRTableCellNode:
         """Map a table cell.
 
         Cell alignment is taken from the first paragraph's justification,
@@ -722,7 +722,7 @@ class _DocxToDocIRMapper:
                 if jc in ("center", "right", "left"):
                     alignment = jc
 
-        ir_cell = DocIRTableCellNode(is_header=is_header, alignment=alignment)
+        ir_cell = DocumentIRTableCellNode(is_header=is_header, alignment=alignment)
 
         # Map cell content — paragraphs and nested tables
         for child in cell.children:
@@ -737,7 +737,7 @@ class _DocxToDocIRMapper:
         return ir_cell
 
     def _append_inline_content(
-        self, para: DocxASTParagraphNode, target: DocIRNode
+        self, para: DocxASTParagraphNode, target: DocumentIRNode
     ) -> None:
         """Collect inline nodes from a paragraph's runs and append to target."""
         for child in para.children:
@@ -746,11 +746,11 @@ class _DocxToDocIRMapper:
                     target.add_child(ir_node)
             # Bookmarks are silently skipped
 
-    def _map_run(self, run: DocxASTRunNode) -> List[DocIRNode]:
-        """Map a single run to a list of doc_ir inline nodes.
+    def _map_run(self, run: DocxASTRunNode) -> List[DocumentIRNode]:
+        """Map a single run to a list of document_ir inline nodes.
 
         A run may contain text, tabs, breaks, and drawings.  Text content
-        is emitted as DocIRTextSpanNode with formatting flags from the rPr.
+        is emitted as DocumentIRTextSpanNode with formatting flags from the rPr.
         """
         rpr = next(
             (c for c in run.children if isinstance(c, DocxASTRunPropertiesNode)),
@@ -773,7 +773,7 @@ class _DocxToDocIRMapper:
             if rpr.font_ascii.lower() in _MONOSPACE_FONTS:
                 code = True
 
-        result: List[DocIRNode] = []
+        result: List[DocumentIRNode] = []
 
         for child in run.children:
             if isinstance(child, DocxASTRunPropertiesNode):
@@ -781,7 +781,7 @@ class _DocxToDocIRMapper:
 
             if isinstance(child, DocxASTTextNode):
                 if child.content:
-                    result.append(DocIRTextSpanNode(
+                    result.append(DocumentIRTextSpanNode(
                         content=child.content,
                         bold=bold,
                         italic=italic,
@@ -792,7 +792,7 @@ class _DocxToDocIRMapper:
             elif isinstance(child, DocxASTTabNode):
                 # Represent tabs as a space span — they are layout artefacts
                 # in most prose contexts
-                result.append(DocIRTextSpanNode(
+                result.append(DocumentIRTextSpanNode(
                     content="\t",
                     bold=bold,
                     italic=italic,
@@ -802,7 +802,7 @@ class _DocxToDocIRMapper:
 
             elif isinstance(child, DocxASTBreakNode):
                 if child.break_type == "textWrapping":
-                    result.append(DocIRLineBreakNode())
+                    result.append(DocumentIRLineBreakNode())
                 # Page and column breaks are dropped — they are layout-only
 
             elif isinstance(child, DocxASTLastRenderedPageBreakNode):
@@ -815,13 +815,13 @@ class _DocxToDocIRMapper:
 
         return result
 
-    def _map_drawing(self, drawing: DocxASTDrawingNode) -> DocIRNode | None:
-        """Map a drawing node to a DocIRImageNode."""
+    def _map_drawing(self, drawing: DocxASTDrawingNode) -> DocumentIRNode | None:
+        """Map a drawing node to a DocumentIRImageNode."""
         url = drawing.resolved_path or drawing.relationship_id or ""
         if not url:
             return None
 
-        return DocIRImageNode(
+        return DocumentIRImageNode(
             url=url,
             alt_text=drawing.description or "",
             title=None,

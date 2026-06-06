@@ -1,45 +1,45 @@
 from typing import List, Sequence
 
-from doc_ir import (
-    DocIRBlockquoteNode,
-    DocIRCodeBlockNode,
-    DocIRDocumentNode,
-    DocIRHeadingNode,
-    DocIRHorizontalRuleNode,
-    DocIRImageNode,
-    DocIRLineBreakNode,
-    DocIRLinkNode,
-    DocIRListItemNode,
-    DocIRNode,
-    DocIROrderedListNode,
-    DocIRParagraphNode,
-    DocIRTableBodyNode,
-    DocIRTableCellNode,
-    DocIRTableHeaderNode,
-    DocIRTableNode,
-    DocIRTableRowNode,
-    DocIRTextSpanNode,
-    DocIRUnorderedListNode,
+from document_ir import (
+    DocumentIRBlockquoteNode,
+    DocumentIRCodeBlockNode,
+    DocumentIRDocumentNode,
+    DocumentIRHeadingNode,
+    DocumentIRHorizontalRuleNode,
+    DocumentIRImageNode,
+    DocumentIRLineBreakNode,
+    DocumentIRLinkNode,
+    DocumentIRListItemNode,
+    DocumentIRNode,
+    DocumentIROrderedListNode,
+    DocumentIRParagraphNode,
+    DocumentIRTableBodyNode,
+    DocumentIRTableCellNode,
+    DocumentIRTableHeaderNode,
+    DocumentIRTableNode,
+    DocumentIRTableRowNode,
+    DocumentIRTextSpanNode,
+    DocumentIRUnorderedListNode,
 )
 
 
-def doc_ir_to_markdown(document: DocIRDocumentNode) -> str:
-    """Convert a doc_ir document tree to a Markdown string.
+def document_ir_to_markdown(document: DocumentIRDocumentNode) -> str:
+    """Convert a document_ir document tree to a Markdown string.
 
     Args:
-        document: The root DocIRDocumentNode to serialise.
+        document: The root DocumentIRDocumentNode to serialise.
 
     Returns:
         A Markdown string representing the document content.
     """
-    serialiser = _DocIRToMarkdownSerialiser()
+    serialiser = _DocumentIRToMarkdownSerialiser()
     return serialiser.serialise(document)
 
 
-class _DocIRToMarkdownSerialiser:
-    """Walks a doc_ir tree and emits Markdown text."""
+class _DocumentIRToMarkdownSerialiser:
+    """Walks a document_ir tree and emits Markdown text."""
 
-    def serialise(self, document: DocIRDocumentNode) -> str:
+    def serialise(self, document: DocumentIRDocumentNode) -> str:
         """Serialise a document to a Markdown string.
 
         Args:
@@ -58,7 +58,7 @@ class _DocIRToMarkdownSerialiser:
 
     def _serialise_block(
         self,
-        node: DocIRNode,
+        node: DocumentIRNode,
         depth: int,
         ordered_index: int | None,  # pylint: disable=unused-argument
     ) -> str | None:
@@ -73,44 +73,44 @@ class _DocIRToMarkdownSerialiser:
         Returns:
             The Markdown string for this block, or None if nothing to emit.
         """
-        if isinstance(node, DocIRHeadingNode):
+        if isinstance(node, DocumentIRHeadingNode):
             return self._serialise_heading(node)
 
-        if isinstance(node, DocIRParagraphNode):
+        if isinstance(node, DocumentIRParagraphNode):
             return self._serialise_paragraph(node)
 
-        if isinstance(node, DocIRBlockquoteNode):
+        if isinstance(node, DocumentIRBlockquoteNode):
             return self._serialise_blockquote(node)
 
-        if isinstance(node, DocIRCodeBlockNode):
+        if isinstance(node, DocumentIRCodeBlockNode):
             return self._serialise_code_block(node)
 
-        if isinstance(node, DocIRUnorderedListNode):
+        if isinstance(node, DocumentIRUnorderedListNode):
             return self._serialise_unordered_list(node, depth=depth)
 
-        if isinstance(node, DocIROrderedListNode):
+        if isinstance(node, DocumentIROrderedListNode):
             return self._serialise_ordered_list(node, depth=depth)
 
-        if isinstance(node, DocIRTableNode):
+        if isinstance(node, DocumentIRTableNode):
             return self._serialise_table(node)
 
-        if isinstance(node, DocIRHorizontalRuleNode):
+        if isinstance(node, DocumentIRHorizontalRuleNode):
             return "---"
 
         return None
 
-    def _serialise_heading(self, node: DocIRHeadingNode) -> str:
+    def _serialise_heading(self, node: DocumentIRHeadingNode) -> str:
         """Serialise a heading node."""
         prefix = "#" * node.level
         text = self._serialise_inline_children(node.children)
         return f"{prefix} {text}"
 
-    def _serialise_paragraph(self, node: DocIRParagraphNode) -> str | None:
+    def _serialise_paragraph(self, node: DocumentIRParagraphNode) -> str | None:
         """Serialise a paragraph node."""
         text = self._serialise_inline_children(node.children)
         return text if text else None
 
-    def _serialise_blockquote(self, node: DocIRBlockquoteNode) -> str | None:
+    def _serialise_blockquote(self, node: DocumentIRBlockquoteNode) -> str | None:
         """Serialise a blockquote by prefixing each block line with '> '."""
         inner_blocks: List[str] = []
         for child in node.children:
@@ -125,31 +125,31 @@ class _DocIRToMarkdownSerialiser:
         prefixed = "\n".join(f"> {line}" if line else ">" for line in inner.splitlines())
         return prefixed
 
-    def _serialise_code_block(self, node: DocIRCodeBlockNode) -> str:
+    def _serialise_code_block(self, node: DocumentIRCodeBlockNode) -> str:
         """Serialise a fenced code block."""
         lang = node.language or ""
         return f"```{lang}\n{node.content}\n```"
 
     def _serialise_unordered_list(
-        self, node: DocIRUnorderedListNode, depth: int
+        self, node: DocumentIRUnorderedListNode, depth: int
     ) -> str | None:
         """Serialise an unordered list."""
         lines: List[str] = []
         for child in node.children:
-            if isinstance(child, DocIRListItemNode):
+            if isinstance(child, DocumentIRListItemNode):
                 item_lines = self._serialise_list_item(child, depth=depth, ordered_index=None)
                 lines.extend(item_lines)
 
         return "\n".join(lines) if lines else None
 
     def _serialise_ordered_list(
-        self, node: DocIROrderedListNode, depth: int
+        self, node: DocumentIROrderedListNode, depth: int
     ) -> str | None:
         """Serialise an ordered list."""
         lines: List[str] = []
         index = node.start
         for child in node.children:
-            if isinstance(child, DocIRListItemNode):
+            if isinstance(child, DocumentIRListItemNode):
                 item_lines = self._serialise_list_item(child, depth=depth, ordered_index=index)
                 lines.extend(item_lines)
                 index += 1
@@ -158,7 +158,7 @@ class _DocIRToMarkdownSerialiser:
 
     def _serialise_list_item(
         self,
-        item: DocIRListItemNode,
+        item: DocumentIRListItemNode,
         depth: int,
         ordered_index: int | None,
     ) -> List[str]:
@@ -189,7 +189,7 @@ class _DocIRToMarkdownSerialiser:
         is_first_para = True
 
         for child in item.children:
-            if isinstance(child, DocIRParagraphNode):
+            if isinstance(child, DocumentIRParagraphNode):
                 text = self._serialise_inline_children(child.children)
                 if is_first_para:
                     lines.append(f"{indent}{marker} {text}")
@@ -197,19 +197,19 @@ class _DocIRToMarkdownSerialiser:
                 else:
                     lines.append(f"{continuation_indent}{text}")
 
-            elif isinstance(child, DocIRUnorderedListNode):
+            elif isinstance(child, DocumentIRUnorderedListNode):
                 is_first_para = False
                 nested = self._serialise_unordered_list(child, depth=depth + 1)
                 if nested:
                     lines.extend(nested.splitlines())
 
-            elif isinstance(child, DocIROrderedListNode):
+            elif isinstance(child, DocumentIROrderedListNode):
                 is_first_para = False
                 nested = self._serialise_ordered_list(child, depth=depth + 1)
                 if nested:
                     lines.extend(nested.splitlines())
 
-            elif isinstance(child, DocIRCodeBlockNode):
+            elif isinstance(child, DocumentIRCodeBlockNode):
                 is_first_para = False
                 code = self._serialise_code_block(child)
                 for code_line in code.splitlines():
@@ -217,25 +217,25 @@ class _DocIRToMarkdownSerialiser:
 
         return lines
 
-    def _serialise_table(self, node: DocIRTableNode) -> str | None:
+    def _serialise_table(self, node: DocumentIRTableNode) -> str | None:
         """Serialise a table to GFM pipe-table syntax.
 
         If a header section is present it is emitted first with a separator
         row.  If there is no header, the first body row is treated as the
         header (required by GFM table syntax).
         """
-        header_rows: List[DocIRTableRowNode] = []
-        body_rows: List[DocIRTableRowNode] = []
+        header_rows: List[DocumentIRTableRowNode] = []
+        body_rows: List[DocumentIRTableRowNode] = []
 
         for child in node.children:
-            if isinstance(child, DocIRTableHeaderNode):
+            if isinstance(child, DocumentIRTableHeaderNode):
                 for row in child.children:
-                    if isinstance(row, DocIRTableRowNode):
+                    if isinstance(row, DocumentIRTableRowNode):
                         header_rows.append(row)
 
-            elif isinstance(child, DocIRTableBodyNode):
+            elif isinstance(child, DocumentIRTableBodyNode):
                 for row in child.children:
-                    if isinstance(row, DocIRTableRowNode):
+                    if isinstance(row, DocumentIRTableRowNode):
                         body_rows.append(row)
 
         if not header_rows and not body_rows:
@@ -284,21 +284,21 @@ class _DocIRToMarkdownSerialiser:
 
         return "\n".join(lines)
 
-    def _row_alignments(self, row: DocIRTableRowNode) -> List[str]:
+    def _row_alignments(self, row: DocumentIRTableRowNode) -> List[str]:
         """Return a list of alignment strings for each cell in a row."""
         alignments: List[str] = []
         for child in row.children:
-            if isinstance(child, DocIRTableCellNode):
+            if isinstance(child, DocumentIRTableCellNode):
                 alignments.append(child.alignment or "left")
         return alignments
 
     def _render_row_cells(
-        self, row: DocIRTableRowNode, col_count: int
+        self, row: DocumentIRTableRowNode, col_count: int
     ) -> List[str]:
         """Render all cells in a row to strings, padding to col_count."""
         cells: List[str] = []
         for child in row.children:
-            if isinstance(child, DocIRTableCellNode):
+            if isinstance(child, DocumentIRTableCellNode):
                 cells.append(self._serialise_cell(child))
 
         # Pad with empty cells if row is short
@@ -307,7 +307,7 @@ class _DocIRToMarkdownSerialiser:
 
         return cells[:col_count]
 
-    def _serialise_cell(self, cell: DocIRTableCellNode) -> str:
+    def _serialise_cell(self, cell: DocumentIRTableCellNode) -> str:
         """Serialise a table cell's content to a single-line string.
 
         Inline children are serialised directly; block children (paragraphs,
@@ -315,20 +315,20 @@ class _DocIRToMarkdownSerialiser:
         """
         parts: List[str] = []
 
-        # Inline children directly on the cell (from markdown_to_doc_ir path)
-        inline_types = (DocIRTextSpanNode, DocIRLinkNode, DocIRImageNode, DocIRLineBreakNode)
+        # Inline children directly on the cell (from markdown_to_document_ir path)
+        inline_types = (DocumentIRTextSpanNode, DocumentIRLinkNode, DocumentIRImageNode, DocumentIRLineBreakNode)
         inline_children = [c for c in cell.children if isinstance(c, inline_types)]
         if inline_children:
             parts.append(self._serialise_inline_children(inline_children))
 
-        # Block children (from docx_ast_to_doc_ir path)
+        # Block children (from docx_ast_to_document_ir path)
         for child in cell.children:
-            if isinstance(child, DocIRParagraphNode):
+            if isinstance(child, DocumentIRParagraphNode):
                 text = self._serialise_inline_children(child.children)
                 if text:
                     parts.append(text)
 
-            elif isinstance(child, DocIRCodeBlockNode):
+            elif isinstance(child, DocumentIRCodeBlockNode):
                 # A code block in a cell (e.g. from a monospace-font paragraph)
                 # is rendered as an inline code span rather than a fenced block.
                 if child.content:
@@ -342,7 +342,7 @@ class _DocIRToMarkdownSerialiser:
         padded = [cell.ljust(col_widths[i]) for i, cell in enumerate(cells)]
         return "| " + " | ".join(padded) + " |"
 
-    def _serialise_inline_children(self, children: Sequence[DocIRNode]) -> str:
+    def _serialise_inline_children(self, children: Sequence[DocumentIRNode]) -> str:
         """Serialise a list of inline nodes to a Markdown string."""
         parts: List[str] = []
         for child in children:
@@ -350,24 +350,24 @@ class _DocIRToMarkdownSerialiser:
 
         return "".join(parts)
 
-    def _serialise_inline(self, node: DocIRNode) -> str:
+    def _serialise_inline(self, node: DocumentIRNode) -> str:
         """Serialise a single inline node."""
-        if isinstance(node, DocIRTextSpanNode):
+        if isinstance(node, DocumentIRTextSpanNode):
             return self._serialise_text_span(node)
 
-        if isinstance(node, DocIRLinkNode):
+        if isinstance(node, DocumentIRLinkNode):
             inner = self._serialise_inline_children(node.children)
             return f"[{inner}]({node.url})"
 
-        if isinstance(node, DocIRImageNode):
+        if isinstance(node, DocumentIRImageNode):
             return f"![{node.alt_text}]({node.url})"
 
-        if isinstance(node, DocIRLineBreakNode):
+        if isinstance(node, DocumentIRLineBreakNode):
             return "  \n"
 
         return ""
 
-    def _serialise_text_span(self, node: DocIRTextSpanNode) -> str:
+    def _serialise_text_span(self, node: DocumentIRTextSpanNode) -> str:
         """Serialise a text span, wrapping with Markdown formatting markers."""
         if node.code:
             # Code spans are returned as-is — no escaping or further wrapping.
