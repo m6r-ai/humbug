@@ -20,6 +20,8 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
   everything we need anyway and these sorts of delimeter comments simply add clutter to the code.
 - If you are writing tests, the tests must reflect the correct and desired behaviour.  NEVER write or patch a test to
   mask broken implementation logic.  If the logic is wrong then a test must fail.
+- Test docstrings must describe the expected correct behaviour only.  They must not reference previously broken
+  behaviour, historical bugs, or implementation details of past fixes.  A test is a specification, not a changelog.
 
 ## Code restructuring
 

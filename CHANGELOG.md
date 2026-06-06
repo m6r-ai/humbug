@@ -40,6 +40,7 @@ Internal structure changes:
 - Separated out more functionality from the tab manager (was the column manager) into the tabs.
 - Created a clean separation of sidebar functionality and added a new sidebar manager.
 - Hoisted all tabs and sidebars to the top of the src/desktop directory.
+- Added pytest tests for the Markdown syntax highlighter.
 
 ## v48 (2026-05-22)
 

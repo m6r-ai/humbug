@@ -815,6 +815,9 @@ class StyleManager(QObject):
             TokenType.STRING: ColorRole.SYNTAX_20,
             TokenType.TABLE: ColorRole.SYNTAX_03,
             TokenType.TEXT: ColorRole.SYNTAX_17,
+            TokenType.STRIKETHROUGH: ColorRole.SYNTAX_10,
+            TokenType.STRIKETHROUGH_END: ColorRole.SYNTAX_07,
+            TokenType.STRIKETHROUGH_START: ColorRole.SYNTAX_07,
             TokenType.TYPE: ColorRole.SYNTAX_21,
             TokenType.VECTOR_START: ColorRole.SYNTAX_08,
             TokenType.XML_DOC: ColorRole.SYNTAX_03
@@ -862,6 +865,9 @@ class StyleManager(QObject):
             TokenType.LINK_URL: ColorRole.SYNTAX_20,
             TokenType.LIST_MARKER: ColorRole.SYNTAX_15,
             TokenType.TABLE: ColorRole.SYNTAX_03,
+            TokenType.STRIKETHROUGH: ColorRole.SYNTAX_10,
+            TokenType.STRIKETHROUGH_END: ColorRole.SYNTAX_07,
+            TokenType.STRIKETHROUGH_START: ColorRole.SYNTAX_07,
             TokenType.TEXT: ColorRole.TEXT_PRIMARY
         }
 

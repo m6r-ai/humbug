@@ -174,12 +174,28 @@ class MarkdownParser(Parser):
 
         at_start = i == 0
         preceded_by_space = not at_start and text[i - 1].isspace()
-        not_part_of_bold = at_start or text[i-1] != text[i]
+        not_part_of_bold = text[i + 1] != text[i]
 
         is_asterisk = text[i] == '*'
         is_underscore = text[i] == '_' and (at_start or preceded_by_space)
 
         return (is_asterisk or is_underscore) and not_part_of_bold
+
+    def _is_strikethrough_marker(self, text: str, i: int) -> bool:
+        """
+        Check if position i starts a valid strikethrough formatting marker.
+
+        Args:
+            text: The text being parsed
+            i: The current position in the text
+
+        Returns:
+            True if position i starts a strikethrough marker (~~text~~)
+        """
+        if i + 2 >= len(text) or text[i + 2].isspace():
+            return False
+
+        return text[i:i+2] == '~~'
 
     def _parse_inline_formatting_in_text(self, text_token: Token, block_type: TokenType | None) -> List[Token]:
         """
@@ -246,6 +262,11 @@ class MarkdownParser(Parser):
                         current_text_start = i
                         continue
 
+                # Incomplete image syntax; treat the '![' as plain text
+                current_text_start = i
+                i += 2
+                continue
+
             # Check for link
             elif text[i] == '[':
                 # Add any accumulated text
@@ -282,6 +303,9 @@ class MarkdownParser(Parser):
                         current_text_start = i
                         continue
 
+                # Incomplete link syntax; treat the '[' as plain text
+                current_text_start = i
+
             # Check for inline code
             elif text[i] == '`':
                 # Add any accumulated text
@@ -304,6 +328,9 @@ class MarkdownParser(Parser):
                     i = code_end + 1
                     current_text_start = i
                     continue
+
+                # No closing backtick found; treat the ` as plain text
+                current_text_start = i
 
             # Check for bold (**text** or __text__)
             elif self._is_bold_marker(text, i):
@@ -332,16 +359,31 @@ class MarkdownParser(Parser):
                     current_text_start = i
                     continue
 
+                # No closing bold marker found; treat the marker as plain text
+                current_text_start = i
+
             # Check for italic (*text* or _text_)
             elif self._is_italic_marker(text, i):
                 # Add any accumulated text
                 add_text_token(current_text_start, i)
 
                 marker = text[i]
-                italic_end = text.find(marker, i + 1)
-                if (italic_end != -1 and
-                    (italic_end + 1 >= len(text) or text[italic_end + 1] != marker)):  # Avoid **
+                # Search for a closing marker that is not part of a ** pair
+                search_from = i + 1
+                italic_end = -1
+                while True:
+                    candidate = text.find(marker, search_from)
+                    if candidate == -1:
+                        break
 
+                    if candidate + 1 >= len(text) or text[candidate + 1] != marker:
+                        italic_end = candidate
+                        break
+
+                    # This candidate is part of **, skip past it
+                    search_from = candidate + 2
+
+                if italic_end != -1:
                     # Italic start
                     tokens.append(Token(TokenType.ITALIC_START, marker, base_position + i))
 
@@ -360,6 +402,38 @@ class MarkdownParser(Parser):
                     i = italic_end + 1
                     current_text_start = i
                     continue
+
+                # Italic span rejected or unclosed; treat the marker as plain text
+                current_text_start = i
+
+            # Check for strikethrough (~~text~~)
+            elif self._is_strikethrough_marker(text, i):
+                # Add any accumulated text
+                add_text_token(current_text_start, i)
+
+                strike_end = text.find('~~', i + 2)
+                if strike_end != -1:
+                    # Strikethrough start
+                    tokens.append(Token(TokenType.STRIKETHROUGH_START, '~~', base_position + i))
+
+                    # Strikethrough content (may contain nested formatting)
+                    strike_content = text[i + 2:strike_end]
+                    if strike_content:
+                        strike_tokens = self._parse_inline_formatting_in_text(
+                            Token(TokenType.STRIKETHROUGH, strike_content, base_position + i + 2),
+                            TokenType.STRIKETHROUGH
+                        )
+                        tokens.extend(strike_tokens)
+
+                    # Strikethrough end
+                    tokens.append(Token(TokenType.STRIKETHROUGH_END, '~~', base_position + strike_end))
+
+                    i = strike_end + 2
+                    current_text_start = i
+                    continue
+
+                # No closing strikethrough marker; treat the ~~ as plain text
+                current_text_start = i
 
             # No formatting found, move to next character
             i += 1
@@ -446,19 +520,22 @@ class MarkdownParser(Parser):
 
                         # If embedded parser is NOT in a fence block, this fence is for US to handle
                         if not embedded_in_fence:
-                            # This fence closes OUR block
-                            parse_embedded = False
-                            in_fence_block = False
-                            fence_depth = 0
-                            nested_fence_depth = 0
-                            language = ProgrammingLanguage.UNKNOWN
-                            embedded_parser_state = None
                             indent = len(input_str) - len(stripped)
-                            self._tokens.append(Token(type=TokenType.FENCE_END, value='```', start=indent))
-                            return self._create_parser_state(
-                                in_fence_block, fence_depth, nested_fence_depth,
-                                language, in_list_item, list_indent_stack, block_type, embedded_parser_state
-                            )
+                            # Only close if not indented deeper than the opening fence;
+                            # a more-indented ``` is content inside the block
+                            if indent <= fence_depth:
+                                # This fence closes OUR block
+                                parse_embedded = False
+                                in_fence_block = False
+                                fence_depth = 0
+                                nested_fence_depth = 0
+                                language = ProgrammingLanguage.UNKNOWN
+                                embedded_parser_state = None
+                                self._tokens.append(Token(type=TokenType.FENCE_END, value='```', start=indent))
+                                return self._create_parser_state(
+                                    in_fence_block, fence_depth, nested_fence_depth,
+                                    language, in_list_item, list_indent_stack, block_type, embedded_parser_state
+                                )
 
             lexer = MarkdownLexer()
             lexer.lex(None, input_str)
