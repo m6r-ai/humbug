@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v49 (2026-06-xx)
+## v49 (2026-06-06)
 
 New features:
 
