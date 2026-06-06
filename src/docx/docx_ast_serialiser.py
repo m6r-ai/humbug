@@ -540,6 +540,13 @@ class _DocxASTSerialiser:
             )
             parts.append(f'<w:tblBorders>{border_parts}</w:tblBorders>')
 
+        else:
+            border_parts = "".join(
+                f'<w:{side} w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
+                for side in ("top", "left", "bottom", "right", "insideH", "insideV")
+            )
+            parts.append(f'<w:tblBorders>{border_parts}</w:tblBorders>')
+
         return "<w:tblPr>" + "".join(parts) + "</w:tblPr>"
 
     def _serialise_table_row(self, node: DocxASTTableRowNode) -> str:

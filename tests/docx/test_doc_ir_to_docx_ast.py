@@ -21,6 +21,7 @@ from docx.docx_ast_node import (
     DocxASTTableCellNode,
     DocxASTTableCellPropertiesNode,
     DocxASTTableNode,
+    DocxASTTablePropertiesNode,
     DocxASTTableRowNode,
     DocxASTTableRowPropertiesNode,
     DocxASTTextNode,
@@ -765,6 +766,106 @@ class TestTableMapping:
         para = next(c for c in docx_cell.children if isinstance(c, DocxASTParagraphNode))
         ppr = next(c for c in para.children if isinstance(c, DocxASTParagraphPropertiesNode))
         assert ppr.justification == "center"
+
+    def test_table_has_properties_node(self):
+        result = _map(_doc(_ir_table([["A"]])))
+        table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
+        tbl_pr = next(
+            (c for c in table.children if isinstance(c, DocxASTTablePropertiesNode)),
+            None,
+        )
+        assert tbl_pr is not None
+
+    def test_table_width_is_full_page(self):
+        result = _map(_doc(_ir_table([["A"]])))
+        table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
+        tbl_pr = next(c for c in table.children if isinstance(c, DocxASTTablePropertiesNode))
+        assert tbl_pr.width == 5000
+        assert tbl_pr.width_type == "pct"
+
+    def test_cell_with_inline_children_has_paragraph(self):
+        table = DocIRTableNode()
+        body = DocIRTableBodyNode()
+        row = DocIRTableRowNode()
+        cell = DocIRTableCellNode(is_header=False, alignment="left")
+        cell.add_child(_span("Hello"))
+        row.add_child(cell)
+        body.add_child(row)
+        table.add_child(body)
+        result = _map(_doc(table))
+        docx_table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
+        docx_row = next(c for c in docx_table.children if isinstance(c, DocxASTTableRowNode))
+        docx_cell = next(c for c in docx_row.children if isinstance(c, DocxASTTableCellNode))
+        paras = [c for c in docx_cell.children if isinstance(c, DocxASTParagraphNode)]
+        assert len(paras) == 1
+
+    def test_cell_with_inline_children_has_correct_text(self):
+        table = DocIRTableNode()
+        body = DocIRTableBodyNode()
+        row = DocIRTableRowNode()
+        cell = DocIRTableCellNode(is_header=False, alignment="left")
+        cell.add_child(_span("Hello"))
+        row.add_child(cell)
+        body.add_child(row)
+        table.add_child(body)
+        result = _map(_doc(table))
+        docx_table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
+        docx_row = next(c for c in docx_table.children if isinstance(c, DocxASTTableRowNode))
+        docx_cell = next(c for c in docx_row.children if isinstance(c, DocxASTTableCellNode))
+        para = next(c for c in docx_cell.children if isinstance(c, DocxASTParagraphNode))
+        assert _text_of(para) == "Hello"
+
+    def test_cell_with_inline_bold_span(self):
+        table = DocIRTableNode()
+        body = DocIRTableBodyNode()
+        row = DocIRTableRowNode()
+        cell = DocIRTableCellNode(is_header=False, alignment="left")
+        cell.add_child(_span("Bold", bold=True))
+        row.add_child(cell)
+        body.add_child(row)
+        table.add_child(body)
+        result = _map(_doc(table))
+        docx_table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
+        docx_row = next(c for c in docx_table.children if isinstance(c, DocxASTTableRowNode))
+        docx_cell = next(c for c in docx_row.children if isinstance(c, DocxASTTableCellNode))
+        para = next(c for c in docx_cell.children if isinstance(c, DocxASTParagraphNode))
+        run = next(c for c in para.children if isinstance(c, DocxASTRunNode))
+        rpr = next(c for c in run.children if isinstance(c, DocxASTRunPropertiesNode))
+        assert rpr.bold is True
+
+    def test_cell_with_mixed_inline_and_block_children(self):
+        table = DocIRTableNode()
+        body = DocIRTableBodyNode()
+        row = DocIRTableRowNode()
+        cell = DocIRTableCellNode(is_header=False, alignment="left")
+        cell.add_child(_span("Inline"))
+        cell.add_child(_para(_span("Block")))
+        row.add_child(cell)
+        body.add_child(row)
+        table.add_child(body)
+        result = _map(_doc(table))
+        docx_table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
+        docx_row = next(c for c in docx_table.children if isinstance(c, DocxASTTableRowNode))
+        docx_cell = next(c for c in docx_row.children if isinstance(c, DocxASTTableCellNode))
+        paras = [c for c in docx_cell.children if isinstance(c, DocxASTParagraphNode)]
+        assert len(paras) == 2
+
+    def test_cell_alignment_respected_for_inline_children(self):
+        table = DocIRTableNode()
+        body = DocIRTableBodyNode()
+        row = DocIRTableRowNode()
+        cell = DocIRTableCellNode(is_header=False, alignment="right")
+        cell.add_child(_span("Right"))
+        row.add_child(cell)
+        body.add_child(row)
+        table.add_child(body)
+        result = _map(_doc(table))
+        docx_table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
+        docx_row = next(c for c in docx_table.children if isinstance(c, DocxASTTableRowNode))
+        docx_cell = next(c for c in docx_row.children if isinstance(c, DocxASTTableCellNode))
+        para = next(c for c in docx_cell.children if isinstance(c, DocxASTParagraphNode))
+        ppr = next(c for c in para.children if isinstance(c, DocxASTParagraphPropertiesNode))
+        assert ppr.justification == "right"
 
 
 # ---------------------------------------------------------------------------

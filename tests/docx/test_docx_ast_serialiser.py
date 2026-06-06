@@ -29,6 +29,7 @@ from docx.docx_ast_node import (
     DocxASTTableCellNode,
     DocxASTTableCellPropertiesNode,
     DocxASTTableNode,
+    DocxASTTablePropertiesNode,
     DocxASTTableRowNode,
     DocxASTTableRowPropertiesNode,
     DocxASTTextNode,
@@ -349,6 +350,88 @@ class TestDocumentXML:
         root = _parse_xml(result, "word/document.xml")
         tbl_header_elements = list(root.iter(_w("tblHeader")))
         assert len(tbl_header_elements) >= 1
+
+    def test_table_with_properties_has_tbl_pr(self):
+        doc = DocxASTDocumentNode()
+        doc.add_child(DocxASTStylesNode())
+        body = DocxASTBodyNode()
+        table = DocxASTTableNode()
+        table.add_child(DocxASTTablePropertiesNode(width=5000, width_type="pct"))
+        row = DocxASTTableRowNode()
+        cell = DocxASTTableCellNode()
+        cell.add_child(DocxASTTableCellPropertiesNode(width_type="auto"))
+        cell.add_child(DocxASTParagraphNode())
+        row.add_child(cell)
+        table.add_child(row)
+        body.add_child(table)
+        doc.add_child(body)
+        result = serialise_docx(doc)
+        root = _parse_xml(result, "word/document.xml")
+        tbl = root.find(f".//{_w('tbl')}")
+        tbl_pr = tbl.find(_w("tblPr"))
+        assert tbl_pr is not None
+
+    def test_table_with_properties_has_correct_width(self):
+        doc = DocxASTDocumentNode()
+        doc.add_child(DocxASTStylesNode())
+        body = DocxASTBodyNode()
+        table = DocxASTTableNode()
+        table.add_child(DocxASTTablePropertiesNode(width=5000, width_type="pct"))
+        row = DocxASTTableRowNode()
+        cell = DocxASTTableCellNode()
+        cell.add_child(DocxASTTableCellPropertiesNode(width_type="auto"))
+        cell.add_child(DocxASTParagraphNode())
+        row.add_child(cell)
+        table.add_child(row)
+        body.add_child(table)
+        doc.add_child(body)
+        result = serialise_docx(doc)
+        root = _parse_xml(result, "word/document.xml")
+        tbl_w = root.find(f".//{_w('tblW')}")
+        assert tbl_w.get(_w("w")) == "5000"
+        assert tbl_w.get(_w("type")) == "pct"
+
+    def test_table_with_properties_has_borders(self):
+        doc = DocxASTDocumentNode()
+        doc.add_child(DocxASTStylesNode())
+        body = DocxASTBodyNode()
+        table = DocxASTTableNode()
+        table.add_child(DocxASTTablePropertiesNode(width=5000, width_type="pct"))
+        row = DocxASTTableRowNode()
+        cell = DocxASTTableCellNode()
+        cell.add_child(DocxASTTableCellPropertiesNode(width_type="auto"))
+        cell.add_child(DocxASTParagraphNode())
+        row.add_child(cell)
+        table.add_child(row)
+        body.add_child(table)
+        doc.add_child(body)
+        result = serialise_docx(doc)
+        root = _parse_xml(result, "word/document.xml")
+        tbl_borders = root.find(f".//{_w('tblBorders')}")
+        assert tbl_borders is not None
+        border_vals = [el.get(_w("val")) for el in tbl_borders]
+        assert all(v == "single" for v in border_vals)
+
+    def test_table_no_borders_suppresses_borders(self):
+        doc = DocxASTDocumentNode()
+        doc.add_child(DocxASTStylesNode())
+        body = DocxASTBodyNode()
+        table = DocxASTTableNode()
+        table.add_child(DocxASTTablePropertiesNode(width=5000, width_type="pct", no_borders=True))
+        row = DocxASTTableRowNode()
+        cell = DocxASTTableCellNode()
+        cell.add_child(DocxASTTableCellPropertiesNode(width_type="auto"))
+        cell.add_child(DocxASTParagraphNode())
+        row.add_child(cell)
+        table.add_child(row)
+        body.add_child(table)
+        doc.add_child(body)
+        result = serialise_docx(doc)
+        root = _parse_xml(result, "word/document.xml")
+        tbl_borders = root.find(f".//{_w('tblBorders')}")
+        assert tbl_borders is not None
+        border_vals = [el.get(_w("val")) for el in tbl_borders]
+        assert all(v == "none" for v in border_vals)
 
 
 # ---------------------------------------------------------------------------

@@ -531,6 +531,9 @@ class _DocIRToDocxASTMapper:
         """Map a table node."""
         table = DocxASTTableNode()
 
+        tbl_pr = DocxASTTablePropertiesNode(width=5000, width_type="pct")
+        table.add_child(tbl_pr)
+
         for child in node.children:
             if isinstance(child, DocIRTableHeaderNode):
                 for row_node in child.children:
@@ -571,7 +574,25 @@ class _DocIRToDocxASTMapper:
         cpr = DocxASTTableCellPropertiesNode(width_type="auto")
         cell.add_child(cpr)
 
-        # Map cell content
+        # Separate inline children (text spans, links, images, line breaks) from
+        # block children.  Cells produced by markdown_to_doc_ir carry inline nodes
+        # directly as children of the cell rather than wrapped in a paragraph, so
+        # we collect them here and emit a single paragraph for the cell.
+        inline_types = (DocIRTextSpanNode, DocIRLinkNode, DocIRImageNode, DocIRLineBreakNode)
+        inline_children = [c for c in node.children if isinstance(c, inline_types)]
+        if inline_children:
+            justification = self._alignment_to_jc(node.alignment)
+            para = DocxASTParagraphNode()
+            ppr = DocxASTParagraphPropertiesNode(
+                style_id=_STYLE_NORMAL,
+                justification=justification,
+            )
+            para.add_child(ppr)
+            for run in self._build_runs(inline_children):
+                para.add_child(run)
+            cell.add_child(para)
+
+        # Map block-level cell content
         for child in node.children:
             if isinstance(child, DocIRParagraphNode):
                 justification = self._alignment_to_jc(node.alignment)
