@@ -113,7 +113,8 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 Unified diff parsing and application with fuzzy matching.
 
 ### `src/dmarkdown/`
-Advanced markdown support, including converting to/form a markdown AST.
+Advanced markdown support, including converting to/from a markdown AST.
+Includes `doc_ir_to_markdown.py` for serialising a doc_ir tree to Markdown text.
 
 ### `src/doc_ir`
 Abstract document IR.
@@ -200,6 +201,7 @@ Development and debugging utilities:
 - `menai/test-runner/` - Menai test runner
 - `dependency_checker/` - Module dependency validation
 - `docx/` - DOCX-related tooling
+- `docx_to_md/` - DOCX to Markdown conversion
 - `md_to_docx/` - Markdown to DOCX conversion
 - `pdf/` - PDF-related tooling
 - `pipeline-runner/` - Pipeline execution

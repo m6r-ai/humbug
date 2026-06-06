@@ -1,5 +1,6 @@
 """A parser for Markdown."""
 
+from dmarkdown.doc_ir_to_markdown import doc_ir_to_markdown
 from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
 from dmarkdown.markdown_ast_node import (
     MarkdownASTBlockquoteNode,
@@ -31,6 +32,7 @@ from dmarkdown.markdown_converter import MarkdownConverter
 
 
 __all__ = [
+    "doc_ir_to_markdown",
     "MarkdownASTBlockquoteNode",
     "MarkdownASTBoldNode",
     "MarkdownASTBuilder",
