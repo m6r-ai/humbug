@@ -17,6 +17,7 @@ New features:
 - Added support for strikethrough in the markdown parser.
 - Added a tool to convert docs to markdown.
 - Replaced the app icon!
+- Added a document converter AI tool.  Initially this can convert between markdown and DOCX.
 
 Bug fixes:
 
