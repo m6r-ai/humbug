@@ -177,6 +177,84 @@ def test_nested_formatting(ast_builder):
     assert bold_node.children[1].__class__.__name__ == "MarkdownASTEmphasisNode"
 
 
+def test_strikethrough_text(ast_builder):
+    doc = ast_builder.build_ast("This is ~~struck~~ text.")
+    paragraph = doc.children[0]
+    assert len(paragraph.children) == 3
+    assert paragraph.children[0].__class__.__name__ == "MarkdownASTTextNode"
+    assert paragraph.children[0].content == "This is "
+    assert paragraph.children[1].__class__.__name__ == "MarkdownASTStrikethroughNode"
+    assert paragraph.children[1].children[0].__class__.__name__ == "MarkdownASTTextNode"
+    assert paragraph.children[1].children[0].content == "struck"
+    assert paragraph.children[2].__class__.__name__ == "MarkdownASTTextNode"
+    assert paragraph.children[2].content == " text."
+
+
+def test_strikethrough_only(ast_builder):
+    doc = ast_builder.build_ast("~~hello~~")
+    paragraph = doc.children[0]
+    assert len(paragraph.children) == 1
+    assert paragraph.children[0].__class__.__name__ == "MarkdownASTStrikethroughNode"
+    assert paragraph.children[0].children[0].content == "hello"
+
+
+def test_strikethrough_nested_formatting(ast_builder):
+    doc = ast_builder.build_ast("~~**bold strike**~~")
+    paragraph = doc.children[0]
+    strike_node = paragraph.children[0]
+    assert strike_node.__class__.__name__ == "MarkdownASTStrikethroughNode"
+    assert strike_node.children[0].__class__.__name__ == "MarkdownASTBoldNode"
+    assert strike_node.children[0].children[0].content == "bold strike"
+
+
+def test_unclosed_strikethrough_is_literal(ast_builder):
+    doc = ast_builder.build_ast("~~unclosed")
+    paragraph = doc.children[0]
+    assert paragraph.children[0].__class__.__name__ == "MarkdownASTTextNode"
+    assert "~~" in paragraph.children[0].content
+
+
+def test_bold_italic_triple_asterisk(ast_builder):
+    doc = ast_builder.build_ast("***bold italic***")
+    paragraph = doc.children[0]
+    assert len(paragraph.children) == 1
+    bold_node = paragraph.children[0]
+    assert bold_node.__class__.__name__ == "MarkdownASTBoldNode"
+    assert len(bold_node.children) == 1
+    emphasis_node = bold_node.children[0]
+    assert emphasis_node.__class__.__name__ == "MarkdownASTEmphasisNode"
+    assert emphasis_node.children[0].content == "bold italic"
+
+
+def test_bold_italic_triple_asterisk_with_surrounding_text(ast_builder):
+    doc = ast_builder.build_ast("before ***bold italic*** after")
+    paragraph = doc.children[0]
+    assert paragraph.children[0].__class__.__name__ == "MarkdownASTTextNode"
+    assert paragraph.children[0].content == "before "
+    assert paragraph.children[1].__class__.__name__ == "MarkdownASTBoldNode"
+    assert paragraph.children[2].__class__.__name__ == "MarkdownASTTextNode"
+    assert paragraph.children[2].content == " after"
+
+
+def test_bold_italic_triple_asterisk_with_nested_strikethrough(ast_builder):
+    doc = ast_builder.build_ast("***~~bold italic strike~~***")
+    paragraph = doc.children[0]
+    bold_node = paragraph.children[0]
+    assert bold_node.__class__.__name__ == "MarkdownASTBoldNode"
+    emphasis_node = bold_node.children[0]
+    assert emphasis_node.__class__.__name__ == "MarkdownASTEmphasisNode"
+    strike_node = emphasis_node.children[0]
+    assert strike_node.__class__.__name__ == "MarkdownASTStrikethroughNode"
+    assert strike_node.children[0].content == "bold italic strike"
+
+
+def test_unclosed_triple_asterisk_is_literal(ast_builder):
+    doc = ast_builder.build_ast("***unclosed")
+    paragraph = doc.children[0]
+    assert paragraph.children[0].__class__.__name__ == "MarkdownASTTextNode"
+    assert "***" in paragraph.children[0].content or "*" in paragraph.children[0].content
+
+
 def test_headings(ast_builder):
     """Test parsing different levels of headings."""
     markdown = """

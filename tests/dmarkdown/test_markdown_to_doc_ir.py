@@ -4,6 +4,7 @@ from dmarkdown.markdown_ast_node import (
     MarkdownASTBlockquoteNode,
     MarkdownASTBoldNode,
     MarkdownASTCodeBlockNode,
+    MarkdownASTStrikethroughNode,
     MarkdownASTDocumentNode,
     MarkdownASTEmphasisNode,
     MarkdownASTHeadingNode,
@@ -79,6 +80,13 @@ def _bold(*children) -> MarkdownASTBoldNode:
 
 def _em(*children) -> MarkdownASTEmphasisNode:
     node = MarkdownASTEmphasisNode()
+    for child in children:
+        node.add_child(child)
+    return node
+
+
+def _strike(*children) -> MarkdownASTStrikethroughNode:
+    node = MarkdownASTStrikethroughNode()
     for child in children:
         node.add_child(child)
     return node
@@ -284,6 +292,43 @@ class TestInlineFormatting:
         assert span.bold is True
         assert span.italic is True
         assert span.content == "deep"
+
+    def test_bold_italic_strikethrough_combined(self):
+        result = _map(_doc(_para(_bold(_em(_strike(_text("all three"))))))
+        )
+        span = result.children[0].children[0]
+        assert span.bold is True
+        assert span.italic is True
+        assert span.strikethrough is True
+        assert span.content == "all three"
+
+    def test_strikethrough_span(self):
+        result = _map(_doc(_para(_strike(_text("struck")))))
+        span = result.children[0].children[0]
+        assert isinstance(span, DocIRTextSpanNode)
+        assert span.strikethrough is True
+        assert span.bold is False
+        assert span.italic is False
+        assert span.content == "struck"
+
+    def test_strikethrough_with_bold(self):
+        result = _map(_doc(_para(_strike(_bold(_text("bold struck"))))))
+        span = result.children[0].children[0]
+        assert span.strikethrough is True
+        assert span.bold is True
+        assert span.content == "bold struck"
+
+    def test_strikethrough_with_italic(self):
+        result = _map(_doc(_para(_em(_strike(_text("italic struck"))))))
+        span = result.children[0].children[0]
+        assert span.strikethrough is True
+        assert span.italic is True
+        assert span.content == "italic struck"
+
+    def test_plain_text_strikethrough_false(self):
+        result = _map(_doc(_para(_text("plain"))))
+        span = result.children[0].children[0]
+        assert span.strikethrough is False
 
 
 # ---------------------------------------------------------------------------

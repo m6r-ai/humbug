@@ -4,6 +4,7 @@ from dmarkdown.markdown_ast_node import (
     MarkdownASTBlockquoteNode,
     MarkdownASTBoldNode,
     MarkdownASTCodeBlockNode,
+    MarkdownASTStrikethroughNode,
     MarkdownASTDocumentNode,
     MarkdownASTEmphasisNode,
     MarkdownASTHeadingNode,
@@ -279,7 +280,7 @@ class _MarkdownToDocIRMapper:
         if inline_nodes:
             para = DocIRParagraphNode()
             for inline in inline_nodes:
-                spans = self._collect_spans(inline, bold=False, italic=False, code=False)
+                spans = self._collect_spans(inline, bold=False, italic=False, strikethrough=False, code=False)
                 for span in spans:
                     para.add_child(span)
 
@@ -364,7 +365,7 @@ class _MarkdownToDocIRMapper:
             target: The doc_ir node to append the mapped inline nodes to.
         """
         for child in source.children:
-            nodes = self._collect_inline(child, bold=False, italic=False, code=False)
+            nodes = self._collect_inline(child, bold=False, italic=False, strikethrough=False, code=False)
             for node in nodes:
                 target.add_child(node)
 
@@ -373,6 +374,7 @@ class _MarkdownToDocIRMapper:
         node: MarkdownASTNode,
         bold: bool,
         italic: bool,
+        strikethrough: bool,
         code: bool,
     ) -> List[DocIRNode]:
         """Recursively collect inline doc_ir nodes from a markdown AST node.
@@ -388,6 +390,7 @@ class _MarkdownToDocIRMapper:
             node: The markdown AST inline node to process.
             bold: Whether bold formatting is currently active.
             italic: Whether italic formatting is currently active.
+            strikethrough: Whether strikethrough formatting is currently active.
             code: Whether inline-code formatting is currently active.
 
         Returns:
@@ -401,21 +404,28 @@ class _MarkdownToDocIRMapper:
                 content=node.content,
                 bold=bold,
                 italic=italic,
+                strikethrough=strikethrough,
                 code=code,
             )]
 
         if isinstance(node, MarkdownASTBoldNode):
             result: List[DocIRNode] = []
             for child in node.children:
-                result.extend(self._collect_inline(child, bold=True, italic=italic, code=code))
+                result.extend(self._collect_inline(child, bold=True, italic=italic, strikethrough=strikethrough, code=code))
 
             return result
 
         if isinstance(node, MarkdownASTEmphasisNode):
             result = []
             for child in node.children:
-                result.extend(self._collect_inline(child, bold=bold, italic=True, code=code))
+                result.extend(self._collect_inline(child, bold=bold, italic=True, strikethrough=strikethrough, code=code))
 
+            return result
+
+        if isinstance(node, MarkdownASTStrikethroughNode):
+            result = []
+            for child in node.children:
+                result.extend(self._collect_inline(child, bold=bold, italic=italic, strikethrough=True, code=code))
             return result
 
         if isinstance(node, MarkdownASTInlineCodeNode):
@@ -432,7 +442,7 @@ class _MarkdownToDocIRMapper:
         if isinstance(node, MarkdownASTLinkNode):
             link = DocIRLinkNode(url=node.url, title=node.title)
             for child in node.children:
-                result = self._collect_inline(child, bold=bold, italic=italic, code=code)
+                result = self._collect_inline(child, bold=bold, italic=italic, strikethrough=strikethrough, code=code)
                 for item in result:
                     link.add_child(item)
 
@@ -451,7 +461,7 @@ class _MarkdownToDocIRMapper:
         # Any other node type: recurse into children with current formatting
         result = []
         for child in node.children:
-            result.extend(self._collect_inline(child, bold=bold, italic=italic, code=code))
+            result.extend(self._collect_inline(child, bold=bold, italic=italic, strikethrough=strikethrough, code=code))
 
         return result
 
@@ -460,7 +470,8 @@ class _MarkdownToDocIRMapper:
         node: MarkdownASTNode,
         bold: bool,
         italic: bool,
+        strikethrough: bool,
         code: bool,
     ) -> List[DocIRNode]:
         """Alias for _collect_inline used in list item mapping for clarity."""
-        return self._collect_inline(node, bold=bold, italic=italic, code=code)
+        return self._collect_inline(node, bold=bold, italic=italic, strikethrough=strikethrough, code=code)

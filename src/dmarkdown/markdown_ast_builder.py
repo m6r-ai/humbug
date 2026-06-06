@@ -11,6 +11,7 @@ from syntax import ParserRegistry, ProgrammingLanguage, ProgrammingLanguageUtils
 from dmarkdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownASTDocumentNode, MarkdownASTTextNode, MarkdownASTLineBreakNode,
     MarkdownASTEmphasisNode, MarkdownASTBoldNode, MarkdownASTHeadingNode,
+    MarkdownASTStrikethroughNode,
     MarkdownASTParagraphNode, MarkdownASTListNode, MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode,
     MarkdownASTListItemNode, MarkdownASTInlineCodeNode, MarkdownASTCodeBlockNode,
     MarkdownASTTableNode, MarkdownASTTableHeaderNode, MarkdownASTTableBodyNode,
@@ -525,7 +526,55 @@ class MarkdownASTBuilder:
                     i = end_pos + 1
                     continue
 
-            # Check for bold formatting
+            # Check for strikethrough formatting
+            elif i + 1 < len(text) and text[i:i+2] == '~~':
+                # Look for the closing ~~
+                end_pos = text.find('~~', i + 2)
+                if end_pos != -1:
+                    # Add any accumulated text before this strikethrough block
+                    if current_text:
+                        nodes.append(MarkdownASTTextNode(current_text))
+                        current_text = ""
+
+                    # Create strikethrough node and process its content recursively
+                    strike_node = MarkdownASTStrikethroughNode()
+                    for child_node in self._parse_inline_formatting(text[i+2:end_pos]):
+                        strike_node.add_child(child_node)
+
+                    nodes.append(strike_node)
+
+                    # Move past the closing ~~
+                    i = end_pos + 2
+                    continue
+
+                current_text += text[i]
+                i += 1
+
+            # Check for bold+italic formatting (*** or ___)
+            elif (i + 2 < len(text) and
+                    ((text[i:i+3] == '***') or (text[i:i+3] == '___' and not self._no_underscores))):
+                marker = text[i:i+3]
+                end_pos = text.find(marker, i + 3)
+                if end_pos != -1:
+                    if current_text:
+                        nodes.append(MarkdownASTTextNode(current_text))
+                        current_text = ""
+
+                    bold_node = MarkdownASTBoldNode()
+                    emphasis_node = MarkdownASTEmphasisNode()
+                    for child_node in self._parse_inline_formatting(text[i+3:end_pos]):
+                        emphasis_node.add_child(child_node)
+
+                    bold_node.add_child(emphasis_node)
+                    nodes.append(bold_node)
+
+                    i = end_pos + 3
+                    continue
+
+                current_text += text[i]
+                i += 1
+
+            # Check for bold formatting (** or __)
             elif (i + 1 < len(text) and
                     ((text[i:i+2] == '**') or (text[i:i+2] == '__' and not self._no_underscores))):
                 # Determine which marker we're using

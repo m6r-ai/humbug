@@ -235,6 +235,10 @@ class MarkdownASTEmphasisNode(MarkdownASTNode):
     """Node representing emphasized text (<em> or <i>)."""
 
 
+class MarkdownASTStrikethroughNode(MarkdownASTNode):
+    """Node representing strikethrough text (~~text~~)."""
+
+
 class MarkdownASTInlineCodeNode(MarkdownASTNode):
     """Node representing inline code (<code>)."""
     def __init__(self, content: str = "") -> None:

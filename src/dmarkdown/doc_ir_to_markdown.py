@@ -347,6 +347,7 @@ class _DocIRToMarkdownSerialiser:
         parts: List[str] = []
         for child in children:
             parts.append(self._serialise_inline(child))
+
         return "".join(parts)
 
     def _serialise_inline(self, node: DocIRNode) -> str:
@@ -368,25 +369,26 @@ class _DocIRToMarkdownSerialiser:
 
     def _serialise_text_span(self, node: DocIRTextSpanNode) -> str:
         """Serialise a text span, wrapping with Markdown formatting markers."""
-        text = node.content
-
-        # Escape characters that would be misinterpreted as Markdown syntax
-        text = self._escape_markdown(text)
-
         if node.code:
+            # Code spans are returned as-is — no escaping or further wrapping.
             return f"`{node.content}`"
 
+        # Escape characters that would be misinterpreted as Markdown syntax.
+        text = self._escape_markdown(node.content)
+
+        # Apply markers from innermost to outermost so combinations are valid.
+        # bold+italic share a single *** wrapper; other flags compose independently.
         if node.bold and node.italic:
-            return f"***{text}***"
+            text = f"***{text}***"
 
-        if node.bold:
-            return f"**{text}**"
+        elif node.bold:
+            text = f"**{text}**"
 
-        if node.italic:
-            return f"*{text}*"
+        elif node.italic:
+            text = f"*{text}*"
 
         if node.strikethrough:
-            return f"~~{text}~~"
+            text = f"~~{text}~~"
 
         return text
 
@@ -398,4 +400,5 @@ class _DocIRToMarkdownSerialiser:
         # specific constructs and do not need escaping in running prose.
         for ch in ("\\", "`", "*", "_", "~"):
             text = text.replace(ch, "\\" + ch)
+
         return text
