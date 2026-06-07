@@ -15,6 +15,7 @@ from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.file_watcher import FileWatcher
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.style_manager import StyleManager
 from desktop.preview_tab.preview_content import PreviewContent, PreviewContentType
 from desktop.preview_tab.preview_content_widget import PreviewContentWidget
@@ -858,13 +859,48 @@ class PreviewWidget(QWidget):
         menu = self._style_manager.create_menu(self)
         strings = self._language_manager.strings()
 
-        # Copy action
         copy_action = menu.addAction(strings.copy)
         copy_action.setEnabled(self.has_selection())
         copy_action.triggered.connect(self.copy)
 
-        # Show menu at click position
+        if self._path and os.path.isfile(self._path):
+            menu.addSeparator()
+
+            editor_action = menu.addAction(strings.open_in_editor)
+            editor_action.triggered.connect(self._open_in_editor)
+
+            if MindspaceVCSPoller().has_repo():
+                diff_action = menu.addAction(strings.open_in_diff)
+                diff_action.setEnabled(MindspaceVCSPoller().has_vcs_changes(self._path))
+                diff_action.triggered.connect(self._open_in_diff)
+
         menu.exec_(self.mapToGlobal(pos))
+
+    def _open_in_editor(self) -> None:
+        """Open the current file in an editor tab."""
+        contexts = MindspaceManager().mindspace().contexts()
+        existing = contexts.get_by_path_and_type(self._path, "editor")
+        if existing:
+            contexts.focus(existing.context_id)
+        else:
+            contexts.open(
+                context_type="editor",
+                path=self._path,
+                title=os.path.basename(self._path),
+            )
+
+    def _open_in_diff(self) -> None:
+        """Open the current file in a diff tab."""
+        contexts = MindspaceManager().mindspace().contexts()
+        existing = contexts.get_by_path_and_type(self._path, "diff")
+        if existing:
+            contexts.focus(existing.context_id)
+        else:
+            contexts.open(
+                context_type="diff",
+                path=self._path,
+                title=os.path.basename(self._path),
+            )
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
