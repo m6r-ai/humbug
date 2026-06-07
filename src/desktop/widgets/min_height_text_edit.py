@@ -170,10 +170,6 @@ class MinHeightTextEdit(QTextEdit):
 
     def _size_hint_height(self) -> int:
         """Calculate the height of the widget including scrollbar if visible."""
-        # This is a bit of a bizarre workaround.  When text wraps around there is a short window where our
-        # height is actually too small to show all the text and despite us saying not to use a vertical scrollbar,
-        # Qt will adjust it anyway!  We reset it back so things render correctly.
-        self.verticalScrollBar().setValue(0)
         document_size = self.document().size()
         height = document_size.height()
         if self.horizontalScrollBar().isVisible():

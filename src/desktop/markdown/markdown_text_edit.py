@@ -3,8 +3,8 @@
 import logging
 from typing import cast
 
-from PySide6.QtWidgets import QScrollArea, QWidget
-from PySide6.QtCore import Qt, Signal, QObject, QMimeData
+from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import Qt, Signal, QMimeData
 from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
 )
@@ -328,32 +328,24 @@ class MarkdownTextEdit(MinHeightTextEdit):
             return
 
         if e.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown):
-            # Find the scroll area viewport by walking up hierarchy
-            widget: QObject = self
-            viewport = None
-            while widget:
-                widget = widget.parent()
-                if isinstance(widget, QScrollArea):
-                    viewport = widget.viewport()
-                    break
-
-            if viewport is not None:
-                # Calculate visible lines based on cursor height
+            if self._height_cap is not None:
+                # The widget is in capped/scrollable mode - page within the input itself
                 cursor_rect = self.cursorRect()
                 line_height = cursor_rect.height()
-                visible_lines = max(1, viewport.height() // line_height)
+                visible_lines = max(1, self._height_cap // line_height)
 
-                # Move cursor by calculated lines
                 cursor = self.textCursor()
                 orig_pos = cursor.position()
 
                 movement = QTextCursor.MoveOperation.Up if e.key() == Qt.Key.Key_PageUp else QTextCursor.MoveOperation.Down
                 cursor.movePosition(movement, QTextCursor.MoveMode.MoveAnchor, visible_lines)
 
-                # Only set cursor if it actually moved
                 if cursor.position() != orig_pos:
                     self.setTextCursor(cursor)
-                    self.page_key_scroll_requested.emit()
+                    self.ensureCursorVisible()
+
+            else:
+                self.page_key_scroll_requested.emit()
 
             e.accept()
             return
