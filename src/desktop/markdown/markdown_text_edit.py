@@ -469,6 +469,16 @@ class MarkdownTextEdit(MinHeightTextEdit):
         while block.isValid():
             user_data = block.userData()
             if isinstance(user_data, MarkdownBlockData) and user_data.blockquote_depth > 0:
+                # Skip empty separator blocks that trail a blockquote — an empty
+                # block whose next block has a lower blockquote depth exists only
+                # as a cursor position and should not be painted.
+                next_block = block.next()
+                next_data = next_block.userData() if next_block.isValid() else None
+                next_depth = next_data.blockquote_depth if isinstance(next_data, MarkdownBlockData) else 0
+                if block.text() == "" and next_depth < user_data.blockquote_depth:
+                    block = block.next()
+                    continue
+
                 block_rect = layout.blockBoundingRect(block).translated(content_offset_x, content_offset_y)
 
                 # blockBoundingRect excludes top and bottom margins.  We extend the bar
@@ -488,12 +498,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
                     if isinstance(prev_data, MarkdownBlockData):
                         prev_depth = prev_data.blockquote_depth
 
-                next_block = block.next()
-                next_depth = 0
-                if next_block.isValid():
-                    next_data = next_block.userData()
-                    if isinstance(next_data, MarkdownBlockData):
-                        next_depth = next_data.blockquote_depth
+                # next_block, next_data, and next_depth were already computed above.
 
                 # Only paint bars for blocks that intersect the dirty region
                 if block_rect.bottom() >= event.rect().top() and block_rect.top() <= event.rect().bottom():
