@@ -812,7 +812,8 @@ class _DocumentIRToDocxASTMapper:
                     merged += items[i][7]
 
                 run = DocxASTRunNode()
-                if bold or italic or strike or code or superscript or subscript:
+                has_formatting = bold or italic or strike or code or superscript or subscript
+                if has_formatting:
                     vert_align: str | None = None
                     if superscript:
                         vert_align = "superscript"

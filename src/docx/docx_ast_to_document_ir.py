@@ -28,9 +28,6 @@ from docx.docx_ast_node import (
 from document_ir import (
     DocumentIRBlockquoteNode,
     DocumentIRCodeBlockNode,
-    DocumentIRDefinitionDescriptionNode,
-    DocumentIRDefinitionListNode,
-    DocumentIRDefinitionTermNode,
     DocumentIRDocumentNode,
     DocumentIRHeadingNode,
     DocumentIRImageNode,
