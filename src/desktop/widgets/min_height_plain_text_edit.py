@@ -41,7 +41,6 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         # Force the widget to always use the width of its container
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        # Set word wrap mode
         self.setWordWrapMode(word_wrap_mode)
 
         self._current_text = ""

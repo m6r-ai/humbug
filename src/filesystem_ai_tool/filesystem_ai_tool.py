@@ -2160,8 +2160,8 @@ class FileSystemAITool(AITool):
             )
 
         diff_lines = list(difflib.unified_diff(
-            original_content.splitlines(keepends=True),
-            new_content.splitlines(keepends=True),
+            original_content.splitlines(),
+            new_content.splitlines(),
             fromfile=display_path,
             tofile=display_path,
             lineterm=''

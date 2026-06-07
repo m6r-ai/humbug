@@ -817,8 +817,8 @@ class EditorAITool(AITool):
             )
 
         diff_lines = list(difflib.unified_diff(
-            original_content.splitlines(keepends=True),
-            new_content.splitlines(keepends=True),
+            original_content.splitlines(),
+            new_content.splitlines(),
             lineterm=''
         ))
         diff_str = '\n'.join(diff_lines)
