@@ -312,6 +312,14 @@ A blockquote containing an ordered list:
 > 2. Second ordered item inside a blockquote
 > 3. Third ordered item inside a blockquote
 
+A blockquote containing a loose unordered list:
+
+> - Item one inside a blockquote
+>
+> - Item two inside a blockquote
+>
+> - Item three inside a blockquote
+
 A blockquote containing a code block:
 
 > ```python
