@@ -4,7 +4,7 @@ Combo box setting for selecting from a list of options.
 
 from typing import Any, List, Tuple, cast
 
-from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QRectF
+from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QRectF, QTimer
 from PySide6.QtGui import QHideEvent, QIcon, QKeyEvent, QPainter, QPaintEvent, QPainterPath
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -163,14 +163,20 @@ class _SettingsComboPopup(QFrame):
             if global_pos.y() + self.height() > available.bottom():
                 global_pos.setY(self._owner.button_top_global_y() - self.height())
 
-        # Force native handle creation before move() so Qt adjusts the window
-        # geometry for the first time here, at an off-screen position, rather
-        # than after show() where it would shift the popup away from the
-        # intended position on first display.
-        self.winId()
-        self.move(global_pos)
-        self.show()
-        self.raise_()
+        # Move into position then show on the next event loop iteration.  This
+        # lets Qt create the native handle naturally via show(), and the deferred
+        # move ensures the position is applied after the native window exists.
+        # Showing only after the move avoids a visible flash at position (0, 0)
+        # on first open.  On Linux/XCB this also avoids forcing early native
+        # handle creation via winId(), which causes the compositor to disturb
+        # the parent dialog's position.
+        def _show_at_pos() -> None:
+            self.move(global_pos)
+            self.show()
+            self.raise_()
+
+        self.hide()
+        QTimer.singleShot(0, _show_at_pos)
 
         if self._searchable:
             self._search.setFocus(Qt.FocusReason.PopupFocusReason)
