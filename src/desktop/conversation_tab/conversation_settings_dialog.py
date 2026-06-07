@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea, QWidget, QFrame
 )
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 
 from ai import AIConversationSettings, AIReasoningCapability, AIManager
 from ai.ai_model import AIReasoningEffort
@@ -25,6 +25,7 @@ class ConversationSettingsDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the conversation settings dialog."""
         super().__init__(parent)
+        self.setWindowModality(Qt.WindowModality.WindowModal)
         self._language_manager = LanguageManager()
         strings = self._language_manager.strings()
 

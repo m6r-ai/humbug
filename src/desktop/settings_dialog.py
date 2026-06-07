@@ -89,6 +89,7 @@ class SettingsDialog(QDialog):
             parent: Parent widget, typically the main window.
         """
         super().__init__(parent)
+        self.setWindowModality(Qt.WindowModality.WindowModal)
 
         self._logger = logging.getLogger(__name__)
         self._language_manager = LanguageManager()
