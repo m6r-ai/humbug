@@ -1464,6 +1464,12 @@ class MarkdownASTBuilder:
         ):
             return False
 
+        # Do not intercept text that belongs to a blockquote sitting on top of the
+        # stack.  When the current container is a blockquote the text must be added
+        # to that blockquote, not routed back to the enclosing list item.
+        if self._container_stack[-1].container_type == 'blockquote':
+            return False
+
         # Find the current list item container
         list_item_context = None
         list_item_index = None
