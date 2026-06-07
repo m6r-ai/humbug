@@ -276,6 +276,7 @@ def _convert_table(node: HtmlASTElementNode, ir_parent: DocumentIRNode) -> None:
 
     header: DocumentIRTableHeaderNode | None = None
     body: DocumentIRTableBodyNode | None = None
+    direct_tr_nodes: list[HtmlASTElementNode] = []
 
     for child in node.children:
         if not isinstance(child, HtmlASTElementNode):
@@ -301,11 +302,18 @@ def _convert_table(node: HtmlASTElementNode, ir_parent: DocumentIRNode) -> None:
                 body = DocumentIRTableBodyNode()
                 table.add_child(body)
 
-            _convert_table_row(child, body, is_header=False)
+            direct_tr_nodes.append(child)
 
         elif tag == "caption":
             # Captions are not modelled in document_ir; skip.
             pass
+
+    if direct_tr_nodes:
+        if body is None:
+            body = DocumentIRTableBodyNode()
+            table.add_child(body)
+
+        _convert_table_row_list(direct_tr_nodes, body, is_header=False)
 
 
 def _convert_table_rows(
@@ -314,50 +322,119 @@ def _convert_table_rows(
     is_header: bool,
 ) -> None:
     """Convert all <tr> children of a table section node."""
-    for child in node.children:
-        if isinstance(child, HtmlASTElementNode) and child.tag_name == "tr":
-            _convert_table_row(child, ir_section, is_header=is_header)
+    tr_nodes = [
+        child
+        for child in node.children
+        if isinstance(child, HtmlASTElementNode) and child.tag_name == "tr"
+    ]
+    _convert_table_row_list(tr_nodes, ir_section, is_header=is_header)
 
 
-def _convert_table_row(
-    node: HtmlASTElementNode,
+def _convert_table_row_list(
+    tr_nodes: list[HtmlASTElementNode],
     ir_parent: DocumentIRNode,
     is_header: bool,
 ) -> None:
-    """Convert a single <tr> element."""
-    row = DocumentIRTableRowNode()
-    ir_parent.add_child(row)
+    """Convert a list of <tr> elements with shared rowspan state.
 
-    for child in node.children:
-        if not isinstance(child, HtmlASTElementNode):
-            continue
+    Pending spans are scoped to this call so rowspans do not cross section
+    boundaries (thead/tbody/tfoot are each processed independently).
+    """
+    # Maps col index → (remaining_rows, is_header, alignment)
+    pending_spans: dict[int, tuple[int, bool, str]] = {}
 
-        if child.tag_name in ("td", "th"):
-            cell_is_header = is_header or child.tag_name == "th"
-            align_str = child.attributes.get("align", "left").lower()
+    for tr_node in tr_nodes:
+        row = DocumentIRTableRowNode()
+        ir_parent.add_child(row)
+
+        # Collect the real td/th children for this row.
+        real_cells = [
+            child
+            for child in tr_node.children
+            if isinstance(child, HtmlASTElementNode) and child.tag_name in ("td", "th")
+        ]
+        real_cell_iter = iter(real_cells)
+
+        col = 0
+        for real_cell in real_cell_iter:
+            # Drain any pending spans that occupy columns before this real cell.
+            while col in pending_spans:
+                remaining, span_is_header, span_align = pending_spans[col]
+                row.add_child(
+                    DocumentIRTableCellNode(
+                        is_header=span_is_header,
+                        alignment=span_align,
+                    )
+                )
+                remaining -= 1
+                if remaining == 0:
+                    del pending_spans[col]
+
+                else:
+                    pending_spans[col] = (remaining, span_is_header, span_align)
+
+                col += 1
+
+            # Process the real cell.
+            cell_is_header = is_header or real_cell.tag_name == "th"
+            align_str = real_cell.attributes.get("align", "left").lower()
             if align_str not in ("left", "center", "right"):
                 align_str = "left"
 
+            try:
+                colspan = max(1, int(real_cell.attributes.get("colspan", "1")))
+
+            except ValueError:
+                colspan = 1
+
+            try:
+                rowspan = max(1, int(real_cell.attributes.get("rowspan", "1")))
+
+            except ValueError:
+                rowspan = 1
+
+            # Create the primary cell with content.
             cell = DocumentIRTableCellNode(
                 is_header=cell_is_header,
                 alignment=align_str,
             )
             row.add_child(cell)
-            _convert_inline_children(child, cell)
+            _convert_inline_children(real_cell, cell)
 
-            try:
-                colspan = max(1, int(child.attributes.get("colspan", "1")))
+            # Register rowspans and add colspan filler cells.
+            for c in range(colspan):
+                if rowspan > 1:
+                    pending_spans[col + c] = (rowspan - 1, cell_is_header, align_str)
 
-            except ValueError:
-                colspan = 1
-
-            for _ in range(colspan - 1):
-                row.add_child(
-                    DocumentIRTableCellNode(
-                        is_header=cell_is_header,
-                        alignment=align_str,
+                if c > 0:
+                    row.add_child(
+                        DocumentIRTableCellNode(
+                            is_header=cell_is_header,
+                            alignment=align_str,
+                        )
                     )
+
+            col += colspan
+
+        # After all real cells are consumed, inject fillers for any pending span
+        # columns that lie at or beyond the current col position.
+        for span_col in sorted(pending_spans.keys()):
+            if span_col < col:
+                continue
+
+            remaining, span_is_header, span_align = pending_spans[span_col]
+            row.add_child(
+                DocumentIRTableCellNode(
+                    is_header=span_is_header,
+                    alignment=span_align,
                 )
+            )
+            remaining -= 1
+            if remaining == 0:
+                del pending_spans[span_col]
+
+            else:
+                pending_spans[span_col] = (remaining, span_is_header, span_align)
 
 
 def _convert_img(node: HtmlASTElementNode, ir_parent: DocumentIRNode) -> None:

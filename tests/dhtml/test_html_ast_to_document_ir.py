@@ -320,6 +320,137 @@ class TestTable:
         assert cells[1].children == []
         assert cells[2].children == []
 
+    def test_rowspan_inserts_filler_in_next_row(self) -> None:
+        """A td with rowspan=2 in row 0 causes row 1 to have a filler cell at that column."""
+        result = _convert(
+            "<table><tbody>"
+            "<tr><td rowspan=\"2\">A</td><td>B</td></tr>"
+            "<tr><td>C</td></tr>"
+            "</tbody></table>"
+        )
+        table = result.children[0]
+        body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
+        row1 = body.children[1]
+        cells = [c for c in row1.children if isinstance(c, DocumentIRTableCellNode)]
+        assert len(cells) == 2
+
+    def test_rowspan_filler_cell_has_no_children(self) -> None:
+        """The filler cell inserted by rowspan has no children."""
+        result = _convert(
+            "<table><tbody>"
+            "<tr><td rowspan=\"2\">A</td><td>B</td></tr>"
+            "<tr><td>C</td></tr>"
+            "</tbody></table>"
+        )
+        table = result.children[0]
+        body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
+        row1 = body.children[1]
+        cells = [c for c in row1.children if isinstance(c, DocumentIRTableCellNode)]
+        filler = cells[0]
+        assert filler.children == []
+
+    def test_rowspan_filler_preserves_alignment(self) -> None:
+        """The filler cell inserted by rowspan inherits the alignment of the spanning cell."""
+        result = _convert(
+            "<table><tbody>"
+            "<tr><td rowspan=\"2\" align=\"center\">A</td><td>B</td></tr>"
+            "<tr><td>C</td></tr>"
+            "</tbody></table>"
+        )
+        table = result.children[0]
+        body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
+        row1 = body.children[1]
+        cells = [c for c in row1.children if isinstance(c, DocumentIRTableCellNode)]
+        filler = cells[0]
+        assert filler.alignment == "center"
+
+    def test_rowspan_3_fills_two_subsequent_rows(self) -> None:
+        """A td with rowspan=3 inserts filler cells in both rows 1 and 2."""
+        result = _convert(
+            "<table><tbody>"
+            "<tr><td rowspan=\"3\">A</td><td>B</td></tr>"
+            "<tr><td>C</td></tr>"
+            "<tr><td>D</td></tr>"
+            "</tbody></table>"
+        )
+        table = result.children[0]
+        body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
+        row1 = body.children[1]
+        row2 = body.children[2]
+        cells1 = [c for c in row1.children if isinstance(c, DocumentIRTableCellNode)]
+        cells2 = [c for c in row2.children if isinstance(c, DocumentIRTableCellNode)]
+        assert len(cells1) == 2
+        assert len(cells2) == 2
+
+    def test_rowspan_1_is_normal(self) -> None:
+        """A td with rowspan=1 behaves identically to a td with no rowspan attribute."""
+        result = _convert(
+            "<table><tbody>"
+            "<tr><td rowspan=\"1\">A</td><td>B</td></tr>"
+            "<tr><td>C</td><td>D</td></tr>"
+            "</tbody></table>"
+        )
+        table = result.children[0]
+        body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
+        row0 = body.children[0]
+        row1 = body.children[1]
+        cells0 = [c for c in row0.children if isinstance(c, DocumentIRTableCellNode)]
+        cells1 = [c for c in row1.children if isinstance(c, DocumentIRTableCellNode)]
+        assert len(cells0) == 2
+        assert len(cells1) == 2
+
+    def test_colspan_and_rowspan_combined(self) -> None:
+        """A cell with colspan=2 rowspan=2 fills 2 columns and inserts 2 fillers in the next row."""
+        result = _convert(
+            "<table><tbody>"
+            "<tr><td colspan=\"2\" rowspan=\"2\">A</td><td>B</td></tr>"
+            "<tr><td>C</td></tr>"
+            "</tbody></table>"
+        )
+        table = result.children[0]
+        body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
+        row0 = body.children[0]
+        row1 = body.children[1]
+        cells0 = [c for c in row0.children if isinstance(c, DocumentIRTableCellNode)]
+        cells1 = [c for c in row1.children if isinstance(c, DocumentIRTableCellNode)]
+        assert len(cells0) == 3
+        assert len(cells1) == 3
+
+    def test_rowspan_at_start_of_row(self) -> None:
+        """A rowspan cell in column 0 shifts subsequent row's real cells to the right."""
+        result = _convert(
+            "<table><tbody>"
+            "<tr><td rowspan=\"2\">A</td><td>B</td></tr>"
+            "<tr><td>C</td></tr>"
+            "</tbody></table>"
+        )
+        table = result.children[0]
+        body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
+        row1 = body.children[1]
+        cells = [c for c in row1.children if isinstance(c, DocumentIRTableCellNode)]
+        filler = cells[0]
+        real = cells[1]
+        assert filler.children == []
+        span = real.children[0]
+        assert isinstance(span, DocumentIRTextSpanNode)
+        assert span.content == "C"
+
+    def test_rowspan_in_middle_of_row(self) -> None:
+        """A rowspan cell in a middle column inserts a filler at that column in the next row."""
+        result = _convert(
+            "<table><tbody>"
+            "<tr><td>A</td><td rowspan=\"2\">B</td><td>C</td></tr>"
+            "<tr><td>D</td><td>E</td></tr>"
+            "</tbody></table>"
+        )
+        table = result.children[0]
+        body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
+        row1 = body.children[1]
+        cells = [c for c in row1.children if isinstance(c, DocumentIRTableCellNode)]
+        assert len(cells) == 3
+        filler = cells[1]
+        assert filler.children == []
+
 
 class TestHorizontalRule:
     """hr maps to DocumentIRHorizontalRuleNode."""
