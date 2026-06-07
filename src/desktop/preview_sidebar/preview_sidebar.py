@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 from desktop.language.language_manager import LanguageManager
+from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.preview_sidebar.preview_sidebar_model import PreviewSidebarModel
@@ -35,8 +36,9 @@ class PreviewSidebar(SidebarBase):
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
-    file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
+    file_opened_in_editor = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in editor
     file_opened_in_preview = Signal(str)  # Emits path when file is opened in preview
+    file_opened_in_diff = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in diff
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the preview view widget."""
@@ -45,6 +47,7 @@ class PreviewSidebar(SidebarBase):
         self._style_manager = StyleManager()
         self._logger = logging.getLogger("PreviewSidebar")
         self._mindspace_manager = MindspaceManager()
+        self._vcs_poller = MindspaceVCSPoller()
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -663,7 +666,7 @@ class PreviewSidebar(SidebarBase):
 
         else:
             menu = self._style_manager.create_menu(self)
-            menu.addAction(strings.preview).triggered.connect(lambda: self._handle_preview_view_file(path))
+            menu.addAction(strings.open_in_preview).triggered.connect(lambda: self._handle_preview_view_file(path))
             menu.addAction(strings.new_folder).triggered.connect(lambda: self._start_new_folder_creation(path))
             menu.addAction(strings.new_file).triggered.connect(lambda: self._start_new_file_creation(path))
             tree_index = self._get_tree_index_for_path(path)
@@ -695,7 +698,7 @@ class PreviewSidebar(SidebarBase):
             # Create actions based on item type
             if is_dir:
                 # Directory context menu
-                preview_view_action = menu.addAction(strings.preview)
+                preview_view_action = menu.addAction(strings.open_in_preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
                 new_folder_action = menu.addAction(strings.new_folder)
                 new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
@@ -708,10 +711,14 @@ class PreviewSidebar(SidebarBase):
 
             else:
                 # File context menu
-                preview_view_action = menu.addAction(strings.preview)
+                preview_view_action = menu.addAction(strings.open_in_preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
-                edit_action = menu.addAction(strings.edit)
+                edit_action = menu.addAction(strings.open_in_editor)
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
+                if self._vcs_poller.has_repo():
+                    diff_action = menu.addAction(strings.open_in_diff)
+                    diff_action.setEnabled(self._vcs_poller.has_vcs_changes(path))
+                    diff_action.triggered.connect(lambda: self._handle_diff_file(path))
                 duplicate_action = menu.addAction(strings.duplicate)
                 duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
                 rename_action = menu.addAction(strings.rename)
@@ -852,7 +859,11 @@ class PreviewSidebar(SidebarBase):
 
     def _handle_edit_file(self, path: str) -> None:
         """Edit a file."""
-        self.file_edited.emit(path, False)
+        self.file_opened_in_editor.emit(path, False)
+
+    def _handle_diff_file(self, path: str) -> None:
+        """Open a file diff view."""
+        self.file_opened_in_diff.emit(path, False)
 
     def _handle_preview_view_file(self, path: str) -> None:
         """View a file in the preview."""

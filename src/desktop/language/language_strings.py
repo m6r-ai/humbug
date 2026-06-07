@@ -292,9 +292,9 @@ class LanguageStrings:
     # Mindspace File Tree Edit Menu Errors and Options
     rename: str
     delete: str
-    edit: str
-    preview: str
-    diff: str
+    open_in_editor: str
+    open_in_preview: str
+    open_in_diff: str
     duplicate: str
     sort_by: str
     sort_by_name: str

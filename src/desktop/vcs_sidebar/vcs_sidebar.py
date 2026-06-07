@@ -92,7 +92,7 @@ class VCSSidebar(SidebarBase):
     """Sidebar panel showing VCS-modified files for the current mindspace."""
 
     file_clicked = Signal(str, str, bool)                  # panel_id, path, ephemeral
-    file_edited = Signal(str, bool)                        # path, ephemeral
+    file_opened_in_editor = Signal(str, bool)              # path, ephemeral
     file_opened_in_preview = Signal(str)                   # path
     file_deleted = Signal(str)                             # path
     file_opened_in_diff = Signal(str, bool)                # path, ephemeral
@@ -237,15 +237,15 @@ class VCSSidebar(SidebarBase):
         strings = self._language_manager.strings()
         menu = self._style_manager.create_menu(self)
 
-        diff_action = menu.addAction(strings.diff)
+        diff_action = menu.addAction(strings.open_in_diff)
         diff_action.triggered.connect(lambda: self.file_opened_in_diff.emit(path, False))
 
         # Edit and preview are only meaningful for files that still exist on disk.
         if os.path.exists(path):
-            edit_action = menu.addAction(strings.edit)
-            edit_action.triggered.connect(lambda: self.file_edited.emit(path, False))
+            edit_action = menu.addAction(strings.open_in_editor)
+            edit_action.triggered.connect(lambda: self.file_opened_in_editor.emit(path, False))
 
-            preview_action = menu.addAction(strings.preview)
+            preview_action = menu.addAction(strings.open_in_preview)
             preview_action.triggered.connect(lambda: self.file_opened_in_preview.emit(path))
 
             delete_action = menu.addAction(strings.delete)

@@ -268,9 +268,9 @@ class DiffPane(QPlainTextEdit):
         copy_action.setEnabled(self.textCursor().hasSelection())
         copy_action.triggered.connect(self.copy)
         menu.addSeparator()
-        edit_action = menu.addAction(strings.edit)
+        edit_action = menu.addAction(strings.open_in_editor)
         edit_action.triggered.connect(lambda: self.open_in_editor_requested.emit(block_number, column))
-        preview_action = menu.addAction(strings.preview)
+        preview_action = menu.addAction(strings.open_in_preview)
         preview_action.triggered.connect(self.open_in_preview_requested)
         menu.exec_(event.globalPos())
 

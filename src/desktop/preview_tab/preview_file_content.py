@@ -356,12 +356,14 @@ class PreviewFileContent(PreviewContentWidget):
         """
         actions = []
 
+        strings = self._language_manager.strings()
+
         # Add copy action if text is selected
         if self.has_selection():
             actions.append(("Copy", self.copy_selection))
 
         # Add edit action
-        actions.append(("Edit", self.edit_clicked.emit))
+        actions.append((strings.open_in_editor, self.edit_clicked.emit))
 
         return actions
 

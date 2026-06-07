@@ -312,9 +312,9 @@ def get_arabic_strings() -> LanguageStrings:
         # Mindspace File Tree Edit Menu Errors and Options
         rename="إعادة التسمية",
         delete="حذف",
-        edit="تحرير",
-        preview="معاينة",
-        diff="فرق",
+        open_in_editor="فتح في المحرر",
+        open_in_preview="فتح في المعاينة",
+        open_in_diff="فتح في الفرق",
         duplicate="تكرار",
         sort_by="ترتيب حسب",
         sort_by_name="ترتيب حسب الاسم",

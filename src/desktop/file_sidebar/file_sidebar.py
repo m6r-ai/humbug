@@ -36,7 +36,7 @@ class FileSidebar(SidebarBase):
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
-    file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
+    file_opened_in_editor = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in editor
     file_opened_in_preview = Signal(str)  # Emits path when file is opened in preview
     file_opened_in_diff = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in diff
 
@@ -286,7 +286,7 @@ class FileSidebar(SidebarBase):
 
             # If it's a file, signal that it should be opened for editing
             if not is_folder:
-                self.file_edited.emit(new_path, False)
+                self.file_opened_in_editor.emit(new_path, False)
 
         except OSError as e:
             self._logger.error("Failed to rename temporary %s from '%s' to '%s': %s",
@@ -678,7 +678,7 @@ class FileSidebar(SidebarBase):
 
         else:
             menu = self._style_manager.create_menu(self)
-            menu.addAction(strings.preview).triggered.connect(lambda: self._handle_preview_view_file(path))
+            menu.addAction(strings.open_in_preview).triggered.connect(lambda: self._handle_preview_view_file(path))
             menu.addAction(strings.new_folder).triggered.connect(lambda: self._start_new_folder_creation(path))
             menu.addAction(strings.new_file).triggered.connect(lambda: self._start_new_file_creation(path))
             tree_index = self._get_tree_index_for_path(path)
@@ -714,7 +714,7 @@ class FileSidebar(SidebarBase):
             # Create actions based on item type
             if is_dir:
                 # Directory context menu
-                preview_view_action = menu.addAction(strings.preview)
+                preview_view_action = menu.addAction(strings.open_in_preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
                 new_folder_action = menu.addAction(strings.new_folder)
                 new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
@@ -727,12 +727,13 @@ class FileSidebar(SidebarBase):
 
             else:
                 # File context menu
-                edit_action = menu.addAction(strings.edit)
+                edit_action = menu.addAction(strings.open_in_editor)
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
-                preview_view_action = menu.addAction(strings.preview)
+                preview_view_action = menu.addAction(strings.open_in_preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
-                if self._vcs_poller.has_vcs_changes(path):
-                    diff_action = menu.addAction(strings.diff)
+                if self._vcs_poller.has_repo():
+                    diff_action = menu.addAction(strings.open_in_diff)
+                    diff_action.setEnabled(self._vcs_poller.has_vcs_changes(path))
                     diff_action.triggered.connect(lambda: self._handle_diff_file(path))
 
                 duplicate_action = menu.addAction(strings.duplicate)
@@ -879,7 +880,7 @@ class FileSidebar(SidebarBase):
 
     def _handle_edit_file(self, path: str) -> None:
         """Edit a file."""
-        self.file_edited.emit(path, False)
+        self.file_opened_in_editor.emit(path, False)
 
     def _handle_preview_view_file(self, path: str) -> None:
         """View a file in the preview."""

@@ -311,9 +311,9 @@ def get_french_strings() -> LanguageStrings:
         # Mindspace File Tree Edit Menu Errors and Options
         rename="Renommer",
         delete="Supprimer",
-        edit="Modifier",
-        preview="Aperçu",
-        diff="Diff",
+        open_in_editor="Ouvrir dans l'éditeur",
+        open_in_preview="Ouvrir dans l'aperçu",
+        open_in_diff="Ouvrir dans le diff",
         duplicate="Dupliquer",
         sort_by="Trier par",
         sort_by_name="Trier par nom",

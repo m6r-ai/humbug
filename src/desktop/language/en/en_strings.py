@@ -311,9 +311,9 @@ def get_english_strings() -> LanguageStrings:
         # Mindspace File Tree Edit Menu Errors and Options
         rename="Rename",
         delete="Delete",
-        edit="Edit",
-        preview="Preview",
-        diff="Diff",
+        open_in_editor="Open In Editor",
+        open_in_preview="Open In Preview",
+        open_in_diff="Open In Diff",
         duplicate="Duplicate",
         sort_by="Sort By",
         sort_by_name="Sort by name",

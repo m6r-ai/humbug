@@ -150,7 +150,7 @@ def _wire_conversation_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
     panel.file_deleted.connect(mgr.file_deleted)
     panel.file_renamed.connect(mgr.file_renamed)
     panel.file_moved.connect(mgr.file_moved)
-    panel.file_edited.connect(mgr.file_edited)
+    panel.file_opened_in_editor.connect(mgr.file_opened_in_editor)
     panel.file_opened_in_preview.connect(mgr.file_opened_in_preview)
     panel.new_conversation_requested.connect(mgr.new_conversation_requested)
 
@@ -160,7 +160,7 @@ def _wire_vcs_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
     assert isinstance(panel, VCSSidebar)
     panel.file_clicked.connect(mgr.file_clicked)
     panel.file_deleted.connect(mgr.file_deleted)
-    panel.file_edited.connect(mgr.file_edited)
+    panel.file_opened_in_editor.connect(mgr.file_opened_in_editor)
     panel.file_opened_in_preview.connect(mgr.file_opened_in_preview)
     panel.file_opened_in_diff.connect(mgr.file_opened_in_diff)
 
@@ -172,7 +172,7 @@ def _wire_file_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
     panel.file_deleted.connect(mgr.file_deleted)
     panel.file_renamed.connect(mgr.file_renamed)
     panel.file_moved.connect(mgr.file_moved)
-    panel.file_edited.connect(mgr.file_edited)
+    panel.file_opened_in_editor.connect(mgr.file_opened_in_editor)
     panel.file_opened_in_preview.connect(mgr.file_opened_in_preview)
     panel.file_opened_in_diff.connect(mgr.file_opened_in_diff)
 
@@ -184,8 +184,9 @@ def _wire_preview_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
     panel.file_deleted.connect(mgr.file_deleted)
     panel.file_renamed.connect(mgr.file_renamed)
     panel.file_moved.connect(mgr.file_moved)
-    panel.file_edited.connect(mgr.file_edited)
+    panel.file_opened_in_editor.connect(mgr.file_opened_in_editor)
     panel.file_opened_in_preview.connect(mgr.file_opened_in_preview)
+    panel.file_opened_in_diff.connect(mgr.file_opened_in_diff)
 
 
 def _wire_search_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
@@ -518,7 +519,7 @@ class MainWindow(QMainWindow):
         self._sidebar_manager.file_deleted.connect(self._on_sidebar_file_deleted)
         self._sidebar_manager.file_renamed.connect(self._on_sidebar_file_renamed)
         self._sidebar_manager.file_moved.connect(self._on_sidebar_file_moved)
-        self._sidebar_manager.file_edited.connect(self._on_sidebar_file_edited)
+        self._sidebar_manager.file_opened_in_editor.connect(self._on_sidebar_file_opened_in_editor)
         self._sidebar_manager.file_opened_in_preview.connect(self._on_sidebar_file_opened_in_preview)
         self._sidebar_manager.file_opened_in_diff.connect(self._on_sidebar_file_opened_in_diff)
         self._sidebar_manager.search_result_activated.connect(self._on_mindspace_search_result_activated)
@@ -1387,8 +1388,8 @@ class MainWindow(QMainWindow):
                 f"Human moved file: '{old_path}' -> '{new_path}'"
             )
 
-    def _on_sidebar_file_edited(self, path: str, ephemeral: bool) -> None:
-        """Handle file edited event from the sidebar."""
+    def _on_sidebar_file_opened_in_editor(self, path: str, ephemeral: bool) -> None:
+        """Handle file opened in editor event from the sidebar."""
         self._open_file_path(path, ephemeral)
 
     def _on_open_file(self) -> None:

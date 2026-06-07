@@ -37,7 +37,7 @@ class SidebarManager(QWidget):
     file_deleted = Signal(str)
     file_renamed = Signal(str, str)
     file_moved = Signal(str, str)
-    file_edited = Signal(str, bool)
+    file_opened_in_editor = Signal(str, bool)
     file_opened_in_preview = Signal(str)
     file_opened_in_diff = Signal(str, bool)
     new_conversation_requested = Signal(str)

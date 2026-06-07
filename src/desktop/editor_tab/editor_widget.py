@@ -1923,11 +1923,12 @@ class EditorWidget(QPlainTextEdit):
         if self._path:
             menu.addSeparator()
 
-            preview_action = menu.addAction(strings.preview)
+            preview_action = menu.addAction(strings.open_in_preview)
             preview_action.triggered.connect(self._open_in_preview)
 
             if MindspaceVCSPoller().has_repo():
-                diff_action = menu.addAction(strings.diff)
+                diff_action = menu.addAction(strings.open_in_diff)
+                diff_action.setEnabled(MindspaceVCSPoller().has_vcs_changes(self._path))
                 diff_action.triggered.connect(self._open_in_diff)
 
         menu.exec_(event.globalPos())
