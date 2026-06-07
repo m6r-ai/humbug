@@ -2,10 +2,10 @@
 Combo box setting for selecting from a list of options.
 """
 
-from typing import Any, List, Tuple, cast
+from typing import Any, Callable, List, Tuple, cast
 
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QRectF, QTimer
-from PySide6.QtGui import QHideEvent, QIcon, QKeyEvent, QPainter, QPaintEvent, QPainterPath
+from PySide6.QtGui import QHideEvent, QIcon, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPainterPath
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
@@ -25,10 +25,26 @@ from desktop.style_manager import StyleManager
 class _SettingsComboButton(QPushButton):
     """Push button trigger that paints the app dropdown asset on the right."""
 
+    _toggle_callback: "Callable[[], None] | None"
+
     def __init__(self) -> None:
         super().__init__()
         self._dropdown_icon = QIcon()
         self._show_dropdown_icon = True
+        self._toggle_callback = None
+
+    def set_toggle_callback(self, callback: "Callable[[], None]") -> None:
+        """Set the callback invoked on mouse press instead of the clicked signal."""
+        self._toggle_callback = callback
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        """Toggle the popup on press rather than release to beat the popup close event."""
+        if event.button() == Qt.MouseButton.LeftButton and self._toggle_callback:
+            self._toggle_callback()
+            event.accept()
+            return
+
+        super().mousePressEvent(event)
 
     def set_dropdown_icon(self, icon_path: str) -> None:
         """Set the app-provided dropdown icon."""
@@ -72,7 +88,10 @@ class _SettingsComboPopup(QFrame):
         super().__init__(owner, Qt.WindowType.Popup | Qt.WindowType.NoDropShadowWindowHint)
 
         self._owner = owner
+        self._open = False
+        self._just_closed = False
         self.setObjectName("SettingsComboPopupWindow")
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setLineWidth(0)
@@ -174,6 +193,7 @@ class _SettingsComboPopup(QFrame):
             self.move(global_pos)
             self.show()
             self.raise_()
+            self._open = True
 
         self.hide()
         QTimer.singleShot(0, _show_at_pos)
@@ -231,7 +251,27 @@ class _SettingsComboPopup(QFrame):
     def hideEvent(self, event: QHideEvent) -> None:
         """Notify the owner when the popup is hidden so it can reset the chevron."""
         super().hideEvent(event)
-        self._owner.on_popup_hidden()
+        if self._open:
+            self._open = False
+            self._just_closed = True
+            QTimer.singleShot(200, self._clear_just_closed)
+            self._owner.on_popup_hidden()
+
+    def is_open(self) -> bool:
+        """Return True if the popup has been opened and not yet genuinely closed."""
+        return self._open
+
+    def was_just_closed(self) -> bool:
+        """Return True if the popup closed within the last 200 ms."""
+        return self._just_closed
+
+    def _clear_just_closed(self) -> None:
+        self._just_closed = False
+
+    def close_popup(self) -> None:
+        """Close the popup and clear open state."""
+        self._open = False
+        self.hide()
 
     def _item_size_hint(self, enabled: bool) -> QSize:
         zoom = self._owner.style_manager().zoom_factor()
@@ -356,7 +396,7 @@ class SettingsCombo(SettingsField):
         self._button = _SettingsComboButton()
         self._button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._button.clicked.connect(self._show_popup)
+        self._button.set_toggle_callback(self._toggle_popup)
 
         self._popup = _SettingsComboPopup(self)
         self._popup.set_searchable(False)
@@ -378,8 +418,15 @@ class SettingsCombo(SettingsField):
         """Return the combo button top edge in global coordinates."""
         return self._button.mapToGlobal(QPoint(0, 0)).y()
 
-    def _show_popup(self) -> None:
+    def _toggle_popup(self) -> None:
         if not self._items:
+            return
+
+        if self._popup.is_open():
+            self._popup.close_popup()
+            return
+
+        if self._popup.was_just_closed():
             return
 
         self._popup.set_items(self._items)
