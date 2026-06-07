@@ -838,7 +838,17 @@ class MarkdownRenderer(MarkdownASTVisitor):
             self._cursor.movePosition(QTextCursor.MoveOperation.PreviousBlock)
 
         block_format = self._cursor.blockFormat()
-        block_format.setBottomMargin(0)
+
+        # Add a bottom margin when the next sibling is another list or a table,
+        # to visually separate them.  Otherwise suppress the margin so list items
+        # don't have extra space below the last one.
+        next_sib = node.next_sibling()
+        if isinstance(next_sib, (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode, MarkdownASTTableNode)):
+            block_format.setBottomMargin(self._default_font_height)
+
+        else:
+            block_format.setBottomMargin(0)
+
         self._cursor.setBlockFormat(block_format)
 
         if at_block_start:
