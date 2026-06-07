@@ -827,41 +827,10 @@ class MarkdownASTBuilder:
         # Check if the content is a code block fence
         code_block_match = self._code_block_pattern.match(content.strip())
         if code_block_match:
-            # This list item starts with a code block - start the code block
             language_name = code_block_match.group(1) or ""
-            self._in_code_block = True
-            self._code_block_start_container = item
-            self._code_block_blockquote_depth = self._current_blockquote_depth()
-            self._code_block_language_name = language_name
-            self._embedded_language = ProgrammingLanguageUtils.from_name(language_name)
-            self._code_block_content = []
-            self._code_block_start_line = line_num
-
-            # Initialize nesting tracking
-            # The indent should be relative to the list item content
-            self._code_block_nesting_level = 1
-            self._code_block_indents = [indent + marker_length]
-            self._embedded_parser_state = None  # Will be initialized on first line
-
-            # Set up the list item node
-            item.line_start = line_num
-            item.line_end = line_num
-            self._register_node_line(item, line_num)
-
+            self._start_code_block_in_list_item(item, indent + marker_length, language_name, line_num)
         else:
-            # Create a paragraph for the content
-            paragraph = MarkdownASTParagraphNode()
-            for node in self._parse_inline_formatting(content):
-                paragraph.add_child(node)
-
-            paragraph.line_start = line_num
-            paragraph.line_end = line_num
-            item.add_child(paragraph)
-            self._register_node_line(paragraph, line_num)
-
-            item.line_start = line_num
-            item.line_end = line_num
-            self._register_node_line(item, line_num)
+            self._parse_list_item_inline_content(item, content, line_num)
 
         # Update tracking
         self._last_processed_line_type = 'ordered_list_item'
@@ -953,41 +922,11 @@ class MarkdownASTBuilder:
         # Check if the content is a code block fence
         code_block_match = self._code_block_pattern.match(content.strip())
         if code_block_match:
-            # This list item starts with a code block - start the code block
             language_name = code_block_match.group(1) or ""
-            self._in_code_block = True
-            self._code_block_start_container = item
-            self._code_block_blockquote_depth = self._current_blockquote_depth()
-            self._code_block_language_name = language_name
-            self._embedded_language = ProgrammingLanguageUtils.from_name(language_name)
-            self._code_block_content = []
-            self._code_block_start_line = line_num
-
-            # Initialize nesting tracking
-            # The indent should be relative to the list item content
-            self._code_block_nesting_level = 1
-            self._code_block_indents = [indent + marker_length]
-            self._embedded_parser_state = None  # Will be initialized on first line
-
-            # Set up the list item node
-            item.line_start = line_num
-            item.line_end = line_num
-            self._register_node_line(item, line_num)
+            self._start_code_block_in_list_item(item, indent + marker_length, language_name, line_num)
 
         else:
-            # Create a paragraph for the content
-            paragraph = MarkdownASTParagraphNode()
-            for node in self._parse_inline_formatting(content):
-                paragraph.add_child(node)
-
-            paragraph.line_start = line_num
-            paragraph.line_end = line_num
-            item.add_child(paragraph)
-            self._register_node_line(paragraph, line_num)
-
-            item.line_start = line_num
-            item.line_end = line_num
-            self._register_node_line(item, line_num)
+            self._parse_list_item_inline_content(item, content, line_num)
 
         # Update tracking
         self._last_processed_line_type = 'unordered_list_item'
@@ -1003,6 +942,84 @@ class MarkdownASTBuilder:
             marker_length=marker_length
         )
         self._container_stack.append(context)
+
+    def _start_code_block_in_list_item(
+        self, item: MarkdownASTListItemNode, content_indent: int, language_name: str, line_num: int
+    ) -> None:
+        """
+        Begin a fenced code block whose opening fence appeared as the inline content
+        of a list item marker line.
+
+        Args:
+            item: The list item node that owns the code block.
+            content_indent: Column at which the code block content starts (indent +
+                marker_length for the enclosing list item).
+            language_name: Language identifier from the opening fence, or empty string.
+            line_num: The source line number of the opening fence.
+        """
+        self._in_code_block = True
+        self._code_block_start_container = item
+        self._code_block_blockquote_depth = self._current_blockquote_depth()
+        self._code_block_language_name = language_name
+        self._embedded_language = ProgrammingLanguageUtils.from_name(language_name)
+        self._code_block_content = []
+        self._code_block_start_line = line_num
+        self._code_block_nesting_level = 1
+        self._code_block_indents = [content_indent]
+        self._embedded_parser_state = None
+        item.line_start = line_num
+        item.line_end = line_num
+        self._register_node_line(item, line_num)
+
+    def _parse_list_item_inline_content(
+        self, item: MarkdownASTListItemNode, content: str, line_num: int
+    ) -> None:
+        """
+        Attach the inline content of a list item marker line to the item node.
+
+        If the content begins with a blockquote marker (``>``) the content is wrapped
+        in a blockquote node containing a paragraph.  Otherwise a plain paragraph is
+        created directly inside the item.
+
+        Args:
+            item: The list item node to populate.
+            content: The text that follows the list marker on the same source line.
+            line_num: The source line number.
+        """
+        content_stripped = content.lstrip()
+        if content_stripped.startswith('>'):
+            after_marker = content_stripped[1:]
+            if after_marker.startswith(' '):
+                after_marker = after_marker[1:]
+
+            blockquote = MarkdownASTBlockquoteNode()
+            blockquote.line_start = line_num
+            blockquote.line_end = line_num
+            item.add_child(blockquote)
+            self._register_node_line(blockquote, line_num)
+
+            paragraph = MarkdownASTParagraphNode()
+            for node in self._parse_inline_formatting(after_marker):
+                paragraph.add_child(node)
+
+            paragraph.line_start = line_num
+            paragraph.line_end = line_num
+            blockquote.add_child(paragraph)
+            self._register_node_line(paragraph, line_num)
+
+        else:
+            paragraph = MarkdownASTParagraphNode()
+            for node in self._parse_inline_formatting(content):
+                paragraph.add_child(node)
+
+            paragraph.line_start = line_num
+            paragraph.line_end = line_num
+            item.add_child(paragraph)
+            self._register_node_line(paragraph, line_num)
+
+        item.line_start = line_num
+        item.line_end = line_num
+        self._register_node_line(item, line_num)
 
     def _parse_horizontal_rule(self, line_num: int) -> MarkdownASTHorizontalRuleNode:
         """

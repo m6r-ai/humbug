@@ -371,6 +371,23 @@ An ordered list where every item contains a blockquote:
 
    > Blockquote inside second ordered item.
 
+A list with a blockquote containing a list:
+
+- Item one
+
+- Item two with a blockquote:
+
+  > This blockquote is nested inside a list item. It should have its bar
+  > indented to match the list content.
+  >
+  > - Then we have a list
+  > - inside
+  > - and a third item
+  > - > the fourth is a blockquote
+
+- Item three
+
+
 ---
 
 ## 12. Tables
