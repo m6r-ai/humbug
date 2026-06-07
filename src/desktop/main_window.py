@@ -103,7 +103,7 @@ def _create_editor_tab(
     tab = EditorTab(info.context_id, info.path, None, parent)
     goto = registry.get_model(info.context_id, tuple)
     if goto is not None:
-        tab.goto_line(goto[0], goto[1])
+        QTimer.singleShot(0, lambda: tab.goto_line(goto[0], goto[1]))
 
     return tab
 
