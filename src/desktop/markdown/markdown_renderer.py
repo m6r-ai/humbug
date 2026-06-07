@@ -748,8 +748,9 @@ class MarkdownRenderer(MarkdownASTVisitor):
         block_format = QTextBlockFormat()
         block_format.setIndent(len(self._blockquote_bar_offsets))
 
-        # Add a top margin when following a blockquote.
-        if isinstance(node.previous_sibling(), MarkdownASTBlockquoteNode):
+        # Add a top margin when following a list or a blockquote.
+        if isinstance(node.previous_sibling(), (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode,
+                                                MarkdownASTBlockquoteNode)):
             block_format.setTopMargin(self._default_font_height)
 
         # Apply the block format
