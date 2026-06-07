@@ -262,6 +262,12 @@ class MarkdownRenderer(MarkdownASTVisitor):
         elif not previous_sibling and node.parent and isinstance(node.parent, MarkdownASTListItemNode):
             if not tight:
                 block_format.setTopMargin(self._default_font_height)
+            elif node.parent.previous_sibling() is not None:
+                # This is a tight list item that is not the first in its list.  The topMargin
+                # on orig_block_format was inherited from the first block of the list (where it
+                # correctly spaces the list away from a preceding sibling).  Clear it here so
+                # it does not add spurious inter-item spacing.
+                block_format.setTopMargin(0)
 
         # If the next sibling is a horizontal rule, we don't need a bottom margin
         next_sibling = node.next_sibling()
