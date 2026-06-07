@@ -75,8 +75,8 @@ class MarkdownRenderer(MarkdownASTVisitor):
         self._current_table: QTextTable | None = None
         self._current_row: int = 0
 
-        # Blockquote nesting depth (0 = not in a blockquote)
-        self._blockquote_depth: int = 0
+        # Per-level list-indent at each blockquote nesting depth (empty = not in a blockquote)
+        self._blockquote_bar_offsets: list[int] = []
 
     def apply_style(self) -> None:
         """Apply style changes."""
@@ -275,7 +275,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         else:
             block_format.setBottomMargin(self._default_font_height)
 
-        block_format.setIndent(self._blockquote_depth)
+        block_format.setIndent(len(self._blockquote_bar_offsets))
         self._cursor.setBlockFormat(block_format)
         self._stamp_blockquote_data()
 
@@ -336,12 +336,12 @@ class MarkdownRenderer(MarkdownASTVisitor):
             block_format.setTopMargin(self._default_font_height * multipliers[level])
 
         block_format.setBottomMargin(self._default_font_height)
-        block_format.setIndent(self._blockquote_depth)
+        block_format.setIndent(len(self._blockquote_bar_offsets))
         self._cursor.setBlockFormat(block_format)
 
         # Store the ID as block user data
         heading_data = HeadingBlockData(node.anchor_id)
-        heading_data.blockquote_depth = self._blockquote_depth
+        heading_data.blockquote_bar_offsets = list(self._blockquote_bar_offsets)
         self._cursor.block().setUserData(heading_data)
 
         # Process all inline content for the heading
@@ -740,7 +740,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         # Create a code block format with monospace font and background
         block_format = QTextBlockFormat()
-        block_format.setIndent(self._blockquote_depth)
+        block_format.setIndent(len(self._blockquote_bar_offsets))
 
         # Add a top margin when following a blockquote.
         if isinstance(node.previous_sibling(), MarkdownASTBlockquoteNode):
@@ -1251,23 +1251,23 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
     def _stamp_blockquote_data(self) -> None:
         """
-        Stamp blockquote_depth onto the current block's MarkdownBlockData.
+        Stamp blockquote_bar_offsets onto the current block's MarkdownBlockData.
 
-        If the block already has a MarkdownBlockData (e.g. HeadingBlockData), the depth
-        is written onto it directly.  Otherwise a plain MarkdownBlockData is created.
-        Always writes the depth, including zero, so that blocks pre-stamped by a
+        If the block already has a MarkdownBlockData (e.g. HeadingBlockData), the offsets
+        are written onto it directly.  Otherwise a plain MarkdownBlockData is created.
+        Always writes the offsets, including empty, so that blocks pre-stamped by a
         previous blockquote visitor are correctly cleared when rendered outside one.
         """
         existing = self._cursor.block().userData()
         if isinstance(existing, MarkdownBlockData):
-            existing.blockquote_depth = self._blockquote_depth
+            existing.blockquote_bar_offsets = list(self._blockquote_bar_offsets)
 
         else:
-            if self._blockquote_depth == 0:
+            if not self._blockquote_bar_offsets:
                 return
 
             data = MarkdownBlockData()
-            data.blockquote_depth = self._blockquote_depth
+            data.blockquote_bar_offsets = list(self._blockquote_bar_offsets)
             self._cursor.block().setUserData(data)
 
     def visit_MarkdownASTBlockquoteNode(self, node: MarkdownASTBlockquoteNode) -> None:  # pylint: disable=invalid-name
@@ -1280,12 +1280,19 @@ class MarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
-        self._blockquote_depth += 1
+        self._blockquote_bar_offsets.append(self._list_level)
+
+        if self._lists:
+            list_fmt = QTextListFormat(self._lists[-1].format())
+            list_fmt.setStyle(QTextListFormat.Style.ListStyleUndefined)
+            list_for_blockquote = self._cursor.createList(list_fmt)
+            list_for_blockquote.setFormat(list_fmt)
+            list_for_blockquote.add(self._cursor.block())
 
         for child in node.children:
             self.visit(child)
 
-        self._blockquote_depth -= 1
+        self._blockquote_bar_offsets.pop()
 
     def visit_MarkdownASTHorizontalRuleNode(self, node: MarkdownASTHorizontalRuleNode) -> None:  # pylint: disable=invalid-name
         """

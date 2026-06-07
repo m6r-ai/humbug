@@ -439,8 +439,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         """
         Paint the widget, adding blockquote border bars after Qt's normal rendering.
 
-        For each visible text block that carries a non-zero blockquote_depth, one
-        coloured vertical bar is drawn per nesting level in the left margin.  The
+        For each visible text block that carries a non-empty blockquote_bar_offsets list,
+        one coloured vertical bar is drawn per nesting level in the left margin.  The
         bars are painted after the normal text so they appear on top of any
         background fills.
 
@@ -468,14 +468,14 @@ class MarkdownTextEdit(MinHeightTextEdit):
         block = doc.begin()
         while block.isValid():
             user_data = block.userData()
-            if isinstance(user_data, MarkdownBlockData) and user_data.blockquote_depth > 0:
+            if isinstance(user_data, MarkdownBlockData) and user_data.blockquote_bar_offsets:
                 # Skip empty separator blocks that trail a blockquote — an empty
                 # block whose next block has a lower blockquote depth exists only
                 # as a cursor position and should not be painted.
                 next_block = block.next()
                 next_data = next_block.userData() if next_block.isValid() else None
-                next_depth = next_data.blockquote_depth if isinstance(next_data, MarkdownBlockData) else 0
-                if block.text() == "" and next_depth < user_data.blockquote_depth:
+                next_offsets = next_data.blockquote_bar_offsets if isinstance(next_data, MarkdownBlockData) else []
+                if block.text() == "" and len(next_offsets) < len(user_data.blockquote_bar_offsets):
                     block = block.next()
                     continue
 
@@ -486,30 +486,32 @@ class MarkdownTextEdit(MinHeightTextEdit):
                 # adjacent blocks produce a seamless bar.  round() rather than int() is
                 # used throughout to avoid sub-pixel gaps from truncation.  Each bar level
                 # is extended independently: a bar at depth N extends into the margin only
-                # if the adjacent block also reaches depth N.
+                # if the adjacent block also has the same bar offset at depth N.
                 fmt = block.blockFormat()
                 bottom_margin = fmt.bottomMargin()
                 top_margin = fmt.topMargin()
 
                 prev_block = block.previous()
-                prev_depth = 0
+                prev_offsets: list[int] = []
                 if prev_block.isValid():
                     prev_data = prev_block.userData()
                     if isinstance(prev_data, MarkdownBlockData):
-                        prev_depth = prev_data.blockquote_depth
+                        prev_offsets = prev_data.blockquote_bar_offsets
 
                 # next_block, next_data, and next_depth were already computed above.
 
                 # Only paint bars for blocks that intersect the dirty region
                 if block_rect.bottom() >= event.rect().top() and block_rect.top() <= event.rect().bottom():
-                    for level in range(user_data.blockquote_depth):
+                    for level, list_offset in enumerate(user_data.blockquote_bar_offsets):
                         # Bar at depth (level+1): extend into margins only if the
-                        # adjacent block also reaches this depth level.
-                        effective_top = top_margin if prev_depth >= level + 1 else 0.0
-                        effective_bottom = bottom_margin if next_depth >= level + 1 else 0.0
+                        # adjacent block has the same bar offset at this depth level.
+                        prev_matches = len(prev_offsets) >= level + 1 and prev_offsets[level] == list_offset
+                        next_matches = len(next_offsets) >= level + 1 and next_offsets[level] == list_offset
+                        effective_top = top_margin if prev_matches else 0.0
+                        effective_bottom = bottom_margin if next_matches else 0.0
                         bar_top = round(block_rect.top() - effective_top)
                         bar_height = round(block_rect.height() + effective_top + effective_bottom)
-                        x = round(level * indent_width) + content_offset_x
+                        x = round((level + list_offset) * indent_width) + content_offset_x
                         painter.drawRect(x, bar_top, bar_width, bar_height)
 
             block = block.next()

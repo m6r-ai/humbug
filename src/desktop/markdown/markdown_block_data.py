@@ -7,9 +7,9 @@ class MarkdownBlockData(QTextBlockUserData):
     """Base class for all markdown-specific text block user data."""
 
     def __init__(self) -> None:
-        """Initialize with zero blockquote depth."""
+        """Initialize with an empty blockquote bar offsets list."""
         super().__init__()
-        self.blockquote_depth: int = 0
+        self.blockquote_bar_offsets: list[int] = []
 
 
 class HeadingBlockData(MarkdownBlockData):
