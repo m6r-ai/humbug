@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v49 (2026-06-06)
+## v49 (2026-06-07)
 
 New features:
 
@@ -12,13 +12,12 @@ New features:
   and asks it to select the correct one.
 - Google Gemini models now show their reasoning.
 - Added Claude Opus 4.8 and removed 4.6.
-- Added a new abstract document IR and conversion logic to convert markdown and DOCX format files into/out-of this format.
+- Added support for strikethrough in the markdown parser.
 - Added a new DOCX AST and code to read/write DOCX format using it.
 - Added a new HTML DOM and code to read/write HTML using it.
-- Added support for strikethrough in the markdown parser.
-- Added a tool to convert docs to markdown.
-- Replaced the app icon!
+- Added a `convert_document` CLI tool to convert docs between markdown, DOCX, and HTML.
 - Added a document converter AI tool.  Initially this can convert between markdown, DOCX, and HTML.
+- Replaced the app icon!
 
 Bug fixes:
 
@@ -46,6 +45,7 @@ Internal structure changes:
 - Created a clean separation of sidebar functionality and added a new sidebar manager.
 - Hoisted all tabs and sidebars to the top of the src/desktop directory.
 - Added pytest tests for the Markdown syntax highlighter.
+- Added a new abstract document IR.
 
 ## v48 (2026-05-22)
 

@@ -215,16 +215,16 @@ Test structure mirrors `src/` organization:
 ## `tools/` Directory
 
 Development and debugging utilities:
+- `__init__.py` — makes `tools/` a package so mypy resolves all tool subpackages as `tools.*`
+- `menai/benchmark/` - Menai performance benchmarking
 - `menai/benchmark/` - Menai performance benchmarking
 - `menai/checker/` - Static analysis
 - `menai/disassembler/` - Bytecode disassembly
 - `menai/pretty-print/` - Code formatting
 - `menai/profiler/` - Menai profiling
 - `menai/test-runner/` - Menai test runner
+- `convert_document/` - Document conversion between docx, html, and md formats
 - `dependency_checker/` - Module dependency validation
-- `docx/` - DOCX-related tooling
-- `docx_to_md/` - DOCX to Markdown conversion
-- `md_to_docx/` - Markdown to DOCX conversion
 - `pdf/` - PDF-related tooling
 - `pipeline-runner/` - Pipeline execution
 - `planner/` - Project planning
