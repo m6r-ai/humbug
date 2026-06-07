@@ -53,6 +53,7 @@ def get_french_strings() -> LanguageStrings:
         cut="Couper",
         copy="Copier",
         paste="Coller",
+        select_all="Tout sélectionner",
         find="Rechercher",
         find_replace="Rechercher et remplacer",
         goto_line="Aller à la ligne",

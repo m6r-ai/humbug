@@ -54,6 +54,7 @@ def get_arabic_strings() -> LanguageStrings:
         cut="قص",
         copy="نسخ",
         paste="لصق",
+        select_all="تحديد الكل",
         find="بحث",
         find_replace="بحث واستبدال",
         goto_line="الانتقال إلى السطر",

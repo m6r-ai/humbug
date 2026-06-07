@@ -82,6 +82,10 @@ class MindspaceVCSPoller(QObject):
         if self._mindspace_path:
             self._poll()
 
+    def has_repo(self) -> bool:
+        """Return True if a git repository is currently detected for the mindspace."""
+        return self._has_repo
+
     def has_vcs_changes(self, path: str) -> bool:
         """
         Return whether the given path has VCS changes in the last poll.

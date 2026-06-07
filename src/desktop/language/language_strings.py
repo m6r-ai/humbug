@@ -44,6 +44,7 @@ class LanguageStrings:
     cut: str
     copy: str
     paste: str
+    select_all: str
     find: str
     find_replace: str
     goto_line: str

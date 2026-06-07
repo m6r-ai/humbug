@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
 from PySide6.QtCore import Qt, QRect, Signal, QTimer, QRegularExpression
 from PySide6.QtGui import (
     QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
-    QResizeEvent, QPaintEvent, QTextDocument
+    QResizeEvent, QPaintEvent, QTextDocument, QContextMenuEvent
 )
 
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
@@ -17,6 +17,7 @@ from mindspace.mindspace_settings import MindspaceSettings
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 from desktop.code_block_highlighter import CodeBlockHighlighter
+from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
@@ -1882,3 +1883,91 @@ class EditorWidget(QPlainTextEdit):
             'hunks_applied': result.hunks_applied,
             'error_details': result.error_details
         }
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        """Show a styled context menu replacing the built-in Qt editor menu."""
+        strings = self._language_manager.strings()
+        menu = self._style_manager.create_menu(self)
+
+        undo_action = menu.addAction(strings.undo)
+        undo_action.setEnabled(self.can_undo())
+        undo_action.triggered.connect(self.undo)
+
+        redo_action = menu.addAction(strings.redo)
+        redo_action.setEnabled(self.can_redo())
+        redo_action.triggered.connect(self.redo)
+
+        menu.addSeparator()
+
+        cut_action = menu.addAction(strings.cut)
+        cut_action.setEnabled(self.can_cut())
+        cut_action.triggered.connect(self.cut)
+
+        copy_action = menu.addAction(strings.copy)
+        copy_action.setEnabled(self.can_copy())
+        copy_action.triggered.connect(self.copy)
+
+        paste_action = menu.addAction(strings.paste)
+        paste_action.setEnabled(self.can_paste())
+        paste_action.triggered.connect(self.paste)
+
+        delete_action = menu.addAction(strings.delete)
+        delete_action.setEnabled(self.textCursor().hasSelection())
+        delete_action.triggered.connect(self._delete_selected_text)
+
+        menu.addSeparator()
+
+        select_all_action = menu.addAction(strings.select_all)
+        select_all_action.triggered.connect(self.selectAll)
+
+        if self._path:
+            menu.addSeparator()
+
+            preview_action = menu.addAction(strings.preview)
+            preview_action.triggered.connect(self._open_in_preview)
+
+            if MindspaceVCSPoller().has_repo():
+                diff_action = menu.addAction(strings.diff)
+                diff_action.triggered.connect(self._open_in_diff)
+
+        menu.exec_(event.globalPos())
+
+    def _delete_selected_text(self) -> None:
+        """Delete the currently selected text."""
+        self.textCursor().removeSelectedText()
+
+    def _open_in_preview(self) -> None:
+        """Open the current file in a preview tab."""
+        mindspace_manager = MindspaceManager()
+        if not mindspace_manager.has_mindspace():
+            return
+
+        contexts = mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(self._path, "preview")
+        if existing:
+            contexts.focus(existing.context_id)
+
+        else:
+            contexts.open(
+                context_type="preview",
+                path=self._path,
+                title=os.path.basename(self._path),
+            )
+
+    def _open_in_diff(self) -> None:
+        """Open the current file in a diff tab."""
+        mindspace_manager = MindspaceManager()
+        if not mindspace_manager.has_mindspace():
+            return
+
+        contexts = mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(self._path, "diff")
+        if existing:
+            contexts.focus(existing.context_id)
+
+        else:
+            contexts.open(
+                context_type="diff",
+                path=self._path,
+                title=os.path.basename(self._path),
+            )

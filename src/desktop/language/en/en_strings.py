@@ -53,6 +53,7 @@ def get_english_strings() -> LanguageStrings:
         cut="Cut",
         copy="Copy",
         paste="Paste",
+        select_all="Select All",
         find="Find",
         find_replace="Find and Replace",
         goto_line="Go to Line",
