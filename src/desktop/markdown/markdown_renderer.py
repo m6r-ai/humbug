@@ -244,7 +244,8 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # If the previous sibling is a list or code block, we need to add a top margin
         previous_sibling = node.previous_sibling()
         if previous_sibling and isinstance(
-            previous_sibling, (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode, MarkdownASTCodeBlockNode)
+            previous_sibling, (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode,
+                               MarkdownASTCodeBlockNode, MarkdownASTBlockquoteNode)
         ):
             block_format.setTopMargin(self._default_font_height)
 
@@ -741,6 +742,10 @@ class MarkdownRenderer(MarkdownASTVisitor):
         block_format = QTextBlockFormat()
         block_format.setIndent(self._blockquote_depth)
 
+        # Add a top margin when following a blockquote.
+        if isinstance(node.previous_sibling(), MarkdownASTBlockquoteNode):
+            block_format.setTopMargin(self._default_font_height)
+
         # Apply the block format
         self._cursor.setBlockFormat(block_format)
         self._stamp_blockquote_data()
@@ -880,6 +885,11 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         block_format = QTextBlockFormat(orig_block_format)
         block_format.setBottomMargin(0)
+        # Add a top margin when following another list or a blockquote.
+        if isinstance(node.previous_sibling(), (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode,
+                                                MarkdownASTBlockquoteNode)):
+            block_format.setTopMargin(self._default_font_height)
+
         self._cursor.setBlockFormat(block_format)
 
         # Set indentation based on nesting level
@@ -911,6 +921,11 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         block_format = QTextBlockFormat(orig_block_format)
         block_format.setBottomMargin(0)
+        # Add a top margin when following another list or a blockquote.
+        if isinstance(node.previous_sibling(), (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode,
+                                                MarkdownASTBlockquoteNode)):
+            block_format.setTopMargin(self._default_font_height)
+
         self._cursor.setBlockFormat(block_format)
 
         # Set indentation based on nesting level
@@ -973,6 +988,12 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Insert a new block if needed
         orig_block_format = self._cursor.blockFormat()
         top_frame = self._cursor.currentFrame()
+
+        # Add a top margin when following a blockquote.
+        if isinstance(node.previous_sibling(), MarkdownASTBlockquoteNode):
+            sep_format = QTextBlockFormat(orig_block_format)
+            sep_format.setTopMargin(self._default_font_height)
+            self._cursor.setBlockFormat(sep_format)
 
         # Verify that this table has at least one header row and one body row before rendering
         has_valid_structure = False
