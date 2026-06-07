@@ -158,6 +158,18 @@ class DocumentIRListItemNode(DocumentIRNode):
     """Node representing a single item within a list."""
 
 
+class DocumentIRDefinitionListNode(DocumentIRNode):
+    """Node representing a definition list (<dl>)."""
+
+
+class DocumentIRDefinitionTermNode(DocumentIRNode):
+    """Node representing a definition term (<dt>)."""
+
+
+class DocumentIRDefinitionDescriptionNode(DocumentIRNode):
+    """Node representing a definition description (<dd>)."""
+
+
 class DocumentIRTableNode(DocumentIRNode):
     """Node representing a table."""
 
@@ -198,7 +210,7 @@ class DocumentIRTextSpanNode(DocumentIRNode):
 
     Formatting properties are held as flags rather than through nesting,
     since a single span of text may carry any combination of bold, italic,
-    strikethrough and code simultaneously.
+    strikethrough, code, superscript and subscript simultaneously.
     """
 
     def __init__(
@@ -208,6 +220,8 @@ class DocumentIRTextSpanNode(DocumentIRNode):
         italic: bool = False,
         strikethrough: bool = False,
         code: bool = False,
+        superscript: bool = False,
+        subscript: bool = False,
     ) -> None:
         """Initialise a text span node.
 
@@ -217,6 +231,8 @@ class DocumentIRTextSpanNode(DocumentIRNode):
             italic: Whether the text is italic.
             strikethrough: Whether the text has strikethrough.
             code: Whether the text is rendered as inline code.
+            superscript: Whether the text is superscript.
+            subscript: Whether the text is subscript.
         """
         super().__init__()
         self.content = content
@@ -224,6 +240,8 @@ class DocumentIRTextSpanNode(DocumentIRNode):
         self.italic = italic
         self.strikethrough = strikethrough
         self.code = code
+        self.superscript = superscript
+        self.subscript = subscript
 
 
 class DocumentIRLinkNode(DocumentIRNode):

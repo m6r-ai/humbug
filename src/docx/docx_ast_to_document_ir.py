@@ -28,6 +28,9 @@ from docx.docx_ast_node import (
 from document_ir import (
     DocumentIRBlockquoteNode,
     DocumentIRCodeBlockNode,
+    DocumentIRDefinitionDescriptionNode,
+    DocumentIRDefinitionListNode,
+    DocumentIRDefinitionTermNode,
     DocumentIRDocumentNode,
     DocumentIRHeadingNode,
     DocumentIRImageNode,
@@ -762,6 +765,14 @@ class _DocxToDocumentIRMapper:
         strike = rpr.strike if rpr else False
         code = False
 
+        superscript = False
+        subscript = False
+        if rpr and rpr.vertical_align == "superscript":
+            superscript = True
+
+        elif rpr and rpr.vertical_align == "subscript":
+            subscript = True
+
         # A run styled with a code character style is treated as inline code
         if rpr and rpr.style_id:
             style = self._get_style(rpr.style_id)
@@ -787,6 +798,8 @@ class _DocxToDocumentIRMapper:
                         italic=italic,
                         strikethrough=strike,
                         code=code,
+                        superscript=superscript,
+                        subscript=subscript,
                     ))
 
             elif isinstance(child, DocxASTTabNode):
@@ -798,6 +811,8 @@ class _DocxToDocumentIRMapper:
                     italic=italic,
                     strikethrough=strike,
                     code=code,
+                    superscript=superscript,
+                    subscript=subscript,
                 ))
 
             elif isinstance(child, DocxASTBreakNode):

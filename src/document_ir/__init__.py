@@ -1,6 +1,9 @@
 from document_ir.document_ir_node import (
     DocumentIRNode,
     DocumentIRVisitor,
+    DocumentIRDefinitionListNode,
+    DocumentIRDefinitionTermNode,
+    DocumentIRDefinitionDescriptionNode,
     DocumentIRDocumentNode,
     DocumentIRHeadingNode,
     DocumentIRParagraphNode,
@@ -25,6 +28,10 @@ __all__ = [
     # Base
     "DocumentIRNode",
     "DocumentIRVisitor",
+    # Definition list nodes
+    "DocumentIRDefinitionListNode",
+    "DocumentIRDefinitionTermNode",
+    "DocumentIRDefinitionDescriptionNode",
     # Block nodes
     "DocumentIRDocumentNode",
     "DocumentIRHeadingNode",

@@ -453,3 +453,47 @@ class TestAttributeEscaping:
         link.add_child(_span("Go"))
         html = _render(_doc(_para(link)))
         assert "&lt;" in html or "Say" in html
+
+
+class TestDefinitionList:
+    """Definition list nodes produce <dl>, <dt>, and <dd> tags."""
+
+    def _make_dl(self) -> "DocumentIRDefinitionListNode":
+        from document_ir import (
+            DocumentIRDefinitionListNode,
+            DocumentIRDefinitionTermNode,
+            DocumentIRDefinitionDescriptionNode,
+        )
+        dl = DocumentIRDefinitionListNode()
+        dt = DocumentIRDefinitionTermNode()
+        dt.add_child(_span("Term"))
+        dl.add_child(dt)
+        dd = DocumentIRDefinitionDescriptionNode()
+        dd.add_child(_span("Desc"))
+        dl.add_child(dd)
+        return dl
+
+    def test_dl_tag(self) -> None:
+        html = _render(_doc(self._make_dl()))
+        assert "<dl>" in html
+        assert "</dl>" in html
+
+    def test_dt_tag(self) -> None:
+        html = _render(_doc(self._make_dl()))
+        assert "<dt>Term</dt>" in html
+
+    def test_dd_tag(self) -> None:
+        html = _render(_doc(self._make_dl()))
+        assert "<dd>Desc</dd>" in html
+
+
+class TestSuperscriptSubscript:
+    """Superscript and subscript spans produce <sup> and <sub> tags."""
+
+    def test_superscript_span(self) -> None:
+        html = _render(_doc(_para(_span("2", superscript=True))))
+        assert "<sup>2</sup>" in html
+
+    def test_subscript_span(self) -> None:
+        html = _render(_doc(_para(_span("2", subscript=True))))
+        assert "<sub>2</sub>" in html

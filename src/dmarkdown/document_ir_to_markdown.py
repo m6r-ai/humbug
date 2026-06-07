@@ -3,6 +3,9 @@ from typing import List, Sequence
 from document_ir import (
     DocumentIRBlockquoteNode,
     DocumentIRCodeBlockNode,
+    DocumentIRDefinitionDescriptionNode,
+    DocumentIRDefinitionListNode,
+    DocumentIRDefinitionTermNode,
     DocumentIRDocumentNode,
     DocumentIRHeadingNode,
     DocumentIRHorizontalRuleNode,
@@ -96,6 +99,9 @@ class _DocumentIRToMarkdownSerialiser:
 
         if isinstance(node, DocumentIRHorizontalRuleNode):
             return "---"
+
+        if isinstance(node, DocumentIRDefinitionListNode):
+            return self._serialise_definition_list(node)
 
         return None
 
@@ -216,6 +222,24 @@ class _DocumentIRToMarkdownSerialiser:
                     lines.append(f"{continuation_indent}{code_line}")
 
         return lines
+
+    def _serialise_definition_list(self, node: DocumentIRDefinitionListNode) -> str | None:
+        """Serialise a definition list using PHP Markdown Extra style.
+
+        Definition terms are rendered as bold text.  Definition descriptions
+        are rendered with a leading colon and three spaces (': ' style).
+        """
+        lines: List[str] = []
+        for child in node.children:
+            if isinstance(child, DocumentIRDefinitionTermNode):
+                text = self._serialise_inline_children(child.children)
+                lines.append(f"**{text}**")
+
+            elif isinstance(child, DocumentIRDefinitionDescriptionNode):
+                text = self._serialise_inline_children(child.children)
+                lines.append(f":   {text}")
+
+        return "\n".join(lines) if lines else None
 
     def _serialise_table(self, node: DocumentIRTableNode) -> str | None:
         """Serialise a table to GFM pipe-table syntax.
@@ -404,6 +428,9 @@ class _DocumentIRToMarkdownSerialiser:
 
         if node.strikethrough:
             text = f"~~{text}~~"
+
+        # Markdown has no standard syntax for superscript or subscript, so
+        # superscript/subscript spans are emitted as plain text content.
 
         return text
 

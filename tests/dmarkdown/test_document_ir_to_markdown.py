@@ -443,3 +443,72 @@ class TestTables:
         result = _md(_doc(table))
         for text in ("C", "D", "E", "F", "1", "2", "3", "4"):
             assert text in result
+
+
+# ---------------------------------------------------------------------------
+# Definition lists
+# ---------------------------------------------------------------------------
+
+class TestDefinitionLists:
+    def test_definition_term_rendered_as_bold(self):
+        from document_ir import (
+            DocumentIRDefinitionListNode,
+            DocumentIRDefinitionTermNode,
+        )
+        dl = DocumentIRDefinitionListNode()
+        dt = DocumentIRDefinitionTermNode()
+        dt.add_child(_span("My Term"))
+        dl.add_child(dt)
+        result = _md(_doc(dl))
+        assert "**My Term**" in result
+
+    def test_definition_description_rendered_with_colon(self):
+        from document_ir import (
+            DocumentIRDefinitionListNode,
+            DocumentIRDefinitionTermNode,
+            DocumentIRDefinitionDescriptionNode,
+        )
+        dl = DocumentIRDefinitionListNode()
+        dt = DocumentIRDefinitionTermNode()
+        dt.add_child(_span("Term"))
+        dl.add_child(dt)
+        dd = DocumentIRDefinitionDescriptionNode()
+        dd.add_child(_span("My Description"))
+        dl.add_child(dd)
+        result = _md(_doc(dl))
+        assert ":   My Description" in result
+
+    def test_full_definition_list_structure(self):
+        from document_ir import (
+            DocumentIRDefinitionListNode,
+            DocumentIRDefinitionTermNode,
+            DocumentIRDefinitionDescriptionNode,
+        )
+        dl = DocumentIRDefinitionListNode()
+        dt = DocumentIRDefinitionTermNode()
+        dt.add_child(_span("Term"))
+        dl.add_child(dt)
+        dd = DocumentIRDefinitionDescriptionNode()
+        dd.add_child(_span("Description"))
+        dl.add_child(dd)
+        result = _md(_doc(dl))
+        assert "**Term**" in result
+        assert ":   Description" in result
+
+
+# ---------------------------------------------------------------------------
+# Superscript and subscript
+# ---------------------------------------------------------------------------
+
+class TestSuperscriptSubscript:
+    def test_superscript_renders_as_plain_text(self):
+        span = DocumentIRTextSpanNode(content="2", superscript=True)
+        result = _md(_doc(_para(span)))
+        assert "<sup>" not in result
+        assert "2" in result
+
+    def test_subscript_renders_as_plain_text(self):
+        span = DocumentIRTextSpanNode(content="2", subscript=True)
+        result = _md(_doc(_para(span)))
+        assert "<sub>" not in result
+        assert "2" in result

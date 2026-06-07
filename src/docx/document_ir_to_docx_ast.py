@@ -3,6 +3,9 @@ from typing import List, Sequence, Tuple
 from document_ir import (
     DocumentIRBlockquoteNode,
     DocumentIRCodeBlockNode,
+    DocumentIRDefinitionDescriptionNode,
+    DocumentIRDefinitionListNode,
+    DocumentIRDefinitionTermNode,
     DocumentIRDocumentNode,
     DocumentIRHeadingNode,
     DocumentIRHorizontalRuleNode,
@@ -257,6 +260,9 @@ class _DocumentIRToDocxASTMapper:
 
         elif isinstance(node, DocumentIRHorizontalRuleNode):
             parent.add_child(self._make_horizontal_rule_para())
+
+        elif isinstance(node, DocumentIRDefinitionListNode):
+            self._map_definition_list(node, parent)
 
         # Unknown block types are silently skipped
 
@@ -646,6 +652,55 @@ class _DocumentIRToDocxASTMapper:
         para.add_child(ppr)
         return para
 
+    def _map_definition_list(
+        self, node: DocumentIRDefinitionListNode, parent: DocxASTBodyNode
+    ) -> None:
+        """Map a definition list to a sequence of Normal paragraphs.
+
+        Definition terms are emitted as bold Normal paragraphs.  Definition
+        descriptions are emitted as indented Normal paragraphs (indent_left=360).
+        """
+        for child in node.children:
+            if isinstance(child, DocumentIRDefinitionTermNode):
+                para = DocxASTParagraphNode()
+                ppr = DocxASTParagraphPropertiesNode(style_id=_STYLE_NORMAL)
+                para.add_child(ppr)
+                runs = self._build_runs(child.children)
+                if not runs:
+                    run = DocxASTRunNode()
+                    rpr = DocxASTRunPropertiesNode(bold=True)
+                    run.add_child(rpr)
+                    runs = [run]
+
+                else:
+                    for r in runs:
+                        rpr_node = next(
+                            (c for c in r.children if isinstance(c, DocxASTRunPropertiesNode)),
+                            None,
+                        )
+                        if rpr_node is not None:
+                            rpr_node.bold = True
+
+                        else:
+                            r.children.insert(0, DocxASTRunPropertiesNode(bold=True))
+
+                for r in runs:
+                    para.add_child(r)
+
+                parent.add_child(para)
+
+            elif isinstance(child, DocumentIRDefinitionDescriptionNode):
+                para = DocxASTParagraphNode()
+                ppr = DocxASTParagraphPropertiesNode(
+                    style_id=_STYLE_NORMAL,
+                    indent_left=360,
+                )
+                para.add_child(ppr)
+                for r in self._build_runs(child.children):
+                    para.add_child(r)
+
+                parent.add_child(para)
+
     def _append_inline_children(
         self,
         children: Sequence[DocumentIRNode],
@@ -682,7 +737,7 @@ class _DocumentIRToDocxASTMapper:
         """Recursively collect run items from inline nodes.
 
         Each item is a tuple:
-          ('text', bold, italic, strike, code, content)
+          ('text', bold, italic, strike, code, superscript, subscript, content)
           ('break',)
           ('image', url, alt_text)
           ('link_text', bold, italic, strike, code, content, url)
@@ -696,6 +751,8 @@ class _DocumentIRToDocxASTMapper:
                         child.italic,
                         child.strikethrough,
                         child.code,
+                        child.superscript,
+                        child.subscript,
                         child.content,
                     ))
 
@@ -738,7 +795,7 @@ class _DocumentIRToDocxASTMapper:
             kind = item[0]
 
             if kind == "text":
-                _, bold, italic, strike, code, content = item
+                _, bold, italic, strike, code, superscript, subscript, content = item
                 # Merge consecutive text items with same formatting
                 merged = content
                 while (
@@ -748,18 +805,28 @@ class _DocumentIRToDocxASTMapper:
                     and items[i + 1][2] == italic
                     and items[i + 1][3] == strike
                     and items[i + 1][4] == code
+                    and items[i + 1][5] == superscript
+                    and items[i + 1][6] == subscript
                 ):
                     i += 1
-                    merged += items[i][5]
+                    merged += items[i][7]
 
                 run = DocxASTRunNode()
-                if bold or italic or strike or code:
+                if bold or italic or strike or code or superscript or subscript:
+                    vert_align: str | None = None
+                    if superscript:
+                        vert_align = "superscript"
+
+                    elif subscript:
+                        vert_align = "subscript"
+
                     rpr = DocxASTRunPropertiesNode(
                         bold=bold,
                         italic=italic,
                         strike=strike,
                         font_ascii="Courier New" if code else None,
                         font_h_ansi="Courier New" if code else None,
+                        vertical_align=vert_align,
                     )
                     run.add_child(rpr)
 

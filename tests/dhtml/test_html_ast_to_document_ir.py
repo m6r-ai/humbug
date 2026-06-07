@@ -507,3 +507,70 @@ class TestCommentsIgnored:
         result = _convert("<!-- a comment --><p>Visible</p>")
         assert len(result.children) == 1
         assert isinstance(result.children[0], DocumentIRParagraphNode)
+
+
+class TestDefinitionList:
+    """dl/dt/dd elements map to the definition list IR hierarchy."""
+
+    def test_dl_produces_definition_list_node(self) -> None:
+        from document_ir import DocumentIRDefinitionListNode
+        result = _convert("<dl><dt>Term</dt><dd>Desc</dd></dl>")
+        assert isinstance(result.children[0], DocumentIRDefinitionListNode)
+
+    def test_dt_produces_definition_term_node(self) -> None:
+        from document_ir import DocumentIRDefinitionTermNode
+        result = _convert("<dl><dt>Term</dt></dl>")
+        dl = result.children[0]
+        assert isinstance(dl.children[0], DocumentIRDefinitionTermNode)
+
+    def test_dd_produces_definition_description_node(self) -> None:
+        from document_ir import DocumentIRDefinitionDescriptionNode
+        result = _convert("<dl><dt>Term</dt><dd>Desc</dd></dl>")
+        dl = result.children[0]
+        assert isinstance(dl.children[1], DocumentIRDefinitionDescriptionNode)
+
+    def test_definition_list_structure(self) -> None:
+        from document_ir import (
+            DocumentIRDefinitionListNode,
+            DocumentIRDefinitionTermNode,
+            DocumentIRDefinitionDescriptionNode,
+        )
+        result = _convert("<dl><dt>Term</dt><dd>Desc</dd></dl>")
+        dl = result.children[0]
+        assert isinstance(dl, DocumentIRDefinitionListNode)
+        assert isinstance(dl.children[0], DocumentIRDefinitionTermNode)
+        assert isinstance(dl.children[1], DocumentIRDefinitionDescriptionNode)
+
+    def test_dt_text_content(self) -> None:
+        result = _convert("<dl><dt>My Term</dt></dl>")
+        dl = result.children[0]
+        dt = dl.children[0]
+        span = dt.children[0]
+        assert isinstance(span, DocumentIRTextSpanNode)
+        assert span.content == "My Term"
+
+    def test_dd_text_content(self) -> None:
+        result = _convert("<dl><dt>Term</dt><dd>My Description</dd></dl>")
+        dl = result.children[0]
+        dd = dl.children[1]
+        span = dd.children[0]
+        assert isinstance(span, DocumentIRTextSpanNode)
+        assert span.content == "My Description"
+
+
+class TestSuperscriptSubscript:
+    """sup/sub elements map to DocumentIRTextSpanNode with correct flags."""
+
+    def test_sup_produces_superscript_span(self) -> None:
+        result = _convert("<p><sup>2</sup></p>")
+        p = result.children[0]
+        span = p.children[0]
+        assert isinstance(span, DocumentIRTextSpanNode)
+        assert span.superscript is True
+
+    def test_sub_produces_subscript_span(self) -> None:
+        result = _convert("<p><sub>2</sub></p>")
+        p = result.children[0]
+        span = p.children[0]
+        assert isinstance(span, DocumentIRTextSpanNode)
+        assert span.subscript is True

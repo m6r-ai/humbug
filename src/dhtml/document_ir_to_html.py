@@ -4,6 +4,9 @@ from typing import List
 from document_ir.document_ir_node import (
     DocumentIRBlockquoteNode,
     DocumentIRCodeBlockNode,
+    DocumentIRDefinitionDescriptionNode,
+    DocumentIRDefinitionListNode,
+    DocumentIRDefinitionTermNode,
     DocumentIRDocumentNode,
     DocumentIRHeadingNode,
     DocumentIRHorizontalRuleNode,
@@ -128,6 +131,12 @@ class _HtmlSerialiser(DocumentIRVisitor):
 
             if node.strikethrough:
                 return f"<del>{text}</del>"
+
+            if node.superscript:
+                return f"<sup>{text}</sup>"
+
+            if node.subscript:
+                return f"<sub>{text}</sub>"
 
             return text
 
@@ -268,3 +277,21 @@ class _HtmlSerialiser(DocumentIRVisitor):
     def visit_DocumentIRLineBreakNode(self, node: DocumentIRLineBreakNode) -> None:  # pylint: disable=invalid-name,unused-argument
         """Serialise a line break."""
         self._emit("<br>")
+
+    def visit_DocumentIRDefinitionListNode(self, node: DocumentIRDefinitionListNode) -> None:  # pylint: disable=invalid-name
+        """Serialise a definition list."""
+        self._emit("<dl>")
+        self._indent += 1
+        self.generic_visit(node)
+        self._indent -= 1
+        self._emit("</dl>")
+
+    def visit_DocumentIRDefinitionTermNode(self, node: DocumentIRDefinitionTermNode) -> None:  # pylint: disable=invalid-name
+        """Serialise a definition term."""
+        inner = self._emit_inline(node)
+        self._emit(f"<dt>{inner}</dt>")
+
+    def visit_DocumentIRDefinitionDescriptionNode(self, node: DocumentIRDefinitionDescriptionNode) -> None:  # pylint: disable=invalid-name
+        """Serialise a definition description."""
+        inner = self._emit_inline(node)
+        self._emit(f"<dd>{inner}</dd>")

@@ -1,6 +1,9 @@
 from document_ir.document_ir_node import (
     DocumentIRBlockquoteNode,
     DocumentIRCodeBlockNode,
+    DocumentIRDefinitionDescriptionNode,
+    DocumentIRDefinitionListNode,
+    DocumentIRDefinitionTermNode,
     DocumentIRDocumentNode,
     DocumentIRHeadingNode,
     DocumentIRHorizontalRuleNode,
@@ -164,6 +167,26 @@ def _convert_node(
 
     if tag in _INLINE_CODE:
         _convert_inline_code(node, ir_parent)
+        return
+
+    if tag == "dl":
+        _convert_definition_list(node, ir_parent)
+        return
+
+    if tag == "dt":
+        _convert_definition_term(node, ir_parent)
+        return
+
+    if tag == "dd":
+        _convert_definition_description(node, ir_parent)
+        return
+
+    if tag == "sup":
+        _convert_inline(node, ir_parent, superscript=True)
+        return
+
+    if tag == "sub":
+        _convert_inline(node, ir_parent, subscript=True)
         return
 
     # Generic container — recurse into children without adding an IR node.
@@ -354,12 +377,35 @@ def _convert_anchor(node: HtmlASTElementNode, ir_parent: DocumentIRNode) -> None
     _convert_inline_children(node, link)
 
 
+def _convert_definition_list(node: HtmlASTElementNode, ir_parent: DocumentIRNode) -> None:
+    """Convert a <dl> element."""
+    dl = DocumentIRDefinitionListNode()
+    ir_parent.add_child(dl)
+    _convert_children(node, dl)
+
+
+def _convert_definition_term(node: HtmlASTElementNode, ir_parent: DocumentIRNode) -> None:
+    """Convert a <dt> element."""
+    dt = DocumentIRDefinitionTermNode()
+    ir_parent.add_child(dt)
+    _convert_inline_children(node, dt)
+
+
+def _convert_definition_description(node: HtmlASTElementNode, ir_parent: DocumentIRNode) -> None:
+    """Convert a <dd> element."""
+    dd = DocumentIRDefinitionDescriptionNode()
+    ir_parent.add_child(dd)
+    _convert_inline_children(node, dd)
+
+
 def _convert_inline(
     node: HtmlASTElementNode,
     ir_parent: DocumentIRNode,
     bold: bool = False,
     italic: bool = False,
     strikethrough: bool = False,
+    superscript: bool = False,
+    subscript: bool = False,
 ) -> None:
     """Convert an inline formatting element by wrapping text children in spans."""
     for child in node.children:
@@ -370,6 +416,8 @@ def _convert_inline(
                     bold=bold,
                     italic=italic,
                     strikethrough=strikethrough,
+                    superscript=superscript,
+                    subscript=subscript,
                 )
             )
 
