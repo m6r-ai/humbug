@@ -33,6 +33,9 @@ _FORMAT_EXTENSIONS: Dict[str, str] = {
 # Map each file extension to its canonical format name.
 _EXTENSION_FORMATS: Dict[str, str] = {v: k for k, v in _FORMAT_EXTENSIONS.items()}
 
+# Also recognise the legacy .htm extension as HTML.
+_EXTENSION_FORMATS[".htm"] = "html"
+
 _SUPPORTED_FORMAT_NAMES = sorted(_FORMAT_EXTENSIONS.keys())
 
 
