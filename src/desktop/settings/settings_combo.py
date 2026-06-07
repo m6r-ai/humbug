@@ -1,7 +1,7 @@
 """
 Combo box setting for selecting from a list of options.
 """
-
+import sys
 from typing import Any, Callable, List, Tuple, cast
 
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QRectF, QTimer
@@ -194,6 +194,9 @@ class _SettingsComboPopup(QFrame):
             self.show()
             self.raise_()
             self._open = True
+
+        if sys.platform == "darwin":
+            self.winId()
 
         self.hide()
         QTimer.singleShot(0, _show_at_pos)
