@@ -81,6 +81,40 @@ class TestConvertFormatDetection:
             assert "docx" in result.content
             assert "md" in result.content
 
+    def test_detects_html_input_format_from_htm_extension(
+        self, converter_tool, mock_authorization, make_tool_call
+    ):
+        """Input format is inferred as 'html' from a .htm extension."""
+        with patch("pathlib.Path.exists", return_value=True), \
+             patch("pathlib.Path.is_file", return_value=True), \
+             patch("document_converter_ai_tool.document_converter_ai_tool._IMPORTERS") as mock_importers, \
+             patch("document_converter_ai_tool.document_converter_ai_tool._EXPORTERS") as mock_exporters, \
+             patch("pathlib.Path.parent", new_callable=lambda: property(lambda self: MagicMock())), \
+             patch("tempfile.NamedTemporaryFile") as mock_tmp, \
+             patch("pathlib.Path.replace"), \
+             patch("pathlib.Path.chmod"):
+
+            mock_document_ir = MagicMock()
+            mock_importers.__getitem__ = lambda self, k: (lambda p: mock_document_ir)
+            mock_importers.__contains__ = lambda self, k: True
+            mock_exporters.__getitem__ = lambda self, k: (lambda d: "fake md")
+            mock_exporters.__contains__ = lambda self, k: True
+
+            mock_tmp_inst = MagicMock()
+            mock_tmp_inst.name = "/test/mindspace/doc.tmp"
+            mock_tmp_inst.__enter__ = lambda s: s
+            mock_tmp_inst.__exit__ = MagicMock(return_value=False)
+            mock_tmp.return_value = mock_tmp_inst
+
+            tool_call = make_tool_call("document_converter", {
+                "operation": "convert",
+                "input_path": "doc.htm",
+                "to_format": "md",
+            })
+            result = asyncio.run(converter_tool.execute(tool_call, "", mock_authorization))
+            assert "html" in result.content
+            assert "md" in result.content
+
     def test_detects_output_format_from_output_path_extension(
         self, converter_tool, mock_authorization, make_tool_call
     ):

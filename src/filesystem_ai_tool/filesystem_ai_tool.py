@@ -20,7 +20,6 @@ from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, Menai
 from menai import MenaiBufferingTraceWatcher
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
-from dhtml import HtmlError, HtmlParseError, extract_text as extract_html_text, parse_html
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 from mindspace.mindspace import Mindspace
@@ -216,7 +215,7 @@ class FileSystemAITool(AITool):
         prefix += (
             f"The denied paths list applies to all file access, including within the mindspace. "
             f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB. "
-            f"PDF, DOCX and HTML files are supported: text is extracted automatically on read."
+            f"PDF and DOCX files are supported: text is extracted automatically on read."
         )
         return prefix
 
@@ -245,8 +244,7 @@ class FileSystemAITool(AITool):
                 description="Read file contents. PDF files (.pdf) are supported: text is extracted automatically. "
                     "Encrypted PDFs will return an error. "
                     "DOCX files (.docx) are supported: text is extracted automatically. "
-                    "Encrypted DOCX files will return an error. "
-                    "HTML files (.html, .htm) are supported: text is extracted automatically."
+                    "Encrypted DOCX files will return an error."
             ),
             "read_file_lines": AIToolOperationDefinition(
                 name="read_file_lines",
@@ -734,29 +732,6 @@ class FileSystemAITool(AITool):
                 f"AI read file (DOCX): '{display_path}'"
             )
             return AIToolResult(id=tool_call.id, name="filesystem", content=content, context="DOCX")
-
-        if path.suffix.lower() in (".html", ".htm"):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    source = f.read()
-
-                html_doc = parse_html(source, source_path=str(path))
-                content = extract_html_text(html_doc)
-
-            except HtmlParseError as e:
-                raise AIToolExecutionError(f"HTML parse error: {e}") from e
-
-            except HtmlError as e:
-                raise AIToolExecutionError(f"Failed to extract HTML text: {e}") from e
-
-            except OSError as e:
-                raise AIToolExecutionError(f"Failed to read file: {e}") from e
-
-            self._mindspace.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI read file (HTML): '{display_path}'"
-            )
-            return AIToolResult(id=tool_call.id, name="filesystem", content=content, context="HTML")
 
         encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
 

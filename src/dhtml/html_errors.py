@@ -3,8 +3,4 @@ class HtmlError(Exception):
 
 
 class HtmlParseError(HtmlError):
-    """Raised when the HTML input cannot be parsed."""
-
-
-class HtmlExtractionError(HtmlError):
-    """Raised when text extraction from an HTML DOM fails."""
+    """Raised when the HTML source cannot be parsed."""

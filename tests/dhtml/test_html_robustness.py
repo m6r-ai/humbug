@@ -6,18 +6,15 @@ from dhtml.html_ast_node import (
     HtmlASTTextNode,
 )
 from dhtml.html_ast_to_document_ir import html_ast_to_document_ir
-from dhtml.html_extractor import extract_text
 from document_ir import (
     DocumentIRCodeBlockNode,
     DocumentIRHeadingNode,
-    DocumentIRListItemNode,
     DocumentIROrderedListNode,
     DocumentIRParagraphNode,
     DocumentIRTableBodyNode,
     DocumentIRTableCellNode,
     DocumentIRTableHeaderNode,
     DocumentIRTableNode,
-    DocumentIRTableRowNode,
     DocumentIRTextSpanNode,
     DocumentIRUnorderedListNode,
 )
@@ -29,10 +26,6 @@ def _elems(node: HtmlASTDocumentNode | HtmlASTElementNode) -> list[HtmlASTElemen
 
 def _texts(node: HtmlASTDocumentNode | HtmlASTElementNode) -> list[HtmlASTTextNode]:
     return [c for c in node.children if isinstance(c, HtmlASTTextNode)]
-
-
-def _extract(html: str) -> str:
-    return extract_text(parse_html(html))
 
 
 def _convert(html: str):
@@ -66,11 +59,6 @@ class TestUnclosedTags:
     def test_unclosed_produces_no_exception(self) -> None:
         parse_html("<div><p><strong>no close tags anywhere")
 
-    def test_extract_text_from_unclosed_document(self) -> None:
-        result = _extract("<h1>Title<p>Body")
-        assert "Title" in result
-        assert "Body" in result
-
 
 class TestEmptyAndMinimalInput:
     """Edge cases around empty or near-empty input."""
@@ -88,14 +76,6 @@ class TestEmptyAndMinimalInput:
         p = _elems(doc)[0]
         assert p.tag_name == "p"
         assert p.children == []
-
-    def test_empty_element_extract_gives_empty(self) -> None:
-        result = _extract("<p></p>")
-        assert result == ""
-
-    def test_only_skipped_elements(self) -> None:
-        result = _extract("<script>alert(1)</script><style>body{}</style>")
-        assert result == ""
 
     def test_doctype_only(self) -> None:
         doc = parse_html("<!DOCTYPE html>")
@@ -142,11 +122,6 @@ class TestMalformedTags:
         combined = "".join(t.content for t in _texts(p))
         assert "1 " in combined
 
-    def test_multiple_stray_angle_brackets(self) -> None:
-        result = _extract("<p>a < b < c</p>")
-        assert "a" in result
-        assert "b" in result
-
     def test_attribute_with_equals_but_no_value(self) -> None:
         doc = parse_html("<div class=>text</div>")
         div = _elems(doc)[0]
@@ -186,10 +161,6 @@ class TestMisnestingAndStackRecovery:
         html = "<div><table><tr><td><p>cell</div>"
         doc = parse_html(html)
         assert isinstance(doc, HtmlASTDocumentNode)
-
-    def test_extract_survives_misnesting(self) -> None:
-        result = _extract("<div><p><b>text</div>")
-        assert "text" in result
 
 
 class TestImpliedCloseEdgeCases:
@@ -266,17 +237,6 @@ class TestScriptAndStyleEdgeCases:
         assert style.tag_name == "style"
         assert _elems(style) == []
 
-    def test_script_content_excluded_from_extract(self) -> None:
-        result = _extract(
-            "<p>before</p>"
-            "<script>document.write('<p>injected</p>')</script>"
-            "<p>after</p>"
-        )
-        assert "before" in result
-        assert "after" in result
-        assert "injected" not in result
-        assert "document.write" not in result
-
     def test_script_uppercase_close_tag(self) -> None:
         doc = parse_html("<script>var x = 1;</SCRIPT><p>visible</p>")
         assert isinstance(doc, HtmlASTDocumentNode)
@@ -337,40 +297,7 @@ class TestEntityEdgeCases:
 
 
 class TestRealWorldHtmlPatterns:
-    """Patterns commonly found in real-world scraped HTML."""
-
-    def test_full_page_structure(self) -> None:
-        html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Test Page</title>
-  <style>body { margin: 0; }</style>
-</head>
-<body>
-  <nav><a href="/">Home</a></nav>
-  <main>
-    <h1>Main Heading</h1>
-    <p>First paragraph.</p>
-    <p>Second paragraph.</p>
-  </main>
-  <footer>Footer content</footer>
-</body>
-</html>"""
-        result = _extract(html)
-        assert "Main Heading" in result
-        assert "First paragraph." in result
-        assert "Second paragraph." in result
-        assert "Test Page" not in result
-        assert "margin" not in result
-
-    def test_nested_lists(self) -> None:
-        html = "<ul><li>A<ul><li>A1</li><li>A2</li></ul></li><li>B</li></ul>"
-        result = _extract(html)
-        assert "A" in result
-        assert "A1" in result
-        assert "A2" in result
-        assert "B" in result
+    """Patterns commonly found in real-world HTML, tested via the IR converter."""
 
     def test_table_with_no_thead(self) -> None:
         html = "<table><tr><td>R1C1</td><td>R1C2</td></tr><tr><td>R2C1</td></tr></table>"
@@ -434,27 +361,6 @@ class TestRealWorldHtmlPatterns:
         ir = _convert(html)
         cb = ir.children[0]
         assert "line1\nline2\nline3" == cb.content
-
-    def test_deeply_nested_blockquote(self) -> None:
-        html = "<blockquote><blockquote><p>deep</p></blockquote></blockquote>"
-        result = _extract(html)
-        assert "deep" in result
-
-    def test_whitespace_heavy_document(self) -> None:
-        html = """
-        <div>
-            <p>   spaced   </p>
-            <p>   also spaced   </p>
-        </div>
-        """
-        result = _extract(html)
-        assert "spaced" in result
-        assert "also spaced" in result
-
-    def test_extract_collapses_excessive_newlines(self) -> None:
-        html = "<p>A</p><p>B</p><p>C</p><p>D</p><p>E</p>"
-        result = _extract(html)
-        assert "\n\n\n" not in result
 
 
 class TestOrderedListEdgeCases:
@@ -524,41 +430,3 @@ class TestTableCellAlignmentEdgeCases:
         body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
         cell = body.children[0].children[0]
         assert cell.alignment == "left"
-
-
-class TestExtractorEdgeCases:
-    """extract_text handles unusual DOM structures without raising."""
-
-    def test_text_directly_in_document(self) -> None:
-        doc = parse_html("bare text")
-        result = extract_text(doc)
-        assert "bare text" in result
-
-    def test_whitespace_only_inside_element(self) -> None:
-        result = _extract("<p>   </p>")
-        assert result == ""
-
-    def test_nested_block_elements(self) -> None:
-        result = _extract("<div><div><div><p>deep</p></div></div></div>")
-        assert "deep" in result
-
-    def test_br_between_text_nodes(self) -> None:
-        result = _extract("<p>line1<br>line2<br>line3</p>")
-        assert "line1" in result
-        assert "line2" in result
-        assert "line3" in result
-        assert result.count("\n") >= 2
-
-    def test_comment_nodes_produce_no_text(self) -> None:
-        result = _extract("<p>visible<!-- hidden -->text</p>")
-        assert "visible" in result
-        assert "hidden" not in result
-
-    def test_figure_with_figcaption(self) -> None:
-        result = _extract("<figure><img src='x.png' alt='img'><figcaption>Caption</figcaption></figure>")
-        assert "Caption" in result
-
-    def test_details_summary(self) -> None:
-        result = _extract("<details><summary>Title</summary><p>Body</p></details>")
-        assert "Title" in result
-        assert "Body" in result
