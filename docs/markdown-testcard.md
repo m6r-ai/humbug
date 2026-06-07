@@ -395,6 +395,21 @@ A list with a blockquote containing a list:
 
 - Item three
 
+A nested list with a blockquote inside
+
+- Item one
+
+- Item two with nested list
+
+  1. Item #1
+
+  2. Item #2
+
+     > blockquote
+     >
+     > with some more test
+
+- item three
 
 ---
 
