@@ -62,7 +62,6 @@ class DelegateAITool(AITool):
                 "Examples where delegation is useful:\n"
                 "- You want to use AI capabilities from a different model, or with different settings\n"
                 "- You want to Seek analysis from a different perspective (you must provide the perspective in the task_prompt)\n"
-                "- You want to use a subset of your current conversation context for more focused reasoning\n"
                 "- You want to process a lot of context/tokens where you don't need all the context in your main conversation\n"
                 "- You want to xplore multiple approaches to a problem before converging on a solution in your main conversation\n"
                 "- You want a sounding board for ideas or to brainstorm with a different AI\n\n"
@@ -81,10 +80,6 @@ class DelegateAITool(AITool):
                 "- When you delegate one or more tasks you will be blocked until the child/children AIs complete "
                 "their work. You cannot work in parallel with any child AI\n"
                 "- Never delegate a task where a child AIs lack of context may give poor results\n"
-                "- You can provide your current conversation context to a new child AI instance. This is very "
-                "useful if your context has a lot of information that is relevant to the task, but this can also limit the "
-                "amount of new context the child AI can process\n\n"
-
                 "Returns: the delegated AI's response to the task_prompt, or an error message if the operation fails"
             ),
             additional_parameters=[
@@ -98,8 +93,7 @@ class DelegateAITool(AITool):
                 AIToolParameter(
                     name="session_id",
                     type="string",
-                    description="Session ID to continue a previous conversation. Omit to start a new session with no context. "
-                        "Set this to `current` to create a new session with the current conversation context.",
+                    description="Session ID to continue a previous delegated conversation. Omit to start a new session.",
                     required=False
                 ),
                 AIToolParameter(
@@ -181,10 +175,7 @@ class DelegateAITool(AITool):
         # Resolve session_id
         session_path: str | None = None
         if session_id_arg:
-            if session_id_arg == "current":
-                session_path = "current"
-            else:
-                session_path = self._resolve_session_path(session_id_arg)
+            session_path = self._resolve_session_path(session_id_arg)
 
         # Validate temperature
         if temperature is not None:
@@ -261,8 +252,7 @@ class DelegateAITool(AITool):
         self._logger.debug("AI delegation requested with task: %s", task_prompt[:100])
 
         # Request user authorization
-        session_info = "continue a previous session" if session_path == "current" else \
-                       "continue an existing session" if session_path else "start a new session"
+        session_info = "continue an existing session" if session_path else "start a new session"
         model_info = f" using model '{model}'" + (f" ({provider})" if provider else "") \
             if model else " using the default model"
         temp_info = f" with temperature {temperature}" if temperature is not None else ""
@@ -322,8 +312,7 @@ class DelegateAITool(AITool):
             tool_call: The originating tool call
             parent_ai_conversation: The parent AIConversation
             task_prompt: Prompt to send to the child
-            session_path: Absolute path to an existing transcript to resume, the
-                string "current" to copy the parent history, or None for a fresh session
+            session_path: Absolute path to an existing transcript to resume, or None for a fresh session
             model: Model name to use
             provider: Provider name to use
             temperature: Temperature setting (None to use model default)
@@ -349,23 +338,13 @@ class DelegateAITool(AITool):
         child_ai_conversation = AIConversation()
         child_ai_conversation.update_conversation_settings(child_settings)
 
-        continuing_session = session_path == "current"
-
-        if continuing_session:
-            parent_history = parent_ai_conversation.get_conversation_history()
-            child_ai_conversation.load_message_history(parent_history.get_messages())
-            child_ai_conversation.get_conversation_history().restore_attachments(
-                parent_history.attachments()
-            )
-
         # Establish parent/child relationship in the transcript metadata
         self._set_child_parent_metadata(child_ai_conversation, parent_ai_conversation, tool_call)
 
         # Generate the transcript path and wrap in a persistent conversation.
-        # For a resumed session we use the existing path; for new/current we generate one.
-        if session_path and not continuing_session:
+        # For a resumed session we use the existing path; for a new session we generate one.
+        if session_path:
             transcript_path = session_path
-
         else:
             transcript_path = self._new_conversation_path()
 
@@ -386,7 +365,7 @@ class DelegateAITool(AITool):
         requester = AIConversationSettings.get_display_name(parent_settings.model, parent_settings.provider)
         await child_ai_conversation.submit_message(requester, task_prompt)
 
-        session_info = "continuing session" if continuing_session else "new session"
+        session_info = "resuming session" if session_path else "new session"
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"AI delegated task ({session_info})\nsession ID: {relative_session_id}\n"

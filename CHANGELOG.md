@@ -35,6 +35,8 @@ Bug fixes:
 - Markdown indentation for embedded code blocks could end up incorrect.
 - When applying diffs via the filesystem or an editor buffer, if any hunk fails to apply then none apply.  Updated
   the error responses to make this clear so the AI never assumes some did apply.
+- Removed the ability to pass "current" as the session ID to be shared with a child AI.  Passing the history became very
+  confusing as the child didn't understand what it was being presented.
 
 Internal structure changes:
 
