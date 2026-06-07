@@ -1552,9 +1552,13 @@ class MarkdownASTBuilder:
 
         # 2. For non-blockquote lines, we might need to exit blockquotes
         # (unless it's a blank line which allows lazy continuation)
-        elif self._is_in_blockquote() and line_type != 'blank':
-            # Exit all blockquotes
-            while self._is_in_blockquote():
+        elif self._current_blockquote_depth() > 0 and line_type != 'blank':
+            # Exit all blockquotes, popping any intervening non-blockquote
+            # containers (e.g. list, list_item) that sit above them first.
+            while self._current_blockquote_depth() > 0:
+                while self._container_stack[-1].container_type != 'blockquote':
+                    self._container_stack.pop()
+
                 self._exit_blockquote(line_num - 1)
 
         # 3. Headings close all containers except document and blockquotes

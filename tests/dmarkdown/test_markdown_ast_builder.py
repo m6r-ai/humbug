@@ -3152,3 +3152,93 @@ z = 3
     assert "x = 1" in code_block.content
     assert "> y = 2" in code_block.content
     assert "z = 3" in code_block.content
+
+
+
+def test_blockquote_render_test_md(ast_builder):
+    """Test parsing the full test.md blockquote rendering test file as a whole."""
+    markdown = (
+        "A nested blockquote:\n"
+        "\n"
+        "> Outer blockquote text.\n"
+        ">\n"
+        "> > Inner nested blockquote. The inner bar should be inset from the outer one.\n"
+        ">\n"
+        "> Back to the outer blockquote.\n"
+        "\n"
+        "A blockquote containing an unordered list:\n"
+        "\n"
+        "> - Item one inside a blockquote\n"
+        "> - Item two inside a blockquote\n"
+        "> - Item three inside a blockquote\n"
+        "\n"
+        "A blockquote containing an ordered list:\n"
+        "\n"
+        "> 1. First ordered item inside a blockquote\n"
+        "> 2. Second ordered item inside a blockquote\n"
+        "> 3. Third ordered item inside a blockquote\n"
+        "\n"
+        "A blockquote containing a code block:\n"
+        "\n"
+        '> ```python\n'
+        '> print("Hello from inside a blockquote")\n'
+        "> ```\n"
+        "\n"
+        "A blockquote containing a heading, a paragraph, a list, and a code block:\n"
+        "\n"
+        "> ### Heading inside a blockquote\n"
+        ">\n"
+        "> Paragraph inside the blockquote.\n"
+        ">\n"
+        "> - List item one\n"
+        "> - List item two\n"
+        ">\n"
+        "> ```python\n"
+        "> x = 42\n"
+        "> ```"
+    )
+
+    doc = ast_builder.build_ast(markdown)
+
+    # 10 top-level children: 5 intro paragraphs interleaved with 5 blockquotes
+    assert len(doc.children) == 10
+
+    # --- nested blockquote ---
+    outer = doc.children[1]
+    assert outer.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(outer.children) == 3  # paragraph, inner blockquote, paragraph
+    assert outer.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert outer.children[1].__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert outer.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
+
+    # --- blockquote with unordered list ---
+    bq_ul = doc.children[3]
+    assert bq_ul.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(bq_ul.children) == 1
+    assert bq_ul.children[0].__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert len(bq_ul.children[0].children) == 3
+
+    # --- blockquote with ordered list ---
+    bq_ol = doc.children[5]
+    assert bq_ol.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(bq_ol.children) == 1
+    assert bq_ol.children[0].__class__.__name__ == "MarkdownASTOrderedListNode"
+    assert len(bq_ol.children[0].children) == 3
+
+    # --- blockquote with code block ---
+    bq_code = doc.children[7]
+    assert bq_code.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(bq_code.children) == 1
+    assert bq_code.children[0].__class__.__name__ == "MarkdownASTCodeBlockNode"
+    assert bq_code.children[0].language == ProgrammingLanguage.PYTHON
+
+    # --- blockquote with heading, paragraph, list, and code block ---
+    bq_mixed = doc.children[9]
+    assert bq_mixed.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(bq_mixed.children) == 4  # heading, paragraph, list, code block
+    assert bq_mixed.children[0].__class__.__name__ == "MarkdownASTHeadingNode"
+    assert bq_mixed.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert bq_mixed.children[2].__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert len(bq_mixed.children[2].children) == 2
+    assert bq_mixed.children[3].__class__.__name__ == "MarkdownASTCodeBlockNode"
+    assert bq_mixed.children[3].language == ProgrammingLanguage.PYTHON
