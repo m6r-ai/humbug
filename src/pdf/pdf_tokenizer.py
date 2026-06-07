@@ -45,29 +45,20 @@ class PDFTokenizer:
 
     def __init__(self, data: bytes) -> None:
         self._data = data
-        self._pos = 0
-
-    @property
-    def pos(self) -> int:
-        """Current scan position."""
-        return self._pos
-
-    @pos.setter
-    def pos(self, value: int) -> None:
-        self._pos = value
+        self.pos = 0
 
     def peek(self) -> int | None:
         """Return the byte at the current position without advancing."""
-        if self._pos >= len(self._data):
+        if self.pos >= len(self._data):
             return None
 
-        return self._data[self._pos]
+        return self._data[self.pos]
 
     def skip_whitespace_and_comments(self) -> None:
         """Advance past whitespace and % comment lines."""
         data = self._data
         length = len(data)
-        pos = self._pos
+        pos = self.pos
 
         while pos < length:
             b = data[pos]
@@ -81,16 +72,16 @@ class PDFTokenizer:
             else:
                 break
 
-        self._pos = pos
+        self.pos = pos
 
     def next_token(self) -> Token:
         """Scan and return the next token, advancing the position."""
         self.skip_whitespace_and_comments()
 
-        if self._pos >= len(self._data):
+        if self.pos >= len(self._data):
             return Token(TokenType.EOF, None)
 
-        b = self._data[self._pos]
+        b = self._data[self.pos]
 
         if b == ord("/"):
             return self._scan_name()
@@ -99,27 +90,27 @@ class PDFTokenizer:
             return self._scan_literal_string()
 
         if b == ord("<"):
-            if self._pos + 1 < len(self._data) and self._data[self._pos + 1] == ord("<"):
-                self._pos += 2
+            if self.pos + 1 < len(self._data) and self._data[self.pos + 1] == ord("<"):
+                self.pos += 2
                 return Token(TokenType.DICT_START, None)
 
             return self._scan_hex_string()
 
         if b == ord(">"):
-            if self._pos + 1 < len(self._data) and self._data[self._pos + 1] == ord(">"):
-                self._pos += 2
+            if self.pos + 1 < len(self._data) and self._data[self.pos + 1] == ord(">"):
+                self.pos += 2
                 return Token(TokenType.DICT_END, None)
 
             # Lone '>' is malformed but we skip it gracefully
-            self._pos += 1
+            self.pos += 1
             return self.next_token()
 
         if b == ord("["):
-            self._pos += 1
+            self.pos += 1
             return Token(TokenType.ARRAY_START, None)
 
         if b == ord("]"):
-            self._pos += 1
+            self.pos += 1
             return Token(TokenType.ARRAY_END, None)
 
         if b in (ord("+"), ord("-")) or b == ord(".") or (ord("0") <= b <= ord("9")):
@@ -131,63 +122,63 @@ class PDFTokenizer:
         """Read bytes up to and including the next newline."""
         data = self._data
         length = len(data)
-        start = self._pos
+        start = self.pos
 
-        while self._pos < length and data[self._pos] not in (ord("\n"), ord("\r")):
-            self._pos += 1
+        while self.pos < length and data[self.pos] not in (ord("\n"), ord("\r")):
+            self.pos += 1
 
-        line = data[start:self._pos]
+        line = data[start:self.pos]
 
         # Consume the line ending (handle \r\n)
-        if self._pos < length and data[self._pos] == ord("\r"):
-            self._pos += 1
+        if self.pos < length and data[self.pos] == ord("\r"):
+            self.pos += 1
 
-        if self._pos < length and data[self._pos] == ord("\n"):
-            self._pos += 1
+        if self.pos < length and data[self.pos] == ord("\n"):
+            self.pos += 1
 
         return line
 
     def read_exact(self, n: int) -> bytes:
         """Read exactly n bytes, advancing the position."""
-        chunk = self._data[self._pos: self._pos + n]
-        self._pos += n
+        chunk = self._data[self.pos: self.pos + n]
+        self.pos += n
         return chunk
 
     def find(self, needle: bytes, start: int | None = None) -> int:
         """Return the position of needle in the buffer, or -1 if not found."""
-        search_from = start if start is not None else self._pos
+        search_from = start if start is not None else self.pos
         idx = self._data.find(needle, search_from)
         return idx
 
     def _scan_name(self) -> Token:
-        self._pos += 1  # skip '/'
-        start = self._pos
+        self.pos += 1  # skip '/'
+        start = self.pos
         data = self._data
         length = len(data)
 
-        while self._pos < length and data[self._pos] not in _DELIMITERS and data[self._pos] not in _WHITESPACE:
-            self._pos += 1
+        while self.pos < length and data[self.pos] not in _DELIMITERS and data[self.pos] not in _WHITESPACE:
+            self.pos += 1
 
-        raw = data[start:self._pos].decode("latin-1")
+        raw = data[start:self.pos].decode("latin-1")
         name = _unescape_name(raw)
         return Token(TokenType.NAME, name)
 
     def _scan_literal_string(self) -> Token:
-        self._pos += 1  # skip '('
+        self.pos += 1  # skip '('
         data = self._data
         length = len(data)
         result = bytearray()
         depth = 1
 
-        while self._pos < length and depth > 0:
-            b = data[self._pos]
+        while self.pos < length and depth > 0:
+            b = data[self.pos]
 
             if b == ord("\\"):
-                self._pos += 1
-                if self._pos >= length:
+                self.pos += 1
+                if self.pos >= length:
                     break
-                esc = data[self._pos]
-                self._pos += 1
+                esc = data[self.pos]
+                self.pos += 1
                 if esc == ord("n"):
                     result.append(ord("\n"))
 
@@ -210,9 +201,9 @@ class PDFTokenizer:
                     # Octal escape — up to 3 digits
                     octal = bytes([esc])
                     for _ in range(2):
-                        if self._pos < length and ord("0") <= data[self._pos] <= ord("7"):
-                            octal += bytes([data[self._pos]])
-                            self._pos += 1
+                        if self.pos < length and ord("0") <= data[self.pos] <= ord("7"):
+                            octal += bytes([data[self.pos]])
+                            self.pos += 1
 
                         else:
                             break
@@ -221,8 +212,8 @@ class PDFTokenizer:
 
                 elif esc in (ord("\n"), ord("\r")):
                     # Line continuation — consume \r\n if present
-                    if esc == ord("\r") and self._pos < length and data[self._pos] == ord("\n"):
-                        self._pos += 1
+                    if esc == ord("\r") and self.pos < length and data[self.pos] == ord("\n"):
+                        self.pos += 1
 
                 else:
                     result.append(esc)
@@ -230,35 +221,35 @@ class PDFTokenizer:
             elif b == ord("("):
                 depth += 1
                 result.append(b)
-                self._pos += 1
+                self.pos += 1
 
             elif b == ord(")"):
                 depth -= 1
                 if depth > 0:
                     result.append(b)
-                self._pos += 1
+                self.pos += 1
 
             else:
                 result.append(b)
-                self._pos += 1
+                self.pos += 1
 
         return Token(TokenType.STRING, bytes(result))
 
     def _scan_hex_string(self) -> Token:
-        self._pos += 1  # skip '<'
+        self.pos += 1  # skip '<'
         data = self._data
         length = len(data)
         hex_chars = bytearray()
 
-        while self._pos < length and data[self._pos] != ord(">"):
-            b = data[self._pos]
+        while self.pos < length and data[self.pos] != ord(">"):
+            b = data[self.pos]
             if b not in _WHITESPACE:
                 hex_chars.append(b)
 
-            self._pos += 1
+            self.pos += 1
 
-        if self._pos < length:
-            self._pos += 1  # skip '>'
+        if self.pos < length:
+            self.pos += 1  # skip '>'
 
         # Pad to even length
         if len(hex_chars) % 2 != 0:
@@ -275,22 +266,22 @@ class PDFTokenizer:
     def _scan_number(self) -> Token:
         data = self._data
         length = len(data)
-        start = self._pos
+        start = self.pos
         is_real = False
 
-        if self._pos < length and data[self._pos] in (ord("+"), ord("-")):
-            self._pos += 1
+        if self.pos < length and data[self.pos] in (ord("+"), ord("-")):
+            self.pos += 1
 
-        while self._pos < length and (ord("0") <= data[self._pos] <= ord("9")):
-            self._pos += 1
+        while self.pos < length and (ord("0") <= data[self.pos] <= ord("9")):
+            self.pos += 1
 
-        if self._pos < length and data[self._pos] == ord("."):
+        if self.pos < length and data[self.pos] == ord("."):
             is_real = True
-            self._pos += 1
-            while self._pos < length and (ord("0") <= data[self._pos] <= ord("9")):
-                self._pos += 1
+            self.pos += 1
+            while self.pos < length and (ord("0") <= data[self.pos] <= ord("9")):
+                self.pos += 1
 
-        raw = data[start:self._pos].decode("ascii")
+        raw = data[start:self.pos].decode("ascii")
         try:
             if is_real:
                 return Token(TokenType.REAL, float(raw))
@@ -303,12 +294,12 @@ class PDFTokenizer:
     def _scan_keyword(self) -> Token:
         data = self._data
         length = len(data)
-        start = self._pos
+        start = self.pos
 
-        while self._pos < length and data[self._pos] not in _DELIMITERS and data[self._pos] not in _WHITESPACE:
-            self._pos += 1
+        while self.pos < length and data[self.pos] not in _DELIMITERS and data[self.pos] not in _WHITESPACE:
+            self.pos += 1
 
-        word = data[start:self._pos].decode("latin-1")
+        word = data[start:self.pos].decode("latin-1")
 
         if word == "true":
             return Token(TokenType.BOOLEAN, True)

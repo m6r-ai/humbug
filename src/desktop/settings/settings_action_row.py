@@ -27,12 +27,10 @@ class SettingsActionRow(SettingsItem):
         layout.addWidget(self._status_label, 1)
         self.setLayout(layout)
 
-    @property
     def button(self) -> QPushButton:
         """Return the action button."""
         return self._button
 
-    @property
     def status_label(self) -> QLabel:
         """Return the status label."""
         return self._status_label

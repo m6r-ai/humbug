@@ -392,11 +392,11 @@ class SettingsDialog(QDialog):
             fetch_label = strings.ollama_update_local_models if is_ollama else "Update Models"
             fetch_row = SettingsActionRow(fetch_label)
             accordion.add_content(fetch_row)
-            fetch_row.button.setEnabled(False)
+            fetch_row.button().setEnabled(False)
 
             manage_row = SettingsActionRow("Remove Fetched Models…")
             accordion.add_content(manage_row)
-            manage_row.button.setEnabled(False)
+            manage_row.button().setEnabled(False)
 
             if is_ollama:
                 pull_name_field = SettingsFactory.create_text_field(
@@ -407,7 +407,7 @@ class SettingsDialog(QDialog):
 
                 pull_row = SettingsActionRow(strings.ollama_pull_button)
                 accordion.add_content(pull_row)
-                pull_row.button.setEnabled(False)
+                pull_row.button().setEnabled(False)
 
             else:
                 pull_name_field = None
@@ -430,17 +430,17 @@ class SettingsDialog(QDialog):
             api_key_field.value_changed.connect(
                 lambda _v=None, bid=backend_id: self._update_fetch_button_state(bid)
             )
-            fetch_row.button.clicked.connect(
+            fetch_row.button().clicked.connect(
                 lambda _checked=False, bid=backend_id: self._on_fetch_models_clicked(bid)
             )
-            manage_row.button.clicked.connect(
+            manage_row.button().clicked.connect(
                 lambda _checked=False, bid=backend_id: self._on_manage_models_clicked(bid)
             )
             if is_ollama and pull_name_field and pull_row:
                 pull_name_field.value_changed.connect(
                     lambda _v=None, bid=backend_id: self._update_pull_button_state(bid)
                 )
-                pull_row.button.clicked.connect(
+                pull_row.button().clicked.connect(
                     lambda _checked=False, bid=backend_id: self._on_pull_model_clicked(bid)
                 )
 
@@ -953,14 +953,14 @@ class SettingsDialog(QDialog):
         api_key = cast(SettingsTextField, controls["key"]).get_value().strip()
         needs_key = backend_id not in ("ollama", "vllm")
         can_fetch = enabled and (api_key or not needs_key)
-        cast(SettingsActionRow, controls["fetch_row"]).button.setEnabled(bool(can_fetch))
+        cast(SettingsActionRow, controls["fetch_row"]).button().setEnabled(bool(can_fetch))
         self._update_manage_button_state(backend_id)
 
     def _update_manage_button_state(self, backend_id: str) -> None:
         """Enable "Remove Fetched Models" only when there are fetched models for this provider."""
         controls = self._ai_backend_controls[backend_id]
         has_fetched = bool(AIConversationSettings.get_fetched_models_by_provider(backend_id))
-        cast(SettingsActionRow, controls["manage_row"]).button.setEnabled(has_fetched)
+        cast(SettingsActionRow, controls["manage_row"]).button().setEnabled(has_fetched)
 
     def _update_pull_button_state(self, backend_id: str) -> None:
         """Enable Pull only when Ollama is on and a model name is entered."""
@@ -970,7 +970,7 @@ class SettingsDialog(QDialog):
             return
         enabled = cast(SettingsSwitch, controls["enable"]).get_value()
         name = cast(SettingsTextField, controls["pull_name"]).get_value().strip()
-        cast(SettingsActionRow, pull_row).button.setEnabled(bool(enabled and name))
+        cast(SettingsActionRow, pull_row).button().setEnabled(bool(enabled and name))
 
     def _on_pull_model_clicked(self, backend_id: str) -> None:
         """Pull a model from the Ollama registry by name."""
@@ -982,7 +982,7 @@ class SettingsDialog(QDialog):
             return
 
         strings = self._language_manager.strings()
-        pull_row.button.setEnabled(False)
+        pull_row.button().setEnabled(False)
         pull_row.set_status(strings.ollama_pull_pulling.format(model_name))
 
         url = cast(SettingsTextField, controls["url"]).get_value().strip()
@@ -1017,7 +1017,7 @@ class SettingsDialog(QDialog):
         """Kick off an async model-list fetch for the given backend."""
         controls = self._ai_backend_controls[backend_id]
         fetch_row = cast(SettingsActionRow, controls["fetch_row"])
-        fetch_row.button.setEnabled(False)
+        fetch_row.button().setEnabled(False)
         fetch_row.set_status("Fetching…")  # clears any previous error colour
 
         api_key = cast(SettingsTextField, controls["key"]).get_value().strip()

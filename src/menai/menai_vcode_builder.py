@@ -441,6 +441,6 @@ class MenaiVCodeBuilder:
 
             post_order.append(block)
 
-        dfs(func.entry)
+        dfs(func.entry())
         post_order.reverse()
         return post_order

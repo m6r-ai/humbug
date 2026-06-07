@@ -437,12 +437,10 @@ class MenaiCFGFunction:
     source_line: int = 0
     source_file: str = ""
 
-    @property
     def entry(self) -> MenaiCFGBlock:
         """The entry block (always the first block)."""
         return self.blocks[0]
 
-    @property
     def param_count(self) -> int:
         """Get the number of parameters (length of the params list)."""
         return len(self.params)

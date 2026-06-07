@@ -305,7 +305,6 @@ class MenaiVCodeFunction:
     source_line: int = 0
     source_file: str = ""
 
-    @property
     def param_count(self) -> int:
         """Return the number of parameters for this VCode function."""
         return len(self.params)
