@@ -11,13 +11,14 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import (
     QTextCursor, QTextDocument, QTextCharFormat, QTextBlockFormat,
     QTextListFormat, QFont, QFontMetricsF, QTextList, QTextTable,
-    QTextTableFormat, QTextFrameFormat, QTextLength, QImage, QTextImageFormat
+    QTextTableFormat, QTextFrameFormat, QTextLength, QImage, QTextImageFormat,
+    QTextDocumentFragment
 )
 
 from syntax import TokenType
 
 from dmarkdown import (
-    MarkdownASTVisitor, MarkdownASTDocumentNode, MarkdownASTParagraphNode, MarkdownASTHeadingNode,
+    MarkdownASTNode, MarkdownASTVisitor, MarkdownASTDocumentNode, MarkdownASTParagraphNode, MarkdownASTHeadingNode,
     MarkdownASTTextNode, MarkdownASTBoldNode, MarkdownASTEmphasisNode, MarkdownASTInlineCodeNode,
     MarkdownASTCodeBlockNode, MarkdownASTListItemNode, MarkdownASTOrderedListNode,
     MarkdownASTUnorderedListNode, MarkdownASTLineBreakNode, MarkdownASTStrikethroughNode,
@@ -59,6 +60,15 @@ class MarkdownRenderer(MarkdownASTVisitor):
         self._mindspace_manager = MindspaceManager()
 
         self._style_manager = StyleManager()
+
+        # Fingerprints of the top-level nodes in the last stable snapshot.
+        self._stable_fingerprints: List[int] = []
+
+        # Snapshot of the rendered document at the last stable point.  When all
+        # current top-level nodes match the stable fingerprints, this is updated.
+        # On the next call, if the last node has changed, we restore from this
+        # snapshot and re-render only the changed suffix cleanly.
+        self._snapshot: QTextDocument | None = None
         self.apply_style()
 
         # Table state variables
@@ -70,11 +80,63 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
     def apply_style(self) -> None:
         """Apply style changes."""
+        self._stable_fingerprints = []
+        self._snapshot = None
         # Add a pixel image resource to the document for horizontal rules.  Make the image
         # very wide so it will always fit the width of the viewport.
         pixel_image = QImage(8192, 1, QImage.Format.Format_ARGB32)
         pixel_image.fill(self._style_manager.get_color(ColorRole.TABLE_BORDER))
         self._document.addResource(QTextDocument.ResourceType.ImageResource, "pixel", pixel_image)
+
+    @staticmethod
+    def _node_fingerprint(node: MarkdownASTNode) -> int:
+        """
+        Compute a cheap structural fingerprint for a top-level AST node.
+
+        Two nodes with identical fingerprints produce identical rendered output.
+        line_start/line_end alone are insufficient for single-line nodes that grow
+        by token appending, so child count and last child content are also included.
+
+        Args:
+            node: A top-level child of the document node.
+
+        Returns:
+            An integer hash suitable for equality comparison.
+        """
+        language = ""
+        if isinstance(node, MarkdownASTCodeBlockNode):
+            language = node.language_name
+
+        child_count = len(node.children)
+        last_content = ""
+        if node.children:
+            last = node.children[-1]
+            if isinstance(last, MarkdownASTTextNode):
+                last_content = last.content
+
+        return hash((type(node).__name__, node.line_start, node.line_end, language,
+                     child_count, last_content))
+
+    def _first_changed_index(self, new_children: List[MarkdownASTNode]) -> int:
+        """
+        Return the index of the first top-level child that differs from the
+        stable snapshot fingerprints.
+
+        Args:
+            new_children: The new document node's children list.
+
+        Returns:
+            The index of the first changed child, or len(new_children) if all
+            children match the stable snapshot.
+        """
+        for i, child in enumerate(new_children):
+            if i >= len(self._stable_fingerprints):
+                return i
+
+            if self._node_fingerprint(child) != self._stable_fingerprints[i]:
+                return i
+
+        return len(new_children)
 
     def visit_MarkdownASTDocumentNode(self, node: MarkdownASTDocumentNode) -> None:  # pylint: disable=invalid-name
         """
@@ -88,17 +150,6 @@ class MarkdownRenderer(MarkdownASTVisitor):
         """
         self._source_path = node.source_path
 
-        # Treat this entire operation as one "edit" so Qt doesn't attempt to
-        # rendering as we're adding things.  It's *much* faster to do this as
-        # one batch update.
-        cursor = self._cursor
-        cursor.beginEditBlock()
-
-        # Clear the document.  At some point in the future we may want to do
-        # incremental edits instead.
-        cursor.select(QTextCursor.SelectionType.Document)
-        cursor.removeSelectedText()
-
         # Set up the default font size
         style_manager = self._style_manager
         font = QFont()
@@ -106,20 +157,65 @@ class MarkdownRenderer(MarkdownASTVisitor):
         font_metrics = QFontMetricsF(font)
         self._default_font_height = font_metrics.height()
 
-        cursor.setBlockFormat(self._orig_block_format)
+        first_changed = self._first_changed_index(node.children)
 
-        # Process all children
-        for child in node.children:
+        # Treat this entire operation as one "edit" so Qt doesn't attempt to
+        # render as we're adding things.  It's *much* faster to do this as
+        # one batch update.
+        cursor = self._cursor
+        cursor.beginEditBlock()
+
+        if first_changed == 0 or self._snapshot is None:
+            # Nothing is reusable — full clear and re-render.
+            cursor.select(QTextCursor.SelectionType.Document)
+            cursor.removeSelectedText()
+            cursor.setBlockFormat(self._orig_block_format)
+
+        else:
+            # Restore the snapshot, then append the changed suffix.  The snapshot
+            # contains the cleanly rendered stable prefix, so the cursor state and
+            # document content are exactly as they were after the stable render.
+            cursor.select(QTextCursor.SelectionType.Document)
+            cursor.removeSelectedText()
+            cursor.setBlockFormat(self._orig_block_format)
+            cursor.insertFragment(QTextDocumentFragment(self._snapshot))
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+
+        children = node.children
+        stable_end = len(children) - 1 if children else 0
+
+        for i, child in enumerate(children[first_changed:], start=first_changed):
+            # Before rendering the last child, snapshot the document if all
+            # preceding nodes are stable.  This gives us a clean restore point
+            # that contains exactly nodes 0..N-2, with no partial last-node content.
+            if i == stable_end and first_changed >= stable_end:
+                self._stable_fingerprints = [self._node_fingerprint(c) for c in children[:stable_end]]
+                self._snapshot = QTextDocument()
+                self._snapshot.setDefaultFont(self._document.defaultFont())
+                snapshot_cursor = QTextCursor(self._snapshot)
+                snapshot_cursor.insertFragment(QTextDocumentFragment(self._document))
+
             self.visit(child)
 
-        # If our last block is empty then delete it
+        # Enable all the changes to render
+        cursor.endEditBlock()
+
+        # Trim the trailing empty block that Qt always leaves.
+        self._trim_empty_tail()
+
+    def _trim_empty_tail(self) -> None:
+        """
+        Remove the trailing empty block Qt appends after every edit.
+        """
+        cursor = self._cursor
+        cursor.beginEditBlock()
+
         if cursor.block().text() == "":
             cursor.movePosition(QTextCursor.MoveOperation.PreviousBlock)
             cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
             cursor.movePosition(QTextCursor.MoveOperation.End, QTextCursor.MoveMode.KeepAnchor)
             cursor.removeSelectedText()
 
-        # Enable all the changes to render
         cursor.endEditBlock()
 
     def visit_MarkdownASTParagraphNode(self, node: MarkdownASTParagraphNode) -> None:  # pylint: disable=invalid-name
