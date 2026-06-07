@@ -146,14 +146,15 @@ class ConversationSidebarIndex(QObject):
         Returns:
             List of absolute paths of child conversations.
         """
-        node = self._nodes.get(os.path.normpath(path))
+        norm_path = os.path.normpath(path)
+        node = self._nodes.get(norm_path)
         if node is None:
             return []
 
         message_id_set = set(node.message_ids)
         children = []
         for candidate_path, candidate_node in self._nodes.items():
-            if candidate_node.parent_message_id in message_id_set:
+            if candidate_path != norm_path and candidate_node.parent_message_id in message_id_set:
                 children.append(candidate_path)
 
         return children
