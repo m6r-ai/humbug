@@ -35,3 +35,7 @@
 # Ignore Cython build artefacts (compiled per-machine, not source)
 src/menai/*.so
 
+# Ignore PDF and DOCX files
+*.pdf
+*.docx
+

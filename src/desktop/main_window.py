@@ -54,14 +54,15 @@ from desktop.preview_sidebar.preview_sidebar import PreviewSidebar
 from desktop.preview_tab.preview_tab import PreviewTab
 from desktop.search_sidebar.search_sidebar import SearchSidebar
 from desktop.settings_dialog import SettingsDialog, SECTION_AI_BACKENDS
+from desktop.shell_tab.commands.shell_command_cat import ShellCommandCat
 from desktop.shell_tab.commands.shell_command_clear import ShellCommandClear
 from desktop.shell_tab.commands.shell_command_conversation import ShellCommandConversation
 from desktop.shell_tab.commands.shell_command_diff import ShellCommandDiff
 from desktop.shell_tab.commands.shell_command_edit import ShellCommandEdit
 from desktop.shell_tab.commands.shell_command_help import ShellCommandHelp
 from desktop.shell_tab.commands.shell_command_log import ShellCommandLog
-from desktop.shell_tab.commands.shell_command_terminal import ShellCommandTerminal
 from desktop.shell_tab.commands.shell_command_preview import ShellCommandPreview
+from desktop.shell_tab.commands.shell_command_terminal import ShellCommandTerminal
 from desktop.shell_tab.shell_command_registry import ShellCommandRegistry
 from desktop.shell_tab.shell_tab import ShellTab
 from desktop.sidebar.sidebar_base import SidebarBase
@@ -611,13 +612,14 @@ class MainWindow(QMainWindow):
                     tab.clear_history()
                     return
 
+        self._command_registry.register_command(ShellCommandCat())
         self._command_registry.register_command(ShellCommandClear(_clear_shell_history))
         self._command_registry.register_command(ShellCommandConversation())
+        self._command_registry.register_command(ShellCommandDiff())
         self._command_registry.register_command(ShellCommandEdit())
         self._command_registry.register_command(ShellCommandLog())
-        self._command_registry.register_command(ShellCommandTerminal())
         self._command_registry.register_command(ShellCommandPreview())
-        self._command_registry.register_command(ShellCommandDiff())
+        self._command_registry.register_command(ShellCommandTerminal())
 
         # Register help command last so it can see all other commands
         self._command_registry.register_command(ShellCommandHelp(self._command_registry))
