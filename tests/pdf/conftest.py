@@ -285,3 +285,50 @@ def make_tounicode_pdf(cmap_entries: list[tuple[int, str]], glyph_bytes: bytes) 
 
     trailer = f"trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
     return body + xref.encode() + trailer.encode()
+
+
+def make_raw_content_pdf(content_stream: str) -> bytes:
+    """Build a minimal single-page PDF with a caller-supplied content stream.
+
+    The content stream is embedded verbatim, allowing tests to exercise specific
+    PDF operators (Tm, Td, TD, T*, TJ, etc.) with precise control over text
+    positioning.  A standard WinAnsiEncoding Type1 font is registered as /F1
+    so that Tf and text-show operators work without a ToUnicode CMap.
+    """
+    font_dict = (
+        b"<< /F1 << /Type /Font /Subtype /Type1 "
+        b"/BaseFont /Helvetica /Encoding /WinAnsiEncoding >> >>"
+    )
+    stream_body = content_stream.encode("latin-1")
+
+    body = b"%PDF-1.4\n"
+    offsets: dict[int, int] = {}
+
+    content_obj = (
+        f"<< /Length {len(stream_body)} >>\nstream\n".encode()
+        + stream_body
+        + b"\nendstream"
+    )
+    page_obj = (
+        b"<< /Type /Page /Parent 2 0 R /Contents 3 0 R"
+        b" /Resources << /Font " + font_dict + b" >> >>"
+    )
+
+    objects: list[tuple[int, bytes]] = [
+        (1, b"<< /Type /Catalog /Pages 2 0 R >>"),
+        (2, b"<< /Type /Pages /Kids [4 0 R] /Count 1 >>"),
+        (3, content_obj),
+        (4, page_obj),
+    ]
+
+    for num, obj_body in objects:
+        offsets[num] = len(body)
+        body += f"{num} 0 obj\n".encode() + obj_body + b"\nendobj\n"
+
+    xref_offset = len(body)
+    xref = "xref\n0 5\n0000000000 65535 f \n"
+    for i in range(1, 5):
+        xref += f"{offsets[i]:010d} 00000 n \n"
+
+    trailer = f"trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
+    return body + xref.encode() + trailer.encode()

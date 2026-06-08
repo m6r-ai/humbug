@@ -6,6 +6,10 @@ New features:
 
 - Added a `cat` shell command that emulates the functionality of the filesystem AI tool's file read operation.
 
+Bug fixes:
+
+- Improved the PDF text extraction.
+
 ## v49 (2026-06-07)
 
 New features:

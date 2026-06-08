@@ -129,6 +129,15 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
     current_font_name: str = ""
     current_font_size: float = 12.0
     font_cache: dict[str, dict[str, Any]] = {}
+    # Text position state: absolute coordinates in text space
+    tx: float = 0.0
+    ty: float = 0.0
+    # tm_scale captures the effective rendered font size from the Tm matrix (a component).
+    tm_scale: float = 1.0
+    prev_tx: float = 0.0
+    prev_ty: float = 0.0
+    prev_width: float = 0.0
+    line_leading: float = 0.0
 
     while True:
         tokenizer.skip_whitespace_and_comments()
@@ -173,7 +182,6 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
 
         if op == "ET":
             in_text_block = False
-            text_parts.append("\n")
             operand_stack.clear()
             continue
 
@@ -236,7 +244,11 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
         if op in ("Tj", "'"):
             if operand_stack:
                 text = _decode_string(operand_stack[-1], _get_font(font_cache, current_font_name))
-                text_parts.append(text)
+                effective_size = tm_scale * current_font_size
+                prev_tx, prev_ty, prev_width = _emit_text(
+                    text, text_parts, tx, ty, prev_tx, prev_ty, prev_width, effective_size
+                )
+                tx += len(text) * effective_size * 0.5
 
             operand_stack.clear()
             continue
@@ -245,7 +257,11 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
             # word-spacing char-spacing string
             if operand_stack:
                 text = _decode_string(operand_stack[-1], _get_font(font_cache, current_font_name))
-                text_parts.append(text)
+                effective_size = tm_scale * current_font_size
+                prev_tx, prev_ty, prev_width = _emit_text(
+                    text, text_parts, tx, ty, prev_tx, prev_ty, prev_width, effective_size
+                )
+                tx += len(text) * effective_size * 0.5
 
             operand_stack.clear()
             continue
@@ -262,30 +278,106 @@ def _interpret_content_stream(data: bytes, resources: dict[str, Any], doc: PDFDo
                     elif isinstance(item, (int, float)) and item < -100:
                         parts.append(" ")
 
-                text_parts.append("".join(parts))
+                text = "".join(parts)
+                effective_size = tm_scale * current_font_size
+                prev_tx, prev_ty, prev_width = _emit_text(
+                    text, text_parts, tx, ty, prev_tx, prev_ty, prev_width, effective_size
+                )
+                tx += len(text) * effective_size * 0.5
+
+            operand_stack.clear()
+            continue
+
+        if op == "Tm":
+            # Tm sets the text matrix absolutely: [a b c d e f]
+            # e is the new x position, f is the new y position in user space.
+            # a is the x-scale component; abs(a) gives the effective rendered font size
+            # when Tf sets size=1 and scaling is done entirely via the matrix.
+            # prev_tx/prev_ty/prev_width are left unchanged: _emit_text uses
+            # prev_tx + prev_width as the end of the previous chunk, so the gap
+            # to the new tx is computed correctly whether Tm jumps far or lands
+            # contiguously after the previous chunk.
+            if len(operand_stack) >= 6:
+                tx = float(operand_stack[-2])
+                ty = float(operand_stack[-1])
+                tm_scale = abs(float(operand_stack[-6]))
 
             operand_stack.clear()
             continue
 
         if op == "Td":
-            # Td moves the text position by (tx, ty). Only emit a space for horizontal
-            # moves large enough to represent a word gap (> half the current font size).
-            # Small values are kerning/tracking adjustments and should be ignored.
+            # Td moves the text position relatively by (dtx, dty).
             if len(operand_stack) >= 2:
-                tx = float(operand_stack[-2])
-                if abs(tx) > current_font_size * 0.5:
-                    text_parts.append(" ")
+                tx += float(operand_stack[-2])
+                ty += float(operand_stack[-1])
+
             operand_stack.clear()
             continue
 
-        if op in ("TD", "T*"):
-            text_parts.append("\n")
+        if op == "TD":
+            # TD moves the text position and sets the leading to -dty.
+            if len(operand_stack) >= 2:
+                dty = float(operand_stack[-1])
+                tx += float(operand_stack[-2])
+                ty += dty
+                line_leading = -dty
+
+            operand_stack.clear()
+            continue
+
+        if op == "T*":
+            # T* moves to the start of the next line using the current leading.
+            tx = 0.0
+            ty -= line_leading
             operand_stack.clear()
             continue
 
         operand_stack.clear()
 
     return _clean_text("".join(text_parts))
+
+
+def _emit_text(
+    text: str,
+    text_parts: list[str],
+    tx: float,
+    ty: float,
+    prev_tx: float,
+    prev_ty: float,
+    prev_width: float,
+    font_size: float,
+) -> tuple[float, float, float]:
+    """Append text to text_parts with a position-aware separator, return updated prev state.
+
+    Uses the current and previous text positions to decide whether to insert a
+    newline, a space, or nothing between the previous chunk and this one.
+    """
+    # One average character width, used as the word-gap threshold.
+    char_width = font_size * 0.5
+    # A forward X jump larger than ~3 characters, or any significant backward
+    # X jump, signals a column boundary or line wrap rather than a word space.
+    large_forward_threshold = char_width * 3.0
+    large_backward_threshold = char_width * 2.0
+
+    if text_parts:
+        dy = abs(ty - prev_ty)
+        if dy > font_size * 0.2:
+            text_parts.append("\n")
+
+        else:
+            gap = tx - (prev_tx + prev_width)
+            if gap >= large_forward_threshold or gap <= -large_backward_threshold:
+                # Large forward jump on the same line: column wrap or line wrap.
+                text_parts.append("\n")
+
+            elif gap >= char_width * 0.3:
+                text_parts.append(" ")
+
+            # Negative or very small gap: continuation of same word, no separator.
+
+    text_parts.append(text)
+    new_width = len(text) * font_size * 0.5
+    return tx, ty, new_width
 
 
 def _resolve_font(doc: PDFDocument, resources: dict[str, Any], font_name: str) -> dict[str, Any]:

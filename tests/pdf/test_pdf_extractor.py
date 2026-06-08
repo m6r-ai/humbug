@@ -4,7 +4,7 @@ from pdf.pdf_errors import PDFExtractionError
 from pdf.pdf_extractor import extract_text
 from pdf.pdf_parser import parse
 
-from .conftest import make_pdf, make_compressed_pdf, make_form_xobject_pdf, make_tounicode_pdf
+from .conftest import make_pdf, make_compressed_pdf, make_form_xobject_pdf, make_tounicode_pdf, make_raw_content_pdf
 
 
 class TestExtractText:
@@ -192,3 +192,169 @@ class TestUnmappedBytes:
         doc = parse(pdf)
         text = extract_text(doc)
         assert "@" not in text
+
+
+class TestTmPositioning:
+    """Tm operator sets absolute text position; spacing between chunks is geometry-driven."""
+
+    def test_tm_same_line_word_gap_inserts_space(self) -> None:
+        # Two Tm-positioned chunks on the same Y with a gap larger than one
+        # character width.  With font size 12 the word-gap threshold is
+        # 12 * 0.5 * 0.3 = 1.8 pts.  A gap of 10 pts is well above that.
+        # "Hello" is 5 chars -> estimated width 5 * 12 * 0.5 = 30 pts.
+        # Second chunk starts at x = 72 + 30 + 10 = 112.
+        pdf = make_raw_content_pdf(
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (Hello) Tj ET "
+            "BT /F1 12 Tf 1 0 0 1 112 720 Tm (world) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "Hello world" in text
+
+    def test_tm_same_line_no_gap_no_separator(self) -> None:
+        # Two chunks whose X positions are contiguous: no gap, no separator.
+        # "Hello" width estimate = 30 pts; second chunk at x = 72 + 30 = 102.
+        pdf = make_raw_content_pdf(
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (Hello) Tj ET "
+            "BT /F1 12 Tf 1 0 0 1 102 720 Tm (world) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "Helloworld" in text
+        assert "Hello world" not in text
+
+    def test_tm_y_change_inserts_newline(self) -> None:
+        # A Tm that moves to a lower Y (new line) produces a newline between chunks.
+        # Y change of 14 pts > threshold of 12 * 0.2 = 2.4 pts.
+        pdf = make_raw_content_pdf(
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (First) Tj ET "
+            "BT /F1 12 Tf 1 0 0 1 72 706 Tm (Second) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "First" in text
+        assert "Second" in text
+        assert "First Second" not in text
+
+    def test_tm_large_forward_x_jump_inserts_newline(self) -> None:
+        # A Tm that jumps far forward on the same Y signals a column boundary.
+        # Large forward threshold = 12 * 0.5 * 3.0 = 18 pts.
+        # "Hi" width = 2 * 12 * 0.5 = 12 pts; second chunk at x = 72 + 12 + 200 = 284.
+        # Gap = 284 - (72 + 12) = 200 pts >> 18 pts threshold.
+        pdf = make_raw_content_pdf(
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (Hi) Tj ET "
+            "BT /F1 12 Tf 1 0 0 1 284 720 Tm (there) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "Hi" in text
+        assert "there" in text
+        assert "Hi there" not in text
+
+    def test_tm_large_backward_x_jump_inserts_newline(self) -> None:
+        # A Tm that jumps far backward on the same Y signals a line wrap.
+        # Large backward threshold = 12 * 0.5 * 2.0 = 12 pts.
+        # "end" width = 3 * 12 * 0.5 = 18 pts; chunk starts at x = 400.
+        # After emitting, tx advances to 418.  Next Tm at x = 72.
+        # Gap = 72 - (400 + 0) = -328 pts; abs > 12 threshold -> newline.
+        pdf = make_raw_content_pdf(
+            "BT /F1 12 Tf 1 0 0 1 400 720 Tm (end) Tj ET "
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (start) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "end" in text
+        assert "start" in text
+        assert "endstart" not in text
+        assert "end start" not in text
+
+    def test_tm_matrix_scale_used_for_thresholds(self) -> None:
+        # When Tf sets size=1 and the Tm matrix provides the scale (a=12),
+        # the effective font size is 12 and thresholds behave identically to
+        # the Tf-size=12 case.  A word gap of 10 pts should produce a space.
+        # "Hello" width = 5 * (12*1) * 0.5 = 30 pts; second chunk at x = 112.
+        pdf = make_raw_content_pdf(
+            "BT /F1 1 Tf 12 0 0 12 72 720 Tm (Hello) Tj ET "
+            "BT /F1 1 Tf 12 0 0 12 112 720 Tm (world) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "Hello world" in text
+
+    def test_multiple_bt_et_blocks_same_line_join_correctly(self) -> None:
+        # Text split across multiple BT...ET blocks on the same line must not
+        # produce a spurious newline at the ET boundary.
+        # Chunks are contiguous: "Hello" width = 30 pts, next at x = 102.
+        pdf = make_raw_content_pdf(
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (Hello) Tj ET "
+            "BT /F1 12 Tf 1 0 0 1 102 720 Tm (world) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "\n" not in text.strip()
+
+
+class TestTdPositioning:
+    """Td operator moves text position relatively; spacing is geometry-driven."""
+
+    def test_td_horizontal_word_gap_inserts_space(self) -> None:
+        # Td with a horizontal move larger than one character width produces a space.
+        # After "Hello" (width 30), Td moves +10 pts -> gap = 10 > 1.8 threshold.
+        pdf = make_raw_content_pdf(
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (Hello) Tj 10 0 Td (world) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "Hello world" in text
+
+    def test_td_zero_horizontal_no_separator(self) -> None:
+        # Td with zero horizontal offset: chunks are contiguous, no separator.
+        pdf = make_raw_content_pdf(
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (Hello) Tj 0 0 Td (world) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "Helloworld" in text
+        assert "Hello world" not in text
+
+    def test_td_negative_y_inserts_newline(self) -> None:
+        # Td with a negative Y offset (moving down a line) produces a newline.
+        # Y move of -14 pts; threshold is 12 * 0.2 = 2.4 pts.
+        pdf = make_raw_content_pdf(
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (First) Tj 0 -14 Td (Second) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "First" in text
+        assert "Second" in text
+        assert "First Second" not in text
+
+
+class TestTDAndTStar:
+    """TD sets leading; T* advances by that leading."""
+
+    def test_TD_sets_leading_and_moves_position(self) -> None:
+        # TD tx ty: moves by (tx, ty) and sets leading to -ty.
+        # A move of (0, -14) is a line break; threshold is 2.4 pts.
+        pdf = make_raw_content_pdf(
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (First) Tj 0 -14 TD (Second) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "First" in text
+        assert "Second" in text
+        assert "First Second" not in text
+
+    def test_T_star_uses_leading_to_insert_newline(self) -> None:
+        # TD sets leading; T* moves down by that leading.
+        # TD 0 -14 sets leading=14; T* then moves ty by -14.
+        pdf = make_raw_content_pdf(
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (First) Tj 0 -14 TD (Second) Tj T* (Third) Tj ET"
+        )
+        doc = parse(pdf)
+        text = extract_text(doc)
+        assert "First" in text
+        assert "Second" in text
+        assert "Third" in text
+        assert "First Second" not in text
+        assert "Second Third" not in text
