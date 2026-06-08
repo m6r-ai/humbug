@@ -2,6 +2,10 @@
 
 ## v50 (2026-06-xx)
 
+New features:
+
+- Added a `cat` shell command that emulates the functionality of the filesystem AI tool's file read operation.
+
 ## v49 (2026-06-07)
 
 New features:
