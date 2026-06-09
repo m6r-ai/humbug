@@ -267,6 +267,11 @@ class EditorAITool(AITool):
         """
         arguments = tool_call.arguments
         operation = arguments.get("operation")
+
+        if operation == "transform":
+            program = arguments.get("program", "")
+            return f"`program` is:\n```menai\n{program}\n```"
+
         if operation != "apply_diff":
             return None
 
