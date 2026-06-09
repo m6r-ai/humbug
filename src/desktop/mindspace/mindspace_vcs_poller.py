@@ -10,8 +10,10 @@ from PySide6.QtCore import QObject, QTimer, Signal
 from git import GitCommandError, GitNotFoundError, GitNotRepositoryError
 from git import VCSFileStatus, find_repo_root, get_status
 
+from desktop.file_watcher.file_watcher import FileWatcher
 
-_POLL_INTERVAL_MS = 2000
+
+_FALLBACK_INTERVAL_MS = 30000
 
 
 @dataclass
@@ -95,6 +97,17 @@ class MindspaceVCSPoller(QObject):
     Emits repo_state_changed when a repository appears or disappears, and
     status_changed whenever the set of modified files changes.
 
+    Change detection uses two mechanisms:
+
+    - FileWatcher monitors .git/HEAD, .git/index, and the mindspace directory
+      itself for changes.  Any change triggers an immediate git status run.
+      After each git status completes the watches are re-registered so that the
+      post-status mtime becomes the new baseline, preventing the index refresh
+      side-effect of git status from re-triggering the watcher.
+
+    - A 30-second fallback timer catches working-tree file modifications in
+      subdirectories that the file watcher cannot see (it is not recursive).
+
     The blocking filesystem walk and git subprocess are executed on a
     thread-pool thread via asyncio's default executor so that neither ever
     stalls the Qt main thread.  A guard flag prevents overlapping poll cycles
@@ -128,10 +141,12 @@ class MindspaceVCSPoller(QObject):
         self._last_status: list[VCSFileStatus] = []
         self._poll_running: bool = False
 
-        self._timer = QTimer(self)
-        self._timer.setInterval(_POLL_INTERVAL_MS)
-        self._timer.setSingleShot(False)
-        self._timer.timeout.connect(self._on_timer)
+        self._file_watcher = FileWatcher()
+
+        self._fallback_timer = QTimer(self)
+        self._fallback_timer.setInterval(_FALLBACK_INTERVAL_MS)
+        self._fallback_timer.setSingleShot(False)
+        self._fallback_timer.timeout.connect(self._on_trigger)
 
     def set_mindspace(self, path: str) -> None:
         """
@@ -143,7 +158,9 @@ class MindspaceVCSPoller(QObject):
         Args:
             path: Absolute path to the mindspace root, or empty string to stop.
         """
-        self._timer.stop()
+        self._fallback_timer.stop()
+        self._unregister_watches()
+
         self._mindspace_path = path
         self._repo_root = ""
         self._last_status = []
@@ -154,13 +171,13 @@ class MindspaceVCSPoller(QObject):
             self.repo_state_changed.emit(False)
 
         if path:
-            self._on_timer()
-            self._timer.start()
+            self._on_trigger()
+            self._fallback_timer.start()
 
     def force_refresh(self) -> None:
         """Trigger an immediate poll cycle outside the normal timer cadence."""
         if self._mindspace_path:
-            self._on_timer()
+            self._on_trigger()
 
     def has_repo(self) -> bool:
         """Return True if a git repository is currently detected for the mindspace."""
@@ -178,8 +195,8 @@ class MindspaceVCSPoller(QObject):
         """
         return any(s.path == path for s in self._last_status)
 
-    def _on_timer(self) -> None:
-        """Timer tick: dispatch a poll cycle to the thread pool if none is running."""
+    def _on_trigger(self) -> None:
+        """Dispatch a poll cycle to the thread pool if none is running."""
         if not self._mindspace_path:
             return
 
@@ -189,6 +206,38 @@ class MindspaceVCSPoller(QObject):
         self._poll_running = True
         loop = asyncio.get_event_loop()
         loop.create_task(self._run_poll())
+
+    def _on_watch_changed(self, _path: str) -> None:
+        """File watcher callback: a watched path changed, trigger a poll."""
+        self._on_trigger()
+
+    def _register_watches(self) -> None:
+        """Register FileWatcher callbacks for the repo's key git files and the mindspace dir."""
+        if not self._repo_root:
+            return
+
+        self._file_watcher.watch_file(self._mindspace_path, self._on_watch_changed)
+        self._file_watcher.watch_file(
+            os.path.join(self._repo_root, ".git", "HEAD"), self._on_watch_changed
+        )
+        self._file_watcher.watch_file(
+            os.path.join(self._repo_root, ".git", "index"), self._on_watch_changed
+        )
+
+    def _unregister_watches(self) -> None:
+        """Remove all FileWatcher callbacks registered by this poller."""
+        if not self._mindspace_path:
+            return
+
+        self._file_watcher.unwatch_file(self._mindspace_path, self._on_watch_changed)
+
+        if self._repo_root:
+            self._file_watcher.unwatch_file(
+                os.path.join(self._repo_root, ".git", "HEAD"), self._on_watch_changed
+            )
+            self._file_watcher.unwatch_file(
+                os.path.join(self._repo_root, ".git", "index"), self._on_watch_changed
+            )
 
     async def _run_poll(self) -> None:
         """
@@ -219,12 +268,16 @@ class MindspaceVCSPoller(QObject):
         """
         Apply a completed poll result on the main thread.
 
-        Updates internal state and emits signals as needed.
+        Updates internal state, re-registers file watches with the post-poll
+        mtime as the new baseline, and emits signals as needed.
 
         Args:
             result: The _PollResult returned by the worker.
         """
-        if result.repo_root != self._repo_root:
+        repo_changed = result.repo_root != self._repo_root
+
+        if repo_changed:
+            self._unregister_watches()
             self._repo_root = result.repo_root
             has_repo = bool(result.repo_root)
 
@@ -235,6 +288,11 @@ class MindspaceVCSPoller(QObject):
 
         if not self._repo_root:
             return
+
+        # Re-register watches after every poll so that the post-poll mtime of
+        # .git/index becomes the new baseline.  This prevents the index refresh
+        # side-effect of git status from immediately re-triggering the watcher.
+        self._register_watches()
 
         if result.error is not None:
             if isinstance(result.error, GitNotFoundError):
