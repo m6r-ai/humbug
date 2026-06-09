@@ -1800,7 +1800,8 @@ class ConversationWidget(QWidget):
         """Set the floating input's width to match the viewport content width."""
         style_manager = self._style_manager
         spacing = int(style_manager.message_bubble_spacing())
-        max_content_width = int(style_manager.nice_tab_width())
+        zoom_factor = style_manager.zoom_factor()
+        max_content_width = int(style_manager.nice_tab_width() * zoom_factor)
         input_width = min(self._scroll_area.viewport().width(), max_content_width) - 2 * spacing + 2
         self._input.resize(input_width, self._input.height())
 
@@ -1808,7 +1809,8 @@ class ConversationWidget(QWidget):
         """Position the floating input at the bottom of the visible viewport."""
         style_manager = self._style_manager
         spacing = int(style_manager.message_bubble_spacing())
-        max_content_width = int(style_manager.nice_tab_width())
+        zoom_factor = style_manager.zoom_factor()
+        max_content_width = int(style_manager.nice_tab_width() * zoom_factor)
         viewport_width = self._scroll_area.viewport().width()
         container_width = min(viewport_width, max_content_width) + 2
         container_offset = (viewport_width - container_width) // 2
@@ -2554,7 +2556,8 @@ class ConversationWidget(QWidget):
         style_manager = self._style_manager
         spacing = int(style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
-        self._messages_container.setMaximumWidth(int(style_manager.nice_tab_width()))
+        zoom_factor = style_manager.zoom_factor()
+        self._messages_container.setMaximumWidth(int(style_manager.nice_tab_width() * zoom_factor))
 
         font = self.font()
         base_font_size = style_manager.base_font_size()
