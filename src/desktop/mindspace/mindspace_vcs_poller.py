@@ -13,7 +13,7 @@ from git import VCSFileStatus, find_repo_root, get_status
 from desktop.file_watcher.file_watcher import FileWatcher
 
 
-_FALLBACK_INTERVAL_MS = 30000
+_POLL_INTERVAL_MS = 10000
 
 
 @dataclass
@@ -105,8 +105,8 @@ class MindspaceVCSPoller(QObject):
       post-status mtime becomes the new baseline, preventing the index refresh
       side-effect of git status from re-triggering the watcher.
 
-    - A 30-second fallback timer catches working-tree file modifications in
-      subdirectories that the file watcher cannot see (it is not recursive).
+    - A 10-second periodic timer catches working-tree file modifications that
+      the file watcher cannot see (it is not recursive).
 
     The blocking filesystem walk and git subprocess are executed on a
     thread-pool thread via asyncio's default executor so that neither ever
@@ -143,10 +143,10 @@ class MindspaceVCSPoller(QObject):
 
         self._file_watcher = FileWatcher()
 
-        self._fallback_timer = QTimer(self)
-        self._fallback_timer.setInterval(_FALLBACK_INTERVAL_MS)
-        self._fallback_timer.setSingleShot(False)
-        self._fallback_timer.timeout.connect(self._on_trigger)
+        self._poll_timer = QTimer(self)
+        self._poll_timer.setInterval(_POLL_INTERVAL_MS)
+        self._poll_timer.setSingleShot(False)
+        self._poll_timer.timeout.connect(self._on_trigger)
 
     def set_mindspace(self, path: str) -> None:
         """
@@ -158,7 +158,7 @@ class MindspaceVCSPoller(QObject):
         Args:
             path: Absolute path to the mindspace root, or empty string to stop.
         """
-        self._fallback_timer.stop()
+        self._poll_timer.stop()
         self._unregister_watches()
 
         self._mindspace_path = path
@@ -172,7 +172,7 @@ class MindspaceVCSPoller(QObject):
 
         if path:
             self._on_trigger()
-            self._fallback_timer.start()
+            self._poll_timer.start()
 
     def force_refresh(self) -> None:
         """Trigger an immediate poll cycle outside the normal timer cadence."""
