@@ -15,6 +15,7 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.status_message import StatusMessage
 from desktop.tab import TabBase, TabState
+from desktop.style_manager import StyleManager
 from desktop.widgets import FindWidget
 
 
@@ -187,7 +188,8 @@ class DiffTab(TabBase):
 
     def preferred_width(self) -> int | None:
         """Return the preferred column width: twice the default editor column width."""
-        return 2048
+        style_manager = StyleManager()
+        return int(style_manager.nice_tab_width() * style_manager.zoom_factor() * 2)
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """Return serialisable state for mindspace persistence."""

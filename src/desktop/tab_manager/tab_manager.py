@@ -1583,6 +1583,7 @@ class TabManager(QWidget):
 
         self._update_column_splitter()
         self._apply_all_tab_bar_styles()
+        QTimer.singleShot(0, self.show_all_columns)
 
         for column in self._tab_columns:
             tab_bar = column.tabBar()
@@ -1654,27 +1655,28 @@ class TabManager(QWidget):
         """Show all columns, sizing each to its preferred width where possible.
 
         Each column is sized to its preferred width. Tabs that return None from preferred_width()
-        are treated as having a default preferred width of 1024px. If the total of all column
+        are treated as having the zoom-scaled default preferred width. If the total of all column
         widths is less than the available width, symmetric spacers centre the content.
         """
         if len(self._tab_columns) == 0:
             return
 
         min_col_width = 200
-        default_col_width = 1024
+        style_manager = StyleManager()
+        default_col_width = int(style_manager.nice_tab_width() * style_manager.zoom_factor())
         available = self.width()
 
         # Compute each column's preferred width. Tabs returning None use the default.
         col_preferred: List[int] = []
         for column in self._tab_columns:
-            pref: int = default_col_width
+            pref: int | None = None
             for i in range(column.count()):
                 tab = cast(TabBase, column.widget(i))
                 tab_pref = tab.preferred_width()
                 if tab_pref is not None:
-                    pref = max(pref, tab_pref)
+                    pref = tab_pref if pref is None else max(pref, tab_pref)
 
-            col_preferred.append(pref)
+            col_preferred.append(pref if pref is not None else default_col_width)
 
         total_preferred = sum(max(min_col_width, p) for p in col_preferred)
         sizes = [min_col_width] * len(self._tab_columns)
