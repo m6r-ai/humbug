@@ -10,6 +10,7 @@ New features:
 Bug fixes:
 
 - Improved the PDF text extraction.
+- Conversation inputs now scale with the zoom factor.
 
 ## v49 (2026-06-07)
 
