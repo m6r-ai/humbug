@@ -1,7 +1,9 @@
 """Background poller for VCS (git) working-tree status."""
 
+import asyncio
 import logging
 import os
+from dataclasses import dataclass
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
@@ -12,6 +14,80 @@ from git import VCSFileStatus, find_repo_root, get_status
 _POLL_INTERVAL_MS = 2000
 
 
+@dataclass
+class _PollResult:
+    """Result of a single background poll cycle."""
+    repo_root: str
+    status: list[VCSFileStatus]
+    error: Exception | None
+
+
+def _poll_worker(mindspace_path: str, current_repo_root: str) -> _PollResult:
+    """
+    Blocking poll worker executed on a thread-pool thread.
+
+    Performs the .git filesystem walk and git status subprocess call so that
+    neither blocks the Qt main thread.  Returns a plain _PollResult — no Qt
+    objects are created or touched here.
+
+    Args:
+        mindspace_path: Absolute path to the mindspace root.
+        current_repo_root: The repo root discovered on the previous poll, or
+            empty string if none was known.
+
+    Returns:
+        _PollResult with the detected repo root and current status list.
+    """
+    repo_root = _detect_repo_root(mindspace_path, current_repo_root)
+
+    if not repo_root:
+        return _PollResult(repo_root="", status=[], error=None)
+
+    try:
+        status = get_status(repo_root, mindspace_path)
+        return _PollResult(repo_root=repo_root, status=status, error=None)
+
+    except (GitNotFoundError, GitNotRepositoryError, GitCommandError) as e:
+        return _PollResult(repo_root=repo_root, status=[], error=e)
+
+
+def _detect_repo_root(mindspace_path: str, current_repo_root: str) -> str:
+    """
+    Return the git repo root for the mindspace, or empty string if none.
+
+    Uses a cheap filesystem check first (.git directory existence) before
+    falling back to the subprocess-based find_repo_root call.
+
+    Args:
+        mindspace_path: Absolute path to the mindspace root.
+        current_repo_root: Previously known repo root, or empty string.
+
+    Returns:
+        Absolute repo root path, or empty string.
+    """
+    if current_repo_root:
+        git_dir = os.path.join(current_repo_root, ".git")
+        if os.path.exists(git_dir):
+            return current_repo_root
+
+    candidate = mindspace_path
+    while True:
+        if os.path.exists(os.path.join(candidate, ".git")):
+            try:
+                return find_repo_root(candidate)
+
+            except (GitNotFoundError, GitNotRepositoryError, GitCommandError):
+                return ""
+
+        parent = os.path.dirname(candidate)
+        if parent == candidate:
+            break
+
+        candidate = parent
+
+    return ""
+
+
 class MindspaceVCSPoller(QObject):
     """
     Singleton background poller that tracks git repository state for a mindspace.
@@ -19,8 +95,10 @@ class MindspaceVCSPoller(QObject):
     Emits repo_state_changed when a repository appears or disappears, and
     status_changed whenever the set of modified files changes.
 
-    The poller checks for .git directory existence on every tick (cheap), and
-    only runs git status when a repository is confirmed present.
+    The blocking filesystem walk and git subprocess are executed on a
+    thread-pool thread via asyncio's default executor so that neither ever
+    stalls the Qt main thread.  A guard flag prevents overlapping poll cycles
+    if a previous git call has not yet completed.
     """
 
     repo_state_changed = Signal(bool)               # True = repo found, False = no repo
@@ -48,11 +126,12 @@ class MindspaceVCSPoller(QObject):
         self._repo_root: str = ""
         self._has_repo: bool = False
         self._last_status: list[VCSFileStatus] = []
+        self._poll_running: bool = False
 
         self._timer = QTimer(self)
         self._timer.setInterval(_POLL_INTERVAL_MS)
         self._timer.setSingleShot(False)
-        self._timer.timeout.connect(self._poll)
+        self._timer.timeout.connect(self._on_timer)
 
     def set_mindspace(self, path: str) -> None:
         """
@@ -68,19 +147,20 @@ class MindspaceVCSPoller(QObject):
         self._mindspace_path = path
         self._repo_root = ""
         self._last_status = []
+        self._poll_running = False
 
         if self._has_repo:
             self._has_repo = False
             self.repo_state_changed.emit(False)
 
         if path:
-            self._poll()
+            self._on_timer()
             self._timer.start()
 
     def force_refresh(self) -> None:
         """Trigger an immediate poll cycle outside the normal timer cadence."""
         if self._mindspace_path:
-            self._poll()
+            self._on_timer()
 
     def has_repo(self) -> bool:
         """Return True if a git repository is currently detected for the mindspace."""
@@ -98,16 +178,55 @@ class MindspaceVCSPoller(QObject):
         """
         return any(s.path == path for s in self._last_status)
 
-    def _poll(self) -> None:
-        """Single poll cycle: check repo presence then fetch status if present."""
+    def _on_timer(self) -> None:
+        """Timer tick: dispatch a poll cycle to the thread pool if none is running."""
         if not self._mindspace_path:
             return
 
-        repo_root = self._detect_repo_root()
+        if self._poll_running:
+            return
 
-        if repo_root != self._repo_root:
-            self._repo_root = repo_root
-            has_repo = bool(repo_root)
+        self._poll_running = True
+        loop = asyncio.get_event_loop()
+        loop.create_task(self._run_poll())
+
+    async def _run_poll(self) -> None:
+        """
+        Coroutine that runs the blocking poll worker on the executor and then
+        processes the result back on the main thread.
+        """
+        mindspace_path = self._mindspace_path
+        current_repo_root = self._repo_root
+
+        try:
+            loop = asyncio.get_event_loop()
+            result: _PollResult = await loop.run_in_executor(
+                None,
+                _poll_worker,
+                mindspace_path,
+                current_repo_root,
+            )
+
+        finally:
+            self._poll_running = False
+
+        if self._mindspace_path != mindspace_path:
+            return
+
+        self._apply_result(result)
+
+    def _apply_result(self, result: _PollResult) -> None:
+        """
+        Apply a completed poll result on the main thread.
+
+        Updates internal state and emits signals as needed.
+
+        Args:
+            result: The _PollResult returned by the worker.
+        """
+        if result.repo_root != self._repo_root:
+            self._repo_root = result.repo_root
+            has_repo = bool(result.repo_root)
 
             if has_repo != self._has_repo:
                 self._has_repo = has_repo
@@ -117,59 +236,15 @@ class MindspaceVCSPoller(QObject):
         if not self._repo_root:
             return
 
-        self._refresh_status()
+        if result.error is not None:
+            if isinstance(result.error, GitNotFoundError):
+                self._logger.warning("git not found: %s", result.error)
 
-    def _detect_repo_root(self) -> str:
-        """
-        Return the git repo root for the mindspace, or empty string if none.
+            else:
+                self._logger.debug("git status failed: %s", result.error)
 
-        Uses a cheap filesystem check first (.git directory existence) before
-        falling back to the subprocess-based find_repo_root call.
-
-        Returns:
-            Absolute repo root path, or empty string.
-        """
-        # Fast path: if we already have a known repo root, verify .git still exists.
-        if self._repo_root:
-            git_dir = os.path.join(self._repo_root, ".git")
-            if os.path.exists(git_dir):
-                return self._repo_root
-
-            # .git has gone — fall through to full scan.
-
-        # Walk up from the mindspace looking for a .git directory.
-        candidate = self._mindspace_path
-        while True:
-            if os.path.exists(os.path.join(candidate, ".git")):
-                try:
-                    return find_repo_root(candidate)
-
-                except (GitNotFoundError, GitNotRepositoryError, GitCommandError):
-                    return ""
-
-            parent = os.path.dirname(candidate)
-            if parent == candidate:
-                break
-
-            candidate = parent
-
-        return ""
-
-    def _refresh_status(self) -> None:
-        """
-        Run git status and emit status_changed if the result differs from last time.
-        """
-        try:
-            new_status = get_status(self._repo_root, self._mindspace_path)
-
-        except GitNotFoundError as e:
-            self._logger.warning("git not found: %s", e)
             return
 
-        except (GitNotRepositoryError, GitCommandError) as e:
-            self._logger.debug("git status failed: %s", e)
-            return
-
-        if new_status != self._last_status:
-            self._last_status = new_status
-            self.status_changed.emit(new_status)
+        if result.status != self._last_status:
+            self._last_status = result.status
+            self.status_changed.emit(result.status)
