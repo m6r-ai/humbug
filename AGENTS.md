@@ -106,6 +106,7 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `language/` - Localization support
 - `log_tab/` - Log tab implementation
 - `markdown/` - Markdown and code rendering stack
+- `mindspace/` - Qt-facing mindspace singleton (`MindspaceManager`), directory tracking, VCS polling, and mindspace folder management
 - `preview_sidebar/` - Preview panel implementation
 - `preview_tab/` - Preview tab implementation
 - `search_sidebar/` - Search panel implementation
@@ -201,11 +202,16 @@ Context model for open terminal tabs (`TerminalContext`).
 ## `tests/` Directory
 
 Test structure mirrors `src/` organization:
+- `ai/` - AI backend tests
 - `ai_transcript_conversation/` - AI transcript/conversation tests
 - `clock_ai_tool/` - Clock AI tool tests
 - `diff/` - Diff system tests
+- `dhtml/` - HTML processing tests
 - `docx/` - DOCX handling tests
+- `document_converter_ai_tool/` - Document converter AI tool tests
+- `document_ir/` - Document IR tests
 - `dmarkdown/` - Markdown parser tests
+- `editor_ai_tool/` - Editor AI tool tests
 - `filesystem_ai_tool/` - Filesystem AI tool tests
 - `menai/` - Menai language tests
 - `menai_ai_tool/` - Menai AI tool tests
@@ -217,7 +223,6 @@ Test structure mirrors `src/` organization:
 
 Development and debugging utilities:
 - `__init__.py` — makes `tools/` a package so mypy resolves all tool subpackages as `tools.*`
-- `menai/benchmark/` - Menai performance benchmarking
 - `menai/benchmark/` - Menai performance benchmarking
 - `menai/checker/` - Static analysis
 - `menai/disassembler/` - Bytecode disassembly
