@@ -5,6 +5,7 @@
 New features:
 
 - Added a `cat` shell command that emulates the functionality of the filesystem AI tool's file read operation.
+- Made VCS (git) polling an async task so it doesn't block the main thread.  Useful on Windows with anti-malware scanners.
 
 Bug fixes:
 
