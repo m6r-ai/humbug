@@ -11,6 +11,7 @@ Bug fixes:
 
 - Improved the PDF text extraction.
 - Conversation inputs now scale with the zoom factor.
+- When an AI was opening tabs, if another tab of a different type existed for the same file then the open would not work correctly.
 
 ## v49 (2026-06-07)
 

@@ -273,7 +273,7 @@ class SystemAITool(AITool):
         file_path = self._validate_and_resolve_path(file_path_arg)
 
         # Return existing tab if this file is already open
-        existing = self._mindspace.contexts().get_by_path(file_path)
+        existing = self._mindspace.contexts().get_by_path_and_type(file_path, "editor")
         if existing is not None:
             self._tab_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
@@ -353,7 +353,7 @@ class SystemAITool(AITool):
         conversation_path = self._validate_and_resolve_path(file_path_arg)
 
         # Return existing tab if this conversation is already open
-        existing = self._mindspace.contexts().get_by_path(conversation_path)
+        existing = self._mindspace.contexts().get_by_path_and_type(conversation_path, "conversation")
         if existing is not None:
             self._tab_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
@@ -527,7 +527,7 @@ class SystemAITool(AITool):
             preview_path = self._mindspace.get_absolute_path(".")
 
         # Return existing tab if this path is already open in a preview
-        existing = self._mindspace.contexts().get_by_path(preview_path)
+        existing = self._mindspace.contexts().get_by_path_and_type(preview_path, "preview")
         if existing is not None:
             self._tab_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
@@ -588,7 +588,7 @@ class SystemAITool(AITool):
             raise AIToolExecutionError(f"Cannot diff a directory: '{file_path_arg}'")
 
         # Return existing tab if this file is already open in a diff tab
-        existing = self._mindspace.contexts().get_by_path(file_path)
+        existing = self._mindspace.contexts().get_by_path_and_type(file_path, "diff")
         if existing is not None:
             self._tab_manager.make_tab_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)

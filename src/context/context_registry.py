@@ -179,31 +179,11 @@ class ContextRegistry:
         """
         return self._contexts.get(context_id)
 
-    def get_by_path(self, path: str) -> ContextInfo | None:
-        """
-        Find an open context by its associated path.
-
-        Returns the first match if multiple contexts share the same path
-        (which should not happen in normal use).
-
-        Args:
-            path: Absolute file path to search for.
-
-        Returns:
-            Immutable ContextInfo snapshot, or None if not found.
-        """
-        for info in self._contexts.values():
-            if info.path == path:
-                return info
-
-        return None
-
     def get_by_path_and_type(self, path: str, context_type: str) -> ContextInfo | None:
         """
         Find an open context by its associated path and type.
 
-        Use this in preference to get_by_path when the context type is known,
-        since multiple contexts of different types may share the same path
+        Multiple contexts of different types may share the same path
         (e.g. an editor tab and a diff tab open for the same file).
 
         Args:
