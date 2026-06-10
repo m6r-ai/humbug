@@ -571,3 +571,11 @@ class TabBase(QFrame):
         constrained columns have been allocated their preferred widths.
         """
         return None
+
+    def apply_style(self) -> None:
+        """Apply current style settings to the tab and its content.
+
+        Called by TabManager when the application style changes.  The default
+        implementation is a no-op.  Subclasses that own styled content widgets
+        should override this to forward the call to those widgets.
+        """

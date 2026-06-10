@@ -440,6 +440,11 @@ class ConversationTab(TabBase):
         style_manager = StyleManager()
         return int(style_manager.nice_tab_width() * style_manager.zoom_factor())
 
+    def apply_style(self) -> None:
+        """Apply current style settings to the tab's content widgets."""
+        self._find_widget.apply_style()
+        self._conversation_widget.apply_style()
+
     def show_find(self) -> None:
         """Show the find widget."""
         # Get selected text if any

@@ -78,7 +78,6 @@ class PreviewWidget(QWidget):
         self._last_scroll_maximum = 0
 
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._on_style_changed)
 
         # Create layout
         content_layout = QVBoxLayout(self)
@@ -148,7 +147,7 @@ class PreviewWidget(QWidget):
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
-        self._on_style_changed()
+        self.apply_style()
 
         # Find functionality
         self._matches: List[Tuple[PreviewContentWidget, List[Tuple[int, int, int]]]] = []
@@ -829,8 +828,8 @@ class PreviewWidget(QWidget):
             }}
         """
 
-    def _on_style_changed(self) -> None:
-        """Handle style changes."""
+    def apply_style(self) -> None:
+        """Apply current style settings."""
         zoom_factor = self._style_manager.zoom_factor()
         self._content_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
 

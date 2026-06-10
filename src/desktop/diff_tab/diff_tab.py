@@ -367,3 +367,8 @@ class DiffTab(TabBase):
     def navigate_previous_message(self) -> None:
         """Scroll to the previous hunk."""
         self._diff_widget.navigate_next_hunk(forward=False)
+
+    def apply_style(self) -> None:
+        """Apply current style settings to the tab's content widgets."""
+        self._find_widget.apply_style()
+        self._diff_widget.apply_style()

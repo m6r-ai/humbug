@@ -55,7 +55,6 @@ class WindowControlsWidget(QWidget):
         self._close_button.clicked.connect(self._on_close)
         self._layout.addWidget(self._close_button)
 
-        self._style_manager.style_changed.connect(self.apply_style)
         self.apply_style()
 
     def apply_style(self) -> None:

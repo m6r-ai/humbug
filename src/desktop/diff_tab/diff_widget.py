@@ -111,8 +111,7 @@ class DiffWidget(QWidget):
         self._left_pane.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
         self._scrollbar.valueChanged.connect(self._update_active_hunk)
 
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
+        self.apply_style()
 
         # Find state: flat list of (pane, start, end) tuples across both panes,
         # ordered by row position so navigation feels natural.
@@ -266,12 +265,6 @@ class DiffWidget(QWidget):
         """Return the number of diff rows currently displayed."""
         return len(self._rows)
 
-    def apply_style(self) -> None:
-        """Reapply colours and fonts after a theme or zoom change."""
-        self._left_pane.apply_style()
-        self._right_pane.apply_style()
-        self._on_style_changed()
-
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self._update_shared_scrollbar()
@@ -416,8 +409,8 @@ class DiffWidget(QWidget):
         self._scrollbar.setPageStep(vbar.pageStep())
         self._scrollbar.setValue(vbar.value())
 
-    def _on_style_changed(self) -> None:
-        """Reapply stylesheet when the theme or zoom changes."""
+    def apply_style(self) -> None:
+        """Apply current style settings."""
         bg = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
         fg = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
         splitter_color = self._style_manager.get_color_str(ColorRole.SPLITTER)

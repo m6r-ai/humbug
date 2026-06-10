@@ -135,7 +135,6 @@ class FindWidget(QWidget):
 
         self._on_language_changed()
 
-        self._style_manager.style_changed.connect(self._on_style_changed)
         self._language_manager.language_changed.connect(self._on_language_changed)
 
     def enable_replace_row(self) -> None:
@@ -150,7 +149,7 @@ class FindWidget(QWidget):
 
         self._replace_row_enabled = True
         self._expand_button.show()
-        self._on_style_changed()
+        self.apply_style()
 
     def _toggle_replace_row(self) -> None:
         """Toggle the replace row visibility."""
@@ -220,10 +219,10 @@ class FindWidget(QWidget):
         self._replace_button.setText(strings.replace_button)
         self._replace_all_button.setText(strings.replace_all_button)
         self._update_match_status()
-        self._on_style_changed()
+        self.apply_style()
 
-    def _on_style_changed(self) -> None:
-        """Update styling when application style changes."""
+    def apply_style(self) -> None:
+        """Apply current style settings."""
         self._update_margins()
         factor = self._style_manager.zoom_factor()
         font = self.font()

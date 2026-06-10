@@ -121,6 +121,7 @@ class TerminalWidget(QAbstractScrollArea):
         self._char_width: float = 0.0
         self._char_height: float = 0.0
         self._char_ascent: float = 0.0
+        self._base_char_width: float = 0.0
 
         # Horizontal centering offset in pixels (non-zero only when fixed_width is set)
         self._center_offset: float = 0.0
@@ -128,8 +129,7 @@ class TerminalWidget(QAbstractScrollArea):
         # Initialize size and connect signals
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_terminal_context_menu)
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
+        self.apply_style()
 
         # Find functionality attributes
         self._matches: List[TerminalMatch] = []
@@ -169,13 +169,22 @@ class TerminalWidget(QAbstractScrollArea):
         }
         self._state.set_ansi_colors(color_map)
 
-    def _on_style_changed(self) -> None:
-        """Handle style changes."""
+    def apply_style(self) -> None:
+        """Apply current style settings."""
         # Update terminal font
         font = self._style_manager.make_monospace_font_no_ligatures()
         self.setFont(font)
 
-        fm = QFontMetricsF(self.font())
+        # Measure the base character width at zoom 1.0 so preferred_pixel_width
+        # can scale it continuously with the zoom factor, bypassing font engine snapping.
+        base_font = QFont()
+        base_font.setFamilies(self._style_manager.monospace_font_families())
+        base_font.setFixedPitch(True)
+        base_font.setPointSizeF(self._style_manager.base_font_size())
+        base_font.setStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
+        self._base_char_width = QFontMetricsF(base_font).horizontalAdvance(' ')
+
+        fm = QFontMetricsF(font)
         self._char_width = fm.horizontalAdvance(' ')
         self._char_height = fm.height()
         self._char_ascent = fm.ascent()
@@ -1333,7 +1342,9 @@ class TerminalWidget(QAbstractScrollArea):
 
         margins = self.viewportMargins()
         scrollbar_size = self._style_manager.get_scrollbar_size()
-        return int(self._fixed_width * self._char_width) + margins.left() + margins.right() + scrollbar_size
+        zoom = self._style_manager.zoom_factor()
+        print(f"pref wid: {(self._fixed_width * self._base_char_width * zoom) + margins.left() + margins.right() + scrollbar_size}")
+        return round(self._fixed_width * self._base_char_width * zoom) + margins.left() + margins.right() + scrollbar_size
 
     def create_state_metadata(self) -> Dict:
         """Create metadata dictionary capturing widget state."""

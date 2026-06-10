@@ -86,9 +86,7 @@ class WelcomeWidget(QFrame):
         # Set margins for dialog-style spacing
         layout.setContentsMargins(20, 20, 20, 20)
 
-        # Connect style manager signals (already created above)
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
+        self.apply_style()
         self._on_language_changed()
 
     def set_user_settings(self, settings: UserSettings) -> None:
@@ -218,8 +216,8 @@ class WelcomeWidget(QFrame):
         painter.fillRect(self.rect(), color)
         painter.end()
 
-    def _on_style_changed(self) -> None:
-        """Update styling when application style changes."""
+    def apply_style(self) -> None:
+        """Apply current style settings."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
 

@@ -315,3 +315,8 @@ class ShellTab(TabBase):
     def clear_history(self) -> None:
         """Clear the shell history including command history."""
         self._shell_widget.clear_history()
+
+    def apply_style(self) -> None:
+        """Apply current style settings to the tab's content widgets."""
+        self._find_widget.apply_style()
+        self._shell_widget.apply_style()

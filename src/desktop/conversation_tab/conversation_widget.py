@@ -209,8 +209,7 @@ class ConversationWidget(QWidget):
         self._input.attach_requested.connect(self._on_attach_requested)
         self._input.modified.connect(self.conversation_modified)
 
-        style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
+        self.apply_style()
 
         # Invisible spacer that reserves the same height as the floating input
         # at the bottom of the scroll area so scrolling to the end doesn't hide
@@ -2551,8 +2550,8 @@ class ConversationWidget(QWidget):
             {style_manager.get_scrollbar_stylesheet("#ConversationMessage #ConversationMessageSection QScrollBar")}
         """
 
-    def _on_style_changed(self) -> None:
-        """Update styles when the application style changes."""
+    def apply_style(self) -> None:
+        """Apply current style settings."""
         style_manager = self._style_manager
         spacing = int(style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)

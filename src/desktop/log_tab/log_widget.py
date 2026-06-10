@@ -129,8 +129,7 @@ class LogWidget(QWidget):
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
+        self.apply_style()
 
         # Find functionality
         self._matches: List[Tuple[LogMessage, List[Tuple[int, int]]]] = []
@@ -676,7 +675,7 @@ class LogWidget(QWidget):
             {style_manager.get_scrollbar_stylesheet("#LogMessage #_text_area QScrollBar")}
         """
 
-    def _on_style_changed(self) -> None:
+    def apply_style(self) -> None:
         zoom_factor = self._style_manager.zoom_factor()
         self._messages_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
 

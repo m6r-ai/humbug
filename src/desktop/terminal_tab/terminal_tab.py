@@ -708,3 +708,8 @@ class TerminalTab(TabBase):
         # Send keystrokes with newline to execute it
         keystrokes_bytes = keystrokes.encode('utf-8')
         await self._terminal_process.write_data(keystrokes_bytes)
+
+    def apply_style(self) -> None:
+        """Apply current style settings to the tab's content widgets."""
+        self._find_widget.apply_style()
+        self._terminal_widget.apply_style()

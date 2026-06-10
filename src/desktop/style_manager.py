@@ -858,6 +858,7 @@ class StyleManager(QObject):
         text_highlight.setFontFamilies(self._code_font_families)
         if not self._font_ligatures:
             text_highlight.setFontStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
+
         text_highlight.setFontFixedPitch(True)
         text_highlight.setForeground(QColor(self._colors[role][self._resolve_color_mode()]))
 
@@ -1223,6 +1224,7 @@ class StyleManager(QObject):
         new_factor = max(0.5, min(2.0, factor))
         if new_factor != self._zoom_factor:
             self._zoom_factor = new_factor
+            print(f"zoom_factor changed to {new_factor}")
             self._scaled_icon_cache.clear()  # Invalidate scaled icons
             self.style_changed.emit()
 
@@ -1231,6 +1233,7 @@ class StyleManager(QObject):
         font = QFont(self._code_font_families)
         if not self._font_ligatures:
             font.setStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
+
         font.setPointSizeF(self.base_font_size() * self._zoom_factor)
         font_metrics = QFontMetricsF(font)
         space_width = font_metrics.horizontalAdvance('        ') / 8
@@ -1253,6 +1256,7 @@ class StyleManager(QObject):
         font.setPointSizeF(self.base_font_size() * self._zoom_factor)
         if not self._font_ligatures:
             font.setStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
+
         return font
 
     def make_monospace_font_no_ligatures(self) -> QFont:
@@ -1808,21 +1812,6 @@ class StyleManager(QObject):
                 image: none;
             }}
         """
-
-    def get_common_controls_stylesheet(self) -> str:
-        """Get shared styles for common interactive controls."""
-        return "\n".join([
-            self.get_button_stylesheet(),
-            self.get_tool_button_stylesheet(),
-            self.get_toggle_button_stylesheet(),
-            self.get_text_input_stylesheet("QLineEdit"),
-            self.get_text_input_stylesheet("QPlainTextEdit"),
-            self.get_text_input_stylesheet("QTextEdit"),
-            self.get_checkbox_stylesheet(),
-            self.get_combo_box_stylesheet(),
-            self.get_spin_box_stylesheet(),
-            self.get_double_spin_box_stylesheet(),
-        ])
 
     def create_menu(self, parent: QWidget) -> QMenu:
         """Create a styled QMenu with correct attributes for all platforms."""

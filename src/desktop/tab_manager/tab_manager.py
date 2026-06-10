@@ -2,7 +2,7 @@ import os
 import logging
 from typing import Callable, Dict, List, cast
 
-from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer
 from PySide6.QtGui import QResizeEvent
 
@@ -846,7 +846,7 @@ class TabManager(QWidget):
 
         tab_bar = column_widget.tabBar()
         if tab_bar:
-            self._apply_tab_bar_style(tab_bar)
+            tab_bar.setStyleSheet(build_tab_bar_stylesheet(self._style_manager))
 
         tab_bar = column_widget.tabBar()
         if isinstance(tab_bar, TabBar):
@@ -1581,14 +1581,18 @@ class TabManager(QWidget):
         """Apply style changes from StyleManager."""
         self.setStyleSheet(build_tab_manager_stylesheet(self._style_manager))
 
-        self._update_column_splitter()
-        self._apply_all_tab_bar_styles()
-        QTimer.singleShot(0, self.show_all_columns)
+        self._welcome_widget.apply_style()
+        self.show_all_columns()
 
         for column in self._tab_columns:
             tab_bar = column.tabBar()
-            if isinstance(tab_bar, TabBar):
+            if tab_bar:
+                assert isinstance(tab_bar, TabBar)
                 tab_bar.handle_style_changed()
+                tab_bar.setStyleSheet(build_tab_bar_stylesheet(self._style_manager))
+
+        for tab in self._tabs.values():
+            tab.apply_style()
 
     def update_welcome_widget(self, user_settings: UserSettings) -> None:
         """
@@ -1598,21 +1602,6 @@ class TabManager(QWidget):
             user_settings: Current user settings
         """
         self._welcome_widget.set_user_settings(user_settings)
-
-    def _update_column_splitter(self) -> None:
-        """Trigger repaint of column splitter handles."""
-        self._column_splitter.update()
-
-    def _apply_tab_bar_style(self, tab_bar: QTabBar) -> None:
-        """Apply styling to a specific tab bar."""
-        tab_bar.setStyleSheet(build_tab_bar_stylesheet(self._style_manager))
-
-    def _apply_all_tab_bar_styles(self) -> None:
-        """Apply styling to all tab bars in all columns."""
-        for column in self._tab_columns:
-            tab_bar = column.tabBar()
-            if tab_bar:
-                self._apply_tab_bar_style(tab_bar)
 
     def close_deleted_file(self, path: str) -> None:
         """
@@ -1662,7 +1651,7 @@ class TabManager(QWidget):
             return
 
         min_col_width = 200
-        style_manager = StyleManager()
+        style_manager = self._style_manager
         default_col_width = int(style_manager.nice_tab_width() * style_manager.zoom_factor())
         available = self.width()
 

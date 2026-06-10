@@ -116,8 +116,7 @@ class EditorWidget(QPlainTextEdit):
         self.cursorPositionChanged.connect(self.status_updated)
 
         # Connect to style changes
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
+        self.apply_style()
 
         # Load file if path provided
         if self._path:
@@ -1041,10 +1040,10 @@ class EditorWidget(QPlainTextEdit):
 
         super().keyPressEvent(event)
 
-    def _on_style_changed(self) -> None:
-        """Handle style changes affecting search highlighting."""
-        # Update font size
+    def apply_style(self) -> None:
+        """Apply current style settings."""
         font = self._style_manager.make_monospace_font()
+        print(f"font size: {font.pointSizeF()}, {font.pixelSize()}")
         self.setFont(font)
 
         # Update tab stops - scale with zoom

@@ -554,3 +554,8 @@ class EditorTab(TabBase):
             exist or file has never been saved
         """
         return self._editor_widget.get_diff(context_lines)
+
+    def apply_style(self) -> None:
+        """Apply current style settings to the tab's content widgets."""
+        self._find_widget.apply_style()
+        self._editor_widget.apply_style()

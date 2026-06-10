@@ -482,3 +482,8 @@ class PreviewTab(TabBase):
         return self._preview_content_widget.scroll_to_content_position(
             block_index, section_index, position, viewport_position
         )
+
+    def apply_style(self) -> None:
+        """Apply current style settings to the tab's content widgets."""
+        self._find_widget.apply_style()
+        self._preview_content_widget.apply_style()

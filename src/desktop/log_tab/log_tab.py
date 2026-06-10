@@ -388,3 +388,8 @@ class LogTab(TabBase):
         return self._log_widget.scroll_to_message_by_id_or_index(
             message_id, message_index
         )
+
+    def apply_style(self) -> None:
+        """Apply current style settings to the tab's content widgets."""
+        self._find_widget.apply_style()
+        self._log_widget.apply_style()

@@ -1586,6 +1586,7 @@ class MainWindow(QMainWindow):
         self._apply_statusbar_style()
         if self._window_controls is not None:
             self._window_controls.apply_style()
+
         self._apply_splitter_style()
 
         # Apply styles to the sidebar manager and column manager
