@@ -401,9 +401,9 @@ def get_english_strings() -> LanguageStrings:
             " This may change how the file is handled. Are you sure?",
 
         # Tool use
-        approve_tool_call="Approve Tool Call",
+        approve_tool_call="Approve",
         i_am_unsure_about_tool_call="I'm Unsure About This",
-        reject_tool_call="Reject Tool Call",
+        reject_tool_call="Reject",
         retry_error="Retry",
 
         # Update checker

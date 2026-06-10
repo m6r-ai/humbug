@@ -401,9 +401,9 @@ def get_french_strings() -> LanguageStrings:
             " Cela peut changer la façon dont le fichier est traité. Êtes-vous sûr ?",
 
         # Tool use
-        approve_tool_call="Approuver les appels d'outils",
+        approve_tool_call="Approuver",
         i_am_unsure_about_tool_call="Je ne suis pas sûr à propos",
-        reject_tool_call="Rejeter les appels d'outils",
+        reject_tool_call="Rejeter",
         retry_error="Réessayer",
 
         # Update checker

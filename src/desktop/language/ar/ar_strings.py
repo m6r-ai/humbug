@@ -400,9 +400,9 @@ def get_arabic_strings() -> LanguageStrings:
             " قد يؤثر ذلك على طريقة التعامل مع الملف. هل أنت متأكد؟",
 
         # Tool use
-        approve_tool_call="الموافقة على استدعاء الأداة",
+        approve_tool_call="موافقة",
         i_am_unsure_about_tool_call="لست متأكداً من هذا",
-        reject_tool_call="رفض استدعاء الأداة",
+        reject_tool_call="رفض",
         retry_error="إعادة المحاولة",
 
         # Update checker
