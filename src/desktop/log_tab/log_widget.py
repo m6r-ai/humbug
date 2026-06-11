@@ -676,6 +676,7 @@ class LogWidget(QWidget):
         """
 
     def apply_style(self) -> None:
+        """Apply the current style to this widget."""
         zoom_factor = self._style_manager.zoom_factor()
         self._messages_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
 

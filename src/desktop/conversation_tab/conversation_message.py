@@ -477,7 +477,10 @@ class ConversationMessage(QFrame):
                 expand_icon = self._message_style.expand_down_icon
 
             else:
-                expand_icon = self._message_style.expand_right_icon if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else self._message_style.expand_left_icon
+                expand_icon = (
+                    self._message_style.expand_right_icon if self.layoutDirection() == Qt.LayoutDirection.LeftToRight
+                    else self._message_style.expand_left_icon
+                )
 
             self._expand_button.setIcon(expand_icon)
 
@@ -1185,7 +1188,10 @@ class ConversationMessage(QFrame):
             if self._is_expanded:
                 expand_icon = style.expand_down_icon
             else:
-                expand_icon = style.expand_right_icon if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else style.expand_left_icon
+                expand_icon = (
+                    style.expand_right_icon if self.layoutDirection() == Qt.LayoutDirection.LeftToRight
+                    else style.expand_left_icon
+                )
             self._expand_button.setIcon(expand_icon)
             self._expand_button.setIconSize(style.icon_size)
 
