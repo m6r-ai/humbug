@@ -392,15 +392,21 @@ class TabManager(QWidget):
         strings = self._language_manager.strings()
         menu = self._style_manager.create_menu(self)
 
+        # In right-to-left layouts the visual order is mirrored, so "left"
+        # corresponds to higher tab indexes and "right" to lower ones
+        left_to_right = self._language_manager.left_to_right()
+        has_tabs_before = tab_index > 0
+        has_tabs_after = tab_index < tab_count - 1
+
         new_left_action = menu.addAction(strings.new_tab_to_left)
         new_right_action = menu.addAction(strings.new_tab_to_right)
         menu.addSeparator()
 
         close_left_action = menu.addAction(strings.close_tabs_to_left)
-        close_left_action.setEnabled(tab_index > 0)
+        close_left_action.setEnabled(has_tabs_before if left_to_right else has_tabs_after)
 
         close_right_action = menu.addAction(strings.close_tabs_to_right)
-        close_right_action.setEnabled(tab_index < tab_count - 1)
+        close_right_action.setEnabled(has_tabs_after if left_to_right else has_tabs_before)
 
         close_others_action = menu.addAction(strings.close_other_tabs)
         close_others_action.setEnabled(tab_count > 1)
@@ -409,16 +415,21 @@ class TabManager(QWidget):
         if action is None:
             return
 
-        if action == new_left_action:
+        new_before_action = new_left_action if left_to_right else new_right_action
+        new_after_action = new_right_action if left_to_right else new_left_action
+        close_before_action = close_left_action if left_to_right else close_right_action
+        close_after_action = close_right_action if left_to_right else close_left_action
+
+        if action == new_before_action:
             self.new_tab_requested.emit(column_index, tab_index)
 
-        elif action == new_right_action:
+        elif action == new_after_action:
             self.new_tab_requested.emit(column_index, tab_index + 1)
 
-        elif action == close_left_action:
+        elif action == close_before_action:
             self._close_tabs_in_column(column, list(range(0, tab_index)))
 
-        elif action == close_right_action:
+        elif action == close_after_action:
             self._close_tabs_in_column(column, list(range(tab_index + 1, tab_count)))
 
         elif action == close_others_action:

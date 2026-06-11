@@ -359,13 +359,13 @@ class TabOverviewWidget(QWidget):
 
         self._relayout()
 
-    def cycle_selection(self) -> None:
-        """Move the selection highlight to the next card, wrapping at the end."""
+    def cycle_selection(self, step: int = 1) -> None:
+        """Move the selection highlight by step cards, wrapping at either end."""
         if not self._card_order:
             return
 
         if self._selected_id in self._card_order:
-            index = (self._card_order.index(self._selected_id) + 1) % len(self._card_order)
+            index = (self._card_order.index(self._selected_id) + step) % len(self._card_order)
 
         else:
             index = 0
@@ -436,6 +436,11 @@ class TabOverviewWidget(QWidget):
         self._scroll_area.setGeometry(self.rect())
         self._relayout()
 
+    def focusNextPrevChild(self, next: bool) -> bool:  # pylint: disable=redefined-builtin
+        """Cycle the card selection on Tab/Shift+Tab instead of moving focus."""
+        self.cycle_selection(1 if next else -1)
+        return True
+
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key.Key_Escape:
             self.dismissed.emit()
@@ -449,6 +454,10 @@ class TabOverviewWidget(QWidget):
 
         if event.key() in (Qt.Key.Key_Right, Qt.Key.Key_Tab):
             self.cycle_selection()
+            return
+
+        if event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Backtab):
+            self.cycle_selection(-1)
             return
 
         super().keyPressEvent(event)
