@@ -1043,7 +1043,6 @@ class EditorWidget(QPlainTextEdit):
     def apply_style(self) -> None:
         """Apply current style settings."""
         font = self._style_manager.make_monospace_font()
-        print(f"font size: {font.pointSizeF()}, {font.pixelSize()}")
         self.setFont(font)
 
         # Update tab stops - scale with zoom

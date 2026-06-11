@@ -1343,7 +1343,6 @@ class TerminalWidget(QAbstractScrollArea):
         margins = self.viewportMargins()
         scrollbar_size = self._style_manager.get_scrollbar_size()
         zoom = self._style_manager.zoom_factor()
-        print(f"pref wid: {(self._fixed_width * self._base_char_width * zoom) + margins.left() + margins.right() + scrollbar_size}")
         return round(self._fixed_width * self._base_char_width * zoom) + margins.left() + margins.right() + scrollbar_size
 
     def create_state_metadata(self) -> Dict:
