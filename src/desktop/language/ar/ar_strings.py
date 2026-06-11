@@ -47,6 +47,13 @@ def get_arabic_strings() -> LanguageStrings:
         close_tab="إغلاق التبويب",
         settings="الإعدادات",
 
+        # Tab bar context menu items
+        new_tab_to_left="تبويب جديد إلى اليسار",
+        new_tab_to_right="تبويب جديد إلى اليمين",
+        close_tabs_to_left="إغلاق التبويبات إلى اليسار",
+        close_tabs_to_right="إغلاق التبويبات إلى اليمين",
+        close_other_tabs="إغلاق التبويبات الأخرى",
+
         # Edit menu items
         submit_message="إرسال الرسالة",
         undo="تراجع",
@@ -69,6 +76,8 @@ def get_arabic_strings() -> LanguageStrings:
         reset_zoom="إعادة تعيين التكبير",
         show_system_log="عرض سجل المساحة الذهنية",
         show_system_shell="عرض صدفة هامبغ",
+        show_tab_overview="عرض التبويبات المفتوحة",
+        show_tab_carousel="عرض دوّار التبويبات",
         show_all_columns="عرض كل الأعمدة",
         split_column_left="تقسيم العمود لليسار",
         split_column_right="تقسيم العمود لليمين",

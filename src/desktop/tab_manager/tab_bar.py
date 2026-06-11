@@ -4,7 +4,7 @@ from typing import Dict
 
 from PySide6.QtCore import QEvent, QMimeData, QObject, QPoint, QRect, QSize, Qt, Signal
 from PySide6.QtGui import (
-    QDrag, QFont, QFontMetricsF, QPainter, QPaintEvent, QMouseEvent, QPixmap, QWheelEvent
+    QContextMenuEvent, QDrag, QFont, QFontMetricsF, QPainter, QPaintEvent, QMouseEvent, QPixmap, QWheelEvent
 )
 from PySide6.QtWidgets import QApplication, QTabBar, QToolButton, QWidget
 
@@ -63,6 +63,7 @@ class TabBar(QTabBar):
 
     close_clicked = Signal(str)
     double_clicked = Signal(str)
+    context_menu_requested = Signal(str, QPoint)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         self._style_manager = StyleManager()
@@ -347,6 +348,17 @@ class TabBar(QTabBar):
                     self.double_clicked.emit(data.tab_id)
 
         super().mouseDoubleClickEvent(event)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        index = self.tabAt(event.pos())
+        if index != -1:
+            data = self._data_for_index(index)
+            if data:
+                self.context_menu_requested.emit(data.tab_id, event.globalPos())
+                event.accept()
+                return
+
+        super().contextMenuEvent(event)
 
     def wheelEvent(self, event: QWheelEvent) -> None:
         """Use wheel or trackpad gestures to scroll the tab strip."""

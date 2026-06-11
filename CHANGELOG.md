@@ -5,6 +5,8 @@
 New features:
 
 - Added a `cat` shell command that emulates the functionality of the filesystem AI tool's file read operation.
+- Right-clicking a tab now shows a context menu with options to open a new tab to the left or right, and to close
+  tabs to the left, tabs to the right, or all other tabs in the column.
 - Made VCS (git) polling an async task so it doesn't block the main thread.  Useful on Windows with anti-malware scanners.
 
 Bug fixes:

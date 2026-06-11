@@ -46,6 +46,13 @@ def get_french_strings() -> LanguageStrings:
         close_tab="Fermer l'onglet",
         settings="Paramètres",
 
+        # Tab bar context menu items
+        new_tab_to_left="Nouvel onglet à gauche",
+        new_tab_to_right="Nouvel onglet à droite",
+        close_tabs_to_left="Fermer les onglets à gauche",
+        close_tabs_to_right="Fermer les onglets à droite",
+        close_other_tabs="Fermer les autres onglets",
+
         # Edit menu items
         submit_message="Envoyer le message",
         undo="Annuler",
@@ -68,6 +75,8 @@ def get_french_strings() -> LanguageStrings:
         reset_zoom="Réinitialiser le zoom",
         show_system_log="Afficher le journal de l'espace mental",
         show_system_shell="Afficher le shell Humbug",
+        show_tab_overview="Afficher les onglets ouverts",
+        show_tab_carousel="Afficher le carrousel d'onglets",
         show_all_columns="Afficher toutes les colonnes",
         split_column_left="Diviser la colonne à gauche",
         split_column_right="Diviser la colonne à droite",

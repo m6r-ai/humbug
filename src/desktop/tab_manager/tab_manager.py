@@ -3,12 +3,13 @@ import logging
 from typing import Callable, Dict, List, cast
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
-from PySide6.QtCore import Signal, QTimer
+from PySide6.QtCore import Signal, QTimer, QPoint
 from PySide6.QtGui import QResizeEvent
 
 from context.context_info import ContextInfo
 from context.context_registry import ContextEvent, ContextRegistry
 
+from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
@@ -18,7 +19,9 @@ from desktop.tab_manager.column_splitter import ColumnSplitter
 from desktop.tab_manager.column_widget import ColumnWidget
 from desktop.tab_manager.spacer_drop_widget import SpacerDropWidget
 from desktop.tab_manager.tab_bar import TabBar
+from desktop.tab_manager.tab_carousel import TabCarouselWidget
 from desktop.tab_manager.tab_manager_error import TabManagerError
+from desktop.tab_manager.tab_overview import TabOverviewEntry, TabOverviewWidget
 from desktop.tab_manager.tab_style import build_tab_manager_stylesheet, build_tab_bar_stylesheet
 from desktop.tab_manager.welcome_widget import WelcomeWidget
 from desktop.user.user_settings import UserSettings
@@ -34,6 +37,7 @@ class TabManager(QWidget):
     tab_changed = Signal()
     tab_closed = Signal(str)
     user_settings_requested = Signal()
+    new_tab_requested = Signal(int, int)  # column_index, insert_index
 
     def __init__(
         self,
@@ -44,6 +48,7 @@ class TabManager(QWidget):
         super().__init__(parent)
 
         self._mindspace_manager = MindspaceManager()
+        self._language_manager = LanguageManager()
         self._logger = logging.getLogger("TabManager")
 
         # Subscribe to mindspace open/close so we can wire registry callbacks
@@ -125,6 +130,10 @@ class TabManager(QWidget):
         self._tab_factories: Dict[str, TabFactory] = {}
         self._context_factories: Dict[str, ContextFactory] = {}
         self._current_status_tab: TabBase | None = None
+
+        # Lazily-created overlays: grid overview and carousel ("recents screens")
+        self._tab_overview: TabOverviewWidget | None = None
+        self._tab_carousel: TabCarouselWidget | None = None
 
     def register_tab_factory(self, tool_name: str, factory: TabFactory) -> None:
         """Register a tab factory for session restore.
@@ -359,6 +368,75 @@ class TabManager(QWidget):
 
         if tab.is_ephemeral():
             self._make_tab_permanent(tab)
+
+    def _on_tab_label_context_menu(self, tab_id: str, global_pos: QPoint) -> None:
+        """
+        Show the context menu for a tab label.
+
+        Args:
+            tab_id: ID of the tab that was right-clicked
+            global_pos: Global position at which to show the menu
+        """
+        tab = self._tabs.get(tab_id)
+        if tab is None:
+            return
+
+        column = self._find_column_for_tab(tab)
+        if column is None:
+            return
+
+        column_index = self._tab_columns.index(column)
+        tab_index = column.indexOf(tab)
+        tab_count = column.count()
+
+        strings = self._language_manager.strings()
+        menu = self._style_manager.create_menu(self)
+
+        new_left_action = menu.addAction(strings.new_tab_to_left)
+        new_right_action = menu.addAction(strings.new_tab_to_right)
+        menu.addSeparator()
+
+        close_left_action = menu.addAction(strings.close_tabs_to_left)
+        close_left_action.setEnabled(tab_index > 0)
+
+        close_right_action = menu.addAction(strings.close_tabs_to_right)
+        close_right_action.setEnabled(tab_index < tab_count - 1)
+
+        close_others_action = menu.addAction(strings.close_other_tabs)
+        close_others_action.setEnabled(tab_count > 1)
+
+        action = menu.exec_(global_pos)
+        if action is None:
+            return
+
+        if action == new_left_action:
+            self.new_tab_requested.emit(column_index, tab_index)
+
+        elif action == new_right_action:
+            self.new_tab_requested.emit(column_index, tab_index + 1)
+
+        elif action == close_left_action:
+            self._close_tabs_in_column(column, list(range(0, tab_index)))
+
+        elif action == close_right_action:
+            self._close_tabs_in_column(column, list(range(tab_index + 1, tab_count)))
+
+        elif action == close_others_action:
+            self._close_tabs_in_column(column, [i for i in range(tab_count) if i != tab_index])
+
+    def _close_tabs_in_column(self, column: ColumnWidget, indexes: List[int]) -> None:
+        """
+        Close the tabs at the given indexes within a column.
+
+        Args:
+            column: Column containing the tabs
+            indexes: Tab indexes to close, relative to the column's current layout
+        """
+        tab_ids = [cast(TabBase, column.widget(i)).tab_id() for i in indexes]
+        for close_id in tab_ids:
+            self.close_tab_by_id(close_id)
+            if close_id not in self._tabs:
+                self.tab_closed.emit(close_id)
 
     def _on_tab_updated_state_changed(self, _tab_id: str, _is_updated: bool) -> None:
         """
@@ -798,6 +876,133 @@ class TabManager(QWidget):
         if current_index not in (-1, target_index):
             column.tabBar().moveTab(current_index, target_index)
 
+    def toggle_tab_overview(self) -> None:
+        """Show the tab overview, or cycle its selection if it is already visible."""
+        if self._tab_overview is not None and self._tab_overview.isVisible():
+            self._tab_overview.cycle_selection()
+            return
+
+        self.show_tab_overview()
+
+    def show_tab_overview(self) -> None:
+        """Show an overview of all open tabs as a grid of thumbnail cards."""
+        entries = self._build_overview_entries()
+        if not entries:
+            return
+
+        self._hide_tab_carousel()
+
+        if self._tab_overview is None:
+            self._tab_overview = TabOverviewWidget(self)
+            self._tab_overview.tab_activated.connect(self._on_overview_tab_activated)
+            self._tab_overview.tab_close_requested.connect(self._on_overview_tab_close_requested)
+            self._tab_overview.dismissed.connect(self._hide_tab_overview)
+
+        self._tab_overview.set_entries(entries)
+        self._tab_overview.setGeometry(self.rect())
+        self._tab_overview.show()
+        self._tab_overview.raise_()
+        self._tab_overview.setFocus()
+
+    def _hide_tab_overview(self) -> None:
+        """Hide the tab overview overlay and return focus to the current tab."""
+        if self._tab_overview is None or not self._tab_overview.isVisible():
+            return
+
+        self._tab_overview.hide()
+        self._activation_timer.start()
+
+    def toggle_tab_carousel(self) -> None:
+        """Show the tab carousel, or advance it if it is already visible."""
+        if self._tab_carousel is not None and self._tab_carousel.isVisible():
+            self._tab_carousel.select_next()
+            return
+
+        self.show_tab_carousel()
+
+    def show_tab_carousel(self) -> None:
+        """Show a carousel of all open tabs, centred on the current tab."""
+        entries = self._build_overview_entries()
+        if not entries:
+            return
+
+        self._hide_tab_overview()
+
+        if self._tab_carousel is None:
+            self._tab_carousel = TabCarouselWidget(self)
+            self._tab_carousel.tab_activated.connect(self._on_carousel_tab_activated)
+            self._tab_carousel.tab_close_requested.connect(self._on_carousel_tab_close_requested)
+            self._tab_carousel.dismissed.connect(self._hide_tab_carousel)
+
+        self._tab_carousel.set_entries(entries)
+        self._tab_carousel.setGeometry(self.rect())
+        self._tab_carousel.show()
+        self._tab_carousel.raise_()
+        self._tab_carousel.setFocus()
+
+    def _hide_tab_carousel(self) -> None:
+        """Hide the tab carousel overlay and return focus to the current tab."""
+        if self._tab_carousel is None or not self._tab_carousel.isVisible():
+            return
+
+        self._tab_carousel.hide()
+        self._activation_timer.start()
+
+    def _hide_tab_overlays(self) -> None:
+        """Hide both the overview and carousel overlays."""
+        self._hide_tab_overview()
+        self._hide_tab_carousel()
+
+    def _on_carousel_tab_activated(self, tab_id: str) -> None:
+        """Switch to the tab whose carousel card was clicked or chosen."""
+        self._hide_tab_carousel()
+        tab = self._tabs.get(tab_id)
+        if tab is not None:
+            self._set_current_tab(tab, False)
+
+    def _on_carousel_tab_close_requested(self, tab_id: str) -> None:
+        """Close the tab whose carousel close button was clicked."""
+        self.close_tab_by_id(tab_id)
+        if tab_id not in self._tabs:
+            self.tab_closed.emit(tab_id)
+
+    def _build_overview_entries(self) -> List[TabOverviewEntry]:
+        """Build display records for every open tab, in column then tab order."""
+        entries: List[TabOverviewEntry] = []
+        for column in self._tab_columns:
+            is_active_column = column == self._active_column
+            tab_bar = column.tabBar()
+            for i in range(column.count()):
+                tab = cast(TabBase, column.widget(i))
+                title = tab_bar.get_tab_text(i) if isinstance(tab_bar, TabBar) else ""
+                entries.append(TabOverviewEntry(
+                    tab_id=tab.tab_id(),
+                    icon_name=tab.tab_icon(),
+                    title=title,
+                    thumbnail=tab.grab(),
+                    is_current=is_active_column and column.currentWidget() is tab,
+                ))
+
+        return entries
+
+    def _on_overview_tab_activated(self, tab_id: str) -> None:
+        """Switch to the tab whose overview card was clicked."""
+        self._hide_tab_overview()
+        tab = self._tabs.get(tab_id)
+        if tab is not None:
+            self._set_current_tab(tab, False)
+
+    def _on_overview_tab_close_requested(self, tab_id: str) -> None:
+        """Close the tab whose overview card was swiped away."""
+        self.close_tab_by_id(tab_id)
+        if tab_id not in self._tabs:
+            self.tab_closed.emit(tab_id)
+            return
+
+        # The close was vetoed (e.g. the user cancelled a save prompt)
+        if self._tab_overview is not None:
+            self._tab_overview.restore_card(tab_id)
+
     def _update_tab_bar_for_label_change(self, tab: TabBase) -> None:
         """
         Efficiently update the tab bar after a label text change.
@@ -852,6 +1057,7 @@ class TabManager(QWidget):
         if isinstance(tab_bar, TabBar):
             tab_bar.close_clicked.connect(self._on_tab_label_close_clicked)
             tab_bar.double_clicked.connect(self._on_tab_label_double_clicked)
+            tab_bar.context_menu_requested.connect(self._on_tab_label_context_menu)
 
         self.show_all_columns()
         return column_widget
@@ -1036,6 +1242,9 @@ class TabManager(QWidget):
             # If no tabs exist, we need to switch to the columns widget
             self._stack.setCurrentWidget(self._columns_widget)
 
+        # A newly opened tab supersedes the overlay views
+        self._hide_tab_overlays()
+
         prior_active_column = self._active_column
         target_column = self._get_target_column_for_new_tab(requester_id)
 
@@ -1081,6 +1290,17 @@ class TabManager(QWidget):
                 column.setCurrentWidget(next_tab)
 
         self._remove_tab_from_column(tab, column)
+
+        # Keep the overlay views in sync if they're showing
+        if self._tab_overview is not None and self._tab_overview.isVisible():
+            self._tab_overview.remove_card(tab_id)
+            if self._tab_overview.card_count() == 0:
+                self._hide_tab_overview()
+
+        if self._tab_carousel is not None and self._tab_carousel.isVisible():
+            self._tab_carousel.remove_entry(tab_id)
+            if self._tab_carousel.entry_count() == 0:
+                self._hide_tab_carousel()
 
         # If we closed the last tab in the column, close the column unless it's the last column
         if column.count() == 0:
@@ -1594,6 +1814,9 @@ class TabManager(QWidget):
         for tab in self._tabs.values():
             tab.apply_style()
 
+        # Thumbnails and metrics are stale after a style change, so close the overlays
+        self._hide_tab_overlays()
+
     def update_welcome_widget(self, user_settings: UserSettings) -> None:
         """
         Update the welcome widget with current user settings.
@@ -1639,6 +1862,12 @@ class TabManager(QWidget):
         super().resizeEvent(event)
         if self._tab_columns:
             self.show_all_columns()
+
+        if self._tab_overview is not None and self._tab_overview.isVisible():
+            self._tab_overview.setGeometry(self.rect())
+
+        if self._tab_carousel is not None and self._tab_carousel.isVisible():
+            self._tab_carousel.setGeometry(self.rect())
 
     def show_all_columns(self) -> None:
         """Show all columns, sizing each to its preferred width where possible.

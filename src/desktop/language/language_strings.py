@@ -37,6 +37,13 @@ class LanguageStrings:
     close_tab: str
     settings: str
 
+    # Tab bar context menu items
+    new_tab_to_left: str
+    new_tab_to_right: str
+    close_tabs_to_left: str
+    close_tabs_to_right: str
+    close_other_tabs: str
+
     # Edit menu items
     submit_message: str
     undo: str
@@ -59,6 +66,8 @@ class LanguageStrings:
     reset_zoom: str
     show_system_log: str
     show_system_shell: str
+    show_tab_overview: str
+    show_tab_carousel: str
     show_all_columns: str
     split_column_left: str
     split_column_right: str
