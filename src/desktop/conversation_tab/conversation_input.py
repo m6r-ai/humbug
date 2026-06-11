@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel, QSizePo
 from ai import AIMessageSource
 
 from desktop.markdown import MarkdownTextEdit
+from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 from desktop.conversation_tab.conversation_message import ConversationMessage
 
 
@@ -137,9 +138,9 @@ class ConversationInput(ConversationMessage):
 
         return "Ctrl+Enter"
 
-    def apply_style(self) -> None:
+    def apply_style(self, style: ConversationMessageStyle | None = None) -> None:
         """Apply style changes."""
-        super().apply_style()
+        super().apply_style(style)
 
         # Fix the banner height so it cannot expand to absorb slack space when
         # the outer frame is resized during a text reflow. The sections_container

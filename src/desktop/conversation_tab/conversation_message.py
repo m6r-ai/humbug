@@ -7,8 +7,8 @@ from typing import Dict, List, Tuple, Any, cast
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
 )
-from PySide6.QtCore import Signal, QPoint, QSize, Qt, QEvent, QObject
-from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QKeyEvent
+from PySide6.QtCore import Signal, QPoint, Qt, QEvent, QObject
+from PySide6.QtGui import QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QKeyEvent
 
 from ai import AIMessageSource
 from ai_tool import AIToolCall
@@ -22,6 +22,7 @@ from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from desktop.markdown import MarkdownCodeBlockTextEdit, MarkdownTextEdit
 from desktop.style_manager import StyleManager, ColorMode
 from desktop.conversation_tab.conversation_message_section import ConversationMessageSection
+from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 from desktop.widgets.elided_label import ElidedLabel
 
 
@@ -223,7 +224,7 @@ class ConversationMessage(QFrame):
                 if isinstance(text_area, MarkdownCodeBlockTextEdit):
                     text_area.set_text_with_highlighting(file_content, [], [])
 
-                section.apply_style()
+                section.apply_style(self._message_style)
                 self._attachment_sections.append(section)
                 attachments_layout.addWidget(section)
 
@@ -299,6 +300,7 @@ class ConversationMessage(QFrame):
         self._markdown_converter = MarkdownConverter()
 
         self._is_spotlighted = False
+        self._message_style: ConversationMessageStyle | None = None
 
         self._on_language_changed()
 
@@ -463,17 +465,21 @@ class ConversationMessage(QFrame):
                 self._pending_context = None
 
             self._sections_container.show()
-            icon_name = "expand-down"
             tooltip = strings.tooltip_collapse_message
 
         else:
             self._sections_container.hide()
-            icon_name = "expand-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "expand-left"
             tooltip = strings.tooltip_expand_message
 
         # Update icon
-        icon_base_size = 14
-        self._expand_button.setIcon(QIcon(self._style_manager.scale_icon(icon_name, icon_base_size)))
+        if self._message_style is not None:
+            if self._is_expanded:
+                expand_icon = self._message_style.expand_down_icon
+
+            else:
+                expand_icon = self._message_style.expand_right_icon if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else self._message_style.expand_left_icon
+
+            self._expand_button.setIcon(expand_icon)
 
         # Update tooltip
         self._expand_button.setToolTip(tooltip)
@@ -904,7 +910,7 @@ class ConversationMessage(QFrame):
             # Create new section if needed
             if i >= len(self._sections):
                 section = self._create_section_widget(syntax)
-                section.apply_style()
+                section.apply_style(self._message_style)
                 section.prime_width(self._sections_container.width())
                 section.set_content(node)
                 self._sections.append(section)
@@ -1136,88 +1142,80 @@ class ConversationMessage(QFrame):
         """Return the banner widget."""
         return self._banner
 
-    def apply_style(self) -> None:
+    def apply_style(self, style: ConversationMessageStyle | None = None) -> None:
         """Apply style changes."""
-        style_manager = self._style_manager
+        if style is not None:
+            self._message_style = style
 
-        spacing = int(style_manager.message_bubble_spacing())
-        self._layout.setSpacing(spacing)
-        self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
-        self._sections_layout.setSpacing(spacing)
+        if self._message_style is None:
+            return
 
-        font = self.font()
-        base_font_size = style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * style_manager.zoom_factor())
-        self._role_label.setFont(font)
+        style = self._message_style
+        self._layout.setSpacing(style.spacing)
+        self._layout.setContentsMargins(style.spacing, style.spacing, style.spacing, style.spacing)
+        self._sections_layout.setSpacing(style.spacing)
 
-        # Set icons and sizes for buttons
-        icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * style_manager.zoom_factor())
-        icon_size = QSize(icon_scaled_size, icon_scaled_size)
+        self._role_label.setFont(style.font)
 
         if self._copy_message_button:
-            self._copy_message_button.setIcon(QIcon(style_manager.scale_icon("copy", icon_base_size)))
-            self._copy_message_button.setIconSize(icon_size)
+            self._copy_message_button.setIcon(style.copy_icon)
+            self._copy_message_button.setIconSize(style.icon_size)
 
         if self._save_message_button:
-            self._save_message_button.setIcon(QIcon(style_manager.scale_icon("save", icon_base_size)))
-            self._save_message_button.setIconSize(icon_size)
+            self._save_message_button.setIcon(style.save_icon)
+            self._save_message_button.setIconSize(style.icon_size)
 
         if self._fork_message_button:
-            self._fork_message_button.setIcon(QIcon(style_manager.scale_icon("fork", icon_base_size)))
-            self._fork_message_button.setIconSize(icon_size)
+            self._fork_message_button.setIcon(style.fork_icon)
+            self._fork_message_button.setIconSize(style.icon_size)
 
         if self._edit_message_button:
-            self._edit_message_button.setIcon(QIcon(style_manager.scale_icon("edit", icon_base_size)))
-            self._edit_message_button.setIconSize(icon_size)
+            self._edit_message_button.setIcon(style.edit_icon)
+            self._edit_message_button.setIconSize(style.icon_size)
 
         if self._delete_message_button:
-            self._delete_message_button.setIcon(QIcon(style_manager.scale_icon("delete", icon_base_size)))
-            self._delete_message_button.setIconSize(icon_size)
+            self._delete_message_button.setIcon(style.delete_icon)
+            self._delete_message_button.setIconSize(style.icon_size)
 
         if self._attachments_button:
-            self._attachments_button.setIcon(QIcon(style_manager.scale_icon("paperclip", icon_base_size)))
-            self._attachments_button.setIconSize(icon_size)
+            self._attachments_button.setIcon(style.paperclip_icon)
+            self._attachments_button.setIconSize(style.icon_size)
 
         if self._expand_button:
             if self._is_expanded:
-                icon_name = "expand-down"
-
+                expand_icon = style.expand_down_icon
             else:
-                icon_name = "expand-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "expand-left"
-
-            self._expand_button.setIcon(QIcon(self._style_manager.scale_icon(icon_name, icon_base_size)))
-            self._expand_button.setIconSize(icon_size)
+                expand_icon = style.expand_right_icon if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else style.expand_left_icon
+            self._expand_button.setIcon(expand_icon)
+            self._expand_button.setIconSize(style.icon_size)
 
         # Apply fonts to approval buttons if present
         if self._approval_approve_button:
-            self._approval_approve_button.setFont(font)
+            self._approval_approve_button.setFont(style.font)
 
         if self._approval_i_am_unsure_button:
-            self._approval_i_am_unsure_button.setFont(font)
+            self._approval_i_am_unsure_button.setFont(style.font)
 
         if self._approval_reject_button:
-            self._approval_reject_button.setFont(font)
+            self._approval_reject_button.setFont(style.font)
 
         if self._approval_text_edit:
-            self._approval_text_edit.setFont(font)
+            self._approval_text_edit.setFont(style.font)
 
         if self._approval_context_text_edit:
-            self._approval_context_text_edit.setFont(font)
+            self._approval_context_text_edit.setFont(style.font)
 
         if self._retry_button:
-            self._retry_button.setFont(font)
+            self._retry_button.setFont(style.font)
 
         # Apply styling to all sections
         for section in self._sections:
-            section.apply_style()
+            section.apply_style(style)
 
         for section in self._attachment_sections:
-            section.apply_style()
+            section.apply_style(style)
 
         if self._chips_bar is not None:
-            chip_font = self.font()
-            chip_font.setPointSizeF(style_manager.base_font_size() * style_manager.zoom_factor() * 0.8)
             chips_layout = self._chips_bar.layout()
             if chips_layout is not None:
                 for i in range(chips_layout.count()):
@@ -1226,7 +1224,7 @@ class ConversationMessage(QFrame):
                     if chip is not None:
                         label = chip.findChild(QLabel, "_attachment_label")
                         if label is not None:
-                            label.setFont(chip_font)
+                            label.setFont(style.chip_font)
 
         # Re-apply style to the inline edit text area if currently open
         if self._edit_text_edit is not None:

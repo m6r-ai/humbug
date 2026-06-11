@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QSize, QRegularExpression
 from PySide6.QtGui import (
-    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon, QColor, QTextDocument
+    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QTextDocument
 )
 
 from dmarkdown import MarkdownASTNode, MarkdownASTCodeBlockNode, MarkdownASTTextNode
@@ -20,6 +20,7 @@ from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType
 from desktop.style_manager import StyleManager
 from desktop.markdown import MarkdownCodeBlockTextEdit, MarkdownRenderer, MarkdownTextEdit
+from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 
 
 class ConversationMessageSection(QFrame):
@@ -468,33 +469,26 @@ class ConversationMessageSection(QFrame):
 
         return local_pos
 
-    def apply_style(self) -> None:
+    def apply_style(self, style: ConversationMessageStyle | None = None) -> None:
         """Apply styling to this section."""
-        style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
-        self._layout.setSpacing(spacing)
+        if style is None:
+            return
+
+        self._layout.setSpacing(style.spacing)
 
         if self._syntax_header:
-            font = self.font()
-            base_font_size = style_manager.base_font_size()
-            font.setPointSizeF(base_font_size * zoom_factor)
-            self._syntax_header.setFont(font)
-            self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
+            self._syntax_header.setFont(style.font)
+            self._layout.setContentsMargins(style.spacing, style.spacing, style.spacing, style.spacing)
 
         self._text_area.apply_style()
 
-        icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * zoom_factor)
-        icon_size = QSize(icon_scaled_size, icon_scaled_size)
-
         if self._copy_button:
-            self._copy_button.setIcon(QIcon(self._style_manager.scale_icon("copy", icon_base_size)))
-            self._copy_button.setIconSize(icon_size)
+            self._copy_button.setIcon(style.copy_icon)
+            self._copy_button.setIconSize(style.icon_size)
 
         if self._save_as_button:
-            self._save_as_button.setIcon(QIcon(self._style_manager.scale_icon("save", icon_base_size)))
-            self._save_as_button.setIconSize(icon_size)
+            self._save_as_button.setIcon(style.save_icon)
+            self._save_as_button.setIconSize(style.icon_size)
 
         # Only apply renderer style for MarkdownTextEdit
         if self._renderer is not None and self._content_node is not None:

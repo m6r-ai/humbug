@@ -54,6 +54,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
         # Calculate tab stops
         self._style_manager = StyleManager()
+        self._applied_color_mode = self._style_manager.color_mode()
         self.apply_style()
 
     def _on_code_block_state_changed(self, has_code_block: bool) -> None:
@@ -85,7 +86,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         self.setTabStopDistance(space_width * 8)
         self.document().setIndentWidth(space_width * 4)
 
-        if self._highlighter:
+        if self._highlighter and self._style_manager.color_mode() != self._applied_color_mode:
+            self._applied_color_mode = self._style_manager.color_mode()
             self._highlighter.rehighlight()
 
     def insertFromMimeData(self, source: QMimeData) -> None:

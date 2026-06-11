@@ -10,8 +10,8 @@ from typing import Callable, cast, Dict, List, Tuple, Any, Set
 from PySide6.QtWidgets import (
     QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QFileDialog
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QEvent
-from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
+from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QEvent, QSize
+from PySide6.QtGui import QCursor, QFont, QGuiApplication, QIcon, QResizeEvent
 
 from ai import (
     AIConversationEvent, AIConversationHistory, AIConversationSettings,
@@ -27,6 +27,7 @@ from desktop.color_role import ColorRole
 from desktop.conversation_tab.conversation_error import ConversationError
 from desktop.conversation_tab.conversation_input import ConversationInput
 from desktop.conversation_tab.conversation_message import ConversationMessage
+from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -84,6 +85,7 @@ class ConversationWidget(QWidget):
 
         style_manager = StyleManager()
         self._style_manager = style_manager
+        self._message_style = self._build_message_style()
 
         if ai_transcript_conversation is not None:
             self._ai_conversation = ai_transcript_conversation
@@ -519,7 +521,7 @@ class ConversationWidget(QWidget):
             self._delete_user_queued_messages()
 
         msg_widget = self._add_message_core(message)
-        msg_widget.apply_style()
+        msg_widget.apply_style(self._message_style)
 
         # If we're not animating then we've done everything we need to.
         if not self._is_animating:
@@ -1895,7 +1897,7 @@ class ConversationWidget(QWidget):
                 message_widget.set_rendered(False)
 
             else:
-                message_widget.apply_style()
+                message_widget.apply_style(self._message_style)
 
         self._auto_scroll = True
         if self._deferred_scroll_timer_slot is not None:
@@ -1930,7 +1932,7 @@ class ConversationWidget(QWidget):
             message_widget = self._add_message_core(message, self._load_head_insert_pos)
             message_widget.set_rendered(False)
             if message_widget.message_source() not in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
-                message_widget.apply_style()
+                message_widget.apply_style(self._message_style)
 
             self._load_head_insert_pos += 1
 
@@ -2553,6 +2555,7 @@ class ConversationWidget(QWidget):
     def apply_style(self) -> None:
         """Apply current style settings."""
         style_manager = self._style_manager
+        self._message_style = self._build_message_style()
         spacing = int(style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
         zoom_factor = style_manager.zoom_factor()
@@ -2574,13 +2577,45 @@ class ConversationWidget(QWidget):
 
         for message in self._messages:
             if message.is_rendered():
-                message.apply_style()
+                message.apply_style(self._message_style)
 
         self._input.apply_style()
         if self._input_spacer is not None:
             self._update_input_width()
             self._on_input_size_hint_changed()
             self._update_input_position()
+
+    def _build_message_style(self) -> ConversationMessageStyle:
+        """Build the shared style object for all ConversationMessage instances."""
+        style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
+        base_font_size = style_manager.base_font_size()
+        icon_base_size = 14
+        icon_scaled_size = int(icon_base_size * zoom_factor)
+
+        font = QFont(self.font())
+        font.setPointSizeF(base_font_size * zoom_factor)
+
+        chip_font = QFont(self.font())
+        chip_font.setPointSizeF(base_font_size * zoom_factor * 0.8)
+
+        icon_size = QSize(icon_scaled_size, icon_scaled_size)
+
+        return ConversationMessageStyle(
+            font=font,
+            chip_font=chip_font,
+            spacing=int(style_manager.message_bubble_spacing()),
+            icon_size=icon_size,
+            copy_icon=QIcon(style_manager.scale_icon("copy", icon_base_size)),
+            save_icon=QIcon(style_manager.scale_icon("save", icon_base_size)),
+            fork_icon=QIcon(style_manager.scale_icon("fork", icon_base_size)),
+            edit_icon=QIcon(style_manager.scale_icon("edit", icon_base_size)),
+            delete_icon=QIcon(style_manager.scale_icon("delete", icon_base_size)),
+            paperclip_icon=QIcon(style_manager.scale_icon("paperclip", icon_base_size)),
+            expand_down_icon=QIcon(style_manager.scale_icon("expand-down", icon_base_size)),
+            expand_right_icon=QIcon(style_manager.scale_icon("expand-right", icon_base_size)),
+            expand_left_icon=QIcon(style_manager.scale_icon("expand-left", icon_base_size)),
+        )
 
     def _show_conversation_context_menu(self, pos: QPoint) -> None:
         """

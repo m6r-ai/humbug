@@ -1203,7 +1203,6 @@ class StyleManager(QObject):
             self._color_mode = mode
             self._initialize_highlights()
             self._initialize_proportional_highlights()
-            # Clear scaled cache since icon paths change with theme
             self._scaled_icon_cache.clear()
             self.style_changed.emit()
 
