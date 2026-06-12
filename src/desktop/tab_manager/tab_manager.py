@@ -4,7 +4,7 @@ from typing import Callable, Dict, List, cast
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer, QPoint
-from PySide6.QtGui import QResizeEvent
+from PySide6.QtGui import QPixmap, QResizeEvent
 
 from context.context_info import ContextInfo
 from context.context_registry import ContextEvent, ContextRegistry
@@ -983,16 +983,27 @@ class TabManager(QWidget):
         for column in self._tab_columns:
             is_active_column = column == self._active_column
             tab_bar = column.tabBar()
+            original_current = column.currentWidget()
+
             for i in range(column.count()):
                 tab = cast(TabBase, column.widget(i))
                 title = tab_bar.get_tab_text(i) if isinstance(tab_bar, TabBar) else ""
+                is_current = is_active_column and column.currentWidget() is tab
+                if tab.thumbnail() is None:
+                    column.setCurrentWidget(tab)
+                    tab.capture_thumbnail()
+
+                thumbnail = tab.grab() if is_current else tab.thumbnail()
                 entries.append(TabOverviewEntry(
                     tab_id=tab.tab_id(),
                     icon_name=tab.tab_icon(),
                     title=title,
-                    thumbnail=tab.grab(),
-                    is_current=is_active_column and column.currentWidget() is tab,
+                    thumbnail=thumbnail or QPixmap(),
+                    is_current=is_current,
                 ))
+
+            if column.currentWidget() is not original_current:
+                column.setCurrentWidget(original_current)
 
         return entries
 
@@ -1158,6 +1169,12 @@ class TabManager(QWidget):
             return
 
         current_tab.activate()
+        current_tab.capture_thumbnail()
+
+    def _refresh_current_tab_thumbnails(self) -> None:
+        """Invalidate all cached thumbnails after a resize so the next overview rebuild re-grabs them all."""
+        for tab in self._tabs.values():
+            tab.invalidate_thumbnail()
 
     def _on_column_widget_current_changed(self, _index: int) -> None:
         """
@@ -1877,14 +1894,17 @@ class TabManager(QWidget):
     def resizeEvent(self, event: QResizeEvent) -> None:  # type: ignore[override]
         """Reapply column sizing and margins when the widget is resized."""
         super().resizeEvent(event)
+
         if self._tab_columns:
             self.show_all_columns()
 
-        if self._tab_overview is not None and self._tab_overview.isVisible():
-            self._tab_overview.setGeometry(self.rect())
+        QTimer.singleShot(0, self._refresh_current_tab_thumbnails)
 
-        if self._tab_carousel is not None and self._tab_carousel.isVisible():
-            self._tab_carousel.setGeometry(self.rect())
+        if self._tab_overview is not None and self._tab_overview.isVisible():
+            self.show_tab_overview()
+
+        elif self._tab_carousel is not None and self._tab_carousel.isVisible():
+            self.show_tab_carousel()
 
     def show_all_columns(self) -> None:
         """Show all columns, sizing each to its preferred width where possible.

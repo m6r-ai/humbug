@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QFrame, QWidget
 from PySide6.QtCore import Signal
 
 from context.context_registry import ContextRegistry
+from PySide6.QtGui import QPixmap
 
 from desktop.file_watcher import FileWatcher
 from desktop.status_message import StatusMessage
@@ -43,10 +44,23 @@ class TabBase(QFrame):
         self._is_ephemeral = False
         self._path: str = ""
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._thumbnail: QPixmap | None = None
 
         # File watching
         self._file_watcher = FileWatcher()
         self._file_exists = True
+
+    def capture_thumbnail(self) -> None:
+        """Grab and cache a thumbnail of the tab's current rendered content."""
+        self._thumbnail = self.grab()
+
+    def invalidate_thumbnail(self) -> None:
+        """Discard the cached thumbnail so the next overview rebuild re-grabs it."""
+        self._thumbnail = None
+
+    def thumbnail(self) -> QPixmap | None:
+        """Return the cached thumbnail, or None if none has been captured yet."""
+        return self._thumbnail
 
     def set_active(self, widget: QWidget, active: bool) -> None:
         """
