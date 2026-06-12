@@ -10,7 +10,7 @@ from typing import List
 from PySide6.QtCore import QEasingCurve, QPoint, QRect, QRectF, Qt, QVariantAnimation, Signal
 from PySide6.QtGui import (
     QColor, QFont, QFontMetricsF, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPaintEvent,
-    QPen, QWheelEvent
+    QPen, QWheelEvent, QEnterEvent
 )
 from PySide6.QtWidgets import QApplication, QWidget
 
@@ -44,6 +44,7 @@ class TabCarouselWidget(QWidget):
         self._swipe_index: int | None = None
         self._swipe_offset_y = 0.0
         self._swipe_animation: QVariantAnimation | None = None
+        self._close_hover_index: int | None = None
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMouseTracking(True)
@@ -122,7 +123,25 @@ class TabCarouselWidget(QWidget):
 
     def _card_spacing(self) -> int:
         """Horizontal distance between adjacent card centres."""
-        return int(self.width() * 0.52 * 0.95)
+        return 480
+
+    def _card_offset_x(self, offset: float) -> int:
+        """
+        Convert a fractional card offset to a pixel displacement from the strip centre.
+
+        Spacing shrinks with distance so outer cards sit closer together than
+        inner ones.  A separate, steeper falloff coefficient is used here so the
+        spacing can compress more aggressively than the card size scale, keeping
+        the outer cards visually tight without shrinking them too small.
+        """
+        spacing = self._card_spacing()
+        sign = 1 if offset >= 0 else -1
+        steps = abs(offset)
+        whole = int(steps)
+        frac = steps - whole
+        px = sum(spacing * max(0.3125, 1.0 - 0.4583 * (i + 0.5)) for i in range(whole))
+        px += frac * spacing * max(0.3125, 1.0 - 0.4583 * (whole + frac * 0.5))
+        return sign * int(px)
 
     def _card_rect(self, offset: float, index: int | None = None) -> QRect:
         """
@@ -149,11 +168,11 @@ class TabCarouselWidget(QWidget):
                 width = body_width
                 height = body_height + header_height
 
-        scale = max(0.75, 1.0 - 0.12 * abs(offset))
+        scale = max(0.60, 1.0 - 0.25 * abs(offset))
         width = int(width * scale)
         height = int(height * scale)
 
-        center_x = self.width() // 2 + int(offset * self._card_spacing())
+        center_x = self.width() // 2 + self._card_offset_x(offset)
         center_y = self.height() // 2
         return QRect(center_x - width // 2, center_y - height // 2, width, height)
 
@@ -172,7 +191,7 @@ class TabCarouselWidget(QWidget):
         """Return entry indices near enough to the centre to be drawn."""
         return [
             i for i in range(len(self._entries))
-            if abs(i - self._scroll_pos) <= 1.6
+            if abs(i - self._scroll_pos) <= 2.6
         ]
 
     def paintEvent(self, _event: QPaintEvent) -> None:
@@ -233,6 +252,12 @@ class TabCarouselWidget(QWidget):
 
         if is_focused:
             close_rect = self._close_rect(card_rect)
+            if index == self._close_hover_index:
+                hover_color = sm.get_color(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)
+                painter.setBrush(hover_color)
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawRoundedRect(close_rect, sm.radius(), sm.radius())
+
             painter.drawPixmap(close_rect.topLeft(), sm.scale_icon("close", 16))
 
         body_rect = QRect(
@@ -296,6 +321,13 @@ class TabCarouselWidget(QWidget):
         if is_swiping:
             painter.setOpacity(1.0)
 
+    def leaveEvent(self, event: QEnterEvent) -> None:
+        if self._close_hover_index is not None:
+            self._close_hover_index = None
+            self.update()
+
+        super().leaveEvent(event)
+
     def wheelEvent(self, event: QWheelEvent) -> None:
         delta = event.angleDelta().x()
         if delta == 0:
@@ -345,11 +377,28 @@ class TabCarouselWidget(QWidget):
         self._is_dragging = False
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if self._press_pos is None or not self._entries:
+        if not self._entries:
+            super().mouseMoveEvent(event)
+            return
+
+        if self._press_pos is None:
+            close_hover_index: int | None = None
+            focused_index = self._target_index
+            card_rect = self._card_rect(0.0, focused_index)
+            if self._close_rect(card_rect).contains(event.pos()):
+                close_hover_index = focused_index
+
+            if close_hover_index != self._close_hover_index:
+                self._close_hover_index = close_hover_index
+                self.update()
+
             super().mouseMoveEvent(event)
             return
 
         delta = event.pos() - self._press_pos
+        if self._close_hover_index is not None:
+            self._close_hover_index = None
+            self.update()
 
         if not self._is_dragging and self._swipe_index is None:
             if delta.manhattanLength() < QApplication.startDragDistance():

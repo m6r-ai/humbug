@@ -22,6 +22,8 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Implemented a new AI provider and model selection UI.
 * Implemented support for dynamically fetching the model lists from the AI providers.
 * Designed the new Humbug logo and icons.
+* Added the tab carousel and tab card view features.
+* Added tab label context menu.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 

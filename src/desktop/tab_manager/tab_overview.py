@@ -309,7 +309,10 @@ class TabOverviewWidget(QWidget):
         self._scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll_area.viewport().setAutoFillBackground(False)
-        self._scroll_area.setStyleSheet("QScrollArea { background: transparent; }")
+        self._scroll_area.setStyleSheet(
+            "QScrollArea { background: transparent; }\n"
+            + self._style_manager.get_scrollbar_stylesheet()
+        )
 
         self._content = QWidget()
         self._content.setAutoFillBackground(False)

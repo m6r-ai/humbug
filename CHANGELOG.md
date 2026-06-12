@@ -4,8 +4,7 @@
 
 New features:
 
-- Added a `cat` shell command that emulates the functionality of the filesystem AI tool's file read operation.
-- Right-clicking a tab now shows a context menu with options to open a new tab to the left or right, and to close
+- Right-clicking a tab label now shows a context menu with options to open a new tab to the left or right, and to close
   tabs to the left, tabs to the right, or all other tabs in the column.
 - Added a tab overview (View -> Show Open Tabs, Ctrl+Shift+E) that shows all open tabs as thumbnail cards, like a
   mobile recents screen.  Click a card to switch to that tab, swipe/drag it upwards or use its close button to close
@@ -14,6 +13,7 @@ New features:
   card strip with the current tab nearly filling the view.  Scroll, drag the strip sideways, use the arrow keys, or
   press the shortcut again to flip through tabs; click the centred card (or press Enter) to switch to it, and close
   a tab with its close button or by swiping its card upwards.
+- Added a `cat` shell command that emulates the functionality of the filesystem AI tool's file read operation.
 - Made VCS (git) polling an async task so it doesn't block the main thread.  Useful on Windows with anti-malware scanners.
 
 Bug fixes:
@@ -21,6 +21,7 @@ Bug fixes:
 - Improved the PDF text extraction.
 - Conversation inputs now scale with the zoom factor.
 - When an AI was opening tabs, if another tab of a different type existed for the same file then the open would not work correctly.
+- Zoom operations are now much faster.
 
 ## v49 (2026-06-07)
 
