@@ -70,7 +70,7 @@ from desktop.sidebar_manager import SidebarManager
 from desktop.style_manager import StyleManager, ColorMode
 from desktop.status_message import StatusMessage
 from desktop.system_ai_tool import SystemAITool
-from desktop.tab_manager import TabManager
+from desktop.tab_manager import TabManager, TabManagerError
 from desktop.terminal_tab.terminal_tab import TerminalTab
 from desktop.title_bar import MenuBarDragFilter, WindowControlsWidget
 from desktop.update_checker import UpdateChecker
@@ -387,6 +387,14 @@ class MainWindow(QMainWindow):
         self._show_system_shell_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
         self._show_system_shell_action.triggered.connect(self._on_show_system_shell)
 
+        self._show_tab_overview_action = QAction(strings.show_tab_overview, self)
+        self._show_tab_overview_action.setShortcut(QKeySequence("Ctrl+Shift+E"))
+        self._show_tab_overview_action.triggered.connect(self._on_show_tab_overview)
+
+        self._show_tab_carousel_action = QAction(strings.show_tab_carousel, self)
+        self._show_tab_carousel_action.setShortcut(QKeySequence("Ctrl+Shift+T"))
+        self._show_tab_carousel_action.triggered.connect(self._on_show_tab_carousel)
+
         self._show_all_columns_action = QAction(strings.show_all_columns, self)
         self._show_all_columns_action.setShortcut(QKeySequence("Ctrl+\\"))
         self._show_all_columns_action.triggered.connect(self._on_show_all_columns)
@@ -478,6 +486,9 @@ class MainWindow(QMainWindow):
         self._view_menu.addAction(self._show_system_log_action)
         self._view_menu.addAction(self._show_system_shell_action)
         self._view_menu.addSeparator()
+        self._view_menu.addAction(self._show_tab_overview_action)
+        self._view_menu.addAction(self._show_tab_carousel_action)
+        self._view_menu.addSeparator()
         self._view_menu.addAction(self._show_all_columns_action)
         self._view_menu.addAction(self._split_column_left_action)
         self._view_menu.addAction(self._split_column_right_action)
@@ -536,6 +547,7 @@ class MainWindow(QMainWindow):
         self._tab_manager.tab_changed.connect(self._on_tab_manager_tab_changed)
         self._tab_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
         self._tab_manager.tab_closed.connect(self._on_tab_manager_tab_closed)
+        self._tab_manager.new_tab_requested.connect(self._on_tab_bar_new_tab_requested)
         self._splitter.addWidget(self._tab_manager)
 
         # Register tab factories for session restore and context-open events.
@@ -736,6 +748,8 @@ class MainWindow(QMainWindow):
         self._show_system_log_action.setEnabled(has_mindspace)
         self._show_system_shell_action.setEnabled(has_mindspace)
         self._show_all_columns_action.setEnabled(tab_manager.can_show_all_columns())
+        self._show_tab_overview_action.setEnabled(tab is not None)
+        self._show_tab_carousel_action.setEnabled(tab is not None)
         self._split_column_left_action.setEnabled(tab_manager.can_split_column())
         self._split_column_right_action.setEnabled(tab_manager.can_split_column())
         self._merge_column_left_action.setEnabled(tab_manager.can_merge_column(left_to_right))
@@ -807,6 +821,8 @@ class MainWindow(QMainWindow):
         self._zoom_out_action.setText(strings.zoom_out)
         self._reset_zoom_action.setText(strings.reset_zoom)
         self._show_system_shell_action.setText(strings.show_system_shell)
+        self._show_tab_overview_action.setText(strings.show_tab_overview)
+        self._show_tab_carousel_action.setText(strings.show_tab_carousel)
         self._show_all_columns_action.setText(strings.show_all_columns)
         self._split_column_left_action.setText(strings.split_column_left)
         self._split_column_right_action.setText(strings.split_column_right)
@@ -1563,6 +1579,14 @@ class MainWindow(QMainWindow):
 
         contexts.open(context_type="shell", title="Humbug Shell")
 
+    def _on_show_tab_overview(self) -> None:
+        """Toggle the open-tabs overview overlay."""
+        self._tab_manager.toggle_tab_overview()
+
+    def _on_show_tab_carousel(self) -> None:
+        """Toggle the open-tabs carousel overlay."""
+        self._tab_manager.toggle_tab_carousel()
+
     def _on_show_all_columns(self) -> None:
         """Show all columns equally."""
         self._tab_manager.show_all_columns()
@@ -1679,8 +1703,32 @@ class MainWindow(QMainWindow):
 
     def _on_new_conversation(self) -> None:
         """Create new conversation tab."""
-        if not self._mindspace_manager.has_mindspace():
+        self._create_new_conversation()
+
+    def _on_tab_bar_new_tab_requested(self, column_index: int, insert_index: int) -> None:
+        """
+        Create a new conversation tab at a specific position in a column.
+
+        Args:
+            column_index: Index of the column that should receive the new tab
+            insert_index: Position within the column's tab bar
+        """
+        context_id = self._create_new_conversation()
+        if context_id is None:
             return
+
+        try:
+            self._tab_manager.move_tab_to_column(context_id, column_index)
+
+        except TabManagerError:
+            return
+
+        self._tab_manager.reposition_tab(context_id, column_index, insert_index)
+
+    def _create_new_conversation(self) -> str | None:
+        """Create a new conversation tab and return its context ID, or None on failure."""
+        if not self._mindspace_manager.has_mindspace():
+            return None
 
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
@@ -1697,7 +1745,7 @@ class MainWindow(QMainWindow):
                 MindspaceLogLevel.ERROR,
                 f"User failed to create new conversation: {str(e)}"
             )
-            return
+            return None
 
         try:
             title, full_path = self._generate_conversation_path()
@@ -1718,12 +1766,13 @@ class MainWindow(QMainWindow):
                 MindspaceLogLevel.ERROR,
                 f"User failed to create new conversation: {str(e)}"
             )
-            return
+            return None
 
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
             f"User created new conversation\ntab ID: {context_id}"
         )
+        return context_id
 
     def _on_sidebar_new_conversation_in_folder(self, folder_path: str) -> None:
         """Create a new conversation in a specific folder."""

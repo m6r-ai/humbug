@@ -46,6 +46,13 @@ def get_english_strings() -> LanguageStrings:
         close_tab="Close Tab",
         settings="Settings",
 
+        # Tab bar context menu items
+        new_tab_to_left="New Tab to the Left",
+        new_tab_to_right="New Tab to the Right",
+        close_tabs_to_left="Close Tabs to the Left",
+        close_tabs_to_right="Close Tabs to the Right",
+        close_other_tabs="Close Other Tabs",
+
         # Edit menu items
         submit_message="Submit Message",
         undo="Undo",
@@ -68,6 +75,8 @@ def get_english_strings() -> LanguageStrings:
         reset_zoom="Reset Zoom",
         show_system_log="Show Mindspace Log",
         show_system_shell="Show Humbug Shell",
+        show_tab_overview="Show Open Tabs",
+        show_tab_carousel="Show Tab Carousel",
         show_all_columns="Show All Columns",
         split_column_left="Split Column Left",
         split_column_right="Split Column Right",

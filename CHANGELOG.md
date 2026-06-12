@@ -5,6 +5,15 @@
 New features:
 
 - Added a `cat` shell command that emulates the functionality of the filesystem AI tool's file read operation.
+- Right-clicking a tab now shows a context menu with options to open a new tab to the left or right, and to close
+  tabs to the left, tabs to the right, or all other tabs in the column.
+- Added a tab overview (View -> Show Open Tabs, Ctrl+Shift+E) that shows all open tabs as thumbnail cards, like a
+  mobile recents screen.  Click a card to switch to that tab, swipe/drag it upwards or use its close button to close
+  the tab.  Pressing the shortcut again cycles the selection through the cards; Enter activates the selected tab.
+- Added a tab carousel (View -> Show Tab Carousel, Ctrl+Shift+T) that shows open tabs as a horizontally scrollable
+  card strip with the current tab nearly filling the view.  Scroll, drag the strip sideways, use the arrow keys, or
+  press the shortcut again to flip through tabs; click the centred card (or press Enter) to switch to it, and close
+  a tab with its close button or by swiping its card upwards.
 - Made VCS (git) polling an async task so it doesn't block the main thread.  Useful on Windows with anti-malware scanners.
 
 Bug fixes:
