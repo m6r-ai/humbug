@@ -7,10 +7,10 @@ closes or dismisses.  The TabManager supplies the data and acts on the signals.
 
 from typing import List
 
-from PySide6.QtCore import QEasingCurve, QPoint, QRect, QRectF, Qt, QVariantAnimation, Signal
+from PySide6.QtCore import QEasingCurve, QEvent, QPoint, QRect, QRectF, Qt, QVariantAnimation, Signal
 from PySide6.QtGui import (
     QColor, QFont, QFontMetricsF, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPaintEvent,
-    QPen, QWheelEvent, QEnterEvent
+    QPen, QWheelEvent
 )
 from PySide6.QtWidgets import QApplication, QWidget
 
@@ -321,7 +321,7 @@ class TabCarouselWidget(QWidget):
         if is_swiping:
             painter.setOpacity(1.0)
 
-    def leaveEvent(self, event: QEnterEvent) -> None:
+    def leaveEvent(self, event: QEvent) -> None:
         if self._close_hover_index is not None:
             self._close_hover_index = None
             self.update()

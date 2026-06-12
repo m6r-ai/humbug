@@ -1815,7 +1815,6 @@ class TabManager(QWidget):
             self.setStyleSheet(new_stylesheet)
 
         self._welcome_widget.apply_style()
-        self.show_all_columns()
 
         for column in self._tab_columns:
             tab_bar = column.tabBar()
@@ -1828,6 +1827,9 @@ class TabManager(QWidget):
 
         for tab in self._tabs.values():
             tab.apply_style()
+
+        # Update columns after all other styling has been applied
+        self.show_all_columns()
 
         # Thumbnails and metrics are stale after a style change, so close the overlays
         self._hide_tab_overlays()

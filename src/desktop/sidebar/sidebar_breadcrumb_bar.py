@@ -9,7 +9,6 @@ from PySide6.QtGui import (
     QIcon, QMouseEvent, QPen, QPainter, QWheelEvent,
     QStandardItem, QStandardItemModel,
 )
-from PySide6.QtWidgets import QFrame, QStyleOptionViewItem, QTreeView, QWidget
 from PySide6.QtWidgets import QFrame, QStyledItemDelegate, QStyleOptionViewItem, QTreeView, QWidget
 
 from desktop.color_role import ColorRole
