@@ -49,6 +49,8 @@ differences and are noted in their rows.
 | Reset Zoom | Cmd+0 | Ctrl+0 |
 | Show System Log | Cmd+Shift+L | Ctrl+Shift+L |
 | Show Humbug Shell | Cmd+Shift+Y | Ctrl+Shift+Y |
+| Show Tab Overview | Cmd+Shift+E | Ctrl+Shift+E |
+| Show Tab Carousel | Cmd+Shift+T | Ctrl+Shift+T |
 | Show All Columns | Cmd+\ | Ctrl+\ |
 | Split Column Left | Cmd+Shift+[ | Ctrl+Shift+[ |
 | Split Column Right | Cmd+Shift+] | Ctrl+Shift+] |

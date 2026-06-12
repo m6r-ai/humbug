@@ -156,6 +156,65 @@ immediately obvious which tabs are temporary. Persistent tabs use normal (non-it
 
 ---
 
+## Tab overviews
+
+When you have many tabs open across multiple columns it can be hard to find what you are looking
+for at a glance. Humbug provides two full-screen overlay views — the **Tab Overview** and the
+**Tab Carousel** — that let you see and navigate all open tabs quickly.
+
+Both overlays show a live thumbnail of each tab's content, its icon, and its title. Pressing
+**Esc** or clicking outside any card dismisses the overlay and returns focus to wherever you were.
+
+---
+
+### Tab Overview
+
+**Shortcut:** `Cmd+Shift+E` (macOS) / `Ctrl+Shift+E` (Windows/Linux)  
+**Menu:** View → Show Tab Overview
+
+The Tab Overview presents all open tabs as a **scrollable grid of cards**. Every tab across every
+column is shown, making it easy to survey your entire workspace at once.
+
+**Navigating the overview:**
+
+- **Click** a card to switch to that tab
+- **Arrow keys** or **Tab / Shift+Tab** move the keyboard selection between cards
+- **Enter** activates the selected card
+- **Scroll** vertically if there are more cards than fit on screen
+- **Swipe a card upward** (or drag it upward with the mouse) to close that tab
+- **Esc** or click the background to dismiss without switching
+
+Invoking the shortcut again while the overview is open moves the keyboard selection to the next
+card.
+
+---
+
+### Tab Carousel
+
+**Shortcut:** `Cmd+Shift+T` (macOS) / `Ctrl+Shift+T` (Windows/Linux)  
+**Menu:** View → Show Tab Carousel
+
+The Tab Carousel presents open tabs as a **horizontally scrollable strip of cards** centred on
+the current tab. The focused card is shown at full size in the centre; cards to either side are
+shown progressively smaller, giving a clear sense of depth. Up to five cards are visible at once.
+
+**Navigating the carousel:**
+
+- **Click** the focused (centre) card to switch to that tab
+- **Click** a non-focused card to bring it to the centre
+- **Left / Right arrow keys** move the selection one card at a time
+- **Mouse wheel** scrolls through the strip
+- **Click and drag** horizontally to scrub through the strip; releasing snaps to the nearest card
+- **Enter** activates the currently focused card
+- **Swipe a card upward** (or drag it upward with the mouse) to close that tab
+- **Esc** or click the background to dismiss without switching
+- The **×** button appears on the focused card's header on mouse-over and closes that tab
+
+Invoking the shortcut again while the carousel is already open advances it to the next card,
+making it easy to cycle through tabs with repeated keypresses.
+
+---
+
 ## Tab label colours
 
 The colour and style of a tab label carries meaning at a glance:
