@@ -1579,7 +1579,9 @@ class TabManager(QWidget):
 
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""
-        self.setStyleSheet(build_tab_manager_stylesheet(self._style_manager))
+        new_stylesheet = build_tab_manager_stylesheet(self._style_manager)
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
 
         self._welcome_widget.apply_style()
         self.show_all_columns()
@@ -1589,7 +1591,9 @@ class TabManager(QWidget):
             if tab_bar:
                 assert isinstance(tab_bar, TabBar)
                 tab_bar.handle_style_changed()
-                tab_bar.setStyleSheet(build_tab_bar_stylesheet(self._style_manager))
+                new_tab_bar_stylesheet = build_tab_bar_stylesheet(self._style_manager)
+                if new_tab_bar_stylesheet != tab_bar.styleSheet():
+                    tab_bar.setStyleSheet(new_tab_bar_stylesheet)
 
         for tab in self._tabs.values():
             tab.apply_style()

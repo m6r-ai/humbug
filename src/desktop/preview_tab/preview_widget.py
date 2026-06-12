@@ -674,8 +674,7 @@ class PreviewWidget(QWidget):
     def _build_preview_file_content_style(self) -> str:
         """Build styles for the PreviewFileContent widget."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        bubble_spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        bubble_spacing = int(style_manager.message_bubble_spacing())
 
         return f"""
             #PreviewFileContent {{
@@ -816,8 +815,7 @@ class PreviewWidget(QWidget):
     def _build_preview_markdown_preview_content_style(self) -> str:
         """Build styles for the PreviewMarkdownPreviewContent widget."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
-        bubble_spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        bubble_spacing = int(style_manager.message_bubble_spacing())
 
         return f"""
             QFrame#PreviewMarkdownPreviewContent {{
@@ -845,8 +843,11 @@ class PreviewWidget(QWidget):
             self._build_preview_markdown_preview_content_style(),
         ]
 
-        shared_stylesheet = "\n".join(stylesheet_parts)
-        self.setStyleSheet(shared_stylesheet)
+        new_stylesheet = "\n".join(stylesheet_parts)
+
+        # Style sheet changes are very expensive.  Don't do them unless we must.
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
 
     def _show_context_menu(self, pos: QPoint) -> None:
         """

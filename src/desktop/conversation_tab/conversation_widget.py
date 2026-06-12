@@ -2132,7 +2132,6 @@ class ConversationWidget(QWidget):
         """Build styles for the main message frame."""
         style_manager = self._style_manager
         border_radius = int(style_manager.message_bubble_spacing())
-        label_font_size = style_manager.base_font_size() * style_manager.zoom_factor() * 0.8
 
         # The -2px padding above is to offset the 2px border so that the content area remains the same size
         return f"""
@@ -2332,7 +2331,6 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_attachment_label {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
-                font-size: {label_font_size:.1f}pt;
             }}
 
             #ConversationMessage #_attachment_remove {{
@@ -2356,7 +2354,6 @@ class ConversationWidget(QWidget):
                 border: none;
                 border-radius: 4px;
                 padding: 4px 12px;
-                font-size: {label_font_size:.1f}pt;
             }}
 
             #ConversationMessage #_edit_confirm_button:hover {{
@@ -2373,7 +2370,6 @@ class ConversationWidget(QWidget):
                 border: 1px solid {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
                 border-radius: 4px;
                 padding: 4px 12px;
-                font-size: {label_font_size:.1f}pt;
             }}
 
             #ConversationMessage #_edit_cancel_button:hover {{
@@ -2555,7 +2551,6 @@ class ConversationWidget(QWidget):
     def apply_style(self) -> None:
         """Apply current style settings."""
         style_manager = self._style_manager
-        self._message_style = self._build_message_style()
         spacing = int(style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
         zoom_factor = style_manager.zoom_factor()
@@ -2566,20 +2561,22 @@ class ConversationWidget(QWidget):
         font.setPointSizeF(base_font_size * style_manager.zoom_factor())
         self.setFont(font)
 
-        stylesheet_parts = [
+        new_stylesheet = "\n".join([
             self._build_widget_style(),
             self._build_conversation_message_styles(),
             self._build_conversation_message_section_styles()
-        ]
+        ])
 
-        shared_stylesheet = "\n".join(stylesheet_parts)
-        self.setStyleSheet(shared_stylesheet)
+        # Style sheet changes are very expensive.  Don't do them unless we must.
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
 
+        self._message_style = self._build_message_style()
         for message in self._messages:
             if message.is_rendered():
                 message.apply_style(self._message_style)
 
-        self._input.apply_style()
+        self._input.apply_style(self._message_style)
         if self._input_spacer is not None:
             self._update_input_width()
             self._on_input_size_hint_changed()

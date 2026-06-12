@@ -417,20 +417,25 @@ class DiffWidget(QWidget):
         base_size = self._style_manager.base_font_size()
         zoom = self._style_manager.zoom_factor()
 
-        self.setStyleSheet(f"""
+        label_font = self.font()
+        label_font.setPointSizeF(base_size * zoom)
+        self._message_label.setFont(label_font)
+
+        new_stylesheet = f"""
             QWidget {{
                 background-color: {bg};
                 color: {fg};
             }}
             QLabel {{
                 color: {fg};
-                font-size: {base_size * zoom}pt;
             }}
             QSplitter::handle {{
                 background-color: {splitter_color};
             }}
             {self._style_manager.get_scrollbar_stylesheet()}
-        """)
+        """
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
 
         self._left_pane.apply_style()
         self._right_pane.apply_style()

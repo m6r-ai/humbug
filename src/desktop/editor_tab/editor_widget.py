@@ -1059,7 +1059,7 @@ class EditorWidget(QPlainTextEdit):
 
         self._highlight_matches()
 
-        self.setStyleSheet(f"""
+        new_stylesheet = f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
@@ -1077,7 +1077,11 @@ class EditorWidget(QPlainTextEdit):
             QAbstractScrollArea::corner {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
-        """)
+        """
+
+        # Style sheet changes are very expensive.  Don't do them unless we must.
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
 
     def _find_closest_match_to_cursor(self) -> int:
         """

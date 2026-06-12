@@ -1232,6 +1232,12 @@ class ConversationMessage(QFrame):
                         if label is not None:
                             label.setFont(style.chip_font)
 
+        if self._edit_confirm_button is not None:
+            self._edit_confirm_button.setFont(style.chip_font)
+
+        if self._edit_cancel_button is not None:
+            self._edit_cancel_button.setFont(style.chip_font)
+
         # Re-apply style to the inline edit text area if currently open
         if self._edit_text_edit is not None:
             self._edit_text_edit.apply_style()

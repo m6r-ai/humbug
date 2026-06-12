@@ -829,13 +829,14 @@ class ShellWidget(QWidget):
         for message in self._messages:
             message.apply_style()
 
-        stylesheet_parts = [
+        new_stylesheet = "\n".join([
             self._build_widget_style(),
             self._build_shell_message_widget_styles()
-        ]
+        ])
 
-        shared_stylesheet = "\n".join(stylesheet_parts)
-        self.setStyleSheet(shared_stylesheet)
+        # Style sheet changes are very expensive.  Don't do them unless we must.
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
 
     def _show_context_menu(self, pos: QPoint) -> None:
         """

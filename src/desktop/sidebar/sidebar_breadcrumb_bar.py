@@ -10,6 +10,7 @@ from PySide6.QtGui import (
     QStandardItem, QStandardItemModel,
 )
 from PySide6.QtWidgets import QFrame, QStyleOptionViewItem, QTreeView, QWidget
+from PySide6.QtWidgets import QFrame, QStyledItemDelegate, QStyleOptionViewItem, QTreeView, QWidget
 
 from desktop.color_role import ColorRole
 from desktop.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
@@ -18,6 +19,22 @@ from desktop.style_manager import StyleManager
 
 
 _PATH_ROLE = Qt.ItemDataRole.UserRole
+
+
+class _BreadcrumbDelegate(QStyledItemDelegate):
+    """Item delegate that matches the row height of the main sidebar tree."""
+
+    def __init__(self, style_manager: StyleManager) -> None:
+        super().__init__()
+        self._style_manager = style_manager
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> QSize:
+        """Return the same zoom-scaled row height as SidebarTreeDelegate."""
+        zoom = self._style_manager.zoom_factor()
+        fm = option.fontMetrics  # type: ignore
+        line_height = fm.height()
+        row_height = max(line_height + round(10 * zoom), round(24 * zoom))
+        return QSize(super().sizeHint(option, index).width(), row_height)
 
 
 class SidebarBreadcrumbBar(QTreeView):
@@ -56,6 +73,8 @@ class SidebarBreadcrumbBar(QTreeView):
         self._icon_provider = SidebarTreeIconProvider()
         self._tree_style = SidebarTreeStyle()
         self.setStyle(self._tree_style)
+        self._delegate = _BreadcrumbDelegate(self._style_manager)
+        self.setItemDelegate(self._delegate)
 
         self._model = QStandardItemModel(self)
         self.setModel(self._model)
@@ -228,7 +247,7 @@ class SidebarBreadcrumbBar(QTreeView):
             }}
             SidebarBreadcrumbBar::item {{
                 color: {text};
-                padding: 3px 0px;
+                padding: 0px;
                 margin: 0px;
             }}
             SidebarBreadcrumbBar::item:hover {{

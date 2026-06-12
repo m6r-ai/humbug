@@ -369,11 +369,11 @@ class MainWindow(QMainWindow):
 
         self._zoom_in_action = QAction(strings.zoom_in, self)
         self._zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
-        self._zoom_in_action.triggered.connect(lambda: self._handle_zoom(1.0800597))
+        self._zoom_in_action.triggered.connect(lambda: self._handle_zoom(1.04427379))
 
         self._zoom_out_action = QAction(strings.zoom_out, self)
         self._zoom_out_action.setShortcut(QKeySequence("Ctrl+-"))
-        self._zoom_out_action.triggered.connect(lambda: self._handle_zoom(1/1.0800597))
+        self._zoom_out_action.triggered.connect(lambda: self._handle_zoom(1/1.04427379))
 
         self._reset_zoom_action = QAction(strings.reset_zoom, self)
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
@@ -1598,7 +1598,7 @@ class MainWindow(QMainWindow):
         style_manager = self._style_manager
         base_font_size = style_manager.base_font_size()
 
-        self._menu_bar.setStyleSheet(f"""
+        new_stylesheet = f"""
             QMenuBar {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
                 padding: 4px;
@@ -1613,12 +1613,13 @@ class MainWindow(QMainWindow):
             QMenuBar::item:selected {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)};
             }}
-        """)
+        """
+        if new_stylesheet != self._menu_bar.styleSheet():
+            self._menu_bar.setStyleSheet(new_stylesheet)
 
     def _apply_statusbar_style(self) -> None:
         """Apply styling to status bar."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
         base_font_size = style_manager.base_font_size()
 
         # Determine background based on canary state
@@ -1628,7 +1629,7 @@ class MainWindow(QMainWindow):
             else style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)
         )
 
-        self._status_bar.setStyleSheet(f"""
+        new_stylesheet = f"""
             QStatusBar {{
                 background-color: {status_bg_color};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -1641,13 +1642,17 @@ class MainWindow(QMainWindow):
             QStatusBar QLabel {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0px;
-                padding: {int(2 * zoom_factor)}px;
             }}
-        """)
+        """
+        if new_stylesheet != self._status_bar.styleSheet():
+            self._status_bar.setStyleSheet(new_stylesheet)
 
         # Update status bar font
+        zoom_factor = style_manager.zoom_factor()
         status_font = self.font()
         status_font.setPointSizeF(base_font_size * zoom_factor)
+        padding = int(2 * zoom_factor)
+        self._status_message_label.setContentsMargins(padding, padding, padding, padding)
         self._status_bar.setFont(status_font)
         self._status_message_label.setFont(status_font)
 

@@ -55,6 +55,7 @@ class SidebarBreadcrumbContainer(QWidget):
         self._last_spine_path: str = ""
         self._breadcrumb_rows: int = 0
         self._row_height: int = 0
+        self._bc_row_height: int = 0
         self._scrolling: bool = False
         self._root_path: str = ""
         self._pending_expand_path: str = ""
@@ -131,6 +132,7 @@ class SidebarBreadcrumbContainer(QWidget):
         self._root_path = root_path
         self._breadcrumb_rows = 0
         self._row_height = 0
+        self._bc_row_height = 0
         self._last_spine_path = ""
 
     def refresh_viewport(self) -> None:
@@ -204,6 +206,13 @@ class SidebarBreadcrumbContainer(QWidget):
                     rh = self._tree_view.rowHeight(index)
                     if rh > 0:
                         self._row_height = rh
+                        bc_index = self._breadcrumb_bar.indexAt(QPoint(0, 0))
+                        if bc_index.isValid():
+                            self._bc_row_height = self._breadcrumb_bar.rowHeight(bc_index)
+
+                        if self._bc_row_height <= 0:
+                            self._bc_row_height = rh
+
                         self._on_external_scroll(self._scrollbar.value())
 
         return super().eventFilter(obj, event)
@@ -315,6 +324,11 @@ class SidebarBreadcrumbContainer(QWidget):
             return
 
         self._row_height = row_height
+        bc_index = self._breadcrumb_bar.indexAt(QPoint(0, 0))
+        if bc_index.isValid():
+            bc_rh = self._breadcrumb_bar.rowHeight(bc_index)
+            if bc_rh > 0:
+                self._bc_row_height = bc_rh
         topmost_path = self._tree_view.get_path_from_index(index) or ""
         topmost_is_expanded = self._tree_view.isExpanded(index)
 
@@ -354,8 +368,7 @@ class SidebarBreadcrumbContainer(QWidget):
                 parent = os.path.dirname(topmost_path)
                 spine_path = parent if parent and parent != topmost_path else ""
 
-            elif os.path.isdir(topmost_path) and topmost_is_expanded and \
-                    self._tree_view.visualRect(index).top() < 0:
+            elif os.path.isdir(topmost_path) and topmost_is_expanded and self._tree_view.visualRect(index).top() < 0:
                 spine_path = topmost_path
 
             else:
@@ -510,7 +523,8 @@ class SidebarBreadcrumbContainer(QWidget):
         h = self.height()
         scrollbar = self._scrollbar
 
-        bc_h = self._breadcrumb_rows * self._row_height
+        bc_row_height = self._bc_row_height if self._bc_row_height > 0 else self._row_height
+        bc_h = self._breadcrumb_rows * bc_row_height
 
         # Disconnect rangeChanged while adjusting geometry to prevent the tree's
         # internal range change from causing a spurious external scrollbar value
