@@ -1561,15 +1561,15 @@ class StyleManager(QObject):
         item_pad_h = max(10, int(12 * zoom_factor))
 
         border_normal = self.get_color_str(ColorRole.MENU_BORDER)
-        border_hover  = self.get_color_str(ColorRole.TEXT_INACTIVE)
+        border_hover = self.get_color_str(ColorRole.TEXT_INACTIVE)
         border_active = self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
-        bg            = self.get_color_str(ColorRole.BACKGROUND_DIALOG)
-        bg_disabled   = self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)
-        text          = self.get_color_str(ColorRole.TEXT_PRIMARY)
+        bg = self.get_color_str(ColorRole.BACKGROUND_DIALOG)
+        bg_disabled = self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)
+        text = self.get_color_str(ColorRole.TEXT_PRIMARY)
         text_disabled = self.get_color_str(ColorRole.TEXT_DISABLED)
-        popup_bg      = self.get_color_str(ColorRole.MENU_BACKGROUND)
-        popup_border  = self.get_color_str(ColorRole.MENU_BORDER)
-        item_hover    = self.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
+        popup_bg = self.get_color_str(ColorRole.MENU_BACKGROUND)
+        popup_border = self.get_color_str(ColorRole.MENU_BORDER)
+        item_hover = self.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
         item_selected = self.get_color_str(ColorRole.TEXT_SELECTED)
 
         return f"""
@@ -1662,16 +1662,16 @@ class StyleManager(QObject):
         search_pad_v = max(5, int(6 * zoom_factor))
         item_pad_h = max(10, int(12 * zoom_factor))
 
-        popup_bg      = self.get_color_str(ColorRole.MENU_BACKGROUND)
-        popup_border  = self.get_color_str(ColorRole.MENU_BORDER)
-        surface_bg    = self.get_color_str(ColorRole.BACKGROUND_TERTIARY)
-        text          = self.get_color_str(ColorRole.TEXT_PRIMARY)
+        popup_bg = self.get_color_str(ColorRole.MENU_BACKGROUND)
+        popup_border = self.get_color_str(ColorRole.MENU_BORDER)
+        surface_bg = self.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        text = self.get_color_str(ColorRole.TEXT_PRIMARY)
         text_disabled = self.get_color_str(ColorRole.TEXT_DISABLED)
-        item_hover    = self.get_color_str(ColorRole.COMBO_ITEM_HOVER)
+        item_hover = self.get_color_str(ColorRole.COMBO_ITEM_HOVER)
         item_selected = self.get_color_str(ColorRole.TEXT_SELECTED)
-        focus_border  = self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
-        scrollbar_bg  = self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)
-        scrollbar_h   = self.get_color_str(ColorRole.SCROLLBAR_HANDLE)
+        focus_border = self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
+        scrollbar_bg = self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)
+        scrollbar_h = self.get_color_str(ColorRole.SCROLLBAR_HANDLE)
 
         return f"""
             QLineEdit#SettingsComboPopupSearch {{
