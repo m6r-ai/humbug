@@ -15,6 +15,7 @@ New features:
   a tab with its close button or by swiping its card upwards.
 - Added a `cat` shell command that emulates the functionality of the filesystem AI tool's file read operation.
 - Made VCS (git) polling an async task so it doesn't block the main thread.  Useful on Windows with anti-malware scanners.
+- Added a colour picker and high contrast colour scheme.
 
 Bug fixes:
 
