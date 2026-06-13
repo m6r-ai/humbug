@@ -1216,14 +1216,9 @@ class StyleManager(QObject):
 
         Clears the scaled icon cache since all icons need to be re-rendered
         at the new zoom level.
-
-        Args:
-            factor: New zoom factor to apply (clamped between 0.5 and 2.0)
         """
-        new_factor = max(0.5, min(2.0, factor))
-        if new_factor != self._zoom_factor:
-            self._zoom_factor = new_factor
-            print(f"zoom_factor changed to {new_factor}")
+        if factor != self._zoom_factor:
+            self._zoom_factor = factor
             self._scaled_icon_cache.clear()  # Invalidate scaled icons
             self.style_changed.emit()
 
@@ -1237,6 +1232,19 @@ class StyleManager(QObject):
         font_metrics = QFontMetricsF(font)
         space_width = font_metrics.horizontalAdvance('        ') / 8
         return space_width
+
+    def base_font_pixel_height(self) -> float:
+        """Get the pixel height of the base font at the current zoom level.
+
+        Returns the line height (ascent + descent + leading) in device pixels,
+        which is the quantity that gets rounded to an integer by the font rasteriser.
+        This is used by the zoom logic to ensure each zoom step changes the rendered
+        font size by at least one pixel.
+        """
+        font = QFont(self._code_font_families)
+        font.setPointSizeF(self.base_font_size() * self._zoom_factor)
+        font_metrics = QFontMetricsF(font)
+        return font_metrics.height()
 
     def monospace_font_families(self) -> List[str]:
         """Get the standard monospace font family fallback sequence."""

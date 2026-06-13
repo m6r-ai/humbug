@@ -230,6 +230,8 @@ class MainWindow(QMainWindow):
         self._resize_direction: tuple[int, int] = (0, 0)
         self._resize_start_pos: QPoint | None = None
         self._resize_start_geometry = self.geometry()
+        self._zoom_levels: list[float] = []
+        self._zoom_base_index: int = 0
 
         if self._use_custom_title_bar:
             self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
@@ -602,6 +604,7 @@ class MainWindow(QMainWindow):
         self._user_manager = UserManager()
         user_settings = self._user_manager.settings()
         self._style_manager.set_user_font_size(user_settings.font_size)
+        self._build_zoom_levels()
         self._style_manager.set_font_ligatures(user_settings.font_ligatures)
         self._language_manager.set_language(user_settings.language)
 
@@ -742,9 +745,10 @@ class MainWindow(QMainWindow):
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor()
+        current_zoom_index = self._zoom_levels.index(current_zoom) if current_zoom in self._zoom_levels else self._zoom_base_index
         left_to_right = self._language_manager.left_to_right()
-        self._zoom_in_action.setEnabled(current_zoom < 2.0)
-        self._zoom_out_action.setEnabled(current_zoom > 0.5)
+        self._zoom_in_action.setEnabled(current_zoom_index < len(self._zoom_levels) - 1)
+        self._zoom_out_action.setEnabled(current_zoom_index > 0)
         self._show_system_log_action.setEnabled(has_mindspace)
         self._show_system_shell_action.setEnabled(has_mindspace)
         self._show_all_columns_action.setEnabled(tab_manager.can_show_all_columns())
@@ -1952,6 +1956,7 @@ class MainWindow(QMainWindow):
             try:
                 self._user_manager.update_settings(new_settings)
                 self._style_manager.set_user_font_size(new_settings.font_size)
+                self._build_zoom_levels()
                 self._style_manager.set_font_ligatures(new_settings.font_ligatures)
                 self._language_manager.set_language(new_settings.language)
 
@@ -2152,10 +2157,55 @@ class MainWindow(QMainWindow):
         else:
             self.setCursor(Qt.CursorShape.SizeVerCursor)
 
+    def _build_zoom_levels(self) -> None:
+        """Build the list of valid zoom factors from the current base font size.
+
+        Zoom levels are chosen so that base_font_size * zoom is always an integer
+        number of points.  Steps are ~10% of the current size (minimum 1pt), built
+        symmetrically downward and upward from the base, between 0.5x and 2.0x.
+        """
+        base = self._style_manager.base_font_size()
+        base_pt = round(base)
+        min_pt = max(1, round(base * 0.5))
+        max_pt = round(base * 2.0)
+
+        levels: list[float] = []
+
+        pt = base_pt
+        while pt >= min_pt:
+            if pt / base >= 0.5:
+                levels.append(pt / base)
+
+            step = max(1, round(pt * 0.1))
+            pt -= step
+
+        levels.reverse()
+
+        pt = base_pt + max(1, round(base_pt * 0.1))
+        while pt <= max_pt:
+            levels.append(pt / base)
+            step = max(1, round(pt * 0.1))
+            pt += step
+
+        self._zoom_levels = levels
+        self._zoom_base_index = levels.index(base_pt / base)
+
     def _handle_zoom(self, factor: float) -> None:
         """Handle zoom in/out requests."""
-        new_zoom = self._style_manager.zoom_factor() * factor
-        self._set_zoom(new_zoom)
+        current_zoom = self._style_manager.zoom_factor()
+        if current_zoom in self._zoom_levels:
+            index = self._zoom_levels.index(current_zoom)
+
+        else:
+            index = self._zoom_base_index
+
+        if factor > 1.0:
+            index = min(len(self._zoom_levels) - 1, index + 1)
+
+        else:
+            index = max(0, index - 1)
+
+        self._set_zoom(self._zoom_levels[index])
 
     def _set_zoom(self, zoom_level: float) -> None:
         """Set zoom level for the application."""
