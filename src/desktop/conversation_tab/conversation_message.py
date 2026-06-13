@@ -26,6 +26,10 @@ from desktop.conversation_tab.conversation_message_style import ConversationMess
 from desktop.widgets.elided_label import ElidedLabel
 
 
+_APPROVAL_BUTTON_BASE_WIDTH = 220
+_APPROVAL_BUTTON_BASE_HEIGHT = 40
+
+
 class ConversationMessage(QFrame):
     """Widget for displaying a single message in the conversation history with header."""
 
@@ -712,8 +716,9 @@ class ConversationMessage(QFrame):
         button_layout.setSpacing(spacing)
         button_layout.addStretch()
 
-        min_button_height = 40
-        min_button_width = int(220 * style_manager.zoom_factor())
+        zoom = style_manager.zoom_factor()
+        min_button_width = int(_APPROVAL_BUTTON_BASE_WIDTH * zoom)
+        min_button_height = int(_APPROVAL_BUTTON_BASE_HEIGHT * zoom)
 
         self._approval_approve_button = QPushButton(strings.approve_tool_call)
         self._approval_approve_button.setObjectName("_approval_approve_button")
@@ -1187,23 +1192,35 @@ class ConversationMessage(QFrame):
         if self._expand_button:
             if self._is_expanded:
                 expand_icon = style.expand_down_icon
+
             else:
                 expand_icon = (
                     style.expand_right_icon if self.layoutDirection() == Qt.LayoutDirection.LeftToRight
                     else style.expand_left_icon
                 )
+
             self._expand_button.setIcon(expand_icon)
             self._expand_button.setIconSize(style.icon_size)
 
         # Apply fonts to approval buttons if present
+        zoom = self._style_manager.zoom_factor()
+        min_button_width = int(_APPROVAL_BUTTON_BASE_WIDTH * zoom)
+        min_button_height = int(_APPROVAL_BUTTON_BASE_HEIGHT * zoom)
+
         if self._approval_approve_button:
             self._approval_approve_button.setFont(style.font)
+            self._approval_approve_button.setMinimumWidth(min_button_width)
+            self._approval_approve_button.setMinimumHeight(min_button_height)
 
         if self._approval_i_am_unsure_button:
             self._approval_i_am_unsure_button.setFont(style.font)
+            self._approval_i_am_unsure_button.setMinimumWidth(min_button_width)
+            self._approval_i_am_unsure_button.setMinimumHeight(min_button_height)
 
         if self._approval_reject_button:
             self._approval_reject_button.setFont(style.font)
+            self._approval_reject_button.setMinimumWidth(min_button_width)
+            self._approval_reject_button.setMinimumHeight(min_button_height)
 
         if self._approval_text_edit:
             self._approval_text_edit.setFont(style.font)
