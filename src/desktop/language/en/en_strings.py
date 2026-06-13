@@ -159,6 +159,8 @@ def get_english_strings() -> LanguageStrings:
         font_ligatures="Enable font ligatures",
         theme_dark="Dark",
         theme_light="Light",
+        theme_color_blind="Color Blind",
+        theme_custom="Custom Theme",
         file_sort_order="File Sort Order",
         sort_directories_first="Directories First",
         sort_alphabetical="Alphabetical",

@@ -45,6 +45,7 @@ class ShellTextEdit(MinHeightPlainTextEdit):
 
         self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode()
+        self._last_highlights_version = self._style_manager.highlights_version()
 
         # Calculate tab stops
         self.apply_style()
@@ -65,9 +66,12 @@ class ShellTextEdit(MinHeightPlainTextEdit):
 
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
 
-        # If we changed colour mode then re-highlight
-        if self._style_manager.color_mode() != self._init_colour_mode:
-            self._init_colour_mode = self._style_manager.color_mode()
+        # Rehighlight when colour mode OR highlight formats change (e.g. custom colour overrides)
+        current_mode = self._style_manager.color_mode()
+        current_hv = self._style_manager.highlights_version()
+        if current_mode != self._init_colour_mode or current_hv != self._last_highlights_version:
+            self._init_colour_mode = current_mode
+            self._last_highlights_version = current_hv
             if self._highlighter:
                 self._highlighter.rehighlight()
 

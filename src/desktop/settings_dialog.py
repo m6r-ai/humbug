@@ -20,6 +20,7 @@ from ai_tool import AIToolManager
 from mindspace.mindspace_settings import MindspaceSettings
 
 from desktop.ai_backend_display import get_all_backend_display_names, get_backend_display_name
+from desktop.color_picker_dialog import ThemeColorPickerDialog
 from desktop.language.language_code import LanguageCode
 from desktop.color_role import ColorRole
 from desktop.fetch_error import fetch_error_message as _fetch_error_message
@@ -106,6 +107,7 @@ class SettingsDialog(QDialog):
 
         self._ai_backend_controls: Dict[str, Dict[str, QWidget | None]] = {}
         self._tool_switches: Dict[str, QWidget] = {}
+        self._pending_custom_colors: Dict[str, Dict[str, str]] = {}
         self._fetched_models_cache_path = _FETCHED_MODELS_CACHE
 
         # Map section id -> (list item, stack page widget)
@@ -117,6 +119,7 @@ class SettingsDialog(QDialog):
         self._font_size_spin: SettingsDoubleSpinBox
         self._font_ligatures_check: SettingsSwitch
         self._theme_combo: SettingsCombo
+        self._customize_colors_btn: QPushButton
         self._file_sort_combo: SettingsCombo
         self._check_for_updates_check: SettingsSwitch
         self._display_container: SettingsContainer
@@ -311,7 +314,16 @@ class SettingsDialog(QDialog):
             (strings.theme_system, ColorMode.SYSTEM),
             (strings.theme_light, ColorMode.LIGHT),
             (strings.theme_dark, ColorMode.DARK),
+            (strings.theme_color_blind, ColorMode.COLOR_BLIND),
+            (strings.theme_custom, ColorMode.CUSTOM),
         ])
+
+        self._customize_colors_btn = QPushButton("Customize Colors...")
+        self._customize_colors_btn.setObjectName("CustomizeColorsBtn")
+        self._customize_colors_btn.clicked.connect(self._on_customize_colors)
+        zoom = self._style_manager.zoom_factor()
+        self._customize_colors_btn.setMinimumWidth(int(160 * zoom))
+        container.layout().addWidget(self._customize_colors_btn)  # type: ignore[union-attr]
 
         self._file_sort_combo = SettingsFactory.create_combo(strings.file_sort_order)
         container.add_setting(self._file_sort_combo)
@@ -658,6 +670,7 @@ class SettingsDialog(QDialog):
             font_size=self._font_size_spin.get_value(),
             font_ligatures=self._font_ligatures_check.get_value(),
             theme=self._theme_combo.get_value(),
+            custom_colors=dict(self._pending_custom_colors),
             file_sort_order=self._file_sort_combo.get_value(),
             allow_external_file_access=self._allow_external_access_switch.get_value(),
             external_file_allowlist=self._external_allowlist_area.get_value(),
@@ -710,6 +723,7 @@ class SettingsDialog(QDialog):
         self._font_ligatures_check.set_value(settings.font_ligatures)
         self._file_sort_combo.set_value(settings.file_sort_order)
         self._check_for_updates_check.set_value(settings.check_for_updates)
+        self._pending_custom_colors = dict(settings.custom_colors)
 
         # File access
         self._allow_external_access_switch.set_value(settings.allow_external_file_access)
@@ -1108,6 +1122,19 @@ class SettingsDialog(QDialog):
         """Enable or disable scrollback lines spin based on switch."""
         self._terminal_scrollback_spin.set_enabled(self._terminal_scrollback_check.get_value())
 
+    def _on_customize_colors(self) -> None:
+        """Open the color picker dialog and apply returned theme settings."""
+        current_mode: ColorMode = self._theme_combo.get_value()
+        dialog = ThemeColorPickerDialog(initial_mode=current_mode, parent=self)
+        dialog.theme_settings_changed.connect(self._on_color_picker_applied)
+        dialog.exec()
+
+    def _on_color_picker_applied(self, mode: ColorMode, custom_colors: Dict[str, Dict[str, str]]) -> None:
+        """Receive theme mode + custom colors from the color picker dialog."""
+        self._theme_combo.set_value(mode)
+        self._pending_custom_colors = custom_colors
+        self.apply_button.setEnabled(True)
+
     def _on_apply_clicked(self) -> None:
         """Apply all settings changes to both managers."""
         user_settings = self.get_user_settings()
@@ -1204,6 +1231,8 @@ class SettingsDialog(QDialog):
             (strings.theme_system, ColorMode.SYSTEM),
             (strings.theme_light, ColorMode.LIGHT),
             (strings.theme_dark, ColorMode.DARK),
+            (strings.theme_color_blind, ColorMode.COLOR_BLIND),
+            (strings.theme_custom, ColorMode.CUSTOM),
         ])
         self._theme_combo.set_value(current_theme)
 
@@ -1346,6 +1375,7 @@ class SettingsDialog(QDialog):
             font_size=settings.font_size,
             font_ligatures=settings.font_ligatures,
             theme=settings.theme,
+            custom_colors=dict(settings.custom_colors),
             file_sort_order=settings.file_sort_order,
             allow_external_file_access=settings.allow_external_file_access,
             external_file_allowlist=list(settings.external_file_allowlist),

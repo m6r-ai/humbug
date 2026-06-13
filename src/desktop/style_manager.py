@@ -29,6 +29,8 @@ class ColorMode(Enum):
     LIGHT = auto()
     DARK = auto()
     SYSTEM = auto()
+    COLOR_BLIND = auto()
+    CUSTOM = auto()
 
 
 class StyleManager(QObject):
@@ -66,8 +68,12 @@ class StyleManager(QObject):
             self._font_ligatures: bool = True
             self._color_mode = ColorMode.SYSTEM  # Default to system mode
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
+            self._color_blind_colors: Dict[ColorRole, str] = self._initialize_color_blind_colors()
+            self._custom_colors: Dict[ColorRole, Dict[ColorMode, str]] = {}
+            self._active_preset_name: str | None = "Default"
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
             self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
+            self._highlights_version: int = 0
 
             # Cache SVG-rendered icons by (name, scaled_size)
             self._scaled_icon_cache: Dict[tuple[str, int], QPixmap] = {}
@@ -115,6 +121,14 @@ class StyleManager(QObject):
             ColorRole.BACKGROUND_SECONDARY: {
                 ColorMode.DARK: "#282828",
                 ColorMode.LIGHT: "#e4e4e4"
+            },
+            ColorRole.BACKGROUND_GRADIENT_START: {
+                ColorMode.DARK: "#080808",
+                ColorMode.LIGHT: "#f4f4f4"
+            },
+            ColorRole.BACKGROUND_GRADIENT_END: {
+                ColorMode.DARK: "#080808",
+                ColorMode.LIGHT: "#f4f4f4"
             },
             ColorRole.BACKGROUND_TERTIARY: {
                 ColorMode.DARK: "#060606",
@@ -761,7 +775,161 @@ class StyleManager(QObject):
             }
         }
 
+    def _initialize_color_blind_colors(self) -> Dict[ColorRole, str]:
+        """Initialize a colorblind-friendly dark theme palette."""
+        return {
+            ColorRole.BACKGROUND_PRIMARY: "#101214",
+            ColorRole.BACKGROUND_SECONDARY: "#1b2026",
+            ColorRole.BACKGROUND_TERTIARY: "#0d0f12",
+            ColorRole.BACKGROUND_TERTIARY_HOVER: "#24303a",
+            ColorRole.BACKGROUND_TERTIARY_PRESSED: "#344450",
+            ColorRole.BACKGROUND_DIALOG: "#1f242a",
+            ColorRole.TEXT_PRIMARY: "#d7dde3",
+            ColorRole.TEXT_BRIGHT: "#ffffff",
+            ColorRole.TEXT_HEADING: "#56b4e9",
+            ColorRole.TEXT_HEADING_BRIGHT: "#8bd3ff",
+            ColorRole.TEXT_DISABLED: "#7a8590",
+            ColorRole.TEXT_SELECTED: "#274b66",
+            ColorRole.TEXT_FOUND: "#7a6500",
+            ColorRole.TEXT_FOUND_DIM: "#433a12",
+            ColorRole.TEXT_RECOMMENDED: "#ffffff",
+            ColorRole.TEXT_LINK: "#56b4e9",
+            ColorRole.TEXT_INACTIVE: "#9aa4ad",
+            ColorRole.TEXT_EPHEMERAL: "#d7dde3",
+            ColorRole.TEXT_EPHEMERAL_INACTIVE: "#8b949e",
+            ColorRole.TEXT_ERROR: "#e69f00",
+            ColorRole.TEXT_ERROR_INACTIVE: "#b9822c",
+            ColorRole.EDIT_BOX_BORDER: "#3a4856",
+            ColorRole.EDIT_BOX_BACKGROUND: "#14181d",
+            ColorRole.EDIT_BOX_ERROR: "#e69f00",
+            ColorRole.MINDSPACE_BACKGROUND: "#0c0f12",
+            ColorRole.MINDSPACE_NAME_BACKGROUND: "#161b20",
+            ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER: "#202934",
+            ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED: "#293848",
+            ColorRole.MINDSPACE_HEADING: "#56b4e9",
+            ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND: "#090b0d",
+            ColorRole.MINDSPACE_FOLDER: "#56b4e9",
+            ColorRole.MINDSPACE_FOLDER_BREADCRUMB: "#e69f00",
+            ColorRole.TAB_BAR_BACKGROUND: "#11161c",
+            ColorRole.TAB_BACKGROUND_ACTIVE: "#171d24",
+            ColorRole.TAB_BACKGROUND_INACTIVE: "#202833",
+            ColorRole.TAB_BACKGROUND_HOVER: "#263242",
+            ColorRole.TAB_BACKGROUND_UPDATED: "#233f4a",
+            ColorRole.TAB_BORDER_ACTIVE: "#56b4e9",
+            ColorRole.BUTTON_BACKGROUND: "#28323d",
+            ColorRole.BUTTON_BACKGROUND_PRESSED: "#3a4652",
+            ColorRole.BUTTON_BACKGROUND_HOVER: "#333f4d",
+            ColorRole.BUTTON_SECONDARY_BACKGROUND: "#242c34",
+            ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED: "#36424d",
+            ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER: "#2f3944",
+            ColorRole.BUTTON_BACKGROUND_RECOMMENDED: "#0072b2",
+            ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED: "#005986",
+            ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER: "#1689c7",
+            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: "#d55e00",
+            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: "#a94b00",
+            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: "#e7771a",
+            ColorRole.BUTTON_BACKGROUND_EDIT: "#4b3d70",
+            ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED: "#3a3058",
+            ColorRole.BUTTON_BACKGROUND_EDIT_HOVER: "#5b4a84",
+            ColorRole.BUTTON_BACKGROUND_DISABLED: "#2a3036",
+            ColorRole.SWITCH_TRACK_ON: "#0072b2",
+            ColorRole.SWITCH_TRACK_OFF: "#28323d",
+            ColorRole.SWITCH_TRACK_BORDER: "#56b4e9",
+            ColorRole.SWITCH_KNOB: "#ffffff",
+            ColorRole.MENU_BACKGROUND: "#1f242a",
+            ColorRole.MENU_HOVER: "#263242",
+            ColorRole.MENU_BORDER: "#3a4856",
+            ColorRole.SPLITTER: "#3a4856",
+            ColorRole.TAB_SPLITTER: "#2a333c",
+            ColorRole.SCROLLBAR_BACKGROUND: "#151a20",
+            ColorRole.SCROLLBAR_HANDLE: "#566573",
+            ColorRole.CODE_BORDER: "#3a4856",
+            ColorRole.TABLE_BORDER: "#3a4856",
+            ColorRole.TABLE_HEADER_BACKGROUND: "#202833",
+            ColorRole.MESSAGE_BACKGROUND: "#171b20",
+            ColorRole.MESSAGE_BACKGROUND_HOVER: "#202832",
+            ColorRole.MESSAGE_BACKGROUND_PRESSED: "#293443",
+            ColorRole.MESSAGE_USER_BACKGROUND: "#1a2430",
+            ColorRole.MESSAGE_USER_BACKGROUND_HOVER: "#223246",
+            ColorRole.MESSAGE_USER_BACKGROUND_PRESSED: "#2a3d55",
+            ColorRole.MESSAGE_ATTACHMENT_BACKGROUND: "#222a33",
+            ColorRole.MESSAGE_BORDER: "#36424d",
+            ColorRole.MESSAGE_USER_BORDER: "#3c5870",
+            ColorRole.MESSAGE_SPOTLIGHTED: "#0072b2",
+            ColorRole.MESSAGE_USER: "#56b4e9",
+            ColorRole.MESSAGE_AI: "#009e73",
+            ColorRole.MESSAGE_REASONING: "#cc79a7",
+            ColorRole.MESSAGE_TOOL_CALL: "#f0e442",
+            ColorRole.MESSAGE_TOOL_RESULT: "#009e73",
+            ColorRole.MESSAGE_USER_QUEUED: "#9aa4ad",
+            ColorRole.MESSAGE_SYSTEM_ERROR: "#e69f00",
+            ColorRole.MESSAGE_SYSTEM_SUCCESS: "#009e73",
+            ColorRole.MESSAGE_SYNTAX: "#56b4e9",
+            ColorRole.MESSAGE_STREAMING: "#56b4e9",
+            ColorRole.MESSAGE_TRACE: "#b8c0c8",
+            ColorRole.MESSAGE_INFORMATION: "#56b4e9",
+            ColorRole.MESSAGE_WARNING: "#f0e442",
+            ColorRole.MESSAGE_ERROR: "#e69f00",
+            ColorRole.STATUS_BAR_BACKGROUND: "#11161c",
+            ColorRole.CANARY_BACKGROUND: "#d55e00",
+            ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER: "#384552",
+            ColorRole.DROP_TARGET_HIGHLIGHT: "#274b66",
+            ColorRole.DROP_TARGET_SEPARATOR_HIGHLIGHT: "#56b4e9",
+            ColorRole.LINE_NUMBER: "#8b949e",
+            ColorRole.DIFF_REMOVED_BACKGROUND: "#4a2a12",
+            ColorRole.DIFF_ADDED_BACKGROUND: "#143d36",
+            ColorRole.DIFF_CHANGED_BACKGROUND: "#3d3a12",
+            ColorRole.DIFF_HUNK_LINE_NUMBER: "#f0e442",
+            ColorRole.VCS_MODIFIED: "#f0e442",
+            ColorRole.VCS_ADDED: "#009e73",
+            ColorRole.VCS_DELETED: "#d55e00",
+            ColorRole.VCS_RENAMED: "#56b4e9",
+            ColorRole.SYNTAX_ERROR: "#e69f00",
+            ColorRole.SYNTAX_01: "#56b4e9",
+            ColorRole.SYNTAX_02: "#f2f2f2",
+            ColorRole.SYNTAX_03: "#8bd3c7",
+            ColorRole.SYNTAX_04: "#cc79a7",
+            ColorRole.SYNTAX_05: "#9aa4ad",
+            ColorRole.SYNTAX_06: "#56b4e9",
+            ColorRole.SYNTAX_07: "#f0e442",
+            ColorRole.SYNTAX_08: "#b596e6",
+            ColorRole.SYNTAX_09: "#8bd3ff",
+            ColorRole.SYNTAX_10: "#cc79a7",
+            ColorRole.SYNTAX_11: "#0072b2",
+            ColorRole.SYNTAX_12: "#d55e00",
+            ColorRole.SYNTAX_13: "#b596e6",
+            ColorRole.SYNTAX_14: "#e69f00",
+            ColorRole.SYNTAX_15: "#009e73",
+            ColorRole.SYNTAX_16: "#009e73",
+            ColorRole.SYNTAX_17: "#d7dde3",
+            ColorRole.SYNTAX_18: "#7aa6a0",
+            ColorRole.SYNTAX_19: "#e69f00",
+            ColorRole.SYNTAX_20: "#d55e00",
+            ColorRole.SYNTAX_21: "#009e73",
+            ColorRole.TERM_BLACK: "#000000",
+            ColorRole.TERM_RED: "#d55e00",
+            ColorRole.TERM_GREEN: "#009e73",
+            ColorRole.TERM_YELLOW: "#f0e442",
+            ColorRole.TERM_BLUE: "#0072b2",
+            ColorRole.TERM_MAGENTA: "#cc79a7",
+            ColorRole.TERM_CYAN: "#56b4e9",
+            ColorRole.TERM_WHITE: "#d7dde3",
+            ColorRole.TERM_BRIGHT_BLACK: "#7a8590",
+            ColorRole.TERM_BRIGHT_RED: "#e69f00",
+            ColorRole.TERM_BRIGHT_GREEN: "#32c795",
+            ColorRole.TERM_BRIGHT_YELLOW: "#fff16a",
+            ColorRole.TERM_BRIGHT_BLUE: "#56b4e9",
+            ColorRole.TERM_BRIGHT_MAGENTA: "#e59ac2",
+            ColorRole.TERM_BRIGHT_CYAN: "#8bd3ff",
+            ColorRole.TERM_BRIGHT_WHITE: "#ffffff",
+        }
+
+    def highlights_version(self) -> int:
+        """Incremented every time highlight formats are rebuilt. Widgets use this to detect changes."""
+        return self._highlights_version
+
     def _initialize_highlights(self) -> None:
+        self._highlights_version += 1
         # Mapping from token type to colour
         colour_mapping = {
             TokenType.ADDRESS: ColorRole.SYNTAX_01,
@@ -860,7 +1028,7 @@ class StyleManager(QObject):
             text_highlight.setFontStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
 
         text_highlight.setFontFixedPitch(True)
-        text_highlight.setForeground(QColor(self._colors[role][self._resolve_color_mode()]))
+        text_highlight.setForeground(QColor(self._resolve_color_value(role)))
 
         return text_highlight
 
@@ -905,7 +1073,7 @@ class StyleManager(QObject):
 
     def _create_proportional_highlight(self, role: ColorRole) -> QTextCharFormat:
         text_highlight = QTextCharFormat()
-        text_highlight.setForeground(QColor(self._colors[role][self._resolve_color_mode()]))
+        text_highlight.setForeground(QColor(self._resolve_color_value(role)))
 
         return text_highlight
 
@@ -1055,7 +1223,7 @@ class StyleManager(QObject):
         Raises:
             KeyError: If no color is defined for the role
         """
-        return QColor(self._colors[role][self._resolve_color_mode()])
+        return QColor(self._resolve_color_value(role))
 
     def get_color_str(self, role: ColorRole) -> str:
         """
@@ -1070,7 +1238,43 @@ class StyleManager(QObject):
         Raises:
             KeyError: If no color is defined for the role
         """
-        return self._colors[role][self._resolve_color_mode()]
+        return self._resolve_color_value(role)
+
+    def get_background_surface_css(self) -> str:
+        """Return solid or gradient CSS for the main application surface."""
+        if (
+            ColorRole.BACKGROUND_GRADIENT_START not in self._custom_colors and
+            ColorRole.BACKGROUND_GRADIENT_END not in self._custom_colors
+        ):
+            return self.get_color_str(ColorRole.BACKGROUND_PRIMARY)
+
+        start = self.get_color_str(ColorRole.BACKGROUND_GRADIENT_START)
+        end = self.get_color_str(ColorRole.BACKGROUND_GRADIENT_END)
+        if start == end:
+            return start
+
+        return f"""
+            qlineargradient(
+                x1:0, y1:0, x2:1, y2:1,
+                stop:0 {start},
+                stop:1 {end}
+            )
+        """
+
+    def _resolve_color_value(self, role: ColorRole) -> str:
+        """Return the effective hex color for a role, checking custom overrides first."""
+        resolved_mode = self._resolve_color_mode()
+        if self._color_mode == ColorMode.COLOR_BLIND:
+            return self._color_blind_colors.get(role, self._colors[role][resolved_mode])
+
+        if self._color_mode == ColorMode.CUSTOM:
+            custom = self._custom_colors.get(role)
+            if custom:
+                override = custom.get(ColorMode.CUSTOM) or custom.get(resolved_mode)
+                if override:
+                    return override
+
+        return self._colors[role][resolved_mode]
 
     def get_highlight(self, token_type: TokenType) -> QTextCharFormat:
         """
@@ -1168,6 +1372,9 @@ class StyleManager(QObject):
         Returns:
             ColorMode.LIGHT or ColorMode.DARK
         """
+        if self._color_mode in (ColorMode.COLOR_BLIND, ColorMode.CUSTOM):
+            return ColorMode.DARK
+
         if self._color_mode != ColorMode.SYSTEM:
             return self._color_mode
 
@@ -1186,7 +1393,7 @@ class StyleManager(QObject):
             self.style_changed.emit()
 
     def user_color_mode(self) -> ColorMode:
-        """Get the user's color mode preference, which may be SYSTEM, LIGHT, or DARK."""
+        """Get the user's color mode preference, which may include SYSTEM, COLOR_BLIND, or CUSTOM."""
         return self._color_mode
 
     def set_color_mode(self, mode: ColorMode) -> None:
@@ -1205,6 +1412,78 @@ class StyleManager(QObject):
             self._initialize_proportional_highlights()
             self._scaled_icon_cache.clear()
             self.style_changed.emit()
+
+    def active_preset(self) -> str | None:
+        """Name of the last-applied color preset, or None if colors were edited individually."""
+        return self._active_preset_name
+
+    def set_active_preset(self, name: str | None) -> None:
+        """Record which preset is currently active (persists across color picker dialog opens)."""
+        self._active_preset_name = name
+
+    def set_custom_color(self, role: ColorRole, mode: ColorMode, color: str) -> None:
+        """Override a single color role for a specific mode and emit style_changed."""
+        if role not in self._custom_colors:
+            self._custom_colors[role] = {}
+
+        self._custom_colors[role][mode] = color
+        self._initialize_highlights()
+        self._initialize_proportional_highlights()
+        self.style_changed.emit()
+
+    def clear_section_custom_colors(self, roles: List[ColorRole]) -> None:
+        """Remove custom overrides for the given roles and emit style_changed."""
+        changed = False
+        for role in roles:
+            if role in self._custom_colors:
+                del self._custom_colors[role]
+                changed = True
+
+        if changed:
+            self._initialize_highlights()
+            self._initialize_proportional_highlights()
+            self.style_changed.emit()
+
+    def apply_custom_colors(self, custom: Dict[str, Dict[str, str]]) -> None:
+        """Replace all custom color overrides from a string-keyed dict (loaded from settings).
+
+        Emits style_changed only when the colours actually differ from the current state,
+        so clicking Settings Apply without changing anything produces no visual update.
+        """
+        new_customs: Dict[ColorRole, Dict[ColorMode, str]] = {}
+        for role_name, mode_map in custom.items():
+            try:
+                role = ColorRole[role_name]
+            except KeyError:
+                continue
+
+            mode_colors: Dict[ColorMode, str] = {}
+            for mode_name, color_val in mode_map.items():
+                try:
+                    mode = ColorMode[mode_name]
+                except KeyError:
+                    continue
+
+                mode_colors[mode] = color_val
+
+            if mode_colors:
+                new_customs[role] = mode_colors
+
+        if new_customs == self._custom_colors:
+            return
+
+        self._custom_colors = new_customs
+        self._initialize_highlights()
+        self._initialize_proportional_highlights()
+        self.style_changed.emit()
+
+    def get_custom_colors(self) -> Dict[str, Dict[str, str]]:
+        """Serialize current custom color overrides to a string-keyed dict for persistence."""
+        result: Dict[str, Dict[str, str]] = {}
+        for role, mode_map in self._custom_colors.items():
+            result[role.name] = {mode.name: color for mode, color in mode_map.items()}
+
+        return result
 
     def zoom_factor(self) -> float:
         """Current zoom scaling factor."""

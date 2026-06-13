@@ -150,6 +150,8 @@ class LanguageStrings:
     font_ligatures: str
     theme_dark: str
     theme_light: str
+    theme_color_blind: str
+    theme_custom: str
     file_sort_order: str
     sort_directories_first: str
     sort_alphabetical: str
