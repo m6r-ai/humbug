@@ -137,6 +137,9 @@ class DiffWidget(QWidget):
         self._restore_scroll_timer.timeout.connect(self._on_restore_scroll)
         self._restore_scroll_value: int = 0
 
+        # Scroll centre preservation across style/zoom changes
+        self._centre_block_before_style: int | None = None
+
         self._smooth_scroll_target: int = 0
         self._smooth_scroll_start: int = 0
         self._smooth_scroll_distance: int = 0
@@ -411,6 +414,12 @@ class DiffWidget(QWidget):
 
     def apply_style(self) -> None:
         """Apply current style settings."""
+        # Capture the centre block before the panes' fonts change so we can
+        # restore it to the midpoint after async re-layout.
+        left_pane = self._left_pane
+        visible_lines = left_pane.viewport().height() // max(1, left_pane.fontMetrics().lineSpacing())
+        self._centre_block_before_style = self._scrollbar.value() + visible_lines // 2
+
         bg = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
         fg = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
         splitter_color = self._style_manager.get_color_str(ColorRole.SPLITTER)
@@ -439,6 +448,21 @@ class DiffWidget(QWidget):
 
         self._left_pane.apply_style()
         self._right_pane.apply_style()
+
+        # Re-layout from setFont() is async, so defer the scroll restoration.
+        QTimer.singleShot(0, self._restore_centre_block)
+
+    def _restore_centre_block(self) -> None:
+        """Scroll so that the pre-style centre block sits at the viewport midpoint."""
+        if self._centre_block_before_style is None:
+            return
+
+        left_pane = self._left_pane
+        visible_lines = left_pane.viewport().height() // max(1, left_pane.fontMetrics().lineSpacing())
+        target = max(self._scrollbar.minimum(), min(self._scrollbar.maximum(),
+                     self._centre_block_before_style - visible_lines // 2))
+        self._scrollbar.setValue(target)
+        self._centre_block_before_style = None
 
     def find_text(
         self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False

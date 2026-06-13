@@ -85,6 +85,9 @@ class TerminalWidget(QAbstractScrollArea):
         self._selection: TerminalSelection | None = None
         self._selecting = False
 
+        # Scroll centre preservation across style/zoom changes
+        self._centre_row_before_style: int | None = None
+
         # Default colors
         self._default_fg = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
         self._default_bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
@@ -171,6 +174,11 @@ class TerminalWidget(QAbstractScrollArea):
 
     def apply_style(self) -> None:
         """Apply current style settings."""
+        # Capture the row at the viewport midpoint before the font metrics
+        # change so we can restore it to the centre after _update_dimensions.
+        old_visible_rows = int(self.viewport().height() / max(1.0, self._char_height))
+        self._centre_row_before_style = self.verticalScrollBar().value() + old_visible_rows // 2
+
         # Update terminal font
         font = self._style_manager.make_monospace_font_no_ligatures()
         self.setFont(font)
@@ -260,6 +268,13 @@ class TerminalWidget(QAbstractScrollArea):
         # If we were at bottom before, stay at bottom
         if old_at_bottom:
             vbar.setValue(vbar.maximum())
+
+        elif self._centre_row_before_style is not None:
+            new_visible_rows = self._state.terminal_rows()
+            target = max(vbar.minimum(), min(vbar.maximum(),
+                         self._centre_row_before_style - new_visible_rows // 2))
+            vbar.setValue(target)
+            self._centre_row_before_style = None
 
         cols = self._state.terminal_columns()
         viewport_width = self.viewport().width()

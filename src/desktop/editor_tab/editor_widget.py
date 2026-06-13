@@ -1042,6 +1042,11 @@ class EditorWidget(QPlainTextEdit):
 
     def apply_style(self) -> None:
         """Apply current style settings."""
+        # Capture the block number at the viewport midpoint before the font
+        # changes so we can restore it to the centre after re-layout.
+        visible_lines = self.viewport().height() // max(1, self.fontMetrics().lineSpacing())
+        centre_block = self.verticalScrollBar().value() + visible_lines // 2
+
         font = self._style_manager.make_monospace_font()
         self.setFont(font)
 
@@ -1082,6 +1087,16 @@ class EditorWidget(QPlainTextEdit):
         # Style sheet changes are very expensive.  Don't do them unless we must.
         if new_stylesheet != self.styleSheet():
             self.setStyleSheet(new_stylesheet)
+
+        # Re-layout from setFont() is async, so defer the scroll restoration.
+        QTimer.singleShot(0, lambda: self._restore_centre_block(centre_block))
+
+    def _restore_centre_block(self, centre_block: int) -> None:
+        """Scroll so that centre_block sits at the vertical midpoint of the viewport."""
+        vbar = self.verticalScrollBar()
+        visible_lines = self.viewport().height() // max(1, self.fontMetrics().lineSpacing())
+        target = max(vbar.minimum(), min(vbar.maximum(), centre_block - visible_lines // 2))
+        vbar.setValue(target)
 
     def _find_closest_match_to_cursor(self) -> int:
         """

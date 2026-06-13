@@ -1792,6 +1792,7 @@ class MainWindow(QMainWindow):
                 path=full_path,
                 title=title,
             )
+
         except Exception as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
