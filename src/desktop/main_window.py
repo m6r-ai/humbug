@@ -511,9 +511,10 @@ class MainWindow(QMainWindow):
             MenuBarDragFilter(self._menu_bar)
 
         # Main widget and layout
-        main_widget = QWidget()
-        self.setCentralWidget(main_widget)
-        layout = QVBoxLayout(main_widget)
+        self._main_widget = QWidget()
+        self._main_widget.setObjectName("MainWindowSurface")
+        self.setCentralWidget(self._main_widget)
+        layout = QVBoxLayout(self._main_widget)
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -610,6 +611,7 @@ class MainWindow(QMainWindow):
 
         # Set theme from user settings
         self._style_manager.set_color_mode(user_settings.theme)
+        self._style_manager.apply_custom_colors(user_settings.custom_colors)
         self._update_theme_menu()
 
         # Update welcome widget with initial user settings
@@ -910,6 +912,24 @@ class MainWindow(QMainWindow):
         theme_action_group.addAction(dark_action)
         theme_menu.addAction(dark_action)
         self._theme_actions[ColorMode.DARK] = dark_action
+
+        # Add Color Blind theme action
+        color_blind_action = QAction(strings.theme_color_blind, self)
+        color_blind_action.setCheckable(True)
+        color_blind_action.setChecked(self._style_manager.user_color_mode() == ColorMode.COLOR_BLIND)
+        color_blind_action.triggered.connect(lambda: self._set_color_mode(ColorMode.COLOR_BLIND))
+        theme_action_group.addAction(color_blind_action)
+        theme_menu.addAction(color_blind_action)
+        self._theme_actions[ColorMode.COLOR_BLIND] = color_blind_action
+
+        # Add Custom theme action
+        custom_action = QAction(strings.theme_custom, self)
+        custom_action.setCheckable(True)
+        custom_action.setChecked(self._style_manager.user_color_mode() == ColorMode.CUSTOM)
+        custom_action.triggered.connect(lambda: self._set_color_mode(ColorMode.CUSTOM))
+        theme_action_group.addAction(custom_action)
+        theme_menu.addAction(custom_action)
+        self._theme_actions[ColorMode.CUSTOM] = custom_action
 
         return theme_menu
 
@@ -1612,6 +1632,7 @@ class MainWindow(QMainWindow):
         # Apply styles to individual top-level widgets
         self._apply_menubar_style()
         self._apply_statusbar_style()
+        self._apply_main_surface_style()
         if self._window_controls is not None:
             self._window_controls.apply_style()
 
@@ -1620,6 +1641,15 @@ class MainWindow(QMainWindow):
         # Apply styles to the sidebar manager and column manager
         self._sidebar_manager.apply_style()
         self._tab_manager.apply_style()
+
+    def _apply_main_surface_style(self) -> None:
+        """Apply the app-level background surface."""
+        background = self._style_manager.get_background_surface_css()
+        self._main_widget.setStyleSheet(f"""
+            QWidget#MainWindowSurface {{
+                background: {background};
+            }}
+        """)
 
     def _apply_menubar_style(self) -> None:
         """Apply styling to menu bar."""
@@ -1965,6 +1995,8 @@ class MainWindow(QMainWindow):
                 if new_theme != self._style_manager.user_color_mode():
                     self._style_manager.set_color_mode(new_theme)
                     self._update_theme_menu()
+
+                self._style_manager.apply_custom_colors(new_settings.custom_colors)
 
                 self._tab_manager.update_welcome_widget(new_settings)
                 self._logger.info("User settings saved successfully")

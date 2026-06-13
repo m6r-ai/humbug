@@ -25,6 +25,7 @@ class UserSettings:
     language: LanguageCode = LanguageCode.EN
     font_size: float| None = None  # None means use the default font size
     theme: ColorMode = ColorMode.SYSTEM  # Default to system mode
+    custom_colors: Dict[str, Dict[str, str]] = field(default_factory=dict)
     file_sort_order: UserFileSortOrder = UserFileSortOrder.DIRECTORIES_FIRST
     font_ligatures: bool = True
     allow_external_file_access: bool = True
@@ -332,6 +333,30 @@ class UserSettings:
         else:
             settings.external_file_denylist = denylist if denylist else FilesystemAccessSettings.get_default_denylist()
 
+        # Load custom color overrides
+        custom_colors_raw = data.get("customColors", {})
+        if isinstance(custom_colors_raw, dict):
+            validated: Dict[str, Dict[str, str]] = {}
+            for role_key, mode_map in custom_colors_raw.items():
+                if not isinstance(role_key, str) or not isinstance(mode_map, dict):
+                    continue
+
+                validated_modes: Dict[str, str] = {}
+                for mode_key, color_val in mode_map.items():
+                    if isinstance(mode_key, str) and isinstance(color_val, str):
+                        validated_modes[mode_key] = color_val
+
+                if validated_modes:
+                    validated[role_key] = validated_modes
+
+            settings.custom_colors = validated
+
+        else:
+            cls._logger.warning(
+                "Invalid customColors in %s: expected dict. Using empty.",
+                path
+            )
+
         return settings
 
     @classmethod
@@ -454,6 +479,7 @@ class UserSettings:
             "fontSize": self.font_size,
             "fontLigatures": self.font_ligatures,
             "theme": self.theme.name,
+            "customColors": self.custom_colors,
             "fileSortOrder": self.file_sort_order.name,
             "checkForUpdates": self.check_for_updates,
             "allowExternalFileAccess": self.allow_external_file_access,

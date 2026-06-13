@@ -15,6 +15,8 @@ class ColorRole(Enum):
     # Background colours
     BACKGROUND_PRIMARY = auto()         # Main window background
     BACKGROUND_SECONDARY = auto()       # Secondary elements background
+    BACKGROUND_GRADIENT_START = auto()  # Optional main background gradient start
+    BACKGROUND_GRADIENT_END = auto()    # Optional main background gradient end
     BACKGROUND_TERTIARY = auto()        # Tertiary elements background
     BACKGROUND_TERTIARY_HOVER = auto()  # Tertiary elements background hover
     BACKGROUND_TERTIARY_PRESSED = auto()
