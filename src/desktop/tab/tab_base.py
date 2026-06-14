@@ -4,10 +4,9 @@ import logging
 
 from PySide6.QtWidgets import QFrame, QWidget
 from PySide6.QtCore import Signal
-
-from context.context_registry import ContextRegistry
 from PySide6.QtGui import QPixmap
 
+from context.context_registry import ContextRegistry
 from desktop.file_watcher import FileWatcher
 from desktop.status_message import StatusMessage
 from desktop.tab.tab_state import TabState

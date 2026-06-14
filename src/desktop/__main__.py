@@ -12,9 +12,6 @@ import time
 from types import TracebackType
 from typing import List
 
-if sys.platform == 'win32':
-    import ctypes
-
 from PySide6.QtCore import QObject, QEvent
 from PySide6.QtGui import QFont, QFontDatabase, QIcon
 from PySide6.QtWidgets import QWidget
@@ -31,6 +28,9 @@ from desktop.main_window import MainWindow
 from desktop.style_manager import StyleManager
 from desktop.tab import TabBase
 from desktop.version import CURRENT_VERSION
+
+if sys.platform == 'win32':
+    import ctypes
 
 
 def setup_logging() -> None:

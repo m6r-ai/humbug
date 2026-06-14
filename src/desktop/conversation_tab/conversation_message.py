@@ -340,7 +340,10 @@ class ConversationMessage(QFrame):
         # Derive HSV value from the perceived luminance of the background so the
         # animation looks correct against any palette, including custom themes.
         bg = self._style_manager.get_color(ColorRole.BACKGROUND_PRIMARY)
-        linear = lambda c: c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+        def linear(c: float) -> float:
+            return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
         luminance = 0.2126 * linear(bg.redF()) + 0.7152 * linear(bg.greenF()) + 0.0722 * linear(bg.blueF())
         value = 0.5 + 0.5 * luminance
 

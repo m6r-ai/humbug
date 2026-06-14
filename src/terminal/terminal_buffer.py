@@ -564,7 +564,9 @@ class TerminalBuffer:
         if not max_cursor_resolved:
             new_max_cursor_abs = len(self._lines) - new_rows
 
-        self._finish_resize(old_rows, new_rows, new_cols, new_cursor_abs, new_cursor_col, new_cursor_delayed_wrap, new_max_cursor_abs)
+        self._finish_resize(
+            old_rows, new_rows, new_cols, new_cursor_abs, new_cursor_col, new_cursor_delayed_wrap, new_max_cursor_abs
+        )
 
     def _finish_resize(
         self,
