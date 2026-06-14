@@ -142,6 +142,11 @@ class ConversationInput(ConversationMessage):
         """Apply style changes."""
         super().apply_style(style)
 
+        if self._message_style is None:
+            return
+
+        style = self._message_style
+
         # Fix the banner height so it cannot expand to absorb slack space when the
         # outer frame is resized during a text reflow. The sections_container gets
         # Expanding policy so it absorbs all vertical slack instead. We compute the
