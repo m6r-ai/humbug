@@ -24,6 +24,7 @@ Bug fixes:
 - When an AI was opening tabs, if another tab of a different type existed for the same file then the open would not work correctly.
 - Dramatically sped up zoom operations.
 - The correct icon is now set on the Windows taskbar.
+- Resolved problem with application zoom shortcuts interacting with terminal tabs.
 
 ## v49 (2026-06-07)
 

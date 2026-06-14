@@ -747,7 +747,6 @@ class TerminalWidget(QAbstractScrollArea):
                 Qt.Key.Key_Backslash: b'\x1c',  # Ctrl+\
                 Qt.Key.Key_BracketRight: b'\x1d',  # Ctrl+]
                 Qt.Key.Key_BracketLeft: b'\x1b',  # Ctrl+[
-                Qt.Key.Key_Minus: b'\x1f',  # Ctrl+-
             }
             if key in ctrl_map:
                 self.data_ready.emit(ctrl_map[key])
@@ -823,10 +822,12 @@ class TerminalWidget(QAbstractScrollArea):
             return
 
         # Handle regular text input
-        if text:
+        if text and not (modifiers & Qt.KeyboardModifier.ControlModifier):
             self.data_ready.emit(text.encode())
+            event.accept()
+            return
 
-        event.accept()
+        super().keyPressEvent(event)
 
     def paintEvent(self, event: QPaintEvent) -> None:  # type: ignore[override]
         """Handle paint events efficiently with proper floating-point character metrics."""
