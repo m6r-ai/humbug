@@ -1677,6 +1677,8 @@ class MainWindow(QMainWindow):
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)};
             }}
         """
+
+        # Style sheet changes are very expensive.  Don't do them unless we must.
         if new_stylesheet != self._menu_bar.styleSheet():
             self._menu_bar.setStyleSheet(new_stylesheet)
 
@@ -1707,6 +1709,8 @@ class MainWindow(QMainWindow):
                 margin: 0px;
             }}
         """
+
+        # Style sheet changes are very expensive.  Don't do them unless we must.
         if new_stylesheet != self._status_bar.styleSheet():
             self._status_bar.setStyleSheet(new_stylesheet)
 
