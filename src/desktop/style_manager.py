@@ -406,8 +406,8 @@ class StyleManager(QObject):
         """
         return self._resolve_color_value(role)
 
-    def get_background_surface_css(self) -> str:
-        """Return solid or gradient CSS for the main application surface."""
+    def get_background_surface_qss(self) -> str:
+        """Return solid or gradient QSS for the main application surface."""
         start_overridden = (
             isinstance(self._active_palette, OverlayPalette) and
             ColorRole.BACKGROUND_GRADIENT_START in self._active_palette.overrides()

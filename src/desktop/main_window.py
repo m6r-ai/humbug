@@ -1645,12 +1645,16 @@ class MainWindow(QMainWindow):
 
     def _apply_main_surface_style(self) -> None:
         """Apply the app-level background surface."""
-        background = self._style_manager.get_background_surface_css()
-        self._main_widget.setStyleSheet(f"""
+        background = self._style_manager.get_background_surface_qss()
+        new_stylesheet = f"""
             QWidget#MainWindowSurface {{
                 background: {background};
             }}
-        """)
+        """
+
+        # Style sheet changes are very expensive.  Don't do them unless we must.
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
 
     def _apply_menubar_style(self) -> None:
         """Apply styling to menu bar."""
