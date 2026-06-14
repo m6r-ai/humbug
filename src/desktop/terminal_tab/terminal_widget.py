@@ -57,6 +57,10 @@ class TerminalWidget(QAbstractScrollArea):
         self._logger = logging.getLogger("TerminalWidget")
         self._style_manager = StyleManager()
         self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
+        # Cached stylesheet to avoid redundant setStyleSheet calls
+        self._current_stylesheet: str = ""
+
         self.viewport().setLayoutDirection(Qt.LayoutDirection.LeftToRight)
 
         self._fixed_width = fixed_width
@@ -176,12 +180,19 @@ class TerminalWidget(QAbstractScrollArea):
         """Apply current style settings."""
         # Capture the row at the viewport midpoint before the font metrics
         # change so we can restore it to the centre after _update_dimensions.
+        # Do this before any Qt calls that may trigger resize events.
         old_visible_rows = int(self.viewport().height() / max(1.0, self._char_height))
         self._centre_row_before_style = self.verticalScrollBar().value() + old_visible_rows // 2
 
-        # Update terminal font
+        # Compute all new metrics before making any Qt calls that fire resize
+        # events.  setFont() and setStyleSheet() both cause the viewport to
+        # resize, which calls _update_dimensions().  If _char_width/_char_height
+        # are still stale at that point the column/row count will be wrong and
+        # an O(history) reflow will fire unnecessarily.  By updating the metrics
+        # first, any resize-triggered _update_dimensions() call sees the correct
+        # values and the guard in that method suppresses the reflow when nothing
+        # has actually changed.
         font = self._style_manager.make_monospace_font_no_ligatures()
-        self.setFont(font)
 
         # Measure the base character width at zoom 1.0 so preferred_pixel_width
         # can scale it continuously with the zoom factor, bypassing font engine snapping.
@@ -204,11 +215,14 @@ class TerminalWidget(QAbstractScrollArea):
         # Update color mappings in state
         self._update_colors()
 
-        # Force redraw with new colors
-        self.viewport().update()
+        # Now make the Qt calls that may fire resize/repaint events.  The metrics
+        # are already correct so any re-entrant _update_dimensions() call will
+        # compute the right column count and the reflow guard will suppress
+        # unnecessary work.
+        self.setFont(font)
+        self.viewport().setFont(font)
 
-        # Apply consistent styling to both the terminal widget and its viewport
-        self.setStyleSheet(f"""
+        new_stylesheet = f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
@@ -226,7 +240,13 @@ class TerminalWidget(QAbstractScrollArea):
             }}
 
             {self._style_manager.get_scrollbar_stylesheet()}
-        """)
+        """
+        if new_stylesheet != self._current_stylesheet:
+            self._current_stylesheet = new_stylesheet
+            self.setStyleSheet(new_stylesheet)
+
+        # Force redraw with new colors
+        self.viewport().update()
 
         self._update_dimensions()
 
@@ -246,7 +266,10 @@ class TerminalWidget(QAbstractScrollArea):
             self._center_offset = 0.0
 
         # Update state dimensions
-        self._state.resize(rows, cols)
+        current_rows, current_cols = self._state.get_terminal_size()
+        if rows != current_rows or cols != current_cols:
+            self._state.resize(rows, cols)
+
         self._update_scrollbar()
         self.size_changed.emit()
 

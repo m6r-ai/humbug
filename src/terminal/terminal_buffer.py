@@ -359,8 +359,13 @@ class TerminalBuffer:
         Args:
             new_rows: New number of rows
             new_cols: New number of columns
+
+        Returns early without any work if dimensions are unchanged.
         """
         old_rows = self._rows
+
+        if new_rows == self._rows and new_cols == self._cols:
+            return
 
         # Remove unvisited blank lines at the bottom of the visible area when
         # resizing.  This prevents them from being pushed into scrollback history
