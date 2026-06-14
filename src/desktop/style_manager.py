@@ -1,12 +1,11 @@
-"""
-Style manager for handling application-wide style and zoom settings.
+"""Style manager for handling application-wide style and zoom settings.
 
 Implements a singleton pattern to maintain consistent styling across components.
 Provides signals for style changes and utilities for scaled size calculations.
 """
 
-from enum import Enum, auto
 import os
+from enum import Enum, auto
 from pathlib import Path
 import shutil
 import sys
@@ -22,15 +21,19 @@ from syntax import TokenType
 
 from desktop.color_role import ColorRole
 from desktop.icons.icon_pack import active_inactive_icon_names, app_icon_svg, theme_icon_svg, update_icon_svg
-
+from desktop.palette import COLOR_BLIND_PALETTE, DARK_PALETTE, LIGHT_PALETTE, OverlayPalette, Palette
+from desktop.color_theme import ColorTheme
 
 class ColorMode(Enum):
-    """Enumeration for color theme modes."""
+    """Resolved light/dark display axis, used internally for palette selection.
+
+    This is not part of the public API — callers use ColorTheme to express their
+    preference and ColorRole to request colours.  ColorMode is the internal
+    mechanism by which StyleManager selects between light and dark palettes.
+    """
     LIGHT = auto()
     DARK = auto()
-    SYSTEM = auto()
-    COLOR_BLIND = auto()
-    CUSTOM = auto()
+
 
 
 class StyleManager(QObject):
@@ -66,10 +69,10 @@ class StyleManager(QObject):
             self._user_font_size: float | None = None
             self._initialized = True
             self._font_ligatures: bool = True
-            self._color_mode = ColorMode.SYSTEM  # Default to system mode
-            self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
-            self._color_blind_colors: Dict[ColorRole, str] = self._initialize_color_blind_colors()
-            self._custom_colors: Dict[ColorRole, Dict[ColorMode, str]] = {}
+            self._theme_mode = ColorTheme.SYSTEM
+            self._light_custom_palette = OverlayPalette(LIGHT_PALETTE, {})
+            self._dark_custom_palette = OverlayPalette(DARK_PALETTE, {})
+            self._active_palette: Palette = DARK_PALETTE
             self._active_preset_name: str | None = "Default"
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
             self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
@@ -87,842 +90,6 @@ class StyleManager(QObject):
             # Connect to OS-level colour scheme changes for SYSTEM mode
             hints = QGuiApplication.styleHints()
             hints.colorSchemeChanged.connect(self._on_system_color_scheme_changed)
-
-    def _initialize_colors(self) -> Dict[ColorRole, Dict[ColorMode, str]]:
-        """Initialize the application colours for both light and dark modes."""
-        return {
-            # Brand colours
-            ColorRole.BRAND_PRIMARY: {
-                ColorMode.DARK: "#9b87f5",
-                ColorMode.LIGHT: "#6248e8"
-            },
-            ColorRole.BRAND_GRADIENT_START: {
-                ColorMode.DARK: "#29c5ff",
-                ColorMode.LIGHT: "#29c5ff"
-            },
-            ColorRole.BRAND_GRADIENT_END: {
-                ColorMode.DARK: "#c050ff",
-                ColorMode.LIGHT: "#c050ff"
-            },
-            ColorRole.BRAND_ICON_BG_START: {
-                ColorMode.DARK: "#1e0e50",
-                ColorMode.LIGHT: "#1e0e50"
-            },
-            ColorRole.BRAND_ICON_BG_END: {
-                ColorMode.DARK: "#060612",
-                ColorMode.LIGHT: "#060612"
-            },
-
-            # Background colours
-            ColorRole.BACKGROUND_PRIMARY: {
-                ColorMode.DARK: "#080808",
-                ColorMode.LIGHT: "#f4f4f4"
-            },
-            ColorRole.BACKGROUND_SECONDARY: {
-                ColorMode.DARK: "#282828",
-                ColorMode.LIGHT: "#e4e4e4"
-            },
-            ColorRole.BACKGROUND_GRADIENT_START: {
-                ColorMode.DARK: "#080808",
-                ColorMode.LIGHT: "#f4f4f4"
-            },
-            ColorRole.BACKGROUND_GRADIENT_END: {
-                ColorMode.DARK: "#080808",
-                ColorMode.LIGHT: "#f4f4f4"
-            },
-            ColorRole.BACKGROUND_TERTIARY: {
-                ColorMode.DARK: "#060606",
-                ColorMode.LIGHT: "#fefefe"
-            },
-            ColorRole.BACKGROUND_TERTIARY_HOVER: {
-                ColorMode.DARK: "#303030",
-                ColorMode.LIGHT: "#e0e0e0"
-            },
-            ColorRole.BACKGROUND_TERTIARY_PRESSED: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#c8c8c8"
-            },
-            ColorRole.BACKGROUND_DIALOG: {
-                ColorMode.DARK: "#1e1e1e",
-                ColorMode.LIGHT: "#d8d8d8"
-            },
-
-            # Text colours
-            ColorRole.TEXT_PRIMARY: {
-                ColorMode.DARK: "#d8d8d8",
-                ColorMode.LIGHT: "#202020"
-            },
-            ColorRole.TEXT_BRIGHT: {
-                ColorMode.DARK: "#ffffff",
-                ColorMode.LIGHT: "#000000"
-            },
-            ColorRole.TEXT_HEADING: {
-                ColorMode.DARK: "#ffe0a0",
-                ColorMode.LIGHT: "#204080"
-            },
-            ColorRole.TEXT_HEADING_BRIGHT: {
-                ColorMode.DARK: "#ffe8a0",
-                ColorMode.LIGHT: "#203880"
-            },
-            ColorRole.TEXT_DISABLED: {
-                ColorMode.DARK: "#707070",
-                ColorMode.LIGHT: "#909090"
-            },
-            ColorRole.TEXT_SELECTED: {
-                ColorMode.DARK: "#404058",
-                ColorMode.LIGHT: "#c8c8dc"
-            },
-            ColorRole.TEXT_FOUND: {
-                ColorMode.DARK: "#885050",
-                ColorMode.LIGHT: "#e0b4b4"
-            },
-            ColorRole.TEXT_FOUND_DIM: {
-                ColorMode.DARK: "#583838",
-                ColorMode.LIGHT: "#f4d8d8"
-            },
-            ColorRole.TEXT_RECOMMENDED: {
-                ColorMode.DARK: "#ffffff",
-                ColorMode.LIGHT: "#ffffff"
-            },
-            ColorRole.TEXT_LINK: {
-                ColorMode.DARK: "#5080ff",
-                ColorMode.LIGHT: "#0000ff"
-            },
-            ColorRole.TEXT_INACTIVE: {
-                ColorMode.DARK: "#909090",
-                ColorMode.LIGHT: "#707070"
-            },
-            ColorRole.TEXT_EPHEMERAL: {
-                ColorMode.DARK: "#e0a080",
-                ColorMode.LIGHT: "#a0785c"
-            },
-            ColorRole.TEXT_EPHEMERAL_INACTIVE: {
-                ColorMode.DARK: "#a06040",
-                ColorMode.LIGHT: "#c09070"
-            },
-            ColorRole.TEXT_ERROR: {
-                ColorMode.DARK: "#e03020",
-                ColorMode.LIGHT: "#f04030"
-            },
-            ColorRole.TEXT_ERROR_INACTIVE: {
-                ColorMode.DARK: "#e06050",
-                ColorMode.LIGHT: "#f07060"
-            },
-            ColorRole.TEXT_SUCCESS: {
-                ColorMode.DARK: "#4ade80",
-                ColorMode.LIGHT: "#16a34a"
-            },
-
-            # Edit box colours
-            ColorRole.EDIT_BOX_BORDER: {
-                ColorMode.DARK: "#6060c0",
-                ColorMode.LIGHT: "#404080"
-            },
-            ColorRole.EDIT_BOX_BACKGROUND: {
-                ColorMode.DARK: "#242454",
-                ColorMode.LIGHT: "#b8b8f8"
-            },
-            ColorRole.EDIT_BOX_ERROR: {
-                ColorMode.DARK: "#c03020",
-                ColorMode.LIGHT: "#d04030"
-            },
-
-            # Mindspace colours
-            ColorRole.MINDSPACE_BACKGROUND: {
-                ColorMode.DARK: "#101010",
-                ColorMode.LIGHT: "#fafafa"
-            },
-            ColorRole.MINDSPACE_NAME_BACKGROUND: {
-                ColorMode.DARK: "#383838",
-                ColorMode.LIGHT: "#d0d0d0"
-            },
-            ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#585858",
-                ColorMode.LIGHT: "#b0b0b0"
-            },
-            ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#707070",
-                ColorMode.LIGHT: "#909090"
-            },
-            ColorRole.MINDSPACE_HEADING: {
-                ColorMode.DARK: "#242424",
-                ColorMode.LIGHT: "#e0e0e0"
-            },
-
-            ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND: {
-                ColorMode.DARK: "#181818",
-                ColorMode.LIGHT: "#f0f0f0"
-            },
-            ColorRole.MINDSPACE_FOLDER: {
-                ColorMode.DARK: "#4B89DC",
-                ColorMode.LIGHT: "#4B89DC"
-            },
-            ColorRole.MINDSPACE_FOLDER_BREADCRUMB: {
-                ColorMode.DARK: "#F0C0C8",
-                ColorMode.LIGHT: "#C08090"
-            },
-
-            # Tab colours
-            ColorRole.TAB_BAR_BACKGROUND: {
-                ColorMode.DARK: "#1c1c1c",
-                ColorMode.LIGHT: "#ececec"
-            },
-            ColorRole.TAB_BACKGROUND_ACTIVE: {
-                ColorMode.DARK: "#000000",
-                ColorMode.LIGHT: "#ffffff"
-            },
-            ColorRole.TAB_BACKGROUND_INACTIVE: {
-                ColorMode.DARK: "#303030",
-                ColorMode.LIGHT: "#d4d4d4"
-            },
-            ColorRole.TAB_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#242454",
-                ColorMode.LIGHT: "#c8c8ff"
-            },
-            ColorRole.TAB_BACKGROUND_UPDATED: {
-                ColorMode.DARK: "#3c2054",
-                ColorMode.LIGHT: "#f0d0f8"
-            },
-            ColorRole.TAB_BORDER_ACTIVE: {
-                ColorMode.DARK: "#e03826",
-                ColorMode.LIGHT: "#ff4030"
-            },
-
-            # Button colours
-            ColorRole.BUTTON_BACKGROUND: {
-                ColorMode.DARK: "#303030",
-                ColorMode.LIGHT: "#e8e8e8"
-            },
-            ColorRole.BUTTON_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#b0b0b0"
-            },
-            ColorRole.BUTTON_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#c0c0c0"
-            },
-            ColorRole.BUTTON_SECONDARY_BACKGROUND: {
-                ColorMode.DARK: "#2c2c2c",
-                ColorMode.LIGHT: "#d8d8d8"
-            },
-            ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#b0b0b0"
-            },
-            ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#c0c0c0"
-            },
-            ColorRole.BUTTON_BACKGROUND_RECOMMENDED: {
-                ColorMode.DARK: "#2050c0",
-                ColorMode.LIGHT: "#6080e0"
-            },
-            ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED: {
-                ColorMode.DARK: "#4070e0",
-                ColorMode.LIGHT: "#4060c0"
-            },
-            ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER: {
-                ColorMode.DARK: "#3060d0",
-                ColorMode.LIGHT: "#5070d0"
-            },
-            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: {
-                ColorMode.DARK: "#c03020",
-                ColorMode.LIGHT: "#e06048"
-            },
-            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: {
-                ColorMode.DARK: "#e05040",
-                ColorMode.LIGHT: "#c04030"
-            },
-            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: {
-                ColorMode.DARK: "#d04030",
-                ColorMode.LIGHT: "#d0503c"
-            },
-            ColorRole.BUTTON_BACKGROUND_EDIT: {
-                ColorMode.DARK: "#b07010",
-                ColorMode.LIGHT: "#a06008"
-            },
-            ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED: {
-                ColorMode.DARK: "#906000",
-                ColorMode.LIGHT: "#804800"
-            },
-            ColorRole.BUTTON_BACKGROUND_EDIT_HOVER: {
-                ColorMode.DARK: "#c08020",
-                ColorMode.LIGHT: "#b07018"
-            },
-            ColorRole.BUTTON_BACKGROUND_DISABLED: {
-                ColorMode.DARK: "#282828",
-                ColorMode.LIGHT: "#e0e0e0"
-            },
-
-            # Switch colours
-            ColorRole.SWITCH_TRACK_ON: {
-                ColorMode.DARK: "#5a6893",
-                ColorMode.LIGHT: "#90a0e0"
-            },
-            ColorRole.SWITCH_TRACK_OFF: {
-                ColorMode.DARK: "#303030",
-                ColorMode.LIGHT: "#e0e0e0"
-            },
-            ColorRole.SWITCH_TRACK_DISABLED_ON: {
-                ColorMode.DARK: "#3d4670",
-                ColorMode.LIGHT: "#c0d2f0"
-            },
-            ColorRole.SWITCH_TRACK_BORDER: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#b0b0b0"
-            },
-            ColorRole.SWITCH_KNOB: {
-                ColorMode.DARK: "#d8d8d8",
-                ColorMode.LIGHT: "#202020"
-            },
-            ColorRole.SWITCH_KNOB_DISABLED: {
-                ColorMode.DARK: "#909090",
-                ColorMode.LIGHT: "#707070"
-            },
-
-            # Menu elements
-            ColorRole.MENU_BACKGROUND: {
-                ColorMode.DARK: "#2d2d2d",
-                ColorMode.LIGHT: "#f0f0f0"
-            },
-            ColorRole.MENU_HOVER: {
-                ColorMode.DARK: "#3060d0",
-                ColorMode.LIGHT: "#70a0f0"
-            },
-            ColorRole.MENU_BORDER: {
-                ColorMode.DARK: "#606060",
-                ColorMode.LIGHT: "#b0b0b0"
-            },
-            ColorRole.COMBO_ITEM_HOVER: {
-                ColorMode.DARK: "#484848",
-                ColorMode.LIGHT: "#d0d0d0"
-            },
-
-            # Splitter bars
-            ColorRole.SPLITTER: {
-                ColorMode.DARK: "#606060",
-                ColorMode.LIGHT: "#b0b0b0"
-            },
-            ColorRole.TAB_SPLITTER: {
-                ColorMode.DARK: "#040404",
-                ColorMode.LIGHT: "#fcfcfc"
-            },
-
-            # Scroll bar elements
-            ColorRole.SCROLLBAR_BACKGROUND: {
-                ColorMode.DARK: "#2d2d2d",
-                ColorMode.LIGHT: "#f0f0f0"
-            },
-            ColorRole.SCROLLBAR_HANDLE: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#c0c0c0"
-            },
-
-            # Code block border
-            ColorRole.CODE_BORDER: {
-                ColorMode.DARK: "#282828",
-                ColorMode.LIGHT: "#e0e0e0"
-            },
-
-            # Table elements
-            ColorRole.TABLE_BORDER: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#a0a0a0"
-            },
-
-            # Blockquote elements
-            ColorRole.BLOCKQUOTE_BORDER: {
-                ColorMode.DARK: "#5a5a48",
-                ColorMode.LIGHT: "#c0c0d2"
-            },
-            ColorRole.TABLE_HEADER_BACKGROUND: {
-                ColorMode.DARK: "#484838",
-                ColorMode.LIGHT: "#d0d0e0"
-            },
-
-            # Message colours
-            ColorRole.MESSAGE_BACKGROUND: {
-                ColorMode.DARK: "#121212",
-                ColorMode.LIGHT: "#f8f8f8"
-            },
-            ColorRole.MESSAGE_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#c4c4c4"
-            },
-            ColorRole.MESSAGE_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#585858",
-                ColorMode.LIGHT: "#b0b0b0"
-            },
-            ColorRole.MESSAGE_USER_BACKGROUND: {
-                ColorMode.DARK: "#282828",
-                ColorMode.LIGHT: "#e0e0e0"
-            },
-            ColorRole.MESSAGE_USER_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#484848",
-                ColorMode.LIGHT: "#c0c0c0"
-            },
-            ColorRole.MESSAGE_USER_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#606060",
-                ColorMode.LIGHT: "#a0a0a0"
-            },
-
-            # The input background has an alpha channel so it allows a small amount of what's underneath it to show through.
-            ColorRole.MESSAGE_INPUT_BACKGROUND: {
-                ColorMode.DARK: "#ea383838",
-                ColorMode.LIGHT: "#ead0d0d0"
-            },
-            ColorRole.MESSAGE_ATTACHMENT_BACKGROUND: {
-                ColorMode.DARK: "#383838",
-                ColorMode.LIGHT: "#f0f0f0"
-            },
-            ColorRole.MESSAGE_BORDER: {
-                ColorMode.DARK: "#282828",
-                ColorMode.LIGHT: "#e4e4e4"
-            },
-            ColorRole.MESSAGE_USER_BORDER: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#d0d0d0"
-            },
-            ColorRole.MESSAGE_INPUT_BORDER: {
-                ColorMode.DARK: "#707070",
-                ColorMode.LIGHT: "#909090"
-            },
-            ColorRole.MESSAGE_SPOTLIGHTED: {
-                ColorMode.DARK: "#788ca0",
-                ColorMode.LIGHT: "#607488"
-            },
-            ColorRole.MESSAGE_USER: {
-                ColorMode.DARK: "#7090e0",
-                ColorMode.LIGHT: "#5068a0"
-            },
-            ColorRole.MESSAGE_AI: {
-                ColorMode.DARK: "#80c080",
-                ColorMode.LIGHT: "#208020"
-            },
-            ColorRole.MESSAGE_REASONING: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#808080"
-            },
-            ColorRole.MESSAGE_TOOL_CALL: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#808080"
-            },
-            ColorRole.MESSAGE_TOOL_RESULT: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#808080"
-            },
-            ColorRole.MESSAGE_USER_QUEUED: {
-                ColorMode.DARK: "#a0a0a0",
-                ColorMode.LIGHT: "#606060"
-            },
-            ColorRole.MESSAGE_SYSTEM_ERROR: {
-                ColorMode.DARK: "#c08080",
-                ColorMode.LIGHT: "#a04040"
-            },
-            ColorRole.MESSAGE_SYSTEM_SUCCESS: {
-                ColorMode.DARK: "#80c080",
-                ColorMode.LIGHT: "#40a040"
-            },
-            ColorRole.MESSAGE_SYNTAX: {
-                ColorMode.DARK: "#a07850",
-                ColorMode.LIGHT: "#806040"
-            },
-            ColorRole.MESSAGE_STREAMING: {
-                ColorMode.DARK: "#c0a080",
-                ColorMode.LIGHT: "#a07050"
-            },
-            ColorRole.MESSAGE_TRACE: {
-                ColorMode.DARK: "#a0a0a0",
-                ColorMode.LIGHT: "#606060"
-            },
-            ColorRole.MESSAGE_INFORMATION: {
-                ColorMode.DARK: "#80b0f0",
-                ColorMode.LIGHT: "#0060c0"
-            },
-            ColorRole.MESSAGE_WARNING: {
-                ColorMode.DARK: "#f0c040",
-                ColorMode.LIGHT: "#c0a020"
-            },
-            ColorRole.MESSAGE_ERROR: {
-                ColorMode.DARK: "#ff6060",
-                ColorMode.LIGHT: "#c03030"
-            },
-
-            # Status bar elements
-            ColorRole.STATUS_BAR_BACKGROUND: {
-                ColorMode.DARK: "#121212",
-                ColorMode.LIGHT: "#e8e8e8"
-            },
-            ColorRole.CANARY_BACKGROUND: {
-                ColorMode.DARK: "#802020",
-                ColorMode.LIGHT: "#ff8080"
-            },
-
-            # Close button states
-            ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#e03030",
-                ColorMode.LIGHT: "#ff7070"
-            },
-
-            # Line numbers
-            ColorRole.DROP_TARGET_HIGHLIGHT: {
-                ColorMode.DARK: "#142454",
-                ColorMode.LIGHT: "#a8b8f8"
-            },
-            ColorRole.DROP_TARGET_SEPARATOR_HIGHLIGHT: {
-                ColorMode.DARK: "#a8b8f8",
-                ColorMode.LIGHT: "#142454"
-            },
-
-            # Line numbers
-            ColorRole.LINE_NUMBER: {
-                ColorMode.DARK: "#606060",
-                ColorMode.LIGHT: "#c0c0c0"
-            },
-
-            # Diff view colours
-            ColorRole.DIFF_REMOVED_BACKGROUND: {
-                ColorMode.DARK: "#402020",
-                ColorMode.LIGHT: "#f0c8c8"
-            },
-            ColorRole.DIFF_ADDED_BACKGROUND: {
-                ColorMode.DARK: "#204020",
-                ColorMode.LIGHT: "#c8f0c8"
-            },
-            ColorRole.DIFF_CHANGED_BACKGROUND: {
-                ColorMode.DARK: "#202050",
-                ColorMode.LIGHT: "#c8c8f0"
-            },
-            ColorRole.DIFF_HUNK_LINE_NUMBER: {
-                ColorMode.DARK: "#e0e0e0",
-                ColorMode.LIGHT: "#202020"
-            },
-
-            # VCS status colours
-            ColorRole.VCS_MODIFIED: {
-                ColorMode.DARK: "#f0c040",
-                ColorMode.LIGHT: "#c0a020"
-            },
-            ColorRole.VCS_ADDED: {
-                ColorMode.DARK: "#68b068",
-                ColorMode.LIGHT: "#207020"
-            },
-            ColorRole.VCS_DELETED: {
-                ColorMode.DARK: "#f08080",
-                ColorMode.LIGHT: "#c03030"
-            },
-            ColorRole.VCS_RENAMED: {
-                ColorMode.DARK: "#8080c0",
-                ColorMode.LIGHT: "#4040a0"
-            },
-
-            # Syntax highlighting
-            ColorRole.SYNTAX_ERROR: {
-                ColorMode.DARK: "#ff0000",
-                ColorMode.LIGHT: "#ff0000"
-            },
-            ColorRole.SYNTAX_01: {
-                ColorMode.DARK: "#80e0d0",
-                ColorMode.LIGHT: "#007070"
-            },
-            ColorRole.SYNTAX_02: {
-                ColorMode.DARK: "#f0f0f0",
-                ColorMode.LIGHT: "#202020"
-            },
-            ColorRole.SYNTAX_03: {
-                ColorMode.DARK: "#68c068",
-                ColorMode.LIGHT: "#40a040"
-            },
-            ColorRole.SYNTAX_04: {
-                ColorMode.DARK: "#ffa0eb",
-                ColorMode.LIGHT: "#c000a0"
-            },
-            ColorRole.SYNTAX_05: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#606060"
-            },
-            ColorRole.SYNTAX_06: {
-                ColorMode.DARK: "#90e0e8",
-                ColorMode.LIGHT: "#0080a0"
-            },
-            ColorRole.SYNTAX_07: {
-                ColorMode.DARK: "#e0e080",
-                ColorMode.LIGHT: "#a0a000"
-            },
-            ColorRole.SYNTAX_08: {
-                ColorMode.DARK: "#b090f0",
-                ColorMode.LIGHT: "#5040c0"
-            },
-            ColorRole.SYNTAX_09: {
-                ColorMode.DARK: "#90e0e8",
-                ColorMode.LIGHT: "#0080a0"
-            },
-            ColorRole.SYNTAX_10: {
-                ColorMode.DARK: "#d070d0",
-                ColorMode.LIGHT: "#a000a0"
-            },
-            ColorRole.SYNTAX_11: {
-                ColorMode.DARK: "#80a0f0",
-                ColorMode.LIGHT: "#0040c0"
-            },
-            ColorRole.SYNTAX_12: {
-                ColorMode.DARK: "#f08080",
-                ColorMode.LIGHT: "#c03030"
-            },
-            ColorRole.SYNTAX_13: {
-                ColorMode.DARK: "#ffc0eb",
-                ColorMode.LIGHT: "#c080a0"
-            },
-            ColorRole.SYNTAX_14: {
-                ColorMode.DARK: "#f0e060",
-                ColorMode.LIGHT: "#a09040"
-            },
-            ColorRole.SYNTAX_15: {
-                ColorMode.DARK: "#70e0e8",
-                ColorMode.LIGHT: "#2090a0"
-            },
-            ColorRole.SYNTAX_16: {
-                ColorMode.DARK: "#88d048",
-                ColorMode.LIGHT: "#508020"
-            },
-            ColorRole.SYNTAX_17: {
-                ColorMode.DARK: "#c0c0c0",
-                ColorMode.LIGHT: "#404040"
-            },
-            ColorRole.SYNTAX_18: {
-                ColorMode.DARK: "#80b080",
-                ColorMode.LIGHT: "#609060"
-            },
-            ColorRole.SYNTAX_19: {
-                ColorMode.DARK: "#c87050",
-                ColorMode.LIGHT: "#a04020"
-            },
-            ColorRole.SYNTAX_20: {
-                ColorMode.DARK: "#c05040",
-                ColorMode.LIGHT: "#b03828"
-            },
-            ColorRole.SYNTAX_21: {
-                ColorMode.DARK: "#30c090",
-                ColorMode.LIGHT: "#24906c"
-            },
-
-            # Terminal basic colors
-            ColorRole.TERM_BLACK: {
-                ColorMode.DARK: "#000000",
-                ColorMode.LIGHT: "#000000"
-            },
-            ColorRole.TERM_RED: {
-                ColorMode.DARK: "#cd0000",
-                ColorMode.LIGHT: "#cd0000"
-            },
-            ColorRole.TERM_GREEN: {
-                ColorMode.DARK: "#00cd00",
-                ColorMode.LIGHT: "#00cd00"
-            },
-            ColorRole.TERM_YELLOW: {
-                ColorMode.DARK: "#cdcd00",
-                ColorMode.LIGHT: "#cdcd00"
-            },
-            ColorRole.TERM_BLUE: {
-                ColorMode.DARK: "#0000ee",
-                ColorMode.LIGHT: "#0000ee"
-            },
-            ColorRole.TERM_MAGENTA: {
-                ColorMode.DARK: "#cd00cd",
-                ColorMode.LIGHT: "#cd00cd"
-            },
-            ColorRole.TERM_CYAN: {
-                ColorMode.DARK: "#00cdcd",
-                ColorMode.LIGHT: "#00cdcd"
-            },
-            ColorRole.TERM_WHITE: {
-                ColorMode.DARK: "#e5e5e5",
-                ColorMode.LIGHT: "#e5e5e5"
-            },
-
-            # Terminal bright colors
-            ColorRole.TERM_BRIGHT_BLACK: {
-                ColorMode.DARK: "#7f7f7f",
-                ColorMode.LIGHT: "#7f7f7f"
-            },
-            ColorRole.TERM_BRIGHT_RED: {
-                ColorMode.DARK: "#ff0000",
-                ColorMode.LIGHT: "#ff0000"
-            },
-            ColorRole.TERM_BRIGHT_GREEN: {
-                ColorMode.DARK: "#00ff00",
-                ColorMode.LIGHT: "#00ff00"
-            },
-            ColorRole.TERM_BRIGHT_YELLOW: {
-                ColorMode.DARK: "#ffff00",
-                ColorMode.LIGHT: "#ffff00"
-            },
-            ColorRole.TERM_BRIGHT_BLUE: {
-                ColorMode.DARK: "#5c5cff",
-                ColorMode.LIGHT: "#5c5cff"
-            },
-            ColorRole.TERM_BRIGHT_MAGENTA: {
-                ColorMode.DARK: "#ff00ff",
-                ColorMode.LIGHT: "#ff00ff"
-            },
-            ColorRole.TERM_BRIGHT_CYAN: {
-                ColorMode.DARK: "#00ffff",
-                ColorMode.LIGHT: "#00ffff"
-            },
-            ColorRole.TERM_BRIGHT_WHITE: {
-                ColorMode.DARK: "#ffffff",
-                ColorMode.LIGHT: "#ffffff"
-            }
-        }
-
-    def _initialize_color_blind_colors(self) -> Dict[ColorRole, str]:
-        """Initialize a colorblind-friendly dark theme palette."""
-        return {
-            ColorRole.BACKGROUND_PRIMARY: "#101214",
-            ColorRole.BACKGROUND_SECONDARY: "#1b2026",
-            ColorRole.BACKGROUND_TERTIARY: "#0d0f12",
-            ColorRole.BACKGROUND_TERTIARY_HOVER: "#24303a",
-            ColorRole.BACKGROUND_TERTIARY_PRESSED: "#344450",
-            ColorRole.BACKGROUND_DIALOG: "#1f242a",
-            ColorRole.TEXT_PRIMARY: "#d7dde3",
-            ColorRole.TEXT_BRIGHT: "#ffffff",
-            ColorRole.TEXT_HEADING: "#56b4e9",
-            ColorRole.TEXT_HEADING_BRIGHT: "#8bd3ff",
-            ColorRole.TEXT_DISABLED: "#7a8590",
-            ColorRole.TEXT_SELECTED: "#274b66",
-            ColorRole.TEXT_FOUND: "#7a6500",
-            ColorRole.TEXT_FOUND_DIM: "#433a12",
-            ColorRole.TEXT_RECOMMENDED: "#ffffff",
-            ColorRole.TEXT_LINK: "#56b4e9",
-            ColorRole.TEXT_INACTIVE: "#9aa4ad",
-            ColorRole.TEXT_EPHEMERAL: "#d7dde3",
-            ColorRole.TEXT_EPHEMERAL_INACTIVE: "#8b949e",
-            ColorRole.TEXT_ERROR: "#e69f00",
-            ColorRole.TEXT_ERROR_INACTIVE: "#b9822c",
-            ColorRole.EDIT_BOX_BORDER: "#3a4856",
-            ColorRole.EDIT_BOX_BACKGROUND: "#14181d",
-            ColorRole.EDIT_BOX_ERROR: "#e69f00",
-            ColorRole.MINDSPACE_BACKGROUND: "#0c0f12",
-            ColorRole.MINDSPACE_NAME_BACKGROUND: "#161b20",
-            ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER: "#202934",
-            ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED: "#293848",
-            ColorRole.MINDSPACE_HEADING: "#56b4e9",
-            ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND: "#090b0d",
-            ColorRole.MINDSPACE_FOLDER: "#56b4e9",
-            ColorRole.MINDSPACE_FOLDER_BREADCRUMB: "#e69f00",
-            ColorRole.TAB_BAR_BACKGROUND: "#11161c",
-            ColorRole.TAB_BACKGROUND_ACTIVE: "#171d24",
-            ColorRole.TAB_BACKGROUND_INACTIVE: "#202833",
-            ColorRole.TAB_BACKGROUND_HOVER: "#263242",
-            ColorRole.TAB_BACKGROUND_UPDATED: "#233f4a",
-            ColorRole.TAB_BORDER_ACTIVE: "#56b4e9",
-            ColorRole.BUTTON_BACKGROUND: "#28323d",
-            ColorRole.BUTTON_BACKGROUND_PRESSED: "#3a4652",
-            ColorRole.BUTTON_BACKGROUND_HOVER: "#333f4d",
-            ColorRole.BUTTON_SECONDARY_BACKGROUND: "#242c34",
-            ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED: "#36424d",
-            ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER: "#2f3944",
-            ColorRole.BUTTON_BACKGROUND_RECOMMENDED: "#0072b2",
-            ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED: "#005986",
-            ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER: "#1689c7",
-            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: "#d55e00",
-            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: "#a94b00",
-            ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: "#e7771a",
-            ColorRole.BUTTON_BACKGROUND_EDIT: "#4b3d70",
-            ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED: "#3a3058",
-            ColorRole.BUTTON_BACKGROUND_EDIT_HOVER: "#5b4a84",
-            ColorRole.BUTTON_BACKGROUND_DISABLED: "#2a3036",
-            ColorRole.SWITCH_TRACK_ON: "#0072b2",
-            ColorRole.SWITCH_TRACK_OFF: "#28323d",
-            ColorRole.SWITCH_TRACK_BORDER: "#56b4e9",
-            ColorRole.SWITCH_KNOB: "#ffffff",
-            ColorRole.MENU_BACKGROUND: "#1f242a",
-            ColorRole.MENU_HOVER: "#263242",
-            ColorRole.MENU_BORDER: "#3a4856",
-            ColorRole.SPLITTER: "#3a4856",
-            ColorRole.TAB_SPLITTER: "#2a333c",
-            ColorRole.SCROLLBAR_BACKGROUND: "#151a20",
-            ColorRole.SCROLLBAR_HANDLE: "#566573",
-            ColorRole.CODE_BORDER: "#3a4856",
-            ColorRole.TABLE_BORDER: "#3a4856",
-            ColorRole.TABLE_HEADER_BACKGROUND: "#202833",
-            ColorRole.MESSAGE_BACKGROUND: "#171b20",
-            ColorRole.MESSAGE_BACKGROUND_HOVER: "#202832",
-            ColorRole.MESSAGE_BACKGROUND_PRESSED: "#293443",
-            ColorRole.MESSAGE_USER_BACKGROUND: "#1a2430",
-            ColorRole.MESSAGE_USER_BACKGROUND_HOVER: "#223246",
-            ColorRole.MESSAGE_USER_BACKGROUND_PRESSED: "#2a3d55",
-            ColorRole.MESSAGE_ATTACHMENT_BACKGROUND: "#222a33",
-            ColorRole.MESSAGE_BORDER: "#36424d",
-            ColorRole.MESSAGE_USER_BORDER: "#3c5870",
-            ColorRole.MESSAGE_SPOTLIGHTED: "#0072b2",
-            ColorRole.MESSAGE_USER: "#56b4e9",
-            ColorRole.MESSAGE_AI: "#009e73",
-            ColorRole.MESSAGE_REASONING: "#cc79a7",
-            ColorRole.MESSAGE_TOOL_CALL: "#f0e442",
-            ColorRole.MESSAGE_TOOL_RESULT: "#009e73",
-            ColorRole.MESSAGE_USER_QUEUED: "#9aa4ad",
-            ColorRole.MESSAGE_SYSTEM_ERROR: "#e69f00",
-            ColorRole.MESSAGE_SYSTEM_SUCCESS: "#009e73",
-            ColorRole.MESSAGE_SYNTAX: "#56b4e9",
-            ColorRole.MESSAGE_STREAMING: "#56b4e9",
-            ColorRole.MESSAGE_TRACE: "#b8c0c8",
-            ColorRole.MESSAGE_INFORMATION: "#56b4e9",
-            ColorRole.MESSAGE_WARNING: "#f0e442",
-            ColorRole.MESSAGE_ERROR: "#e69f00",
-            ColorRole.STATUS_BAR_BACKGROUND: "#11161c",
-            ColorRole.CANARY_BACKGROUND: "#d55e00",
-            ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER: "#384552",
-            ColorRole.DROP_TARGET_HIGHLIGHT: "#274b66",
-            ColorRole.DROP_TARGET_SEPARATOR_HIGHLIGHT: "#56b4e9",
-            ColorRole.LINE_NUMBER: "#8b949e",
-            ColorRole.DIFF_REMOVED_BACKGROUND: "#4a2a12",
-            ColorRole.DIFF_ADDED_BACKGROUND: "#143d36",
-            ColorRole.DIFF_CHANGED_BACKGROUND: "#3d3a12",
-            ColorRole.DIFF_HUNK_LINE_NUMBER: "#f0e442",
-            ColorRole.VCS_MODIFIED: "#f0e442",
-            ColorRole.VCS_ADDED: "#009e73",
-            ColorRole.VCS_DELETED: "#d55e00",
-            ColorRole.VCS_RENAMED: "#56b4e9",
-            ColorRole.SYNTAX_ERROR: "#e69f00",
-            ColorRole.SYNTAX_01: "#56b4e9",
-            ColorRole.SYNTAX_02: "#f2f2f2",
-            ColorRole.SYNTAX_03: "#8bd3c7",
-            ColorRole.SYNTAX_04: "#cc79a7",
-            ColorRole.SYNTAX_05: "#9aa4ad",
-            ColorRole.SYNTAX_06: "#56b4e9",
-            ColorRole.SYNTAX_07: "#f0e442",
-            ColorRole.SYNTAX_08: "#b596e6",
-            ColorRole.SYNTAX_09: "#8bd3ff",
-            ColorRole.SYNTAX_10: "#cc79a7",
-            ColorRole.SYNTAX_11: "#0072b2",
-            ColorRole.SYNTAX_12: "#d55e00",
-            ColorRole.SYNTAX_13: "#b596e6",
-            ColorRole.SYNTAX_14: "#e69f00",
-            ColorRole.SYNTAX_15: "#009e73",
-            ColorRole.SYNTAX_16: "#009e73",
-            ColorRole.SYNTAX_17: "#d7dde3",
-            ColorRole.SYNTAX_18: "#7aa6a0",
-            ColorRole.SYNTAX_19: "#e69f00",
-            ColorRole.SYNTAX_20: "#d55e00",
-            ColorRole.SYNTAX_21: "#009e73",
-            ColorRole.TERM_BLACK: "#000000",
-            ColorRole.TERM_RED: "#d55e00",
-            ColorRole.TERM_GREEN: "#009e73",
-            ColorRole.TERM_YELLOW: "#f0e442",
-            ColorRole.TERM_BLUE: "#0072b2",
-            ColorRole.TERM_MAGENTA: "#cc79a7",
-            ColorRole.TERM_CYAN: "#56b4e9",
-            ColorRole.TERM_WHITE: "#d7dde3",
-            ColorRole.TERM_BRIGHT_BLACK: "#7a8590",
-            ColorRole.TERM_BRIGHT_RED: "#e69f00",
-            ColorRole.TERM_BRIGHT_GREEN: "#32c795",
-            ColorRole.TERM_BRIGHT_YELLOW: "#fff16a",
-            ColorRole.TERM_BRIGHT_BLUE: "#56b4e9",
-            ColorRole.TERM_BRIGHT_MAGENTA: "#e59ac2",
-            ColorRole.TERM_BRIGHT_CYAN: "#8bd3ff",
-            ColorRole.TERM_BRIGHT_WHITE: "#ffffff",
-        }
 
     def highlights_version(self) -> int:
         """Incremented every time highlight formats are rebuilt. Widgets use this to detect changes."""
@@ -1094,13 +261,12 @@ class StyleManager(QObject):
         icon_dir = os.path.expanduser("~/.humbug/icons")
         os.makedirs(icon_dir, exist_ok=True)
 
-        # Create collapsed and expanded arrows for both themes
-        for mode in (ColorMode.LIGHT, ColorMode.DARK):
-            color = self._colors[ColorRole.TEXT_PRIMARY][mode]
-            inactive_color = self._colors[ColorRole.TEXT_INACTIVE][mode]
-            bright_color = self._colors[ColorRole.TEXT_BRIGHT][mode]
-            update_color = self._colors[ColorRole.BUTTON_BACKGROUND_RECOMMENDED][mode]
-            suffix = mode.name.lower()
+        # Create icons for both light and dark themes
+        for palette, suffix in ((LIGHT_PALETTE, "light"), (DARK_PALETTE, "dark")):
+            color = palette.resolve(ColorRole.TEXT_PRIMARY)
+            inactive_color = palette.resolve(ColorRole.TEXT_INACTIVE)
+            bright_color = palette.resolve(ColorRole.TEXT_BRIGHT)
+            update_color = palette.resolve(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
 
             for icon_name in (
                 "arrow-right", "arrow-left", "arrow-up", "arrow-down", "close", "check",
@@ -1126,9 +292,9 @@ class StyleManager(QObject):
                 self._write_icon(f'{icon_name}-{suffix}.svg', theme_icon_svg(icon_name, color))
 
         # SVG fallback for when the PNG is unavailable — gradient container, brand H
-        brand_color = self._colors[ColorRole.BRAND_PRIMARY][ColorMode.DARK]
-        bg_start = self._colors[ColorRole.BRAND_ICON_BG_START][ColorMode.DARK]
-        bg_end = self._colors[ColorRole.BRAND_ICON_BG_END][ColorMode.DARK]
+        brand_color = DARK_PALETTE.resolve(ColorRole.BRAND_PRIMARY)
+        bg_start = DARK_PALETTE.resolve(ColorRole.BRAND_ICON_BG_START)
+        bg_end = DARK_PALETTE.resolve(ColorRole.BRAND_ICON_BG_END)
         self._write_icon('app-icon.svg', app_icon_svg(brand_color, bg_start, bg_end))
 
         # Composite the transparent source logo onto themed backgrounds
@@ -1242,14 +408,21 @@ class StyleManager(QObject):
 
     def get_background_surface_css(self) -> str:
         """Return solid or gradient CSS for the main application surface."""
-        if (
-            ColorRole.BACKGROUND_GRADIENT_START not in self._custom_colors and
-            ColorRole.BACKGROUND_GRADIENT_END not in self._custom_colors
-        ):
+        start_overridden = (
+            isinstance(self._active_palette, OverlayPalette) and
+            ColorRole.BACKGROUND_GRADIENT_START in self._active_palette.overrides()
+        )
+        end_overridden = (
+            isinstance(self._active_palette, OverlayPalette) and
+            ColorRole.BACKGROUND_GRADIENT_END in self._active_palette.overrides()
+        )
+
+        if not start_overridden and not end_overridden:
             return self.get_color_str(ColorRole.BACKGROUND_PRIMARY)
 
         start = self.get_color_str(ColorRole.BACKGROUND_GRADIENT_START)
         end = self.get_color_str(ColorRole.BACKGROUND_GRADIENT_END)
+
         if start == end:
             return start
 
@@ -1262,19 +435,8 @@ class StyleManager(QObject):
         """
 
     def _resolve_color_value(self, role: ColorRole) -> str:
-        """Return the effective hex color for a role, checking custom overrides first."""
-        resolved_mode = self._resolve_color_mode()
-        if self._color_mode == ColorMode.COLOR_BLIND:
-            return self._color_blind_colors.get(role, self._colors[role][resolved_mode])
-
-        if self._color_mode == ColorMode.CUSTOM:
-            custom = self._custom_colors.get(role)
-            if custom:
-                override = custom.get(ColorMode.CUSTOM) or custom.get(resolved_mode)
-                if override:
-                    return override
-
-        return self._colors[role][resolved_mode]
+        """Return the effective hex colour for a role from the active palette."""
+        return self._active_palette.resolve(role)
 
     def get_highlight(self, token_type: TokenType) -> QTextCharFormat:
         """
@@ -1358,25 +520,27 @@ class StyleManager(QObject):
             self._initialize_highlights()
             self.style_changed.emit()
 
-    def color_mode(self) -> ColorMode:
-        """Get the resolved (effective) color mode, always LIGHT or DARK."""
-        return self._resolve_color_mode()
-
     def _resolve_color_mode(self) -> ColorMode:
         """
         Resolve the effective (LIGHT or DARK) color mode.
 
-        When the user preference is SYSTEM, the OS color scheme is queried.
-        Qt.ColorScheme.Unknown is treated as LIGHT.
+        COLOR_BLIND and CUSTOM themes both resolve against the dark axis by
+        default (COLOR_BLIND is a fixed dark palette; CUSTOM overlays the
+        default palette using the OS/user light-dark preference).  For SYSTEM,
+        the OS colour scheme is queried.  Qt.ColorScheme.Unknown is treated as
+        LIGHT.
 
         Returns:
             ColorMode.LIGHT or ColorMode.DARK
         """
-        if self._color_mode in (ColorMode.COLOR_BLIND, ColorMode.CUSTOM):
+        if self._theme_mode == ColorTheme.COLOR_BLIND:
             return ColorMode.DARK
 
-        if self._color_mode != ColorMode.SYSTEM:
-            return self._color_mode
+        if self._theme_mode == ColorTheme.LIGHT:
+            return ColorMode.LIGHT
+
+        if self._theme_mode == ColorTheme.DARK:
+            return ColorMode.DARK
 
         scheme = QGuiApplication.styleHints().colorScheme()
         if scheme == Qt.ColorScheme.Dark:
@@ -1386,32 +550,49 @@ class StyleManager(QObject):
 
     def _on_system_color_scheme_changed(self) -> None:
         """Handle OS-level color scheme changes when in SYSTEM mode."""
-        if self._color_mode == ColorMode.SYSTEM:
+        if self._theme_mode in (ColorTheme.SYSTEM, ColorTheme.CUSTOM):
             self._initialize_highlights()
             self._initialize_proportional_highlights()
             self._scaled_icon_cache.clear()
             self.style_changed.emit()
 
-    def user_color_mode(self) -> ColorMode:
-        """Get the user's color mode preference, which may include SYSTEM, COLOR_BLIND, or CUSTOM."""
-        return self._color_mode
+    def user_color_theme(self) -> ColorTheme:
+        """Get the user's theme mode preference."""
+        return self._theme_mode
 
-    def set_color_mode(self, mode: ColorMode) -> None:
+    def set_color_theme(self, mode: ColorTheme) -> None:
         """
-        Set the color mode and update application styles.
+        Set the theme mode and update application styles.
 
-        Clears both icon caches since icon paths include the theme name
+        Clears the icon cache since icon paths include the theme name
         (e.g., 'arrow-dark.svg' vs 'arrow-light.svg').
 
         Args:
-            mode: The ColorMode to switch to
+            mode: The ColorTheme to switch to
         """
-        if mode != self._color_mode:
-            self._color_mode = mode
+        if mode != self._theme_mode:
+            self._theme_mode = mode
+            self._active_palette = self._palette_for_mode(mode)
             self._initialize_highlights()
             self._initialize_proportional_highlights()
             self._scaled_icon_cache.clear()
             self.style_changed.emit()
+
+    def _palette_for_mode(self, mode: ColorTheme) -> Palette:
+        """Return the palette instance that corresponds to the given theme mode."""
+        if mode == ColorTheme.COLOR_BLIND:
+            return COLOR_BLIND_PALETTE
+
+        if mode == ColorTheme.CUSTOM:
+            return self._dark_custom_palette if self._resolve_color_mode() == ColorMode.DARK else self._light_custom_palette
+
+        if mode == ColorTheme.DARK:
+            return DARK_PALETTE
+
+        if mode == ColorTheme.LIGHT:
+            return LIGHT_PALETTE
+
+        return DARK_PALETTE if self._resolve_color_mode() == ColorMode.DARK else LIGHT_PALETTE
 
     def active_preset(self) -> str | None:
         """Name of the last-applied color preset, or None if colors were edited individually."""
@@ -1421,25 +602,43 @@ class StyleManager(QObject):
         """Record which preset is currently active (persists across color picker dialog opens)."""
         self._active_preset_name = name
 
-    def set_custom_color(self, role: ColorRole, mode: ColorMode, color: str) -> None:
-        """Override a single color role for a specific mode and emit style_changed."""
-        if role not in self._custom_colors:
-            self._custom_colors[role] = {}
+    def set_custom_color(self, role: ColorRole, color: str) -> None:
+        """Override a single color role for the current resolved mode and emit style_changed."""
+        if self._resolve_color_mode() == ColorMode.LIGHT:
+            overrides = dict(self._light_custom_palette.overrides())
+            overrides[role] = color
+            self._light_custom_palette = OverlayPalette(LIGHT_PALETTE, overrides)
+        else:
+            overrides = dict(self._dark_custom_palette.overrides())
+            overrides[role] = color
+            self._dark_custom_palette = OverlayPalette(DARK_PALETTE, overrides)
 
-        self._custom_colors[role][mode] = color
+        if self._theme_mode == ColorTheme.CUSTOM:
+            self._active_palette = self._palette_for_mode(ColorTheme.CUSTOM)
+
         self._initialize_highlights()
         self._initialize_proportional_highlights()
         self.style_changed.emit()
 
     def clear_section_custom_colors(self, roles: List[ColorRole]) -> None:
         """Remove custom overrides for the given roles and emit style_changed."""
+        light_overrides = dict(self._light_custom_palette.overrides())
+        dark_overrides = dict(self._dark_custom_palette.overrides())
         changed = False
         for role in roles:
-            if role in self._custom_colors:
-                del self._custom_colors[role]
+            if role in light_overrides:
+                del light_overrides[role]
+                changed = True
+            if role in dark_overrides:
+                del dark_overrides[role]
                 changed = True
 
         if changed:
+            self._light_custom_palette = OverlayPalette(LIGHT_PALETTE, light_overrides)
+            self._dark_custom_palette = OverlayPalette(DARK_PALETTE, dark_overrides)
+            if self._theme_mode == ColorTheme.CUSTOM:
+                self._active_palette = self._palette_for_mode(ColorTheme.CUSTOM)
+
             self._initialize_highlights()
             self._initialize_proportional_highlights()
             self.style_changed.emit()
@@ -1450,29 +649,34 @@ class StyleManager(QObject):
         Emits style_changed only when the colours actually differ from the current state,
         so clicking Settings Apply without changing anything produces no visual update.
         """
-        new_customs: Dict[ColorRole, Dict[ColorMode, str]] = {}
+        new_light_overrides: Dict[ColorRole, str] = {}
+        new_dark_overrides: Dict[ColorRole, str] = {}
         for role_name, mode_map in custom.items():
             try:
                 role = ColorRole[role_name]
             except KeyError:
                 continue
 
-            mode_colors: Dict[ColorMode, str] = {}
             for mode_name, color_val in mode_map.items():
                 try:
                     mode = ColorMode[mode_name]
                 except KeyError:
                     continue
 
-                mode_colors[mode] = color_val
+                if mode == ColorMode.LIGHT:
+                    new_light_overrides[role] = color_val
+                else:
+                    new_dark_overrides[role] = color_val
 
-            if mode_colors:
-                new_customs[role] = mode_colors
-
-        if new_customs == self._custom_colors:
+        if (new_light_overrides == self._light_custom_palette.overrides() and
+                new_dark_overrides == self._dark_custom_palette.overrides()):
             return
 
-        self._custom_colors = new_customs
+        self._light_custom_palette = OverlayPalette(LIGHT_PALETTE, new_light_overrides)
+        self._dark_custom_palette = OverlayPalette(DARK_PALETTE, new_dark_overrides)
+        if self._theme_mode == ColorTheme.CUSTOM:
+            self._active_palette = self._palette_for_mode(ColorTheme.CUSTOM)
+
         self._initialize_highlights()
         self._initialize_proportional_highlights()
         self.style_changed.emit()
@@ -1480,8 +684,11 @@ class StyleManager(QObject):
     def get_custom_colors(self) -> Dict[str, Dict[str, str]]:
         """Serialize current custom color overrides to a string-keyed dict for persistence."""
         result: Dict[str, Dict[str, str]] = {}
-        for role, mode_map in self._custom_colors.items():
-            result[role.name] = {mode.name: color for mode, color in mode_map.items()}
+        for role, color in self._light_custom_palette.overrides().items():
+            result.setdefault(role.name, {})[ColorMode.LIGHT.name] = color
+
+        for role, color in self._dark_custom_palette.overrides().items():
+            result.setdefault(role.name, {})[ColorMode.DARK.name] = color
 
         return result
 

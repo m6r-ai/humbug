@@ -32,8 +32,6 @@ class LogTextEdit(MinHeightPlainTextEdit):
         self.setReadOnly(True)  # Log messages are always read-only
 
         self._style_manager = StyleManager()
-        self._init_colour_mode = self._style_manager.color_mode()
-
         # Calculate tab stops
         self.apply_style()
 

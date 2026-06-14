@@ -13,7 +13,8 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPen
 
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
-from desktop.style_manager import StyleManager, ColorMode
+from desktop.style_manager import StyleManager
+from desktop.color_theme import ColorTheme
 
 
 # Preset themes: (name, gradient_start, gradient_end, {role_name: {mode_name: hex}})
@@ -753,21 +754,21 @@ class ThemeColorPickerDialog(QDialog):
     live via StyleManager and can be reverted on Cancel.
     """
 
-    theme_settings_changed = Signal(ColorMode, dict)
+    theme_settings_changed = Signal(ColorTheme, dict)
 
-    def __init__(self, initial_mode: ColorMode | None = None, parent: QWidget | None = None) -> None:
+    def __init__(self, initial_mode: ColorTheme | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
 
         # Snapshot on open so Cancel can revert
-        self._snapshot_mode = self._style_manager.user_color_mode()
+        self._snapshot_mode = self._style_manager.user_color_theme()
         self._snapshot_colors = self._style_manager.get_custom_colors()
         self._snapshot_preset = self._style_manager.active_preset()
 
         # Apply the initial mode (e.g. passed from Settings dialog combo)
         if initial_mode is not None and initial_mode != self._snapshot_mode:
-            self._style_manager.set_color_mode(initial_mode)
+            self._style_manager.set_color_theme(initial_mode)
 
         self._section_pages: List[_SectionPage] = []
         self._committed = False  # True only after Apply / OK — revert on close otherwise
@@ -829,13 +830,13 @@ class ThemeColorPickerDialog(QDialog):
         mode_row.setContentsMargins(0, 0, 0, 0)
         mode_row.setSpacing(int(8 * zoom))
 
-        self._mode_buttons: Dict[ColorMode, QPushButton] = {}
+        self._mode_buttons: Dict[ColorTheme, QPushButton] = {}
         for mode, label in [
-            (ColorMode.LIGHT, "Light"),
-            (ColorMode.DARK, "Dark"),
-            (ColorMode.SYSTEM, "System"),
-            (ColorMode.COLOR_BLIND, "Color Blind"),
-            (ColorMode.CUSTOM, "Custom"),
+            (ColorTheme.LIGHT, "Light"),
+            (ColorTheme.DARK, "Dark"),
+            (ColorTheme.SYSTEM, "System"),
+            (ColorTheme.COLOR_BLIND, "Color Blind"),
+            (ColorTheme.CUSTOM, "Custom"),
         ]:
             btn = QPushButton(label)
             btn.setCheckable(True)
@@ -844,7 +845,7 @@ class ThemeColorPickerDialog(QDialog):
             self._mode_buttons[mode] = btn
             mode_row.addWidget(btn)
 
-        self._update_mode_buttons(self._style_manager.user_color_mode())
+        self._update_mode_buttons(self._style_manager.user_color_theme())
 
         mode_widget = QWidget()
         mode_widget.setObjectName("ModeBar")
@@ -988,7 +989,7 @@ class ThemeColorPickerDialog(QDialog):
             self._nav_list.setCurrentRow(0)
 
         # Show sections only in Custom mode
-        self._update_sections_visibility(self._style_manager.user_color_mode())
+        self._update_sections_visibility(self._style_manager.user_color_theme())
 
         # Separator above footer buttons
         sep_bot = QFrame()
@@ -1043,8 +1044,8 @@ class ThemeColorPickerDialog(QDialog):
     # Event handlers
     # ------------------------------------------------------------------
 
-    def _on_mode_selected(self, mode: ColorMode) -> None:
-        self._style_manager.set_color_mode(mode)
+    def _on_mode_selected(self, mode: ColorTheme) -> None:
+        self._style_manager.set_color_theme(mode)
         self._update_mode_buttons(mode)
         self._update_sections_visibility(mode)
         self._refresh_all_swatches()
@@ -1056,9 +1057,7 @@ class ThemeColorPickerDialog(QDialog):
         self._stack.setCurrentIndex(idx)
 
     def _on_swatch_color_changed(self, role: ColorRole, hex_color: str) -> None:
-        # Always store against the resolved (DARK or LIGHT) mode
-        mode = self._style_manager.color_mode()
-        self._style_manager.set_custom_color(role, mode, hex_color)
+        self._style_manager.set_custom_color(role, hex_color)
         # Deselect preset since colors no longer match exactly
         self._update_preset_highlight(None)
 
@@ -1070,19 +1069,19 @@ class ThemeColorPickerDialog(QDialog):
         """Merge accessibility color overrides into the current custom palette."""
         current = self._style_manager.get_custom_colors()
         current.update(colors)
-        if self._style_manager.user_color_mode() != ColorMode.CUSTOM:
-            self._style_manager.set_color_mode(ColorMode.CUSTOM)
-            self._update_mode_buttons(ColorMode.CUSTOM)
-            self._update_sections_visibility(ColorMode.CUSTOM)
+        if self._style_manager.user_color_theme() != ColorTheme.CUSTOM:
+            self._style_manager.set_color_theme(ColorTheme.CUSTOM)
+            self._update_mode_buttons(ColorTheme.CUSTOM)
+            self._update_sections_visibility(ColorTheme.CUSTOM)
         self._style_manager.apply_custom_colors(current)
         self._refresh_all_swatches()
 
     def _on_preset_clicked(self, name: str, colors: Dict[str, Dict[str, str]]) -> None:
         """Apply a preset palette. 'Default' clears overrides; others switch to Custom mode."""
-        if name != "Default" and self._style_manager.user_color_mode() != ColorMode.CUSTOM:
-            self._style_manager.set_color_mode(ColorMode.CUSTOM)
-            self._update_mode_buttons(ColorMode.CUSTOM)
-            self._update_sections_visibility(ColorMode.CUSTOM)
+        if name != "Default" and self._style_manager.user_color_theme() != ColorTheme.CUSTOM:
+            self._style_manager.set_color_theme(ColorTheme.CUSTOM)
+            self._update_mode_buttons(ColorTheme.CUSTOM)
+            self._update_sections_visibility(ColorTheme.CUSTOM)
         self._style_manager.apply_custom_colors(colors)
         self._update_preset_highlight(name)
         self._refresh_all_swatches()
@@ -1106,7 +1105,7 @@ class ThemeColorPickerDialog(QDialog):
 
     def _on_apply(self) -> None:
         self._committed = True
-        mode = self._style_manager.user_color_mode()
+        mode = self._style_manager.user_color_theme()
         colors = self._style_manager.get_custom_colors()
         self.theme_settings_changed.emit(mode, colors)
 
@@ -1121,7 +1120,7 @@ class ThemeColorPickerDialog(QDialog):
         """Revert all changes unless Apply/OK was already clicked."""
         self._restore_from_preview()  # ensure opacity is restored if previewing
         if not self._committed:
-            self._style_manager.set_color_mode(self._snapshot_mode)
+            self._style_manager.set_color_theme(self._snapshot_mode)
             self._style_manager.apply_custom_colors(self._snapshot_colors)
             self._style_manager.set_active_preset(self._snapshot_preset)
         super().reject()
@@ -1139,12 +1138,12 @@ class ThemeColorPickerDialog(QDialog):
             btn.setChecked(btn_name == name)
             btn.update()
 
-    def _update_mode_buttons(self, active_mode: ColorMode) -> None:
+    def _update_mode_buttons(self, active_mode: ColorTheme) -> None:
         for mode, btn in self._mode_buttons.items():
             btn.setChecked(mode == active_mode)
 
-    def _update_sections_visibility(self, mode: ColorMode) -> None:
-        is_custom = mode == ColorMode.CUSTOM
+    def _update_sections_visibility(self, mode: ColorTheme) -> None:
+        is_custom = mode == ColorTheme.CUSTOM
         self._splitter.setVisible(is_custom)
         self._placeholder.setVisible(not is_custom)
 
@@ -1312,7 +1311,7 @@ class ThemeColorPickerDialog(QDialog):
         """)
 
         # Refresh swatches in case colors changed
-        current_mode = self._style_manager.user_color_mode()
+        current_mode = self._style_manager.user_color_theme()
         self._refresh_all_swatches()
         self._update_mode_buttons(current_mode)
         self._update_sections_visibility(current_mode)

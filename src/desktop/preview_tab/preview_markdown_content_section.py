@@ -115,8 +115,6 @@ class PreviewMarkdownContentSection(QFrame):
 
         self._mouse_left_button_pressed = False
 
-        self._init_colour_mode = self._style_manager.color_mode()
-
         self._on_language_changed()
 
     def text_area(self) -> MarkdownTextEdit | MarkdownCodeBlockTextEdit:

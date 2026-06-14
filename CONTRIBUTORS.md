@@ -24,7 +24,7 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Designed the new Humbug logo and icons.
 * Added the tab carousel and tab card view features.
 * Added tab label context menu.
-* Added the colour picker and high contrast colour scheme.
+* Added the colour picker and the initial implementation of the high contrast colour scheme.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 

@@ -20,7 +20,7 @@ from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from desktop.markdown import MarkdownCodeBlockTextEdit, MarkdownTextEdit
-from desktop.style_manager import StyleManager, ColorMode
+from desktop.style_manager import StyleManager
 from desktop.conversation_tab.conversation_message_section import ConversationMessageSection
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 from desktop.widgets.elided_label import ElidedLabel
@@ -334,14 +334,15 @@ class ConversationMessage(QFrame):
         Returns:
             str: Hex color string for the current animation frame
         """
-        # Animation parameters
         hue = self._animation_frame / self._animation_steps
         saturation = 0.7
-        if self._style_manager.color_mode() == ColorMode.DARK:
-            value = 0.5
 
-        else:
-            value = 1.0
+        # Derive HSV value from the perceived luminance of the background so the
+        # animation looks correct against any palette, including custom themes.
+        bg = self._style_manager.get_color(ColorRole.BACKGROUND_PRIMARY)
+        linear = lambda c: c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+        luminance = 0.2126 * linear(bg.redF()) + 0.7152 * linear(bg.greenF()) + 0.0722 * linear(bg.blueF())
+        value = 0.5 + 0.5 * luminance
 
         # Convert HSV to RGB
         r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)

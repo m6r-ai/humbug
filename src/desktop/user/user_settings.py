@@ -10,7 +10,7 @@ from ai import AIBackendSettings
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 
 from desktop.language.language_code import LanguageCode
-from desktop.style_manager import ColorMode
+from desktop.color_theme import ColorTheme
 from desktop.user.user_file_sort_order import UserFileSortOrder
 
 
@@ -24,7 +24,7 @@ class UserSettings:
     ai_backends: Dict[str, AIBackendSettings] = field(default_factory=dict)
     language: LanguageCode = LanguageCode.EN
     font_size: float| None = None  # None means use the default font size
-    theme: ColorMode = ColorMode.SYSTEM  # Default to system mode
+    theme: ColorTheme = ColorTheme.SYSTEM
     custom_colors: Dict[str, Dict[str, str]] = field(default_factory=dict)
     file_sort_order: UserFileSortOrder = UserFileSortOrder.DIRECTORIES_FIRST
     font_ligatures: bool = True
@@ -51,7 +51,7 @@ class UserSettings:
             },
             language=LanguageCode.EN,
             font_size=None,
-            theme=ColorMode.SYSTEM,
+            theme=ColorTheme.SYSTEM,
             file_sort_order=UserFileSortOrder.DIRECTORIES_FIRST,
             font_ligatures=True,
             allow_external_file_access=True,
@@ -243,18 +243,18 @@ class UserSettings:
                 "Invalid theme type in %s: expected str, got %s. Using default.",
                 path, type(theme_str).__name__
             )
-            settings.theme = ColorMode.SYSTEM
+            settings.theme = ColorTheme.SYSTEM
 
         else:
             try:
-                settings.theme = ColorMode[theme_str]
+                settings.theme = ColorTheme[theme_str]
 
             except (KeyError, ValueError):
                 cls._logger.warning(
                     "Invalid theme '%s' in %s. Using default (DARK).",
                     theme_str, path
                 )
-                settings.theme = ColorMode.SYSTEM
+                settings.theme = ColorTheme.SYSTEM
 
         # Load file sort order if available, otherwise use default
         sort_order_str = data.get("fileSortOrder", "DIRECTORIES_FIRST")

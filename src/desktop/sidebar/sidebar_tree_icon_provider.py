@@ -10,7 +10,7 @@ from PySide6.QtSvg import QSvgRenderer
 
 from desktop.color_role import ColorRole
 from desktop.icons.icon_pack import MINDSPACE_ICON_PACK
-from desktop.style_manager import StyleManager, ColorMode
+from desktop.style_manager import StyleManager
 
 
 class SidebarTreeIconProvider(QFileIconProvider):
@@ -107,10 +107,9 @@ class SidebarTreeIconProvider(QFileIconProvider):
 
     def breadcrumb_folder_icon(self) -> QIcon:
         """Return the hollow tinted folder icon for use in the breadcrumb bar."""
-        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
-        cache_key = f"folder_breadcrumb_{theme_suffix}"
+        color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB)
+        cache_key = f"folder_breadcrumb_{color}"
         if cache_key not in self._cached_icons:
-            color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB)
             self._cached_icons[cache_key] = self._create_svg_icon(
                 self._svg_paths['folder_breadcrumb'], folder_color=color
             )
@@ -119,10 +118,9 @@ class SidebarTreeIconProvider(QFileIconProvider):
 
     def open_folder_breadcrumb_icon(self) -> QIcon:
         """Return the open folder icon in the breadcrumb tint colour."""
-        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
-        cache_key = f"folder_open_breadcrumb_{theme_suffix}"
+        color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB)
+        cache_key = f"folder_open_breadcrumb_{color}"
         if cache_key not in self._cached_icons:
-            color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB)
             self._cached_icons[cache_key] = self._create_svg_icon(
                 self._svg_paths['folder_open'], folder_color=color
             )
@@ -131,10 +129,9 @@ class SidebarTreeIconProvider(QFileIconProvider):
 
     def open_folder_icon(self) -> QIcon:
         """Return the open folder icon for expanded tree directories."""
-        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
-        cache_key = f"folder_open_{theme_suffix}"
+        color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER)
+        cache_key = f"folder_open_{color}"
         if cache_key not in self._cached_icons:
-            color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER)
             self._cached_icons[cache_key] = self._create_svg_icon(
                 self._svg_paths['folder_open'], folder_color=color
             )
@@ -143,10 +140,9 @@ class SidebarTreeIconProvider(QFileIconProvider):
 
     def root_folder_icon(self) -> QIcon:
         """Return the root folder icon using breadcrumb folder colors."""
-        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
-        cache_key = f"folder_root_{theme_suffix}"
+        folder_color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB)
+        cache_key = f"folder_root_{folder_color}"
         if cache_key not in self._cached_icons:
-            folder_color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER_BREADCRUMB)
             self._cached_icons[cache_key] = self._create_svg_icon(
                 self._svg_paths['folder_root'],
                 folder_color=folder_color
@@ -162,10 +158,9 @@ class SidebarTreeIconProvider(QFileIconProvider):
         info = arg
 
         if info.isDir():
-            theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
-            cache_key = f"folder_{theme_suffix}"
+            color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER)
+            cache_key = f"folder_{color}"
             if cache_key not in self._cached_icons:
-                color = self._style_manager.get_color_str(ColorRole.MINDSPACE_FOLDER)
                 self._cached_icons[cache_key] = self._create_svg_icon(
                     self._svg_paths['folder'], folder_color=color
                 )
@@ -179,8 +174,8 @@ class SidebarTreeIconProvider(QFileIconProvider):
             self._extension_map.get(ext, ('file', None))
         )
 
-        theme_suffix = 'dark' if self._style_manager.color_mode() == ColorMode.DARK else 'light'
-        cache_key = f"{icon_type}_{accent_color}_{theme_suffix}"
+        text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        cache_key = f"{icon_type}_{accent_color}_{text_color}"
 
         if cache_key not in self._cached_icons:
             svg_data = self._svg_paths[icon_type]

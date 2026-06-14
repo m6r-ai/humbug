@@ -38,7 +38,8 @@ from desktop.settings.settings_spinbox import SettingsSpinBox
 from desktop.settings.settings_switch import SettingsSwitch
 from desktop.settings.settings_text_area import SettingsTextArea
 from desktop.settings.settings_text_field import SettingsTextField
-from desktop.style_manager import StyleManager, ColorMode
+from desktop.style_manager import StyleManager
+from desktop.color_theme import ColorTheme
 from desktop.user.user_file_sort_order import UserFileSortOrder
 from desktop.user.user_settings import UserSettings
 
@@ -311,11 +312,11 @@ class SettingsDialog(QDialog):
         self._theme_combo = SettingsFactory.create_combo(strings.display_theme)
         container.add_setting(self._theme_combo)
         self._theme_combo.set_items([
-            (strings.theme_system, ColorMode.SYSTEM),
-            (strings.theme_light, ColorMode.LIGHT),
-            (strings.theme_dark, ColorMode.DARK),
-            (strings.theme_color_blind, ColorMode.COLOR_BLIND),
-            (strings.theme_custom, ColorMode.CUSTOM),
+            (strings.theme_system, ColorTheme.SYSTEM),
+            (strings.theme_light, ColorTheme.LIGHT),
+            (strings.theme_dark, ColorTheme.DARK),
+            (strings.theme_color_blind, ColorTheme.COLOR_BLIND),
+            (strings.theme_custom, ColorTheme.CUSTOM),
         ])
 
         self._customize_colors_btn = QPushButton("Customize Colors...")
@@ -1124,12 +1125,12 @@ class SettingsDialog(QDialog):
 
     def _on_customize_colors(self) -> None:
         """Open the color picker dialog and apply returned theme settings."""
-        current_mode: ColorMode = self._theme_combo.get_value()
+        current_mode: ColorTheme = self._theme_combo.get_value()
         dialog = ThemeColorPickerDialog(initial_mode=current_mode, parent=self)
         dialog.theme_settings_changed.connect(self._on_color_picker_applied)
         dialog.exec()
 
-    def _on_color_picker_applied(self, mode: ColorMode, custom_colors: Dict[str, Dict[str, str]]) -> None:
+    def _on_color_picker_applied(self, mode: ColorTheme, custom_colors: Dict[str, Dict[str, str]]) -> None:
         """Receive theme mode + custom colors from the color picker dialog."""
         self._theme_combo.set_value(mode)
         self._pending_custom_colors = custom_colors
@@ -1228,11 +1229,11 @@ class SettingsDialog(QDialog):
         current_theme = self._theme_combo.get_value()
         self._theme_combo.set_label(strings.display_theme)
         self._theme_combo.set_items([
-            (strings.theme_system, ColorMode.SYSTEM),
-            (strings.theme_light, ColorMode.LIGHT),
-            (strings.theme_dark, ColorMode.DARK),
-            (strings.theme_color_blind, ColorMode.COLOR_BLIND),
-            (strings.theme_custom, ColorMode.CUSTOM),
+            (strings.theme_system, ColorTheme.SYSTEM),
+            (strings.theme_light, ColorTheme.LIGHT),
+            (strings.theme_dark, ColorTheme.DARK),
+            (strings.theme_color_blind, ColorTheme.COLOR_BLIND),
+            (strings.theme_custom, ColorTheme.CUSTOM),
         ])
         self._theme_combo.set_value(current_theme)
 

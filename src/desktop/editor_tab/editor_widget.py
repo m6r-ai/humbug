@@ -62,7 +62,6 @@ class EditorWidget(QPlainTextEdit):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         self._style_manager = StyleManager()
-        self._init_colour_mode = self._style_manager.color_mode()
         self._last_highlights_version = self._style_manager.highlights_version()
 
         # Setup line number area
@@ -1055,11 +1054,9 @@ class EditorWidget(QPlainTextEdit):
         space_width = self._style_manager.get_space_width()
         self.setTabStopDistance(space_width * 8)
 
-        # Rehighlight when colour mode OR highlight formats change (e.g. custom colour overrides)
-        current_mode = self._style_manager.color_mode()
+        # Rehighlight when highlight formats change (covers palette and mode switches)
         current_hv = self._style_manager.highlights_version()
-        if current_mode != self._init_colour_mode or current_hv != self._last_highlights_version:
-            self._init_colour_mode = current_mode
+        if current_hv != self._last_highlights_version:
             self._last_highlights_version = current_hv
             self._highlighter.rehighlight()
 

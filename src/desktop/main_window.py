@@ -67,7 +67,8 @@ from desktop.shell_tab.shell_command_registry import ShellCommandRegistry
 from desktop.shell_tab.shell_tab import ShellTab
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar_manager import SidebarManager
-from desktop.style_manager import StyleManager, ColorMode
+from desktop.style_manager import StyleManager
+from desktop.color_theme import ColorTheme
 from desktop.status_message import StatusMessage
 from desktop.system_ai_tool import SystemAITool
 from desktop.tab_manager import TabManager, TabManagerError
@@ -367,7 +368,7 @@ class MainWindow(QMainWindow):
 
         # View menu actions - Theme menu will be created in _on_language_changed
         self._theme_menu: QMenu | None = None
-        self._theme_actions: Dict[ColorMode, QAction] = {}
+        self._theme_actions: Dict[ColorTheme, QAction] = {}
 
         self._zoom_in_action = QAction(strings.zoom_in, self)
         self._zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
@@ -610,7 +611,7 @@ class MainWindow(QMainWindow):
         self._language_manager.set_language(user_settings.language)
 
         # Set theme from user settings
-        self._style_manager.set_color_mode(user_settings.theme)
+        self._style_manager.set_color_theme(user_settings.theme)
         self._style_manager.apply_custom_colors(user_settings.custom_colors)
         self._update_theme_menu()
 
@@ -889,47 +890,47 @@ class MainWindow(QMainWindow):
         # Add Automatic (system) theme action
         system_action = QAction(strings.theme_system, self)
         system_action.setCheckable(True)
-        system_action.setChecked(self._style_manager.user_color_mode() == ColorMode.SYSTEM)
-        system_action.triggered.connect(lambda: self._set_color_mode(ColorMode.SYSTEM))
+        system_action.setChecked(self._style_manager.user_color_theme() == ColorTheme.SYSTEM)
+        system_action.triggered.connect(lambda: self._set_color_theme(ColorTheme.SYSTEM))
         theme_action_group.addAction(system_action)
         theme_menu.addAction(system_action)
-        self._theme_actions[ColorMode.SYSTEM] = system_action
+        self._theme_actions[ColorTheme.SYSTEM] = system_action
 
         # Add Light theme action
         light_action = QAction(strings.theme_light, self)
         light_action.setCheckable(True)
-        light_action.setChecked(self._style_manager.user_color_mode() == ColorMode.LIGHT)
-        light_action.triggered.connect(lambda: self._set_color_mode(ColorMode.LIGHT))
+        light_action.setChecked(self._style_manager.user_color_theme() == ColorTheme.LIGHT)
+        light_action.triggered.connect(lambda: self._set_color_theme(ColorTheme.LIGHT))
         theme_action_group.addAction(light_action)
         theme_menu.addAction(light_action)
-        self._theme_actions[ColorMode.LIGHT] = light_action
+        self._theme_actions[ColorTheme.LIGHT] = light_action
 
         # Add Dark theme action
         dark_action = QAction(strings.theme_dark, self)
         dark_action.setCheckable(True)
-        dark_action.setChecked(self._style_manager.user_color_mode() == ColorMode.DARK)
-        dark_action.triggered.connect(lambda: self._set_color_mode(ColorMode.DARK))
+        dark_action.setChecked(self._style_manager.user_color_theme() == ColorTheme.DARK)
+        dark_action.triggered.connect(lambda: self._set_color_theme(ColorTheme.DARK))
         theme_action_group.addAction(dark_action)
         theme_menu.addAction(dark_action)
-        self._theme_actions[ColorMode.DARK] = dark_action
+        self._theme_actions[ColorTheme.DARK] = dark_action
 
         # Add Color Blind theme action
         color_blind_action = QAction(strings.theme_color_blind, self)
         color_blind_action.setCheckable(True)
-        color_blind_action.setChecked(self._style_manager.user_color_mode() == ColorMode.COLOR_BLIND)
-        color_blind_action.triggered.connect(lambda: self._set_color_mode(ColorMode.COLOR_BLIND))
+        color_blind_action.setChecked(self._style_manager.user_color_theme() == ColorTheme.COLOR_BLIND)
+        color_blind_action.triggered.connect(lambda: self._set_color_theme(ColorTheme.COLOR_BLIND))
         theme_action_group.addAction(color_blind_action)
         theme_menu.addAction(color_blind_action)
-        self._theme_actions[ColorMode.COLOR_BLIND] = color_blind_action
+        self._theme_actions[ColorTheme.COLOR_BLIND] = color_blind_action
 
         # Add Custom theme action
         custom_action = QAction(strings.theme_custom, self)
         custom_action.setCheckable(True)
-        custom_action.setChecked(self._style_manager.user_color_mode() == ColorMode.CUSTOM)
-        custom_action.triggered.connect(lambda: self._set_color_mode(ColorMode.CUSTOM))
+        custom_action.setChecked(self._style_manager.user_color_theme() == ColorTheme.CUSTOM)
+        custom_action.triggered.connect(lambda: self._set_color_theme(ColorTheme.CUSTOM))
         theme_action_group.addAction(custom_action)
         theme_menu.addAction(custom_action)
-        self._theme_actions[ColorMode.CUSTOM] = custom_action
+        self._theme_actions[ColorTheme.CUSTOM] = custom_action
 
         return theme_menu
 
@@ -937,16 +938,16 @@ class MainWindow(QMainWindow):
         """Update the theme menu to reflect the current selected theme."""
         # Set the checked state for the appropriate theme action
         for theme, action in self._theme_actions.items():
-            action.setChecked(theme == self._style_manager.user_color_mode())
+            action.setChecked(theme == self._style_manager.user_color_theme())
 
-    def _set_color_mode(self, theme: ColorMode) -> None:
+    def _set_color_theme(self, theme: ColorTheme) -> None:
         """
         Set the color mode (theme) for the application.
 
         Args:
-            theme: The new theme to apply
+            theme: The new ColorTheme to apply
         """
-        self._style_manager.set_color_mode(theme)
+        self._style_manager.set_color_theme(theme)
 
     def _on_tab_manager_tab_changed(self) -> None:
         """Handle tab change events."""
@@ -1992,8 +1993,8 @@ class MainWindow(QMainWindow):
                 self._language_manager.set_language(new_settings.language)
 
                 new_theme = new_settings.theme
-                if new_theme != self._style_manager.user_color_mode():
-                    self._style_manager.set_color_mode(new_theme)
+                if new_theme != self._style_manager.user_color_theme():
+                    self._style_manager.set_color_theme(new_theme)
                     self._update_theme_menu()
 
                 self._style_manager.apply_custom_colors(new_settings.custom_colors)
