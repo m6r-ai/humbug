@@ -600,7 +600,7 @@ _COLOR_BLIND_COLORS: Dict[ColorRole, str] = {
     ColorRole.MESSAGE_AI: "#009e73",
     ColorRole.MESSAGE_REASONING: "#cc79a7",
     ColorRole.MESSAGE_TOOL_CALL: "#f0e442",
-    ColorRole.MESSAGE_TOOL_RESULT: "#009e73",
+    ColorRole.MESSAGE_TOOL_RESULT: "#f0e442",
     ColorRole.MESSAGE_USER_QUEUED: "#9aa4ad",
     ColorRole.MESSAGE_SYSTEM_ERROR: "#e69f00",
     ColorRole.MESSAGE_SYSTEM_SUCCESS: "#009e73",
