@@ -4,7 +4,7 @@ import sys
 from typing import Dict, List, Tuple, cast
 
 from PySide6.QtCore import Signal, Qt, QRect, QSize, QObject, QEvent
-from PySide6.QtGui import QTextCursor, QTextDocument, QIcon, QKeyEvent, QMouseEvent
+from PySide6.QtGui import QFontMetrics, QTextCursor, QTextDocument, QIcon, QKeyEvent, QMouseEvent
 from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel, QSizePolicy
 
 from ai import AIMessageSource
@@ -142,11 +142,14 @@ class ConversationInput(ConversationMessage):
         """Apply style changes."""
         super().apply_style(style)
 
-        # Fix the banner height so it cannot expand to absorb slack space when
-        # the outer frame is resized during a text reflow. The sections_container
-        # gets Expanding policy so it absorbs all vertical slack instead.
-        banner_height = self._banner.sizeHint().height()
-        self._banner.setFixedHeight(banner_height)
+        # Fix the banner height so it cannot expand to absorb slack space when the
+        # outer frame is resized during a text reflow. The sections_container gets
+        # Expanding policy so it absorbs all vertical slack instead. We compute the
+        # height directly from known icon and font metrics rather than asking Qt's
+        # layout engine, which may not have processed the new sizes yet.
+        icon_height = int(14 * self._style_manager.zoom_factor())
+        font_height = QFontMetrics(style.font).height()
+        self._banner.setFixedHeight(max(icon_height, font_height))
         self._sections_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         icon_base_size = 14

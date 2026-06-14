@@ -2578,9 +2578,7 @@ class ConversationWidget(QWidget):
 
         self._input.apply_style(self._message_style)
         if self._input_spacer is not None:
-            self._update_input_width()
-            self._on_input_size_hint_changed()
-            self._update_input_position()
+            QTimer.singleShot(0, self._on_input_size_hint_changed)
 
     def _build_message_style(self) -> ConversationMessageStyle:
         """Build the shared style object for all ConversationMessage instances."""
