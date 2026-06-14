@@ -12,6 +12,9 @@ import time
 from types import TracebackType
 from typing import List
 
+if sys.platform == 'win32':
+    import ctypes
+
 from PySide6.QtCore import QObject, QEvent
 from PySide6.QtGui import QFont, QFontDatabase, QIcon
 from PySide6.QtWidgets import QWidget
@@ -200,6 +203,9 @@ def main() -> int:
     setup_ai_system_prompt()
 
     # Create application
+    if sys.platform == 'win32':
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('ai.m6r.humbug')
+
     app = HumbugApplication(sys.argv)
     # Fusion gives a pure-Qt renderer on every platform — no OS-native popup
     # containers, so QSS controls 100% of the appearance on Mac, Linux, Windows.
