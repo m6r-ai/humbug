@@ -359,12 +359,38 @@ class TerminalBuffer:
         Args:
             new_rows: New number of rows
             new_cols: New number of columns
-
-        Returns early without any work if dimensions are unchanged.
         """
         old_rows = self._rows
 
+        # If we have no actual work to do then return
         if new_rows == self._rows and new_cols == self._cols:
+            return
+
+        # If number of columns is unchanged then no reflow is needed.  Just adjust the number
+        # of visible rows in-place.
+        if new_cols == self._cols:
+            # Remove unvisited blank lines at the bottom before shrinking, for
+            # the same reason as the full reflow path.
+            if new_rows < old_rows:
+                unvisited = max(0, old_rows - (self._max_cursor_row + 1))
+                to_remove = min(unvisited, old_rows - new_rows)
+                if to_remove:
+                    del self._lines[-to_remove:]
+
+            # Capture absolute indices before appending or trimming changes len(self._lines).
+            cursor_abs = len(self._lines) - min(old_rows, len(self._lines)) + self._cursor.row
+            max_cursor_abs = len(self._lines) - min(old_rows, len(self._lines)) + self._max_cursor_row
+
+            # Ensure there are at least new_rows lines total.
+            shortfall = new_rows - len(self._lines)
+            if shortfall > 0:
+                for _ in range(shortfall):
+                    self._lines.append(self._get_new_line(self._cols))
+
+            self._rows = new_rows
+            self._trim_scrollback()
+
+            self._finish_resize(old_rows, new_rows, new_cols, cursor_abs, 0, False, max_cursor_abs)
             return
 
         # Remove unvisited blank lines at the bottom of the visible area when
@@ -435,7 +461,6 @@ class TerminalBuffer:
                 cell_offset = 0
                 for k in range(lines_before_cursor):
                     cell_offset += physical_lines[logical_start + k].width
-
                 cell_offset += cursor_col_before
 
             # Strip trailing spaces from the logical line so that re-wrapping
@@ -532,21 +557,45 @@ class TerminalBuffer:
         self._lines = new_lines
         self._trim_scrollback()
 
-        # Recompute cursor position from the resolved absolute index.
         if not cursor_resolved:
             new_cursor_abs = len(self._lines) - new_rows
             new_cursor_col = 0
 
-        self._cursor.row = max(0, min(new_cursor_abs - (len(self._lines) - new_rows), new_rows - 1))
-        self._cursor.col = max(0, min(new_cursor_col, new_cols - 1))
-        self._cursor.delayed_wrap = new_cursor_delayed_wrap
-
-        # Map max_cursor_row through the reflow to its new screen row.
         if not max_cursor_resolved:
             new_max_cursor_abs = len(self._lines) - new_rows
-        self._max_cursor_row = max(0, min(new_max_cursor_abs - (len(self._lines) - new_rows), new_rows - 1))
 
-        # Adjust scroll region proportionally.
+        self._finish_resize(old_rows, new_rows, new_cols, new_cursor_abs, new_cursor_col, new_cursor_delayed_wrap, new_max_cursor_abs)
+
+    def _finish_resize(
+        self,
+        old_rows: int,
+        new_rows: int,
+        new_cols: int,
+        cursor_abs: int,
+        cursor_col: int,
+        cursor_delayed_wrap: bool,
+        max_cursor_abs: int,
+    ) -> None:
+        """Apply cursor, max_cursor, scroll region, and tab stop updates after a resize.
+
+        Called by resize() after the line list has been committed and trimmed.
+        Both the rows-only fast path and the full reflow path share this tail.
+
+        Args:
+            old_rows: Row count before the resize.
+            new_rows: Row count after the resize.
+            new_cols: Column count after the resize.
+            cursor_abs: Absolute line-list index where the cursor landed.
+            cursor_col: New cursor column.
+            cursor_delayed_wrap: New cursor delayed-wrap flag.
+            max_cursor_abs: Absolute line-list index of max_cursor_row.
+        """
+        self._cursor.row = max(0, min(cursor_abs - (len(self._lines) - new_rows), new_rows - 1))
+        self._cursor.col = max(0, min(cursor_col, new_cols - 1))
+        self._cursor.delayed_wrap = cursor_delayed_wrap
+
+        self._max_cursor_row = max(0, min(max_cursor_abs - (len(self._lines) - new_rows), new_rows - 1))
+
         self._scroll_region.bottom = min(
             self._scroll_region.bottom + new_rows - old_rows, new_rows
         )
