@@ -72,7 +72,7 @@ class StyleManager(QObject):
             self._theme_mode = ColorTheme.SYSTEM
             self._light_custom_palette = OverlayPalette(LIGHT_PALETTE, {})
             self._dark_custom_palette = OverlayPalette(DARK_PALETTE, {})
-            self._active_palette: Palette = DARK_PALETTE
+            self._active_palette: Palette = self._palette_for_mode(ColorTheme.SYSTEM)
             self._active_preset_name: str | None = "Default"
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
             self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
@@ -520,6 +520,14 @@ class StyleManager(QObject):
             self._initialize_highlights()
             self.style_changed.emit()
 
+    def _os_color_mode(self) -> ColorMode:
+        """Query the OS colour scheme directly, with Unknown treated as LIGHT."""
+        scheme = QGuiApplication.styleHints().colorScheme()
+        if scheme == Qt.ColorScheme.Dark:
+            return ColorMode.DARK
+
+        return ColorMode.LIGHT
+
     def _resolve_color_mode(self) -> ColorMode:
         """
         Resolve the effective (LIGHT or DARK) color mode.
@@ -542,15 +550,12 @@ class StyleManager(QObject):
         if self._theme_mode == ColorTheme.DARK:
             return ColorMode.DARK
 
-        scheme = QGuiApplication.styleHints().colorScheme()
-        if scheme == Qt.ColorScheme.Dark:
-            return ColorMode.DARK
-
-        return ColorMode.LIGHT
+        return self._os_color_mode()
 
     def _on_system_color_scheme_changed(self) -> None:
         """Handle OS-level color scheme changes when in SYSTEM mode."""
         if self._theme_mode in (ColorTheme.SYSTEM, ColorTheme.CUSTOM):
+            self._active_palette = self._palette_for_mode(self._theme_mode)
             self._initialize_highlights()
             self._initialize_proportional_highlights()
             self._scaled_icon_cache.clear()
@@ -570,9 +575,10 @@ class StyleManager(QObject):
         Args:
             mode: The ColorTheme to switch to
         """
-        if mode != self._theme_mode:
+        new_palette = self._palette_for_mode(mode)
+        if mode != self._theme_mode or new_palette is not self._active_palette:
             self._theme_mode = mode
-            self._active_palette = self._palette_for_mode(mode)
+            self._active_palette = new_palette
             self._initialize_highlights()
             self._initialize_proportional_highlights()
             self._scaled_icon_cache.clear()
@@ -584,7 +590,7 @@ class StyleManager(QObject):
             return COLOR_BLIND_PALETTE
 
         if mode == ColorTheme.CUSTOM:
-            return self._dark_custom_palette if self._resolve_color_mode() == ColorMode.DARK else self._light_custom_palette
+            return self._dark_custom_palette if self._os_color_mode() == ColorMode.DARK else self._light_custom_palette
 
         if mode == ColorTheme.DARK:
             return DARK_PALETTE
@@ -592,7 +598,7 @@ class StyleManager(QObject):
         if mode == ColorTheme.LIGHT:
             return LIGHT_PALETTE
 
-        return DARK_PALETTE if self._resolve_color_mode() == ColorMode.DARK else LIGHT_PALETTE
+        return DARK_PALETTE if self._os_color_mode() == ColorMode.DARK else LIGHT_PALETTE
 
     def active_preset(self) -> str | None:
         """Name of the last-applied color preset, or None if colors were edited individually."""
