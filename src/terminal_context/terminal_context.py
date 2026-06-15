@@ -49,16 +49,19 @@ class TerminalContext:
         history_lines = buffer.history_lines()
         cols = buffer.cols()
 
+        cursor_row = buffer.cursor().row
+        rows = buffer.rows()
+
+        # The cursor line is always the lower bound of meaningful content —
+        # it is where the shell prompt sits.  Rows below the cursor are blank
+        # and should be excluded.
+        cursor_abs = history_lines - rows + cursor_row
+        end_line = cursor_abs + 1
+
         if max_lines is None:
             start_line = 0
-            end_line = history_lines
         else:
-            max_cursor_row = buffer.max_cursor_row()
-            rows = buffer.rows()
-            empty_lines = rows - (max_cursor_row + 1)
-            history_lines -= empty_lines
-            start_line = max(0, history_lines - max_lines)
-            end_line = history_lines
+            start_line = max(0, end_line - max_lines)
 
         extracted_lines = []
         lines = buffer.lines()
