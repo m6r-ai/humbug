@@ -655,7 +655,7 @@ class MainWindow(QMainWindow):
         self._menai_tool = MenaiAITool()
         self._menai_tool.set_mindspace(mindspace)
         self._ai_tool_manager.register_tool(
-            self._menai_tool, "Menai: evaluates expressions using AI Functional Programming Language syntax"
+            self._menai_tool, "Menai: evaluates expressions using Menai Language syntax"
         )
         self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
         self._ai_tool_manager.register_tool(

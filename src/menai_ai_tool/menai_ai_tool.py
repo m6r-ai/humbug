@@ -1,4 +1,4 @@
-"""Menai (AI Functional Programming Language) tool with LISP-like syntax."""
+"""Menai expression evaluator tool."""
 
 import asyncio
 import json
@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from menai import Menai, MenaiError, MenaiCancelledException
+from menai import MenaiTokenError, MenaiASTBuildError, MenaiCodegenError
 from menai import MenaiBufferingTraceWatcher
 from ai_tool import (
     AITool, AIToolCall, AIToolDefinition, AIToolParameter, AIToolResult,
@@ -43,10 +44,9 @@ class MenaiAITool(AITool):
             name="menai",
             description_prefix=(
                 "The menai tool lets you to compile and execute programs written in Menai. "
-                "Menai is a fast, pure, functional programming language. "
                 "It is ideal for everything from simple calculations to complex algorithms. "
                 "Menai has no side effects, so it does not require user approvals to use it."
-                "Never use this tool without first calling `help` with `get_help` for Menai"
+                "You must call `help` with `get_help` for Menai before using this tool."
             ),
             additional_parameters=[
                 AIToolParameter(
@@ -669,7 +669,11 @@ Syntax: (operator arg1 arg2 ...)
             if "division by zero" in error_msg:
                 raise AIToolExecutionError("Division by zero") from e
 
-            raise AIToolExecutionError(str(e)) from e
+            error_text = str(e)
+            if isinstance(e, (MenaiTokenError, MenaiASTBuildError, MenaiCodegenError)):
+                error_text += "\n\nNote: You must call `help` with `get_help` for Menai before using this tool."
+
+            raise AIToolExecutionError(error_text) from e
 
         except Exception as e:
             self._logger.error("Unexpected error evaluating Menai expression '%s': %s", expression, str(e), exc_info=True)

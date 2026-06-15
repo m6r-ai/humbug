@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v50 (2026-06-xx)
+## v50 (2026-06-15)
 
 New features:
 
@@ -17,6 +17,7 @@ New features:
 - Made VCS (git) polling an async task so it doesn't block the main thread.  Useful on Windows with anti-malware scanners.
 - Added a colour picker and high contrast colour scheme.
 - Split out mindspace operations into a new "Mindspace" menu.
+- Improved the Menai tool description to encourage AIs to read the help if they haven't already done so.
 
 Bug fixes:
 
