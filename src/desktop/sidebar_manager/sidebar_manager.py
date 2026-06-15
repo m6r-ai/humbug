@@ -42,6 +42,8 @@ class SidebarManager(QWidget):
     file_opened_in_diff = Signal(str, bool)
     new_conversation_requested = Signal(str)
     settings_requested = Signal()
+    tab_overview_requested = Signal()
+    tab_carousel_requested = Signal()
 
     # panel_id, path, ephemeral, query, case_sensitive, regexp, line_number, message_id
     search_result_activated = Signal(str, str, bool, str, bool, bool, object, object)
@@ -120,6 +122,24 @@ class SidebarManager(QWidget):
         self._update_button.hide()
         self._rail_layout.addWidget(self._update_button)
 
+        self._tab_overview_button = QToolButton(self._rail_widget)
+        self._tab_overview_button.setObjectName("_tab_overview_button")
+        self._tab_overview_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._tab_overview_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._tab_overview_button.clicked.connect(self._on_tab_overview_button_clicked)
+        self._tab_overview_button.setProperty("icon_name", "tab-overview")
+        self._tab_overview_button.installEventFilter(self)
+        self._rail_layout.addWidget(self._tab_overview_button)
+
+        self._tab_carousel_button = QToolButton(self._rail_widget)
+        self._tab_carousel_button.setObjectName("_tab_carousel_button")
+        self._tab_carousel_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self._tab_carousel_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._tab_carousel_button.clicked.connect(self._on_tab_carousel_button_clicked)
+        self._tab_carousel_button.setProperty("icon_name", "tab-carousel")
+        self._tab_carousel_button.installEventFilter(self)
+        self._rail_layout.addWidget(self._tab_carousel_button)
+
         self._settings_button = QToolButton(self._rail_widget)
         self._settings_button.setObjectName("_settings_button")
         self._settings_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
@@ -170,6 +190,7 @@ class SidebarManager(QWidget):
             sig = getattr(panel, visibility_signal, None)
             if sig is not None:
                 sig.connect(lambda visible, pid=panel_id: self._on_panel_visibility_changed(pid, visible))
+
             button.hide()
 
         if on_activated is not None:
@@ -177,6 +198,7 @@ class SidebarManager(QWidget):
             button.clicked.connect(
                 lambda checked, pid=panel_id, cb=on_act: self._on_panel_button_clicked(pid, checked, cb)
             )
+
         else:
             button.clicked.connect(
                 lambda checked, pid=panel_id: self._on_panel_button_clicked(pid, checked, None)
@@ -278,6 +300,7 @@ class SidebarManager(QWidget):
                 if btn.isVisible() and pid != panel_id:
                     self._set_active_panel(pid)
                     break
+
         else:
             self._update_button_styling()
 
@@ -360,6 +383,7 @@ class SidebarManager(QWidget):
         """
         if not path:
             self._header_widget.setText(self._language_manager.strings().mindspace_label_none)
+
         else:
             self._header_widget.setText(os.path.basename(path.rstrip("\\/")))
 
@@ -388,6 +412,14 @@ class SidebarManager(QWidget):
         """Forward settings button click."""
         self.settings_requested.emit()
 
+    def _on_tab_overview_button_clicked(self) -> None:
+        """Forward tab overview button click."""
+        self.tab_overview_requested.emit()
+
+    def _on_tab_carousel_button_clicked(self) -> None:
+        """Forward tab carousel button click."""
+        self.tab_carousel_requested.emit()
+
     def _on_language_changed(self) -> None:
         """Refresh localised strings on all rail controls."""
         current_text = self._header_widget.text()
@@ -399,6 +431,8 @@ class SidebarManager(QWidget):
         self._header_widget.setToolTip(strings.mindspace_name_tooltip)
         self._settings_button.setToolTip(strings.mindspace_settings)
         self._settings_button.setToolTip(strings.settings)
+        self._tab_overview_button.setToolTip(strings.tab_overview_tooltip)
+        self._tab_carousel_button.setToolTip(strings.tab_carousel_tooltip)
         self._sidebar_toggle_button.setToolTip(
             strings.mindspace_collapse_sidebar if not self._sidebar_collapsed else strings.mindspace_expand_sidebar
         )
@@ -413,6 +447,7 @@ class SidebarManager(QWidget):
 
         if self.layoutDirection() == Qt.LayoutDirection.LeftToRight:
             collapse_icon = "expand-right" if self._sidebar_collapsed else "expand-left"
+
         else:
             collapse_icon = "expand-left" if self._sidebar_collapsed else "expand-right"
 
@@ -427,14 +462,22 @@ class SidebarManager(QWidget):
             is_checked = panel_id == self._active_panel_id
             if is_checked:
                 button.setIcon(QIcon(self._style_manager.scale_icon(f"bright-{icon_name}", icon_base_size)))
+
             else:
                 button.setIcon(QIcon(self._style_manager.scale_icon(f"inactive-{icon_name}", icon_base_size)))
+
             button.setIconSize(icon_size)
             button.setChecked(is_checked)
 
         settings_icon_size = round(20 * zoom_factor)
         self._settings_button.setIcon(QIcon(self._style_manager.scale_icon("inactive-cog", 20)))
         self._settings_button.setIconSize(QSize(settings_icon_size, settings_icon_size))
+
+        tab_button_icon_size = round(20 * zoom_factor)
+        self._tab_overview_button.setIcon(QIcon(self._style_manager.scale_icon("inactive-tab-overview", 20)))
+        self._tab_overview_button.setIconSize(QSize(tab_button_icon_size, tab_button_icon_size))
+        self._tab_carousel_button.setIcon(QIcon(self._style_manager.scale_icon("inactive-tab-carousel", 20)))
+        self._tab_carousel_button.setIconSize(QSize(tab_button_icon_size, tab_button_icon_size))
 
         if self._update_button.isVisible():
             update_icon_size = round(20 * zoom_factor)
@@ -454,13 +497,19 @@ class SidebarManager(QWidget):
 
         is_checked = button.isChecked()
         is_update_button = button is self._update_button
+        small_buttons = (
+            self._sidebar_toggle_button, self._settings_button, self._update_button,
+            self._tab_overview_button, self._tab_carousel_button,
+        )
         if hovered:
-            size = 20 if button in (self._sidebar_toggle_button, self._settings_button, self._update_button) else 22
+            size = 20 if button in small_buttons else 22
             button.setIcon(QIcon(self._style_manager.scale_icon(icon_name, size)))
+
         elif is_checked:
             button.setIcon(QIcon(self._style_manager.scale_icon(f"bright-{icon_name}", 22)))
+
         else:
-            size = 20 if button in (self._sidebar_toggle_button, self._settings_button, self._update_button) else 22
+            size = 20 if button in small_buttons else 22
             prefix = "" if is_update_button else "inactive-"
             button.setIcon(QIcon(self._style_manager.scale_icon(f"{prefix}{icon_name}", size)))
 
@@ -469,6 +518,7 @@ class SidebarManager(QWidget):
         if isinstance(obj, QToolButton) and obj.parent() is self._rail_widget:
             if event.type() == QEvent.Type.Enter:
                 self._set_button_hover_icon(obj, hovered=True)
+
             elif event.type() == QEvent.Type.Leave:
                 self._set_button_hover_icon(obj, hovered=False)
 
@@ -519,8 +569,10 @@ class SidebarManager(QWidget):
             button.setFixedHeight(rail_button_height)
 
         self._settings_button.setFixedHeight(rail_button_height)
+        self._tab_overview_button.setFixedHeight(rail_button_height)
+        self._tab_carousel_button.setFixedHeight(rail_button_height)
 
-        # Build a CSS selector that matches all registered panel widget class names
+        # Build a QSS selector that matches all registered panel widget class names
         panel_selectors_rule = ""
         if self._panel_class_names:
             panel_selectors = ",\n            ".join(
@@ -573,6 +625,8 @@ class SidebarManager(QWidget):
 
             QToolButton#_settings_button,
             QToolButton#_update_button,
+            QToolButton#_tab_overview_button,
+            QToolButton#_tab_carousel_button,
             QToolButton[panel_id] {{
                 color: {text_color};
                 background-color: transparent;

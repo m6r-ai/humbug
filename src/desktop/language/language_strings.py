@@ -16,6 +16,7 @@ class LanguageStrings:
     # Menu names
     humbug_menu: str
     file_menu: str
+    mindspace_menu: str
     edit_menu: str
     view_menu: str
 
@@ -38,8 +39,6 @@ class LanguageStrings:
     settings: str
 
     # Tab bar context menu items
-    new_tab_to_left: str
-    new_tab_to_right: str
     close_tabs_to_left: str
     close_tabs_to_right: str
     close_other_tabs: str
@@ -64,8 +63,8 @@ class LanguageStrings:
     zoom_in: str
     zoom_out: str
     reset_zoom: str
-    show_system_log: str
-    show_system_shell: str
+    open_mindspace_log: str
+    open_humbug_shell: str
     show_tab_overview: str
     show_tab_carousel: str
     show_all_columns: str
@@ -393,6 +392,8 @@ class LanguageStrings:
     update_available_message: str  # Format: "Version {0} is available"
     update_check_failed: str
     update_tooltip: str  # Format: "Humbug {0} available"
+    tab_overview_tooltip: str
+    tab_carousel_tooltip: str
     check_for_updates_setting: str
 
     # Fetch-models error messages ({0} = HTTP status code or error text)

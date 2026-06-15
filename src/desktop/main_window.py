@@ -368,6 +368,7 @@ class MainWindow(QMainWindow):
 
         # View menu actions - Theme menu will be created in _on_language_changed
         self._theme_menu: QMenu | None = None
+        self._theme_separator: QAction | None = None
         self._theme_actions: Dict[ColorTheme, QAction] = {}
 
         self._zoom_in_action = QAction(strings.zoom_in, self)
@@ -382,13 +383,13 @@ class MainWindow(QMainWindow):
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
-        self._show_system_log_action = QAction(strings.show_system_log, self)
-        self._show_system_log_action.setShortcut(QKeySequence("Ctrl+Shift+L"))
-        self._show_system_log_action.triggered.connect(self._on_show_system_log)
+        self._open_mindspace_log_action = QAction(strings.open_mindspace_log, self)
+        self._open_mindspace_log_action.setShortcut(QKeySequence("Ctrl+Shift+L"))
+        self._open_mindspace_log_action.triggered.connect(self._on_open_mindspace_log)
 
-        self._show_system_shell_action = QAction(strings.show_system_shell, self)
-        self._show_system_shell_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
-        self._show_system_shell_action.triggered.connect(self._on_show_system_shell)
+        self._open_humbug_shell_action = QAction(strings.open_humbug_shell, self)
+        self._open_humbug_shell_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
+        self._open_humbug_shell_action.triggered.connect(self._on_open_humbug_shell)
 
         self._show_tab_overview_action = QAction(strings.show_tab_overview, self)
         self._show_tab_overview_action.setShortcut(QKeySequence("Ctrl+Shift+E"))
@@ -440,14 +441,24 @@ class MainWindow(QMainWindow):
         self._humbug_menu.addSeparator()
         self._humbug_menu.addAction(self._quit_action)
 
+        # Mindspace menu
+        self._mindspace_menu = self._menu_bar.addMenu(strings.mindspace_menu)
+        self._mindspace_menu.addAction(self._new_mindspace_action)
+        self._mindspace_menu.addAction(self._open_mindspace_action)
+        self._mindspace_menu.addAction(self._close_mindspace_action)
+        self._mindspace_menu.addSeparator()
+        self._mindspace_menu.addAction(self._global_search_action)
+        self._mindspace_menu.addAction(self._mindspace_settings_action)
+        self._mindspace_menu.addSeparator()
+        self._mindspace_menu.addAction(self._open_mindspace_log_action)
+        self._mindspace_menu.addAction(self._open_humbug_shell_action)
+
         # File menu
         self._file_menu = self._menu_bar.addMenu(strings.file_menu)
-        self._file_menu.addAction(self._new_mindspace_action)
         self._file_menu.addAction(self._new_conv_action)
         self._file_menu.addAction(self._new_file_action)
         self._file_menu.addAction(self._new_terminal_action)
         self._file_menu.addSeparator()
-        self._file_menu.addAction(self._open_mindspace_action)
         self._file_menu.addAction(self._open_preview_action)
         self._file_menu.addAction(self._open_diff_action)
         self._file_menu.addAction(self._open_conv_action)
@@ -456,7 +467,6 @@ class MainWindow(QMainWindow):
         self._file_menu.addAction(self._save_action)
         self._file_menu.addAction(self._save_as_action)
         self._file_menu.addSeparator()
-        self._file_menu.addAction(self._close_mindspace_action)
         self._file_menu.addAction(self._close_tab_action)
 
         # Edit menu
@@ -473,7 +483,6 @@ class MainWindow(QMainWindow):
         self._edit_menu.addAction(self._find_action)
         self._edit_menu.addAction(self._find_replace_action)
         self._edit_menu.addAction(self._goto_line_action)
-        self._edit_menu.addAction(self._global_search_action)
         self._edit_menu.addSeparator()
         self._edit_menu.addAction(self._conv_settings_action)
 
@@ -485,9 +494,6 @@ class MainWindow(QMainWindow):
         self._view_menu.addAction(self._zoom_in_action)
         self._view_menu.addAction(self._zoom_out_action)
         self._view_menu.addAction(self._reset_zoom_action)
-        self._view_menu.addSeparator()
-        self._view_menu.addAction(self._show_system_log_action)
-        self._view_menu.addAction(self._show_system_shell_action)
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._show_tab_overview_action)
         self._view_menu.addAction(self._show_tab_carousel_action)
@@ -542,6 +548,8 @@ class MainWindow(QMainWindow):
         self._sidebar_manager.search_highlights_cleared.connect(self._clear_global_search_highlights)
         self._sidebar_manager.open_mindspace_requested.connect(self._on_open_mindspace)
         self._sidebar_manager.settings_requested.connect(self._on_show_settings_dialog)
+        self._sidebar_manager.tab_overview_requested.connect(self._on_show_tab_overview)
+        self._sidebar_manager.tab_carousel_requested.connect(self._on_show_tab_carousel)
         self._sidebar_manager.new_conversation_requested.connect(self._on_sidebar_new_conversation_in_folder)
         self._sidebar_manager.toggle_requested.connect(self._splitter.toggle_mindspace)
         self._splitter.addWidget(self._sidebar_manager)
@@ -551,7 +559,6 @@ class MainWindow(QMainWindow):
         self._tab_manager.tab_changed.connect(self._on_tab_manager_tab_changed)
         self._tab_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
         self._tab_manager.tab_closed.connect(self._on_tab_manager_tab_closed)
-        self._tab_manager.new_tab_requested.connect(self._on_tab_bar_new_tab_requested)
         self._splitter.addWidget(self._tab_manager)
 
         # Register tab factories for session restore and context-open events.
@@ -742,9 +749,14 @@ class MainWindow(QMainWindow):
         self._find_action.setEnabled(tab is not None)
         self._find_replace_action.setEnabled(tab is not None and tab.can_show_find_replace())
         self._goto_line_action.setEnabled(tab is not None and tab.can_show_goto_line())
-        self._global_search_action.setEnabled(has_mindspace)
         self._submit_message_action.setEnabled(tab is not None and tab.can_submit())
         self._conv_settings_action.setEnabled(tab is not None and tab.can_show_conversation_settings_dialog())
+
+        # Update mindspace actions
+        self._global_search_action.setEnabled(has_mindspace)
+        self._mindspace_settings_action.setEnabled(has_mindspace)
+        self._open_mindspace_log_action.setEnabled(has_mindspace)
+        self._open_humbug_shell_action.setEnabled(has_mindspace)
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor()
@@ -752,8 +764,6 @@ class MainWindow(QMainWindow):
         left_to_right = self._language_manager.left_to_right()
         self._zoom_in_action.setEnabled(current_zoom_index < len(self._zoom_levels) - 1)
         self._zoom_out_action.setEnabled(current_zoom_index > 0)
-        self._show_system_log_action.setEnabled(has_mindspace)
-        self._show_system_shell_action.setEnabled(has_mindspace)
         self._show_all_columns_action.setEnabled(tab_manager.can_show_all_columns())
         self._show_tab_overview_action.setEnabled(tab is not None)
         self._show_tab_carousel_action.setEnabled(tab is not None)
@@ -785,6 +795,7 @@ class MainWindow(QMainWindow):
         self._humbug_menu.setTitle(strings.humbug_menu)
         self._edit_menu.setTitle(strings.edit_menu)
         self._file_menu.setTitle(strings.file_menu)
+        self._mindspace_menu.setTitle(strings.mindspace_menu)
         self._view_menu.setTitle(strings.view_menu)
 
         # Update action texts
@@ -813,21 +824,25 @@ class MainWindow(QMainWindow):
         self._find_action.setText(strings.find)
         self._find_replace_action.setText(strings.find_replace)
         self._goto_line_action.setText(strings.goto_line)
+        self._conv_settings_action.setText(strings.conversation_settings)
         self._global_search_action.setText(strings.mindspace_search)
         self._mindspace_settings_action.setText(strings.mindspace_settings)
-        self._conv_settings_action.setText(strings.conversation_settings)
+        self._open_mindspace_log_action.setText(strings.open_mindspace_log)
+        self._open_humbug_shell_action.setText(strings.open_humbug_shell)
 
         # Recreate the theme menu with updated language strings
         if self._theme_menu is not None:
             self._view_menu.removeAction(self._theme_menu.menuAction())
+        if self._theme_separator is not None:
+            self._view_menu.removeAction(self._theme_separator)
 
         self._theme_menu = self._create_theme_menu()
         self._view_menu.insertMenu(self._zoom_in_action, self._theme_menu)
+        self._theme_separator = self._view_menu.insertSeparator(self._zoom_in_action)
 
         self._zoom_in_action.setText(strings.zoom_in)
         self._zoom_out_action.setText(strings.zoom_out)
         self._reset_zoom_action.setText(strings.reset_zoom)
-        self._show_system_shell_action.setText(strings.show_system_shell)
         self._show_tab_overview_action.setText(strings.show_tab_overview)
         self._show_tab_carousel_action.setText(strings.show_tab_carousel)
         self._show_all_columns_action.setText(strings.show_all_columns)
@@ -1584,8 +1599,8 @@ class MainWindow(QMainWindow):
                 f"User opened diff: '{file_path}'\ntab ID: {context_id}"
             )
 
-    def _on_show_system_log(self) -> None:
-        """Show the log tab."""
+    def _on_open_mindspace_log(self) -> None:
+        """Open the log tab."""
         contexts = self._mindspace_manager.mindspace().contexts()
         existing = next((i for i in contexts.list_all() if i.context_type == "log"), None)
         if existing:
@@ -1594,8 +1609,8 @@ class MainWindow(QMainWindow):
 
         contexts.open(context_type="log", title="Mindspace Log")
 
-    def _on_show_system_shell(self) -> None:
-        """Show the shell tab."""
+    def _on_open_humbug_shell(self) -> None:
+        """Open the shell tab."""
         contexts = self._mindspace_manager.mindspace().contexts()
         existing = next((i for i in contexts.list_all() if i.context_type == "shell"), None)
         if existing:
@@ -1747,26 +1762,6 @@ class MainWindow(QMainWindow):
     def _on_new_conversation(self) -> None:
         """Create new conversation tab."""
         self._create_new_conversation()
-
-    def _on_tab_bar_new_tab_requested(self, column_index: int, insert_index: int) -> None:
-        """
-        Create a new conversation tab at a specific position in a column.
-
-        Args:
-            column_index: Index of the column that should receive the new tab
-            insert_index: Position within the column's tab bar
-        """
-        context_id = self._create_new_conversation()
-        if context_id is None:
-            return
-
-        try:
-            self._tab_manager.move_tab_to_column(context_id, column_index)
-
-        except TabManagerError:
-            return
-
-        self._tab_manager.reposition_tab(context_id, column_index, insert_index)
 
     def _create_new_conversation(self) -> str | None:
         """Create a new conversation tab and return its context ID, or None on failure."""

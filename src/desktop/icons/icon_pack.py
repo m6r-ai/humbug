@@ -52,6 +52,8 @@ ACTIVE_INACTIVE_THEME_ICONS: Final[Tuple[str, ...]] = (
     "terminal",
     "preview",
     "diff",
+    "tab-overview",
+    "tab-carousel",
 )
 
 
@@ -350,6 +352,21 @@ THEME_ICON_PACK: Final[Dict[str, str]] = {
             <path stroke="{color}" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"
                 d="M4,32 Q16,12 32,12 Q48,12 60,32 Q48,52 32,52 Q16,52 4,32 Z"/>
             <circle cx="32" cy="32" r="9" stroke="{color}" stroke-width="5" fill="none"/>
+        </svg>
+    ''',
+    "tab-overview": '''
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+    ''',
+    "tab-carousel": '''
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="3" width="8" height="18" rx="1.5" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+            <rect x="3" y="6" width="4" height="12" rx="1.5" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+            <rect x="17" y="6" width="4" height="12" rx="1.5" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
         </svg>
     ''',
 }

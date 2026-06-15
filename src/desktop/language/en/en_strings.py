@@ -25,6 +25,7 @@ def get_english_strings() -> LanguageStrings:
         # Menu names
         humbug_menu="Humbug",
         file_menu="File",
+        mindspace_menu="Mindspace",
         edit_menu="Edit",
         view_menu="View",
 
@@ -47,8 +48,6 @@ def get_english_strings() -> LanguageStrings:
         settings="Settings",
 
         # Tab bar context menu items
-        new_tab_to_left="New Tab to the Left",
-        new_tab_to_right="New Tab to the Right",
         close_tabs_to_left="Close Tabs to the Left",
         close_tabs_to_right="Close Tabs to the Right",
         close_other_tabs="Close Other Tabs",
@@ -73,8 +72,8 @@ def get_english_strings() -> LanguageStrings:
         zoom_in="Zoom In",
         zoom_out="Zoom Out",
         reset_zoom="Reset Zoom",
-        show_system_log="Show Mindspace Log",
-        show_system_shell="Show Humbug Shell",
+        open_mindspace_log="Open Mindspace Log",
+        open_humbug_shell="Open Humbug Shell",
         show_tab_overview="Show Open Tabs",
         show_tab_carousel="Show Tab Carousel",
         show_all_columns="Show All Columns",
@@ -426,6 +425,8 @@ def get_english_strings() -> LanguageStrings:
         update_available_message="Version {0} is available — click to download.",
         update_check_failed="Could not check for updates. Please check your network connection.",
         update_tooltip="Humbug {0} available — click for release page",
+        tab_overview_tooltip="Show all open tabs",
+        tab_carousel_tooltip="Show tab carousel",
         check_for_updates_setting="Automatically check for updates",
 
         # Ollama pull

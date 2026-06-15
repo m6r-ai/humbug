@@ -125,7 +125,8 @@ cover things that are project-specific:
   when the shell exits
 - **AI tools** — which tools are enabled for AI conversations in this mindspace
 
-To open the mindspace settings, click the settings icon in the mindspace panel header.
+To open the mindspace settings, use **Mindspace → Mindspace Settings**, or click the **settings
+icon** at the bottom of the left rail.
 
 ---
 

@@ -1,7 +1,7 @@
 # Mindspace Settings
 
-Mindspace settings apply only to the current mindspace. Open them from the **settings icon**
-in the mindspace panel header, or with **Ctrl+Alt+,**.
+Mindspace settings apply only to the current mindspace. Open them from **Mindspace → Mindspace
+Settings**, the **settings icon** at the bottom of the left rail, or with **Ctrl+Alt+,**.
 
 ---
 

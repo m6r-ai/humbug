@@ -37,7 +37,6 @@ class TabManager(QWidget):
     tab_changed = Signal()
     tab_closed = Signal(str)
     user_settings_requested = Signal()
-    new_tab_requested = Signal(int, int)  # column_index, insert_index
 
     def __init__(
         self,
@@ -398,10 +397,6 @@ class TabManager(QWidget):
         has_tabs_before = tab_index > 0
         has_tabs_after = tab_index < tab_count - 1
 
-        new_left_action = menu.addAction(strings.new_tab_to_left)
-        new_right_action = menu.addAction(strings.new_tab_to_right)
-        menu.addSeparator()
-
         close_left_action = menu.addAction(strings.close_tabs_to_left)
         close_left_action.setEnabled(has_tabs_before if left_to_right else has_tabs_after)
 
@@ -415,18 +410,10 @@ class TabManager(QWidget):
         if action is None:
             return
 
-        new_before_action = new_left_action if left_to_right else new_right_action
-        new_after_action = new_right_action if left_to_right else new_left_action
         close_before_action = close_left_action if left_to_right else close_right_action
         close_after_action = close_right_action if left_to_right else close_left_action
 
-        if action == new_before_action:
-            self.new_tab_requested.emit(column_index, tab_index)
-
-        elif action == new_after_action:
-            self.new_tab_requested.emit(column_index, tab_index + 1)
-
-        elif action == close_before_action:
+        if action == close_before_action:
             self._close_tabs_in_column(column, list(range(0, tab_index)))
 
         elif action == close_after_action:

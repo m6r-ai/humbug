@@ -6,15 +6,25 @@ differences and are noted in their rows.
 
 ---
 
-## File
+## Mindspace
 
 | Action | macOS | Windows/Linux |
 |:---|:---|:---|
 | New Mindspace | Cmd+Alt+N | Ctrl+Alt+N |
+| Open Mindspace | Cmd+Alt+O | Ctrl+Alt+O |
+| Close Mindspace | Cmd+Alt+W | Ctrl+Alt+W |
+| Mindspace Search | Cmd+Shift+F | Ctrl+Shift+F |
+| Mindspace Settings | Cmd+Alt+, | Ctrl+Alt+, |
+| Open Mindspace Log | Cmd+Shift+L | Ctrl+Shift+L |
+| Open Humbug Shell | Cmd+Shift+Y | Ctrl+Shift+Y |
+
+## File
+
+| Action | macOS | Windows/Linux |
+|:---|:---|:---|
 | New Conversation | Cmd+Shift+N | Ctrl+Shift+N |
 | New File | Cmd+N | Ctrl+N |
 | New Terminal | Cmd+Alt+T | Ctrl+Alt+T |
-| Open Mindspace | Cmd+Alt+O | Ctrl+Alt+O |
 | Open File | Cmd+O | Ctrl+O |
 | Open Conversation | Cmd+Shift+O | Ctrl+Shift+O |
 | Open Preview | Cmd+Shift+W | Ctrl+Shift+W |
@@ -22,7 +32,6 @@ differences and are noted in their rows.
 | Save | Cmd+S | Ctrl+S |
 | Save As | Cmd+Shift+S | Ctrl+Shift+S |
 | Close Tab | Cmd+W | Ctrl+W |
-| Close Mindspace | Cmd+Alt+W | Ctrl+Alt+W |
 
 ## Edit
 
@@ -37,7 +46,6 @@ differences and are noted in their rows.
 | Find | Cmd+F | Ctrl+F |
 | Find and Replace | Ctrl+Alt+F | Ctrl+H |
 | Go to Line | Ctrl+G | Ctrl+G |
-| Global Search | Cmd+Shift+F | Ctrl+Shift+F |
 | Conversation Settings | Cmd+Shift+, | Ctrl+Shift+, |
 
 ## View
@@ -47,8 +55,6 @@ differences and are noted in their rows.
 | Zoom In | Cmd+= | Ctrl+= |
 | Zoom Out | Cmd+- | Ctrl+- |
 | Reset Zoom | Cmd+0 | Ctrl+0 |
-| Show System Log | Cmd+Shift+L | Ctrl+Shift+L |
-| Show Humbug Shell | Cmd+Shift+Y | Ctrl+Shift+Y |
 | Show Tab Overview | Cmd+Shift+E | Ctrl+Shift+E |
 | Show Tab Carousel | Cmd+Shift+T | Ctrl+Shift+T |
 | Show All Columns | Cmd+\ | Ctrl+\ |
@@ -66,7 +72,6 @@ differences and are noted in their rows.
 | Action | macOS | Windows/Linux |
 |:---|:---|:---|
 | User Settings | Cmd+, | Ctrl+, |
-| Mindspace Settings | Cmd+Alt+, | Ctrl+Alt+, |
 | Conversation Settings | Cmd+Shift+, | Ctrl+Shift+, |
 
 ## Find bar (all tab types)

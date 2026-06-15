@@ -37,6 +37,7 @@ across your entire mindspace simultaneously.
 ### Opening global search
 
 - Press **Ctrl+Shift+F**, or
+- Open **Mindspace → Mindspace Search**, or
 - Click the **Search** icon in the mindspace panel's icon rail
 
 ### Search options

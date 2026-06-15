@@ -165,12 +165,14 @@ for at a glance. Humbug provides two full-screen overlay views — the **Tab Ove
 Both overlays show a live thumbnail of each tab's content, its icon, and its title. Pressing
 **Esc** or clicking outside any card dismisses the overlay and returns focus to wherever you were.
 
+Both overlays can also be triggered from the two buttons at the bottom of the left sidebar rail.
+
 ---
 
 ### Tab Overview
 
 **Shortcut:** `Cmd+Shift+E` (macOS) / `Ctrl+Shift+E` (Windows/Linux)  
-**Menu:** View → Show Tab Overview
+**Menu:** View → Show Open Tabs
 
 The Tab Overview presents all open tabs as a **scrollable grid of cards**. Every tab across every
 column is shown, making it easy to survey your entire workspace at once.

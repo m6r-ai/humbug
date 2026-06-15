@@ -25,6 +25,7 @@ def get_french_strings() -> LanguageStrings:
         # Menu names
         humbug_menu="Humbug",
         file_menu="Fichier",
+        mindspace_menu="Espace mental",
         edit_menu="Édition",
         view_menu="Affichage",
 
@@ -47,8 +48,6 @@ def get_french_strings() -> LanguageStrings:
         settings="Paramètres",
 
         # Tab bar context menu items
-        new_tab_to_left="Nouvel onglet à gauche",
-        new_tab_to_right="Nouvel onglet à droite",
         close_tabs_to_left="Fermer les onglets à gauche",
         close_tabs_to_right="Fermer les onglets à droite",
         close_other_tabs="Fermer les autres onglets",
@@ -73,8 +72,8 @@ def get_french_strings() -> LanguageStrings:
         zoom_in="Zoom avant",
         zoom_out="Zoom arrière",
         reset_zoom="Réinitialiser le zoom",
-        show_system_log="Afficher le journal de l'espace mental",
-        show_system_shell="Afficher le shell Humbug",
+        open_mindspace_log="Ouvrir le journal de l'espace mental",
+        open_humbug_shell="Ouvrir le shell Humbug",
         show_tab_overview="Afficher les onglets ouverts",
         show_tab_carousel="Afficher le carrousel d'onglets",
         show_all_columns="Afficher toutes les colonnes",
@@ -426,6 +425,8 @@ def get_french_strings() -> LanguageStrings:
         update_available_message="La version {0} est disponible — cliquez pour télécharger.",
         update_check_failed="Impossible de vérifier les mises à jour. Vérifiez votre connexion réseau.",
         update_tooltip="Humbug {0} disponible — cliquez pour la page de version",
+        tab_overview_tooltip="Afficher tous les onglets ouverts",
+        tab_carousel_tooltip="Afficher le carrousel d'onglets",
         check_for_updates_setting="Vérifier automatiquement les mises à jour",
 
         # Ollama pull

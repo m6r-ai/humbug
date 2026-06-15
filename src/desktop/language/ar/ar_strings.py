@@ -26,6 +26,7 @@ def get_arabic_strings() -> LanguageStrings:
         # Menu names
         humbug_menu="هامبج",
         file_menu="ملف",
+        mindspace_menu="المساحة الذهنية",
         edit_menu="تحرير",
         view_menu="عرض",
 
@@ -48,8 +49,6 @@ def get_arabic_strings() -> LanguageStrings:
         settings="الإعدادات",
 
         # Tab bar context menu items
-        new_tab_to_left="تبويب جديد إلى اليسار",
-        new_tab_to_right="تبويب جديد إلى اليمين",
         close_tabs_to_left="إغلاق التبويبات إلى اليسار",
         close_tabs_to_right="إغلاق التبويبات إلى اليمين",
         close_other_tabs="إغلاق التبويبات الأخرى",
@@ -74,8 +73,8 @@ def get_arabic_strings() -> LanguageStrings:
         zoom_in="تكبير",
         zoom_out="تصغير",
         reset_zoom="إعادة تعيين التكبير",
-        show_system_log="عرض سجل المساحة الذهنية",
-        show_system_shell="عرض صدفة هامبغ",
+        open_mindspace_log="فتح سجل المساحة الذهنية",
+        open_humbug_shell="فتح صدفة هامبغ",
         show_tab_overview="عرض التبويبات المفتوحة",
         show_tab_carousel="عرض دوّار التبويبات",
         show_all_columns="عرض كل الأعمدة",
@@ -425,6 +424,8 @@ def get_arabic_strings() -> LanguageStrings:
         update_available_message="الإصدار {0} متاح — انقر للتنزيل.",
         update_check_failed="تعذّر التحقق من التحديثات. يرجى التحقق من اتصالك بالشبكة.",
         update_tooltip="Humbug {0} متاح — انقر لصفحة الإصدار",
+        tab_overview_tooltip="عرض جميع علامات التبويب المفتوحة",
+        tab_carousel_tooltip="عرض دوّار علامات التبويب",
         check_for_updates_setting="التحقق التلقائي من التحديثات",
 
         # Ollama pull

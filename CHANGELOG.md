@@ -16,6 +16,7 @@ New features:
 - Added a `cat` shell command that emulates the functionality of the filesystem AI tool's file read operation.
 - Made VCS (git) polling an async task so it doesn't block the main thread.  Useful on Windows with anti-malware scanners.
 - Added a colour picker and high contrast colour scheme.
+- Split out mindspace operations into a new "Mindspace" menu.
 
 Bug fixes:
 
