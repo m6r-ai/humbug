@@ -120,7 +120,7 @@ class SettingsDialog(QDialog):
         self._font_size_spin: SettingsDoubleSpinBox
         self._font_ligatures_check: SettingsSwitch
         self._theme_combo: SettingsCombo
-        self._customize_colors_btn: QPushButton
+        self._customize_colors_row: SettingsActionRow
         self._file_sort_combo: SettingsCombo
         self._check_for_updates_check: SettingsSwitch
         self._display_container: SettingsContainer
@@ -319,12 +319,9 @@ class SettingsDialog(QDialog):
             (strings.theme_custom, ColorTheme.CUSTOM),
         ])
 
-        self._customize_colors_btn = QPushButton("Customize Colors...")
-        self._customize_colors_btn.setObjectName("CustomizeColorsBtn")
-        self._customize_colors_btn.clicked.connect(self._on_customize_colors)
-        zoom = self._style_manager.zoom_factor()
-        self._customize_colors_btn.setMinimumWidth(int(160 * zoom))
-        container.layout().addWidget(self._customize_colors_btn)  # type: ignore[union-attr]
+        self._customize_colors_row = SettingsActionRow(strings.customize_colors)
+        self._customize_colors_row.button().clicked.connect(self._on_customize_colors)
+        container.add_setting(self._customize_colors_row)
 
         self._file_sort_combo = SettingsFactory.create_combo(strings.file_sort_order)
         container.add_setting(self._file_sort_combo)
@@ -1236,6 +1233,7 @@ class SettingsDialog(QDialog):
             (strings.theme_custom, ColorTheme.CUSTOM),
         ])
         self._theme_combo.set_value(current_theme)
+        self._customize_colors_row.set_button_text(strings.customize_colors)
 
         current_sort = self._file_sort_combo.get_value()
         self._file_sort_combo.set_label(strings.file_sort_order)

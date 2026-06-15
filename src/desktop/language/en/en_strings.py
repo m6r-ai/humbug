@@ -161,6 +161,7 @@ def get_english_strings() -> LanguageStrings:
         theme_light="Light",
         theme_color_blind="Color Blind",
         theme_custom="Custom Theme",
+        customize_colors="Customize Colors…",
         file_sort_order="File Sort Order",
         sort_directories_first="Directories First",
         sort_alphabetical="Alphabetical",

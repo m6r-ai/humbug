@@ -161,6 +161,7 @@ def get_french_strings() -> LanguageStrings:
         theme_light="Clair",
         theme_color_blind="Daltonien",
         theme_custom="Thème personnalisé",
+        customize_colors="Personnaliser les couleurs…",
         file_sort_order="Ordre de tri des fichiers",
         sort_directories_first="Dossiers en premier",
         sort_alphabetical="Alphabétique",

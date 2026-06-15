@@ -152,6 +152,7 @@ class LanguageStrings:
     theme_light: str
     theme_color_blind: str
     theme_custom: str
+    customize_colors: str
     file_sort_order: str
     sort_directories_first: str
     sort_alphabetical: str
