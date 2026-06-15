@@ -233,8 +233,6 @@ Development and debugging utilities:
 - `dependency_checker/` - Module dependency validation
 - `pdf/` - PDF-related tooling
 - `pipeline-runner/` - Pipeline execution
-- `planner/` - Project planning
-- `reformat_c/` - C code reformatting
 
 ## Key Documentation Files
 
