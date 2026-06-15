@@ -84,7 +84,10 @@ class ConversationMessageSection(QFrame):
             # Create a markdown renderer for non-input sections.  Input sections are syntax highlighted only.
             if not is_input:
                 document = self._text_area.document()
-                self._renderer = MarkdownRenderer(document)
+                self._renderer = MarkdownRenderer(
+                    document,
+                    animated_gif_callback=self._text_area.register_animated_gif
+                )
 
         else:
             # Create a container for header (language label + buttons)
@@ -306,6 +309,7 @@ class ConversationMessageSection(QFrame):
             return
 
         if self._renderer is not None:
+            self._text_area.clear_animated_gifs()
             self._renderer.visit(content)
             return
 
@@ -491,6 +495,7 @@ class ConversationMessageSection(QFrame):
             self._save_as_button.setIconSize(style.icon_size)
 
         # Only apply renderer style for MarkdownTextEdit
-        if self._renderer is not None and self._content_node is not None:
+        if self._renderer is not None and self._content_node is not None and isinstance(self._text_area, MarkdownTextEdit):
             self._renderer.apply_style()
+            self._text_area.clear_animated_gifs()
             self._renderer.visit(self._content_node)

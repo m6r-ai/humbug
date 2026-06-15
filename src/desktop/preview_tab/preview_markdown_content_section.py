@@ -67,7 +67,10 @@ class PreviewMarkdownContentSection(QFrame):
             self._text_area = MarkdownTextEdit(False, self)
             self._text_area.link_clicked.connect(self.link_clicked)
             document = self._text_area.document()
-            self._renderer = MarkdownRenderer(document)
+            self._renderer = MarkdownRenderer(
+                document,
+                animated_gif_callback=self._text_area.register_animated_gif
+            )
 
         else:
             self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
@@ -226,6 +229,7 @@ class PreviewMarkdownContentSection(QFrame):
 
         # Render markdown content
         if self._renderer is not None:
+            self._text_area.clear_animated_gifs()
             self._renderer.visit(content)
 
     def has_selection(self) -> bool:
@@ -270,8 +274,9 @@ class PreviewMarkdownContentSection(QFrame):
         if self._syntax_header:
             self._syntax_header.setFont(font)
 
-        if self._renderer is not None and self._content_node is not None:
+        if self._renderer is not None and self._content_node is not None and isinstance(self._text_area, MarkdownTextEdit):
             self._renderer.apply_style()
+            self._text_area.clear_animated_gifs()
             self._renderer.visit(self._content_node)
 
     def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int]]:

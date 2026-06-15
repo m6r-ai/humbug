@@ -5,14 +5,14 @@ Markdown AST visitor to render the AST directly to a QTextDocument.
 import logging
 import os
 import re
-from typing import List, Tuple, cast
+from typing import Callable, List, Tuple, cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import (
     QTextCursor, QTextDocument, QTextCharFormat, QTextBlockFormat,
     QTextListFormat, QFont, QFontMetricsF, QTextList, QTextTable,
     QTextTableFormat, QTextFrameFormat, QTextLength, QImage, QTextImageFormat,
-    QTextDocumentFragment
+    QTextDocumentFragment, QImageReader
 )
 
 from syntax import TokenType
@@ -36,17 +36,24 @@ from desktop.markdown.markdown_block_data import HeadingBlockData, MarkdownBlock
 class MarkdownRenderer(MarkdownASTVisitor):
     """Visitor that renders the AST directly to a QTextDocument."""
 
-    def __init__(self, document: QTextDocument) -> None:
+    def __init__(
+        self,
+        document: QTextDocument,
+        animated_gif_callback: Callable[[str, str], None] | None = None
+    ) -> None:
         """
         Initialize the document renderer.
 
         Args:
             document: The QTextDocument to render into
+            animated_gif_callback: Optional callback invoked with (resource_name, path)
+                for each animated GIF image encountered during rendering
         """
         super().__init__()
         self._logger = logging.getLogger("MarkdownRenderer")
 
         self._document = document
+        self._animated_gif_callback = animated_gif_callback
         self._source_path: str | None = None
         self._cursor = QTextCursor(document)
         self._cursor.movePosition(QTextCursor.MoveOperation.Start)
@@ -611,7 +618,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         return False
 
-    def _load_local_image(self, path: str) -> Tuple[QImage, bool]:
+    def _load_local_image(self, path: str) -> Tuple[QImage, bool, bool]:
         """
         Load an image from a local file path.
 
@@ -619,7 +626,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
             path: The path to the image file
 
         Returns:
-            A tuple of (QImage, success_flag)
+            A tuple of (QImage, success_flag, is_animated)
         """
         logger = logging.getLogger("MarkdownRenderer")
 
@@ -646,24 +653,27 @@ class MarkdownRenderer(MarkdownASTVisitor):
             # Check if file exists
             if not os.path.isfile(path):
                 logger.warning("Local image not found: %s", path)
-                return self._create_placeholder_image(), False
+                return self._create_placeholder_image(), False, False
 
             # Load the image
             image = QImage(path)
             if image.isNull():
                 logger.warning("Failed to load image: %s", path)
-                return self._create_placeholder_image(), False
+                return self._create_placeholder_image(), False, False
 
             # Verify the image is valid
             if image.width() <= 0 or image.height() <= 0:
                 logger.warning("Invalid image dimensions: %s", path)
-                return self._create_placeholder_image(), False
+                return self._create_placeholder_image(), False, False
 
-            return image, True
+            reader = QImageReader(path)
+            is_animated = reader.supportsAnimation() and reader.imageCount() > 1
+
+            return image, True, is_animated
 
         except Exception:
             logger.exception("Error loading local image: %s", path)
-            return self._create_placeholder_image(), False
+            return self._create_placeholder_image(), False, False
 
     def _create_placeholder_image(self) -> QImage:
         """
@@ -695,13 +705,17 @@ class MarkdownRenderer(MarkdownASTVisitor):
         loaded_successfully = False
 
         # Attempt to load local images
+        is_animated = False
         if self._is_local_file(node.url):
-            image, loaded_successfully = self._load_local_image(node.url)
+            image, loaded_successfully, is_animated = self._load_local_image(node.url)
 
         # Create a resource for this image if it doesn't already exist
         resource_name = f"image_{hash(node.url)}"
         if not self._document.resource(QTextDocument.ResourceType.ImageResource, resource_name):
             self._document.addResource(QTextDocument.ResourceType.ImageResource, resource_name, image)
+
+        if is_animated and self._animated_gif_callback is not None:
+            self._animated_gif_callback(resource_name, node.url)
 
         # Create an image format
         img_format = QTextImageFormat()

@@ -21,6 +21,7 @@ New features:
 - Replaced MiniMax M2.5 with MiniMax M3 on Ollama.com.
 - Added Kimi K2.7 Code on Ollama.com.
 - Added GLM 5.2 on Z.ai.
+- Added support for animated GIF files in markdown.
 
 Bug fixes:
 

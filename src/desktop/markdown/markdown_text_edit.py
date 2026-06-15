@@ -4,11 +4,12 @@ import logging
 from typing import cast
 
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import Qt, Signal, QMimeData
+from PySide6.QtCore import Qt, Signal, QMimeData, QUrl
 from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
 )
-from PySide6.QtGui import QPainter, QPaintEvent, QColor
+from PySide6.QtGui import QPainter, QPaintEvent, QColor, QTextDocument
+from PySide6.QtGui import QMovie
 
 from mindspace.mindspace_settings import MindspaceSettings
 
@@ -55,6 +56,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         # Calculate tab stops
         self._style_manager = StyleManager()
         self._last_highlights_version = self._style_manager.highlights_version()
+        self._animated_gifs: dict[str, QMovie] = {}
+        self.destroyed.connect(self.clear_animated_gifs)
         self.apply_style()
 
     def _on_code_block_state_changed(self, has_code_block: bool) -> None:
@@ -89,6 +92,47 @@ class MarkdownTextEdit(MinHeightTextEdit):
         if self._highlighter and self._style_manager.highlights_version() != self._last_highlights_version:
             self._last_highlights_version = self._style_manager.highlights_version()
             self._highlighter.rehighlight()
+
+    def clear_animated_gifs(self) -> None:
+        """Stop and discard all active animated GIF movies."""
+        for movie in self._animated_gifs.values():
+            movie.stop()
+
+        self._animated_gifs.clear()
+
+    def register_animated_gif(self, resource_name: str, path: str) -> None:
+        """
+        Register an animated GIF to be played inside the document.
+
+        Creates a QMovie for the given file and connects its frameChanged signal
+        so that each new frame is written back into the document resource and the
+        viewport is repainted.  Any previously registered movie for the same
+        resource name is stopped and replaced.
+
+        Args:
+            resource_name: The document resource name used for this image
+            path: Absolute local file path to the GIF
+        """
+        existing = self._animated_gifs.get(resource_name)
+        if existing is not None:
+            existing.stop()
+
+        movie = QMovie(path)
+        self._animated_gifs[resource_name] = movie
+
+        def _on_frame_changed(_frame: int) -> None:
+            try:
+                self.document().addResource(
+                    QTextDocument.ResourceType.ImageResource,
+                    QUrl(resource_name),
+                    movie.currentImage()
+                )
+                self.viewport().update()
+            except RuntimeError:
+                movie.stop()
+
+        movie.frameChanged.connect(_on_frame_changed)
+        movie.start()
 
     def insertFromMimeData(self, source: QMimeData) -> None:
         """
