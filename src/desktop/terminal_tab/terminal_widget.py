@@ -822,7 +822,7 @@ class TerminalWidget(QAbstractScrollArea):
             return
 
         # Handle regular text input
-        if text and not (modifiers & Qt.KeyboardModifier.ControlModifier):
+        if text and not modifiers & Qt.KeyboardModifier.ControlModifier:
             self.data_ready.emit(text.encode())
             event.accept()
             return
