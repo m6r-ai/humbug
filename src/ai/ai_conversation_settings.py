@@ -265,6 +265,17 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
+        ("kimi-k2.7-code:cloud", "ollama-cloud"): AIModel(
+            name="kimi-k2.7-code:cloud",
+            provider="ollama-cloud",
+            display_name="Kimi K2.7 Code",
+            context_window=262144,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.HIGH],
+        ),
         ("kimi-k2.6:cloud", "ollama-cloud"): AIModel(
             name="kimi-k2.6:cloud",
             provider="ollama-cloud",
@@ -276,21 +287,21 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        ("minimax-m2.7:cloud", "ollama-cloud"): AIModel(
-            name="minimax-m2.7:cloud",
+        ("minimax-m3:cloud", "ollama-cloud"): AIModel(
+            name="minimax-m3:cloud",
             provider="ollama-cloud",
-            display_name="MiniMax M2.7",
-            context_window=200000,
+            display_name="MiniMax M3",
+            context_window=512000,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.HIGH],
         ),
-        ("minimax-m2.5:cloud", "ollama-cloud"): AIModel(
-            name="minimax-m2.5:cloud",
+        ("minimax-m2.7:cloud", "ollama-cloud"): AIModel(
+            name="minimax-m2.7:cloud",
             provider="ollama-cloud",
-            display_name="MiniMax M2.5",
+            display_name="MiniMax M2.7",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
@@ -406,6 +417,17 @@ class AIConversationSettings:
         ),
 
         # Z.ai models
+        ("glm-5.2", "zai"): AIModel(
+            name="glm-5.2",
+            provider="zai",
+            display_name="GLM 5.2",
+            context_window=1000000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+        ),
         ("glm-5.1", "zai"): AIModel(
             name="glm-5.1",
             provider="zai",

@@ -18,6 +18,9 @@ New features:
 - Added a colour picker and high contrast colour scheme.
 - Split out mindspace operations into a new "Mindspace" menu.
 - Improved the Menai tool description to encourage AIs to read the help if they haven't already done so.
+- Replaced MiniMax M2.5 with MiniMax M3 on Ollama.com.
+- Added Kimi K2.7 Code on Ollama.com.
+- Added GLM 5.2 on Z.ai.
 
 Bug fixes:
 
