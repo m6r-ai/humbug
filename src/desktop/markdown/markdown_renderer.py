@@ -268,7 +268,9 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # If there is no previous sibling, check if our parent is a list item.  If it is, we also need to add a top margin.
         elif not previous_sibling and node.parent and isinstance(node.parent, MarkdownASTListItemNode):
             if not tight:
-                block_format.setTopMargin(self._default_font_height)
+                if node.parent.previous_sibling() is not None:
+                    block_format.setTopMargin(self._default_font_height)
+
             elif node.parent.previous_sibling() is not None:
                 # This is a tight list item that is not the first in its list.  The topMargin
                 # on orig_block_format was inherited from the first block of the list (where it
