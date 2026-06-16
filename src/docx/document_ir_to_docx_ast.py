@@ -444,6 +444,7 @@ class _DocumentIRToDocxASTMapper:
         indent_base: int = 0,
         shading: str | None = None,
         tight: bool = True,
+        suppress_trailing_spacing: bool = False,
     ) -> None:
         """Recursively map a list node, emitting paragraphs with numPr.
 
@@ -456,15 +457,20 @@ class _DocumentIRToDocxASTMapper:
                 when the list is nested inside a blockquote).
             shading: Background shading hex colour, or None.
             tight: Whether to suppress inter-item spacing.
+            suppress_trailing_spacing: When True, skip the trailing spacing
+                patch.  Used when this list is a non-final child inside a tight
+                outer item, where the outer tight context owns the spacing.
         """
         for child in node.children:
             if isinstance(child, DocumentIRListItemNode):
                 self._map_list_item(child, parent, num_id=num_id, depth=depth,
                                     indent_base=indent_base, shading=shading, tight=tight)
 
-        # Apply trailing spacing after the whole list.  For a nested sub-list
-        # this is a no-op when the caller (_map_list_item) will handle it.
-        self._apply_list_trailing_spacing(parent)
+        if not suppress_trailing_spacing:
+            self._apply_list_trailing_spacing(parent)
+
+        else:
+            self._suppress_list_trailing_spacing(parent)
 
     def _map_list_item(
         self,
@@ -521,14 +527,16 @@ class _DocumentIRToDocxASTMapper:
                 is_first_para = False
                 self._map_list(child, parent, num_id=_NUM_ID_BULLET, depth=depth + 1,
                                indent_base=indent_base, shading=shading,
-                               tight=child.tight)
+                               tight=child.tight,
+                               suppress_trailing_spacing=tight)
 
             elif isinstance(child, DocumentIROrderedListNode):
                 is_first_para = False
                 num_id = self._allocate_ordered_num_id(child.start)
                 self._map_list(child, parent, num_id=num_id, depth=depth + 1,
                                indent_base=indent_base, shading=shading,
-                               tight=child.tight)
+                               tight=child.tight,
+                               suppress_trailing_spacing=tight)
 
             else:
                 # Other block children (code blocks, blockquotes, tables) inside
@@ -724,6 +732,28 @@ class _DocumentIRToDocxASTMapper:
             # Last child is already a spacer (from a trailing blockquote/table
             # inside the last item) — it provides the gap, nothing to do.
             pass
+
+    def _suppress_list_trailing_spacing(self, parent: DocxASTBodyNode) -> None:
+        """Suppress the trailing gap on the last paragraph emitted by a list.
+
+        Called when a nested list is inside a tight outer item.  The outer
+        tight context owns all spacing decisions, so the last paragraph of
+        the inner list must have spacing_after=0 regardless of what the inner
+        list's own items set (e.g. a loose inner list sets spacing_after=None
+        which inherits 200 from Normal — that must be overridden to 0 here).
+        """
+        if not parent.children:
+            return
+
+        last = parent.children[-1]
+
+        if isinstance(last, DocxASTParagraphNode) and not self._is_spacer_para(last):
+            ppr = next(
+                (c for c in last.children if isinstance(c, DocxASTParagraphPropertiesNode)),
+                None,
+            )
+            if ppr is not None:
+                ppr.spacing_after = 0
 
     def _is_spacer_para(self, node: DocxASTNode) -> bool:
         """Return True if node is a zero-height spacer paragraph."""

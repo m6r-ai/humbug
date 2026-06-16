@@ -108,7 +108,6 @@ A nested unordered list (loose inside tight):
   - Nested item one
 
   - Nested item two (loose — has blank line above)
-
 - Top level item two
 
 A nested unordered list (tight inside loose):
@@ -152,7 +151,6 @@ A nested ordered list (loose inside tight):
    1. Nested item one
 
    2. Nested item two (loose — has blank line above)
-
 2. Top level item two
 
 An ordered list starting from a number other than 1:

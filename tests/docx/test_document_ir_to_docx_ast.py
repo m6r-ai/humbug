@@ -672,6 +672,88 @@ class TestUnorderedListMapping:
         np1 = next(c for c in ppr1.children if isinstance(c, DocxASTNumberingPropertiesNode))
         assert np1.ilvl == 1
 
+    def test_tight_nested_list_not_last_child_has_no_trailing_spacing(self):
+        """A tight nested list that is not the last child of its tight outer
+        item must have spacing_after=0 on its last paragraph — the outer tight
+        context suppresses the trailing gap so no space appears before the
+        next sibling content."""
+        inner_item = DocumentIRListItemNode()
+        inner_item.add_child(_para(_span("Inner")))
+        inner_ul = DocumentIRUnorderedListNode(tight=True)
+        inner_ul.add_child(inner_item)
+
+        outer_item = DocumentIRListItemNode()
+        outer_item.add_child(_para(_span("Before")))
+        outer_item.add_child(inner_ul)
+        outer_item.add_child(_para(_span("After")))  # inner_ul is not the last child
+
+        outer_ul = DocumentIRUnorderedListNode(tight=True)
+        outer_ul.add_child(outer_item)
+
+        result = _map(_doc(outer_ul))
+        paras = _content_paras(result)
+        # paras: Before, Inner, After
+        # Inner is the last para of the nested list and must have spacing_after=0
+        inner_para = paras[1]
+        assert _ppr(inner_para).spacing_after == 0
+
+    def test_tight_nested_list_last_child_has_standard_trailing_spacing(self):
+        """A tight nested list that is the last child of its tight outer item
+        must have spacing_after=200 on its last paragraph — the outer list's
+        _apply_list_trailing_spacing patches it to provide the gap after the
+        whole outer list."""
+        inner_item = DocumentIRListItemNode()
+        inner_item.add_child(_para(_span("Inner")))
+        inner_ul = DocumentIRUnorderedListNode(tight=True)
+        inner_ul.add_child(inner_item)
+
+        outer_item = DocumentIRListItemNode()
+        outer_item.add_child(_para(_span("Outer")))
+        outer_item.add_child(inner_ul)  # inner_ul is the last child
+
+        outer_ul = DocumentIRUnorderedListNode(tight=True)
+        outer_ul.add_child(outer_item)
+
+        result = _map(_doc(outer_ul))
+        paras = _content_paras(result)
+        # paras: Outer, Inner
+        # Inner is the last para of the nested list and the whole outer list,
+        # so it must have spacing_after=200
+        inner_para = paras[-1]
+        assert _ppr(inner_para).spacing_after == 200
+
+    def test_loose_nested_list_inside_tight_outer_item_has_no_trailing_spacing(self):
+        """A loose nested list inside a tight outer item must have spacing_after=0
+        on its last paragraph.  The loose inner items use spacing_after=None
+        (inheriting 200 from Normal), but the tight outer context must override
+        that to 0 so no gap appears between outer items."""
+        inner_item_a = DocumentIRListItemNode()
+        inner_item_a.add_child(_para(_span("Inner A")))
+        inner_item_b = DocumentIRListItemNode()
+        inner_item_b.add_child(_para(_span("Inner B")))
+        inner_ul = DocumentIRUnorderedListNode(tight=False)
+        inner_ul.add_child(inner_item_a)
+        inner_ul.add_child(inner_item_b)
+
+        outer_item_a = DocumentIRListItemNode()
+        outer_item_a.add_child(_para(_span("Outer A")))
+        outer_item_a.add_child(inner_ul)
+
+        outer_item_b = DocumentIRListItemNode()
+        outer_item_b.add_child(_para(_span("Outer B")))
+
+        outer_ul = DocumentIRUnorderedListNode(tight=True)
+        outer_ul.add_child(outer_item_a)
+        outer_ul.add_child(outer_item_b)
+
+        result = _map(_doc(outer_ul))
+        paras = _content_paras(result)
+        # paras: Outer A, Inner A, Inner B, Outer B
+        # Inner B is the last para of the loose inner list inside a tight outer
+        # item — it must be suppressed to 0, not inherit 200 from Normal.
+        inner_b_para = paras[2]
+        assert _ppr(inner_b_para).spacing_after == 0
+
 
 # ---------------------------------------------------------------------------
 # Ordered list mapping
