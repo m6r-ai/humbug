@@ -243,9 +243,12 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Work out if we are in a tight list or not.  If we are, we're going to adjust margins accordingly.
         tight = False
         if node.parent:
-            parent_list_node = node.parent.parent
-            if isinstance(parent_list_node, (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode)):
-                if parent_list_node.tight:
+            ancestor = node.parent.parent
+            while isinstance(ancestor, (MarkdownASTBlockquoteNode, MarkdownASTListItemNode)):
+                ancestor = ancestor.parent
+
+            if isinstance(ancestor, (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode)):
+                if ancestor.tight:
                     tight = True
 
         # If the previous sibling is a list or code block, we need to add a top margin
