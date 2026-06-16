@@ -1998,9 +1998,9 @@ class MainWindow(QMainWindow):
                 new_theme = new_settings.theme
                 if new_theme != self._style_manager.user_color_theme():
                     self._style_manager.set_color_theme(new_theme)
-                    self._update_theme_menu()
 
                 self._style_manager.apply_custom_colors(new_settings.custom_colors)
+                self._update_theme_menu()
 
                 self._tab_manager.update_welcome_widget(new_settings)
                 self._logger.info("User settings saved successfully")
