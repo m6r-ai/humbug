@@ -184,7 +184,7 @@ class _DocumentIRToDocxASTMapper:
             name="Blockquote",
             based_on=_STYLE_NORMAL,
         )
-        bq_ppr = DocxASTParagraphPropertiesNode(indent_left=720)
+        bq_ppr = DocxASTParagraphPropertiesNode()
         bq.add_child(bq_ppr)
         bq_rpr = DocxASTRunPropertiesNode(italic=True)
         bq.add_child(bq_rpr)
@@ -302,11 +302,13 @@ class _DocumentIRToDocxASTMapper:
 
         # Unknown block types are silently skipped
 
-    def _map_heading(self, node: DocumentIRHeadingNode) -> DocxASTParagraphNode:
+    def _map_heading(
+        self, node: DocumentIRHeadingNode, indent_left: int | None = None
+    ) -> DocxASTParagraphNode:
         """Map a heading to a styled paragraph."""
         style_id = _STYLE_HEADINGS.get(node.level, _STYLE_HEADINGS[6])
         para = DocxASTParagraphNode()
-        ppr = DocxASTParagraphPropertiesNode(style_id=style_id)
+        ppr = DocxASTParagraphPropertiesNode(style_id=style_id, indent_left=indent_left)
         para.add_child(ppr)
         self._append_inline_children(node.children, para)
         return para
@@ -316,6 +318,7 @@ class _DocumentIRToDocxASTMapper:
         node: DocumentIRParagraphNode,
         style_id: str = _STYLE_NORMAL,
         shading: str | None = None,
+        indent_left: int | None = None,
     ) -> DocxASTParagraphNode | None:
         """Map a paragraph to a styled paragraph.
 
@@ -326,7 +329,8 @@ class _DocumentIRToDocxASTMapper:
             return None
 
         para = DocxASTParagraphNode()
-        ppr = DocxASTParagraphPropertiesNode(style_id=style_id, shading=shading)
+        ppr = DocxASTParagraphPropertiesNode(style_id=style_id, shading=shading,
+                                             indent_left=indent_left)
         para.add_child(ppr)
         for run in runs:
             para.add_child(run)
@@ -336,6 +340,7 @@ class _DocumentIRToDocxASTMapper:
     def _map_blockquote(
         self, node: DocumentIRBlockquoteNode, parent: DocxASTBodyNode,
         suppress_trailing_spacing: bool = True,
+        indent_base: int = 0,
     ) -> None:
         """Map a blockquote as a borderless table with a shaded cell.
 
@@ -343,16 +348,20 @@ class _DocumentIRToDocxASTMapper:
         blockquote region regardless of content indentation, which paragraph-level
         shading cannot achieve.
         """
-        blockquote_indent = 720
+        blockquote_indent = indent_base
 
         # Map content into a temporary body so we can transfer children to the cell
         cell_body = DocxASTBodyNode()
 
         for child in node.children:
             if isinstance(child, DocumentIRParagraphNode):
-                para = self._map_paragraph_node(child, style_id=_STYLE_BLOCKQUOTE)
+                para = self._map_paragraph_node(child, style_id=_STYLE_BLOCKQUOTE,
+                                                indent_left=blockquote_indent)
                 if para is not None:
                     cell_body.add_child(para)
+
+            elif isinstance(child, DocumentIRHeadingNode):
+                cell_body.add_child(self._map_heading(child, indent_left=blockquote_indent))
 
             elif isinstance(child, DocumentIRUnorderedListNode):
                 self._map_list(child, cell_body, num_id=_NUM_ID_BULLET, depth=0,
@@ -367,7 +376,11 @@ class _DocumentIRToDocxASTMapper:
                 self._map_code_block(child, cell_body, indent_left=blockquote_indent)
 
             else:
-                self._map_block(child, cell_body)
+                if isinstance(child, DocumentIRBlockquoteNode):
+                    self._map_blockquote(child, cell_body, indent_base=blockquote_indent)
+
+                else:
+                    self._map_block(child, cell_body)
 
         # The mandatory trailing paragraph in every Word table cell must not add
         # visible height.  Suppress spacing_after on the last content paragraph
@@ -565,7 +578,7 @@ class _DocumentIRToDocxASTMapper:
 
                 else:
                     if isinstance(child, DocumentIRBlockquoteNode):
-                        self._map_blockquote(child, parent, suppress_trailing_spacing=True)
+                        self._map_blockquote(child, parent, suppress_trailing_spacing=True, indent_base=indent_left)
 
                     else:
 
