@@ -334,7 +334,8 @@ class _DocumentIRToDocxASTMapper:
         return para
 
     def _map_blockquote(
-        self, node: DocumentIRBlockquoteNode, parent: DocxASTBodyNode
+        self, node: DocumentIRBlockquoteNode, parent: DocxASTBodyNode,
+        suppress_trailing_spacing: bool = True,
     ) -> None:
         """Map a blockquote as a borderless table with a shaded cell.
 
@@ -368,11 +369,12 @@ class _DocumentIRToDocxASTMapper:
             else:
                 self._map_block(child, cell_body)
 
-        # Word requires every table cell to end with a paragraph, so there will
-        # always be a mandatory trailing empty paragraph after the content.
-        # Zero out spacing_after on the last content paragraph so it does not
-        # contribute visible height before that trailing paragraph.
-        self._suppress_list_trailing_spacing(cell_body)
+        # The mandatory trailing paragraph in every Word table cell must not add
+        # visible height.  Suppress spacing_after on the last content paragraph
+        # when in a tight context (or at top level).  In a loose context, leave
+        # it so the cell's spacing bleeds out and separates it from the next item.
+        if suppress_trailing_spacing:
+            self._suppress_list_trailing_spacing(cell_body)
 
         # Build the table wrapper
         table = DocxASTTableNode()
@@ -500,12 +502,17 @@ class _DocumentIRToDocxASTMapper:
                     # First paragraph: carries the bullet/number marker.
                     # The numbering definition carries no indent; paragraph-level
                     # indent is the sole source of positioning.
+                    # In a loose list, non-first items need spacing_before so
+                    # that a gap appears even when the previous item ended with
+                    # a blockquote table (which has no trailing paragraph to
+                    # carry spacing_after).
                     ppr = DocxASTParagraphPropertiesNode(
                         style_id=_STYLE_NORMAL,
                         indent_left=indent_left,
                         indent_hanging=360,
                         shading=shading,
                         spacing_after=0 if tight else None,
+                        spacing_before=_STANDARD_SPACING if (not tight and item.parent is not None and item.parent.children[0] is not item) else None,
                     )
                     num_pr = DocxASTNumberingPropertiesNode(
                         num_id=num_id,
@@ -557,8 +564,13 @@ class _DocumentIRToDocxASTMapper:
                                          trailing_spacing=not (tight and is_last))
 
                 else:
-                    self._map_block(child, parent)
-                    # _map_block adds a trailing spacer for blockquotes/tables.
+                    if isinstance(child, DocumentIRBlockquoteNode):
+                        self._map_blockquote(child, parent, suppress_trailing_spacing=True)
+
+                    else:
+
+                        self._map_block(child, parent)
+                    # _map_block (non-blockquote path) adds a trailing spacer.
                     # In a tight list, always remove the spacer — inter-item spacing
                     # is suppressed throughout.  In a loose list, remove it only when
                     # this is the last child; _apply_list_trailing_spacing will add
@@ -731,6 +743,7 @@ class _DocumentIRToDocxASTMapper:
             )
             if ppr is not None:
                 ppr.spacing_after = _STANDARD_SPACING
+
         elif isinstance(last, DocxASTTableNode):
             # Last child is a table (blockquote/table) — no paragraph to patch.
             parent.add_child(self._make_spacer_para())
