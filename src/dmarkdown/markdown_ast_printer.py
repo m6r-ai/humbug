@@ -7,7 +7,8 @@ from dmarkdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownASTTextNode, MarkdownASTHeadingNode, MarkdownASTInlineCodeNode,
     MarkdownASTCodeBlockNode, MarkdownASTNode, MarkdownASTTableNode, MarkdownASTTableHeaderNode,
     MarkdownASTTableBodyNode, MarkdownASTTableRowNode, MarkdownASTTableCellNode, MarkdownASTHorizontalRuleNode,
-    MarkdownASTLinkNode, MarkdownASTImageNode, MarkdownASTBlockquoteNode
+    MarkdownASTLinkNode, MarkdownASTImageNode, MarkdownASTBlockquoteNode,
+    MarkdownASTUnorderedListNode, MarkdownASTOrderedListNode, MarkdownASTListItemNode
 )
 
 
@@ -102,6 +103,68 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
 
         print(f"{self._indent()}InlineCode{line_range}: '{node.content}'")
         return node.content
+
+    def visit_MarkdownASTUnorderedListNode(self, node: MarkdownASTUnorderedListNode) -> List[Any]:  # pylint: disable=invalid-name
+        """
+        Visit an unordered list node and print its attributes.
+
+        Args:
+            node: The unordered list node to visit
+
+        Returns:
+            The results of visiting the children
+        """
+        line_range = ""
+        if node.line_start is not None and node.line_end is not None:
+            line_range = f" (lines {node.line_start}-{node.line_end})"
+
+        tight = "tight" if node.tight else "loose"
+        print(f"{self._indent()}UnorderedList{line_range}: {tight}, indent={node.indent}")
+        self.indent_level += 1
+        results = super().generic_visit(node)
+        self.indent_level -= 1
+        return results
+
+    def visit_MarkdownASTOrderedListNode(self, node: MarkdownASTOrderedListNode) -> List[Any]:  # pylint: disable=invalid-name
+        """
+        Visit an ordered list node and print its attributes.
+
+        Args:
+            node: The ordered list node to visit
+
+        Returns:
+            The results of visiting the children
+        """
+        line_range = ""
+        if node.line_start is not None and node.line_end is not None:
+            line_range = f" (lines {node.line_start}-{node.line_end})"
+
+        tight = "tight" if node.tight else "loose"
+        print(f"{self._indent()}OrderedList{line_range}: {tight}, indent={node.indent}, start={node.start}")
+        self.indent_level += 1
+        results = super().generic_visit(node)
+        self.indent_level -= 1
+        return results
+
+    def visit_MarkdownASTListItemNode(self, node: MarkdownASTListItemNode) -> List[Any]:  # pylint: disable=invalid-name
+        """
+        Visit a list item node and print its attributes.
+
+        Args:
+            node: The list item node to visit
+
+        Returns:
+            The results of visiting the children
+        """
+        line_range = ""
+        if node.line_start is not None and node.line_end is not None:
+            line_range = f" (lines {node.line_start}-{node.line_end})"
+
+        print(f"{self._indent()}ListItem{line_range}")
+        self.indent_level += 1
+        results = super().generic_visit(node)
+        self.indent_level -= 1
+        return results
 
     def visit_MarkdownASTLinkNode(self, node: MarkdownASTLinkNode) -> List[Any]:  # pylint: disable=invalid-name
         """
