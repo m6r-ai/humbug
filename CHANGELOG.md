@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v50 (2026-06-15)
+## v50 (2026-06-16)
 
 New features:
 
@@ -31,6 +31,7 @@ Bug fixes:
 - Dramatically sped up zoom operations.
 - The correct icon is now set on the Windows taskbar.
 - Resolved problem with application zoom shortcuts interacting with terminal tabs.
+- Resolved `.docx` document rendering problems with spacing and list numbering.
 
 ## v49 (2026-06-07)
 

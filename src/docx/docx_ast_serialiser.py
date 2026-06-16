@@ -72,28 +72,31 @@ _COMPAT_MODE_VAL = "15"
 # that isn't modelled in the AST (fonts, spacing, shading).
 _STYLE_VISUALS = {
     "Normal": {
+        "ppr_extra": '<w:spacing w:after="200"/>',
         "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/>',
     },
     "Heading1": {
-        "ppr_extra": '<w:spacing w:before="240" w:after="120"/>',
+        "ppr_extra": '<w:spacing w:before="480"/>',
         "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="40"/>',
     },
     "Heading2": {
-        "ppr_extra": '<w:spacing w:before="200" w:after="100"/>',
+        "ppr_extra": '<w:spacing w:before="360"/>',
         "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="32"/>',
     },
     "Heading3": {
-        "ppr_extra": '<w:spacing w:before="160" w:after="80"/>',
+        "ppr_extra": '<w:spacing w:before="280"/>',
         "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="28"/>',
     },
     "Heading4": {
-        "ppr_extra": '<w:spacing w:before="120" w:after="60"/>',
+        "ppr_extra": '<w:spacing w:before="240"/>',
         "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/>',
     },
     "Heading5": {
+        "ppr_extra": '<w:spacing w:before="200"/>',
         "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/>',
     },
     "Heading6": {
+        "ppr_extra": '<w:spacing w:before="200"/>',
         "rpr_extra": '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/>',
     },
     "CodeBlock": {
@@ -110,7 +113,6 @@ _STYLE_VISUALS = {
         "ppr_extra": (
             '<w:shd w:val="clear" w:color="auto" w:fill="E8F0F8"/>'
             '<w:ind w:left="720"/>'
-            '<w:spacing w:before="80" w:after="80"/>'
         ),
         "rpr_extra": (
             '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'
@@ -601,6 +603,9 @@ class _DocxASTSerialiser:
         # OOXML requires at least one paragraph in every cell
         if not any("<w:p" in p for p in content_parts):
             content_parts.append("<w:p/>")
+        # OOXML also requires the last child of a cell to be a paragraph
+        elif not content_parts[-1].startswith("<w:p"):
+            content_parts.append("<w:p/>")
 
         # Default tcPr if none provided
         if not tcpr_xml:
@@ -757,9 +762,17 @@ class _DocxASTSerialiser:
                 parts.append(self._serialise_abstract_num(child))
 
             elif isinstance(child, DocxASTNumNode):
+                override_xml = ""
+                if child.start_override is not None:
+                    override_xml = (
+                        f'<w:lvlOverride w:ilvl="0">'
+                        f'<w:startOverride w:val="{child.start_override}"/>'
+                        f'</w:lvlOverride>'
+                    )
                 parts.append(
                     f'<w:num w:numId="{_esc(child.num_id)}">'
                     f'<w:abstractNumId w:val="{_esc(child.abstract_num_id)}"/>'
+                    f'{override_xml}'
                     f'</w:num>'
                 )
 

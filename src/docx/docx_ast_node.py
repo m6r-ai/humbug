@@ -690,17 +690,20 @@ class DocxASTNumNode(DocxASTNode):
     Links a concrete numId to an abstractNum definition.
     """
 
-    def __init__(self, num_id: str, abstract_num_id: str) -> None:
+    def __init__(self, num_id: str, abstract_num_id: str, start_override: int | None = None) -> None:
         """
         Initialise a numbering instance.
 
         Args:
             num_id: The w:numId attribute value referenced by paragraphs.
             abstract_num_id: The abstractNumId this instance references.
+            start_override: If set, overrides the starting number for level 0
+                via a <w:lvlOverride> element.
         """
         super().__init__()
         self.num_id = num_id
         self.abstract_num_id = abstract_num_id
+        self.start_override = start_override
 
 
 class DocxASTNumLevelNode(DocxASTNode):

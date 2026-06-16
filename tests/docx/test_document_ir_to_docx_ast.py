@@ -116,6 +116,22 @@ def _text_of(para: DocxASTParagraphNode) -> str:
     return "".join(parts)
 
 
+def _content_paras(doc: DocxASTDocumentNode) -> list:
+    """Return body paragraphs that are not zero-height spacers.
+
+    Spacer paragraphs have both spacing_before=0 and spacing_after=0 set
+    explicitly; content paragraphs either have no spacing override or only
+    one of the two set.
+    """
+    def _is_spacer(para: DocxASTParagraphNode) -> bool:
+        ppr_node = next((c for c in para.children if isinstance(c, DocxASTParagraphPropertiesNode)), None)
+        return (ppr_node is not None
+                and ppr_node.spacing_before == 0
+                and ppr_node.spacing_after == 0)
+    return [c for c in _body(doc).children
+            if isinstance(c, DocxASTParagraphNode) and not _is_spacer(c)]
+
+
 # ---------------------------------------------------------------------------
 # Document structure
 # ---------------------------------------------------------------------------
@@ -213,11 +229,30 @@ class TestBuiltInNumbering:
         abstract = [c for c in num.children if isinstance(c, DocxASTAbstractNumNode)]
         assert len(abstract) == 2
 
-    def test_two_num_instances(self):
+    def test_empty_doc_has_one_num_instance(self):
+        # Only the bullet instance is pre-created; ordered instances are
+        # allocated dynamically when ordered lists are encountered.
         result = _map(_doc())
         num = _numbering(result)
         instances = [c for c in num.children if isinstance(c, DocxASTNumNode)]
-        assert len(instances) == 2
+        assert len(instances) == 1
+        assert instances[0].num_id == "1"
+
+    def test_each_ordered_list_gets_own_num_instance(self):
+        # Two separate ordered lists must each get a distinct numId so Word
+        # resets the counter independently for each.
+        def _ol():
+            ol = DocumentIROrderedListNode(start=1)
+            item = DocumentIRListItemNode()
+            item.add_child(_para(_span("item")))
+            ol.add_child(item)
+            return ol
+        result = _map(_doc(_ol(), _ol()))
+        num = _numbering(result)
+        instances = [c for c in num.children if isinstance(c, DocxASTNumNode)]
+        ordered = [i for i in instances if i.abstract_num_id == "1"]
+        assert len(ordered) == 2
+        assert ordered[0].num_id != ordered[1].num_id
 
     def test_bullet_abstract_has_levels(self):
         result = _map(_doc())
@@ -367,14 +402,14 @@ class TestCodeBlockMapping:
     def test_single_line_code(self):
         result = _map(_doc(DocumentIRCodeBlockNode(language="python", content="x = 1")))
         body = _body(result)
-        paras = [c for c in body.children if isinstance(c, DocxASTParagraphNode)]
+        paras = _content_paras(result)
         assert len(paras) == 1
         assert _ppr(paras[0]).style_id == "CodeBlock"
 
     def test_multiline_code_one_para_per_line(self):
         result = _map(_doc(DocumentIRCodeBlockNode(language="", content="line1\nline2\nline3")))
         body = _body(result)
-        paras = [c for c in body.children if isinstance(c, DocxASTParagraphNode)]
+        paras = _content_paras(result)
         assert len(paras) == 3
 
     def test_code_content_preserved(self):
@@ -386,14 +421,68 @@ class TestCodeBlockMapping:
     def test_empty_code_block_emits_one_para(self):
         result = _map(_doc(DocumentIRCodeBlockNode(language="", content="")))
         body = _body(result)
-        paras = [c for c in body.children if isinstance(c, DocxASTParagraphNode)]
+        paras = _content_paras(result)
         assert len(paras) == 1
 
     def test_trailing_newline_not_extra_para(self):
         result = _map(_doc(DocumentIRCodeBlockNode(language="", content="code\n")))
         body = _body(result)
-        paras = [c for c in body.children if isinstance(c, DocxASTParagraphNode)]
+        paras = _content_paras(result)
         assert len(paras) == 1
+
+    def test_code_block_last_line_has_standard_spacing(self):
+        result = _map(_doc(DocumentIRCodeBlockNode(language="", content="x = 1")))
+        body_children = list(_body(result).children)
+        last_code = next(c for c in reversed(body_children)
+                         if isinstance(c, DocxASTParagraphNode)
+                         and _ppr(c).style_id == "CodeBlock")
+        assert _ppr(last_code).spacing_after == 200
+
+    def test_code_block_mid_list_item_has_standard_spacing(self):
+        # Code block followed by more content within the same item: last code
+        # line gets spacing_after=200 to separate it from the continuation.
+        item = DocumentIRListItemNode()
+        item.add_child(_para(_span("Intro")))
+        item.add_child(DocumentIRCodeBlockNode(language="", content="x = 1"))
+        item.add_child(_para(_span("Continuation")))
+        ul = DocumentIRUnorderedListNode()
+        ul.add_child(item)
+        result = _map(_doc(ul))
+        body_children = list(_body(result).children)
+        code_para = next(c for c in body_children
+                         if isinstance(c, DocxASTParagraphNode)
+                         and _ppr(c).style_id == "CodeBlock")
+        assert _ppr(code_para).spacing_after == 200
+
+    def test_code_block_at_end_of_tight_list_item_has_standard_spacing(self):
+        # Code block as the last child of a tight list item: last line gets
+        # spacing_after=200 via _apply_list_trailing_spacing.
+        item = DocumentIRListItemNode()
+        item.add_child(_para(_span("Intro")))
+        item.add_child(DocumentIRCodeBlockNode(language="", content="x = 1"))
+        ul = DocumentIRUnorderedListNode()
+        ul.add_child(item)
+        result = _map(_doc(ul))
+        body_children = list(_body(result).children)
+        last_code = next(c for c in reversed(body_children)
+                         if isinstance(c, DocxASTParagraphNode)
+                         and _ppr(c).style_id == "CodeBlock")
+        assert _ppr(last_code).spacing_after == 200
+
+    def test_code_block_at_end_of_loose_list_item_has_standard_spacing(self):
+        # Code block as the last child of a loose list item: last line gets
+        # spacing_after=200 via _apply_list_trailing_spacing.
+        item = DocumentIRListItemNode()
+        item.add_child(_para(_span("Intro")))
+        item.add_child(DocumentIRCodeBlockNode(language="", content="x = 1"))
+        ul = DocumentIRUnorderedListNode(tight=False)
+        ul.add_child(item)
+        result = _map(_doc(ul))
+        body_children = list(_body(result).children)
+        last_code = next(c for c in reversed(body_children)
+                         if isinstance(c, DocxASTParagraphNode)
+                         and _ppr(c).style_id == "CodeBlock")
+        assert _ppr(last_code).spacing_after == 200
 
 
 # ---------------------------------------------------------------------------
@@ -447,8 +536,9 @@ class TestBlockquoteMapping:
             assert _ppr(para).style_id == "Blockquote"
 
     def test_blockquote_followed_by_spacer(self):
-        # A spacer paragraph is emitted after the table so subsequent content
-        # has visible separation.
+        # Blockquotes are implemented as tables, so the general table-spacer
+        # rule applies: a zero-height Normal paragraph is emitted immediately
+        # after the table to provide visible separation from subsequent content.
         bq = DocumentIRBlockquoteNode()
         bq.add_child(_para(_span("Quoted")))
         result = _map(_doc(bq))
@@ -457,6 +547,50 @@ class TestBlockquoteMapping:
         spacer = body_children[table_idx + 1]
         assert isinstance(spacer, DocxASTParagraphNode)
         assert _ppr(spacer).style_id == "Normal"
+        assert _ppr(spacer).spacing_before == 0
+        assert _ppr(spacer).spacing_after == 0
+
+    def test_blockquote_at_end_of_tight_list_item_no_extra_spacer(self):
+        # Blockquote as the last child of a tight list item: _map_block adds a
+        # spacer after the table, but it must be removed so the list's own
+        # trailing spacer is the only one.
+        bq = DocumentIRBlockquoteNode()
+        bq.add_child(_para(_span("Quoted")))
+        item = DocumentIRListItemNode()
+        item.add_child(_para(_span("Intro")))
+        item.add_child(bq)
+        ul = DocumentIRUnorderedListNode(tight=True)
+        ul.add_child(item)
+        result = _map(_doc(ul))
+        body_children = list(_body(result).children)
+        table_idx = next(i for i, c in enumerate(body_children) if isinstance(c, DocxASTTableNode))
+        after_table = body_children[table_idx + 1]
+        assert isinstance(after_table, DocxASTParagraphNode)
+        assert _ppr(after_table).spacing_before == 0
+        assert _ppr(after_table).spacing_after == 0
+        # Must be exactly one spacer, not two.
+        assert not (table_idx + 2 < len(body_children)
+                    and isinstance(body_children[table_idx + 2], DocxASTParagraphNode)
+                    and _ppr(body_children[table_idx + 2]).spacing_before == 0
+                    and _ppr(body_children[table_idx + 2]).spacing_after == 0)
+
+    def test_blockquote_at_end_of_loose_list_item_has_spacer(self):
+        # Blockquote as the last child of a loose list item: the spacer from
+        # _map_block is kept (not removed) to provide the inter-item gap.
+        bq = DocumentIRBlockquoteNode()
+        bq.add_child(_para(_span("Quoted")))
+        item = DocumentIRListItemNode()
+        item.add_child(_para(_span("Intro")))
+        item.add_child(bq)
+        ul = DocumentIRUnorderedListNode(tight=False)
+        ul.add_child(item)
+        result = _map(_doc(ul))
+        body_children = list(_body(result).children)
+        table_idx = next(i for i, c in enumerate(body_children) if isinstance(c, DocxASTTableNode))
+        spacer = body_children[table_idx + 1]
+        assert isinstance(spacer, DocxASTParagraphNode)
+        assert _ppr(spacer).spacing_before == 0
+        assert _ppr(spacer).spacing_after == 0
 
 
 # ---------------------------------------------------------------------------
@@ -495,7 +629,7 @@ class TestUnorderedListMapping:
         for text in ["A", "B", "C"]:
             ul.add_child(self._item(text))
         result = _map(_doc(ul))
-        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
+        paras = _content_paras(result)
         assert len(paras) == 3
 
     def test_bullet_item_text(self):
@@ -503,6 +637,12 @@ class TestUnorderedListMapping:
         ul.add_child(self._item("Hello"))
         result = _map(_doc(ul))
         assert _text_of(_first_para(result)) == "Hello"
+
+    def test_unordered_list_last_item_has_standard_spacing(self):
+        ul = DocumentIRUnorderedListNode()
+        ul.add_child(self._item("Item"))
+        result = _map(_doc(ul))
+        assert _ppr(_content_paras(result)[-1]).spacing_after == 200
 
     def test_nested_list_ilvl(self):
         inner_item = DocumentIRListItemNode()
@@ -519,7 +659,7 @@ class TestUnorderedListMapping:
         outer_ul.add_child(outer_item)
 
         result = _map(_doc(outer_ul))
-        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
+        paras = _content_paras(result)
         assert len(paras) == 2
 
         # First para: ilvl 0
@@ -564,7 +704,7 @@ class TestOrderedListMapping:
         for text in ["One", "Two", "Three"]:
             ol.add_child(self._item(text))
         result = _map(_doc(ol))
-        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
+        paras = _content_paras(result)
         assert len(paras) == 3
 
     def test_tight_ordered_list_items_have_spacing_after_zero(self):
@@ -572,18 +712,26 @@ class TestOrderedListMapping:
         for text in ["One", "Two", "Three"]:
             ol.add_child(self._item(text))
         result = _map(_doc(ol))
-        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
-        for para in paras:
+        paras = _content_paras(result)
+        for para in paras[:-1]:
             assert _ppr(para).spacing_after == 0
+        assert _ppr(paras[-1]).spacing_after == 200
 
     def test_loose_ordered_list_items_have_default_spacing(self):
         ol = DocumentIROrderedListNode(start=1, tight=False)
         for text in ["One", "Two", "Three"]:
             ol.add_child(self._item(text))
         result = _map(_doc(ol))
-        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
-        for para in paras:
+        paras = _content_paras(result)
+        for para in paras[:-1]:
             assert _ppr(para).spacing_after is None
+        assert _ppr(paras[-1]).spacing_after == 200
+
+    def test_ordered_list_last_item_has_standard_spacing(self):
+        ol = DocumentIROrderedListNode(start=1)
+        ol.add_child(self._item("Item"))
+        result = _map(_doc(ol))
+        assert _ppr(_content_paras(result)[-1]).spacing_after == 200
 
 
 # ---------------------------------------------------------------------------
@@ -593,8 +741,8 @@ class TestOrderedListMapping:
 class TestListSpacingInteractions:
     def test_loose_bullet_item_ending_with_tight_nested_ordered_has_loose_spacing(self):
         """Last para of a tight nested ordered list inside a loose bullet item
-        must have spacing_after restored to None so the loose gap between outer
-        items is preserved."""
+        gets spacing_after=200 from _apply_list_trailing_spacing on the nested
+        list, providing the inter-item gap."""
         nested_ol = DocumentIROrderedListNode(start=1, tight=True)
         for text in ["a", "b", "c"]:
             ni = DocumentIRListItemNode()
@@ -609,9 +757,10 @@ class TestListSpacingInteractions:
         outer_ul.add_child(outer_item)
 
         result = _map(_doc(outer_ul))
-        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
-        # Last paragraph emitted belongs to the nested list; spacing must be None
-        assert _ppr(paras[-1]).spacing_after is None
+        paras = _content_paras(result)
+        # Last paragraph emitted belongs to the nested list; it gets 200 from
+        # _apply_list_trailing_spacing, which the outer list then also patches to 200.
+        assert _ppr(paras[-1]).spacing_after == 200
 
     def test_loose_bullet_item_ending_with_tight_nested_bullet_has_loose_spacing(self):
         """Same as above but the nested list is also unordered."""
@@ -629,12 +778,13 @@ class TestListSpacingInteractions:
         outer_ul.add_child(outer_item)
 
         result = _map(_doc(outer_ul))
-        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
-        assert _ppr(paras[-1]).spacing_after is None
+        paras = _content_paras(result)
+        assert _ppr(paras[-1]).spacing_after == 200
 
     def test_tight_outer_item_ending_with_tight_nested_list_stays_tight(self):
-        """When the outer item is itself tight, the nested list's tight spacing
-        must not be overridden."""
+        """When the outer item is itself tight, the last para of the nested list
+        gets spacing_after=200 from _apply_list_trailing_spacing, which the
+        outer tight list also patches to 200."""
         nested_ol = DocumentIROrderedListNode(start=1, tight=True)
         ni = DocumentIRListItemNode()
         ni.add_child(_para(_span("inner")))
@@ -648,8 +798,8 @@ class TestListSpacingInteractions:
         outer_ul.add_child(outer_item)
 
         result = _map(_doc(outer_ul))
-        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
-        assert _ppr(paras[-1]).spacing_after == 0
+        paras = _content_paras(result)
+        assert _ppr(paras[-1]).spacing_after == 200
 
 
 # ---------------------------------------------------------------------------
@@ -782,6 +932,16 @@ class TestTableMapping:
         tbl_pr = next(c for c in table.children if isinstance(c, DocxASTTablePropertiesNode))
         assert tbl_pr.width == 5000
         assert tbl_pr.width_type == "pct"
+
+    def test_table_followed_by_spacer(self):
+        result = _map(_doc(_ir_table([["A"]])))
+        body_children = list(_body(result).children)
+        table_idx = next(i for i, c in enumerate(body_children) if isinstance(c, DocxASTTableNode))
+        spacer = body_children[table_idx + 1]
+        assert isinstance(spacer, DocxASTParagraphNode)
+        assert _ppr(spacer).style_id == "Normal"
+        assert _ppr(spacer).spacing_before == 0
+        assert _ppr(spacer).spacing_after == 0
 
     def test_cell_with_inline_children_has_paragraph(self):
         table = DocumentIRTableNode()
@@ -985,7 +1145,7 @@ class TestMixedDocument:
             ul,
             _para(_span("After")),
         ))
-        paras = [c for c in _body(result).children if isinstance(c, DocxASTParagraphNode)]
+        paras = _content_paras(result)
         assert len(paras) == 3
         # Middle para has numPr
         ppr1 = _ppr(paras[1])

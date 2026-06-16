@@ -65,13 +65,15 @@ _STYLE_BLOCKQUOTE = "Blockquote"
 
 # numId values for bullet and ordered lists (referenced in numPr)
 _NUM_ID_BULLET = "1"
-_NUM_ID_ORDERED = "2"
 
 # Maximum nesting depth supported for lists
 _MAX_LIST_DEPTH = 9
 
 # Background shading colour for blockquote paragraphs
 _BLOCKQUOTE_SHADING = "E8F0F8"
+
+# Standard inter-block spacing_after in twips, matching Normal style's spacing_after.
+_STANDARD_SPACING = 200
 
 
 def document_ir_to_docx_ast(document: DocumentIRDocumentNode) -> DocxASTDocumentNode:
@@ -103,6 +105,15 @@ class _DocumentIRToDocxASTMapper:
     then maps each document_ir node to the appropriate DOCX AST structure.
     """
 
+    def __init__(self) -> None:
+        """Initialise the mapper with a fresh numbering state."""
+        # Holds the numbering node so ordered lists can register new numId
+        # instances dynamically during mapping.
+        self._numbering_node: DocxASTNumberingNode | None = None
+        # Next available numId; 1 is reserved for bullets, so ordered lists
+        # start from 2.
+        self._next_num_id: int = 2
+
     def map(self, document: DocumentIRDocumentNode) -> DocxASTDocumentNode:
         """Perform the full mapping.
 
@@ -116,7 +127,8 @@ class _DocumentIRToDocxASTMapper:
 
         # Always include styles and numbering so the output is self-contained
         docx_doc.add_child(self._build_styles_node())
-        docx_doc.add_child(self._build_numbering_node())
+        self._numbering_node = self._build_numbering_node()
+        docx_doc.add_child(self._numbering_node)
 
         body = DocxASTBodyNode()
         for child in document.children:
@@ -183,9 +195,10 @@ class _DocumentIRToDocxASTMapper:
     def _build_numbering_node(self) -> DocxASTNumberingNode:
         """Build a DocxASTNumberingNode with bullet and ordered list definitions.
 
-        Defines two abstractNum entries (bullet and decimal) and two num
-        instances referencing them.  Each definition covers _MAX_LIST_DEPTH
-        indent levels.
+        Defines two abstractNum entries (bullet and decimal).  A single bullet
+        num instance (numId=1) is pre-created.  Ordered list num instances are
+        allocated dynamically by _allocate_ordered_num_id as lists are mapped,
+        so each ordered list gets its own numId and can start at any number.
         """
         numbering = DocxASTNumberingNode()
 
@@ -221,12 +234,32 @@ class _DocumentIRToDocxASTMapper:
         numbering.add_child(ordered_abstract)
 
         # num 1: bullet instance
-
         numbering.add_child(DocxASTNumNode(num_id=_NUM_ID_BULLET, abstract_num_id="0"))
-        # num 2: ordered instance
-        numbering.add_child(DocxASTNumNode(num_id=_NUM_ID_ORDERED, abstract_num_id="1"))
 
         return numbering
+
+    def _allocate_ordered_num_id(self, start: int) -> str:
+        """Allocate a fresh numId for an ordered list and register it.
+
+        Each ordered list gets its own <w:num> instance so that Word resets
+        the counter independently for each list.  A lvlOverride startOverride
+        is used to honour non-default start values.
+
+        Args:
+            start: The starting number for the list (typically 1).
+
+        Returns:
+            The allocated numId string.
+        """
+        num_id = str(self._next_num_id)
+        self._next_num_id += 1
+        assert self._numbering_node is not None
+        self._numbering_node.add_child(DocxASTNumNode(
+            num_id=num_id,
+            abstract_num_id="1",
+            start_override=start,
+        ))
+        return num_id
 
     def _map_block(self, node: DocumentIRNode, parent: DocxASTBodyNode) -> None:
         """Map a block-level document_ir node and append result(s) to parent.
@@ -245,6 +278,7 @@ class _DocumentIRToDocxASTMapper:
 
         elif isinstance(node, DocumentIRBlockquoteNode):
             self._map_blockquote(node, parent)
+            parent.add_child(self._make_spacer_para())
 
         elif isinstance(node, DocumentIRCodeBlockNode):
             self._map_code_block(node, parent)
@@ -253,10 +287,12 @@ class _DocumentIRToDocxASTMapper:
             self._map_list(node, parent, num_id=_NUM_ID_BULLET, depth=0, tight=node.tight)
 
         elif isinstance(node, DocumentIROrderedListNode):
-            self._map_list(node, parent, num_id=_NUM_ID_ORDERED, depth=0, tight=node.tight)
+            num_id = self._allocate_ordered_num_id(node.start)
+            self._map_list(node, parent, num_id=num_id, depth=0, tight=node.tight)
 
         elif isinstance(node, DocumentIRTableNode):
             parent.add_child(self._map_table(node))
+            parent.add_child(self._make_spacer_para())
 
         elif isinstance(node, DocumentIRHorizontalRuleNode):
             parent.add_child(self._make_horizontal_rule_para())
@@ -322,7 +358,8 @@ class _DocumentIRToDocxASTMapper:
                                indent_base=blockquote_indent, tight=child.tight)
 
             elif isinstance(child, DocumentIROrderedListNode):
-                self._map_list(child, cell_body, num_id=_NUM_ID_ORDERED, depth=0,
+                num_id = self._allocate_ordered_num_id(child.start)
+                self._map_list(child, cell_body, num_id=num_id, depth=0,
                                indent_base=blockquote_indent, tight=child.tight)
 
             elif isinstance(child, DocumentIRCodeBlockNode):
@@ -354,23 +391,18 @@ class _DocumentIRToDocxASTMapper:
         row.add_child(cell)
         parent.add_child(table)
 
-        # Word provides no spacing mechanism on tables equivalent to paragraph
-        # spacing_after, so insert an empty paragraph to create the gap that the
-        # markdown blank line implies.
-        spacer = DocxASTParagraphNode()
-        spacer.add_child(DocxASTParagraphPropertiesNode(
-            style_id=_STYLE_NORMAL,
-            spacing_before=0,
-            spacing_after=0,
-        ))
-        parent.add_child(spacer)
-
     def _map_code_block(
         self, node: DocumentIRCodeBlockNode, parent: DocxASTBodyNode,
         indent_left: int | None = None,
         shading: str | None = None,
+        trailing_spacing: bool = True,
     ) -> None:
-        """Map a code block — one paragraph per line, all with CodeBlock style."""
+        """Map a code block — one paragraph per line, all with CodeBlock style.
+
+        The last line gets spacing_after=_STANDARD_SPACING to provide a gap
+        after the block, unless trailing_spacing=False (used inside tight list
+        items that are not the last item, where no gap is wanted).
+        """
         lines = node.content.split("\n")
         # Remove trailing empty line that split() often produces
         if lines and lines[-1] == "":
@@ -395,10 +427,10 @@ class _DocumentIRToDocxASTMapper:
                 para.add_child(run)
             paras.append(para)
 
-        # Add spacing after the last line so there is a visible gap between the
-        # code block and whatever follows it (the CodeBlock style sets after=0)
+        # Patch the last line: override the CodeBlock style's spacing_after=0
+        # with the standard gap, unless suppressed for intra-item use.
         last_ppr = next(c for c in paras[-1].children if isinstance(c, DocxASTParagraphPropertiesNode))
-        last_ppr.spacing_after = 160
+        last_ppr.spacing_after = _STANDARD_SPACING if trailing_spacing else 0
 
         for para in paras:
             parent.add_child(para)
@@ -430,6 +462,10 @@ class _DocumentIRToDocxASTMapper:
                 self._map_list_item(child, parent, num_id=num_id, depth=depth,
                                     indent_base=indent_base, shading=shading, tight=tight)
 
+        # Apply trailing spacing after the whole list.  For a nested sub-list
+        # this is a no-op when the caller (_map_list_item) will handle it.
+        self._apply_list_trailing_spacing(parent)
+
     def _map_list_item(
         self,
         item: DocumentIRListItemNode,
@@ -440,19 +476,9 @@ class _DocumentIRToDocxASTMapper:
         shading: str | None = None,
         tight: bool = True,
     ) -> None:
-        """Map a list item.
-
-        Inline content (wrapped in an implicit paragraph) is emitted as a
-        numbered paragraph.  Subsequent paragraphs within the same list item
-        (continuation paragraphs) are indented to the same level but carry no
-        list marker.  Nested lists are recursed with depth+1.  When the outer
-        item is loose, the last paragraph emitted (which may belong to a nested
-        sub-list) has its spacing_after restored to the default so the loose
-        spacing is preserved after the item.
-        """
+        """Map a list item, emitting all its content paragraphs."""
         is_first_para = True
         indent_left = indent_base + 720 * (depth + 1)  # text/continuation indent
-        para_count_before = len(parent.children)
 
         for child in item.children:
             if isinstance(child, DocumentIRParagraphNode):
@@ -499,39 +525,34 @@ class _DocumentIRToDocxASTMapper:
 
             elif isinstance(child, DocumentIROrderedListNode):
                 is_first_para = False
-                self._map_list(child, parent, num_id=_NUM_ID_ORDERED, depth=depth + 1,
+                num_id = self._allocate_ordered_num_id(child.start)
+                self._map_list(child, parent, num_id=num_id, depth=depth + 1,
                                indent_base=indent_base, shading=shading,
                                tight=child.tight)
 
             else:
-                # Other block children inside a list item — handle with list
-                # context so indentation is preserved
+                # Other block children (code blocks, blockquotes, tables) inside
+                # a list item — handle with list context so indentation is preserved.
                 is_first_para = False
                 if isinstance(child, DocumentIRCodeBlockNode):
                     # Use the list text indent directly — explicit indent_left
                     # overrides the CodeBlock style's own indent entirely
+                    is_last = child is item.children[-1]
                     self._map_code_block(child, parent, indent_left=indent_left,
-                                         shading=shading)
+                                         shading=shading,
+                                         trailing_spacing=not (tight and is_last))
 
                 else:
                     self._map_block(child, parent)
-
-        # If the outer item is loose and the last paragraph added to parent
-        # came from a tight nested list, its spacing_after will be 0.  Patch
-        # it back to None (i.e. inherit the style default) so the loose
-        # spacing between outer items is preserved.
-        if not tight:
-            added = parent.children[para_count_before:]
-            for node in reversed(added):
-                if isinstance(node, DocxASTParagraphNode):
-                    last_ppr: DocxASTParagraphPropertiesNode | None = next(
-                        (c for c in node.children if isinstance(c, DocxASTParagraphPropertiesNode)),
-                        None,
-                    )
-                    if last_ppr is not None:
-                        last_ppr.spacing_after = None
-
-                    break
+                    # _map_block adds a trailing spacer for blockquotes/tables.
+                    # If this is not the last child, leave the spacer — it
+                    # separates the blockquote from the next item content.
+                    # If this is the last child, remove it — _apply_list_trailing_spacing
+                    # will handle the end-of-list gap instead.
+                    if (child is item.children[-1]
+                            and parent.children
+                            and self._is_spacer_para(parent.children[-1])):
+                        parent.remove_child(parent.children[-1])
 
     def _map_table(self, node: DocumentIRTableNode) -> DocxASTTableNode:
         """Map a table node."""
@@ -651,6 +672,67 @@ class _DocumentIRToDocxASTMapper:
         ppr = DocxASTParagraphPropertiesNode(style_id=_STYLE_NORMAL)
         para.add_child(ppr)
         return para
+
+    def _make_spacer_para(self) -> DocxASTParagraphNode:
+        """Create a zero-height spacer paragraph to follow a table.
+
+        OOXML provides no table-level spacing_after equivalent, so a spacer
+        paragraph is inserted after every table.  It uses Normal style with
+        both spacing_before and spacing_after suppressed so it contributes no
+        extra visual gap beyond the Normal style's own spacing_after.
+        """
+        para = DocxASTParagraphNode()
+        para.add_child(DocxASTParagraphPropertiesNode(
+            style_id=_STYLE_NORMAL,
+            spacing_before=0,
+            spacing_after=0,
+        ))
+        return para
+
+    def _apply_list_trailing_spacing(self, parent: DocxASTBodyNode) -> None:
+        """Apply the standard trailing gap after a list.
+
+        Walks back through the paragraphs most recently added to parent and
+        applies the appropriate end-of-list gap:
+
+        - If the last child is a paragraph (Normal or CodeBlock), set its
+          spacing_after to _STANDARD_SPACING explicitly.  This overrides both
+          the tight list's explicit 0 and CodeBlock's style-level 0.
+        - If the last child is a table (blockquote or content table), there is
+          no paragraph to patch, so a spacer paragraph is appended instead.
+        - Spacer paragraphs from mid-list blockquotes are skipped — they are
+          not the end of the list.
+        """
+        if not parent.children:
+            return
+
+        last = parent.children[-1]
+
+        if isinstance(last, DocxASTParagraphNode) and not self._is_spacer_para(last):
+            # Patch spacing_after on the last content paragraph.
+            ppr = next(
+                (c for c in last.children if isinstance(c, DocxASTParagraphPropertiesNode)),
+                None,
+            )
+            if ppr is not None:
+                ppr.spacing_after = _STANDARD_SPACING
+        elif isinstance(last, DocxASTTableNode):
+            # Last child is a table (blockquote/table) — no paragraph to patch.
+            parent.add_child(self._make_spacer_para())
+
+        elif self._is_spacer_para(last):
+            # Last child is already a spacer (from a trailing blockquote/table
+            # inside the last item) — it provides the gap, nothing to do.
+            pass
+
+    def _is_spacer_para(self, node: DocxASTNode) -> bool:
+        """Return True if node is a zero-height spacer paragraph."""
+        if not isinstance(node, DocxASTParagraphNode):
+            return False
+        ppr = next((c for c in node.children if isinstance(c, DocxASTParagraphPropertiesNode)), None)
+        return (ppr is not None
+                and ppr.spacing_before == 0
+                and ppr.spacing_after == 0)
 
     def _map_definition_list(
         self, node: DocumentIRDefinitionListNode, parent: DocxASTBodyNode
