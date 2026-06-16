@@ -349,7 +349,7 @@ A list where one item contains a blockquote (tight list):
   > indented to match the list content.
 - Item three
 
-An ordered list where every item contains a blockquote:
+An ordered list (tight) where every item contains a blockquote:
 
 1. First item
    > Blockquote inside first ordered item.
@@ -367,7 +367,7 @@ A list where one item contains a blockquote (loose list):
 
 - Item three
 
-An ordered list where every item contains a blockquote:
+An ordered list (loose) where every item contains a blockquote:
 
 1. First item
 

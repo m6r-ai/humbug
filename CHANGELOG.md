@@ -32,6 +32,7 @@ Bug fixes:
 - The correct icon is now set on the Windows taskbar.
 - Resolved problem with application zoom shortcuts interacting with terminal tabs.
 - Resolved `.docx` document rendering problems with spacing and list numbering.
+- Resolved subtle rendering problems with Markdown documents and "tight" lists.
 
 ## v49 (2026-06-07)
 

@@ -368,6 +368,12 @@ class _DocumentIRToDocxASTMapper:
             else:
                 self._map_block(child, cell_body)
 
+        # Word requires every table cell to end with a paragraph, so there will
+        # always be a mandatory trailing empty paragraph after the content.
+        # Zero out spacing_after on the last content paragraph so it does not
+        # contribute visible height before that trailing paragraph.
+        self._suppress_list_trailing_spacing(cell_body)
+
         # Build the table wrapper
         table = DocxASTTableNode()
 
@@ -553,11 +559,12 @@ class _DocumentIRToDocxASTMapper:
                 else:
                     self._map_block(child, parent)
                     # _map_block adds a trailing spacer for blockquotes/tables.
-                    # If this is not the last child, leave the spacer — it
-                    # separates the blockquote from the next item content.
-                    # If this is the last child, remove it — _apply_list_trailing_spacing
-                    # will handle the end-of-list gap instead.
-                    if (child is item.children[-1]
+                    # In a tight list, always remove the spacer — inter-item spacing
+                    # is suppressed throughout.  In a loose list, remove it only when
+                    # this is the last child; _apply_list_trailing_spacing will add
+                    # the end-of-list gap.  Non-last children in a loose list keep
+                    # the spacer so the blockquote is separated from the next content.
+                    if ((tight or child is item.children[-1])
                             and parent.children
                             and self._is_spacer_para(parent.children[-1])):
                         parent.remove_child(parent.children[-1])
