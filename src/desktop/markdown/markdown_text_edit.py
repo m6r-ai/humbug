@@ -531,6 +531,9 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
                 block_rect = layout.blockBoundingRect(block).translated(content_offset_x, content_offset_y)
 
+                font_height = self._style_manager.base_font_size() * self._style_manager.zoom_factor()
+                half_height = font_height * 0.5
+
                 # blockBoundingRect excludes top and bottom margins.  We extend the bar
                 # upward through the top margin and downward through the bottom margin so
                 # adjacent blocks produce a seamless bar.  round() rather than int() is
@@ -554,13 +557,19 @@ class MarkdownTextEdit(MinHeightTextEdit):
                 if block_rect.bottom() >= event.rect().top() and block_rect.top() <= event.rect().bottom():
                     for level, list_offset in enumerate(user_data.blockquote_bar_offsets):
                         # Bar at depth (level+1): extend into the margin when the adjacent
-                        # block shares this bar (same depth and offset), or when the adjacent
-                        # block is outside the blockquote entirely (no offsets at all), which
-                        # is where the extra half-row boundary padding lives.
-                        prev_matches = len(prev_offsets) == 0 or (len(prev_offsets) >= level + 1 and prev_offsets[level] == list_offset)
-                        next_matches = len(next_offsets) == 0 or (len(next_offsets) >= level + 1 and next_offsets[level] == list_offset)
+                        # block shares this bar (same depth and offset).
+                        prev_matches = len(prev_offsets) >= level + 1 and prev_offsets[level] == list_offset
+                        next_matches = len(next_offsets) >= level + 1 and next_offsets[level] == list_offset
                         effective_top = top_margin if prev_matches else 0.0
                         effective_bottom = bottom_margin if next_matches else 0.0
+                        # Add half-row padding at the start and end of each blockquote
+                        # nesting level, where the adjacent block has fewer levels.
+                        if len(prev_offsets) < level + 1:
+                            effective_top += half_height
+
+                        if len(next_offsets) < level + 1:
+                            effective_bottom += half_height
+
                         bar_top = round(block_rect.top() - effective_top)
                         bar_height = round(block_rect.height() + effective_top + effective_bottom)
                         x = round((level + list_offset) * indent_width) + content_offset_x
@@ -613,16 +622,25 @@ class MarkdownTextEdit(MinHeightTextEdit):
                     top_margin = fmt.topMargin()
                     bottom_margin = fmt.bottomMargin()
 
+                    font_height = self._style_manager.base_font_size() * self._style_manager.zoom_factor()
+                    half_height = font_height * 0.5
+
                     prev_block = block.previous()
                     prev_data = prev_block.userData() if prev_block.isValid() else None
                     prev_offsets = prev_data.blockquote_bar_offsets if isinstance(prev_data, MarkdownBlockData) else []
 
-                    # Always extend into the margin: if the neighbour has no blockquote
-                    # offsets at all, this is the boundary where the extra padding lives.
-                    prev_matches = len(prev_offsets) == 0 or prev_offsets[0] == user_data.blockquote_bar_offsets[0]
-                    next_matches = len(next_offsets) == 0 or next_offsets[0] == user_data.blockquote_bar_offsets[0]
+                    # Extend into the margin when the adjacent block shares the outermost
+                    # blockquote bar.  Add half-row padding at the boundary where the
+                    # adjacent block has no blockquote offsets at all.
+                    prev_matches = len(prev_offsets) >= 1 and prev_offsets[0] == user_data.blockquote_bar_offsets[0]
+                    next_matches = len(next_offsets) >= 1 and next_offsets[0] == user_data.blockquote_bar_offsets[0]
                     effective_top = top_margin if prev_matches else 0.0
                     effective_bottom = bottom_margin if next_matches else 0.0
+                    if len(prev_offsets) == 0:
+                        effective_top += half_height
+
+                    if len(next_offsets) == 0:
+                        effective_bottom += half_height
 
                     bg_top = round(block_rect.top() - effective_top)
                     bg_height = round(block_rect.height() + effective_top + effective_bottom)

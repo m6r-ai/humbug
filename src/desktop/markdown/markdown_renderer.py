@@ -1318,7 +1318,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         is_outermost = len(self._blockquote_bar_offsets) == 1
         half_height = self._default_font_height * 0.5
 
-        first_block = self._cursor.block() if is_outermost else None
+        first_block = self._cursor.block()
 
         if self._lists:
             list_fmt = QTextListFormat(self._lists[-1].format())
@@ -1330,7 +1330,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         for child in node.children:
             self.visit(child)
 
-        if is_outermost and first_block is not None:
+        if is_outermost:
             # Add half-row top padding to the first block of the outermost blockquote.
             first_fmt = QTextBlockFormat(first_block.blockFormat())
             first_fmt.setTopMargin(first_fmt.topMargin() + half_height)
@@ -1357,6 +1357,28 @@ class MarkdownRenderer(MarkdownASTVisitor):
             if candidate.isValid():
                 last_fmt = QTextBlockFormat(candidate.blockFormat())
                 last_fmt.setBottomMargin(half_height)
+                last_cursor = QTextCursor(candidate)
+                last_cursor.setBlockFormat(last_fmt)
+
+        else:
+            # For inner blockquotes, add half-row spacing before and after by
+            # augmenting the first and last block margins.
+            first_fmt = QTextBlockFormat(first_block.blockFormat())
+            first_fmt.setTopMargin(first_fmt.topMargin() + half_height)
+            cursor = QTextCursor(first_block)
+            cursor.setBlockFormat(first_fmt)
+
+            last_block = self._cursor.block()
+            candidate = last_block.previous() if last_block.text() == "" else last_block
+            while candidate.isValid():
+                data = candidate.userData()
+                if isinstance(data, MarkdownBlockData) and data.blockquote_bar_offsets:
+                    break
+                candidate = candidate.previous()
+
+            if candidate.isValid():
+                last_fmt = QTextBlockFormat(candidate.blockFormat())
+                last_fmt.setBottomMargin(last_fmt.bottomMargin() + half_height)
                 last_cursor = QTextCursor(candidate)
                 last_cursor.setBlockFormat(last_fmt)
 
