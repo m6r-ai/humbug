@@ -553,10 +553,12 @@ class MarkdownTextEdit(MinHeightTextEdit):
                 # Only paint bars for blocks that intersect the dirty region
                 if block_rect.bottom() >= event.rect().top() and block_rect.top() <= event.rect().bottom():
                     for level, list_offset in enumerate(user_data.blockquote_bar_offsets):
-                        # Bar at depth (level+1): extend into margins only if the
-                        # adjacent block has the same bar offset at this depth level.
-                        prev_matches = len(prev_offsets) >= level + 1 and prev_offsets[level] == list_offset
-                        next_matches = len(next_offsets) >= level + 1 and next_offsets[level] == list_offset
+                        # Bar at depth (level+1): extend into the margin when the adjacent
+                        # block shares this bar (same depth and offset), or when the adjacent
+                        # block is outside the blockquote entirely (no offsets at all), which
+                        # is where the extra half-row boundary padding lives.
+                        prev_matches = len(prev_offsets) == 0 or (len(prev_offsets) >= level + 1 and prev_offsets[level] == list_offset)
+                        next_matches = len(next_offsets) == 0 or (len(next_offsets) >= level + 1 and next_offsets[level] == list_offset)
                         effective_top = top_margin if prev_matches else 0.0
                         effective_bottom = bottom_margin if next_matches else 0.0
                         bar_top = round(block_rect.top() - effective_top)
@@ -615,8 +617,10 @@ class MarkdownTextEdit(MinHeightTextEdit):
                     prev_data = prev_block.userData() if prev_block.isValid() else None
                     prev_offsets = prev_data.blockquote_bar_offsets if isinstance(prev_data, MarkdownBlockData) else []
 
-                    prev_matches = len(prev_offsets) >= 1
-                    next_matches = len(next_offsets) >= 1
+                    # Always extend into the margin: if the neighbour has no blockquote
+                    # offsets at all, this is the boundary where the extra padding lives.
+                    prev_matches = len(prev_offsets) == 0 or prev_offsets[0] == user_data.blockquote_bar_offsets[0]
+                    next_matches = len(next_offsets) == 0 or next_offsets[0] == user_data.blockquote_bar_offsets[0]
                     effective_top = top_margin if prev_matches else 0.0
                     effective_bottom = bottom_margin if next_matches else 0.0
 
