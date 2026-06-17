@@ -102,7 +102,6 @@ _STYLE_VISUALS = {
     "CodeBlock": {
         "ppr_extra": (
             '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="exact"/>'
-            '<w:shd w:val="clear" w:color="auto" w:fill="F2F2F2"/>'
         ),
         "rpr_extra": (
             '<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New" w:cs="Courier New"/>'
@@ -112,7 +111,6 @@ _STYLE_VISUALS = {
     "Blockquote": {
         "ppr_extra": (
             '<w:shd w:val="clear" w:color="auto" w:fill="E8F0F8"/>'
-            '<w:ind w:left="720"/>'
         ),
         "rpr_extra": (
             '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>'
@@ -602,10 +600,10 @@ class _DocxASTSerialiser:
 
         # OOXML requires at least one paragraph in every cell
         if not any("<w:p" in p for p in content_parts):
-            content_parts.append("<w:p/>")
+            content_parts.append("<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\"/></w:pPr></w:p>")
         # OOXML also requires the last child of a cell to be a paragraph
         elif not content_parts[-1].startswith("<w:p"):
-            content_parts.append("<w:p/>")
+            content_parts.append("<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\"/></w:pPr></w:p>")
 
         # Default tcPr if none provided
         if not tcpr_xml:
@@ -638,6 +636,23 @@ class _DocxASTSerialiser:
             parts.append(
                 f'<w:shd w:val="clear" w:color="auto" w:fill="{_esc(node.shading_fill)}"/>'
             )
+
+        if node.left_bar:
+            parts.append(
+                '<w:tcBorders>'
+                '<w:left w:val="single" w:sz="24" w:space="0" w:color="4A90D9"/>'
+                '</w:tcBorders>'
+            )
+
+        # Uniform cell padding of 120 twips (~half a line height) on all sides
+        parts.append(
+            '<w:tcMar>'
+            '<w:top w:w="120" w:type="dxa"/>'
+            '<w:left w:w="120" w:type="dxa"/>'
+            '<w:bottom w:w="120" w:type="dxa"/>'
+            '<w:right w:w="120" w:type="dxa"/>'
+            '</w:tcMar>'
+        )
 
         return "<w:tcPr>" + "".join(parts) + "</w:tcPr>"
 

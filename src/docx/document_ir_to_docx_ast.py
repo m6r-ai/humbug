@@ -72,6 +72,12 @@ _MAX_LIST_DEPTH = 9
 # Background shading colour for blockquote paragraphs
 _BLOCKQUOTE_SHADING = "E8F0F8"
 
+# Background shading colour for code block cells
+_CODE_BLOCK_SHADING = "F2F2F2"
+
+# Background shading colour for table header cells
+_TABLE_HEADER_SHADING = "D0D0D0"
+
 # Standard inter-block spacing_after in twips, matching Normal style's spacing_after.
 _STANDARD_SPACING = 200
 
@@ -184,7 +190,7 @@ class _DocumentIRToDocxASTMapper:
             name="Blockquote",
             based_on=_STYLE_NORMAL,
         )
-        bq_ppr = DocxASTParagraphPropertiesNode()
+        bq_ppr = DocxASTParagraphPropertiesNode(spacing_after=0)
         bq.add_child(bq_ppr)
         bq_rpr = DocxASTRunPropertiesNode(italic=True)
         bq.add_child(bq_rpr)
@@ -356,28 +362,28 @@ class _DocumentIRToDocxASTMapper:
         for child in node.children:
             if isinstance(child, DocumentIRParagraphNode):
                 para = self._map_paragraph_node(child, style_id=_STYLE_BLOCKQUOTE,
-                                                indent_left=blockquote_indent)
+                                                indent_left=None)
                 if para is not None:
                     cell_body.add_child(para)
 
             elif isinstance(child, DocumentIRHeadingNode):
-                cell_body.add_child(self._map_heading(child, indent_left=blockquote_indent))
+                cell_body.add_child(self._map_heading(child, indent_left=None))
 
             elif isinstance(child, DocumentIRUnorderedListNode):
                 self._map_list(child, cell_body, num_id=_NUM_ID_BULLET, depth=0,
-                               indent_base=blockquote_indent, tight=child.tight)
+                               indent_base=0, tight=child.tight)
 
             elif isinstance(child, DocumentIROrderedListNode):
                 num_id = self._allocate_ordered_num_id(child.start)
                 self._map_list(child, cell_body, num_id=num_id, depth=0,
-                               indent_base=blockquote_indent, tight=child.tight)
+                               indent_base=0, tight=child.tight)
 
             elif isinstance(child, DocumentIRCodeBlockNode):
-                self._map_code_block(child, cell_body, indent_left=blockquote_indent)
+                self._map_code_block(child, cell_body)
 
             else:
                 if isinstance(child, DocumentIRBlockquoteNode):
-                    self._map_blockquote(child, cell_body, indent_base=blockquote_indent)
+                    self._map_blockquote(child, cell_body, indent_base=blockquote_indent)  # accumulates correctly
 
                 else:
                     self._map_block(child, cell_body)
@@ -392,7 +398,7 @@ class _DocumentIRToDocxASTMapper:
         # Build the table wrapper
         table = DocxASTTableNode()
 
-        tbl_pr = DocxASTTablePropertiesNode(width=5000, width_type="pct", no_borders=True)
+        tbl_pr = DocxASTTablePropertiesNode(width=5000, width_type="pct", no_borders=True, indent=indent_base)
         table.add_child(tbl_pr)
 
         row = DocxASTTableRowNode()
@@ -403,6 +409,7 @@ class _DocumentIRToDocxASTMapper:
             width=5000,
             width_type="pct",
             shading_fill=_BLOCKQUOTE_SHADING,
+            left_bar=True,
         )
         cell.add_child(tcp)
 
@@ -415,46 +422,50 @@ class _DocumentIRToDocxASTMapper:
     def _map_code_block(
         self, node: DocumentIRCodeBlockNode, parent: DocxASTBodyNode,
         indent_left: int | None = None,
-        shading: str | None = None,
         trailing_spacing: bool = True,
     ) -> None:
-        """Map a code block — one paragraph per line, all with CodeBlock style.
+        """Map a code block as a borderless single-cell table with shaded background.
 
-        The last line gets spacing_after=_STANDARD_SPACING to provide a gap
-        after the block, unless trailing_spacing=False (used inside tight list
-        items that are not the last item, where no gap is wanted).
+        The table provides full-width shading independent of text indentation.
+        Cell margins supply the padding.  trailing_spacing controls whether a
+        post-block spacer paragraph is appended after the table.
         """
         lines = node.content.split("\n")
         # Remove trailing empty line that split() often produces
         if lines and lines[-1] == "":
             lines = lines[:-1]
-
         if not lines:
-            # Emit one empty code paragraph to preserve the block
             lines = [""]
 
-        paras: List[DocxASTParagraphNode] = []
+        cell_body = DocxASTBodyNode()
         for line in lines:
             para = DocxASTParagraphNode()
-            ppr = DocxASTParagraphPropertiesNode(
-                style_id=_STYLE_CODE_BLOCK,
-                indent_left=indent_left,
-                shading=shading,
-            )
+            ppr = DocxASTParagraphPropertiesNode(style_id=_STYLE_CODE_BLOCK)
             para.add_child(ppr)
             if line:
                 run = DocxASTRunNode()
                 run.add_child(DocxASTTextNode(content=line, preserve_space=True))
                 para.add_child(run)
-            paras.append(para)
+            cell_body.add_child(para)
 
-        # Patch the last line: override the CodeBlock style's spacing_after=0
-        # with the standard gap, unless suppressed for intra-item use.
-        last_ppr = next(c for c in paras[-1].children if isinstance(c, DocxASTParagraphPropertiesNode))
-        last_ppr.spacing_after = _STANDARD_SPACING if trailing_spacing else 0
+        table = DocxASTTableNode()
+        tbl_pr = DocxASTTablePropertiesNode(width=5000, width_type="pct", no_borders=True,
+                                            indent=indent_left)
+        table.add_child(tbl_pr)
+        row = DocxASTTableRowNode()
+        table.add_child(row)
+        cell = DocxASTTableCellNode()
+        tcp = DocxASTTableCellPropertiesNode(width=5000, width_type="pct",
+                                             shading_fill=_CODE_BLOCK_SHADING)
+        cell.add_child(tcp)
+        for content_node in cell_body.children:
+            cell.add_child(content_node)
 
-        for para in paras:
-            parent.add_child(para)
+        row.add_child(cell)
+        parent.add_child(table)
+
+        if trailing_spacing:
+            parent.add_child(self._make_spacer_para())
 
     def _map_list(
         self,
@@ -569,26 +580,24 @@ class _DocumentIRToDocxASTMapper:
                 # a list item — handle with list context so indentation is preserved.
                 is_first_para = False
                 if isinstance(child, DocumentIRCodeBlockNode):
-                    # Use the list text indent directly — explicit indent_left
-                    # overrides the CodeBlock style's own indent entirely
                     is_last = child is item.children[-1]
                     self._map_code_block(child, parent, indent_left=indent_left,
-                                         shading=shading,
                                          trailing_spacing=not (tight and is_last))
+                    # Code blocks now emit a table + optional spacer — apply the
+                    # same spacer removal logic as blockquotes.
+                    if ((tight or child is item.children[-1])
+                            and parent.children
+                            and self._is_spacer_para(parent.children[-1])):
+                        parent.remove_child(parent.children[-1])
+
+                elif isinstance(child, DocumentIRBlockquoteNode):
+                    self._map_blockquote(child, parent, suppress_trailing_spacing=True,
+                                         indent_base=indent_left)
 
                 else:
-                    if isinstance(child, DocumentIRBlockquoteNode):
-                        self._map_blockquote(child, parent, suppress_trailing_spacing=True, indent_base=indent_left)
-
-                    else:
-
-                        self._map_block(child, parent)
-                    # _map_block (non-blockquote path) adds a trailing spacer.
-                    # In a tight list, always remove the spacer — inter-item spacing
-                    # is suppressed throughout.  In a loose list, remove it only when
-                    # this is the last child; _apply_list_trailing_spacing will add
-                    # the end-of-list gap.  Non-last children in a loose list keep
-                    # the spacer so the blockquote is separated from the next content.
+                    self._map_block(child, parent)
+                    # _map_block adds a trailing spacer for tables.  Remove it
+                    # in tight lists or when it's the last child.
                     if ((tight or child is item.children[-1])
                             and parent.children
                             and self._is_spacer_para(parent.children[-1])):
@@ -634,11 +643,14 @@ class _DocumentIRToDocxASTMapper:
         return row
 
     def _map_table_cell(
-        self, node: DocumentIRTableCellNode, _is_header: bool
+        self, node: DocumentIRTableCellNode, is_header: bool
     ) -> DocxASTTableCellNode:
         """Map a table cell."""
         cell = DocxASTTableCellNode()
-        cpr = DocxASTTableCellPropertiesNode(width_type="auto")
+        cpr = DocxASTTableCellPropertiesNode(
+            width_type="auto",
+            shading_fill=_TABLE_HEADER_SHADING if is_header else None,
+        )
         cell.add_child(cpr)
 
         # Separate inline children (text spans, links, images, line breaks) from
@@ -653,6 +665,7 @@ class _DocumentIRToDocxASTMapper:
             ppr = DocxASTParagraphPropertiesNode(
                 style_id=_STYLE_NORMAL,
                 justification=justification,
+                spacing_after=0,
             )
             para.add_child(ppr)
             for run in self._build_runs(inline_children):
@@ -667,6 +680,7 @@ class _DocumentIRToDocxASTMapper:
                 ppr = DocxASTParagraphPropertiesNode(
                     style_id=_STYLE_NORMAL,
                     justification=justification,
+                    spacing_after=0,
                 )
                 para.add_child(ppr)
                 runs = self._build_runs(child.children)
@@ -685,6 +699,7 @@ class _DocumentIRToDocxASTMapper:
                 # Inline code block in cell: emit as single para
                 para = DocxASTParagraphNode()
                 ppr = DocxASTParagraphPropertiesNode(style_id=_STYLE_CODE_BLOCK)
+                ppr.spacing_after = 0
                 para.add_child(ppr)
                 run = DocxASTRunNode()
                 run.add_child(DocxASTTextNode(content=child.content, preserve_space=True))

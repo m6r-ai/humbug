@@ -577,6 +577,7 @@ class DocxASTTableCellPropertiesNode(DocxASTNode):
         vertical_merge: str | None = None,
         vertical_alignment: str | None = None,
         shading_fill: str | None = None,
+        left_bar: bool = False,
     ) -> None:
         """
         Initialise table cell properties.
@@ -588,6 +589,7 @@ class DocxASTTableCellPropertiesNode(DocxASTNode):
             vertical_merge: Vertical merge type ('restart', 'continue', None).
             vertical_alignment: Vertical alignment ('top', 'center', 'bottom').
             shading_fill: Background fill colour hex string.
+            left_bar: Whether to render a coloured bar on the left edge of the cell.
         """
         super().__init__()
         self.width = width
@@ -596,6 +598,7 @@ class DocxASTTableCellPropertiesNode(DocxASTNode):
         self.vertical_merge = vertical_merge
         self.vertical_alignment = vertical_alignment
         self.shading_fill = shading_fill
+        self.left_bar = left_bar
 
 
 class DocxASTStylesNode(DocxASTNode):
