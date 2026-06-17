@@ -118,6 +118,14 @@ _STYLE_VISUALS = {
             '<w:color w:val="444444"/>'
         ),
     },
+    "HorizontalRule": {
+        "ppr_extra": (
+            '<w:spacing w:before="200" w:after="200" w:line="1" w:lineRule="exact"/>'
+            '<w:pBdr>'
+            '<w:bottom w:val="single" w:sz="6" w:space="1" w:color="AAAAAA"/>'
+            '</w:pBdr>'
+        ),
+    },
 }
 
 # Hyperlink character style visual definition (not in _STYLE_VISUALS since it

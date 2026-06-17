@@ -62,6 +62,7 @@ _STYLE_HEADINGS = {
 }
 _STYLE_CODE_BLOCK = "CodeBlock"
 _STYLE_BLOCKQUOTE = "Blockquote"
+_STYLE_HORIZONTAL_RULE = "HorizontalRule"
 
 # numId values for bullet and ordered lists (referenced in numPr)
 _NUM_ID_BULLET = "1"
@@ -195,6 +196,17 @@ class _DocumentIRToDocxASTMapper:
         bq_rpr = DocxASTRunPropertiesNode(italic=True)
         bq.add_child(bq_rpr)
         styles.add_child(bq)
+
+        # Horizontal rule
+        hr = DocxASTStyleNode(
+            style_type="paragraph",
+            style_id=_STYLE_HORIZONTAL_RULE,
+            name="Horizontal Rule",
+            based_on=_STYLE_NORMAL,
+        )
+        hr_ppr = DocxASTParagraphPropertiesNode()
+        hr.add_child(hr_ppr)
+        styles.add_child(hr)
 
         return styles
 
@@ -383,7 +395,7 @@ class _DocumentIRToDocxASTMapper:
 
             else:
                 if isinstance(child, DocumentIRBlockquoteNode):
-                    self._map_blockquote(child, cell_body, indent_base=blockquote_indent)  # accumulates correctly
+                    self._map_blockquote(child, cell_body, indent_base=indent_base + 720)
 
                 else:
                     self._map_block(child, cell_body)
@@ -724,7 +736,7 @@ class _DocumentIRToDocxASTMapper:
     def _make_horizontal_rule_para(self) -> DocxASTParagraphNode:
         """Create a paragraph with a bottom border to represent a horizontal rule."""
         para = DocxASTParagraphNode()
-        ppr = DocxASTParagraphPropertiesNode(style_id=_STYLE_NORMAL)
+        ppr = DocxASTParagraphPropertiesNode(style_id=_STYLE_HORIZONTAL_RULE)
         para.add_child(ppr)
         return para
 
