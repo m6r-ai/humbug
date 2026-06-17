@@ -125,6 +125,7 @@ class ColorRole(Enum):
 
     # Blockquote elements
     BLOCKQUOTE_BORDER = auto()          # Blockquote left border bar
+    BLOCKQUOTE_BACKGROUND = auto()      # Blockquote background fill
 
     # Table elements
     TABLE_BORDER = auto()               # Table border

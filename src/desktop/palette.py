@@ -159,6 +159,7 @@ _DARK_COLORS: Dict[ColorRole, str] = {
 
     # Blockquote elements
     ColorRole.BLOCKQUOTE_BORDER: "#5a5a48",
+    ColorRole.BLOCKQUOTE_BACKGROUND: "#1e1e18",
 
     # Table elements
     ColorRole.TABLE_BORDER: "#808080",
@@ -368,6 +369,7 @@ _LIGHT_COLORS: Dict[ColorRole, str] = {
 
     # Blockquote elements
     ColorRole.BLOCKQUOTE_BORDER: "#c0c0d2",
+    ColorRole.BLOCKQUOTE_BACKGROUND: "#eeeef4",
 
     # Table elements
     ColorRole.TABLE_BORDER: "#a0a0a0",
@@ -577,6 +579,7 @@ _COLOR_BLIND_COLORS: Dict[ColorRole, str] = {
 
     # Blockquote elements
     ColorRole.BLOCKQUOTE_BORDER: "#3a4856",
+    ColorRole.BLOCKQUOTE_BACKGROUND: "#141c24",
 
     # Table elements
     ColorRole.TABLE_BORDER: "#3a4856",

@@ -487,12 +487,16 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
         For each visible text block that carries a non-empty blockquote_bar_offsets list,
         one coloured vertical bar is drawn per nesting level in the left margin.  The
-        bars are painted after the normal text so they appear on top of any
-        background fills.
+        bars are painted after the normal text so they appear on top of the background
+        fills.  The background fill is painted before the normal text so it sits behind
+        the text content.
 
         Args:
             event: The paint event
         """
+        if not self._is_input:
+            self._paint_blockquote_backgrounds(event)
+
         super().paintEvent(event)
 
         if self._is_input:
@@ -559,6 +563,67 @@ class MarkdownTextEdit(MinHeightTextEdit):
                         bar_height = round(block_rect.height() + effective_top + effective_bottom)
                         x = round((level + list_offset) * indent_width) + content_offset_x
                         painter.drawRect(x, bar_top, bar_width, bar_height)
+
+            block = block.next()
+
+        painter.end()
+
+    def _paint_blockquote_backgrounds(self, event: QPaintEvent) -> None:
+        """
+        Paint background fills for all visible blockquote blocks before normal text rendering.
+
+        For each visible text block that carries a non-empty blockquote_bar_offsets list a
+        filled rectangle is drawn behind the text, extending across the full viewport width
+        from the indented left edge.  Adjacent blockquote blocks at the same nesting depth
+        have their top/bottom margins included so the fill is seamless.
+
+        Args:
+            event: The paint event
+        """
+        bg_color: QColor = self._style_manager.get_color(ColorRole.BLOCKQUOTE_BACKGROUND)
+
+        painter = QPainter(self.viewport())
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(bg_color)
+
+        doc = self.document()
+        layout = doc.documentLayout()
+        indent_width = doc.indentWidth()
+        content_offset_x = -self.horizontalScrollBar().value()
+        content_offset_y = -self.verticalScrollBar().value()
+        viewport_width = self.viewport().width()
+
+        block = doc.begin()
+        while block.isValid():
+            user_data = block.userData()
+            if isinstance(user_data, MarkdownBlockData) and user_data.blockquote_bar_offsets:
+                next_block = block.next()
+                next_data = next_block.userData() if next_block.isValid() else None
+                next_offsets = next_data.blockquote_bar_offsets if isinstance(next_data, MarkdownBlockData) else []
+                if block.text() == "" and len(next_offsets) < len(user_data.blockquote_bar_offsets):
+                    block = block.next()
+                    continue
+
+                block_rect = layout.blockBoundingRect(block).translated(content_offset_x, content_offset_y)
+
+                if block_rect.bottom() >= event.rect().top() and block_rect.top() <= event.rect().bottom():
+                    fmt = block.blockFormat()
+                    top_margin = fmt.topMargin()
+                    bottom_margin = fmt.bottomMargin()
+
+                    prev_block = block.previous()
+                    prev_data = prev_block.userData() if prev_block.isValid() else None
+                    prev_offsets = prev_data.blockquote_bar_offsets if isinstance(prev_data, MarkdownBlockData) else []
+
+                    prev_matches = len(prev_offsets) >= 1
+                    next_matches = len(next_offsets) >= 1
+                    effective_top = top_margin if prev_matches else 0.0
+                    effective_bottom = bottom_margin if next_matches else 0.0
+
+                    bg_top = round(block_rect.top() - effective_top)
+                    bg_height = round(block_rect.height() + effective_top + effective_bottom)
+                    x = round(user_data.blockquote_bar_offsets[0] * indent_width) + content_offset_x
+                    painter.drawRect(x, bg_top, viewport_width - x, bg_height)
 
             block = block.next()
 
