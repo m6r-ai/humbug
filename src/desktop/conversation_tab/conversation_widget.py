@@ -446,7 +446,8 @@ class ConversationWidget(QWidget):
     def _add_message_core(
         self,
         message: AIMessage,
-        layout_pos: int | None = None
+        layout_pos: int | None = None,
+        apply_style: bool = True
     ) -> ConversationMessage:
         """
         Core of the _add_message method that avoids unnecessary UI updates.
@@ -456,6 +457,8 @@ class ConversationWidget(QWidget):
             layout_pos: If given, insert the widget at this layout position and at
                 the corresponding index in self._messages.  If None (default),
                 append before the input widget at the end of the layout.
+            apply_style: If True, pass the current message style into the widget
+                so sections are styled correctly on first render.
         """
         resolved_attachments: list[tuple[str, str]] | None = None
         if message.attachments:
@@ -477,7 +480,8 @@ class ConversationWidget(QWidget):
             message.user_name,
             message.content,
             message.tool_call_context,
-            attachments=resolved_attachments
+            attachments=resolved_attachments,
+            message_style=self._message_style if apply_style else None
         )
         msg_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(msg_widget, has_selection)
@@ -521,7 +525,6 @@ class ConversationWidget(QWidget):
             self._delete_user_queued_messages()
 
         msg_widget = self._add_message_core(message)
-        msg_widget.apply_style(self._message_style)
 
         # If we're not animating then we've done everything we need to.
         if not self._is_animating:
@@ -1892,12 +1895,10 @@ class ConversationWidget(QWidget):
         head = messages[:-self._load_tail_size]
 
         for message in tail:
-            message_widget = self._add_message_core(message)
-            if message_widget.message_source() in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
+            skip_style = message.source in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED)
+            message_widget = self._add_message_core(message, apply_style=not skip_style)
+            if skip_style:
                 message_widget.set_rendered(False)
-
-            else:
-                message_widget.apply_style(self._message_style)
 
         self._auto_scroll = True
         if self._deferred_scroll_timer_slot is not None:
@@ -1929,10 +1930,9 @@ class ConversationWidget(QWidget):
                 break
 
             message = self._load_queue.pop(0)
-            message_widget = self._add_message_core(message, self._load_head_insert_pos)
+            skip_style = message.source in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED)
+            message_widget = self._add_message_core(message, self._load_head_insert_pos, apply_style=not skip_style)
             message_widget.set_rendered(False)
-            if message_widget.message_source() not in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
-                message_widget.apply_style(self._message_style)
 
             self._load_head_insert_pos += 1
 

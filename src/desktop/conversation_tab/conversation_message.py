@@ -56,7 +56,8 @@ class ConversationMessage(QFrame):
         context: str | None = None,
         parent: QWidget | None = None,
         is_input: bool = False,
-        attachments: list[tuple[str, str]] | None = None
+        attachments: list[tuple[str, str]] | None = None,
+        message_style: ConversationMessageStyle | None = None
     ) -> None:
         """
         Initialize the message widget.
@@ -71,6 +72,7 @@ class ConversationMessage(QFrame):
             context: Optional context for the message
             parent: Optional parent widget
             is_input: Whether this is an input widget (affects styling)
+            message_style: Optional style to apply before initial content render
         """
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
@@ -304,7 +306,7 @@ class ConversationMessage(QFrame):
         self._markdown_converter = MarkdownConverter()
 
         self._is_spotlighted = False
-        self._message_style: ConversationMessageStyle | None = None
+        self._message_style: ConversationMessageStyle | None = message_style
 
         self._on_language_changed()
 

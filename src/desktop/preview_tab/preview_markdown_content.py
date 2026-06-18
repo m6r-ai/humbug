@@ -125,7 +125,6 @@ class PreviewMarkdownContent(PreviewContentWidget):
         for _, (node, syntax) in enumerate(sections_data):
             section = self._create_section_widget(syntax)
             section.set_content(node)
-            section.apply_style()
             self._sections.append(section)
             self._sections_layout.addWidget(section)
 
