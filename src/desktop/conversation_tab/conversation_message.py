@@ -308,6 +308,7 @@ class ConversationMessage(QFrame):
         self._is_spotlighted = False
         self._message_style: ConversationMessageStyle | None = message_style
 
+        self.apply_style(message_style)
         self._on_language_changed()
 
         self._context = context
