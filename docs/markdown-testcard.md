@@ -119,6 +119,21 @@ A nested unordered list (tight inside loose):
 
 - Top level item two
 
+A list containing paragraphs:
+
+- Top level item
+
+  A paragraph within it.
+  And a continuation.
+
+  Then another paragraph
+
+- Top level item two
+
+- Top level item three
+
+  With a closing paragraph
+
 ---
 
 ## 5. Ordered lists
