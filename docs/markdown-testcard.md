@@ -444,6 +444,12 @@ A table with column alignment:
 | One | Two | Three |
 | 100 | 200 | 300 |
 
+> A blockquote followed by a table:
+
+| Col 1 | Col 2 |
+|-------|-------|
+| A | B |
+
 ---
 
 ## 13. List followed by table

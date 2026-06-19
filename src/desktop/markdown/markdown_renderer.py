@@ -1315,9 +1315,6 @@ class MarkdownRenderer(MarkdownASTVisitor):
         """
         self._blockquote_bar_offsets.append(self._list_level)
 
-        is_outermost = len(self._blockquote_bar_offsets) == 1
-        half_height = self._default_font_height * 0.5
-
         first_block = self._cursor.block()
 
         if self._lists:
@@ -1329,58 +1326,6 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         for child in node.children:
             self.visit(child)
-
-        if is_outermost:
-            # Add half-row top padding to the first block of the outermost blockquote.
-            first_fmt = QTextBlockFormat(first_block.blockFormat())
-            first_fmt.setTopMargin(first_fmt.topMargin() + half_height)
-            cursor = QTextCursor(first_block)
-            cursor.setBlockFormat(first_fmt)
-
-            # Find the last block that belongs to this blockquote and add half-row
-            # bottom padding.  Walk backwards from the current position to find the
-            # last block stamped with a non-empty blockquote_bar_offsets.
-            last_block = self._cursor.block()
-            if last_block.text() == "":
-                candidate = last_block.previous()
-
-            else:
-                candidate = last_block
-
-            while candidate.isValid():
-                data = candidate.userData()
-                if isinstance(data, MarkdownBlockData) and data.blockquote_bar_offsets:
-                    break
-
-                candidate = candidate.previous()
-
-            if candidate.isValid():
-                last_fmt = QTextBlockFormat(candidate.blockFormat())
-                last_fmt.setBottomMargin(half_height)
-                last_cursor = QTextCursor(candidate)
-                last_cursor.setBlockFormat(last_fmt)
-
-        else:
-            # For inner blockquotes, add half-row spacing before and after by
-            # augmenting the first and last block margins.
-            first_fmt = QTextBlockFormat(first_block.blockFormat())
-            first_fmt.setTopMargin(first_fmt.topMargin() + half_height)
-            cursor = QTextCursor(first_block)
-            cursor.setBlockFormat(first_fmt)
-
-            last_block = self._cursor.block()
-            candidate = last_block.previous() if last_block.text() == "" else last_block
-            while candidate.isValid():
-                data = candidate.userData()
-                if isinstance(data, MarkdownBlockData) and data.blockquote_bar_offsets:
-                    break
-                candidate = candidate.previous()
-
-            if candidate.isValid():
-                last_fmt = QTextBlockFormat(candidate.blockFormat())
-                last_fmt.setBottomMargin(last_fmt.bottomMargin() + half_height)
-                last_cursor = QTextCursor(candidate)
-                last_cursor.setBlockFormat(last_fmt)
 
         self._blockquote_bar_offsets.pop()
 
