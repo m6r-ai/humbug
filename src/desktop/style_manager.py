@@ -72,6 +72,7 @@ class StyleManager(QObject):
             self._theme_mode = ColorTheme.SYSTEM
             self._light_custom_palette = OverlayPalette(LIGHT_PALETTE, {})
             self._dark_custom_palette = OverlayPalette(DARK_PALETTE, {})
+            self._custom_color_mode: ColorMode = ColorMode.DARK
             self._active_palette: Palette = self._palette_for_mode(ColorTheme.SYSTEM)
             self._active_preset_name: str | None = "Default"
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
@@ -328,7 +329,9 @@ class StyleManager(QObject):
         """
         icon_dir = os.path.expanduser("~/.humbug/icons")
         theme = "dark" if self._resolve_color_mode() == ColorMode.DARK else "light"
-        return Path(os.path.join(icon_dir, f"{name}-{theme}.svg")).as_posix()
+        path = Path(os.path.join(icon_dir, f"{name}-{theme}.svg")).as_posix()
+        print(f"DEBUG get_icon_path: name={name!r} theme_mode={self._theme_mode.name} custom_color_mode={self._custom_color_mode.name} resolved={theme!r} path={path!r} exists={os.path.exists(path)}")
+        return path
 
     def get_app_icon_path(self) -> str:
         """Return the app icon PNG path, falling back to SVG."""
@@ -363,9 +366,11 @@ class StyleManager(QObject):
         cache_key = (icon_name, scaled_size)
 
         if cache_key in self._scaled_icon_cache:
+            print(f"DEBUG scale_icon: name={icon_name!r} size={scaled_size} -> cache HIT")
             return self._scaled_icon_cache[cache_key]
 
         renderer = QSvgRenderer(self.get_icon_path(icon_name))
+        print(f"DEBUG scale_icon: name={icon_name!r} size={scaled_size} renderer.isValid()={renderer.isValid()}")
         pixmap = QPixmap(scaled_size, scaled_size)
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
@@ -532,11 +537,11 @@ class StyleManager(QObject):
         """
         Resolve the effective (LIGHT or DARK) color mode.
 
-        COLOR_BLIND and CUSTOM themes both resolve against the dark axis by
-        default (COLOR_BLIND is a fixed dark palette; CUSTOM overlays the
-        default palette using the OS/user light-dark preference).  For SYSTEM,
-        the OS colour scheme is queried.  Qt.ColorScheme.Unknown is treated as
-        LIGHT.
+        COLOR_BLIND resolves against the dark axis (it is a fixed dark palette).
+        CUSTOM resolves against the axis recorded in _custom_color_mode, which is
+        set when custom overrides are applied and is independent of the OS setting.
+        For SYSTEM, the OS colour scheme is queried.  Qt.ColorScheme.Unknown is
+        treated as LIGHT.
 
         Returns:
             ColorMode.LIGHT or ColorMode.DARK
@@ -550,11 +555,14 @@ class StyleManager(QObject):
         if self._theme_mode == ColorTheme.DARK:
             return ColorMode.DARK
 
+        if self._theme_mode == ColorTheme.CUSTOM:
+            return self._custom_color_mode
+
         return self._os_color_mode()
 
     def _on_system_color_scheme_changed(self) -> None:
         """Handle OS-level color scheme changes when in SYSTEM mode."""
-        if self._theme_mode in (ColorTheme.SYSTEM, ColorTheme.CUSTOM):
+        if self._theme_mode == ColorTheme.SYSTEM:
             self._active_palette = self._palette_for_mode(self._theme_mode)
             self._initialize_highlights()
             self._initialize_proportional_highlights()
@@ -590,7 +598,7 @@ class StyleManager(QObject):
             return COLOR_BLIND_PALETTE
 
         if mode == ColorTheme.CUSTOM:
-            return self._dark_custom_palette if self._os_color_mode() == ColorMode.DARK else self._light_custom_palette
+            return self._dark_custom_palette if self._custom_color_mode == ColorMode.DARK else self._light_custom_palette
 
         if mode == ColorTheme.DARK:
             return DARK_PALETTE
@@ -614,6 +622,7 @@ class StyleManager(QObject):
             overrides = dict(self._light_custom_palette.overrides())
             overrides[role] = color
             self._light_custom_palette = OverlayPalette(LIGHT_PALETTE, overrides)
+
         else:
             overrides = dict(self._dark_custom_palette.overrides())
             overrides[role] = color
@@ -666,11 +675,13 @@ class StyleManager(QObject):
             for mode_name, color_val in mode_map.items():
                 try:
                     mode = ColorMode[mode_name]
+
                 except KeyError:
                     continue
 
                 if mode == ColorMode.LIGHT:
                     new_light_overrides[role] = color_val
+
                 else:
                     new_dark_overrides[role] = color_val
 
@@ -680,6 +691,21 @@ class StyleManager(QObject):
 
         self._light_custom_palette = OverlayPalette(LIGHT_PALETTE, new_light_overrides)
         self._dark_custom_palette = OverlayPalette(DARK_PALETTE, new_dark_overrides)
+
+        # Infer the intended light/dark axis from which side has overrides.  A
+        # preset that defines only LIGHT keys (e.g. Enterprise Light) should
+        # resolve against the light base palette regardless of the OS setting.
+        # If both sides are populated, or neither, fall back to the OS mode so
+        # that the SYSTEM-like behaviour is preserved for hand-edited palettes.
+        if new_light_overrides and not new_dark_overrides:
+            self._custom_color_mode = ColorMode.LIGHT
+
+        elif new_dark_overrides and not new_light_overrides:
+            self._custom_color_mode = ColorMode.DARK
+
+        else:
+            self._custom_color_mode = self._os_color_mode()
+
         if self._theme_mode == ColorTheme.CUSTOM:
             self._active_palette = self._palette_for_mode(ColorTheme.CUSTOM)
 
