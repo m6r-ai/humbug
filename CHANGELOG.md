@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v50 (2026-06-16)
+## v50 (2026-06-19)
 
 New features:
 
@@ -22,6 +22,8 @@ New features:
 - Added Kimi K2.7 Code on Ollama.com.
 - Added GLM 5.2 on Z.ai.
 - Added support for animated GIF files in markdown.
+- When converting from `.docx` files, images are now extracted into a sidecar directory.  When converting to `.docx` files
+  images are now inserted.
 
 Bug fixes:
 

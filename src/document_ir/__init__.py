@@ -23,6 +23,11 @@ from document_ir.document_ir_node import (
     DocumentIRImageNode,
     DocumentIRLineBreakNode,
 )
+from document_ir.image_sidecar import (
+    extract_images_to_sidecar,
+    extension_for_mime_type,
+    mime_type_for_extension,
+)
 
 __all__ = [
     # Base
@@ -52,4 +57,8 @@ __all__ = [
     "DocumentIRLinkNode",
     "DocumentIRImageNode",
     "DocumentIRLineBreakNode",
+    # Image sidecar utilities
+    "extract_images_to_sidecar",
+    "extension_for_mime_type",
+    "mime_type_for_extension",
 ]

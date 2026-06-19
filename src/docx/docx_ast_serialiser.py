@@ -6,7 +6,9 @@ standard library.
 """
 
 import io
+from pathlib import Path
 from xml.sax import saxutils
+import struct
 import zipfile
 from typing import List
 
@@ -51,17 +53,45 @@ _SETTINGS_PATH = "word/settings.xml"
 # XML namespace URIs
 _W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+_WP = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
+_PIC = "http://schemas.openxmlformats.org/drawingml/2006/picture"
 _REL_STYLES = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"
 _REL_NUMBERING = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering"
 _REL_SETTINGS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings"
 _REL_OFFICE_DOC = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
 _REL_HYPERLINK = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+_REL_IMAGE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
 _CT_RELS = "application/vnd.openxmlformats-package.relationships+xml"
 _CT_XML = "application/xml"
 _CT_DOCUMENT = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
 _CT_STYLES = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"
 _CT_NUMBERING = "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"
 _CT_SETTINGS = "application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"
+
+# Default image dimensions used when the source drawing carries no size information.
+# 3 inches × 2 inches expressed in EMU (914400 EMU = 1 inch).
+_DEFAULT_WIDTH_EMU = 2_743_200
+_DEFAULT_HEIGHT_EMU = 1_828_800
+
+# Conversion factor: 1 twip = 635 EMU (914400 EMU/inch ÷ 1440 twips/inch).
+_EMU_PER_TWIP = 635
+# Full text area width in EMU (9360 twips × 635).
+_TEXT_WIDTH_EMU = 9360 * _EMU_PER_TWIP
+
+# Maps lowercase image file extensions to OOXML content-type strings.
+_IMAGE_CONTENT_TYPES: dict[str, str] = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "gif": "image/gif",
+    "webp": "image/webp",
+    "bmp": "image/bmp",
+    "tiff": "image/tiff",
+    "tif": "image/tiff",
+    "emf": "image/x-emf",
+    "wmf": "image/x-wmf",
+}
 
 # Word 2013+ compatibility mode value — prevents MS Word from opening the
 # document in compatibility mode.
@@ -143,6 +173,92 @@ def _esc(text: str) -> str:
     return saxutils.escape(text)
 
 
+def _read_image_dimensions(data: bytes) -> tuple[int, int] | None:
+    """Read the intrinsic pixel dimensions from image bytes.
+
+    Supports PNG, JPEG, GIF, and WEBP using only the Python standard library.
+    Returns (width_px, height_px), or None if the format is unrecognised or
+    the data is too short to contain a valid header.
+
+    Args:
+        data: Raw image bytes.
+
+    Returns:
+        A (width, height) tuple in pixels, or None.
+    """
+    if len(data) < 12:
+        return None
+
+    # PNG: 8-byte signature + 4-byte length + 4-byte 'IHDR' + 4-byte w + 4-byte h
+    if data[:8] == b'\x89PNG\r\n\x1a\n':
+        if len(data) < 24:
+            return None
+
+        w, h = struct.unpack('>II', data[16:24])
+        return w, h
+
+    # GIF: 'GIF87a' or 'GIF89a' + 2-byte w + 2-byte h (little-endian)
+    if data[:6] in (b'GIF87a', b'GIF89a'):
+        if len(data) < 10:
+            return None
+
+        w, h = struct.unpack('<HH', data[6:10])
+        return w, h
+
+    # WEBP: 'RIFF' + 4-byte size + 'WEBP' + 'VP8 '/'VP8L'/'VP8X'
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        chunk = data[12:16]
+        if chunk == b'VP8 ' and len(data) >= 30:
+            # Lossy: width/height in bits 0-13 of bytes 26-27 and 28-29
+            w = (struct.unpack('<H', data[26:28])[0] & 0x3FFF) + 1
+            h = (struct.unpack('<H', data[28:30])[0] & 0x3FFF) + 1
+            return w, h
+
+        if chunk == b'VP8L' and len(data) >= 25:
+            # Lossless: packed bits in bytes 21-24
+            bits = struct.unpack('<I', data[21:25])[0]
+            w = (bits & 0x3FFF) + 1
+            h = ((bits >> 14) & 0x3FFF) + 1
+            return w, h
+
+        if chunk == b'VP8X' and len(data) >= 30:
+            # Extended: flags(4) then 3-byte canvas width/height minus 1 at bytes 24 and 27
+            w = (data[24] | (data[25] << 8) | (data[26] << 16)) + 1
+            h = (data[27] | (data[28] << 8) | (data[29] << 16)) + 1
+            return w, h
+
+        return None
+
+    # JPEG: scan for SOF markers (0xFF 0xC0..0xC3, 0xC5..0xC7, 0xC9..0xCB, 0xCD..0xCF)
+    if data[:2] == b'\xff\xd8':
+        i = 2
+        while i + 3 < len(data):
+            if data[i] != 0xFF:
+                break
+
+            marker = data[i + 1]
+            if marker in range(0xC0, 0xD0) and marker not in (0xC4, 0xC8, 0xCC):
+                if i + 9 <= len(data):
+                    h, w = struct.unpack('>HH', data[i + 5:i + 9])
+                    return w, h
+
+            # Skip this segment: 2-byte marker + 2-byte length (length includes itself)
+            if i + 3 >= len(data):
+                break
+
+            seg_len = struct.unpack('>H', data[i + 2:i + 4])[0]
+            i += 2 + seg_len
+
+        return None
+
+    return None
+
+
+# EMU per inch, and assumed screen resolution for images without explicit DPI.
+_EMU_PER_INCH = 914_400
+_DEFAULT_DPI = 96
+
+
 def serialise_docx(document: DocxASTDocumentNode) -> bytes:
     """Serialise a DocxASTDocumentNode to raw .docx bytes.
 
@@ -166,8 +282,12 @@ class _DocxASTSerialiser:
         self._has_numbering = False
         # Maps URL → rId, populated during document body serialisation
         self._hyperlink_rels: dict[str, str] = {}
+        # Maps rId → (zip_path, image_bytes) for embedded images
+        self._image_rels: dict[str, tuple[str, bytes]] = {}
         # Fixed relationship IDs: rId1=styles, rId2=numbering, rId3=settings
         self._next_rel_id: int = 4
+        # Available width for images in the current serialisation context, in EMU.
+        self._available_width_emu: int = _TEXT_WIDTH_EMU
 
     def serialise(self) -> bytes:
         """Perform the full serialisation and return raw bytes."""
@@ -208,7 +328,9 @@ class _DocxASTSerialiser:
         """Assemble all XML parts into a .docx ZIP archive."""
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr(_CONTENT_TYPES_PATH, self._content_types_xml(numbering_xml is not None))
+            zf.writestr(_CONTENT_TYPES_PATH, self._content_types_xml(
+                numbering_xml is not None, bool(self._image_rels)
+            ))
             zf.writestr(_RELS_PATH, self._root_rels_xml())
             zf.writestr(_DOCUMENT_PATH, document_xml)
             zf.writestr(_DOCUMENT_RELS_PATH, self._document_rels_xml(numbering_xml is not None))
@@ -216,15 +338,27 @@ class _DocxASTSerialiser:
             if numbering_xml is not None:
                 zf.writestr(_NUMBERING_PATH, numbering_xml)
             zf.writestr(_SETTINGS_PATH, settings_xml)
+            for _rid, (zip_path, img_bytes) in self._image_rels.items():
+                zf.writestr(zip_path, img_bytes)
 
         return buf.getvalue()
 
-    def _content_types_xml(self, include_numbering: bool) -> str:
+    def _content_types_xml(self, include_numbering: bool, include_images: bool) -> str:
         numbering_override = (
             f'\n  <Override PartName="/{_NUMBERING_PATH}" ContentType="{_CT_NUMBERING}"/>'
             if include_numbering
             else ""
         )
+        image_defaults = ""
+        if include_images:
+            exts_seen: set[str] = set()
+            for _rid, (zip_path, _data) in self._image_rels.items():
+                ext = zip_path.rsplit(".", 1)[-1].lower() if "." in zip_path else ""
+                if ext and ext not in exts_seen:
+                    exts_seen.add(ext)
+                    mime = _IMAGE_CONTENT_TYPES.get(ext, f"image/{ext}")
+                    image_defaults += f'\n  <Default Extension="{ext}" ContentType="{mime}"/>'
+
         return (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
             '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">\n'
@@ -233,7 +367,8 @@ class _DocxASTSerialiser:
             f'  <Override PartName="/{_DOCUMENT_PATH}" ContentType="{_CT_DOCUMENT}"/>\n'
             f'  <Override PartName="/{_STYLES_PATH}" ContentType="{_CT_STYLES}"/>'
             f'{numbering_override}\n'
-            f'  <Override PartName="/{_SETTINGS_PATH}" ContentType="{_CT_SETTINGS}"/>\n'
+            f'  <Override PartName="/{_SETTINGS_PATH}" ContentType="{_CT_SETTINGS}"/>'
+            f'{image_defaults}\n'
             '</Types>'
         )
 
@@ -256,13 +391,19 @@ class _DocxASTSerialiser:
             f' Target="{_esc(url)}" TargetMode="External"/>'
             for url, rid in self._hyperlink_rels.items()
         )
+        image_rels = "".join(
+            f'\n  <Relationship Id="{rid}" Type="{_REL_IMAGE}"'
+            f' Target="{_esc(zip_path[len("word/"):])}" />'
+            for rid, (zip_path, _data) in self._image_rels.items()
+        )
         return (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
             f'  <Relationship Id="rId1" Type="{_REL_STYLES}" Target="styles.xml"/>'
             f'{numbering_rel}'
             f'\n  <Relationship Id="rId3" Type="{_REL_SETTINGS}" Target="settings.xml"/>'
-            f'{hyperlink_rels}\n'
+            f'{hyperlink_rels}'
+            f'{image_rels}\n'
             '</Relationships>'
         )
 
@@ -479,17 +620,101 @@ class _DocxASTSerialiser:
         return f"<w:t{space_attr}>{_esc(node.content)}</w:t>"
 
     def _serialise_drawing(self, node: DocxASTDrawingNode) -> str:
-        """Serialise a drawing as an alt-text placeholder.
+        """Serialise a <w:drawing> element, embedding the image into the ZIP.
 
-        Full drawing serialisation (embedding image bytes, generating
-        relationship IDs) requires ZIP-level coordination that is beyond
-        the scope of a pure AST serialiser.  We emit a text placeholder
+        Image bytes are sourced from, in order of preference:
+        1. ``node.image_data`` — bytes already in memory (from a parsed DOCX).
+        2. ``node.resolved_path`` — a filesystem path relative to the document
+           source, read from disk (from a Markdown or HTML import with sidecar
+           images).
+
+        If no image bytes can be obtained, a plain-text placeholder is emitted
         so content is not silently lost.
         """
-        alt = node.description or node.resolved_path or node.relationship_id or "image"
+        image_bytes = self._resolve_image_bytes(node)
+        if image_bytes is None:
+            alt = node.description or node.resolved_path or node.relationship_id or "image"
+            return f'<w:t xml:space="preserve">[Image: {_esc(alt)}]</w:t>'
+
+        rid = self._register_image(node.resolved_path or "", image_bytes)
+        dims = _read_image_dimensions(image_bytes)
+        if dims is not None:
+            width_px, height_px = dims
+            width_emu = round(width_px * _EMU_PER_INCH / _DEFAULT_DPI)
+            height_emu = round(height_px * _EMU_PER_INCH / _DEFAULT_DPI)
+
+        else:
+            width_emu = _DEFAULT_WIDTH_EMU
+            height_emu = _DEFAULT_HEIGHT_EMU
+
+        if width_emu > self._available_width_emu:
+            scale = self._available_width_emu / width_emu
+            width_emu = self._available_width_emu
+            height_emu = round(height_emu * scale)
+
+        alt = _esc(node.description or "")
+        doc_pr_id = len(self._image_rels)
+
         return (
-            f'<w:t xml:space="preserve">[Image: {_esc(alt)}]</w:t>'
+            f'<w:drawing>'
+            f'<wp:inline xmlns:wp="{_WP}">'
+            f'<wp:extent cx="{width_emu}" cy="{height_emu}"/>'
+            f'<wp:docPr id="{doc_pr_id}" name="Image{doc_pr_id}" descr="{alt}"/>'
+            f'<a:graphic xmlns:a="{_A}">'
+            f'<a:graphicData uri="{_PIC}">'
+            f'<pic:pic xmlns:pic="{_PIC}">'
+            f'<pic:nvPicPr>'
+            f'<pic:cNvPr id="{doc_pr_id}" name="Image{doc_pr_id}"/>'
+            f'<pic:cNvPicPr/>'
+            f'</pic:nvPicPr>'
+            f'<pic:blipFill>'
+            f'<a:blip r:embed="{rid}" xmlns:r="{_R}"/>'
+            f'<a:stretch><a:fillRect/></a:stretch>'
+            f'</pic:blipFill>'
+            f'<pic:spPr>'
+            f'<a:xfrm>'
+            f'<a:off x="0" y="0"/>'
+            f'<a:ext cx="{width_emu}" cy="{height_emu}"/>'
+            f'</a:xfrm>'
+            f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+            f'</pic:spPr>'
+            f'</pic:pic>'
+            f'</a:graphicData>'
+            f'</a:graphic>'
+            f'</wp:inline>'
+            f'</w:drawing>'
         )
+
+    def _resolve_image_bytes(self, node: DocxASTDrawingNode) -> bytes | None:
+        """Return image bytes for a drawing node, or None if unavailable."""
+        if node.image_data is not None:
+            return node.image_data
+
+        if node.resolved_path and self._document.source_path:
+            source_dir = Path(self._document.source_path).parent
+            image_path = source_dir / node.resolved_path
+            if image_path.is_file():
+                try:
+                    return image_path.read_bytes()
+
+                except OSError:
+                    pass
+
+        return None
+
+    def _register_image(self, hint_path: str, image_bytes: bytes) -> str:
+        """Register image bytes for ZIP embedding and return the relationship ID.
+
+        If the same bytes have already been registered (e.g. the same image
+        used twice), a new entry is still created so each drawing has its own
+        relationship ID, which is the simplest correct approach.
+        """
+        rid = f"rId{self._next_rel_id}"
+        self._next_rel_id += 1
+        ext = hint_path.rsplit(".", 1)[-1].lower() if "." in hint_path else "bin"
+        zip_path = f"word/media/image{len(self._image_rels) + 1}.{ext}"
+        self._image_rels[rid] = (zip_path, image_bytes)
+        return rid
 
     def _serialise_table(self, node: DocxASTTableNode) -> str:
         """Serialise a <w:tbl> element."""
@@ -596,15 +821,31 @@ class _DocxASTSerialiser:
         tcpr_xml = ""
         content_parts: List[str] = []
 
+        # Determine available image width from the cell's explicit dxa width, if set.
+        cell_width_dxa: int | None = None
         for child in node.children:
             if isinstance(child, DocxASTTableCellPropertiesNode):
                 tcpr_xml = self._serialise_tcpr(child)
+                if child.width is not None and child.width_type == "dxa":
+                    cell_width_dxa = child.width
+
+        saved_width = self._available_width_emu
+        if cell_width_dxa is not None:
+            # Subtract cell margins (120 twips each side) before converting.
+            inner_dxa = max(0, cell_width_dxa - 2 * 120)
+            self._available_width_emu = inner_dxa * _EMU_PER_TWIP
+
+        for child in node.children:
+            if isinstance(child, DocxASTTableCellPropertiesNode):
+                pass  # already handled above
 
             elif isinstance(child, DocxASTParagraphNode):
                 content_parts.append(self._serialise_paragraph(child))
 
             elif isinstance(child, DocxASTTableNode):
                 content_parts.append(self._serialise_table(child))
+
+        self._available_width_emu = saved_width
 
         # OOXML requires at least one paragraph in every cell
         if not any("<w:p" in p for p in content_parts):

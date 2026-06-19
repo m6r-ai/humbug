@@ -373,11 +373,11 @@ class TestParagraphMapping:
         rpr = next(c for c in run.children if isinstance(c, DocxASTRunPropertiesNode))
         assert rpr.strike is True
 
-    def test_code_span_uses_courier(self):
+    def test_code_span_uses_consolas(self):
         result = _map(_doc(_para(_span("func()", code=True))))
         run = _runs(_first_para(result))[0]
         rpr = next(c for c in run.children if isinstance(c, DocxASTRunPropertiesNode))
-        assert rpr.font_ascii == "Courier New"
+        assert rpr.font_ascii == "Consolas"
 
     def test_plain_span_no_rpr(self):
         result = _map(_doc(_para(_span("plain"))))

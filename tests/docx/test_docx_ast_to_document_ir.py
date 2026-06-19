@@ -744,6 +744,7 @@ class TestInlineContent:
         run.add_child(DocxASTDrawingNode(
             resolved_path="word/media/image1.png",
             description="A photo",
+            image_data=b"fakepng",
         ))
         para.add_child(run)
         result = _map(_doc(_body(para)))
@@ -752,6 +753,7 @@ class TestInlineContent:
         assert isinstance(img, DocumentIRImageNode)
         assert img.url == "word/media/image1.png"
         assert img.alt_text == "A photo"
+        assert img.data == b"fakepng"
 
     def test_drawing_without_path_uses_rel_id(self):
         para = DocxASTParagraphNode()
@@ -759,12 +761,14 @@ class TestInlineContent:
         run.add_child(DocxASTDrawingNode(
             relationship_id="rId6",
             resolved_path=None,
+            image_data=b"fakejpeg",
         ))
         para.add_child(run)
         result = _map(_doc(_body(para)))
         img = result.children[0].children[0]
         assert isinstance(img, DocumentIRImageNode)
         assert img.url == "rId6"
+        assert img.data == b"fakejpeg"
 
     def test_drawing_without_any_url_omitted(self):
         para = DocxASTParagraphNode()

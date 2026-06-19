@@ -100,6 +100,10 @@ class DocxASTParser:
     of the mapper that converts the AST to doc_ir.
     """
 
+    def __init__(self) -> None:
+        """Initialise the parser."""
+        self._zf: zipfile.ZipFile | None = None
+
     def parse(
         self,
         data: bytes,
@@ -126,6 +130,7 @@ class DocxASTParser:
             raise DocxParseError(f"Not a valid DOCX file (ZIP open failed): {e}") from e
 
         with zf:
+            self._zf = zf
             names = zf.namelist()
 
             if _ENCRYPTED_ENTRY in names:
@@ -159,6 +164,8 @@ class DocxASTParser:
             doc_xml = self._read_xml(zf, _DOCUMENT_PATH)
             body_node = self._parse_document_body(doc_xml, document.relationships)
             document.add_child(body_node)
+
+            self._zf = None
 
         return document
 
@@ -805,12 +812,21 @@ class DocxASTParser:
 
         resolved_path = relationships.get(relationship_id)
 
+        image_data: bytes | None = None
+        if resolved_path is not None and self._zf is not None:
+            try:
+                image_data = self._zf.read(resolved_path)
+
+            except KeyError:
+                pass
+
         return DocxASTDrawingNode(
             relationship_id=relationship_id,
             resolved_path=resolved_path,
             description=description,
             width_emu=width_emu,
             height_emu=height_emu,
+            image_data=image_data,
         )
 
     def _parse_table(

@@ -7,6 +7,7 @@ from dhtml import HtmlError, HtmlParseError, document_ir_to_html, html_ast_to_do
 from dmarkdown.document_ir_to_markdown import document_ir_to_markdown
 from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
 from dmarkdown.markdown_to_document_ir import markdown_ast_to_document_ir
+from document_ir.image_sidecar import extract_images_to_sidecar
 from docx import (
     DocxError, DocxUnsupportedError,
     docx_ast_to_document_ir, document_ir_to_docx_ast, parse_docx, serialise_docx
@@ -27,6 +28,9 @@ _EXTENSION_FORMATS: dict[str, str] = {v: k for k, v in _FORMAT_EXTENSIONS.items(
 _EXTENSION_FORMATS[".htm"] = "html"
 
 _SUPPORTED_FORMATS = sorted(_FORMAT_EXTENSIONS.keys())
+
+# Formats that use text files and need embedded images extracted to a sidecar directory.
+_SIDECAR_FORMATS = frozenset({"html", "md"})
 
 
 def _infer_format(path: Path, label: str) -> str:
@@ -154,6 +158,15 @@ Examples:
 
     try:
         doc_ir = _IMPORTERS[from_format](input_path)
+
+        if to_format in _SIDECAR_FORMATS:
+            sidecar_dir = output_path.parent / f"{output_path.stem}_files"
+            extract_images_to_sidecar(
+                doc_ir,
+                sidecar_dir,
+                output_path.stem,
+            )
+
         content = _EXPORTERS[to_format](doc_ir)  # type: ignore[operator]
     except SystemExit:
         raise
