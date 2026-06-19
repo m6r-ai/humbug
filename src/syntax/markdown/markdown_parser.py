@@ -1,6 +1,5 @@
-import re
 from dataclasses import dataclass, field
-from typing import List, cast
+from typing import List
 
 from syntax.lexer import TokenType, Token
 from syntax.markdown.markdown_lexer import MarkdownLexer
@@ -8,6 +7,20 @@ from syntax.parser import Parser, ParserState
 from syntax.parser_registry import ParserRegistry
 from syntax.programming_language import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
+
+
+@dataclass
+class BlockContext:
+    """
+    A single entry in the block-level context stack.
+
+    Attributes:
+        type: The block type — either BLOCKQUOTE or LIST_MARKER
+        indent: For LIST_MARKER, the column at which list item content begins.
+                For BLOCKQUOTE, unused (depth is implicit in stack position).
+    """
+    type: TokenType
+    indent: int = 0
 
 
 @dataclass
@@ -19,14 +32,13 @@ class MarkdownParserState(ParserState):
         in_fence_block: Indicates if we're currently in a code fence block
         fence_depth: Indentation of the current fence block (if we are in one)
         nested_fence_depth: Counter for nested fence blocks within the current fence
-        blockquote_depth: Number of '>' prefixes that were present when the current
-            fence block was opened; used to strip the same number of prefixes from
-            each subsequent content line before delegating to the embedded parser
+        fence_blockquote_depth: Number of BLOCKQUOTE entries in the block stack when
+            the current fence was opened; used to strip the same number of '>' prefixes
+            from each subsequent content line before delegating to the embedded parser
         language: The current programming language being parsed
         embedded_parser_state: State of the embedded language parser
-        in_list_item: Indicates if we're currently in a list item
-        list_indent_stack: Stack of indentation levels for nested lists
-        block_type: The type of block element we're in (heading, blockquote, list)
+        block_stack: Stack of active block-level contexts (BLOCKQUOTE and LIST_MARKER
+            entries). The innermost entry determines how content tokens are coloured.
         inline_formatting_stack: Stack tracking nested inline formatting
         in_link: Indicates if we're currently in a link
         in_image: Indicates if we're currently in an image
@@ -34,20 +46,13 @@ class MarkdownParserState(ParserState):
     in_fence_block: bool = False
     fence_depth: int = 0
     nested_fence_depth: int = 0
-    blockquote_depth: int = 0
+    fence_blockquote_depth: int = 0
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
     embedded_parser_state: ParserState | None = None
-    in_list_item: bool = False
-    list_indent_stack: List[int] | None = None
-    block_type: TokenType | None = None
+    block_stack: List[BlockContext] = field(default_factory=list)
     inline_formatting_stack: List[str] = field(default_factory=list)
     in_link: bool = False
     in_image: bool = False
-
-    def __post_init__(self) -> None:
-        """Initialize mutable default attributes."""
-        if self.list_indent_stack is None:
-            self.list_indent_stack = []
 
 
 @ParserRegistry.register_parser(ProgrammingLanguage.MARKDOWN)
@@ -488,11 +493,9 @@ class MarkdownParser(Parser):
         in_fence_block: bool,
         fence_depth: int,
         nested_fence_depth: int,
-        blockquote_depth: int,
+        fence_blockquote_depth: int,
         language: ProgrammingLanguage,
-        in_list_item: bool,
-        list_indent_stack: List[int],
-        block_type: TokenType | None,
+        block_stack: List[BlockContext],
         embedded_parser_state: ParserState | None,
     ) -> MarkdownParserState:
         """Helper to create a MarkdownParserState from individual fields."""
@@ -500,11 +503,9 @@ class MarkdownParser(Parser):
         parser_state.in_fence_block = in_fence_block
         parser_state.fence_depth = fence_depth
         parser_state.nested_fence_depth = nested_fence_depth
-        parser_state.blockquote_depth = blockquote_depth
+        parser_state.fence_blockquote_depth = fence_blockquote_depth
         parser_state.language = language
-        parser_state.in_list_item = in_list_item
-        parser_state.list_indent_stack = list_indent_stack
-        parser_state.block_type = block_type
+        parser_state.block_stack = block_stack
         parser_state.embedded_parser_state = embedded_parser_state
         return parser_state
 
@@ -527,13 +528,11 @@ class MarkdownParser(Parser):
         in_fence_block = False
         fence_depth = 0
         nested_fence_depth = 0
-        blockquote_depth = 0
+        fence_blockquote_depth = 0
         language = ProgrammingLanguage.UNKNOWN
         embedded_parser_state = None
         parsing_continuation = False
-        in_list_item = False
-        list_indent_stack: List[int] = []
-        block_type = None
+        block_stack: List[BlockContext] = []
 
         if prev_parser_state is not None:
             assert isinstance(prev_parser_state, MarkdownParserState), \
@@ -541,28 +540,26 @@ class MarkdownParser(Parser):
             in_fence_block = prev_parser_state.in_fence_block
             fence_depth = prev_parser_state.fence_depth
             nested_fence_depth = prev_parser_state.nested_fence_depth
-            blockquote_depth = prev_parser_state.blockquote_depth
+            fence_blockquote_depth = prev_parser_state.fence_blockquote_depth
             language = prev_parser_state.language
             embedded_parser_state = prev_parser_state.embedded_parser_state
             parsing_continuation = prev_parser_state.parsing_continuation
-            in_list_item = prev_parser_state.in_list_item
-            list_indent_stack = cast(List[int], prev_parser_state.list_indent_stack).copy()
-            block_type = prev_parser_state.block_type
+            block_stack = prev_parser_state.block_stack.copy()
 
         # Step 1: strip leading blockquote prefixes and emit BLOCKQUOTE tokens.
         #
         # We always do this, even when inside a fence block, so that the '> '
         # markers that were present when the fence opened are removed before the
         # content is handed to the embedded parser.  We only strip as many levels
-        # as were present when the fence was opened (blockquote_depth) so that
-        # any '>' characters that are genuine code content are preserved.
-        if in_fence_block and blockquote_depth > 0:
+        # as were present when the fence was opened (fence_blockquote_depth) so
+        # that any '>' characters that are genuine code content are preserved.
+        if in_fence_block and fence_blockquote_depth > 0:
             # Strip exactly the number of blockquote levels that were active when
             # the fence opened, preserving any deeper '>' as code content.
-            bq_tokens: list[Token] = []
             remaining = input_str
             bq_offset = 0
-            for _ in range(blockquote_depth):
+            bq_tokens_count = 0
+            for _ in range(fence_blockquote_depth):
                 stripped = remaining.lstrip()
                 spaces_before = len(remaining) - len(stripped)
                 if not stripped.startswith('>'):
@@ -579,8 +576,8 @@ class MarkdownParser(Parser):
                 self._tokens.append(Token(type=TokenType.BLOCKQUOTE, value=token_value, start=bq_offset))
                 bq_offset += consumed
                 remaining = remaining[consumed:]
+                bq_tokens_count += 1
 
-            bq_tokens_count = len(bq_tokens)
             content_offset = bq_offset
 
         else:
@@ -612,8 +609,7 @@ class MarkdownParser(Parser):
                             return self._create_parser_state(
                                 False, 0, 0, 0,
                                 ProgrammingLanguage.UNKNOWN,
-                                in_list_item, list_indent_stack,
-                                block_type, None
+                                block_stack, None
                             )
 
                         # More indented than the opening fence — treat as content.
@@ -630,9 +626,8 @@ class MarkdownParser(Parser):
             # Delegate remaining content to the embedded parser.
             new_embedded_state = self._embedded_parse(language, embedded_parser_state, remaining, content_offset)
             parser_state = self._create_parser_state(
-                in_fence_block, fence_depth, nested_fence_depth, blockquote_depth,
-                language, in_list_item, list_indent_stack,
-                block_type, embedded_parser_state
+                in_fence_block, fence_depth, nested_fence_depth, fence_blockquote_depth,
+                language, block_stack, embedded_parser_state
             )
             parser_state.embedded_parser_state = new_embedded_state
             if new_embedded_state is not None:
@@ -646,9 +641,8 @@ class MarkdownParser(Parser):
         if parsing_continuation:
             new_embedded_state = self._embedded_parse(language, embedded_parser_state, remaining, content_offset)
             parser_state = self._create_parser_state(
-                in_fence_block, fence_depth, nested_fence_depth, blockquote_depth,
-                language, in_list_item, list_indent_stack,
-                block_type, embedded_parser_state
+                in_fence_block, fence_depth, nested_fence_depth, fence_blockquote_depth,
+                language, block_stack, embedded_parser_state
             )
             parser_state.embedded_parser_state = new_embedded_state
             if new_embedded_state is not None:
@@ -658,21 +652,50 @@ class MarkdownParser(Parser):
             return parser_state
 
         # Step 4: not in a fence block — lex and classify the stripped content.
+        #
+        # Reconcile the block stack with the observed blockquote depth for this line.
+        # The number of leading '>' markers stripped in Step 1 tells us the current
+        # blockquote nesting level.  We pop stack entries that belong to a deeper
+        # blockquote context (both the excess BLOCKQUOTE entries and any LIST_MARKER
+        # entries nested inside them), then push new BLOCKQUOTE entries if the depth
+        # has increased.
+        current_bq_depth = sum(1 for ctx in block_stack if ctx.type == TokenType.BLOCKQUOTE)
+
+        if bq_tokens_count < current_bq_depth:
+            # Blockquote depth decreased — trim the stack down to the new depth,
+            # discarding both the excess BLOCKQUOTE entries and any LIST_MARKER
+            # entries that were nested inside them.
+            new_stack: List[BlockContext] = []
+            remaining_bq = bq_tokens_count
+            for ctx in block_stack:
+                if ctx.type == TokenType.BLOCKQUOTE:
+                    if remaining_bq > 0:
+                        new_stack.append(ctx)
+                        remaining_bq -= 1
+
+                    else:
+                        break
+
+                else:
+                    new_stack.append(ctx)
+            block_stack = new_stack
+
+        elif bq_tokens_count > current_bq_depth:
+            # Blockquote depth increased — push new BLOCKQUOTE entries.
+            # If we are entering a blockquote from depth 0, any list context
+            # that existed outside any blockquote is a separate block and must
+            # be cleared before we push the new blockquote level.
+            if current_bq_depth == 0:
+                block_stack = [ctx for ctx in block_stack if ctx.type != TokenType.LIST_MARKER]
+
+            for _ in range(bq_tokens_count - current_bq_depth):
+                block_stack.append(BlockContext(type=TokenType.BLOCKQUOTE))
+
         lexer = MarkdownLexer()
         lexer.lex(None, remaining)
 
-        # Collect tokens from the lexer, processing fence opens/closes and
-        # list markers inline; plain text tokens are accumulated for the
-        # inline-formatting pass at the end.
         parse_embedded = False
         fence_just_opened = False
-
-        # A top-level blockquote line resets list state — a blockquote is not a
-        # continuation of a preceding list.
-        if bq_tokens_count > 0:
-            in_list_item = False
-            list_indent_stack.clear()
-            block_type = None
 
         while True:
             token = lexer.get_next_token()
@@ -704,7 +727,7 @@ class MarkdownParser(Parser):
                     token = Token(type=TokenType.FENCE_END, value=token.value, start=token.start)
                     self._tokens.append(token)
                     in_fence_block = False
-                    blockquote_depth = 0
+                    fence_blockquote_depth = 0
                     fence_depth = 0
                     nested_fence_depth = 0
                     language = ProgrammingLanguage.UNKNOWN
@@ -712,18 +735,21 @@ class MarkdownParser(Parser):
                     parse_embedded = False
                     break
 
-                # Open a new fence.
+                # Open a new fence.  A fence at or outside the innermost list indent
+                # pops list entries from the stack (the fence is not a list
+                # continuation), but blockquote entries are preserved.
                 in_fence_block = True
                 fence_depth = token.start - content_offset
                 fence_just_opened = True
-                blockquote_depth = bq_tokens_count
+                fence_blockquote_depth = bq_tokens_count
                 embedded_parser_state = None
 
-                # A fence that starts at or outside the current list indent resets list state.
-                if not list_indent_stack or (token.start - content_offset) < list_indent_stack[-1]:
-                    in_list_item = False
-                    list_indent_stack.clear()
-                    block_type = None
+                list_indent = next(
+                    (ctx.indent for ctx in reversed(block_stack) if ctx.type == TokenType.LIST_MARKER),
+                    None
+                )
+                if list_indent is None or fence_depth < list_indent:
+                    block_stack = [ctx for ctx in block_stack if ctx.type != TokenType.LIST_MARKER]
 
                 token = Token(type=TokenType.FENCE_START, value=token.value, start=token.start)
                 self._tokens.append(token)
@@ -746,93 +772,94 @@ class MarkdownParser(Parser):
                 break
 
             if token.type == TokenType.HEADING:
-                in_list_item = False
-                block_type = TokenType.HEADING
-                list_indent_stack.clear()
+                # A heading resets any list context but preserves blockquote context.
+                block_stack = [ctx for ctx in block_stack if ctx.type != TokenType.LIST_MARKER]
                 self._tokens.append(token)
                 continue
 
             if token.type == TokenType.LIST_MARKER:
-                matches = list(re.finditer(r'\S+', token.value))
-                assert len(matches) > 0, "Cannot have zero matches in a LIST_MARKER token"
+                # The LIST_MARKER token now covers only the marker prefix (e.g.
+                # "* " or "1. "), so the content indent is simply the position
+                # immediately after the token.
+                current_indent = token.start + len(token.value)
 
-                if len(matches) == 1:
-                    current_indent = matches[0].end() + token.start
+                # Find the innermost LIST_MARKER entry in the stack (if any).
+                list_ctx_index = next(
+                    (i for i in range(len(block_stack) - 1, -1, -1)
+                     if block_stack[i].type == TokenType.LIST_MARKER),
+                    None
+                )
 
+                if list_ctx_index is None:
+                    # No list active yet — start one.
+                    block_stack.append(BlockContext(type=TokenType.LIST_MARKER, indent=current_indent))
                 else:
-                    current_indent = matches[1].start() + token.start
+                    top_indent = block_stack[list_ctx_index].indent
+                    if current_indent > top_indent:
+                        # Deeper indent — push a nested list level.
+                        block_stack.append(BlockContext(type=TokenType.LIST_MARKER, indent=current_indent))
 
-                # Update list nesting stack.
-                if not in_list_item:
-                    in_list_item = True
-                    list_indent_stack.append(current_indent)
-                else:
-                    if list_indent_stack and current_indent > list_indent_stack[-1]:
-                        list_indent_stack.append(current_indent)
+                    elif current_indent < top_indent:
+                        # Shallower indent — pop list levels until we match or exhaust.
+                        while (block_stack and
+                               block_stack[-1].type == TokenType.LIST_MARKER and
+                               block_stack[-1].indent > current_indent):
+                            block_stack.pop()
 
-                    elif list_indent_stack:
-                        while list_indent_stack and current_indent < list_indent_stack[-1]:
-                            list_indent_stack.pop()
+                        if not block_stack or block_stack[-1].type != TokenType.LIST_MARKER:
+                            block_stack.append(BlockContext(type=TokenType.LIST_MARKER, indent=current_indent))
 
-                        if not list_indent_stack:
-                            list_indent_stack.append(current_indent)
+                    # else: same indent — stay on the current level (no push/pop needed)
 
-                        elif current_indent != list_indent_stack[-1]:
-                            list_indent_stack.append(current_indent)
-
-                block_type = TokenType.LIST_MARKER
-
-                # Check whether the list item content starts with a blockquote marker,
-                # e.g. '- > quote'.  If so, split into a LIST_MARKER prefix token and
-                # a BLOCKQUOTE token for the remainder.
-                if len(matches) >= 2 and matches[1].group().startswith('>'):
-                    content_offset_in_token = matches[1].start()
-                    self._tokens.append(Token(
-                        type=TokenType.LIST_MARKER,
-                        value=token.value[:content_offset_in_token],
-                        start=token.start
-                    ))
-                    self._tokens.append(Token(
-                        type=TokenType.BLOCKQUOTE,
-                        value=token.value[content_offset_in_token:],
-                        start=token.start + content_offset_in_token
-                    ))
-
-                else:
-                    self._tokens.append(token)
-
+                self._tokens.append(token)
                 continue
 
-            if in_list_item and list_indent_stack:
-                if token.start >= list_indent_stack[-1]:
-                    token = Token(type=TokenType.LIST_MARKER, value=token.value, start=token.start)
+            # Content token following a list marker or on a continuation line.
+            # Only plain TEXT tokens are retyped to LIST_MARKER — structural tokens
+            # (TABLE, HEADING, HORIZONTAL_RULE, FENCE, BLOCKQUOTE) keep their own
+            # type so the highlighter can colour them appropriately.
+            list_ctx = next(
+                (ctx for ctx in reversed(block_stack) if ctx.type == TokenType.LIST_MARKER),
+                None
+            )
+            if list_ctx is not None:
+                if token.start >= list_ctx.indent:
+                    # Content is indented enough to be list content.  Retype only
+                    # plain TEXT tokens; structural tokens keep their own type.
+                    if token.type == TokenType.TEXT:
+                        token = Token(type=TokenType.LIST_MARKER, value=token.value, start=token.start)
                     self._tokens.append(token)
                     continue
 
-                while list_indent_stack and token.start < list_indent_stack[-1]:
-                    list_indent_stack.pop()
-
-                if not list_indent_stack:
-                    in_list_item = False
-                    block_type = None
-
-                else:
-                    token = Token(type=TokenType.LIST_MARKER, value=token.value, start=token.start)
-                    self._tokens.append(token)
-                    continue
-
-            if not list_indent_stack:
-                block_type = None
-                in_list_item = False
+                # Content is less indented than the list — pop list levels.
+                while (block_stack and
+                       block_stack[-1].type == TokenType.LIST_MARKER and
+                       block_stack[-1].indent > token.start):
+                    block_stack.pop()
 
             self._tokens.append(token)
 
         # Step 5: inline formatting pass over non-fence tokens.
+        # BLOCKQUOTE, LIST_MARKER, and HEADING tokens are passed with their own
+        # type so the highlighter colours their content consistently.
+        # TEXT tokens use the innermost block context type from the stack so that
+        # plain text content inside a blockquote or list continuation is coloured
+        # to match its container rather than appearing as unstyled TEXT.
         if not parse_embedded:
+            innermost_type: TokenType | None = next(
+                (ctx.type for ctx in reversed(block_stack)),
+                None
+            )
             processed_tokens: List[Token] = []
             for token in self._tokens:
                 if token.type in (TokenType.TEXT, TokenType.HEADING, TokenType.BLOCKQUOTE, TokenType.LIST_MARKER):
-                    inline_tokens = self._parse_inline_formatting_in_text(token, token.type)
+                    if token.type == TokenType.TEXT and innermost_type is not None:
+                        block_type = innermost_type
+
+                    else:
+                        block_type = token.type
+
+                    inline_tokens = self._parse_inline_formatting_in_text(token, block_type)
                     processed_tokens.extend(inline_tokens)
 
                 else:
@@ -842,9 +869,8 @@ class MarkdownParser(Parser):
 
         # Step 6: build and return the new parser state.
         parser_state = self._create_parser_state(
-            in_fence_block, fence_depth, nested_fence_depth, blockquote_depth,
-            language, in_list_item, list_indent_stack,
-            block_type, embedded_parser_state
+            in_fence_block, fence_depth, nested_fence_depth, fence_blockquote_depth,
+            language, block_stack, embedded_parser_state
         )
 
         if parse_embedded and not fence_just_opened:

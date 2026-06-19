@@ -92,10 +92,10 @@ class MarkdownLexer(Lexer):
         if pos < self._input_len and self._is_whitespace(self._input[pos]):
             self._tokens.append(Token(
                 type=TokenType.LIST_MARKER,
-                value=self._input[self._position:],
+                value=self._input[self._position:pos + 1],
                 start=self._position
             ))
-            self._position = self._input_len
+            self._position = pos + 1
             return
 
         # Do we have 3 or more of the same marker?  If yes, it's a horizontal rule
@@ -131,10 +131,10 @@ class MarkdownLexer(Lexer):
             # It's a valid ordered list marker
             self._tokens.append(Token(
                 type=TokenType.LIST_MARKER,
-                value=self._input[self._position:],
+                value=self._input[self._position:pos + 2],
                 start=self._position
             ))
-            self._position = self._input_len
+            self._position = pos + 2
             return
 
         # Not a valid ordered list marker, reset and read as text

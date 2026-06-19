@@ -33,6 +33,7 @@ Bug fixes:
 - Resolved problem with application zoom shortcuts interacting with terminal tabs.
 - Resolved `.docx` document rendering problems with spacing and list numbering.
 - Resolved subtle rendering problems with Markdown documents and "tight" lists.
+- Improved the Markdown syntax highlighter to make things consistent between different block types.
 
 ## v49 (2026-06-07)
 

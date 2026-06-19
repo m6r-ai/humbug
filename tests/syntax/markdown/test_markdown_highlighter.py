@@ -2,14 +2,14 @@
 Comprehensive tests for the markdown syntax highlighter (lexer + parser).
 
 Covers block-level recognition, fence state machine, inline formatting (happy
-path and edge cases), list parsing, nesting, token positions, and known
-behavioural quirks identified by reading the source.
+path and edge cases), list parsing, nesting, token positions, and state
+continuity across lines.
 """
 import sys
 sys.path.insert(0, 'src')
 
 import syntax.parser_imports  # registers all parsers
-from syntax.markdown.markdown_parser import MarkdownParser, MarkdownParserState
+from syntax.markdown.markdown_parser import MarkdownParser, MarkdownParserState, BlockContext
 from syntax.programming_language import ProgrammingLanguage
 from syntax.lexer import TokenType
 
@@ -65,6 +65,16 @@ def values(tokens):
 def starts(tokens):
     """Return list of token start positions."""
     return [t.start for t in tokens]
+
+
+def in_list(state):
+    """Return True if the state has any LIST_MARKER entry in the block stack."""
+    return any(ctx.type == TokenType.LIST_MARKER for ctx in state.block_stack)
+
+
+def list_indent_stack(state):
+    """Return the list of indent values from LIST_MARKER entries in block_stack."""
+    return [ctx.indent for ctx in state.block_stack if ctx.type == TokenType.LIST_MARKER]
 
 
 # ---------------------------------------------------------------------------
@@ -806,41 +816,40 @@ class TestListParsing:
         """An indented continuation line inside a list is treated as LIST_MARKER."""
         lines = ["* item", "  continuation text"]
         all_tokens, state = parse_lines(lines)
-        # The continuation line should be LIST_MARKER (or contain one)
         assert TokenType.LIST_MARKER in types(all_tokens[1])
 
     def test_nested_list_pushes_indent_stack(self):
-        """An indented sub-item pushes a new level onto the indent stack."""
+        """An indented sub-item pushes a new level onto the block stack."""
         lines = ["* outer", "  * inner"]
         all_tokens, state = parse_lines(lines)
-        assert state.in_list_item is True
-        assert len(state.list_indent_stack) == 2
+        assert in_list(state) is True
+        assert len(list_indent_stack(state)) == 2
 
     def test_de_indented_item_pops_stack(self):
         """Returning to outer indentation pops the inner level from the stack."""
         lines = ["* outer", "  * inner", "* outer again"]
         all_tokens, state = parse_lines(lines)
-        assert state.in_list_item is True
-        assert len(state.list_indent_stack) == 1
+        assert in_list(state) is True
+        assert len(list_indent_stack(state)) == 1
 
     def test_non_list_line_after_list_resets_state(self):
         """A non-indented, non-list line after a list resets list state."""
         lines = ["* item", "plain text"]
         all_tokens, state = parse_lines(lines)
-        assert state.in_list_item is False
-        assert state.list_indent_stack == []
+        assert in_list(state) is False
+        assert list_indent_stack(state) == []
 
     def test_heading_after_list_resets_state(self):
         """A heading line after a list resets list state."""
         lines = ["* item", "# Heading"]
         all_tokens, state = parse_lines(lines)
-        assert state.in_list_item is False
+        assert in_list(state) is False
 
     def test_list_state_carries_across_lines(self):
-        """in_list_item remains True across consecutive list lines."""
+        """List context remains active across consecutive list lines."""
         lines = ["* one", "* two"]
         all_tokens, state = parse_lines(lines)
-        assert state.in_list_item is True
+        assert in_list(state) is True
 
 
 # ---------------------------------------------------------------------------
@@ -924,7 +933,7 @@ class TestMultiLine:
         lines = ["line one", "line two", "line three"]
         _, state = parse_lines(lines)
         assert state.in_fence_block is False
-        assert state.in_list_item is False
+        assert in_list(state) is False
 
     def test_fence_state_persists_across_content_lines(self):
         """in_fence_block remains True for all lines inside a fence."""
@@ -967,11 +976,11 @@ class TestMultiLine:
         assert TokenType.FENCE_END in types(all_tokens[3])
         assert TokenType.TEXT in types(all_tokens[4])
         assert state.in_fence_block is False
-        assert state.in_list_item is False
+        assert in_list(state) is False
 
     def test_heading_resets_list_state(self):
-        """A heading encountered while in a list resets in_list_item."""
+        """A heading encountered while in a list resets list context."""
         lines = ["* item", "## Heading"]
         _, state = parse_lines(lines)
-        assert state.in_list_item is False
-        assert state.list_indent_stack == []
+        assert in_list(state) is False
+        assert list_indent_stack(state) == []
