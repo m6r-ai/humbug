@@ -669,11 +669,17 @@ class TestRoundTrip:
 
         parsed = self._round_trip(ir)
         from docx.docx_ast_node import (
-            DocxASTBodyNode, DocxASTParagraphNode,
+            DocxASTBodyNode, DocxASTParagraphNode, DocxASTTableNode,
+            DocxASTTableRowNode, DocxASTTableCellNode,
             DocxASTParagraphPropertiesNode, DocxASTRunNode, DocxASTTextNode,
         )
         body = next(c for c in parsed.children if isinstance(c, DocxASTBodyNode))
-        para = next(c for c in body.children if isinstance(c, DocxASTParagraphNode))
+        # Code blocks are serialised as a single-cell table; the CodeBlock
+        # paragraphs live inside the cell, not directly in the body.
+        table = next(c for c in body.children if isinstance(c, DocxASTTableNode))
+        row = next(c for c in table.children if isinstance(c, DocxASTTableRowNode))
+        cell = next(c for c in row.children if isinstance(c, DocxASTTableCellNode))
+        para = next(c for c in cell.children if isinstance(c, DocxASTParagraphNode))
         ppr = next(c for c in para.children if isinstance(c, DocxASTParagraphPropertiesNode))
         assert ppr.style_id == "CodeBlock"
         texts = [t.content for r in para.children
