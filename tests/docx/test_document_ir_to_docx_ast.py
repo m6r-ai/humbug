@@ -132,6 +132,40 @@ def _content_paras(doc: DocxASTDocumentNode) -> list:
             if isinstance(c, DocxASTParagraphNode) and not _is_spacer(c)]
 
 
+def _code_block_table(doc: DocxASTDocumentNode) -> DocxASTTableNode:
+    """Return the first code-block table in the body."""
+    return next(c for c in _body(doc).children if isinstance(c, DocxASTTableNode))
+
+
+def _code_block_cell(doc: DocxASTDocumentNode) -> DocxASTTableCellNode:
+    """Return the single cell of the first code-block table in the body."""
+    table = next(c for c in _body(doc).children if isinstance(c, DocxASTTableNode))
+    row = next(c for c in table.children if isinstance(c, DocxASTTableRowNode))
+    return next(c for c in row.children if isinstance(c, DocxASTTableCellNode))
+
+
+def _code_block_paras(doc: DocxASTDocumentNode) -> list:
+    """Return the CodeBlock paragraphs from inside the first code-block table."""
+    cell = _code_block_cell(doc)
+    return [c for c in cell.children if isinstance(c, DocxASTParagraphNode)]
+
+
+def _last_code_para_in_body(doc: DocxASTDocumentNode) -> DocxASTParagraphNode:
+    """Return the last CodeBlock paragraph across all code-block tables in the body."""
+    paras = []
+    for node in _body(doc).children:
+        if isinstance(node, DocxASTTableNode):
+            for row in node.children:
+                if isinstance(row, DocxASTTableRowNode):
+                    for cell in row.children:
+                        if isinstance(cell, DocxASTTableCellNode):
+                            paras.extend(
+                                c for c in cell.children
+                                if isinstance(c, DocxASTParagraphNode)
+                            )
+    return paras[-1]
+
+
 # ---------------------------------------------------------------------------
 # Document structure
 # ---------------------------------------------------------------------------
@@ -401,46 +435,46 @@ class TestHeadingMapping:
 class TestCodeBlockMapping:
     def test_single_line_code(self):
         result = _map(_doc(DocumentIRCodeBlockNode(language="python", content="x = 1")))
-        body = _body(result)
-        paras = _content_paras(result)
+        paras = _code_block_paras(result)
         assert len(paras) == 1
         assert _ppr(paras[0]).style_id == "CodeBlock"
 
     def test_multiline_code_one_para_per_line(self):
         result = _map(_doc(DocumentIRCodeBlockNode(language="", content="line1\nline2\nline3")))
-        body = _body(result)
-        paras = _content_paras(result)
+        paras = _code_block_paras(result)
         assert len(paras) == 3
 
     def test_code_content_preserved(self):
         result = _map(_doc(DocumentIRCodeBlockNode(language="", content="print('hello')")))
-        body = _body(result)
-        para = next(c for c in body.children if isinstance(c, DocxASTParagraphNode))
+        paras = _code_block_paras(result)
+        para = paras[0]
         assert _text_of(para) == "print('hello')"
 
     def test_empty_code_block_emits_one_para(self):
         result = _map(_doc(DocumentIRCodeBlockNode(language="", content="")))
-        body = _body(result)
-        paras = _content_paras(result)
+        paras = _code_block_paras(result)
         assert len(paras) == 1
 
     def test_trailing_newline_not_extra_para(self):
         result = _map(_doc(DocumentIRCodeBlockNode(language="", content="code\n")))
-        body = _body(result)
-        paras = _content_paras(result)
+        paras = _code_block_paras(result)
         assert len(paras) == 1
 
     def test_code_block_last_line_has_standard_spacing(self):
+        # A top-level code block is emitted as a table; the trailing gap is
+        # provided by a spacer paragraph that follows the table.
         result = _map(_doc(DocumentIRCodeBlockNode(language="", content="x = 1")))
         body_children = list(_body(result).children)
-        last_code = next(c for c in reversed(body_children)
-                         if isinstance(c, DocxASTParagraphNode)
-                         and _ppr(c).style_id == "CodeBlock")
-        assert _ppr(last_code).spacing_after == 200
+        table_idx = next(i for i, c in enumerate(body_children) if isinstance(c, DocxASTTableNode))
+        spacer = body_children[table_idx + 1]
+        assert isinstance(spacer, DocxASTParagraphNode)
+        assert _ppr(spacer).spacing_before == 0
+        assert _ppr(spacer).spacing_after == 0
 
     def test_code_block_mid_list_item_has_standard_spacing(self):
-        # Code block followed by more content within the same item: last code
-        # line gets spacing_after=200 to separate it from the continuation.
+        # Code block followed by more content within the same item: the
+        # continuation paragraph follows the table directly and carries the
+        # standard spacing_after to separate it from subsequent content.
         item = DocumentIRListItemNode()
         item.add_child(_para(_span("Intro")))
         item.add_child(DocumentIRCodeBlockNode(language="", content="x = 1"))
@@ -449,14 +483,15 @@ class TestCodeBlockMapping:
         ul.add_child(item)
         result = _map(_doc(ul))
         body_children = list(_body(result).children)
-        code_para = next(c for c in body_children
-                         if isinstance(c, DocxASTParagraphNode)
-                         and _ppr(c).style_id == "CodeBlock")
-        assert _ppr(code_para).spacing_after == 200
+        table_idx = next(i for i, c in enumerate(body_children) if isinstance(c, DocxASTTableNode))
+        continuation = body_children[table_idx + 1]
+        assert isinstance(continuation, DocxASTParagraphNode)
+        assert _text_of(continuation) == "Continuation"
+        assert _ppr(continuation).spacing_after == 200
 
     def test_code_block_at_end_of_tight_list_item_has_standard_spacing(self):
-        # Code block as the last child of a tight list item: last line gets
-        # spacing_after=200 via _apply_list_trailing_spacing.
+        # Code block as the last child of a tight list item: the trailing gap
+        # is provided by a spacer paragraph after the code block table.
         item = DocumentIRListItemNode()
         item.add_child(_para(_span("Intro")))
         item.add_child(DocumentIRCodeBlockNode(language="", content="x = 1"))
@@ -464,14 +499,15 @@ class TestCodeBlockMapping:
         ul.add_child(item)
         result = _map(_doc(ul))
         body_children = list(_body(result).children)
-        last_code = next(c for c in reversed(body_children)
-                         if isinstance(c, DocxASTParagraphNode)
-                         and _ppr(c).style_id == "CodeBlock")
-        assert _ppr(last_code).spacing_after == 200
+        table_idx = next(i for i, c in enumerate(body_children) if isinstance(c, DocxASTTableNode))
+        spacer = body_children[table_idx + 1]
+        assert isinstance(spacer, DocxASTParagraphNode)
+        assert _ppr(spacer).spacing_before == 0
+        assert _ppr(spacer).spacing_after == 0
 
     def test_code_block_at_end_of_loose_list_item_has_standard_spacing(self):
-        # Code block as the last child of a loose list item: last line gets
-        # spacing_after=200 via _apply_list_trailing_spacing.
+        # Code block as the last child of a loose list item: the trailing gap
+        # is provided by a spacer paragraph after the code block table.
         item = DocumentIRListItemNode()
         item.add_child(_para(_span("Intro")))
         item.add_child(DocumentIRCodeBlockNode(language="", content="x = 1"))
@@ -479,10 +515,11 @@ class TestCodeBlockMapping:
         ul.add_child(item)
         result = _map(_doc(ul))
         body_children = list(_body(result).children)
-        last_code = next(c for c in reversed(body_children)
-                         if isinstance(c, DocxASTParagraphNode)
-                         and _ppr(c).style_id == "CodeBlock")
-        assert _ppr(last_code).spacing_after == 200
+        table_idx = next(i for i, c in enumerate(body_children) if isinstance(c, DocxASTTableNode))
+        spacer = body_children[table_idx + 1]
+        assert isinstance(spacer, DocxASTParagraphNode)
+        assert _ppr(spacer).spacing_before == 0
+        assert _ppr(spacer).spacing_after == 0
 
 
 # ---------------------------------------------------------------------------
@@ -1012,8 +1049,8 @@ class TestTableMapping:
         result = _map(_doc(_ir_table([["A"]])))
         table = next(c for c in _body(result).children if isinstance(c, DocxASTTableNode))
         tbl_pr = next(c for c in table.children if isinstance(c, DocxASTTablePropertiesNode))
-        assert tbl_pr.width == 5000
-        assert tbl_pr.width_type == "pct"
+        assert tbl_pr.width == 9360
+        assert tbl_pr.width_type == "dxa"
 
     def test_table_followed_by_spacer(self):
         result = _map(_doc(_ir_table([["A"]])))
@@ -1198,7 +1235,7 @@ class TestHorizontalRule:
     def test_horizontal_rule_uses_normal_style(self):
         result = _map(_doc(DocumentIRHorizontalRuleNode()))
         para = _first_para(result)
-        assert _ppr(para).style_id == "Normal"
+        assert _ppr(para).style_id == "HorizontalRule"
 
 
 # ---------------------------------------------------------------------------
