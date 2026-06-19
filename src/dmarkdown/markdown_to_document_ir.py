@@ -220,6 +220,11 @@ class _MarkdownToDocumentIRMapper:
             if isinstance(child, MarkdownASTListItemNode):
                 ul.add_child(self._map_list_item(child))
 
+            elif isinstance(child, MarkdownASTTableNode) and ul.children:
+                last_item = ul.children[-1]
+                assert isinstance(last_item, DocumentIRListItemNode)
+                last_item.add_child(self._map_table(child))
+
         return ul
 
     def _map_ordered_list(
@@ -237,6 +242,11 @@ class _MarkdownToDocumentIRMapper:
         for child in node.children:
             if isinstance(child, MarkdownASTListItemNode):
                 ol.add_child(self._map_list_item(child))
+
+            elif isinstance(child, MarkdownASTTableNode) and ol.children:
+                last_item = ol.children[-1]
+                assert isinstance(last_item, DocumentIRListItemNode)
+                last_item.add_child(self._map_table(child))
 
         return ol
 
@@ -269,6 +279,7 @@ class _MarkdownToDocumentIRMapper:
                     MarkdownASTParagraphNode,
                     MarkdownASTBlockquoteNode,
                     MarkdownASTCodeBlockNode,
+                    MarkdownASTTableNode,
                 ),
             ):
                 block_nodes.append(child)
