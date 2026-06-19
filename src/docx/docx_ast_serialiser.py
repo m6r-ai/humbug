@@ -104,7 +104,7 @@ _STYLE_VISUALS = {
             '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="exact"/>'
         ),
         "rpr_extra": (
-            '<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New" w:cs="Courier New"/>'
+            '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/>'
             '<w:sz w:val="20"/>'
         ),
     },
