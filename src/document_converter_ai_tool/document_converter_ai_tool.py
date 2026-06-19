@@ -16,6 +16,7 @@ from dmarkdown.document_ir_to_markdown import document_ir_to_markdown
 from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
 from dmarkdown.markdown_to_document_ir import markdown_ast_to_document_ir
 from document_ir.document_ir_node import DocumentIRDocumentNode
+from document_ir.image_sidecar import extract_images_to_sidecar
 from docx import (
     DocxError, DocxUnsupportedError,
     docx_ast_to_document_ir, document_ir_to_docx_ast, parse_docx, serialise_docx
@@ -116,6 +117,10 @@ _EXPORTERS: Dict[str, Callable[[DocumentIRDocumentNode], bytes | str]] = {
     "html": _export_html,
     "md": _export_md,
 }
+
+
+# Formats that use text files and need embedded images extracted to a sidecar directory.
+_SIDECAR_FORMATS = frozenset({"html", "md"})
 
 
 def _resolve_format_from_extension(path: Path) -> str | None:
@@ -435,6 +440,15 @@ class DocumentConverterAITool(AITool):
 
         try:
             document_ir = _IMPORTERS[from_format](input_path)
+
+            if to_format in _SIDECAR_FORMATS:
+                sidecar_dir = output_path.parent / f"{output_path.stem}_files"
+                extract_images_to_sidecar(
+                    document_ir,
+                    sidecar_dir,
+                    output_path.stem,
+                )
+
             content = _EXPORTERS[to_format](document_ir)
 
         except AIToolExecutionError:

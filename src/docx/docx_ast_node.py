@@ -413,6 +413,7 @@ class DocxASTDrawingNode(DocxASTNode):
         description: str | None = None,
         width_emu: int | None = None,
         height_emu: int | None = None,
+        image_data: bytes | None = None,
     ) -> None:
         """
         Initialise a drawing node.
@@ -424,6 +425,8 @@ class DocxASTDrawingNode(DocxASTNode):
             description: Alt text / description from the drawing properties.
             width_emu: Width in English Metric Units (914400 EMU = 1 inch).
             height_emu: Height in English Metric Units.
+            image_data: Raw bytes of the image read from the ZIP, or None if
+                not yet extracted.
         """
         super().__init__()
         self.relationship_id = relationship_id
@@ -431,6 +434,7 @@ class DocxASTDrawingNode(DocxASTNode):
         self.description = description
         self.width_emu = width_emu
         self.height_emu = height_emu
+        self.image_data = image_data
 
 
 class DocxASTHyperlinkNode(DocxASTNode):

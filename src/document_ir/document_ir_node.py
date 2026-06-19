@@ -265,18 +265,30 @@ class DocumentIRLinkNode(DocumentIRNode):
 class DocumentIRImageNode(DocumentIRNode):
     """Node representing an image."""
 
-    def __init__(self, url: str, alt_text: str = "", title: str | None = None) -> None:
+    def __init__(
+        self,
+        url: str,
+        alt_text: str = "",
+        title: str | None = None,
+        data: bytes | None = None,
+        mime_type: str | None = None,
+    ) -> None:
         """Initialise an image node.
 
         Args:
             url: The image URL or path.
             alt_text: Alternative text for the image.
             title: Optional tooltip title.
+            data: Raw image bytes, present when the image was embedded in the
+                source document rather than referenced by URL.
+            mime_type: MIME type of the image data (e.g. 'image/png'), or None.
         """
         super().__init__()
         self.url = url
         self.alt_text = alt_text
         self.title = title
+        self.data = data
+        self.mime_type = mime_type
 
 
 class DocumentIRLineBreakNode(DocumentIRNode):

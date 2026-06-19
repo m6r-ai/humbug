@@ -43,6 +43,7 @@ from document_ir import (
     DocumentIRTableRowNode,
     DocumentIRTextSpanNode,
     DocumentIRUnorderedListNode,
+    mime_type_for_extension,
 )
 
 # Style IDs / names that map to heading levels 1-6.
@@ -829,14 +830,21 @@ class _DocxToDocumentIRMapper:
 
     def _map_drawing(self, drawing: DocxASTDrawingNode) -> DocumentIRNode | None:
         """Map a drawing node to a DocumentIRImageNode."""
-        url = drawing.resolved_path or drawing.relationship_id or ""
-        if not url:
+        if drawing.image_data is None:
             return None
+
+        url = drawing.resolved_path or drawing.relationship_id or ""
+        mime_type: str | None = None
+        if drawing.resolved_path:
+            ext = drawing.resolved_path.rsplit(".", 1)[-1] if "." in drawing.resolved_path else ""
+            mime_type = mime_type_for_extension(ext)
 
         return DocumentIRImageNode(
             url=url,
             alt_text=drawing.description or "",
             title=None,
+            data=drawing.image_data,
+            mime_type=mime_type,
         )
 
     def _extract_plain_text(self, para: DocxASTParagraphNode) -> str:
