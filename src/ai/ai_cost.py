@@ -19,7 +19,7 @@ def calculate_cost(
 
     Returns 0.0 for models with no pricing data (local/unknown models).
     """
-    regular_tokens = prompt_tokens - cache_write_tokens - cache_read_tokens
+    regular_tokens = max(prompt_tokens - cache_write_tokens - cache_read_tokens, 0)
     return (
         (regular_tokens / 1_000_000) * model.input_cost_per_mtok
         + (cache_write_tokens / 1_000_000) * model.cache_write_cost_per_mtok
