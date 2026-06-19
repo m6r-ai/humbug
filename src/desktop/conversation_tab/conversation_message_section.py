@@ -132,7 +132,7 @@ class ConversationMessageSection(QFrame):
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
         self._text_area.mouse_released.connect(self._on_mouse_released)
-        if self._renderer is not None:
+        if self._renderer is not None and isinstance(self._text_area, MarkdownTextEdit):
             self._text_area.text_width_changed.connect(self._on_text_width_changed)
 
         self._mouse_left_button_pressed = False
@@ -233,7 +233,7 @@ class ConversationMessageSection(QFrame):
         Fixed-width table frames are sized at render time, so a width change
         requires a full re-render to recompute the correct table dimensions.
         """
-        if self._renderer is not None and self._content_node is not None:
+        if self._renderer is not None and self._content_node is not None and isinstance(self._text_area, MarkdownTextEdit):
             self._text_area.clear_animated_gifs()
             self._text_area.document().setTextWidth(self._text_area.viewport().width())
             self._renderer.visit(self._content_node)
