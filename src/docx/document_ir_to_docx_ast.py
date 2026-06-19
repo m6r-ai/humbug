@@ -82,6 +82,13 @@ _TABLE_HEADER_SHADING = "D0D0D0"
 # Standard inter-block spacing_after in twips, matching Normal style's spacing_after.
 _STANDARD_SPACING = 200
 
+# Text area width in twips: page width (12240) minus left+right margins (1440 each).
+# Used to compute dxa widths for block elements so they shrink correctly when indented.
+_TEXT_WIDTH_DXA = 9360
+
+# Cell margin in twips applied to all four sides of blockquote and code block cells.
+_CELL_MARGIN_DXA = 120
+
 
 def document_ir_to_docx_ast(document: DocumentIRDocumentNode) -> DocxASTDocumentNode:
     """Convert a document_ir document into a DOCX AST document.
@@ -359,6 +366,7 @@ class _DocumentIRToDocxASTMapper:
         self, node: DocumentIRBlockquoteNode, parent: DocxASTBodyNode,
         suppress_trailing_spacing: bool = True,
         indent_base: int = 0,
+        available_width: int = _TEXT_WIDTH_DXA,
     ) -> None:
         """Map a blockquote as a borderless table with a shaded cell.
 
@@ -368,6 +376,10 @@ class _DocumentIRToDocxASTMapper:
         """
         # Map content into a temporary body so we can transfer children to the cell
         cell_body = DocxASTBodyNode()
+        # Compute the cell width up front so inner block calls can use it.
+        width = available_width - indent_base
+        # Inner blocks must fit within the cell's content area (cell margins on left and right).
+        inner_width = width - 2 * _CELL_MARGIN_DXA
 
         for child in node.children:
             if isinstance(child, DocumentIRParagraphNode):
@@ -381,19 +393,24 @@ class _DocumentIRToDocxASTMapper:
 
             elif isinstance(child, DocumentIRUnorderedListNode):
                 self._map_list(child, cell_body, num_id=_NUM_ID_BULLET, depth=0,
-                               indent_base=0, tight=child.tight)
+                               indent_base=0, tight=child.tight, available_width=inner_width)
 
             elif isinstance(child, DocumentIROrderedListNode):
                 num_id = self._allocate_ordered_num_id(child.start)
                 self._map_list(child, cell_body, num_id=num_id, depth=0,
-                               indent_base=0, tight=child.tight)
+                               indent_base=0, tight=child.tight, available_width=inner_width)
 
             elif isinstance(child, DocumentIRCodeBlockNode):
-                self._map_code_block(child, cell_body)
+                self._map_code_block(child, cell_body, available_width=inner_width)
+
+            elif isinstance(child, DocumentIRTableNode):
+                cell_body.add_child(self._map_table(child, available_width=inner_width))
+                cell_body.add_child(self._make_spacer_para())
 
             else:
                 if isinstance(child, DocumentIRBlockquoteNode):
-                    self._map_blockquote(child, cell_body, indent_base=indent_base + 720)
+                    self._map_blockquote(child, cell_body, indent_base=indent_base + 720,
+                                         available_width=inner_width)
 
                 else:
                     self._map_block(child, cell_body)
@@ -408,7 +425,7 @@ class _DocumentIRToDocxASTMapper:
         # Build the table wrapper
         table = DocxASTTableNode()
 
-        tbl_pr = DocxASTTablePropertiesNode(width=5000, width_type="pct", no_borders=True, indent=indent_base)
+        tbl_pr = DocxASTTablePropertiesNode(width=width, width_type="dxa", no_borders=True, indent=indent_base)
         table.add_child(tbl_pr)
 
         row = DocxASTTableRowNode()
@@ -416,8 +433,8 @@ class _DocumentIRToDocxASTMapper:
 
         cell = DocxASTTableCellNode()
         tcp = DocxASTTableCellPropertiesNode(
-            width=5000,
-            width_type="pct",
+            width=width,
+            width_type="dxa",
             shading_fill=_BLOCKQUOTE_SHADING,
             left_bar=True,
         )
@@ -433,6 +450,7 @@ class _DocumentIRToDocxASTMapper:
         self, node: DocumentIRCodeBlockNode, parent: DocxASTBodyNode,
         indent_left: int | None = None,
         trailing_spacing: bool = True,
+        available_width: int = _TEXT_WIDTH_DXA,
     ) -> None:
         """Map a code block as a borderless single-cell table with shaded background.
 
@@ -459,13 +477,15 @@ class _DocumentIRToDocxASTMapper:
             cell_body.add_child(para)
 
         table = DocxASTTableNode()
-        tbl_pr = DocxASTTablePropertiesNode(width=5000, width_type="pct", no_borders=True,
+        _indent = indent_left or 0
+        width = available_width - _indent
+        tbl_pr = DocxASTTablePropertiesNode(width=width, width_type="dxa", no_borders=True,
                                             indent=indent_left)
         table.add_child(tbl_pr)
         row = DocxASTTableRowNode()
         table.add_child(row)
         cell = DocxASTTableCellNode()
-        tcp = DocxASTTableCellPropertiesNode(width=5000, width_type="pct",
+        tcp = DocxASTTableCellPropertiesNode(width=width, width_type="dxa",
                                              shading_fill=_CODE_BLOCK_SHADING)
         cell.add_child(tcp)
         for content_node in cell_body.children:
@@ -487,6 +507,7 @@ class _DocumentIRToDocxASTMapper:
         shading: str | None = None,
         tight: bool = True,
         suppress_trailing_spacing: bool = False,
+        available_width: int = _TEXT_WIDTH_DXA,
     ) -> None:
         """Recursively map a list node, emitting paragraphs with numPr.
 
@@ -506,7 +527,8 @@ class _DocumentIRToDocxASTMapper:
         for child in node.children:
             if isinstance(child, DocumentIRListItemNode):
                 self._map_list_item(child, parent, num_id=num_id, depth=depth,
-                                    indent_base=indent_base, shading=shading, tight=tight)
+                                    indent_base=indent_base, shading=shading, tight=tight,
+                                    available_width=available_width)
 
         if not suppress_trailing_spacing:
             self._apply_list_trailing_spacing(parent)
@@ -523,6 +545,7 @@ class _DocumentIRToDocxASTMapper:
         indent_base: int = 0,
         shading: str | None = None,
         tight: bool = True,
+        available_width: int = _TEXT_WIDTH_DXA,
     ) -> None:
         """Map a list item, emitting all its content paragraphs."""
         is_first_para = True
@@ -577,7 +600,8 @@ class _DocumentIRToDocxASTMapper:
                 self._map_list(child, parent, num_id=_NUM_ID_BULLET, depth=depth + 1,
                                indent_base=indent_base, shading=shading,
                                tight=child.tight,
-                               suppress_trailing_spacing=tight)
+                               suppress_trailing_spacing=tight,
+                               available_width=available_width)
 
             elif isinstance(child, DocumentIROrderedListNode):
                 is_first_para = False
@@ -585,7 +609,8 @@ class _DocumentIRToDocxASTMapper:
                 self._map_list(child, parent, num_id=num_id, depth=depth + 1,
                                indent_base=indent_base, shading=shading,
                                tight=child.tight,
-                               suppress_trailing_spacing=tight)
+                               suppress_trailing_spacing=tight,
+                               available_width=available_width)
 
             else:
                 # Other block children (code blocks, blockquotes, tables) inside
@@ -594,7 +619,8 @@ class _DocumentIRToDocxASTMapper:
                 if isinstance(child, DocumentIRCodeBlockNode):
                     is_last = child is item.children[-1]
                     self._map_code_block(child, parent, indent_left=indent_left,
-                                         trailing_spacing=not (tight and is_last))
+                                         trailing_spacing=not (tight and is_last),
+                                         available_width=available_width)
                     # Code blocks now emit a table + optional spacer — apply the
                     # same spacer removal logic as blockquotes.
                     if ((tight or child is item.children[-1])
@@ -604,10 +630,12 @@ class _DocumentIRToDocxASTMapper:
 
                 elif isinstance(child, DocumentIRBlockquoteNode):
                     self._map_blockquote(child, parent, suppress_trailing_spacing=True,
-                                         indent_base=indent_left)
+                                         indent_base=indent_left,
+                                         available_width=available_width)
 
                 elif isinstance(child, DocumentIRTableNode):
-                    self._map_table_in_list(child, parent, indent_left=indent_left, tight=tight)
+                    self._map_table_in_list(child, parent, indent_left=indent_left, tight=tight,
+                                            available_width=available_width)
 
                 else:
                     self._map_block(child, parent)
@@ -624,6 +652,7 @@ class _DocumentIRToDocxASTMapper:
         parent: DocxASTBodyNode,
         indent_left: int,
         tight: bool,
+        available_width: int = _TEXT_WIDTH_DXA,
     ) -> None:
         """Map a table that is a direct child of a list item.
 
@@ -638,20 +667,30 @@ class _DocumentIRToDocxASTMapper:
             indent_left: Left indent in twips matching the list level.
             tight: Whether the enclosing list is tight (suppresses trailing gap).
         """
-        table = self._map_table(node)
-        tbl_pr = next(c for c in table.children if isinstance(c, DocxASTTablePropertiesNode))
-        tbl_pr.indent = indent_left
-
+        table = self._map_table(node, indent=indent_left, available_width=available_width)
         parent.add_child(table)
 
         if not tight:
             parent.add_child(self._make_spacer_para())
 
-    def _map_table(self, node: DocumentIRTableNode) -> DocxASTTableNode:
-        """Map a table node."""
+    def _map_table(self, node: DocumentIRTableNode, indent: int = 0,
+                   available_width: int = _TEXT_WIDTH_DXA) -> DocxASTTableNode:
+        """Map a table node.
+
+        Args:
+            node: The DocumentIRTableNode to map.
+            indent: Left indent in twips (for tables inside list items).  The
+                table width is reduced by this amount so it does not overflow
+                the right margin.
+            available_width: The width in twips available to this table.  Defaults
+                to the full text area width.  Pass a smaller value when the table
+                is inside a blockquote or other constrained container.
+        """
         table = DocxASTTableNode()
 
-        tbl_pr = DocxASTTablePropertiesNode(width=5000, width_type="pct")
+        width = available_width - indent
+        tbl_pr = DocxASTTablePropertiesNode(width=width, width_type="dxa",
+                                            indent=indent if indent else None)
         table.add_child(tbl_pr)
 
         for child in node.children:
