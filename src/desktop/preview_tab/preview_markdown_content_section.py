@@ -109,6 +109,8 @@ class PreviewMarkdownContentSection(QFrame):
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
         self._text_area.mouse_released.connect(self._on_mouse_released)
+        if self._renderer is not None:
+            self._text_area.text_width_changed.connect(self._on_text_width_changed)
 
         # Add mouse move tracking for cursor changes on links
         self._text_area.viewport().setMouseTracking(True)
@@ -158,6 +160,17 @@ class PreviewMarkdownContentSection(QFrame):
         """Handle mouse press from text area."""
         if event.buttons() == Qt.MouseButton.LeftButton:
             self._mouse_left_button_pressed = True
+
+    def _on_text_width_changed(self) -> None:
+        """Re-render content when the document text width changes.
+
+        Fixed-width table frames are sized at render time, so a width change
+        requires a full re-render to recompute the correct table dimensions.
+        """
+        if self._renderer is not None and self._content_node is not None:
+            self._text_area.clear_animated_gifs()
+            self._text_area.document().setTextWidth(self._text_area.viewport().width())
+            self._renderer.visit(self._content_node)
 
     def _on_mouse_released(self, _event: QMouseEvent) -> None:
         """Handle mouse release from text area."""
@@ -230,6 +243,7 @@ class PreviewMarkdownContentSection(QFrame):
         # Render markdown content
         if self._renderer is not None:
             self._text_area.clear_animated_gifs()
+            self._text_area.document().setTextWidth(self._text_area.viewport().width())
             self._renderer.visit(content)
 
     def has_selection(self) -> bool:

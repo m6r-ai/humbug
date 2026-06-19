@@ -1022,6 +1022,19 @@ class MarkdownRenderer(MarkdownASTVisitor):
         orig_block_format = self._cursor.blockFormat()
         top_frame = self._cursor.currentFrame()
 
+        # If we're inside a list, insert a clean block attached to a ListStyleUndefined
+        # list before the table frame.  Without this Qt associates the frame's anchor
+        # block with the active list and renders a spurious bullet to the left of the
+        # table.  This mirrors the same technique used for paragraphs and code blocks.
+        if self._lists:
+            if not self._cursor.atBlockStart():
+                self._cursor.insertBlock()
+
+            list_fmt = QTextListFormat(self._lists[-1].format())
+            list_fmt.setStyle(QTextListFormat.Style.ListStyleUndefined)
+            pre_table_list = self._cursor.createList(list_fmt)
+            pre_table_list.add(self._cursor.block())
+
         # Add a top margin when following a blockquote.
         if isinstance(node.previous_sibling(), MarkdownASTBlockquoteNode):
             sep_format = QTextBlockFormat(orig_block_format)
@@ -1183,9 +1196,18 @@ class MarkdownRenderer(MarkdownASTVisitor):
             table_format.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Solid)
             table_format.setBorder(1)
 
-            # Get the width of the document
+            # When inside a list or blockquote, offset the table's left edge to align with the list
+            # indent, and reduce the width by the same amount so it doesn't overflow.
+            # QTextTable is a QTextFrame and its percentage width is always relative to
+            # the full document text width, so we must use a fixed pixel width here.
             doc_width = self._document.textWidth()
-            if doc_width > 0:
+            indent_depth = self._list_level + len(self._blockquote_bar_offsets)
+            if indent_depth > 0 and doc_width > 0:
+                left_margin = indent_depth * self._document.indentWidth()
+                table_format.setLeftMargin(left_margin)
+                table_format.setWidth(QTextLength(QTextLength.Type.FixedLength, doc_width))
+
+            elif doc_width > 0:
                 table_format.setWidth(QTextLength(QTextLength.Type.PercentageLength, 100))
 
             # Set uniform column widths

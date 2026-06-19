@@ -11,6 +11,7 @@ class MinHeightTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height."""
 
     size_hint_changed = Signal()
+    text_width_changed = Signal()
 
     def __init__(
         self,
@@ -44,6 +45,11 @@ class MinHeightTextEdit(QTextEdit):
         self._height_cap: int | None = None
 
     def resizeEvent(self, event: QResizeEvent) -> None:
+        old_width = self.document().textWidth()
+        self.document().setTextWidth(self.viewport().width())
+        if self.document().textWidth() != old_width:
+            self.text_width_changed.emit()
+
         self._on_content_resized()
         super().resizeEvent(event)
 
