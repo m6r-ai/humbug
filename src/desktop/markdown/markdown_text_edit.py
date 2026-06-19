@@ -9,7 +9,7 @@ from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
 )
 from PySide6.QtGui import QPainter, QPaintEvent, QColor, QTextDocument
-from PySide6.QtGui import QMovie
+from PySide6.QtGui import QMovie, QTextFrame
 
 from mindspace.mindspace_settings import MindspaceSettings
 
@@ -525,7 +525,11 @@ class MarkdownTextEdit(MinHeightTextEdit):
                 next_block = block.next()
                 next_data = next_block.userData() if next_block.isValid() else None
                 next_offsets = next_data.blockquote_bar_offsets if isinstance(next_data, MarkdownBlockData) else []
-                if block.text() == "" and len(next_offsets) < len(user_data.blockquote_bar_offsets):
+                next_is_in_child_frame = (
+                    next_block.isValid() and
+                    doc.frameAt(next_block.position()) != doc.rootFrame()
+                )
+                if block.text() == "" and len(next_offsets) < len(user_data.blockquote_bar_offsets) and not next_is_in_child_frame:
                     block = block.next()
                     continue
 
@@ -564,6 +568,16 @@ class MarkdownTextEdit(MinHeightTextEdit):
                         x = round((level + list_offset) * indent_width) + content_offset_x
                         painter.drawRect(x, bar_top, bar_width, bar_height)
 
+                # If the next block is inside a child frame (table), paint the bar
+                # over the frame's bounding rect using this block's blockquote offsets.
+                if next_is_in_child_frame:
+                    child_frame = doc.frameAt(next_block.position())
+                    frame_rect = layout.frameBoundingRect(child_frame).translated(content_offset_x, content_offset_y)
+                    if frame_rect.bottom() >= event.rect().top() and frame_rect.top() <= event.rect().bottom():
+                        for level, list_offset in enumerate(user_data.blockquote_bar_offsets):
+                            x = round((level + list_offset) * indent_width) + content_offset_x
+                            painter.drawRect(x, round(frame_rect.top()), bar_width, round(frame_rect.height()))
+
             block = block.next()
 
         painter.end()
@@ -600,7 +614,11 @@ class MarkdownTextEdit(MinHeightTextEdit):
                 next_block = block.next()
                 next_data = next_block.userData() if next_block.isValid() else None
                 next_offsets = next_data.blockquote_bar_offsets if isinstance(next_data, MarkdownBlockData) else []
-                if block.text() == "" and len(next_offsets) < len(user_data.blockquote_bar_offsets):
+                next_is_in_child_frame = (
+                    next_block.isValid() and
+                    doc.frameAt(next_block.position()) != doc.rootFrame()
+                )
+                if block.text() == "" and len(next_offsets) < len(user_data.blockquote_bar_offsets) and not next_is_in_child_frame:
                     block = block.next()
                     continue
 
@@ -624,6 +642,15 @@ class MarkdownTextEdit(MinHeightTextEdit):
                     bg_height = round(block_rect.height() + effective_top + effective_bottom)
                     x = round(user_data.blockquote_bar_offsets[0] * indent_width) + content_offset_x
                     painter.drawRect(x, bg_top, viewport_width - x, bg_height)
+
+                # If the next block is inside a child frame (table), paint the background
+                # over the frame's bounding rect using this block's blockquote offsets.
+                if next_is_in_child_frame:
+                    child_frame = doc.frameAt(next_block.position())
+                    frame_rect = layout.frameBoundingRect(child_frame).translated(content_offset_x, content_offset_y)
+                    if frame_rect.bottom() >= event.rect().top() and frame_rect.top() <= event.rect().bottom():
+                        x = round(user_data.blockquote_bar_offsets[0] * indent_width) + content_offset_x
+                        painter.drawRect(x, round(frame_rect.top()), viewport_width - x, round(frame_rect.height()))
 
             block = block.next()
 
