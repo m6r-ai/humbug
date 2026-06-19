@@ -450,6 +450,50 @@ A table with column alignment:
 |-------|-------|
 | A | B |
 
+A table inside a tight list:
+
+- This is item one
+- This is item two
+  | Left aligned | Centre aligned | Right aligned |
+  |:-------------|:--------------:|--------------:|
+  | Apple | Banana | Cherry |
+  | One | Two | Three |
+  | 100 | 200 | 300 |
+
+A table inside a loose list:
+
+- This is item one
+
+- This is item two
+
+  | Left aligned | Centre aligned | Right aligned |
+  |:-------------|:--------------:|--------------:|
+  | Apple | Banana | Cherry |
+  | One | Two | Three |
+  | 100 | 200 | 300 |
+
+A table inside a nested tight list:
+
+- This is item one
+- This is item two
+  - A nested list item one
+  - nested list item two
+    | Left aligned | Centre aligned | Right aligned |
+    |:-------------|:--------------:|--------------:|
+    | Apple | Banana | Cherry |
+    | One | Two | Three |
+    | 100 | 200 | 300 |
+
+A table inside a blockquote:
+
+> This is item one
+> This is item two
+> | Left aligned | Centre aligned | Right aligned |
+> |:-------------|:--------------:|--------------:|
+> | Apple | Banana | Cherry |
+> | One | Two | Three |
+> | 100 | 200 | 300 |
+
 ---
 
 ## 13. List followed by table
