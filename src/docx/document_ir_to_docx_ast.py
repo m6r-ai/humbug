@@ -366,8 +366,6 @@ class _DocumentIRToDocxASTMapper:
         blockquote region regardless of content indentation, which paragraph-level
         shading cannot achieve.
         """
-        blockquote_indent = indent_base
-
         # Map content into a temporary body so we can transfer children to the cell
         cell_body = DocxASTBodyNode()
 
@@ -548,7 +546,9 @@ class _DocumentIRToDocxASTMapper:
                         indent_hanging=360,
                         shading=shading,
                         spacing_after=0 if tight else None,
-                        spacing_before=_STANDARD_SPACING if (not tight and item.parent is not None and item.parent.children[0] is not item) else None,
+                        spacing_before=_STANDARD_SPACING if (
+                            not tight and item.parent is not None and item.parent.children[0] is not item
+                        ) else None,
                     )
                     num_pr = DocxASTNumberingPropertiesNode(
                         num_id=num_id,

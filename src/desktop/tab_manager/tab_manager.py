@@ -384,7 +384,6 @@ class TabManager(QWidget):
         if column is None:
             return
 
-        column_index = self._tab_columns.index(column)
         tab_index = column.indexOf(tab)
         tab_count = column.count()
 

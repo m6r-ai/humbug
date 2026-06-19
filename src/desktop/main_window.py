@@ -71,7 +71,7 @@ from desktop.style_manager import StyleManager
 from desktop.color_theme import ColorTheme
 from desktop.status_message import StatusMessage
 from desktop.system_ai_tool import SystemAITool
-from desktop.tab_manager import TabManager, TabManagerError
+from desktop.tab_manager import TabManager
 from desktop.terminal_tab.terminal_tab import TerminalTab
 from desktop.title_bar import MenuBarDragFilter, WindowControlsWidget
 from desktop.update_checker import UpdateChecker

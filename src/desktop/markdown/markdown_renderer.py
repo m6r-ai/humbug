@@ -1338,8 +1338,6 @@ class MarkdownRenderer(MarkdownASTVisitor):
         """
         self._blockquote_bar_offsets.append(self._list_level)
 
-        first_block = self._cursor.block()
-
         if self._lists:
             list_fmt = QTextListFormat(self._lists[-1].format())
             list_fmt.setStyle(QTextListFormat.Style.ListStyleUndefined)

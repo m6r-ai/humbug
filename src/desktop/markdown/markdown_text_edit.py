@@ -9,7 +9,7 @@ from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
 )
 from PySide6.QtGui import QPainter, QPaintEvent, QColor, QTextDocument
-from PySide6.QtGui import QMovie, QTextFrame
+from PySide6.QtGui import QMovie
 
 from mindspace.mindspace_settings import MindspaceSettings
 
