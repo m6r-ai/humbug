@@ -606,6 +606,9 @@ class _DocumentIRToDocxASTMapper:
                     self._map_blockquote(child, parent, suppress_trailing_spacing=True,
                                          indent_base=indent_left)
 
+                elif isinstance(child, DocumentIRTableNode):
+                    self._map_table_in_list(child, parent, indent_left=indent_left, tight=tight)
+
                 else:
                     self._map_block(child, parent)
                     # _map_block adds a trailing spacer for tables.  Remove it
@@ -614,6 +617,35 @@ class _DocumentIRToDocxASTMapper:
                             and parent.children
                             and self._is_spacer_para(parent.children[-1])):
                         parent.remove_child(parent.children[-1])
+
+    def _map_table_in_list(
+        self,
+        node: DocumentIRTableNode,
+        parent: DocxASTBodyNode,
+        indent_left: int,
+        tight: bool,
+    ) -> None:
+        """Map a table that is a direct child of a list item.
+
+        Word supports <w:tblInd> on a top-level table to shift it right from
+        the page margin, so we emit the table directly with the list-level
+        indent applied via tblInd.  Percentage widths cannot be used on nested
+        tables, so the table uses auto width here.
+
+        Args:
+            node: The DocumentIRTableNode to render.
+            parent: The body node to append the wrapper table to.
+            indent_left: Left indent in twips matching the list level.
+            tight: Whether the enclosing list is tight (suppresses trailing gap).
+        """
+        table = self._map_table(node)
+        tbl_pr = next(c for c in table.children if isinstance(c, DocxASTTablePropertiesNode))
+        tbl_pr.indent = indent_left
+
+        parent.add_child(table)
+
+        if not tight:
+            parent.add_child(self._make_spacer_para())
 
     def _map_table(self, node: DocumentIRTableNode) -> DocxASTTableNode:
         """Map a table node."""
