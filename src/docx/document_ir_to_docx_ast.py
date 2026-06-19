@@ -187,7 +187,7 @@ class _DocumentIRToDocxASTMapper:
             name="Code Block",
             based_on=_STYLE_NORMAL,
         )
-        code_rpr = DocxASTRunPropertiesNode(font_ascii="Courier New", font_h_ansi="Courier New")
+        code_rpr = DocxASTRunPropertiesNode(font_ascii="Consolas", font_h_ansi="Consolas")
         code.add_child(code_rpr)
         styles.add_child(code)
 
@@ -1068,8 +1068,8 @@ class _DocumentIRToDocxASTMapper:
                         bold=bold,
                         italic=italic,
                         strike=strike,
-                        font_ascii="Courier New" if code else None,
-                        font_h_ansi="Courier New" if code else None,
+                        font_ascii="Consolas" if code else None,
+                        font_h_ansi="Consolas" if code else None,
                         vertical_align=vert_align,
                     )
                     run.add_child(rpr)
