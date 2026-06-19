@@ -1040,6 +1040,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
             sep_format = QTextBlockFormat(orig_block_format)
             sep_format.setTopMargin(self._default_font_height)
             self._cursor.setBlockFormat(sep_format)
+            self._stamp_blockquote_data()
 
         # Verify that this table has at least one header row and one body row before rendering
         has_valid_structure = False
