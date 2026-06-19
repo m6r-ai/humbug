@@ -74,6 +74,7 @@ def get_french_strings() -> LanguageStrings:
         reset_zoom="Réinitialiser le zoom",
         open_mindspace_log="Ouvrir le journal de l'espace mental",
         open_humbug_shell="Ouvrir le shell Humbug",
+        open_cost_tokens="Coûts/Tokens",
         show_tab_overview="Afficher les onglets ouverts",
         show_tab_carousel="Afficher le carrousel d'onglets",
         show_all_columns="Afficher toutes les colonnes",
@@ -308,11 +309,14 @@ def get_french_strings() -> LanguageStrings:
             "Total Entrée : {total_input_tokens}  |  "
             "Jetons de Sortie : {output_tokens} / {max_output_tokens}  |  "
             "Total Sortie : {total_output_tokens}"
+            "{cost_section}"
         ),
         conversation_status_temperature="Temp : {temperature:.1f}",
         conversation_status_no_temperature="Temp : N/D",
         conversation_status_reasoning="Raisonnement : {effort}",
         conversation_status_no_reasoning="Raisonnement : N/D",
+        conversation_status_cost="  |  Coût : ${cost:.4f}  |  Coût Total : ${total_cost:.4f}",
+        conversation_status_rate_limited="Limite de requêtes atteinte — nouvelle tentative dans {delay}s…",
         terminal_status="Terminal : {name} ({columns}x{rows})",
         system_status="Statut du système",
         log_status="Journal",

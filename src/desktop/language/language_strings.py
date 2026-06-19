@@ -65,6 +65,7 @@ class LanguageStrings:
     reset_zoom: str
     open_mindspace_log: str
     open_humbug_shell: str
+    open_cost_tokens: str
     show_tab_overview: str
     show_tab_carousel: str
     show_all_columns: str
@@ -294,6 +295,8 @@ class LanguageStrings:
     conversation_status_no_temperature: str
     conversation_status_reasoning: str
     conversation_status_no_reasoning: str
+    conversation_status_cost: str
+    conversation_status_rate_limited: str
     terminal_status: str
     system_status: str
     log_status: str

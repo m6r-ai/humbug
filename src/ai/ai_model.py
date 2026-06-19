@@ -65,6 +65,10 @@ class AIModel:
         supported_reasoning_efforts: List[str] | None = None,
         temperature_incompatible_efforts: Set[str] | None = None,
         adaptive_thinking_only: bool = False,
+        input_cost_per_mtok: float = 0.0,
+        output_cost_per_mtok: float = 0.0,
+        cache_write_cost_per_mtok: float = 0.0,
+        cache_read_cost_per_mtok: float = 0.0,
     ):
         """
         Initialize an AI model configuration.
@@ -97,6 +101,10 @@ class AIModel:
         self.supported_reasoning_efforts: List[str] = supported_reasoning_efforts or []
         self.temperature_incompatible_efforts: Set[str] = temperature_incompatible_efforts or set()
         self.adaptive_thinking_only: bool = adaptive_thinking_only
+        self.input_cost_per_mtok: float = input_cost_per_mtok
+        self.output_cost_per_mtok: float = output_cost_per_mtok
+        self.cache_write_cost_per_mtok: float = cache_write_cost_per_mtok
+        self.cache_read_cost_per_mtok: float = cache_read_cost_per_mtok
 
     def supports_tools(self) -> bool:
         """Check if this model supports any tool calling capabilities."""

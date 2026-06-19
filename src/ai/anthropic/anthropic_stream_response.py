@@ -16,6 +16,8 @@ class AnthropicStreamResponse(AIStreamResponse):
 
         # Internal tracking of tokens
         self._input_tokens = 0
+        self._cache_write_tokens = 0
+        self._cache_read_tokens = 0
         self._output_tokens = 0
 
         # Tool call tracking
@@ -43,9 +45,13 @@ class AnthropicStreamResponse(AIStreamResponse):
             # Track input tokens but don't expose them yet
             if "message" in chunk and "usage" in chunk["message"]:
                 usage = chunk["message"]["usage"]
-                self._input_tokens = usage.get("input_tokens", 0)
-                self._input_tokens += usage.get("cache_creation_input_tokens", 0)
-                self._input_tokens += usage.get("cache_read_input_tokens", 0)
+                self._cache_write_tokens = usage.get("cache_creation_input_tokens", 0)
+                self._cache_read_tokens = usage.get("cache_read_input_tokens", 0)
+                self._input_tokens = (
+                    usage.get("input_tokens", 0)
+                    + self._cache_write_tokens
+                    + self._cache_read_tokens
+                )
 
         elif event_type == "content_block_start":
             content_block = chunk.get("content_block", {})
@@ -120,5 +126,7 @@ class AnthropicStreamResponse(AIStreamResponse):
             self._update_usage(
                 prompt_tokens=self._input_tokens,
                 completion_tokens=self._output_tokens,
-                total_tokens=self._input_tokens + self._output_tokens
+                total_tokens=self._input_tokens + self._output_tokens,
+                cache_write_tokens=self._cache_write_tokens,
+                cache_read_tokens=self._cache_read_tokens,
             )

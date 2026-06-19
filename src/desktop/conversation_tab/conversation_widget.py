@@ -61,6 +61,9 @@ class ConversationWidget(QWidget):
     # Emits when the conversation is modified by the user
     conversation_modified = Signal()
 
+    # Emits when a rate-limit retry is in progress; carries the retry message text
+    rate_limited = Signal(str)
+
     def __init__(
         self,
         path: str,
@@ -638,6 +641,9 @@ class ConversationWidget(QWidget):
         self._ai_conversation.unregister_callback(
             AIConversationEvent.AI_CONNECTED, self._on_ai_connected
         )
+        self._ai_conversation.unregister_callback(
+            AIConversationEvent.RATE_LIMITED, self._on_rate_limited
+        )
 
     def _register_ai_conversation_callbacks(self) -> None:
         """Register UI callbacks on the inner AIConversation."""
@@ -668,6 +674,13 @@ class ConversationWidget(QWidget):
         self._ai_conversation.register_callback(
             AIConversationEvent.AI_CONNECTED, self._on_ai_connected
         )
+        self._ai_conversation.register_callback(
+            AIConversationEvent.RATE_LIMITED, self._on_rate_limited
+        )
+
+    async def _on_rate_limited(self, message: str) -> None:
+        """Emit a signal so the parent tab can show a timed status bar notice."""
+        self.rate_limited.emit(message)
 
     async def _on_ai_connected(self, message: AIMessage) -> None:
         """

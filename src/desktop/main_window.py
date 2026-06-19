@@ -67,6 +67,7 @@ from desktop.shell_tab.shell_command_registry import ShellCommandRegistry
 from desktop.shell_tab.shell_tab import ShellTab
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar_manager import SidebarManager
+from desktop.usage_tab.usage_tab import UsageTab
 from desktop.style_manager import StyleManager
 from desktop.color_theme import ColorTheme
 from desktop.status_message import StatusMessage
@@ -145,6 +146,13 @@ def _create_shell_tab(
     return ShellTab(info.context_id, parent)
 
 
+def _create_usage_tab(
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+) -> UsageTab:
+    """Context factory for UsageTab."""
+    return UsageTab(info.context_id, parent)
+
+
 def _wire_conversation_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
     """Wire ConversationSidebar signals to SidebarManager."""
     assert isinstance(panel, ConversationSidebar)
@@ -203,6 +211,7 @@ def _activate_search_sidebar(panel: SidebarBase) -> None:
     """Focus the search input when the search panel is activated."""
     assert isinstance(panel, SearchSidebar)
     panel.focus_search()
+
 
 
 class MainWindow(QMainWindow):
@@ -391,6 +400,10 @@ class MainWindow(QMainWindow):
         self._open_humbug_shell_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
         self._open_humbug_shell_action.triggered.connect(self._on_open_humbug_shell)
 
+        self._open_cost_tokens_action = QAction(strings.open_cost_tokens, self)
+        self._open_cost_tokens_action.setShortcut(QKeySequence("Ctrl+Shift+U"))
+        self._open_cost_tokens_action.triggered.connect(self._on_open_cost_tokens)
+
         self._show_tab_overview_action = QAction(strings.show_tab_overview, self)
         self._show_tab_overview_action.setShortcut(QKeySequence("Ctrl+Shift+E"))
         self._show_tab_overview_action.triggered.connect(self._on_show_tab_overview)
@@ -452,6 +465,7 @@ class MainWindow(QMainWindow):
         self._mindspace_menu.addSeparator()
         self._mindspace_menu.addAction(self._open_mindspace_log_action)
         self._mindspace_menu.addAction(self._open_humbug_shell_action)
+        self._mindspace_menu.addAction(self._open_cost_tokens_action)
 
         # File menu
         self._file_menu = self._menu_bar.addMenu(strings.file_menu)
@@ -567,6 +581,7 @@ class MainWindow(QMainWindow):
         tab_manager.register_tab_factory("editor", EditorTab.restore_from_state)
         tab_manager.register_tab_factory("log", LogTab.restore_from_state)
         tab_manager.register_tab_factory("shell", ShellTab.restore_from_state)
+        tab_manager.register_tab_factory("usage", UsageTab.restore_from_state)
         tab_manager.register_tab_factory("terminal", TerminalTab.restore_from_state)
         tab_manager.register_tab_factory("preview", PreviewTab.restore_from_state)
         tab_manager.register_tab_factory("diff", DiffTab.restore_from_state)
@@ -578,6 +593,7 @@ class MainWindow(QMainWindow):
         tab_manager.register_context_factory("diff", _create_diff_tab)
         tab_manager.register_context_factory("log", _create_log_tab)
         tab_manager.register_context_factory("shell", _create_shell_tab)
+        tab_manager.register_context_factory("usage", _create_usage_tab)
 
         # Set initial sidebar width
         self._splitter.setSizes([300, self.width() - 300])
@@ -757,6 +773,7 @@ class MainWindow(QMainWindow):
         self._mindspace_settings_action.setEnabled(has_mindspace)
         self._open_mindspace_log_action.setEnabled(has_mindspace)
         self._open_humbug_shell_action.setEnabled(has_mindspace)
+        self._open_cost_tokens_action.setEnabled(has_mindspace)
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor()
@@ -829,6 +846,7 @@ class MainWindow(QMainWindow):
         self._mindspace_settings_action.setText(strings.mindspace_settings)
         self._open_mindspace_log_action.setText(strings.open_mindspace_log)
         self._open_humbug_shell_action.setText(strings.open_humbug_shell)
+        self._open_cost_tokens_action.setText(strings.open_cost_tokens)
 
         # Recreate the theme menu with updated language strings
         if self._theme_menu is not None:
@@ -1608,6 +1626,28 @@ class MainWindow(QMainWindow):
             return
 
         contexts.open(context_type="log", title="Mindspace Log")
+
+    def _on_open_cost_tokens(self) -> None:
+        """Open (or focus) the Cost & Tokens tab."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = next(
+            (i for i in contexts.list_all() if i.context_type == "usage"), None
+        )
+        if existing:
+            # If the tab is already tracked by the tab manager, just focus it.
+            # If the context is stale (e.g. the tab failed to create on a
+            # previous attempt), close it so we can open a fresh one below.
+            tab_manager = self._tab_manager
+            if existing.context_id in tab_manager._tabs:
+                contexts.focus(existing.context_id)
+                return
+            contexts.close(existing.context_id)
+
+        strings = self._language_manager.strings()
+        contexts.open(context_type="usage", title=strings.open_cost_tokens)
 
     def _on_open_humbug_shell(self) -> None:
         """Open the shell tab."""

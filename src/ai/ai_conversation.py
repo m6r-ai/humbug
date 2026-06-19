@@ -39,6 +39,7 @@ class AIConversationEvent(Enum):
                                 # When tool calls need user approval
     STREAMING_UPDATE = auto()   # When a streaming response is updated
     AI_CONNECTED = auto()       # When AI connection is established
+    RATE_LIMITED = auto()       # When a rate limit retry is in progress (not exhausted)
 
 
 class AIConversation:
@@ -744,6 +745,9 @@ class AIConversation:
 
         # Only stop streaming if retries are exhausted
         if not error.retries_exhausted:
+            if error.code == "rate_limit":
+                await self._trigger_event(AIConversationEvent.RATE_LIMITED, error.message)
+
             return
 
         self._is_streaming = False

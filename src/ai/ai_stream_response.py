@@ -69,19 +69,30 @@ class AIStreamResponse(ABC):
             details=error_data
         )
 
-    def _update_usage(self, prompt_tokens: int, completion_tokens: int, total_tokens: int) -> None:
+    def _update_usage(
+        self,
+        prompt_tokens: int,
+        completion_tokens: int,
+        total_tokens: int,
+        cache_write_tokens: int = 0,
+        cache_read_tokens: int = 0,
+    ) -> None:
         """
         Update usage statistics.
 
         Args:
-            prompt_tokens: Number of tokens in the prompt
+            prompt_tokens: Total input tokens (including any cache hits/misses)
             completion_tokens: Number of tokens in the completion
             total_tokens: Total number of tokens used
+            cache_write_tokens: Tokens written to provider cache (Anthropic only)
+            cache_read_tokens: Tokens read from provider cache (Anthropic only)
         """
         self.usage = AIUsage(
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
-            total_tokens=total_tokens
+            total_tokens=total_tokens,
+            cache_write_tokens=cache_write_tokens,
+            cache_read_tokens=cache_read_tokens,
         )
 
     def _add_tool_call(self, tool_call: AIToolCall) -> None:

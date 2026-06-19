@@ -12,6 +12,7 @@ from mindspace.mindspace_interactions import MindspaceInteractions
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
 from mindspace.mindspace_settings import MindspaceSettings
+from mindspace.mindspace_usage import MindspaceUsage
 
 
 class Mindspace:
@@ -26,11 +27,13 @@ class Mindspace:
     SETTINGS_FILE     = "settings.json"
     SESSION_FILE      = "session.json"
     INTERACTIONS_FILE = "system.json"
+    USAGE_FILE        = "usage.json"
 
     def __init__(
         self,
         on_settings_changed: Callable[[], None],
         on_interactions_updated: Callable[[], None],
+        on_usage_updated: Callable[[], None] | None = None,
     ) -> None:
         """
         Initialise the mindspace model.
@@ -39,12 +42,15 @@ class Mindspace:
             on_settings_changed: Called whenever settings change or a mindspace
                 is opened or closed.
             on_interactions_updated: Called whenever a new interaction is added.
+            on_usage_updated: Called whenever usage stats are updated.
         """
         self._on_settings_changed     = on_settings_changed
         self._on_interactions_updated = on_interactions_updated
+        self._on_usage_updated        = on_usage_updated
         self._path: str = ""
         self._settings: MindspaceSettings | None = None
         self._interactions = MindspaceInteractions()
+        self._usage = MindspaceUsage()
         self._context_registry = ContextRegistry()
         self._tool_manager = AIToolManager()
         self._logger = logging.getLogger("Mindspace")
@@ -137,6 +143,7 @@ class Mindspace:
             self._path = path
             self._settings = settings
             self._load_interactions()
+            self._load_usage()
             self._apply_tool_settings(settings)
             self._on_settings_changed()
 
@@ -150,6 +157,7 @@ class Mindspace:
             self._path = ""
             self._settings = None
             self._interactions.clear()
+            self._usage = MindspaceUsage()
             self._context_registry.clear()
             self._reset_tool_manager()
             self._on_settings_changed()
@@ -361,6 +369,48 @@ class Mindspace:
         except OSError as e:
             raise MindspaceError(f"Failed to load mindspace state: {str(e)}") from e
 
+    def usage(self) -> MindspaceUsage:
+        """Return the current mindspace usage stats."""
+        return self._usage
+
+    def update_usage(
+        self,
+        provider: str,
+        model: str,
+        input_tokens: int,
+        output_tokens: int,
+        cost_usd: float,
+        cache_write_tokens: int = 0,
+        cache_read_tokens: int = 0,
+    ) -> None:
+        """
+        Record usage from a completed AI response and persist to disk.
+
+        Args:
+            provider: Provider identifier (e.g. 'anthropic').
+            model: Model name (e.g. 'claude-sonnet-4-6').
+            input_tokens: Number of prompt tokens consumed.
+            output_tokens: Number of completion tokens generated.
+            cost_usd: Estimated cost in USD for this response.
+            cache_write_tokens: Tokens written to provider cache.
+            cache_read_tokens: Tokens read from provider cache.
+        """
+        self._usage.record(
+            provider, model, input_tokens, output_tokens, cost_usd,
+            cache_write_tokens=cache_write_tokens,
+            cache_read_tokens=cache_read_tokens,
+        )
+        self._save_usage()
+        if self._on_usage_updated:
+            self._on_usage_updated()
+
+    def reset_usage(self) -> None:
+        """Clear all accumulated usage stats and persist the empty state."""
+        self._usage.reset()
+        self._save_usage()
+        if self._on_usage_updated:
+            self._on_usage_updated()
+
     def _apply_tool_settings(self, settings: MindspaceSettings) -> None:
         """Apply tool enabled states from settings to the tool manager."""
         try:
@@ -378,6 +428,35 @@ class Mindspace:
 
         except Exception as e:
             self._logger.error("Failed to reset tool manager: %s", e)
+
+    def _save_usage(self) -> None:
+        """Persist usage stats to disk."""
+        try:
+            mindspace_dir = os.path.join(self._path, self.MINDSPACE_DIR)
+            os.makedirs(mindspace_dir, exist_ok=True)
+            usage_path = os.path.join(mindspace_dir, self.USAGE_FILE)
+            with open(usage_path, 'w', encoding='utf-8') as f:
+                json.dump(self._usage.to_dict(), f, indent=4)
+
+        except OSError as e:
+            self._logger.error("Failed to save usage stats: %s", e)
+
+    def _load_usage(self) -> None:
+        """Load usage stats from disk, silently ignoring missing files."""
+        try:
+            usage_path = os.path.join(self._path, self.MINDSPACE_DIR, self.USAGE_FILE)
+            if not os.path.exists(usage_path):
+                self._usage = MindspaceUsage()
+                return
+
+            with open(usage_path, encoding='utf-8') as f:
+                data = json.load(f)
+
+            self._usage = MindspaceUsage.from_dict(data)
+
+        except Exception as e:
+            self._logger.info("Failed to load usage stats: %s", e)
+            self._usage = MindspaceUsage()
 
     def _save_interactions(self) -> None:
         """Persist the interaction log to disk."""

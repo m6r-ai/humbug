@@ -23,6 +23,10 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            input_cost_per_mtok=0.80,
+            output_cost_per_mtok=4.00,
+            cache_write_cost_per_mtok=1.00,
+            cache_read_cost_per_mtok=0.08,
         ),
         ("claude-sonnet-4-6", "anthropic"): AIModel(
             name="claude-sonnet-4-6",
@@ -38,6 +42,10 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH, AIReasoningEffort.MAX,
             ],
             temperature_incompatible_efforts={AIReasoningEffort.HIGH},
+            input_cost_per_mtok=3.00,
+            output_cost_per_mtok=15.00,
+            cache_write_cost_per_mtok=3.75,
+            cache_read_cost_per_mtok=0.30,
         ),
         ("claude-opus-4-8", "anthropic"): AIModel(
             name="claude-opus-4-8",
@@ -53,6 +61,10 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH, AIReasoningEffort.XHIGH, AIReasoningEffort.MAX,
             ],
             adaptive_thinking_only=True,
+            input_cost_per_mtok=15.00,
+            output_cost_per_mtok=75.00,
+            cache_write_cost_per_mtok=18.75,
+            cache_read_cost_per_mtok=1.50,
         ),
         ("claude-opus-4-7", "anthropic"): AIModel(
             name="claude-opus-4-7",
@@ -68,6 +80,10 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH, AIReasoningEffort.XHIGH, AIReasoningEffort.MAX,
             ],
             adaptive_thinking_only=True,
+            input_cost_per_mtok=15.00,
+            output_cost_per_mtok=75.00,
+            cache_write_cost_per_mtok=18.75,
+            cache_read_cost_per_mtok=1.50,
         ),
 
         # Deepseek models
@@ -81,6 +97,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            input_cost_per_mtok=0.27,
+            output_cost_per_mtok=1.10,
         ),
         ("deepseek-v4-pro", "deepseek"): AIModel(
             name="deepseek-v4-pro",
@@ -92,6 +110,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            input_cost_per_mtok=0.55,
+            output_cost_per_mtok=2.19,
         ),
 
         # Google models
@@ -109,7 +129,9 @@ class AIConversationSettings:
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
-            ]
+            ],
+            input_cost_per_mtok=0.075,
+            output_cost_per_mtok=0.30,
         ),
         ("gemini-3-flash-preview", "google"): AIModel(
             name="gemini-3-flash-preview",
@@ -125,7 +147,9 @@ class AIConversationSettings:
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
-            ]
+            ],
+            input_cost_per_mtok=0.15,
+            output_cost_per_mtok=0.60,
         ),
         ("gemini-3.1-pro-preview", "google"): AIModel(
             name="gemini-3.1-pro-preview",
@@ -140,7 +164,62 @@ class AIConversationSettings:
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
-            ]
+            ],
+            input_cost_per_mtok=1.25,
+            output_cost_per_mtok=5.00,
+        ),
+        ("gemini-2.5-flash-lite", "google"): AIModel(
+            name="gemini-2.5-flash-lite",
+            provider="google",
+            display_name="Gemini 2.5 Flash Lite",
+            context_window=1048576,
+            max_output_tokens=65536,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.MINIMAL,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ],
+            input_cost_per_mtok=0.10,
+            output_cost_per_mtok=0.40,
+        ),
+        ("gemini-2.5-flash", "google"): AIModel(
+            name="gemini-2.5-flash",
+            provider="google",
+            display_name="Gemini 2.5 Flash",
+            context_window=1048576,
+            max_output_tokens=65536,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.MINIMAL,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ],
+            input_cost_per_mtok=0.30,
+            output_cost_per_mtok=2.50,
+        ),
+        ("gemini-2.5-pro", "google"): AIModel(
+            name="gemini-2.5-pro",
+            provider="google",
+            display_name="Gemini 2.5 Pro",
+            context_window=1048576,
+            max_output_tokens=65536,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ],
+            input_cost_per_mtok=1.25,
+            output_cost_per_mtok=10.00,
         ),
 
         # Mistral models
@@ -152,7 +231,9 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            input_cost_per_mtok=0.10,
+            output_cost_per_mtok=0.30,
         ),
         ("codestral-latest", "mistral"): AIModel(
             name="codestral-latest",
@@ -162,7 +243,9 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            input_cost_per_mtok=0.30,
+            output_cost_per_mtok=0.90,
         ),
         ("mistral-large-latest", "mistral"): AIModel(
             name="mistral-large-latest",
@@ -172,7 +255,9 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            input_cost_per_mtok=2.00,
+            output_cost_per_mtok=6.00,
         ),
         ("mistral-small-latest", "mistral"): AIModel(
             name="mistral-small-latest",
@@ -182,7 +267,9 @@ class AIConversationSettings:
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            input_cost_per_mtok=0.10,
+            output_cost_per_mtok=0.30,
         ),
 
         # Ollama local models
@@ -343,7 +430,9 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.MEDIUM,
-            ]
+            ],
+            input_cost_per_mtok=0.15,
+            output_cost_per_mtok=0.60,
         ),
         ("gpt-5.4-mini", "openai"): AIModel(
             name="gpt-5.4-mini",
@@ -356,7 +445,9 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.MEDIUM,
-            ]
+            ],
+            input_cost_per_mtok=0.40,
+            output_cost_per_mtok=1.60,
         ),
         ("gpt-5.5", "openai"): AIModel(
             name="gpt-5.5",
@@ -369,7 +460,9 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.MEDIUM,
-            ]
+            ],
+            input_cost_per_mtok=2.50,
+            output_cost_per_mtok=10.00,
         ),
         ("gpt-5.4", "openai"): AIModel(
             name="gpt-5.4",
@@ -383,7 +476,9 @@ class AIConversationSettings:
             supported_reasoning_efforts=[
                 AIReasoningEffort.NONE,
                 AIReasoningEffort.MEDIUM,
-            ]
+            ],
+            input_cost_per_mtok=2.50,
+            output_cost_per_mtok=10.00,
         ),
 
         # vLLM models
@@ -413,7 +508,9 @@ class AIConversationSettings:
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
-            ]
+            ],
+            input_cost_per_mtok=3.00,
+            output_cost_per_mtok=15.00,
         ),
 
         # Z.ai models

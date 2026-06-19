@@ -52,6 +52,7 @@ ACTIVE_INACTIVE_THEME_ICONS: Final[Tuple[str, ...]] = (
     "terminal",
     "preview",
     "diff",
+    "usage",
     "tab-overview",
     "tab-carousel",
 )
@@ -195,6 +196,15 @@ THEME_ICON_PACK: Final[Dict[str, str]] = {
                 stroke="{color}" stroke-width="2"/>
             <path d="M6 15V9" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M18 9V12.3242C18 16.9982 16.9424 18 12.008 18H9" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    ''',
+    "usage": '''
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z"
+                stroke="{color}" stroke-width="2"/>
+            <path d="M12 6V8M12 16V18" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+            <path d="M9 9.5C9 8.67157 9.67157 8 10.5 8H13C14.1046 8 15 8.89543 15 10C15 11.1046 14.1046 12 13 12H11C9.89543 12 9 12.8954 9 14C9 15.1046 9.89543 16 11 16H13.5C14.3284 16 15 15.3284 15 14.5"
+                stroke="{color}" stroke-width="2" stroke-linecap="round"/>
         </svg>
     ''',
     "info": '''
