@@ -329,8 +329,7 @@ class StyleManager(QObject):
         """
         icon_dir = os.path.expanduser("~/.humbug/icons")
         theme = "dark" if self._resolve_color_mode() == ColorMode.DARK else "light"
-        path = Path(os.path.join(icon_dir, f"{name}-{theme}.svg")).as_posix()
-        return path
+        return Path(os.path.join(icon_dir, f"{name}-{theme}.svg")).as_posix()
 
     def get_app_icon_path(self) -> str:
         """Return the app icon PNG path, falling back to SVG."""
@@ -694,6 +693,7 @@ class StyleManager(QObject):
         # resolve against the light base palette regardless of the OS setting.
         # If both sides are populated, or neither, fall back to the OS mode so
         # that the SYSTEM-like behaviour is preserved for hand-edited palettes.
+        previous_custom_color_mode = self._custom_color_mode
         if new_light_overrides and not new_dark_overrides:
             self._custom_color_mode = ColorMode.LIGHT
 
@@ -702,6 +702,11 @@ class StyleManager(QObject):
 
         else:
             self._custom_color_mode = self._os_color_mode()
+
+        # If the light/dark axis changed, the cached icon pixmaps are for the
+        # wrong theme and must be discarded before style_changed fires.
+        if self._custom_color_mode != previous_custom_color_mode:
+            self._scaled_icon_cache.clear()
 
         if self._theme_mode == ColorTheme.CUSTOM:
             self._active_palette = self._palette_for_mode(ColorTheme.CUSTOM)
