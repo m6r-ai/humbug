@@ -1346,6 +1346,11 @@ class StyleManager(QObject):
             QMenu::item:selected {{
                 background-color: {self.get_color_str(ColorRole.MENU_HOVER)}
             }}
+            QMenu::separator {{
+                height: 1px;
+                background-color: {self.get_color_str(ColorRole.MENU_BORDER)};
+                margin: 2px 4px;
+            }}
         """
 
     def get_scrollbar_size(self) -> int:
