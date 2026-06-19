@@ -330,7 +330,6 @@ class StyleManager(QObject):
         icon_dir = os.path.expanduser("~/.humbug/icons")
         theme = "dark" if self._resolve_color_mode() == ColorMode.DARK else "light"
         path = Path(os.path.join(icon_dir, f"{name}-{theme}.svg")).as_posix()
-        print(f"DEBUG get_icon_path: name={name!r} theme_mode={self._theme_mode.name} custom_color_mode={self._custom_color_mode.name} resolved={theme!r} path={path!r} exists={os.path.exists(path)}")
         return path
 
     def get_app_icon_path(self) -> str:
@@ -366,11 +365,9 @@ class StyleManager(QObject):
         cache_key = (icon_name, scaled_size)
 
         if cache_key in self._scaled_icon_cache:
-            print(f"DEBUG scale_icon: name={icon_name!r} size={scaled_size} -> cache HIT")
             return self._scaled_icon_cache[cache_key]
 
         renderer = QSvgRenderer(self.get_icon_path(icon_name))
-        print(f"DEBUG scale_icon: name={icon_name!r} size={scaled_size} renderer.isValid()={renderer.isValid()}")
         pixmap = QPixmap(scaled_size, scaled_size)
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
