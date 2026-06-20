@@ -1,4 +1,4 @@
-"""Cost and token usage tab."""
+"""Token usage tab."""
 
 import logging
 from collections import defaultdict
@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -47,26 +46,13 @@ def _fmt(n: int) -> str:
     return f"{n:,}"
 
 
-def _money(value: float) -> str:
-    if value <= 0:
-        return "$0.0000"
-
-    if value < 0.01:
-        return f"${value:.5f}"
-
-    if value < 1:
-        return f"${value:.4f}"
-
-    return f"${value:,.2f}"
-
-
 def _count_label(count: int, singular: str, plural: str) -> str:
     word = singular if count == 1 else plural
     return f"{count} {word}"
 
 
 class UsageTab(TabBase):
-    """Tab showing per-mindspace token and cost usage by provider and model."""
+    """Tab showing per-mindspace token usage by provider and model."""
 
     def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
         super().__init__(tab_id, parent)
@@ -119,7 +105,7 @@ class UsageTab(TabBase):
         return "usage"
 
     def tab_title_from_path(self) -> str:
-        return "Cost/Tokens"
+        return "Token Usage"
 
     def on_path_renamed(self, new_path: str) -> None:
         pass
@@ -193,7 +179,7 @@ class UsageTab(TabBase):
         pass
 
     def update_status(self) -> None:
-        self.status_message.emit(StatusMessage("Cost/Tokens"))
+        self.status_message.emit(StatusMessage("Token Usage"))
 
     def preferred_width(self) -> int | None:
         return int(self._style_manager.nice_tab_width() * self._style_manager.zoom_factor())
@@ -218,7 +204,6 @@ class UsageTab(TabBase):
             return
 
         usage = self._mindspace_manager.mindspace().usage()
-        total_cost = usage.total_cost()
         total_in = usage.total_input_tokens()
         total_out = usage.total_output_tokens()
         total_cw = usage.total_cache_write_tokens()
@@ -226,13 +211,13 @@ class UsageTab(TabBase):
         entries = usage.entries()
 
         if not entries:
-            cl.addWidget(self._hero_card(total_cost, total_in, total_out, 0, 0))
+            cl.addWidget(self._hero_card(total_in, total_out, 0, 0))
             cl.addSpacing(16)
             cl.addWidget(self._empty_state("No usage recorded yet", "Complete an AI response in this mindspace to populate this dashboard."))
             self._apply_stylesheet()
             return
 
-        cl.addWidget(self._hero_card(total_cost, total_in, total_out, len(entries), len({e.provider for e in entries})))
+        cl.addWidget(self._hero_card(total_in, total_out, len(entries), len({e.provider for e in entries})))
         cl.addSpacing(24)
 
         cl.addWidget(self._section_label("Token mix"))
@@ -275,7 +260,7 @@ class UsageTab(TabBase):
         self._provider_page = self._clamped_page(self._provider_page, provider_count)
         self._model_page = self._clamped_page(self._model_page, model_count)
 
-        cl.addWidget(self._section_label("Provider spend"))
+        cl.addWidget(self._section_label("By provider"))
         cl.addSpacing(10)
         cl.addWidget(self._provider_grid(by_provider))
         if provider_count > _PAGE_SIZE:
@@ -285,7 +270,7 @@ class UsageTab(TabBase):
 
         cl.addWidget(self._section_label("Model detail"))
         cl.addSpacing(10)
-        cl.addWidget(self._model_table(by_provider, color_map, max(total_cost, 0.000001)))
+        cl.addWidget(self._model_table(by_provider, color_map, max(total_in + total_out, 1)))
         if model_count > _PAGE_SIZE:
             cl.addSpacing(10)
             cl.addWidget(self._pagination_row("models", self._model_page, model_count))
@@ -313,13 +298,12 @@ class UsageTab(TabBase):
 
     def _hero_card(
         self,
-        total_cost: float,
         total_in: int,
         total_out: int,
         model_count: int,
         provider_count: int,
     ) -> QFrame:
-        """Return the top-level usage summary."""
+        """Return the top-level token usage summary."""
         card = QFrame()
         card.setObjectName("UsageHeroCard")
         card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -328,57 +312,30 @@ class UsageTab(TabBase):
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(0)
 
-        left = QWidget()
-        left.setObjectName("UsageHeroPane")
-        lv = QVBoxLayout(left)
-        lv.setContentsMargins(24, 22, 24, 22)
-        lv.setSpacing(5)
-
-        cost_lbl = QLabel("Mindspace spend")
-        cost_lbl.setObjectName("UsageHeroPaneLabel")
-        lv.addWidget(cost_lbl)
-
-        cost_val = QLabel(_money(total_cost))
-        cost_val.setObjectName("UsageHeroValue")
-        lv.addWidget(cost_val)
-
-        cost_sub = QLabel(
-            f"{_count_label(provider_count, 'provider', 'providers')}  /  "
-            f"{_count_label(model_count, 'model', 'models')}"
-        )
-        cost_sub.setObjectName("UsageHeroSub")
-        lv.addWidget(cost_sub)
-        lv.addStretch()
-
-        hl.addWidget(left, stretch=1)
-
-        div = QFrame()
-        div.setObjectName("UsageHeroDivider")
-        div.setFrameShape(QFrame.Shape.VLine)
-        div.setFrameShadow(QFrame.Shadow.Plain)
-        div.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
-        hl.addWidget(div)
-
-        right = QWidget()
-        right.setObjectName("UsageHeroPane")
-        rv = QVBoxLayout(right)
-        rv.setContentsMargins(24, 22, 24, 22)
-        rv.setSpacing(5)
+        pane = QWidget()
+        pane.setObjectName("UsageHeroPane")
+        pv = QVBoxLayout(pane)
+        pv.setContentsMargins(24, 22, 24, 22)
+        pv.setSpacing(5)
 
         tok_lbl = QLabel("Total Tokens")
         tok_lbl.setObjectName("UsageHeroPaneLabel")
-        rv.addWidget(tok_lbl)
+        pv.addWidget(tok_lbl)
 
         tok_val = QLabel(_fmt(total_in + total_out))
         tok_val.setObjectName("UsageHeroTokens")
-        rv.addWidget(tok_val)
+        pv.addWidget(tok_val)
 
-        tok_sub = QLabel(f"in {_fmt(total_in)}  /  out {_fmt(total_out)}")
+        tok_sub = QLabel(
+            f"in {_fmt(total_in)}  /  out {_fmt(total_out)}  ·  "
+            f"{_count_label(provider_count, 'provider', 'providers')}  /  "
+            f"{_count_label(model_count, 'model', 'models')}"
+        )
         tok_sub.setObjectName("UsageHeroSub")
-        rv.addWidget(tok_sub)
-        rv.addStretch()
+        pv.addWidget(tok_sub)
+        pv.addStretch()
 
-        hl.addWidget(right, stretch=1)
+        hl.addWidget(pane, stretch=1)
 
         return card
 
@@ -431,7 +388,7 @@ class UsageTab(TabBase):
     ) -> list[tuple[str, list[ModelUsageEntry]]]:
         return sorted(
             by_provider.items(),
-            key=lambda item: sum(e.cost_usd for e in item[1]),
+            key=lambda item: sum(e.input_tokens + e.output_tokens for e in item[1]),
             reverse=True,
         )
 
@@ -440,7 +397,6 @@ class UsageTab(TabBase):
         card.setObjectName("UsageProviderCard")
         card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
-        cost = sum(e.cost_usd for e in entries)
         tokens = sum(e.input_tokens + e.output_tokens for e in entries)
 
         layout = QVBoxLayout(card)
@@ -458,12 +414,12 @@ class UsageTab(TabBase):
         hl.addWidget(name)
         hl.addStretch()
 
-        spend = QLabel(_money(cost))
-        spend.setObjectName("UsageProviderSpend")
-        hl.addWidget(spend)
+        token_total = QLabel(_fmt(tokens))
+        token_total.setObjectName("UsageProviderTokens")
+        hl.addWidget(token_total)
         layout.addWidget(top)
 
-        detail = QLabel(f"{_fmt(tokens)} tokens across {_count_label(len(entries), 'model', 'models')}")
+        detail = QLabel(f"tokens across {_count_label(len(entries), 'model', 'models')}")
         detail.setObjectName("UsageProviderDetail")
         layout.addWidget(detail)
 
@@ -473,7 +429,7 @@ class UsageTab(TabBase):
         self,
         by_provider: dict[str, list[ModelUsageEntry]],
         color_map: dict[str, str],
-        total_cost: float,
+        total_tokens: int,
     ) -> QFrame:
         table = QFrame()
         table.setObjectName("UsageTableCard")
@@ -505,7 +461,7 @@ class UsageTab(TabBase):
             for m_idx, entry in enumerate(models):
                 key = f"{entry.provider}/{entry.model}"
                 color = color_map.get(key, _MODEL_COLORS[0])
-                vl.addWidget(self._model_row(entry, color, total_cost))
+                vl.addWidget(self._model_row(entry, color, total_tokens))
                 if m_idx < len(models) - 1:
                     vl.addWidget(self._row_separator(indent=20))
 
@@ -521,7 +477,7 @@ class UsageTab(TabBase):
         entries = [
             entry
             for _, models in self._sorted_providers(by_provider)
-            for entry in sorted(models, key=lambda e: e.cost_usd, reverse=True)
+            for entry in sorted(models, key=lambda e: e.input_tokens + e.output_tokens, reverse=True)
         ]
         start = self._model_page * _PAGE_SIZE
         return entries[start:start + _PAGE_SIZE]
@@ -541,10 +497,9 @@ class UsageTab(TabBase):
 
         hl.addWidget(_h("Model"), stretch=3)
         hl.addWidget(_h("Tokens", Qt.AlignmentFlag.AlignRight), stretch=2)
-        hl.addWidget(_h("Cost", Qt.AlignmentFlag.AlignRight), stretch=1)
         return row
 
-    def _model_row(self, entry: ModelUsageEntry, color: str, total_cost: float) -> QWidget:
+    def _model_row(self, entry: ModelUsageEntry, color: str, total_tokens: int) -> QWidget:
         row = QWidget()
         row.setObjectName("UsageModelRow")
         row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -564,16 +519,11 @@ class UsageTab(TabBase):
         name.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         hl.addWidget(name, stretch=3)
 
-        tok_lbl = QLabel(_fmt(entry.input_tokens + entry.output_tokens))
+        model_tokens = entry.input_tokens + entry.output_tokens
+        tok_lbl = QLabel(_fmt(model_tokens))
         tok_lbl.setObjectName("UsageModelTokens")
         tok_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         hl.addWidget(tok_lbl, stretch=2)
-
-        cost_text = _money(entry.cost_usd) if entry.cost_usd > 0 else "No price"
-        cost_lbl = QLabel(cost_text)
-        cost_lbl.setObjectName("UsageModelCost")
-        cost_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        hl.addWidget(cost_lbl, stretch=1)
 
         vl.addWidget(top)
 
@@ -589,13 +539,13 @@ class UsageTab(TabBase):
         detail.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         vl.addWidget(detail)
 
-        bar = QProgressBar()
-        bar.setObjectName("UsageSpendBar")
-        bar.setRange(0, 1000)
-        bar.setValue(round((entry.cost_usd / total_cost) * 1000))
-        bar.setTextVisible(False)
-        bar.setFixedHeight(6)
-        bar.setStyleSheet(
+        share_bar = QProgressBar()
+        share_bar.setObjectName("UsageSpendBar")
+        share_bar.setRange(0, 1000)
+        share_bar.setValue(round((model_tokens / total_tokens) * 1000))
+        share_bar.setTextVisible(False)
+        share_bar.setFixedHeight(6)
+        share_bar.setStyleSheet(
             "QProgressBar#UsageSpendBar {"
             "  background: transparent;"
             "  border: none;"
@@ -605,7 +555,7 @@ class UsageTab(TabBase):
             "  border-radius: 3px;"
             "}"
         )
-        vl.addWidget(bar)
+        vl.addWidget(share_bar)
 
         return row
 
@@ -787,13 +737,6 @@ class UsageTab(TabBase):
                 letter-spacing: 0;
                 background: transparent;
             }}
-            QLabel#UsageHeroValue {{
-                color: {heading};
-                font-size: {round(fs * 2.0)}pt;
-                font-weight: bold;
-                font-family: "{mono}";
-                background: transparent;
-            }}
             QLabel#UsageHeroTokens {{
                 color: {heading};
                 font-size: {round(fs * 2.0)}pt;
@@ -805,13 +748,6 @@ class UsageTab(TabBase):
                 color: {dim};
                 font-size: {round(fs * 0.83)}pt;
                 background: transparent;
-            }}
-            QFrame#UsageHeroDivider {{
-                color: {border};
-                border: none;
-                border-left: 1px solid {border};
-                background: transparent;
-                max-width: 1px;
             }}
 
             QLabel#UsageStatLabel {{
@@ -848,7 +784,7 @@ class UsageTab(TabBase):
                 font-weight: bold;
                 letter-spacing: 0;
             }}
-            QLabel#UsageProviderSpend {{
+            QLabel#UsageProviderTokens {{
                 color: {text};
                 font-size: {round(fs * 1.18)}pt;
                 font-weight: bold;
@@ -904,13 +840,6 @@ class UsageTab(TabBase):
             QLabel#UsageModelTokens {{
                 color: {dim};
                 font-size: {round(fs)}pt;
-                font-family: "{mono}";
-                background: transparent;
-            }}
-            QLabel#UsageModelCost {{
-                color: {text};
-                font-size: {round(fs)}pt;
-                font-weight: bold;
                 font-family: "{mono}";
                 background: transparent;
             }}

@@ -74,7 +74,7 @@ def get_english_strings() -> LanguageStrings:
         reset_zoom="Reset Zoom",
         open_mindspace_log="Open Mindspace Log",
         open_humbug_shell="Open Humbug Shell",
-        open_cost_tokens="Cost/Tokens",
+        open_token_usage="Token Usage",
         show_tab_overview="Show Open Tabs",
         show_tab_carousel="Show Tab Carousel",
         show_all_columns="Show All Columns",

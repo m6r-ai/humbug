@@ -74,7 +74,7 @@ def get_french_strings() -> LanguageStrings:
         reset_zoom="Réinitialiser le zoom",
         open_mindspace_log="Ouvrir le journal de l'espace mental",
         open_humbug_shell="Ouvrir le shell Humbug",
-        open_cost_tokens="Coûts/Tokens",
+        open_token_usage="Utilisation des tokens",
         show_tab_overview="Afficher les onglets ouverts",
         show_tab_carousel="Afficher le carrousel d'onglets",
         show_all_columns="Afficher toutes les colonnes",

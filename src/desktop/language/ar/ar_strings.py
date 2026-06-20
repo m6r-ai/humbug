@@ -75,7 +75,7 @@ def get_arabic_strings() -> LanguageStrings:
         reset_zoom="إعادة تعيين التكبير",
         open_mindspace_log="فتح سجل المساحة الذهنية",
         open_humbug_shell="فتح صدفة هامبغ",
-        open_cost_tokens="التكاليف/الرموز",
+        open_token_usage="استخدام الرموز",
         show_tab_overview="عرض التبويبات المفتوحة",
         show_tab_carousel="عرض دوّار التبويبات",
         show_all_columns="عرض كل الأعمدة",

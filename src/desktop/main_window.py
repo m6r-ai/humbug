@@ -400,9 +400,9 @@ class MainWindow(QMainWindow):
         self._open_humbug_shell_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
         self._open_humbug_shell_action.triggered.connect(self._on_open_humbug_shell)
 
-        self._open_cost_tokens_action = QAction(strings.open_cost_tokens, self)
-        self._open_cost_tokens_action.setShortcut(QKeySequence("Ctrl+Shift+U"))
-        self._open_cost_tokens_action.triggered.connect(self._on_open_cost_tokens)
+        self._open_token_usage_action = QAction(strings.open_token_usage, self)
+        self._open_token_usage_action.setShortcut(QKeySequence("Ctrl+Shift+U"))
+        self._open_token_usage_action.triggered.connect(self._on_open_token_usage)
 
         self._show_tab_overview_action = QAction(strings.show_tab_overview, self)
         self._show_tab_overview_action.setShortcut(QKeySequence("Ctrl+Shift+E"))
@@ -465,7 +465,7 @@ class MainWindow(QMainWindow):
         self._mindspace_menu.addSeparator()
         self._mindspace_menu.addAction(self._open_mindspace_log_action)
         self._mindspace_menu.addAction(self._open_humbug_shell_action)
-        self._mindspace_menu.addAction(self._open_cost_tokens_action)
+        self._mindspace_menu.addAction(self._open_token_usage_action)
 
         # File menu
         self._file_menu = self._menu_bar.addMenu(strings.file_menu)
@@ -773,7 +773,7 @@ class MainWindow(QMainWindow):
         self._mindspace_settings_action.setEnabled(has_mindspace)
         self._open_mindspace_log_action.setEnabled(has_mindspace)
         self._open_humbug_shell_action.setEnabled(has_mindspace)
-        self._open_cost_tokens_action.setEnabled(has_mindspace)
+        self._open_token_usage_action.setEnabled(has_mindspace)
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor()
@@ -846,7 +846,7 @@ class MainWindow(QMainWindow):
         self._mindspace_settings_action.setText(strings.mindspace_settings)
         self._open_mindspace_log_action.setText(strings.open_mindspace_log)
         self._open_humbug_shell_action.setText(strings.open_humbug_shell)
-        self._open_cost_tokens_action.setText(strings.open_cost_tokens)
+        self._open_token_usage_action.setText(strings.open_token_usage)
 
         # Recreate the theme menu with updated language strings
         if self._theme_menu is not None:
@@ -1627,8 +1627,8 @@ class MainWindow(QMainWindow):
 
         contexts.open(context_type="log", title="Mindspace Log")
 
-    def _on_open_cost_tokens(self) -> None:
-        """Open (or focus) the Cost & Tokens tab."""
+    def _on_open_token_usage(self) -> None:
+        """Open (or focus) the Token Usage tab."""
         if not self._mindspace_manager.has_mindspace():
             return
 
@@ -1647,7 +1647,7 @@ class MainWindow(QMainWindow):
             contexts.close(existing.context_id)
 
         strings = self._language_manager.strings()
-        contexts.open(context_type="usage", title=strings.open_cost_tokens)
+        contexts.open(context_type="usage", title=strings.open_token_usage)
 
     def _on_open_humbug_shell(self) -> None:
         """Open the shell tab."""

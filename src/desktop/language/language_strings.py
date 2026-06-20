@@ -65,7 +65,7 @@ class LanguageStrings:
     reset_zoom: str
     open_mindspace_log: str
     open_humbug_shell: str
-    open_cost_tokens: str
+    open_token_usage: str
     show_tab_overview: str
     show_tab_carousel: str
     show_all_columns: str
