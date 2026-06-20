@@ -120,6 +120,15 @@ class ConversationMessage(QFrame):
         # layout position so we know when to raise/lower it.
         self._banner_is_sticky = False
 
+        # The pinned Y target while sticky, and a re-entrancy guard. We watch the
+        # banner's own move events so that when the layout (e.g. on a window resize)
+        # snaps the banner back to its natural position, we can immediately re-pin it
+        # within the same event — preventing a visible flicker. The event filter is
+        # installed at the end of __init__ (see below) so it never fires before the
+        # attributes our eventFilter relies on are initialised.
+        self._sticky_target_y = 0
+        self._repinning_banner = False
+
         # Add expand/collapse button for all messages (input and non-input)
         self._expand_button: QToolButton | None = None
 
@@ -324,6 +333,15 @@ class ConversationMessage(QFrame):
             self.set_content(content)
 
         self.setLayout(self._layout)
+
+        # Watch the banner for sticky re-pinning. Only non-input messages have a sticky
+        # banner, and installing this last guarantees every attribute our eventFilter
+        # reads is already set before any banner event can be delivered. (Subclasses such
+        # as ConversationInput finish their own __init__ after this, so an input message
+        # must never receive banner events here — its eventFilter relies on attributes it
+        # has not assigned yet.)
+        if not is_input:
+            self._banner.installEventFilter(self)
 
     def set_border_animation(self, active: bool, frame: int = 0, step: int = 64) -> None:
         """
@@ -1113,6 +1131,20 @@ class ConversationMessage(QFrame):
                 self._confirm_edit()
                 return True
 
+        # While the banner is pinned, the parent layout may try to snap it back to its
+        # natural position (most commonly during a window resize). Re-pin it immediately,
+        # in the same event, so the sticky header never visibly drops out of place.
+        if (
+            obj is self._banner
+            and event.type() == QEvent.Type.Move
+            and self._banner_is_sticky
+            and not self._repinning_banner
+            and self._banner.y() != self._sticky_target_y
+        ):
+            self._repinning_banner = True
+            self._banner.move(self._banner.x(), self._sticky_target_y)
+            self._repinning_banner = False
+
         return super().eventFilter(obj, event)
 
     def _delete_message(self) -> None:
@@ -1195,6 +1227,7 @@ class ConversationMessage(QFrame):
         max_y = max(natural_y, max_y)
 
         target_y = max(natural_y, min(viewport_top_local, max_y))
+        self._sticky_target_y = target_y
 
         if target_y != self._banner.y():
             self._banner.move(self._banner.x(), target_y)

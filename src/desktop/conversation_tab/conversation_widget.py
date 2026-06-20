@@ -167,6 +167,7 @@ class ConversationWidget(QWidget):
         # Initialize tracking variables
         self._auto_scroll = True
         self._input_spacer: QWidget | None = None
+        self._sticky_update_pending = False
 
         # Create layout
         conversation_layout = QVBoxLayout(self)
@@ -1456,6 +1457,25 @@ class ConversationWidget(QWidget):
 
         self._update_sticky_banners()
 
+    def _schedule_sticky_update(self) -> None:
+        """
+        Coalesce a sticky-banner recompute onto the next event-loop turn.
+
+        Used for resize-driven updates: the message widgets are re-laid-out via posted
+        layout events, so recomputing immediately would read stale geometry. Deferring
+        lets the layout settle first, giving precise final banner positions.
+        """
+        if self._sticky_update_pending:
+            return
+
+        self._sticky_update_pending = True
+        QTimer.singleShot(0, self._run_deferred_sticky_update)
+
+    def _run_deferred_sticky_update(self) -> None:
+        """Run a coalesced sticky-banner recompute scheduled by _schedule_sticky_update."""
+        self._sticky_update_pending = False
+        self._update_sticky_banners()
+
     def _update_sticky_banners(self) -> None:
         """
         Keep each message's banner pinned to the top of the viewport while the message
@@ -1817,7 +1837,9 @@ class ConversationWidget(QWidget):
             self._scroll_area.viewport(), self._messages_container
         ):
             self._on_input_size_hint_changed()
-            self._update_sticky_banners()
+            # Defer so message relayouts settle before we read geometry; the per-message
+            # banner move filter keeps things pinned (flicker-free) in the meantime.
+            self._schedule_sticky_update()
 
         return super().eventFilter(obj, event)
 
@@ -2211,6 +2233,8 @@ class ConversationWidget(QWidget):
             }}
             #ConversationMessage #_banner[sticky="true"] {{
                 border-top: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
+                border-top-left-radius: 0;
+                border-top-right-radius: 0;
             }}
             #ConversationMessage[message_source="user"] #_banner {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
