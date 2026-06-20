@@ -520,6 +520,14 @@ A paragraph before a horizontal rule.
 A paragraph after a horizontal rule. The rule above and the heading below should
 both have correct spacing.
 
+A blockquote before a horizontal rule.
+
+> Here's the blockquote
+
+---
+
+A paragraph after the rule
+
 ---
 
 ## 15. Images
