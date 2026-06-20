@@ -703,6 +703,7 @@ class UsageTab(TabBase):
             QScrollArea {{
                 border: none;
             }}
+            {self._style_manager.get_scrollbar_stylesheet()}
 
             QLabel#UsageSectionLabel {{
                 color: {dim};
