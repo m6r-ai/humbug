@@ -295,7 +295,6 @@ class LanguageStrings:
     conversation_status_no_temperature: str
     conversation_status_reasoning: str
     conversation_status_no_reasoning: str
-    conversation_status_cost: str
     conversation_status_rate_limited: str
     terminal_status: str
     system_status: str

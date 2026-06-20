@@ -379,7 +379,6 @@ class Mindspace:
         model: str,
         input_tokens: int,
         output_tokens: int,
-        cost_usd: float,
         cache_write_tokens: int = 0,
         cache_read_tokens: int = 0,
     ) -> None:
@@ -391,12 +390,11 @@ class Mindspace:
             model: Model name (e.g. 'claude-sonnet-4-6').
             input_tokens: Number of prompt tokens consumed.
             output_tokens: Number of completion tokens generated.
-            cost_usd: Estimated cost in USD for this response.
             cache_write_tokens: Tokens written to provider cache.
             cache_read_tokens: Tokens read from provider cache.
         """
         self._usage.record(
-            provider, model, input_tokens, output_tokens, cost_usd,
+            provider, model, input_tokens, output_tokens,
             cache_write_tokens=cache_write_tokens,
             cache_read_tokens=cache_read_tokens,
         )

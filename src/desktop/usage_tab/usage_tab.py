@@ -199,7 +199,7 @@ class UsageTab(TabBase):
         cl = self._content_layout
 
         if not self._mindspace_manager.has_mindspace():
-            cl.addWidget(self._empty_state("No mindspace open", "Open a mindspace to track model spend and tokens."))
+            cl.addWidget(self._empty_state("No mindspace open", "Open a mindspace to track model token usage."))
             self._apply_stylesheet()
             return
 

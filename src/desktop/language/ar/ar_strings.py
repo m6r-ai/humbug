@@ -310,13 +310,11 @@ def get_arabic_strings() -> LanguageStrings:
             "إجمالي الإدخال: {total_input_tokens}  |  "
             "رموز الإخراج: {output_tokens} / {max_output_tokens}  |  "
             "إجمالي الإخراج: {total_output_tokens}"
-            "{cost_section}"
         ),
         conversation_status_temperature="درجة الحرارة: {temperature:.1f}",
         conversation_status_no_temperature="درجة الحرارة: غير متوفر",
         conversation_status_reasoning="الاستدلال: {effort}",
         conversation_status_no_reasoning="الاستدلال: غير متوفر",
-        conversation_status_cost="  |  التكلفة: ${cost:.4f}  |  التكلفة الإجمالية: ${total_cost:.4f}",
         conversation_status_rate_limited="تم تجاوز حد الطلبات — إعادة المحاولة خلال {delay}ث…",
         terminal_status="طرفية: {name} ({columns}x{rows})",
         system_status="نظام",

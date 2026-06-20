@@ -1,24 +1,23 @@
-"""Per-mindspace token and cost usage tracking."""
+"""Per-mindspace token usage tracking."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List
 
 
 @dataclass
 class ModelUsageEntry:
-    """Aggregated token and cost stats for one (provider, model) pair."""
+    """Aggregated token stats for one (provider, model) pair."""
     provider: str
     model: str
     input_tokens: int = 0
     output_tokens: int = 0
     cache_write_tokens: int = 0
     cache_read_tokens: int = 0
-    cost_usd: float = 0.0
 
 
 class MindspaceUsage:
     """
-    Accumulates token usage and estimated cost across all conversations in a mindspace.
+    Accumulates token usage across all conversations in a mindspace.
 
     Stored as .humbug/usage.json and updated after each completed AI response.
     """
@@ -32,7 +31,6 @@ class MindspaceUsage:
         model: str,
         input_tokens: int,
         output_tokens: int,
-        cost_usd: float,
         cache_write_tokens: int = 0,
         cache_read_tokens: int = 0,
     ) -> None:
@@ -46,11 +44,6 @@ class MindspaceUsage:
         entry.output_tokens += output_tokens
         entry.cache_write_tokens += cache_write_tokens
         entry.cache_read_tokens += cache_read_tokens
-        entry.cost_usd += cost_usd
-
-    def total_cost(self) -> float:
-        """Return total estimated spend across all models."""
-        return sum(e.cost_usd for e in self._entries.values())
 
     def total_input_tokens(self) -> int:
         """Return total input tokens across all models."""
@@ -69,8 +62,12 @@ class MindspaceUsage:
         return sum(e.cache_read_tokens for e in self._entries.values())
 
     def entries(self) -> List[ModelUsageEntry]:
-        """Return per-model entries sorted by cost descending."""
-        return sorted(self._entries.values(), key=lambda e: e.cost_usd, reverse=True)
+        """Return per-model entries sorted by total tokens descending."""
+        return sorted(
+            self._entries.values(),
+            key=lambda e: e.input_tokens + e.output_tokens,
+            reverse=True,
+        )
 
     def reset(self) -> None:
         """Clear all accumulated usage data."""
@@ -88,7 +85,6 @@ class MindspaceUsage:
                     "output_tokens": e.output_tokens,
                     "cache_write_tokens": e.cache_write_tokens,
                     "cache_read_tokens": e.cache_read_tokens,
-                    "cost_usd": e.cost_usd,
                 }
                 for e in self._entries.values()
             ],
@@ -107,7 +103,6 @@ class MindspaceUsage:
                 output_tokens=item.get("output_tokens", 0),
                 cache_write_tokens=item.get("cache_write_tokens", 0),
                 cache_read_tokens=item.get("cache_read_tokens", 0),
-                cost_usd=item.get("cost_usd", 0.0),
             )
 
         return usage

@@ -309,13 +309,11 @@ def get_english_strings() -> LanguageStrings:
             "Input Total: {total_input_tokens}  |  "
             "Output Tokens: {output_tokens} / {max_output_tokens}  |  "
             "Output Total: {total_output_tokens}"
-            "{cost_section}"
         ),
         conversation_status_temperature="Temp: {temperature:.1f}",
         conversation_status_no_temperature="Temp: N/A",
         conversation_status_reasoning="Reasoning: {effort}",
         conversation_status_no_reasoning="Reasoning: N/A",
-        conversation_status_cost="  |  Cost: ${cost:.4f}  |  Total Cost: ${total_cost:.4f}",
         conversation_status_rate_limited="Rate limited — retrying in {delay}s…",
         terminal_status="Terminal: {name} ({columns}x{rows})",
         system_status="System",

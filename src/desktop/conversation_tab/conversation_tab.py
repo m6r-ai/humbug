@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QObject, Signal, QRegularExpression
 
 from ai import AIConversationHistory, AIConversationSettings
-from ai.ai_cost import calculate_cost
 from ai_transcript_conversation import AITranscriptConversation
 from context.context_registry import ContextRegistry
 from conversation_context.conversation_context import ConversationContext
@@ -83,9 +82,6 @@ class ConversationTab(TabBase):
         self._conversation_widget.conversation_modified.connect(self._on_conversation_modified)
         self._conversation_widget.rate_limited.connect(self._on_rate_limited)
         layout.addWidget(self._conversation_widget)
-
-        self._conversation_cost: float = 0.0
-        self._conversation_total_cost: float = 0.0
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -318,31 +314,16 @@ class ConversationTab(TabBase):
         if usage_data:
             settings = self._conversation_widget.conversation_settings()
             if settings:
-                model = AIConversationSettings.find_by_model_and_provider(
-                    settings.model, settings.provider
-                )
-                if model:
-                    cost = calculate_cost(
-                        usage_data.get("prompt_tokens", 0),
-                        usage_data.get("completion_tokens", 0),
-                        model,
+                mindspace_manager = MindspaceManager()
+                if mindspace_manager.has_mindspace():
+                    mindspace_manager.mindspace().update_usage(
+                        provider=settings.provider,
+                        model=settings.model,
+                        input_tokens=usage_data.get("prompt_tokens", 0),
+                        output_tokens=usage_data.get("completion_tokens", 0),
                         cache_write_tokens=usage_data.get("cache_write_tokens", 0),
                         cache_read_tokens=usage_data.get("cache_read_tokens", 0),
                     )
-                    self._conversation_cost = cost
-                    self._conversation_total_cost += cost
-
-                    mindspace_manager = MindspaceManager()
-                    if mindspace_manager.has_mindspace():
-                        mindspace_manager.mindspace().update_usage(
-                            provider=settings.provider,
-                            model=settings.model,
-                            input_tokens=usage_data.get("prompt_tokens", 0),
-                            output_tokens=usage_data.get("completion_tokens", 0),
-                            cost_usd=cost,
-                            cache_write_tokens=usage_data.get("cache_write_tokens", 0),
-                            cache_read_tokens=usage_data.get("cache_read_tokens", 0),
-                        )
 
         self.conversation_completed.emit(result)
 
@@ -375,15 +356,6 @@ class ConversationTab(TabBase):
 
         provider_display = get_backend_display_name(settings.provider, strings)
 
-        model = AIConversationSettings.find_by_model_and_provider(settings.model, settings.provider)
-        if model and model.input_cost_per_mtok > 0:
-            cost_section = strings.conversation_status_cost.format(
-                cost=self._conversation_cost,
-                total_cost=self._conversation_total_cost
-            )
-        else:
-            cost_section = ""
-
         status = strings.conversation_status.format(
             model=AIConversationSettings.get_display_name(settings.model, settings.provider),
             provider=provider_display,
@@ -394,8 +366,7 @@ class ConversationTab(TabBase):
             total_input_tokens=counts['input_total'],
             output_tokens=counts['output'],
             max_output_tokens=settings.max_output_tokens,
-            total_output_tokens=counts['output_total'],
-            cost_section=cost_section
+            total_output_tokens=counts['output_total']
         )
 
         self.status_message.emit(StatusMessage(status))
