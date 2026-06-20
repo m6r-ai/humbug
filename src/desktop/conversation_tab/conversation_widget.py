@@ -1447,10 +1447,45 @@ class ConversationWidget(QWidget):
 
         self.has_seen_latest_update_changed.emit(at_bottom)
 
+        self._update_sticky_banners()
+
     def _on_scroll_range_changed(self, _minimum: int, _maximum: int) -> None:
         """Handle the scroll range changing."""
         if self._auto_scroll:
             self._scroll_to_bottom()
+
+        self._update_sticky_banners()
+
+    def _update_sticky_banners(self) -> None:
+        """
+        Keep each message's banner pinned to the top of the viewport while the message
+        body scrolls beneath it. The banner returns to its natural position once the
+        message top is back within view, and rides off the top once the message has
+        almost fully scrolled past.
+        """
+        if not self._messages:
+            return
+
+        viewport = self._scroll_area.viewport()
+        viewport_height = viewport.height()
+        for message in self._messages:
+            if not message.is_rendered():
+                continue
+
+            # The viewport top edge, expressed in the message's local coordinates.
+            top_in_viewport = message.mapTo(viewport, QPoint(0, 0)).y()
+
+            # Skip messages that lie entirely below the viewport: their banners are
+            # already at their natural position and nothing is scrolling past them yet.
+            if top_in_viewport >= viewport_height:
+                continue
+
+            # Messages entirely above the viewport keep their banner parked off-screen
+            # from the last update, so there's no need to reposition them either.
+            if top_in_viewport + message.height() <= 0:
+                continue
+
+            message.update_sticky_banner(-top_in_viewport)
 
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""
@@ -1782,6 +1817,7 @@ class ConversationWidget(QWidget):
             self._scroll_area.viewport(), self._messages_container
         ):
             self._on_input_size_hint_changed()
+            self._update_sticky_banners()
 
         return super().eventFilter(obj, event)
 
@@ -2152,13 +2188,29 @@ class ConversationWidget(QWidget):
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
             }}
 
-            #ConversationMessage #_banner,
             #ConversationMessage #_sections_container {{
                 background-color: transparent;
                 border: none;
                 border-radius: 0;
                 padding: 0;
                 margin: 0;
+            }}
+
+            /* The banner is opaque (matching its message background) so it can be pinned
+               as a sticky header with content scrolling beneath it. */
+            #ConversationMessage #_banner {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+            #ConversationMessage[message_source="user"] #_banner {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+            }}
+            #ConversationMessage[message_source="user_input"] #_banner,
+            #ConversationMessage[message_source="ai_streaming"] #_banner {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
             }}
 
             #ConversationMessage #_role_label {{

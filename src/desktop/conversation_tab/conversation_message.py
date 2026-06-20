@@ -106,12 +106,19 @@ class ConversationMessage(QFrame):
             self._message_rendered = False
             self.hide()
 
-        # Create banner area with horizontal layout
+        # Create banner area with horizontal layout. The banner can be pinned to the
+        # top of the viewport while the message body scrolls beneath it (sticky header),
+        # so it needs an opaque, styled background to hide content passing behind it.
         self._banner = QWidget(self)
         self._banner.setObjectName("_banner")
+        self._banner.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._banner_layout = QHBoxLayout(self._banner)
         self._banner_layout.setContentsMargins(0, 0, 0, 0)
         self._banner_layout.setSpacing(4)
+
+        # Tracks whether the banner is currently translated away from its natural
+        # layout position so we know when to raise/lower it.
+        self._banner_is_sticky = False
 
         # Add expand/collapse button for all messages (input and non-input)
         self._expand_button: QToolButton | None = None
@@ -1156,6 +1163,47 @@ class ConversationMessage(QFrame):
     def banner(self) -> QWidget:
         """Return the banner widget."""
         return self._banner
+
+    def update_sticky_banner(self, viewport_top_local: int) -> None:
+        """
+        Pin the banner near the top of the viewport while this message is scrolled.
+
+        The banner stays at its natural layout position until the message has scrolled
+        far enough that the banner would leave the top of the viewport. From that point
+        the banner is translated down so it remains pinned at the viewport's top edge,
+        until the message itself has almost fully scrolled out, at which point the banner
+        rides off the top with the rest of the message.
+
+        Args:
+            viewport_top_local: The y-coordinate of the viewport's top edge expressed in
+                this message's local coordinates. Values at or below the banner's natural
+                position mean the banner does not need to stick.
+        """
+        # Input messages keep their banner at the bottom and never stick, and unrendered
+        # (hidden) messages have no meaningful geometry to position against.
+        if self._is_input or not self._message_rendered:
+            return
+
+        margins = self._layout.contentsMargins()
+        natural_y = margins.top()
+        banner_height = self._banner.height()
+
+        # The banner must not slide past the bottom of the message body; once it reaches
+        # that limit it scrolls off the top together with the message.
+        max_y = self.height() - margins.bottom() - banner_height
+        max_y = max(natural_y, max_y)
+
+        target_y = max(natural_y, min(viewport_top_local, max_y))
+
+        if target_y != self._banner.y():
+            self._banner.move(self._banner.x(), target_y)
+
+        sticky = target_y > natural_y
+        if sticky and not self._banner_is_sticky:
+            # Ensure the banner paints on top of the message sections while pinned.
+            self._banner.raise_()
+
+        self._banner_is_sticky = sticky
 
     def apply_style(self, style: ConversationMessageStyle | None = None) -> None:
         """Apply style changes."""
