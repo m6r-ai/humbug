@@ -286,6 +286,13 @@ class MarkdownRenderer(MarkdownASTVisitor):
         if next_sibling and isinstance(next_sibling, MarkdownASTHorizontalRuleNode):
             block_format.setBottomMargin(0)
 
+        # If there is no next sibling, check if our parent is a blockquote whose next sibling
+        # is a horizontal rule.  If so, suppress the bottom margin for the same reason.
+        elif (not next_sibling and
+                node.parent and isinstance(node.parent, MarkdownASTBlockquoteNode) and
+                isinstance(node.parent.next_sibling(), MarkdownASTHorizontalRuleNode)):
+            block_format.setBottomMargin(0)
+
         # If we are in a tight list, we don't need a bottom margin either
         elif tight:
             block_format.setBottomMargin(0)
