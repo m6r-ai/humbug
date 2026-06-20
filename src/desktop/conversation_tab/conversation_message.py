@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
 )
 from PySide6.QtCore import Signal, QPoint, Qt, QEvent, QObject
-from PySide6.QtGui import QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QKeyEvent
+from PySide6.QtGui import QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QKeyEvent, QFont
 
 from ai import AIMessageSource
 from ai_tool import AIToolCall
@@ -142,6 +142,7 @@ class ConversationMessage(QFrame):
         self._role_label.setObjectName("_role_label")
         self._role_label.setIndent(0)
         self._banner_layout.addWidget(self._role_label)
+        self._banner_layout.addStretch(1)
 
         role_sources = {
             AIMessageSource.USER: "user",
@@ -1199,6 +1200,11 @@ class ConversationMessage(QFrame):
             self._banner.move(self._banner.x(), target_y)
 
         sticky = target_y > natural_y
+        if sticky != self._banner_is_sticky:
+            self._banner.setProperty("sticky", sticky)
+            self._banner.style().unpolish(self._banner)
+            self._banner.style().polish(self._banner)
+
         if sticky and not self._banner_is_sticky:
             # Ensure the banner paints on top of the message sections while pinned.
             self._banner.raise_()
@@ -1218,7 +1224,39 @@ class ConversationMessage(QFrame):
         self._layout.setContentsMargins(style.spacing, style.spacing, style.spacing, style.spacing)
         self._sections_layout.setSpacing(style.spacing)
 
-        self._role_label.setFont(style.font)
+        role_font = QFont(style.font)
+        if not self._is_input:
+            role_font.setWeight(QFont.Weight.DemiBold)
+
+        self._role_label.setFont(role_font)
+
+        if not self._is_input:
+            zoom = self._style_manager.zoom_factor()
+            horizontal_margin = max(6, int(8 * zoom))
+            vertical_margin = max(4, int(5 * zoom))
+            action_size = max(24, int(28 * zoom))
+            banner_spacing = max(6, int(6 * zoom))
+
+            self._banner_layout.setContentsMargins(
+                horizontal_margin,
+                vertical_margin,
+                horizontal_margin,
+                vertical_margin
+            )
+            self._banner_layout.setSpacing(banner_spacing)
+            self._banner.setMinimumHeight(action_size + (vertical_margin * 2))
+
+            for button in (
+                self._expand_button,
+                self._copy_message_button,
+                self._save_message_button,
+                self._fork_message_button,
+                self._edit_message_button,
+                self._delete_message_button,
+                self._attachments_button,
+            ):
+                if button is not None:
+                    button.setFixedSize(action_size, action_size)
 
         if self._copy_message_button:
             self._copy_message_button.setIcon(style.copy_icon)

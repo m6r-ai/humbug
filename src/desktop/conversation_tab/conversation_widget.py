@@ -2201,16 +2201,28 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_banner {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 border: none;
-                border-radius: 0;
+                border-top: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border-top-left-radius: {border_radius}px;
+                border-top-right-radius: {border_radius}px;
+                border-bottom-left-radius: 0;
+                border-bottom-right-radius: 0;
                 padding: 0;
                 margin: 0;
             }}
+            #ConversationMessage #_banner[sticky="true"] {{
+                border-top: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
+            }}
             #ConversationMessage[message_source="user"] #_banner {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border-top: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+            }}
+            #ConversationMessage[message_source="user"] #_banner[sticky="true"] {{
+                border-top: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
             }}
             #ConversationMessage[message_source="user_input"] #_banner,
             #ConversationMessage[message_source="ai_streaming"] #_banner {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
+                border-top: none;
             }}
 
             #ConversationMessage #_role_label {{
@@ -2258,12 +2270,14 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_attach_button,
             #ConversationMessage #_attachments_button {{
                 background-color: transparent;
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_INACTIVE)};
                 border: none;
+                border-radius: {max(4, int(4 * style_manager.zoom_factor()))}px;
                 padding: 0px;
                 margin: 0px;
             }}
 
+            #ConversationMessage #_expand_button:hover,
             #ConversationMessage #_copy_button:hover,
             #ConversationMessage #_save_button:hover,
             #ConversationMessage #_fork_button:hover,
@@ -2275,8 +2289,10 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_attach_button:hover,
             #ConversationMessage #_attachments_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
+            #ConversationMessage #_expand_button:pressed,
             #ConversationMessage #_copy_button:pressed,
             #ConversationMessage #_save_button:pressed,
             #ConversationMessage #_fork_button:pressed,
@@ -2288,6 +2304,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_attach_button:pressed,
             #ConversationMessage #_attachments_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
             #ConversationMessage #_stop_button:disabled,
@@ -2296,6 +2313,7 @@ class ConversationWidget(QWidget):
                 background-color: transparent;
             }}
 
+            #ConversationMessage[message_source="user"] #_expand_button:hover,
             #ConversationMessage[message_source="user"] #_copy_button:hover,
             #ConversationMessage[message_source="user"] #_save_button:hover,
             #ConversationMessage[message_source="user"] #_fork_button:hover,
@@ -2305,6 +2323,7 @@ class ConversationWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
             }}
 
+            #ConversationMessage[message_source="user"] #_expand_button:pressed,
             #ConversationMessage[message_source="user"] #_copy_button:pressed,
             #ConversationMessage[message_source="user"] #_save_button:pressed,
             #ConversationMessage[message_source="user"] #_fork_button:pressed,
