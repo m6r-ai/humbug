@@ -195,6 +195,7 @@ class UsageTab(TabBase):
         return cls(state.tab_id, parent)
 
     def refresh(self) -> None:
+        """Rebuild the usage dashboard content from current mindspace usage data."""
         self._clear(self._content_layout)
         cl = self._content_layout
 
@@ -213,7 +214,10 @@ class UsageTab(TabBase):
         if not entries:
             cl.addWidget(self._hero_card(total_in, total_out, 0, 0))
             cl.addSpacing(16)
-            cl.addWidget(self._empty_state("No usage recorded yet", "Complete an AI response in this mindspace to populate this dashboard."))
+            cl.addWidget(self._empty_state(
+                "No usage recorded yet",
+                "Complete an AI response in this mindspace to populate this dashboard."
+            ))
             self._apply_stylesheet()
             return
 
@@ -638,8 +642,10 @@ class UsageTab(TabBase):
     def _clear(self, layout: QVBoxLayout) -> None:
         while layout.count():
             item = layout.takeAt(0)
-            if item and item.widget():
-                item.widget().deleteLater()
+            if item:
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
 
     def _on_reset(self) -> None:
         if self._mindspace_manager.has_mindspace():

@@ -1641,9 +1641,10 @@ class MainWindow(QMainWindow):
             # If the context is stale (e.g. the tab failed to create on a
             # previous attempt), close it so we can open a fresh one below.
             tab_manager = self._tab_manager
-            if existing.context_id in tab_manager._tabs:
+            if tab_manager.get_tab_by_id(existing.context_id):
                 contexts.focus(existing.context_id)
                 return
+
             contexts.close(existing.context_id)
 
         strings = self._language_manager.strings()
