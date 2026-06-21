@@ -26,6 +26,13 @@ All checks must pass cleanly. This runs:
 
 ## Coding standards
 
+Consistency is more important than improvement. A change that makes one part of the
+codebase "better" but leaves it inconsistent with the rest is not acceptable. If you
+want to improve a pattern or convention, that improvement must be applied uniformly
+across the entire codebase — not just in the files you happen to be touching. The
+burden for identifying and resolving any inconsistency a change introduces rests
+entirely with the contributor.
+
 - No file-level docstrings — they go stale quickly as code evolves.
 - No block comments delimiting sections within a file. Functions and classes have
   docstrings; grouping comments just add clutter.
