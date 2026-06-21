@@ -13,6 +13,14 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
   you want to be somewhere else.
 - Terminals will not open with a python virtual environment by default.  The venv is at `venv/` in the mindspace root.
 
+## Code quality
+
+- Before considering any code change complete, run the full suite of static analysis tools:
+  ```bash
+  source venv/bin/activate && python -m tools.code_checker
+  ```
+  All checks must pass cleanly before the work is done.
+
 ## Code generation
 
 - When you help write code, do not write lengthy file-level docstrings.  These go stale very fast as the code evolves.

@@ -228,3 +228,5 @@ Developer dependencies (installed automatically with `.[dev]`):
 5. Initial configuration:
 
    If you load Humbug and don't have any AIs already configured, it will guide you how to use any AI API keys you have.
+
+If you plan to contribute changes, see [CONTRIBUTING.md](./CONTRIBUTING.md) for coding standards and how to verify your work.
