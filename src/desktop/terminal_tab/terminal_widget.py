@@ -1,6 +1,7 @@
 """Terminal widget implementation."""
 
 from dataclasses import dataclass
+import math
 import logging
 import re
 from typing import Tuple, Dict, List, cast
@@ -1382,7 +1383,7 @@ class TerminalWidget(QAbstractScrollArea):
         margins = self.viewportMargins()
         scrollbar_size = self._style_manager.get_scrollbar_size()
         zoom = self._style_manager.zoom_factor()
-        return round(self._fixed_width * self._base_char_width * zoom) + margins.left() + margins.right() + scrollbar_size
+        return math.ceil(self._fixed_width * self._base_char_width * zoom) + margins.left() + margins.right() + scrollbar_size
 
     def create_state_metadata(self) -> Dict:
         """Create metadata dictionary capturing widget state."""

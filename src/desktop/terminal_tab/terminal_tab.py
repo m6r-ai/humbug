@@ -723,12 +723,11 @@ class TerminalTab(TabBase):
     def apply_style(self) -> None:
         """Apply current style settings to the tab's content widgets."""
         super().apply_style()
-        pixel_width = self._terminal_widget.preferred_pixel_width()
-        if pixel_width is not None:
-            self._terminal_widget.setMaximumWidth(pixel_width)
-
-        else:
-            self._terminal_widget.setMaximumWidth(16777215)  # QWIDGETSIZE_MAX
-
         self._find_widget.apply_style()
         self._terminal_widget.apply_style()
+
+        pixel_width = self._terminal_widget.preferred_pixel_width()
+        if pixel_width is not None:
+            self._terminal_widget.setMaximumWidth(pixel_width + 1)
+        else:
+            self._terminal_widget.setMaximumWidth(16777215)  # QWIDGETSIZE_MAX
