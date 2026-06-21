@@ -109,7 +109,7 @@ class AIConversationSettings:
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
-            ]
+            ],
         ),
         ("gemini-3-flash-preview", "google"): AIModel(
             name="gemini-3-flash-preview",
@@ -125,7 +125,7 @@ class AIConversationSettings:
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
-            ]
+            ],
         ),
         ("gemini-3.1-pro-preview", "google"): AIModel(
             name="gemini-3.1-pro-preview",
@@ -140,7 +140,54 @@ class AIConversationSettings:
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
-            ]
+            ],
+        ),
+        ("gemini-2.5-flash-lite", "google"): AIModel(
+            name="gemini-2.5-flash-lite",
+            provider="google",
+            display_name="Gemini 2.5 Flash Lite",
+            context_window=1048576,
+            max_output_tokens=65536,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.MINIMAL,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ],
+        ),
+        ("gemini-2.5-flash", "google"): AIModel(
+            name="gemini-2.5-flash",
+            provider="google",
+            display_name="Gemini 2.5 Flash",
+            context_window=1048576,
+            max_output_tokens=65536,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.MINIMAL,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ],
+        ),
+        ("gemini-2.5-pro", "google"): AIModel(
+            name="gemini-2.5-pro",
+            provider="google",
+            display_name="Gemini 2.5 Pro",
+            context_window=1048576,
+            max_output_tokens=65536,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ],
         ),
 
         # Mistral models
@@ -152,7 +199,7 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
         ),
         ("codestral-latest", "mistral"): AIModel(
             name="codestral-latest",
@@ -162,7 +209,7 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
         ),
         ("mistral-large-latest", "mistral"): AIModel(
             name="mistral-large-latest",
@@ -172,7 +219,7 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
         ),
         ("mistral-small-latest", "mistral"): AIModel(
             name="mistral-small-latest",
@@ -182,7 +229,7 @@ class AIConversationSettings:
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
         ),
 
         # Ollama local models
@@ -343,7 +390,7 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.MEDIUM,
-            ]
+            ],
         ),
         ("gpt-5.4-mini", "openai"): AIModel(
             name="gpt-5.4-mini",
@@ -356,7 +403,7 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.MEDIUM,
-            ]
+            ],
         ),
         ("gpt-5.5", "openai"): AIModel(
             name="gpt-5.5",
@@ -369,7 +416,7 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.MEDIUM,
-            ]
+            ],
         ),
         ("gpt-5.4", "openai"): AIModel(
             name="gpt-5.4",
@@ -383,7 +430,7 @@ class AIConversationSettings:
             supported_reasoning_efforts=[
                 AIReasoningEffort.NONE,
                 AIReasoningEffort.MEDIUM,
-            ]
+            ],
         ),
 
         # vLLM models
@@ -413,7 +460,7 @@ class AIConversationSettings:
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
-            ]
+            ],
         ),
 
         # Z.ai models

@@ -80,6 +80,7 @@ class ConversationTab(TabBase):
         self._conversation_widget.update_label.connect(self._on_update_label)
         self._conversation_widget.has_seen_latest_update_changed.connect(self._on_has_seen_latest_update_changed)
         self._conversation_widget.conversation_modified.connect(self._on_conversation_modified)
+        self._conversation_widget.rate_limited.connect(self._on_rate_limited)
         layout.addWidget(self._conversation_widget)
 
         self._language_manager = LanguageManager()
@@ -303,11 +304,27 @@ class ConversationTab(TabBase):
         """
         self.set_has_seen_latest_update(seen)
 
+    def _on_rate_limited(self, message: str) -> None:
+        """Show a timed status bar notice when a rate-limit retry is in progress."""
+        self.status_message.emit(StatusMessage(message, timeout=5000))
+
     def _on_submit_finished(self, result: Dict[str, Any]) -> None:
-        """
-        Handle when a submitted message finishes processing.
-        """
-        # Update the tab bar to indicate content has changed
+        """Handle when a submitted message finishes processing."""
+        usage_data = result.get("usage")
+        if usage_data:
+            settings = self._conversation_widget.conversation_settings()
+            if settings:
+                mindspace_manager = MindspaceManager()
+                if mindspace_manager.has_mindspace():
+                    mindspace_manager.mindspace().update_usage(
+                        provider=settings.provider,
+                        model=settings.model,
+                        input_tokens=usage_data.get("prompt_tokens", 0),
+                        output_tokens=usage_data.get("completion_tokens", 0),
+                        cache_write_tokens=usage_data.get("cache_write_tokens", 0),
+                        cache_read_tokens=usage_data.get("cache_read_tokens", 0),
+                    )
+
         self.conversation_completed.emit(result)
 
     def update_status(self) -> None:

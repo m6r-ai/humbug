@@ -27,6 +27,7 @@ class MindspaceManager(QObject):
 
     settings_changed     = Signal()
     interactions_updated = Signal()
+    usage_updated        = Signal()
 
     MINDSPACE_DIR = Mindspace.MINDSPACE_DIR
 
@@ -47,6 +48,7 @@ class MindspaceManager(QObject):
             self._mindspace = Mindspace(
                 on_settings_changed=self.settings_changed.emit,
                 on_interactions_updated=self.interactions_updated.emit,
+                on_usage_updated=self.usage_updated.emit,
             )
             self._directory_tracker = MindspaceDirectoryTracker()
             self._home_config = os.path.expanduser("~/.humbug/mindspace.json")
