@@ -6,7 +6,7 @@ import re
 from typing import Dict, List, Any, Set, Tuple
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QSizePolicy
+    QWidget, QHBoxLayout, QVBoxLayout, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QTimer
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
@@ -90,7 +90,6 @@ class PreviewWidget(QWidget):
         self._scroll_area.setFrameStyle(0)
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self._scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -107,8 +106,16 @@ class PreviewWidget(QWidget):
         self._content_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setWidget(self._content_container)
 
-        # Add the scroll area to the main layout
-        content_layout.addWidget(self._scroll_area)
+        # Wrap scroll area in a centring container so the scrollbar sits
+        # adjacent to the content rather than at the far right of the column.
+        scroll_container = QWidget()
+        scroll_container.setObjectName("PreviewScrollContainer")
+        scroll_container_layout = QHBoxLayout(scroll_container)
+        scroll_container_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_container_layout.setSpacing(0)
+        scroll_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        scroll_container_layout.addWidget(self._scroll_area)
+        content_layout.addWidget(scroll_container)
 
         # Setup signals for search highlights
         self._search_highlights: Dict[PreviewContentWidget, List[Tuple[int, int, int]]] = {}
@@ -668,8 +675,12 @@ class PreviewWidget(QWidget):
                 border: none;
             }}
 
-            QScrollArea {{
+            #PreviewScrollContainer {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+            }}
+
+            QScrollArea {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
             {style_manager.get_scrollbar_stylesheet()}
@@ -833,7 +844,7 @@ class PreviewWidget(QWidget):
     def apply_style(self) -> None:
         """Apply current style settings."""
         zoom_factor = self._style_manager.zoom_factor()
-        self._content_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
+        self._scroll_area.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
 
         # Apply style to all content blocks
         for content_block in self._content_blocks:

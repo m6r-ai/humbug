@@ -4,7 +4,7 @@ import logging
 from typing import Dict, List, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QSizePolicy
+    QWidget, QHBoxLayout, QVBoxLayout, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
@@ -71,7 +71,6 @@ class LogWidget(QWidget):
         self._scroll_area.setFrameStyle(0)
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self._scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -88,8 +87,16 @@ class LogWidget(QWidget):
         self._messages_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setWidget(self._messages_container)
 
-        # Add the scroll area to the main layout
-        log_layout.addWidget(self._scroll_area)
+        # Wrap scroll area in a centring container so the scrollbar sits
+        # adjacent to the content rather than at the far right of the column.
+        scroll_container = QWidget()
+        scroll_container.setObjectName("LogScrollContainer")
+        scroll_container_layout = QHBoxLayout(scroll_container)
+        scroll_container_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_container_layout.setSpacing(0)
+        scroll_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        scroll_container_layout.addWidget(self._scroll_area)
+        log_layout.addWidget(scroll_container)
 
         # Setup signals for search highlights
         self._search_highlights: Dict[LogMessage, List[Tuple[int, int]]] = {}
@@ -614,8 +621,12 @@ class LogWidget(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
-            QScrollArea {{
+            #LogScrollContainer {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+            }}
+
+            QScrollArea {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
             {self._style_manager.get_scrollbar_stylesheet()}
@@ -682,7 +693,7 @@ class LogWidget(QWidget):
     def apply_style(self) -> None:
         """Apply the current style to this widget."""
         zoom_factor = self._style_manager.zoom_factor()
-        self._messages_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
+        self._scroll_area.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
 
         font = self.font()
         base_font_size = self._style_manager.base_font_size()

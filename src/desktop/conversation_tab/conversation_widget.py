@@ -8,7 +8,7 @@ import time
 from typing import Callable, cast, Dict, List, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
-    QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QFileDialog
+    QWidget, QApplication, QHBoxLayout, QVBoxLayout, QScrollArea, QSizePolicy, QFileDialog
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QEvent, QSize
 from PySide6.QtGui import QCursor, QFont, QGuiApplication, QIcon, QResizeEvent
@@ -185,7 +185,6 @@ class ConversationWidget(QWidget):
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self._scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -229,8 +228,16 @@ class ConversationWidget(QWidget):
 
         self._scroll_area.setWidget(self._messages_container)
 
-        # Add the scroll area to the main layout
-        conversation_layout.addWidget(self._scroll_area)
+        # Wrap scroll area in a centring container so the scrollbar sits
+        # adjacent to the content rather than at the far right of the column.
+        scroll_container = QWidget()
+        scroll_container.setObjectName("ConversationScrollContainer")
+        scroll_container_layout = QHBoxLayout(scroll_container)
+        scroll_container_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_container_layout.setSpacing(0)
+        scroll_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        scroll_container_layout.addWidget(self._scroll_area)
+        conversation_layout.addWidget(scroll_container)
 
         input_text_area = cast(MarkdownTextEdit, self._input._text_area)
         input_text_area.size_hint_changed.connect(self._on_input_size_hint_changed)
@@ -1884,12 +1891,7 @@ class ConversationWidget(QWidget):
         """Position the floating input at the bottom of the visible viewport."""
         style_manager = self._style_manager
         spacing = int(style_manager.message_bubble_spacing())
-        zoom_factor = style_manager.zoom_factor()
-        max_content_width = int(style_manager.nice_tab_width() * zoom_factor)
-        viewport_width = self._scroll_area.viewport().width()
-        container_width = min(viewport_width, max_content_width) + 2
-        container_offset = (viewport_width - container_width) // 2
-        input_x = container_offset + spacing
+        input_x = self._scroll_area.viewport().mapTo(self, QPoint(0, 0)).x() + spacing - 1
 
         if input_height is None:
             assert self._input_spacer is not None
@@ -2196,8 +2198,12 @@ class ConversationWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
-            #ConversationWidget QScrollArea {{
+            #ConversationScrollContainer {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+            }}
+
+            #ConversationWidget QScrollArea {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
             {style_manager.get_scrollbar_stylesheet()}
@@ -2658,7 +2664,7 @@ class ConversationWidget(QWidget):
         spacing = int(style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
         zoom_factor = style_manager.zoom_factor()
-        self._messages_container.setMaximumWidth(int(style_manager.nice_tab_width() * zoom_factor))
+        self._scroll_area.setMaximumWidth(int(style_manager.nice_tab_width() * zoom_factor))
 
         font = self.font()
         base_font_size = style_manager.base_font_size()
