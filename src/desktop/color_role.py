@@ -190,6 +190,16 @@ class ColorRole(Enum):
     VCS_DELETED = auto()                # Deleted file badge
     VCS_RENAMED = auto()                # Renamed / copied file badge
 
+    # Usage model colours (categorical series for token usage charts)
+    USAGE_MODEL_COLOR_1 = auto()
+    USAGE_MODEL_COLOR_2 = auto()
+    USAGE_MODEL_COLOR_3 = auto()
+    USAGE_MODEL_COLOR_4 = auto()
+    USAGE_MODEL_COLOR_5 = auto()
+    USAGE_MODEL_COLOR_6 = auto()
+    USAGE_MODEL_COLOR_7 = auto()
+    USAGE_MODEL_COLOR_8 = auto()
+
     # Syntax highlighting
     SYNTAX_ERROR = auto()               # Red
     SYNTAX_01 = auto()                  # Cyan

@@ -220,6 +220,16 @@ _DARK_COLORS: Dict[ColorRole, str] = {
     ColorRole.VCS_DELETED: "#f08080",
     ColorRole.VCS_RENAMED: "#8080c0",
 
+    # Usage model colours
+    ColorRole.USAGE_MODEL_COLOR_1: "#4C9BE8",
+    ColorRole.USAGE_MODEL_COLOR_2: "#4EC994",
+    ColorRole.USAGE_MODEL_COLOR_3: "#F5A623",
+    ColorRole.USAGE_MODEL_COLOR_4: "#E85D75",
+    ColorRole.USAGE_MODEL_COLOR_5: "#9B8AF5",
+    ColorRole.USAGE_MODEL_COLOR_6: "#F5724D",
+    ColorRole.USAGE_MODEL_COLOR_7: "#50C8D8",
+    ColorRole.USAGE_MODEL_COLOR_8: "#A8CC5E",
+
     # Syntax highlighting
     ColorRole.SYNTAX_ERROR: "#ff0000",
     ColorRole.SYNTAX_01: "#80e0d0",
@@ -430,6 +440,16 @@ _LIGHT_COLORS: Dict[ColorRole, str] = {
     ColorRole.VCS_DELETED: "#c03030",
     ColorRole.VCS_RENAMED: "#4040a0",
 
+    # Usage model colours
+    ColorRole.USAGE_MODEL_COLOR_1: "#2878c8",
+    ColorRole.USAGE_MODEL_COLOR_2: "#28a060",
+    ColorRole.USAGE_MODEL_COLOR_3: "#c07800",
+    ColorRole.USAGE_MODEL_COLOR_4: "#c03050",
+    ColorRole.USAGE_MODEL_COLOR_5: "#6050c8",
+    ColorRole.USAGE_MODEL_COLOR_6: "#c04820",
+    ColorRole.USAGE_MODEL_COLOR_7: "#2090a0",
+    ColorRole.USAGE_MODEL_COLOR_8: "#608020",
+
     # Syntax highlighting
     ColorRole.SYNTAX_ERROR: "#ff0000",
     ColorRole.SYNTAX_01: "#007070",
@@ -639,6 +659,16 @@ _COLOR_BLIND_COLORS: Dict[ColorRole, str] = {
     ColorRole.VCS_ADDED: "#009e73",
     ColorRole.VCS_DELETED: "#d55e00",
     ColorRole.VCS_RENAMED: "#56b4e9",
+
+    # Usage model colours (Okabe-Ito colour-blind safe palette)
+    ColorRole.USAGE_MODEL_COLOR_1: "#56b4e9",
+    ColorRole.USAGE_MODEL_COLOR_2: "#009e73",
+    ColorRole.USAGE_MODEL_COLOR_3: "#e69f00",
+    ColorRole.USAGE_MODEL_COLOR_4: "#d55e00",
+    ColorRole.USAGE_MODEL_COLOR_5: "#cc79a7",
+    ColorRole.USAGE_MODEL_COLOR_6: "#0072b2",
+    ColorRole.USAGE_MODEL_COLOR_7: "#f0e442",
+    ColorRole.USAGE_MODEL_COLOR_8: "#000000",
 
     # Syntax highlighting
     ColorRole.SYNTAX_ERROR: "#e69f00",

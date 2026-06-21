@@ -407,6 +407,19 @@ class StyleManager(QObject):
         """
         return self._resolve_color_value(role)
 
+    def model_colors(self) -> list[str]:
+        """Return the ordered list of categorical colours for usage model charts."""
+        return [
+            self._resolve_color_value(ColorRole.USAGE_MODEL_COLOR_1),
+            self._resolve_color_value(ColorRole.USAGE_MODEL_COLOR_2),
+            self._resolve_color_value(ColorRole.USAGE_MODEL_COLOR_3),
+            self._resolve_color_value(ColorRole.USAGE_MODEL_COLOR_4),
+            self._resolve_color_value(ColorRole.USAGE_MODEL_COLOR_5),
+            self._resolve_color_value(ColorRole.USAGE_MODEL_COLOR_6),
+            self._resolve_color_value(ColorRole.USAGE_MODEL_COLOR_7),
+            self._resolve_color_value(ColorRole.USAGE_MODEL_COLOR_8),
+        ]
+
     def get_background_surface_qss(self) -> str:
         """Return solid or gradient QSS for the main application surface."""
         start_overridden = (
