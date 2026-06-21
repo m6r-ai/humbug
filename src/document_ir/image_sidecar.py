@@ -58,24 +58,20 @@ def extension_for_mime_type(mime_type: str) -> str:
 def extract_images_to_sidecar(
     document: DocumentIRNode,
     sidecar_dir: Path,
-    stem: str,
 ) -> int:
     """Walk a document IR tree and write embedded image data to a sidecar directory.
 
     For every DocumentIRImageNode that carries inline ``data``, the bytes are
     written to a file inside ``sidecar_dir`` and the node's ``url`` is updated
-    to a relative path of the form ``{stem}_files/imageN.ext``.  The ``data``
-    and ``mime_type`` fields are then cleared so subsequent serialisers treat
-    the image as an ordinary file reference.
+    to a relative path of the form ``{sidecar_dir.name}/imageN.ext``.  The
+    ``data`` and ``mime_type`` fields are then cleared so subsequent serialisers
+    treat the image as an ordinary file reference.
 
     Nodes whose ``data`` is None are left untouched.
 
     Args:
         document: The root IR node to walk (modified in place).
         sidecar_dir: Directory to write image files into (created if absent).
-        stem: Base name used to build relative URL paths, typically the output
-            file stem (e.g. ``'report'`` → ``'report_files/image1.png'``).
-
     Returns:
         The number of image files written.
     """

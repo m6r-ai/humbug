@@ -446,7 +446,6 @@ class DocumentConverterAITool(AITool):
                 extract_images_to_sidecar(
                     document_ir,
                     sidecar_dir,
-                    output_path.stem,
                 )
 
             content = _EXPORTERS[to_format](document_ir)

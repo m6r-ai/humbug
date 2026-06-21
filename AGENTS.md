@@ -230,6 +230,7 @@ Development and debugging utilities:
 - `menai/profiler/` - Menai profiling
 - `menai/test-runner/` - Menai test runner
 - `convert_document/` - Document conversion between docx, html, and md formats
+- `code_checker/` - Runs all static analysis tools (dependency checker, mypy, pylint) in sequence
 - `dependency_checker/` - Module dependency validation
 - `pdf/` - PDF-related tooling
 - `pipeline-runner/` - Pipeline execution

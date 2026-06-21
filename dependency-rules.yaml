@@ -101,12 +101,12 @@ modules:
 
   dmarkdown:
     internal_dependencies:
-      - doc_ir
+      - document_ir
       - syntax
     external_dependencies:
       - "standard_library"
 
-  doc_ir:
+  document_ir:
     internal_dependencies: []
     external_dependencies:
       - "standard_library"
@@ -114,6 +114,7 @@ modules:
   document_converter_ai_tool:
     internal_dependencies:
       - ai_tool
+      - document_ir
       - dhtml
       - dmarkdown
       - docx
@@ -124,13 +125,13 @@ modules:
 
   dhtml:
     internal_dependencies:
-      - doc_ir
+      - document_ir
     external_dependencies:
       - "standard_library"
 
   docx:
     internal_dependencies:
-      - doc_ir
+      - document_ir
     external_dependencies:
       - "standard_library"
 
