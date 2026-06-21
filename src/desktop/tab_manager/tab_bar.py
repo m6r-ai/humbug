@@ -414,7 +414,7 @@ class TabBar(QTabBar):
         self._resources.icon_pixmaps.clear()
         self._resources.inactive_icon_pixmaps.clear()
 
-        for icon_name in ("conversation", "editor", "log", "shell", "terminal", "preview", "diff"):
+        for icon_name in ("conversation", "editor", "log", "shell", "terminal", "preview", "diff", "usage"):
             self._resources.icon_pixmaps[icon_name] = sm.scale_icon(icon_name, 16)
             self._resources.inactive_icon_pixmaps[icon_name] = sm.scale_icon(f"inactive-{icon_name}", 16)
 

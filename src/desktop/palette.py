@@ -175,8 +175,8 @@ _DARK_COLORS: Dict[ColorRole, str] = {
     # The input background has an alpha channel so it allows a small amount of what's underneath it to show through.
     ColorRole.MESSAGE_INPUT_BACKGROUND: "#ea383838",
     ColorRole.MESSAGE_ATTACHMENT_BACKGROUND: "#383838",
-    ColorRole.MESSAGE_BORDER: "#282828",
-    ColorRole.MESSAGE_USER_BORDER: "#404040",
+    ColorRole.MESSAGE_BORDER: "#303030",
+    ColorRole.MESSAGE_USER_BORDER: "#484848",
     ColorRole.MESSAGE_INPUT_BORDER: "#707070",
     ColorRole.MESSAGE_SPOTLIGHTED: "#788ca0",
     ColorRole.MESSAGE_USER: "#7090e0",

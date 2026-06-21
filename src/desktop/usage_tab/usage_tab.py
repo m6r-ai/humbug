@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from desktop.color_role import ColorRole
+from ai.ai_conversation_settings import AIConversationSettings
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
@@ -71,7 +72,6 @@ class UsageTab(TabBase):
         self._scroll.setWidget(self._body_widget)
 
         self._body = QVBoxLayout(self._body_widget)
-        self._body.setContentsMargins(28, 28, 28, 28)
         self._body.setSpacing(0)
         self._body.setAlignment(Qt.AlignmentFlag.AlignTop)
 
@@ -82,6 +82,19 @@ class UsageTab(TabBase):
         self._content_layout.setSpacing(0)
         self._content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._body.addWidget(self._content)
+        self._body.addSpacing(int(self._style_manager.message_bubble_spacing()))
+
+        reset_row = QWidget()
+        reset_row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        rl = QHBoxLayout(reset_row)
+        rl.setContentsMargins(0, 0, 0, 0)
+        self._reset_btn = QPushButton("Reset Usage")
+        self._reset_btn.setObjectName("UsageResetBtn")
+        self._reset_btn.setEnabled(False)
+        self._reset_btn.clicked.connect(self._on_reset)
+        rl.addWidget(self._reset_btn)
+        rl.addStretch()
+        self._body.addWidget(reset_row)
         self._body.addStretch()
 
         self._mindspace_manager.usage_updated.connect(self.refresh)
@@ -101,7 +114,6 @@ class UsageTab(TabBase):
 
     def set_active(self, widget: QWidget, active: bool) -> None:
         if active:
-            self.refresh()
             self.activated.emit()
 
     def activate(self) -> None:
@@ -174,6 +186,8 @@ class UsageTab(TabBase):
         return int(self._style_manager.nice_tab_width() * self._style_manager.zoom_factor())
 
     def apply_style(self) -> None:
+        s = int(self._style_manager.message_bubble_spacing())
+        self._body.setContentsMargins(s, s, s, s)
         self._apply_stylesheet()
 
     def get_state(self, temp_state: bool = False) -> TabState:
@@ -190,6 +204,7 @@ class UsageTab(TabBase):
 
         if not self._mindspace_manager.has_mindspace():
             cl.addWidget(self._empty_state("No mindspace open", "Open a mindspace to track model token usage."))
+            self._reset_btn.setEnabled(False)
             self._apply_stylesheet()
             return
 
@@ -204,11 +219,12 @@ class UsageTab(TabBase):
 
         if not entries:
             cl.addWidget(self._hero_card(total_in, total_out, 0, 0))
-            cl.addSpacing(16)
+            cl.addSpacing(int(self._style_manager.message_bubble_spacing()))
             cl.addWidget(self._empty_state(
                 "No usage recorded yet",
                 "Complete an AI response in this mindspace to populate this dashboard."
             ))
+            self._reset_btn.setEnabled(False)
             self._apply_stylesheet()
             return
 
@@ -231,7 +247,7 @@ class UsageTab(TabBase):
         cards_w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         grid = QGridLayout(cards_w)
         grid.setContentsMargins(0, 0, 0, 0)
-        grid.setSpacing(12)
+        grid.setSpacing(int(self._style_manager.message_bubble_spacing()))
         cols = 2
         for c in range(cols):
             grid.setColumnStretch(c, 1)
@@ -269,19 +285,7 @@ class UsageTab(TabBase):
         if model_count > _PAGE_SIZE:
             cl.addSpacing(10)
             cl.addWidget(self._pagination_row("models", self._model_page, model_count))
-        cl.addSpacing(22)
-
-        reset_row = QWidget()
-        reset_row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        rl = QHBoxLayout(reset_row)
-        rl.setContentsMargins(0, 0, 0, 0)
-        btn = QPushButton("Reset Usage")
-        btn.setObjectName("UsageResetBtn")
-        btn.setEnabled(self._mindspace_manager.has_mindspace())
-        btn.clicked.connect(self._on_reset)
-        rl.addWidget(btn)
-        rl.addStretch()
-        cl.addWidget(reset_row)
+        self._reset_btn.setEnabled(self._mindspace_manager.has_mindspace())
 
         self._apply_stylesheet()
 
@@ -310,8 +314,9 @@ class UsageTab(TabBase):
         pane = QWidget()
         pane.setObjectName("UsageHeroPane")
         pv = QVBoxLayout(pane)
-        pv.setContentsMargins(24, 22, 24, 22)
-        pv.setSpacing(5)
+        s = int(self._style_manager.message_bubble_spacing())
+        pv.setContentsMargins(s, s, s, s)
+        pv.setSpacing(s // 2)
 
         tok_lbl = QLabel("Total Tokens")
         tok_lbl.setObjectName("UsageHeroPaneLabel")
@@ -339,9 +344,10 @@ class UsageTab(TabBase):
         card.setObjectName("UsageCard")
         card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
+        s = int(self._style_manager.message_bubble_spacing())
         vl = QVBoxLayout(card)
-        vl.setContentsMargins(20, 18, 20, 18)
-        vl.setSpacing(6)
+        vl.setContentsMargins(s, s, s, s)
+        vl.setSpacing(s // 2)
 
         lbl = QLabel(label)
         lbl.setObjectName("UsageStatLabel")
@@ -363,7 +369,7 @@ class UsageTab(TabBase):
         widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         grid = QGridLayout(widget)
         grid.setContentsMargins(0, 0, 0, 0)
-        grid.setSpacing(12)
+        grid.setSpacing(int(self._style_manager.message_bubble_spacing()))
         cols = 2
         for c in range(cols):
             grid.setColumnStretch(c, 1)
@@ -393,15 +399,16 @@ class UsageTab(TabBase):
 
         tokens = sum(e.input_tokens + e.output_tokens for e in entries)
 
+        s = int(self._style_manager.message_bubble_spacing())
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(8)
+        layout.setContentsMargins(s, s, s, s)
+        layout.setSpacing(s)
 
         top = QWidget()
         top.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         hl = QHBoxLayout(top)
         hl.setContentsMargins(0, 0, 0, 0)
-        hl.setSpacing(10)
+        hl.setSpacing(s)
 
         name = QLabel(provider.upper())
         name.setObjectName("UsageProviderName")
@@ -443,10 +450,11 @@ class UsageTab(TabBase):
             visible_by_provider[entry.provider].append(entry)
 
         providers = self._sorted_providers(visible_by_provider)
+        s = int(self._style_manager.message_bubble_spacing())
         for p_idx, (provider, models) in enumerate(providers):
             ph = QWidget()
             ph_hl = QHBoxLayout(ph)
-            ph_hl.setContentsMargins(20, 10, 20, 6)
+            ph_hl.setContentsMargins(s, s, s, s // 2)
             provider_lbl = QLabel(provider.upper())
             provider_lbl.setObjectName("UsageProviderLabel")
             ph_hl.addWidget(provider_lbl)
@@ -458,7 +466,7 @@ class UsageTab(TabBase):
                 color = color_map.get(key, model_colors[0])
                 vl.addWidget(self._model_row(entry, color, total_tokens))
                 if m_idx < len(models) - 1:
-                    vl.addWidget(self._row_separator(indent=20))
+                    vl.addWidget(self._row_separator(indent=int(self._style_manager.message_bubble_spacing())))
 
             if p_idx < len(providers) - 1:
                 vl.addWidget(self._row_separator())
@@ -481,7 +489,8 @@ class UsageTab(TabBase):
         row = QWidget()
         row.setObjectName("UsageTableHeader")
         hl = QHBoxLayout(row)
-        hl.setContentsMargins(20, 12, 20, 12)
+        s = int(self._style_manager.message_bubble_spacing())
+        hl.setContentsMargins(s, s, s, s)
         hl.setSpacing(0)
 
         def _h(text: str, align: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft) -> QLabel:
@@ -499,9 +508,10 @@ class UsageTab(TabBase):
         row.setObjectName("UsageModelRow")
         row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
+        s = int(self._style_manager.message_bubble_spacing())
         vl = QVBoxLayout(row)
-        vl.setContentsMargins(20, 12, 20, 12)
-        vl.setSpacing(4)
+        vl.setContentsMargins(s, s, s, s)
+        vl.setSpacing(s // 2)
 
         top = QWidget()
         top.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
@@ -509,7 +519,7 @@ class UsageTab(TabBase):
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(0)
 
-        name = QLabel(entry.model)
+        name = QLabel(AIConversationSettings.get_display_name(entry.model, entry.provider))
         name.setObjectName("UsageModelName")
         name.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         hl.addWidget(name, stretch=3)
@@ -530,7 +540,6 @@ class UsageTab(TabBase):
 
         detail = QLabel("  /  ".join(parts))
         detail.setObjectName("UsageModelDetail")
-        detail.setIndent(20)
         detail.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         vl.addWidget(detail)
 
@@ -561,7 +570,7 @@ class UsageTab(TabBase):
 
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setSpacing(int(self._style_manager.message_bubble_spacing()))
 
         page_count = self._page_count(item_count)
         start = page * _PAGE_SIZE + 1
@@ -615,9 +624,10 @@ class UsageTab(TabBase):
         card.setObjectName("UsageEmptyCard")
         card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
+        s = int(self._style_manager.message_bubble_spacing())
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(24, 22, 24, 22)
-        layout.setSpacing(8)
+        layout.setContentsMargins(s, s, s, s)
+        layout.setSpacing(s)
 
         title_label = QLabel(title)
         title_label.setObjectName("UsageEmptyTitle")
