@@ -63,8 +63,17 @@ class UsageWidget(QWidget):
         self._scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._scroll.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
-        root.addWidget(self._scroll)
+
+        # Wrap scroll area in a centring container so the scrollbar sits
+        # adjacent to the content rather than at the far right of the column.
+        scroll_container = QWidget()
+        scroll_container.setObjectName("UsageScrollContainer")
+        scroll_container_layout = QHBoxLayout(scroll_container)
+        scroll_container_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_container_layout.setSpacing(0)
+        scroll_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        scroll_container_layout.addWidget(self._scroll)
+        root.addWidget(scroll_container)
 
         self._body_widget = QWidget()
         self._body_widget.setObjectName("UsageTabBody")
@@ -83,7 +92,7 @@ class UsageWidget(QWidget):
         self._content_layout.setSpacing(0)
         self._content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._body.addWidget(self._content)
-        self._body.addSpacing(int(self._style_manager.message_bubble_spacing()))
+        self._body.addSpacing(int(self._style_manager.message_bubble_spacing() * 2))
 
         reset_row = QWidget()
         reset_row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
@@ -109,7 +118,7 @@ class UsageWidget(QWidget):
         s = int(self._style_manager.message_bubble_spacing())
         self._body.setContentsMargins(s, s, s, s)
         zoom = self._style_manager.zoom_factor()
-        self._body_widget.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom))
+        self._scroll.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom))
         self._apply_stylesheet()
 
     def refresh(self) -> None:
@@ -155,6 +164,7 @@ class UsageWidget(QWidget):
         ]
         if total_cr > 0:
             stat_defs.append(("Cache hits", _fmt(total_cr), "Tokens read from cache"))
+
         if total_cw > 0:
             stat_defs.append(("Cache writes", _fmt(total_cw), "Tokens added to cache"))
 
@@ -192,6 +202,7 @@ class UsageWidget(QWidget):
         if provider_count > _PAGE_SIZE:
             cl.addSpacing(int(self._style_manager.message_bubble_spacing()))
             cl.addWidget(self._pagination_row("providers", self._provider_page, provider_count))
+
         cl.addSpacing(int(self._style_manager.message_bubble_spacing()) * 2)
 
         cl.addWidget(self._section_label("Model detail"))
@@ -200,6 +211,7 @@ class UsageWidget(QWidget):
         if model_count > _PAGE_SIZE:
             cl.addSpacing(int(self._style_manager.message_bubble_spacing()))
             cl.addWidget(self._pagination_row("models", self._model_page, model_count))
+
         self._reset_btn.setEnabled(self._mindspace_manager.has_mindspace())
 
         self._apply_stylesheet()
@@ -607,8 +619,12 @@ class UsageWidget(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
-            #UsageTabBody {{
+            #UsageScrollContainer {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
+            }}
+
+            QScrollArea {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
             QLabel#UsageSectionLabel {{
@@ -841,4 +857,6 @@ class UsageWidget(QWidget):
                 color: {dim};
                 border-color: {sep};
             }}
+
+            {self._style_manager.get_scrollbar_stylesheet()}
         """)
