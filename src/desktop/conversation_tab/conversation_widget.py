@@ -2252,7 +2252,7 @@ class ConversationWidget(QWidget):
             }}
             #ConversationMessage[message_source="user_input"] #_banner,
             #ConversationMessage[message_source="ai_streaming"] #_banner {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
+                background-color: transparent;
             }}
 
             #ConversationMessage #_role_label {{
