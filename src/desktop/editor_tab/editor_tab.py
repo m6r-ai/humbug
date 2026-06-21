@@ -3,9 +3,9 @@ import logging
 import os
 
 from PySide6.QtWidgets import (
-    QVBoxLayout, QWidget
+    QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 )
-from PySide6.QtCore import QTimer, QRegularExpression
+from PySide6.QtCore import Qt, QTimer, QRegularExpression
 
 from context.context_registry import ContextRegistry
 from editor_context.editor_context import EditorContext
@@ -13,6 +13,7 @@ from editor_context.editor_context import EditorContext
 from desktop.editor_tab.editor_goto_line_dialog import EditorGotoLineDialog
 from desktop.language.language_manager import LanguageManager
 from desktop.status_message import StatusMessage
+from desktop.style_manager import StyleManager
 from desktop.editor_tab.editor_widget import EditorWidget
 from desktop.widgets import FindWidget
 from desktop.tab import TabBase, TabState
@@ -70,7 +71,15 @@ class EditorTab(TabBase):
         self._editor_widget.text_changed.connect(self._on_text_changed)
         self._editor_widget.status_updated.connect(self.update_status)
         self._editor_widget.file_saved.connect(self._on_file_saved)
-        layout.addWidget(self._editor_widget)
+
+        editor_container = QWidget()
+        editor_container_layout = QHBoxLayout(editor_container)
+        editor_container_layout.setContentsMargins(0, 0, 0, 0)
+        editor_container_layout.setSpacing(0)
+        editor_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self._editor_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        editor_container_layout.addWidget(self._editor_widget)
+        layout.addWidget(editor_container)
 
         # Build the EditorContext backed by the widget's document
         self._editor_context: EditorContext | None = EditorContext(
@@ -559,3 +568,8 @@ class EditorTab(TabBase):
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
         self._editor_widget.apply_style()
+
+    def preferred_width(self) -> int | None:
+        """Return the preferred column width for the editor tab."""
+        style_manager = StyleManager()
+        return int(style_manager.nice_tab_width() * style_manager.zoom_factor())

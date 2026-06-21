@@ -30,8 +30,10 @@ _PAGE_SIZE = 5
 def _fmt(n: int) -> str:
     if n >= 1_000_000:
         return f"{n / 1_000_000:.2f}M"
+
     if n >= 1_000:
         return f"{n / 1_000:.1f}K"
+
     return f"{n:,}"
 
 
@@ -603,6 +605,10 @@ class UsageWidget(QWidget):
         self.setStyleSheet(f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            #UsageTabBody {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
             }}
 
             QLabel#UsageSectionLabel {{

@@ -1042,6 +1042,9 @@ class EditorWidget(QPlainTextEdit):
 
     def apply_style(self) -> None:
         """Apply current style settings."""
+        zoom_factor = self._style_manager.zoom_factor()
+        self.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
+
         # Capture the block number at the viewport midpoint before the font
         # changes so we can restore it to the centre after re-layout.
         visible_lines = self.viewport().height() // max(1, self.fontMetrics().lineSpacing())

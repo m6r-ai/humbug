@@ -668,6 +668,10 @@ class PreviewWidget(QWidget):
                 border: none;
             }}
 
+            QScrollArea {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+            }}
+
             {style_manager.get_scrollbar_stylesheet()}
         """
 

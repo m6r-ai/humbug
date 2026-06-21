@@ -432,9 +432,14 @@ class DiffWidget(QWidget):
 
         new_stylesheet = f"""
             QWidget {{
-                background-color: {bg};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 color: {fg};
             }}
+
+            QAbstractScrollArea {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+            }}
+
             QLabel {{
                 color: {fg};
             }}

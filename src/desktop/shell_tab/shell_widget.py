@@ -756,6 +756,10 @@ class ShellWidget(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
+            QScrollArea {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+            }}
+
             {self._style_manager.get_scrollbar_stylesheet()}
         """
 

@@ -2196,6 +2196,10 @@ class ConversationWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
+            #ConversationWidget QScrollArea {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+            }}
+
             {style_manager.get_scrollbar_stylesheet()}
         """
 
