@@ -176,6 +176,7 @@ class UsageWidget(QWidget):
         cols = 2
         for c in range(cols):
             grid.setColumnStretch(c, 1)
+
         for idx, (label, value, note) in enumerate(stat_defs):
             r, c = divmod(idx, cols)
             grid.addWidget(self._stat_card(label, value, note), r, c)
@@ -254,8 +255,8 @@ class UsageWidget(QWidget):
         pv.addWidget(tok_val)
 
         tok_sub = QLabel(
-            f"in {_fmt(total_in)}  /  out {_fmt(total_out)}  ·  "
-            f"{_count_label(provider_count, 'provider', 'providers')}  /  "
+            f"in {_fmt(total_in)} / out {_fmt(total_out)}  ·  "
+            f"{_count_label(provider_count, 'provider', 'providers')} / "
             f"{_count_label(model_count, 'model', 'models')}"
         )
         tok_sub.setObjectName("UsageHeroSub")
@@ -462,10 +463,11 @@ class UsageWidget(QWidget):
         parts = [f"in {_fmt(entry.input_tokens)}", f"out {_fmt(entry.output_tokens)}"]
         if entry.cache_read_tokens:
             parts.append(f"cached {_fmt(entry.cache_read_tokens)}")
+
         if entry.cache_write_tokens:
             parts.append(f"cache write {_fmt(entry.cache_write_tokens)}")
 
-        detail = QLabel("  /  ".join(parts))
+        detail = QLabel(" / ".join(parts))
         detail.setObjectName("UsageModelDetail")
         detail.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         vl.addWidget(detail)
@@ -544,6 +546,7 @@ class UsageWidget(QWidget):
         line.setFrameShadow(QFrame.Shadow.Plain)
         if indent:
             line.setContentsMargins(indent, 0, 0, 0)
+
         return line
 
     def _empty_state(self, title: str, message: str) -> QFrame:

@@ -26,6 +26,7 @@ New features:
   images are now inserted.
 - Conversation message banners are now "sticky" at the top of the conversation tab when scrolling.  This provides context
   on the conversation you're viewing.
+- Added a new "token usage" tab to keep track of token usage within the mindspace.
 
 Bug fixes:
 

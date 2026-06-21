@@ -26,6 +26,7 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Added tab label context menu.
 * Added the colour picker and the initial implementation of the high contrast colour scheme.
 * Implemented the initial sticky conversation banner feature.
+* Implemented the initial token usage tab.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 
