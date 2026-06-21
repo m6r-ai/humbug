@@ -676,7 +676,7 @@ class PreviewWidget(QWidget):
             }}
 
             #PreviewScrollContainer {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
             }}
 
             QScrollArea {{

@@ -2142,7 +2142,7 @@ class ConversationWidget(QWidget):
         if self._input_spacer is None:
             return
 
-        self._update_input_position()
+        QTimer.singleShot(0, self._update_input_position)
 
         if self._auto_scroll:
             self._scroll_to_bottom()
@@ -2199,7 +2199,7 @@ class ConversationWidget(QWidget):
             }}
 
             #ConversationScrollContainer {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
             }}
 
             #ConversationWidget QScrollArea {{

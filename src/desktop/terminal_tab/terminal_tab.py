@@ -6,8 +6,8 @@ import sys
 import logging
 from typing import Any, Coroutine, Dict, Set
 
-from PySide6.QtWidgets import QVBoxLayout, QWidget
-from PySide6.QtCore import QRegularExpression
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, QRegularExpression
 
 from terminal import TerminalBase, TerminalState, create_terminal
 
@@ -124,7 +124,18 @@ class TerminalTab(TabBase):
 
         # Create terminal widget with scrollback limit
         self._terminal_widget = TerminalWidget(self, scrollback_limit, minimum_width, self._terminal_state)
-        layout.addWidget(self._terminal_widget)
+
+        # Wrap terminal widget in a centring container so the scrollbar sits
+        # adjacent to the content rather than at the far right of the column.
+        terminal_container = QWidget()
+        terminal_container.setObjectName("TerminalContainer")
+        terminal_container_layout = QHBoxLayout(terminal_container)
+        terminal_container_layout.setContentsMargins(0, 0, 0, 0)
+        terminal_container_layout.setSpacing(0)
+        terminal_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        terminal_container_layout.addWidget(self._terminal_widget)
+        layout.addWidget(terminal_container)
+
         self._find_widget.set_preferred_width(self.preferred_width)
 
         # Connect signals
@@ -711,5 +722,13 @@ class TerminalTab(TabBase):
 
     def apply_style(self) -> None:
         """Apply current style settings to the tab's content widgets."""
+        super().apply_style()
+        pixel_width = self._terminal_widget.preferred_pixel_width()
+        if pixel_width is not None:
+            self._terminal_widget.setMaximumWidth(pixel_width)
+
+        else:
+            self._terminal_widget.setMaximumWidth(16777215)  # QWIDGETSIZE_MAX
+
         self._find_widget.apply_style()
         self._terminal_widget.apply_style()

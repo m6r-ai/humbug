@@ -437,7 +437,7 @@ class DiffWidget(QWidget):
             }}
 
             QAbstractScrollArea {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
             }}
 
             QLabel {{
