@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v50 (2026-06-19)
+## v50 (2026-06-21)
 
 New features:
 
@@ -24,6 +24,8 @@ New features:
 - Added support for animated GIF files in markdown.
 - When converting from `.docx` files, images are now extracted into a sidecar directory.  When converting to `.docx` files
   images are now inserted.
+- Conversation message banners are now "sticky" at the top of the conversation tab when scrolling.  This provides context
+  on the conversation you're viewing.
 
 Bug fixes:
 

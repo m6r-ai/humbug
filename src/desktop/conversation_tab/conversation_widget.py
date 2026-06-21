@@ -26,7 +26,7 @@ from syntax.programming_language_utils import ProgrammingLanguageUtils
 from desktop.color_role import ColorRole
 from desktop.conversation_tab.conversation_error import ConversationError
 from desktop.conversation_tab.conversation_input import ConversationInput
-from desktop.conversation_tab.conversation_message import ConversationMessage
+from desktop.conversation_tab.conversation_message import ConversationMessage, _BORDER_INSET, _BORDER_WIDTH_ACTIVE
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
@@ -167,6 +167,7 @@ class ConversationWidget(QWidget):
         # Initialize tracking variables
         self._auto_scroll = True
         self._input_spacer: QWidget | None = None
+        self._sticky_update_pending = False
 
         # Create layout
         conversation_layout = QVBoxLayout(self)
@@ -1447,10 +1448,64 @@ class ConversationWidget(QWidget):
 
         self.has_seen_latest_update_changed.emit(at_bottom)
 
+        self._update_sticky_banners()
+
     def _on_scroll_range_changed(self, _minimum: int, _maximum: int) -> None:
         """Handle the scroll range changing."""
         if self._auto_scroll:
             self._scroll_to_bottom()
+
+        self._update_sticky_banners()
+
+    def _schedule_sticky_update(self) -> None:
+        """
+        Coalesce a sticky-banner recompute onto the next event-loop turn.
+
+        Used for resize-driven updates: the message widgets are re-laid-out via posted
+        layout events, so recomputing immediately would read stale geometry. Deferring
+        lets the layout settle first, giving precise final banner positions.
+        """
+        if self._sticky_update_pending:
+            return
+
+        self._sticky_update_pending = True
+        QTimer.singleShot(0, self._run_deferred_sticky_update)
+
+    def _run_deferred_sticky_update(self) -> None:
+        """Run a coalesced sticky-banner recompute scheduled by _schedule_sticky_update."""
+        self._sticky_update_pending = False
+        self._update_sticky_banners()
+
+    def _update_sticky_banners(self) -> None:
+        """
+        Keep each message's banner pinned to the top of the viewport while the message
+        body scrolls beneath it. The banner returns to its natural position once the
+        message top is back within view, and rides off the top once the message has
+        almost fully scrolled past.
+        """
+        if not self._messages:
+            return
+
+        viewport = self._scroll_area.viewport()
+        viewport_height = viewport.height()
+        for message in self._messages:
+            if not message.is_rendered():
+                continue
+
+            # The viewport top edge, expressed in the message's local coordinates.
+            top_in_viewport = message.mapTo(viewport, QPoint(0, 0)).y()
+
+            # Skip messages that lie entirely below the viewport: their banners are
+            # already at their natural position and nothing is scrolling past them yet.
+            if top_in_viewport >= viewport_height:
+                continue
+
+            # Messages entirely above the viewport keep their banner parked off-screen
+            # from the last update, so there's no need to reposition them either.
+            if top_in_viewport + message.height() <= 0:
+                continue
+
+            message.update_sticky_banner(-top_in_viewport)
 
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""
@@ -1782,6 +1837,9 @@ class ConversationWidget(QWidget):
             self._scroll_area.viewport(), self._messages_container
         ):
             self._on_input_size_hint_changed()
+            # Defer so message relayouts settle before we read geometry; the per-message
+            # banner move filter keeps things pinned (flicker-free) in the meantime.
+            self._schedule_sticky_update()
 
         return super().eventFilter(obj, event)
 
@@ -2139,26 +2197,49 @@ class ConversationWidget(QWidget):
                 margin: 0;
                 border-radius: {border_radius}px;
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                padding: -2px;
+                border: {_BORDER_WIDTH_ACTIVE}px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                padding: -{_BORDER_INSET}px;
             }}
             #ConversationMessage[message_source="user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: {_BORDER_WIDTH_ACTIVE}px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
             #ConversationMessage[message_source="user_input"],
             #ConversationMessage[message_source="ai_streaming"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
+                border: {_BORDER_WIDTH_ACTIVE}px solid {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
             }}
 
-            #ConversationMessage #_banner,
             #ConversationMessage #_sections_container {{
                 background-color: transparent;
                 border: none;
                 border-radius: 0;
                 padding: 0;
                 margin: 0;
+            }}
+
+            /* The banner is opaque (matching its message background) so it can be pinned
+               as a sticky header with content scrolling beneath it. */
+            #ConversationMessage #_banner {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: none;
+                border-top-left-radius: {border_radius}px;
+                border-top-right-radius: {border_radius}px;
+                border-bottom-left-radius: 0;
+                border-bottom-right-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+            #ConversationMessage #_banner[sticky="true"] {{
+                border-top-left-radius: 0;
+                border-top-right-radius: 0;
+            }}
+            #ConversationMessage[message_source="user"] #_banner {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+            }}
+            #ConversationMessage[message_source="user_input"] #_banner,
+            #ConversationMessage[message_source="ai_streaming"] #_banner {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
             }}
 
             #ConversationMessage #_role_label {{
@@ -2206,12 +2287,13 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_attach_button,
             #ConversationMessage #_attachments_button {{
                 background-color: transparent;
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_INACTIVE)};
                 border: none;
                 padding: 0px;
                 margin: 0px;
             }}
 
+            #ConversationMessage #_expand_button:hover,
             #ConversationMessage #_copy_button:hover,
             #ConversationMessage #_save_button:hover,
             #ConversationMessage #_fork_button:hover,
@@ -2223,8 +2305,10 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_attach_button:hover,
             #ConversationMessage #_attachments_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
+            #ConversationMessage #_expand_button:pressed,
             #ConversationMessage #_copy_button:pressed,
             #ConversationMessage #_save_button:pressed,
             #ConversationMessage #_fork_button:pressed,
@@ -2236,6 +2320,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_attach_button:pressed,
             #ConversationMessage #_attachments_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
             #ConversationMessage #_stop_button:disabled,
@@ -2244,6 +2329,7 @@ class ConversationWidget(QWidget):
                 background-color: transparent;
             }}
 
+            #ConversationMessage[message_source="user"] #_expand_button:hover,
             #ConversationMessage[message_source="user"] #_copy_button:hover,
             #ConversationMessage[message_source="user"] #_save_button:hover,
             #ConversationMessage[message_source="user"] #_fork_button:hover,
@@ -2253,6 +2339,7 @@ class ConversationWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
             }}
 
+            #ConversationMessage[message_source="user"] #_expand_button:pressed,
             #ConversationMessage[message_source="user"] #_copy_button:pressed,
             #ConversationMessage[message_source="user"] #_save_button:pressed,
             #ConversationMessage[message_source="user"] #_fork_button:pressed,

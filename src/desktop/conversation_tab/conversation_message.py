@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
 )
 from PySide6.QtCore import Signal, QPoint, Qt, QEvent, QObject
-from PySide6.QtGui import QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QKeyEvent
+from PySide6.QtGui import QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QKeyEvent, QFont, QFontMetrics
 
 from ai import AIMessageSource
 from ai_tool import AIToolCall
@@ -28,6 +28,10 @@ from desktop.widgets.elided_label import ElidedLabel
 
 _APPROVAL_BUTTON_BASE_WIDTH = 220
 _APPROVAL_BUTTON_BASE_HEIGHT = 40
+
+_BORDER_WIDTH = 1
+_BORDER_WIDTH_ACTIVE = 2  # animated or spotlighted
+_BORDER_INSET = _BORDER_WIDTH_ACTIVE  # inner pixel of widest border that must stay clear
 
 
 class ConversationMessage(QFrame):
@@ -106,12 +110,28 @@ class ConversationMessage(QFrame):
             self._message_rendered = False
             self.hide()
 
-        # Create banner area with horizontal layout
+        # Create banner area with horizontal layout. The banner can be pinned to the
+        # top of the viewport while the message body scrolls beneath it (sticky header),
+        # so it needs an opaque, styled background to hide content passing behind it.
         self._banner = QWidget(self)
         self._banner.setObjectName("_banner")
+        self._banner.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._banner_layout = QHBoxLayout(self._banner)
         self._banner_layout.setContentsMargins(0, 0, 0, 0)
         self._banner_layout.setSpacing(4)
+
+        # Tracks whether the banner is currently translated away from its natural
+        # layout position so we know when to raise/lower it.
+        self._banner_is_sticky = False
+
+        # The pinned Y target while sticky, and a re-entrancy guard. We watch the
+        # banner's own move events so that when the layout (e.g. on a window resize)
+        # snaps the banner back to its natural position, we can immediately re-pin it
+        # within the same event — preventing a visible flicker. The event filter is
+        # installed at the end of __init__ (see below) so it never fires before the
+        # attributes our eventFilter relies on are initialised.
+        self._sticky_target_y = 0
+        self._repinning_banner = False
 
         # Add expand/collapse button for all messages (input and non-input)
         self._expand_button: QToolButton | None = None
@@ -135,6 +155,7 @@ class ConversationMessage(QFrame):
         self._role_label.setObjectName("_role_label")
         self._role_label.setIndent(0)
         self._banner_layout.addWidget(self._role_label)
+        self._banner_layout.addStretch(1)
 
         role_sources = {
             AIMessageSource.USER: "user",
@@ -317,6 +338,15 @@ class ConversationMessage(QFrame):
 
         self.setLayout(self._layout)
 
+        # Watch the banner for sticky re-pinning. Only non-input messages have a sticky
+        # banner, and installing this last guarantees every attribute our eventFilter
+        # reads is already set before any banner event can be delivered. (Subclasses such
+        # as ConversationInput finish their own __init__ after this, so an input message
+        # must never receive banner events here — its eventFilter relies on attributes it
+        # has not assigned yet.)
+        if not is_input:
+            self._banner.installEventFilter(self)
+
     def set_border_animation(self, active: bool, frame: int = 0, step: int = 64) -> None:
         """
         Enable/disable border animation with specific frame.
@@ -381,11 +411,11 @@ class ConversationMessage(QFrame):
 
         if self._is_border_animated:
             border_color = self._get_fade_color()
-            border_width = 2
+            border_width = _BORDER_WIDTH_ACTIVE
 
         elif self._is_spotlighted and self._has_focus_in_hierarchy():
             border_color = self._style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)
-            border_width = 2
+            border_width = _BORDER_WIDTH_ACTIVE
 
         else:
             color_role = ColorRole.MESSAGE_BORDER
@@ -396,7 +426,7 @@ class ConversationMessage(QFrame):
                 color_role = ColorRole.MESSAGE_USER_BORDER
 
             border_color = self._style_manager.get_color_str(color_role)
-            border_width = 1
+            border_width = _BORDER_WIDTH
 
         # Enable antialiasing for smooth curves
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -477,10 +507,16 @@ class ConversationMessage(QFrame):
 
             self._sections_container.show()
             tooltip = strings.tooltip_collapse_message
+            self._layout.setSpacing(0 if self._message_style is None else self._message_style.spacing // 2)
+            spacing = 0 if self._message_style is None else self._message_style.spacing
+            self._layout.setContentsMargins(spacing, spacing // 2, spacing, spacing)
 
         else:
             self._sections_container.hide()
             tooltip = strings.tooltip_expand_message
+            self._layout.setSpacing(0)
+            spacing = 0 if self._message_style is None else self._message_style.spacing
+            self._layout.setContentsMargins(spacing, spacing // 2, spacing, spacing // 2)
 
         # Update icon
         if self._message_style is not None:
@@ -1105,6 +1141,20 @@ class ConversationMessage(QFrame):
                 self._confirm_edit()
                 return True
 
+        # While the banner is pinned, the parent layout may try to snap it back to its
+        # natural position (most commonly during a window resize). Re-pin it immediately,
+        # in the same event, so the sticky header never visibly drops out of place.
+        if (
+            obj is self._banner
+            and event.type() == QEvent.Type.Move
+            and self._banner_is_sticky
+            and not self._repinning_banner
+            and self._banner.y() != self._sticky_target_y
+        ):
+            self._repinning_banner = True
+            self._banner.move(self._banner.x(), self._sticky_target_y)
+            self._repinning_banner = False
+
         return super().eventFilter(obj, event)
 
     def _delete_message(self) -> None:
@@ -1153,9 +1203,52 @@ class ConversationMessage(QFrame):
             self._section_with_selection.clear_selection()
             self._section_with_selection = None
 
-    def banner(self) -> QWidget:
-        """Return the banner widget."""
-        return self._banner
+    def update_sticky_banner(self, viewport_top_local: int) -> None:
+        """
+        Pin the banner near the top of the viewport while this message is scrolled.
+
+        The banner stays at its natural layout position until the message has scrolled
+        far enough that the banner would leave the top of the viewport. From that point
+        the banner is translated down so it remains pinned at the viewport's top edge,
+        until the message itself has almost fully scrolled out, at which point the banner
+        rides off the top with the rest of the message.
+
+        Args:
+            viewport_top_local: The y-coordinate of the viewport's top edge expressed in
+                this message's local coordinates. Values at or below the banner's natural
+                position mean the banner does not need to stick.
+        """
+        # Input messages keep their banner at the bottom and never stick, and unrendered
+        # (hidden) messages have no meaningful geometry to position against.
+        if self._is_input or not self._message_rendered:
+            return
+
+        margins = self._layout.contentsMargins()
+        natural_y = margins.top()
+        banner_height = self._banner.height()
+
+        # The banner must not slide past the bottom of the message body; once it reaches
+        # that limit it scrolls off the top together with the message.
+        max_y = self.height() - margins.bottom() - banner_height
+        max_y = max(natural_y, max_y)
+
+        target_y = max(natural_y, min(viewport_top_local, max_y))
+        self._sticky_target_y = target_y
+
+        if target_y != self._banner.y():
+            self._banner.move(self._banner.x(), target_y)
+
+        sticky = target_y > natural_y
+        if sticky != self._banner_is_sticky:
+            self._banner.setProperty("sticky", sticky)
+            self._banner.style().unpolish(self._banner)
+            self._banner.style().polish(self._banner)
+
+        if sticky and not self._banner_is_sticky:
+            # Ensure the banner paints on top of the message sections while pinned.
+            self._banner.raise_()
+
+        self._banner_is_sticky = sticky
 
     def apply_style(self, style: ConversationMessageStyle | None = None) -> None:
         """Apply style changes."""
@@ -1166,11 +1259,25 @@ class ConversationMessage(QFrame):
             return
 
         style = self._message_style
-        self._layout.setSpacing(style.spacing)
-        self._layout.setContentsMargins(style.spacing, style.spacing, style.spacing, style.spacing)
+        if self._is_input:
+            self._layout.setSpacing(style.spacing)
+            self._layout.setContentsMargins(style.spacing, style.spacing, style.spacing, style.spacing)
+
+        else:
+            # Spacings related to normal messages are complicated by the sticky message banner
+            self._layout.setSpacing(style.spacing // 2 if self._is_expanded else 0)
+            bottom = style.spacing if self._is_expanded else style.spacing // 2
+            self._layout.setContentsMargins(style.spacing, style.spacing // 2, style.spacing, bottom)
+
         self._sections_layout.setSpacing(style.spacing)
 
-        self._role_label.setFont(style.font)
+        role_font = QFont(style.font)
+        self._role_label.setFont(role_font)
+
+        if not self._is_input:
+            icon_height = int(14 * self._style_manager.zoom_factor())
+            font_height = QFontMetrics(style.font).height()
+            self._banner.setFixedHeight(int(max(icon_height, font_height)) + 10)
 
         if self._copy_message_button:
             self._copy_message_button.setIcon(style.copy_icon)
