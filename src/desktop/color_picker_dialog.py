@@ -836,6 +836,7 @@ class ThemeColorPickerDialog(QDialog):
             (ColorTheme.DARK, "Dark"),
             (ColorTheme.SYSTEM, "System"),
             (ColorTheme.COLOR_BLIND, "Color Blind"),
+            (ColorTheme.OCEAN_LIGHT, "Ocean Light"),
             (ColorTheme.CUSTOM, "Custom"),
         ]:
             btn = QPushButton(label)

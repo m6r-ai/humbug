@@ -161,6 +161,7 @@ def get_arabic_strings() -> LanguageStrings:
         theme_dark="داكن",
         theme_light="فاتح",
         theme_color_blind="عمى الألوان",
+        theme_ocean_light="محيح فاتح",
         theme_custom="مظهر مخصص",
         customize_colors="تخصيص الألوان…",
         file_sort_order="ترتيب الملفات",

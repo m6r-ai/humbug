@@ -21,7 +21,7 @@ from syntax import TokenType
 
 from desktop.color_role import ColorRole
 from desktop.icons.icon_pack import active_inactive_icon_names, app_icon_svg, theme_icon_svg, update_icon_svg
-from desktop.palette import COLOR_BLIND_PALETTE, DARK_PALETTE, LIGHT_PALETTE, OverlayPalette, Palette
+from desktop.palette import COLOR_BLIND_PALETTE, DARK_PALETTE, LIGHT_PALETTE, OCEAN_LIGHT_PALETTE, OverlayPalette, Palette
 from desktop.color_theme import ColorTheme
 
 class ColorMode(Enum):
@@ -549,6 +549,7 @@ class StyleManager(QObject):
         COLOR_BLIND resolves against the dark axis (it is a fixed dark palette).
         CUSTOM resolves against the axis recorded in _custom_color_mode, which is
         set when custom overrides are applied and is independent of the OS setting.
+        OCEAN_LIGHT resolves against the light axis (it is a fixed light palette).
         For SYSTEM, the OS colour scheme is queried.  Qt.ColorScheme.Unknown is
         treated as LIGHT.
 
@@ -557,6 +558,9 @@ class StyleManager(QObject):
         """
         if self._theme_mode == ColorTheme.COLOR_BLIND:
             return ColorMode.DARK
+
+        if self._theme_mode == ColorTheme.OCEAN_LIGHT:
+            return ColorMode.LIGHT
 
         if self._theme_mode == ColorTheme.LIGHT:
             return ColorMode.LIGHT
@@ -605,6 +609,9 @@ class StyleManager(QObject):
         """Return the palette instance that corresponds to the given theme mode."""
         if mode == ColorTheme.COLOR_BLIND:
             return COLOR_BLIND_PALETTE
+
+        if mode == ColorTheme.OCEAN_LIGHT:
+            return OCEAN_LIGHT_PALETTE
 
         if mode == ColorTheme.CUSTOM:
             return self._dark_custom_palette if self._custom_color_mode == ColorMode.DARK else self._light_custom_palette

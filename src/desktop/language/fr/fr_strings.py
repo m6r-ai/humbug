@@ -160,6 +160,7 @@ def get_french_strings() -> LanguageStrings:
         theme_dark="Sombre",
         theme_light="Clair",
         theme_color_blind="Daltonien",
+        theme_ocean_light="Océan Clair",
         theme_custom="Thème personnalisé",
         customize_colors="Personnaliser les couleurs…",
         file_sort_order="Ordre de tri des fichiers",

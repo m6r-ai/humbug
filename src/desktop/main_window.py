@@ -956,6 +956,15 @@ class MainWindow(QMainWindow):
         theme_menu.addAction(color_blind_action)
         self._theme_actions[ColorTheme.COLOR_BLIND] = color_blind_action
 
+        # Add Ocean Light theme action
+        ocean_light_action = QAction(strings.theme_ocean_light, self)
+        ocean_light_action.setCheckable(True)
+        ocean_light_action.setChecked(self._style_manager.user_color_theme() == ColorTheme.OCEAN_LIGHT)
+        ocean_light_action.triggered.connect(lambda: self._set_color_theme(ColorTheme.OCEAN_LIGHT))
+        theme_action_group.addAction(ocean_light_action)
+        theme_menu.addAction(ocean_light_action)
+        self._theme_actions[ColorTheme.OCEAN_LIGHT] = ocean_light_action
+
         # Add Custom theme action
         custom_action = QAction(strings.theme_custom, self)
         custom_action.setCheckable(True)

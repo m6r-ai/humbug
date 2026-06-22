@@ -151,6 +151,7 @@ class LanguageStrings:
     theme_dark: str
     theme_light: str
     theme_color_blind: str
+    theme_ocean_light: str
     theme_custom: str
     customize_colors: str
     file_sort_order: str
