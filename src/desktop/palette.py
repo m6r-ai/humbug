@@ -825,7 +825,7 @@ _OCEAN_LIGHT_COLORS: Dict[ColorRole, str] = {
 
     # Message colours
     ColorRole.MESSAGE_BACKGROUND: "#f5f9fd",
-    ColorRole.MESSAGE_BACKGROUND_HOVER: "#eaf2fa",
+    ColorRole.MESSAGE_BACKGROUND_HOVER: "#cfe0ef",
     ColorRole.MESSAGE_BACKGROUND_PRESSED: "#deeaf6",
     ColorRole.MESSAGE_USER_BACKGROUND: "#e9f3fa",
     ColorRole.MESSAGE_USER_BACKGROUND_HOVER: "#deedf8",
@@ -835,7 +835,7 @@ _OCEAN_LIGHT_COLORS: Dict[ColorRole, str] = {
     ColorRole.MESSAGE_ATTACHMENT_BACKGROUND: "#eef3f8",
     ColorRole.MESSAGE_BORDER: "#c5d3e1",
     ColorRole.MESSAGE_USER_BORDER: "#9fbede",
-    ColorRole.MESSAGE_INPUT_BORDER: "#c5d3e1",
+    ColorRole.MESSAGE_INPUT_BORDER: "#95a3b1",
     ColorRole.MESSAGE_SPOTLIGHTED: "#607488",
     ColorRole.MESSAGE_USER: "#185d96",
     ColorRole.MESSAGE_AI: "#1d7a4d",
