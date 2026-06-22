@@ -260,7 +260,7 @@ class PreviewTab(TabBase):
     def preferred_width(self) -> int | None:
         """Return the preferred column width matching the preview content max width."""
         style_manager = StyleManager()
-        return int(style_manager.nice_tab_width() * style_manager.zoom_factor())
+        return style_manager.scaled_tab_width()
 
     def can_close_tab(self) -> bool:
         """Check if preview can be closed."""
@@ -496,7 +496,7 @@ class PreviewTab(TabBase):
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
         style_manager = StyleManager()
-        self._preview_content_widget.setMaximumWidth(int(style_manager.nice_tab_width() * style_manager.zoom_factor()))
+        self._preview_content_widget.setMaximumWidth(style_manager.scaled_tab_width())
         self._preview_content_widget.apply_style()
 
         new_stylesheet = self._build_stylesheet()

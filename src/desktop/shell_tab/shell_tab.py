@@ -314,7 +314,7 @@ class ShellTab(TabBase):
     def preferred_width(self) -> int | None:
         """Return the preferred column width matching the shell content max width."""
         style_manager = StyleManager()
-        return int(style_manager.nice_tab_width() * style_manager.zoom_factor())
+        return style_manager.scaled_tab_width()
 
     def update_status(self) -> None:
         """Update status bar with shell tab information."""
@@ -330,7 +330,7 @@ class ShellTab(TabBase):
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
         style_manager = StyleManager()
-        self._shell_widget.setMaximumWidth(int(style_manager.nice_tab_width() * style_manager.zoom_factor()))
+        self._shell_widget.setMaximumWidth(style_manager.scaled_tab_width())
         self._shell_widget.apply_style()
 
         new_stylesheet = self._build_stylesheet()

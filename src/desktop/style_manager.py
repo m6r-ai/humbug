@@ -5,6 +5,7 @@ Provides signals for style changes and utilities for scaled size calculations.
 """
 
 import os
+import math
 from enum import Enum, auto
 from pathlib import Path
 import shutil
@@ -831,6 +832,10 @@ class StyleManager(QObject):
     def nice_tab_width(self) -> float:
         """Get the ideal width for tabs to balance information density and readability."""
         return 1024.0
+
+    def scaled_tab_width(self, multiplier: float = 1.0) -> int:
+        """Get the zoom-scaled preferred tab width, rounded up to the nearest pixel."""
+        return math.ceil(self.nice_tab_width() * self._zoom_factor * multiplier)
 
     def scale(self, value: int | float) -> int:
         """Scale a UI metric by the current zoom factor."""

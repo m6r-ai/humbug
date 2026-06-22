@@ -316,7 +316,7 @@ class LogTab(TabBase):
     def preferred_width(self) -> int | None:
         """Return the preferred column width matching the log content max width."""
         style_manager = StyleManager()
-        return int(style_manager.nice_tab_width() * style_manager.zoom_factor())
+        return style_manager.scaled_tab_width()
 
     def update_status(self) -> None:
         """Update status bar with log tab information."""
@@ -403,7 +403,7 @@ class LogTab(TabBase):
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
         style_manager = StyleManager()
-        self._log_widget.setMaximumWidth(int(style_manager.nice_tab_width() * style_manager.zoom_factor()))
+        self._log_widget.setMaximumWidth(style_manager.scaled_tab_width())
         self._log_widget.apply_style()
 
         new_stylesheet = self._build_stylesheet()

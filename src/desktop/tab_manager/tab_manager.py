@@ -1,3 +1,4 @@
+import math
 import os
 import logging
 from typing import Callable, Dict, List, cast
@@ -1904,7 +1905,7 @@ class TabManager(QWidget):
 
         min_col_width = 200
         style_manager = self._style_manager
-        default_col_width = int(style_manager.nice_tab_width() * style_manager.zoom_factor())
+        default_col_width = style_manager.scaled_tab_width()
         available = self.width()
 
         # Compute each column's preferred width. Tabs returning None use the default.
@@ -1929,15 +1930,15 @@ class TabManager(QWidget):
             for i, p in enumerate(col_preferred):
                 sizes[i] = max(min_col_width, p)
 
-            margin = (available - total_preferred) // 2
-            self._left_spacer.setFixedWidth(margin)
-            self._right_spacer.setFixedWidth(margin)
+            slack = available - total_preferred
+            self._left_spacer.setFixedWidth(math.ceil(slack / 2))
+            self._right_spacer.setFixedWidth(slack // 2)
 
         else:
             # Not enough room: scale proportionally, no spacers.
             scale = available / total_preferred
             for i, p in enumerate(col_preferred):
-                sizes[i] = max(min_col_width, int(p * scale))
+                sizes[i] = max(min_col_width, math.ceil(p * scale))
 
             self._left_spacer.setFixedWidth(0)
             self._right_spacer.setFixedWidth(0)

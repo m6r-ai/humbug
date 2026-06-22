@@ -466,13 +466,13 @@ class ConversationTab(TabBase):
     def preferred_width(self) -> int | None:
         """Return the preferred column width matching the conversation content max width."""
         style_manager = StyleManager()
-        return int(style_manager.nice_tab_width() * style_manager.zoom_factor())
+        return style_manager.scaled_tab_width()
 
     def apply_style(self) -> None:
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
         style_manager = StyleManager()
-        self._conversation_widget.setMaximumWidth(int(style_manager.nice_tab_width() * style_manager.zoom_factor()))
+        self._conversation_widget.setMaximumWidth(style_manager.scaled_tab_width())
         self._conversation_widget.apply_style()
 
         new_stylesheet = self._build_stylesheet()

@@ -191,7 +191,7 @@ class DiffTab(TabBase):
     def preferred_width(self) -> int | None:
         """Return the preferred column width: twice the default editor column width."""
         style_manager = StyleManager()
-        return int(style_manager.nice_tab_width() * style_manager.zoom_factor() * 2)
+        return style_manager.scaled_tab_width(2.0)
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """Return serialisable state for mindspace persistence."""

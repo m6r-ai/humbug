@@ -116,11 +116,11 @@ class UsageTab(TabBase):
         self.status_message.emit(StatusMessage("Token Usage"))
 
     def preferred_width(self) -> int | None:
-        return int(self._style_manager.nice_tab_width() * self._style_manager.zoom_factor())
+        return self._style_manager.scaled_tab_width()
 
     def apply_style(self) -> None:
+        self._usage_widget.setMaximumWidth(self._style_manager.scaled_tab_width())
         self._usage_widget.apply_style()
-        self._usage_widget.setMaximumWidth(int(self._style_manager.nice_tab_width() * self._style_manager.zoom_factor()))
 
         new_stylesheet = self._build_stylesheet()
         if new_stylesheet != self.styleSheet():
