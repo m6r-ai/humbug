@@ -20,7 +20,7 @@ New features:
 - Improved the Menai tool description to encourage AIs to read the help if they haven't already done so.
 - Replaced MiniMax M2.5 with MiniMax M3 on Ollama.com.
 - Added Kimi K2.7 Code on Ollama.com.
-- Added GLM 5.2 on Z.ai.
+- Added GLM 5.2 on Z.ai and Ollama.com.
 - Added support for animated GIF files in markdown.
 - When converting from `.docx` files, images are now extracted into a sidecar directory.  When converting to `.docx` files
   images are now inserted.
