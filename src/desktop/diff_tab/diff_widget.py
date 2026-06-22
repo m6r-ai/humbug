@@ -420,7 +420,6 @@ class DiffWidget(QWidget):
         visible_lines = left_pane.viewport().height() // max(1, left_pane.fontMetrics().lineSpacing())
         self._centre_block_before_style = self._scrollbar.value() + visible_lines // 2
 
-        bg = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
         fg = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
         splitter_color = self._style_manager.get_color_str(ColorRole.SPLITTER)
         base_size = self._style_manager.base_font_size()
