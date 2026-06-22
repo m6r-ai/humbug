@@ -290,17 +290,6 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        ("glm-5.1:cloud", "ollama-cloud"): AIModel(
-            name="glm-5.1:cloud",
-            provider="ollama-cloud",
-            display_name="GLM 5.1",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
-        ),
         ("glm-5.2:cloud", "ollama-cloud"): AIModel(
             name="glm-5.2:cloud",
             provider="ollama-cloud",
@@ -312,10 +301,10 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
         ),
-        ("glm-4.7:cloud", "ollama-cloud"): AIModel(
-            name="glm-4.7:cloud",
+        ("glm-5.1:cloud", "ollama-cloud"): AIModel(
+            name="glm-5.1:cloud",
             provider="ollama-cloud",
-            display_name="GLM 4.7",
+            display_name="GLM 5.1",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
