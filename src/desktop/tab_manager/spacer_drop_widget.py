@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QPainter, QPaintEvent
+from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QPainter, QPaintEvent, QColor
 
 from desktop.color_role import ColorRole
 from desktop.style_manager import StyleManager
@@ -12,11 +12,12 @@ class SpacerDropWidget(QWidget):
     path_dropped = Signal(str, str)  # source_type, path
     tab_dropped = Signal(str)  # tab_id
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, line_on_right: bool, parent: QWidget | None = None) -> None:
         """Initialize the spacer drop widget."""
         super().__init__(parent)
         self._drag_active = False
         self._style_manager = StyleManager()
+        self._line_on_right = line_on_right
         self.setAcceptDrops(True)
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
@@ -95,10 +96,17 @@ class SpacerDropWidget(QWidget):
     def paintEvent(self, event: QPaintEvent) -> None:
         """Paint a highlight background when a drag is active over this widget."""
         super().paintEvent(event)
-        if not self._drag_active:
-            return
 
         painter = QPainter(self)
-        color = self._style_manager.get_color(ColorRole.DROP_TARGET_HIGHLIGHT)
-        painter.fillRect(self.rect(), color)
+
+        if self._drag_active:
+            color = self._style_manager.get_color(ColorRole.DROP_TARGET_HIGHLIGHT)
+            painter.fillRect(self.rect(), color)
+
+        if self.width() >= 1:
+            line_color: QColor = self._style_manager.get_color(ColorRole.SPLITTER)
+            painter.setPen(line_color)
+            x = self.width() - 1 if self._line_on_right else 0
+            painter.drawLine(x, 0, x, self.height() - 1)
+
         painter.end()
