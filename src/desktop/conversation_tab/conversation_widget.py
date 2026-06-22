@@ -526,21 +526,14 @@ class ConversationWidget(QWidget):
         if message.source == AIMessageSource.USER:
             self._delete_user_queued_messages()
 
-        msg_widget = self._add_message_core(message)
+        self._add_message_core(message)
 
         # If we're not animating then we've done everything we need to.
         if not self._is_animating:
             return
 
-        # We're currently animating, transfer animation to this new message
-        # but only if the new message is not hidden
-        if msg_widget.is_rendered():
-            self._transfer_animation_to_message(msg_widget)
-
-        # We're animating but current animated message is no longer visible,
-        # find a new visible message to animate
-        elif self._animated_message and not self._animated_message.is_rendered():
-            self._update_animated_message()
+        # Ensure animation is always on the last rendered message.
+        self._update_animated_message()
 
     def _hide_last_ai_connected_message(self) -> None:
         """
@@ -822,9 +815,10 @@ class ConversationWidget(QWidget):
         # Find the last visible message
         last_visible = self._find_last_visible_message_widget()
 
-        # If no visible messages, stop animation
+        # If no visible messages, leave animation state as-is.  Messages may
+        # be in a transient hidden state (e.g. content not yet revealed) and
+        # a subsequent event will re-evaluate.
         if not last_visible:
-            self._stop_message_border_animation()
             return
 
         # If the currently animated message is different from last visible, transfer
@@ -1214,8 +1208,9 @@ class ConversationWidget(QWidget):
         if did_render and self._auto_scroll:
             self._scroll_to_bottom()
 
-        if newly_visible_widget is not None and self._is_animating and newly_visible_widget != self._animated_message:
-            self._transfer_animation_to_message(newly_visible_widget)
+        # Ensure animation is always on the last rendered message.
+        if newly_visible_widget is not None and self._is_animating:
+            self._update_animated_message()
 
         if did_render:
             self.trigger_message_animation()
