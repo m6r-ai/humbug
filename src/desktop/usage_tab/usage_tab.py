@@ -138,6 +138,7 @@ class UsageTab(TabBase):
         zoom = style_manager.zoom_factor()
         base = style_manager.base_font_size()
         fs = base * zoom
+        border_radius = int(style_manager.message_bubble_spacing())
 
         soft_bg = style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
         msg_bg = style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
@@ -151,10 +152,6 @@ class UsageTab(TabBase):
         mono = style_manager.make_monospace_font().family()
 
         return f"""
-            #UsageWidget {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
             #UsageWidget QWidget {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
@@ -170,7 +167,7 @@ class UsageTab(TabBase):
             #UsageWidget QFrame#UsageHeroCard {{
                 background-color: {soft_bg};
                 border: 1px solid {border};
-                border-radius: 8px;
+                border-radius: {border_radius}px;
             }}
             #UsageWidget QFrame#UsageHeroCard QWidget,
             #UsageWidget QFrame#UsageHeroCard QLabel {{
@@ -202,7 +199,7 @@ class UsageTab(TabBase):
             #UsageWidget QFrame#UsageCard {{
                 background-color: {soft_bg};
                 border: 1px solid {border};
-                border-radius: 8px;
+                border-radius: {border_radius}px;
             }}
             #UsageWidget QFrame#UsageCard QWidget,
             #UsageWidget QFrame#UsageCard QLabel {{
@@ -231,7 +228,7 @@ class UsageTab(TabBase):
             #UsageWidget QFrame#UsageProviderCard {{
                 background-color: {msg_bg};
                 border: 1px solid {sep};
-                border-radius: 8px;
+                border-radius: {border_radius}px;
             }}
             #UsageWidget QFrame#UsageProviderCard QWidget,
             #UsageWidget QFrame#UsageProviderCard QLabel {{
@@ -257,7 +254,7 @@ class UsageTab(TabBase):
             #UsageWidget QFrame#UsageTableCard {{
                 background-color: {msg_bg};
                 border: 1px solid {sep};
-                border-radius: 8px;
+                border-radius: {border_radius}px;
             }}
             #UsageWidget QFrame#UsageTableCard QWidget,
             #UsageWidget QFrame#UsageTableCard QLabel {{
@@ -285,7 +282,7 @@ class UsageTab(TabBase):
 
             #UsageWidget QWidget#UsageModelRow {{
                 background: transparent;
-                border-radius: 6px;
+                border-radius: {border_radius}px;
             }}
             #UsageWidget QWidget#UsageModelRow:hover {{
                 background-color: {hover};
@@ -325,7 +322,7 @@ class UsageTab(TabBase):
                 background: transparent;
                 color: {dim};
                 border: 1px solid {border};
-                border-radius: 7px;
+                border-radius: {border_radius}px;
                 padding: {round(5 * zoom)}px {round(12 * zoom)}px;
                 font-size: {round(fs * 0.85)}pt;
                 font-weight: 500;
@@ -354,7 +351,7 @@ class UsageTab(TabBase):
             #UsageWidget QFrame#UsageEmptyCard {{
                 background-color: {soft_bg};
                 border: 1px solid {border};
-                border-radius: 8px;
+                border-radius: {border_radius}px;
             }}
             #UsageWidget QFrame#UsageEmptyCard QLabel {{
                 background: transparent;
@@ -373,7 +370,7 @@ class UsageTab(TabBase):
                 background: transparent;
                 color: {dim};
                 border: 1px solid {border};
-                border-radius: 7px;
+                border-radius: {border_radius}px;
                 padding: {round(7 * zoom)}px {round(20 * zoom)}px;
                 font-size: {round(fs)}pt;
                 font-weight: 500;

@@ -4,7 +4,6 @@ import os
 import logging
 from typing import Any, Dict, List, Tuple, cast
 
-from PySide6.QtCore import QUrl, QRegularExpression
 from PySide6.QtCore import Qt, QUrl, QRegularExpression
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
@@ -507,14 +506,8 @@ class PreviewTab(TabBase):
     def _build_stylesheet(self) -> str:
         """Build the stylesheet for this tab."""
         style_manager = StyleManager()
-        bubble_spacing = int(style_manager.message_bubble_spacing())
-        border_radius = bubble_spacing
+        border_radius = int(style_manager.message_bubble_spacing())
         return f"""
-            #PreviewWidget {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-
             #PreviewWidget QWidget {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
@@ -522,7 +515,7 @@ class PreviewTab(TabBase):
             #PreviewWidget #PreviewFileContent {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
-                border-radius: {bubble_spacing}px;
+                border-radius: {border_radius}px;
                 border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
             }}
 
@@ -637,7 +630,7 @@ class PreviewTab(TabBase):
             #PreviewWidget QFrame#PreviewMarkdownPreviewContent {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
-                border-radius: {bubble_spacing}px;
+                border-radius: {border_radius}px;
                 border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
             }}
 

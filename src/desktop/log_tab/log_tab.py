@@ -415,10 +415,6 @@ class LogTab(TabBase):
         style_manager = StyleManager()
         border_radius = int(style_manager.message_bubble_spacing())
         return f"""
-            #LogWidget {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
             #LogWidget QWidget {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
