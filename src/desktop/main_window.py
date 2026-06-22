@@ -986,10 +986,27 @@ class MainWindow(QMainWindow):
         """
         Set the color mode (theme) for the application.
 
+        Persists the choice to user settings so it survives restarts,
+        consistent with changing the theme via the Settings dialog.
+
         Args:
             theme: The new ColorTheme to apply
         """
         self._style_manager.set_color_theme(theme)
+
+        try:
+            settings = self._user_manager.settings()
+            settings.theme = theme
+            self._user_manager.update_settings(settings)
+
+            if self._mindspace_manager.has_mindspace():
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"Theme changed to {theme.name}"
+                )
+
+        except UserError as e:
+            self._logger.error("Failed to persist theme change: %s", str(e))
 
     def _on_tab_manager_tab_changed(self) -> None:
         """Handle tab change events."""
