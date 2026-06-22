@@ -155,7 +155,6 @@ class ConversationMessage(QFrame):
         self._role_label.setObjectName("_role_label")
         self._role_label.setIndent(0)
         self._banner_layout.addWidget(self._role_label)
-        self._banner_layout.addStretch(1)
 
         role_sources = {
             AIMessageSource.USER: "user",
@@ -229,6 +228,8 @@ class ConversationMessage(QFrame):
         # Container for message sections
         self._sections_container = QWidget(self)
         self._sections_container.setObjectName("_sections_container")
+        self._is_spotlighted = False
+        self._message_style: ConversationMessageStyle | None = message_style
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
         if not default_expanded:
@@ -325,9 +326,6 @@ class ConversationMessage(QFrame):
 
         # Initialize markdown converter
         self._markdown_converter = MarkdownConverter()
-
-        self._is_spotlighted = False
-        self._message_style: ConversationMessageStyle | None = message_style
 
         self.apply_style(message_style)
         self._on_language_changed()
