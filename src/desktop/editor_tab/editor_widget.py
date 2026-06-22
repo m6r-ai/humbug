@@ -46,6 +46,7 @@ class EditorWidget(QPlainTextEdit):
         """
         super().__init__(parent)
         self._logger = logging.getLogger("EditorWidget")
+        self.setObjectName("EditorWidget")
 
         # File state
         self._path = path
@@ -115,8 +116,6 @@ class EditorWidget(QPlainTextEdit):
         self.textChanged.connect(self._on_text_changed)
         self.cursorPositionChanged.connect(self.status_updated)
 
-        # Connect to style changes
-        self.apply_style()
 
         # Load file if path provided
         if self._path:
@@ -1042,9 +1041,6 @@ class EditorWidget(QPlainTextEdit):
 
     def apply_style(self) -> None:
         """Apply current style settings."""
-        zoom_factor = self._style_manager.zoom_factor()
-        self.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
-
         # Capture the block number at the viewport midpoint before the font
         # changes so we can restore it to the centre after re-layout.
         visible_lines = self.viewport().height() // max(1, self.fontMetrics().lineSpacing())
@@ -1067,30 +1063,6 @@ class EditorWidget(QPlainTextEdit):
         self._update_line_number_area_width()
 
         self._highlight_matches()
-
-        new_stylesheet = f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            {self._style_manager.get_menu_stylesheet()}
-
-            QPlainTextEdit {{
-                border: none;
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                selection-color: none;
-            }}
-
-            {self._style_manager.get_scrollbar_stylesheet()}
-
-            QAbstractScrollArea::corner {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-        """
-
-        # Style sheet changes are very expensive.  Don't do them unless we must.
-        if new_stylesheet != self.styleSheet():
-            self.setStyleSheet(new_stylesheet)
 
         # Re-layout from setFont() is async, so defer the scroll restoration.
         QTimer.singleShot(0, lambda: self._restore_centre_block(centre_block))

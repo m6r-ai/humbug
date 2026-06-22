@@ -6,8 +6,8 @@ This tab provides a shell command interface with its own persistent history.
 
 import logging
 
-from PySide6.QtCore import QObject, QRegularExpression
-from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+from PySide6.QtCore import QObject, QRegularExpression, Qt
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -16,6 +16,7 @@ from desktop.widgets import FindWidget
 from desktop.shell_tab.shell_widget import ShellWidget
 from desktop.tab import TabBase, TabState
 from desktop.style_manager import StyleManager
+from desktop.color_role import ColorRole
 
 
 class ShellTab(TabBase):
@@ -56,10 +57,19 @@ class ShellTab(TabBase):
         # Create shell widget
         self._shell_widget = ShellWidget(self._tab_id, self)
         self._shell_widget.status_updated.connect(self.update_status)
-        layout.addWidget(self._shell_widget)
+
+        shell_container = QWidget()
+        shell_container_layout = QHBoxLayout(shell_container)
+        shell_container_layout.setContentsMargins(0, 0, 0, 0)
+        shell_container_layout.setSpacing(0)
+        shell_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self._shell_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        shell_container_layout.addWidget(self._shell_widget)
+        layout.addWidget(shell_container)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
+        self.apply_style()
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""
@@ -319,4 +329,73 @@ class ShellTab(TabBase):
     def apply_style(self) -> None:
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
+        style_manager = StyleManager()
+        self._shell_widget.setMaximumWidth(int(style_manager.nice_tab_width() * style_manager.zoom_factor()))
         self._shell_widget.apply_style()
+
+        new_stylesheet = self._build_stylesheet()
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
+
+    def _build_stylesheet(self) -> str:
+        """Build the stylesheet for this tab."""
+        style_manager = StyleManager()
+        border_radius = int(style_manager.message_bubble_spacing())
+        return f"""
+            #ShellWidget QWidget {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            #ShellWidget #ShellMessage {{
+                margin: 0;
+                border-radius: {border_radius}px;
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
+            }}
+            #ShellWidget #ShellMessage[message_source="user"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+            }}
+            #ShellWidget #ShellMessage[border="spotlighted"] {{
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)};
+            }}
+
+            #ShellWidget #ShellMessage #_header {{
+                background-color: transparent;
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+
+            #ShellWidget #ShellMessage #_role_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                margin: 0;
+                padding: 0;
+                border: none;
+                background-color: transparent;
+            }}
+            #ShellWidget #ShellMessage #_role_label[message_source="user"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
+            }}
+            #ShellWidget #ShellMessage #_role_label[message_source="success"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_SUCCESS)};
+            }}
+            #ShellWidget #ShellMessage #_role_label[message_source="error"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
+            }}
+
+            #ShellWidget #ShellMessage #_text_area {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: transparent;
+            }}
+
+            {style_manager.get_scrollbar_stylesheet("#ShellWidget #ShellMessage #_text_area QScrollBar")}
+
+            {style_manager.get_scrollbar_stylesheet("#ShellWidget QScrollBar")}
+        """

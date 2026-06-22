@@ -5,8 +5,9 @@ import logging
 from typing import Any, Dict, List, Tuple, cast
 
 from PySide6.QtCore import QUrl, QRegularExpression
+from PySide6.QtCore import Qt, QUrl, QRegularExpression
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 
 from context.context_registry import ContextRegistry
 from preview_context.preview_context import PreviewContext
@@ -18,6 +19,7 @@ from desktop.preview_tab.preview_error import PreviewError
 from desktop.preview_tab.preview_widget import PreviewWidget
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
+from desktop.color_role import ColorRole
 from desktop.tab import TabBase, TabState
 from desktop.widgets import FindWidget
 
@@ -68,7 +70,14 @@ class PreviewTab(TabBase):
         # Connect new signals for file watching
         self._preview_content_widget.content_refreshed.connect(self._on_content_refreshed)
 
-        layout.addWidget(self._preview_content_widget)
+        preview_container = QWidget()
+        preview_container_layout = QHBoxLayout(preview_container)
+        preview_container_layout.setContentsMargins(0, 0, 0, 0)
+        preview_container_layout.setSpacing(0)
+        preview_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self._preview_content_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        preview_container_layout.addWidget(self._preview_content_widget)
+        layout.addWidget(preview_container)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -77,6 +86,7 @@ class PreviewTab(TabBase):
         self._preview_content_widget.load_content()
 
         self._start_file_watching(self._path)
+        self.apply_style()
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""
@@ -486,4 +496,150 @@ class PreviewTab(TabBase):
     def apply_style(self) -> None:
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
+        style_manager = StyleManager()
+        self._preview_content_widget.setMaximumWidth(int(style_manager.nice_tab_width() * style_manager.zoom_factor()))
         self._preview_content_widget.apply_style()
+
+        new_stylesheet = self._build_stylesheet()
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
+
+    def _build_stylesheet(self) -> str:
+        """Build the stylesheet for this tab."""
+        style_manager = StyleManager()
+        bubble_spacing = int(style_manager.message_bubble_spacing())
+        border_radius = bubble_spacing
+        return f"""
+            #PreviewWidget {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+
+            #PreviewWidget QWidget {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            #PreviewWidget #PreviewFileContent {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                margin: 0;
+                border-radius: {bubble_spacing}px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
+            }}
+
+            #PreviewWidget #PreviewFileContent #_content_container {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            #PreviewWidget #PreviewFileContent #_header_container {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            #PreviewWidget #PreviewFileContent #_syntax_header {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYNTAX)};
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            #PreviewWidget #PreviewFileContent #_text_area {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: transparent;
+            }}
+
+            {style_manager.get_scrollbar_stylesheet("#PreviewWidget #PreviewFileContent #_text_area QScrollBar")}
+
+            #PreviewWidget #PreviewFileContent #_edit_button {{
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 0;
+                padding: 0px;
+            }}
+            #PreviewWidget #PreviewFileContent #_edit_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            #PreviewWidget #PreviewFileContent #_edit_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+
+            #PreviewWidget QWidget#PreviewMarkdownContent {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            #PreviewWidget QWidget#PreviewMarkdownContent[contained="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
+            #PreviewWidget #PreviewMarkdownContent QWidget#_sections_container {{
+                background-color: transparent;
+                border: none;
+                margin: 0;
+                padding: 0;
+            }}
+
+            #PreviewWidget QFrame#PreviewMarkdownContentSection {{
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 0;
+            }}
+
+            #PreviewWidget QFrame#PreviewMarkdownContentSection[section_type="text"][contained="false"] {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            #PreviewWidget QFrame#PreviewMarkdownContentSection[section_type="text"][contained="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
+            #PreviewWidget QFrame#PreviewMarkdownContentSection[section_type="code"][contained="false"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
+            }}
+
+            #PreviewWidget QFrame#PreviewMarkdownContentSection[section_type="code"][contained="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
+            }}
+
+            #PreviewWidget QFrame#PreviewMarkdownContentSection QLabel {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYNTAX)};
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            #PreviewWidget #PreviewMarkdownContentSection QTextEdit {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                margin: 0;
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+            }}
+
+            #PreviewWidget #PreviewMarkdownContentSection QWidget {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            {style_manager.get_scrollbar_stylesheet("#PreviewWidget #PreviewMarkdownContentSection QScrollBar")}
+
+            #PreviewWidget QFrame#PreviewMarkdownPreviewContent {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                margin: 0;
+                border-radius: {bubble_spacing}px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
+            }}
+
+            {style_manager.get_scrollbar_stylesheet("#PreviewWidget QScrollBar")}
+        """

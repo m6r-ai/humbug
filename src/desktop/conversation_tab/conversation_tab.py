@@ -5,9 +5,9 @@ import os
 from typing import Dict, Any
 
 from PySide6.QtWidgets import (
-    QApplication, QVBoxLayout, QWidget
+    QApplication, QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 )
-from PySide6.QtCore import QObject, Signal, QRegularExpression
+from PySide6.QtCore import QObject, Qt, Signal, QRegularExpression
 
 from ai import AIConversationHistory, AIConversationSettings
 from ai_transcript_conversation import AITranscriptConversation
@@ -17,6 +17,8 @@ from conversation_context.conversation_context import ConversationContext
 from desktop.ai_backend_display import get_backend_display_name
 from desktop.conversation_tab.conversation_settings_dialog import ConversationSettingsDialog
 from desktop.conversation_tab.conversation_widget import ConversationWidget
+from desktop.conversation_tab.conversation_message import _BORDER_INSET, _BORDER_WIDTH_ACTIVE
+from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
@@ -81,12 +83,21 @@ class ConversationTab(TabBase):
         self._conversation_widget.has_seen_latest_update_changed.connect(self._on_has_seen_latest_update_changed)
         self._conversation_widget.conversation_modified.connect(self._on_conversation_modified)
         self._conversation_widget.rate_limited.connect(self._on_rate_limited)
-        layout.addWidget(self._conversation_widget)
+
+        conversation_container = QWidget()
+        conversation_container_layout = QHBoxLayout(conversation_container)
+        conversation_container_layout.setContentsMargins(0, 0, 0, 0)
+        conversation_container_layout.setSpacing(0)
+        conversation_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self._conversation_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        conversation_container_layout.addWidget(self._conversation_widget)
+        layout.addWidget(conversation_container)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._start_file_watching(self._path)
+        self.apply_style()
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""
@@ -460,7 +471,394 @@ class ConversationTab(TabBase):
     def apply_style(self) -> None:
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
+        style_manager = StyleManager()
+        self._conversation_widget.setMaximumWidth(int(style_manager.nice_tab_width() * style_manager.zoom_factor()))
         self._conversation_widget.apply_style()
+
+        new_stylesheet = self._build_stylesheet()
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
+
+    def _build_stylesheet(self) -> str:
+        """Build the stylesheet for this tab."""
+        style_manager = StyleManager()
+        border_radius = int(style_manager.message_bubble_spacing())
+        section_border_radius = int(style_manager.message_bubble_spacing() / 2)
+        return f"""
+            #ConversationWidget QWidget {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            #ConversationWidget #ConversationMessage {{
+                margin: 0;
+                border-radius: {border_radius}px;
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: {_BORDER_WIDTH_ACTIVE}px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                padding: -{_BORDER_INSET}px;
+            }}
+            #ConversationWidget #ConversationMessage[message_source="user"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: {_BORDER_WIDTH_ACTIVE}px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+            }}
+            #ConversationWidget #ConversationMessage[message_source="user_input"],
+            #ConversationWidget #ConversationMessage[message_source="ai_streaming"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
+                border: {_BORDER_WIDTH_ACTIVE}px solid {style_manager.get_color_str(ColorRole.MESSAGE_INPUT_BACKGROUND)};
+            }}
+
+            #ConversationWidget #ConversationMessage #_sections_container {{
+                background-color: transparent;
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+
+            #ConversationWidget #ConversationMessage #_banner {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: none;
+                border-top-left-radius: {border_radius}px;
+                border-top-right-radius: {border_radius}px;
+                border-bottom-left-radius: 0;
+                border-bottom-right-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+            #ConversationWidget #ConversationMessage #_banner[sticky="true"] {{
+                border-top-left-radius: 0;
+                border-top-right-radius: 0;
+            }}
+            #ConversationWidget #ConversationMessage[message_source="user"] #_banner {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+            }}
+            #ConversationWidget #ConversationMessage[message_source="user_input"] #_banner,
+            #ConversationWidget #ConversationMessage[message_source="ai_streaming"] #_banner {{
+                background-color: transparent;
+            }}
+
+            #ConversationWidget #ConversationMessage #_role_label {{
+                margin: 0;
+                padding: 0;
+                border: none;
+                background-color: transparent;
+            }}
+            #ConversationWidget #ConversationMessage[message_source="user"] #_role_label {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
+            }}
+            #ConversationWidget #ConversationMessage[message_source="ai_connected"] #_role_label,
+            #ConversationWidget #ConversationMessage[message_source="ai_streaming"] #_role_label {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_STREAMING)};
+            }}
+            #ConversationWidget #ConversationMessage[message_source="ai"] #_role_label {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_AI)};
+            }}
+            #ConversationWidget #ConversationMessage[message_source="reasoning"] #_role_label {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_REASONING)};
+            }}
+            #ConversationWidget #ConversationMessage[message_source="tool_call"] #_role_label {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_TOOL_CALL)};
+            }}
+            #ConversationWidget #ConversationMessage[message_source="tool_result"] #_role_label {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_TOOL_RESULT)};
+            }}
+            #ConversationWidget #ConversationMessage[message_source="system"] #_role_label {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
+            }}
+            #ConversationWidget #ConversationMessage[message_source="user_input"] #_role_label,
+            #ConversationWidget #ConversationMessage[message_source="user_queued"] #_role_label {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_QUEUED)};
+            }}
+
+            #ConversationWidget #ConversationMessage #_expand_button,
+            #ConversationWidget #ConversationMessage #_copy_button,
+            #ConversationWidget #ConversationMessage #_save_button,
+            #ConversationWidget #ConversationMessage #_fork_button,
+            #ConversationWidget #ConversationMessage #_edit_button,
+            #ConversationWidget #ConversationMessage #_delete_button,
+            #ConversationWidget #ConversationMessage #_stop_button,
+            #ConversationWidget #ConversationMessage #_submit_button,
+            #ConversationWidget #ConversationMessage #_settings_button,
+            #ConversationWidget #ConversationMessage #_attach_button,
+            #ConversationWidget #ConversationMessage #_attachments_button {{
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.TEXT_INACTIVE)};
+                border: none;
+                padding: 0px;
+                margin: 0px;
+            }}
+            #ConversationWidget #ConversationMessage #_expand_button:hover,
+            #ConversationWidget #ConversationMessage #_copy_button:hover,
+            #ConversationWidget #ConversationMessage #_save_button:hover,
+            #ConversationWidget #ConversationMessage #_fork_button:hover,
+            #ConversationWidget #ConversationMessage #_edit_button:hover,
+            #ConversationWidget #ConversationMessage #_delete_button:hover,
+            #ConversationWidget #ConversationMessage #_stop_button:hover,
+            #ConversationWidget #ConversationMessage #_submit_button:hover,
+            #ConversationWidget #ConversationMessage #_settings_button:hover,
+            #ConversationWidget #ConversationMessage #_attach_button:hover,
+            #ConversationWidget #ConversationMessage #_attachments_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            #ConversationWidget #ConversationMessage #_expand_button:pressed,
+            #ConversationWidget #ConversationMessage #_copy_button:pressed,
+            #ConversationWidget #ConversationMessage #_save_button:pressed,
+            #ConversationWidget #ConversationMessage #_fork_button:pressed,
+            #ConversationWidget #ConversationMessage #_edit_button:pressed,
+            #ConversationWidget #ConversationMessage #_delete_button:pressed,
+            #ConversationWidget #ConversationMessage #_stop_button:pressed,
+            #ConversationWidget #ConversationMessage #_submit_button:pressed,
+            #ConversationWidget #ConversationMessage #_settings_button:pressed,
+            #ConversationWidget #ConversationMessage #_attach_button:pressed,
+            #ConversationWidget #ConversationMessage #_attachments_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            #ConversationWidget #ConversationMessage #_stop_button:disabled,
+            #ConversationWidget #ConversationMessage #_submit_button:disabled {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: transparent;
+            }}
+            #ConversationWidget #ConversationMessage[message_source="user"] #_expand_button:hover,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_copy_button:hover,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_save_button:hover,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_fork_button:hover,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_edit_button:hover,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_delete_button:hover,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_attachments_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage[message_source="user"] #_expand_button:pressed,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_copy_button:pressed,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_save_button:pressed,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_fork_button:pressed,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_edit_button:pressed,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_delete_button:pressed,
+            #ConversationWidget #ConversationMessage[message_source="user"] #_attachments_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
+            }}
+
+            #ConversationWidget #ConversationMessage #_attachments_container, #ConversationWidget #ConversationMessage #_chips_bar,
+            #ConversationWidget #ConversationMessage #_approval_widget, #ConversationWidget #ConversationMessage #_edit_btn_row,
+            #ConversationWidget #ConversationMessage #_attachments_bar {{
+                background-color: transparent;
+                border: none;
+            }}
+            #ConversationWidget #ConversationMessage #_approval_text_edit {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+                border: none;
+                border-radius: 0px;
+                padding: 0;
+                margin: 0;
+            }}
+            #ConversationWidget #ConversationMessage #_approval_context_widget {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+                margin: 0;
+                padding: 0;
+                border-radius: {border_radius // 2}px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
+            }}
+            #ConversationWidget #ConversationMessage #_approval_context_widget #_approval_context_text_edit {{
+                background-color: transparent;
+            }}
+            #ConversationWidget #ConversationMessage #_edit_area {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border-radius: {border_radius}px;
+                border: 0;
+            }}
+            #ConversationWidget #ConversationMessage #_edit_text_edit {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                margin: 0 0 {border_radius}px 0;
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+            }}
+            #ConversationWidget #ConversationMessage #_attachment_widget {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_ATTACHMENT_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+                border-radius: 4px;
+            }}
+            #ConversationWidget #ConversationMessage #_attachment_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+            }}
+            #ConversationWidget #ConversationMessage #_attachment_remove {{
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                margin: 0;
+            }}
+            #ConversationWidget #ConversationMessage #_attachment_remove:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #_attachment_remove:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
+            }}
+            #ConversationWidget #ConversationMessage #_edit_confirm_button {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                border: none;
+                border-radius: 4px;
+                padding: 4px 12px;
+            }}
+            #ConversationWidget #ConversationMessage #_edit_confirm_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #_edit_confirm_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED)};
+            }}
+            #ConversationWidget #ConversationMessage #_edit_cancel_button {{
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                border-radius: 4px;
+                padding: 4px 12px;
+            }}
+            #ConversationWidget #ConversationMessage #_edit_cancel_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #_edit_cancel_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+                border-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+            }}
+            {style_manager.get_scrollbar_stylesheet(
+                "#ConversationWidget #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar"
+            )}
+            #ConversationWidget #ConversationMessage #_approval_approve_button[recommended="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                border-radius: 4px;
+            }}
+            #ConversationWidget #ConversationMessage #_approval_approve_button[recommended="true"]:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #_approval_approve_button[recommended="true"]:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
+            }}
+            #ConversationWidget #ConversationMessage #_approval_approve_button[recommended="false"] {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                border-radius: 4px;
+            }}
+            #ConversationWidget #ConversationMessage #_approval_approve_button[recommended="false"]:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #_approval_approve_button[recommended="false"]:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+            }}
+            #ConversationWidget #ConversationMessage #_approval_i_am_unsure_button {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border-radius: 4px;
+            }}
+            #ConversationWidget #ConversationMessage #_approval_i_am_unsure_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #_approval_i_am_unsure_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+            }}
+            #ConversationWidget #ConversationMessage #_approval_reject_button {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border-radius: 4px;
+            }}
+            #ConversationWidget #ConversationMessage #_approval_reject_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #_approval_reject_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+            }}
+            #ConversationWidget #ConversationMessage #_retry_widget {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+            #ConversationWidget #ConversationMessage #_retry_button {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                border-radius: 4px;
+                padding: 4px 48px;
+            }}
+            #ConversationWidget #ConversationMessage #_retry_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #_retry_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
+            }}
+
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="text-system"],
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="text-user"] {{
+                background-color: transparent;
+                margin: 0;
+                border-radius: {section_border_radius}px;
+                border: 0;
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="code-system"],
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="code-user"] {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+                margin: 0;
+                border-radius: {section_border_radius}px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection #_banner_container {{
+                background-color: transparent;
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection QTextEdit {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                margin: 0;
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection QLabel {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYNTAX)};
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection QWidget {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection QToolButton {{
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                padding: 0px;
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="text-system"] QToolButton:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="text-system"] QToolButton:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="text-user"] QToolButton:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="text-user"] QToolButton:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton:hover,
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton:pressed,
+            #ConversationWidget #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)};
+            }}
+            {style_manager.get_scrollbar_stylesheet(
+                "#ConversationWidget #ConversationMessage #ConversationMessageSection QScrollBar"
+            )}
+
+            {style_manager.get_scrollbar_stylesheet("#ConversationWidget QScrollBar")}
+        """
 
     def show_find(self) -> None:
         """Show the find widget."""

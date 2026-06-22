@@ -149,6 +149,7 @@ class DiffPane(QPlainTextEdit):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._logger = logging.getLogger("DiffPane")
+        self.setObjectName("DiffPane")
         self._style_manager = StyleManager()
         self._active_hunk_start: int = -1
         self._active_hunk_end: int = -1
@@ -227,20 +228,6 @@ class DiffPane(QPlainTextEdit):
         """Reapply colours and font after a theme or zoom change."""
         font = self._style_manager.make_monospace_font()
         self.setFont(font)
-
-        bg = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
-        fg = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-        sel = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
-        self.setStyleSheet(f"""
-            QPlainTextEdit {{
-                background-color: {bg};
-                color: {fg};
-                border: none;
-                padding: 0px;
-                selection-background-color: {sel};
-                selection-color: none;
-            }}
-        """)
 
         self._update_gutter_width()
         self.viewport().update()

@@ -3,22 +3,21 @@
 import logging
 from collections import defaultdict
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
-    QHBoxLayout,
     QLabel,
     QProgressBar,
     QPushButton,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
+    QHBoxLayout,
     QWidget,
 )
 
 from ai.ai_conversation_settings import AIConversationSettings
-from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
@@ -45,9 +44,12 @@ def _count_label(count: int, singular: str, plural: str) -> str:
 class UsageWidget(QWidget):
     """Widget showing per-mindspace token usage by provider and model."""
 
+    refreshed = Signal()
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._logger = logging.getLogger("UsageWidget")
+        self.setObjectName("UsageWidget")
         self._mindspace_manager = MindspaceManager()
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
@@ -64,16 +66,8 @@ class UsageWidget(QWidget):
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
 
-        # Wrap scroll area in a centring container so the scrollbar sits
-        # adjacent to the content rather than at the far right of the column.
-        scroll_container = QWidget()
-        scroll_container.setObjectName("UsageScrollContainer")
-        scroll_container_layout = QHBoxLayout(scroll_container)
-        scroll_container_layout.setContentsMargins(0, 0, 0, 0)
-        scroll_container_layout.setSpacing(0)
-        scroll_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        scroll_container_layout.addWidget(self._scroll)
-        root.addWidget(scroll_container)
+        self._scroll.viewport().setAutoFillBackground(True)
+        root.addWidget(self._scroll)
 
         self._body_widget = QWidget()
         self._body_widget.setObjectName("UsageTabBody")
@@ -109,7 +103,6 @@ class UsageWidget(QWidget):
 
         self._mindspace_manager.usage_updated.connect(self.refresh)
         self._language_manager.language_changed.connect(self.refresh)
-        self._style_manager.style_changed.connect(self.apply_style)
 
         self.refresh()
 
@@ -117,9 +110,7 @@ class UsageWidget(QWidget):
         """Apply current style settings."""
         s = int(self._style_manager.message_bubble_spacing())
         self._body.setContentsMargins(s, s, s, s)
-        zoom = self._style_manager.zoom_factor()
-        self._scroll.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom))
-        self._apply_stylesheet()
+        self.refreshed.emit()
 
     def refresh(self) -> None:
         """Rebuild the usage dashboard content from current mindspace usage data."""
@@ -129,7 +120,7 @@ class UsageWidget(QWidget):
         if not self._mindspace_manager.has_mindspace():
             cl.addWidget(self._empty_state("No mindspace open", "Open a mindspace to track model token usage."))
             self._reset_btn.setEnabled(False)
-            self._apply_stylesheet()
+            self.refreshed.emit()
             return
 
         usage = self._mindspace_manager.mindspace().usage()
@@ -149,7 +140,7 @@ class UsageWidget(QWidget):
                 "Complete an AI response in this mindspace to populate this dashboard."
             ))
             self._reset_btn.setEnabled(False)
-            self._apply_stylesheet()
+            self.refreshed.emit()
             return
 
         cl.addWidget(self._hero_card(total_in, total_out, len(entries), len({e.provider for e in entries})))
@@ -215,7 +206,7 @@ class UsageWidget(QWidget):
 
         self._reset_btn.setEnabled(self._mindspace_manager.has_mindspace())
 
-        self._apply_stylesheet()
+        self.refreshed.emit()
 
     def _section_label(self, text: str) -> QLabel:
         lbl = QLabel(text.upper())
@@ -599,267 +590,3 @@ class UsageWidget(QWidget):
     def _next_model_page(self) -> None:
         self._model_page += 1
         self.refresh()
-
-    def _apply_stylesheet(self) -> None:
-        zoom = self._style_manager.zoom_factor()
-        base = self._style_manager.base_font_size()
-        fs = base * zoom
-
-        soft_bg = self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
-        msg_bg = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-        border = self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)
-        sep = self._style_manager.get_color_str(ColorRole.MESSAGE_BORDER)
-        hover_qc = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
-        hover = f"rgba({hover_qc.red()}, {hover_qc.green()}, {hover_qc.blue()}, 0.06)"
-        text = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-        dim = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
-        heading = self._style_manager.get_color_str(ColorRole.TEXT_HEADING)
-
-        mono = self._style_manager.make_monospace_font().family()
-
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            #UsageScrollContainer {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
-            }}
-
-            QScrollArea {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            QLabel#UsageSectionLabel {{
-                color: {dim};
-                font-size: {round(fs * 0.9)}pt;
-                font-weight: bold;
-                letter-spacing: 0;
-                background: transparent;
-            }}
-
-            QFrame#UsageHeroCard {{
-                background-color: {soft_bg};
-                border: 1px solid {border};
-                border-radius: 8px;
-            }}
-            QFrame#UsageHeroCard QWidget,
-            QFrame#UsageHeroCard QLabel {{
-                background: transparent;
-            }}
-            QWidget#UsageHeroPane {{
-                background: transparent;
-            }}
-            QLabel#UsageHeroPaneLabel {{
-                color: {dim};
-                font-size: {round(fs * 0.9)}pt;
-                font-weight: 600;
-                letter-spacing: 0;
-                background: transparent;
-            }}
-            QLabel#UsageHeroTokens {{
-                color: {heading};
-                font-size: {round(fs * 2.0)}pt;
-                font-weight: bold;
-                font-family: "{mono}";
-                background: transparent;
-            }}
-            QLabel#UsageHeroSub {{
-                color: {dim};
-                font-size: {round(fs * 0.85)}pt;
-                background: transparent;
-            }}
-
-            QFrame#UsageCard {{
-                background-color: {soft_bg};
-                border: 1px solid {border};
-                border-radius: 8px;
-            }}
-            QFrame#UsageCard QWidget, QFrame#UsageCard QLabel {{
-                background: transparent;
-            }}
-
-            QLabel#UsageStatLabel {{
-                color: {dim};
-                font-size: {round(fs * 0.9)}pt;
-                font-weight: 600;
-                background: transparent;
-            }}
-            QLabel#UsageStatValue {{
-                color: {text};
-                font-size: {round(fs * 1.6)}pt;
-                font-weight: bold;
-                font-family: "{mono}";
-                background: transparent;
-            }}
-            QLabel#UsageStatNote {{
-                color: {dim};
-                font-size: {round(fs * 0.85)}pt;
-                background: transparent;
-            }}
-
-            QFrame#UsageProviderCard {{
-                background-color: {msg_bg};
-                border: 1px solid {sep};
-                border-radius: 8px;
-            }}
-            QFrame#UsageProviderCard QWidget,
-            QFrame#UsageProviderCard QLabel {{
-                background: transparent;
-            }}
-            QLabel#UsageProviderName {{
-                color: {dim};
-                font-size: {round(fs * 0.9)}pt;
-                font-weight: bold;
-                letter-spacing: 0;
-            }}
-            QLabel#UsageProviderTokens {{
-                color: {text};
-                font-size: {round(fs * 1.18)}pt;
-                font-weight: bold;
-                font-family: "{mono}";
-            }}
-            QLabel#UsageProviderDetail {{
-                color: {dim};
-                font-size: {round(fs * 0.85)}pt;
-            }}
-
-            QFrame#UsageTableCard {{
-                background-color: {msg_bg};
-                border: 1px solid {sep};
-                border-radius: 8px;
-            }}
-            QFrame#UsageTableCard QWidget,
-            QFrame#UsageTableCard QLabel {{
-                background: transparent;
-            }}
-
-            QWidget#UsageTableHeader {{
-                background: transparent;
-            }}
-            QLabel#UsageTableHeaderCell {{
-                color: {dim};
-                font-size: {round(fs * 0.9)}pt;
-                font-weight: bold;
-                letter-spacing: 0;
-                background: transparent;
-            }}
-
-            QLabel#UsageProviderLabel {{
-                color: {dim};
-                font-size: {round(fs * 0.9)}pt;
-                font-weight: bold;
-                letter-spacing: 0;
-                background: transparent;
-            }}
-
-            QWidget#UsageModelRow {{
-                background: transparent;
-                border-radius: 6px;
-            }}
-            QWidget#UsageModelRow:hover {{
-                background-color: {hover};
-            }}
-            QLabel#UsageModelName {{
-                color: {text};
-                font-size: {round(fs)}pt;
-                font-weight: 500;
-                background: transparent;
-            }}
-            QLabel#UsageModelTokens {{
-                color: {dim};
-                font-size: {round(fs)}pt;
-                font-family: "{mono}";
-                background: transparent;
-            }}
-            QLabel#UsageModelDetail {{
-                color: {dim};
-                font-size: {round(fs * 0.85)}pt;
-                font-family: "{mono}";
-                background: transparent;
-            }}
-
-            QWidget#UsagePager {{
-                background: transparent;
-            }}
-            QLabel#UsagePagerLabel,
-            QLabel#UsagePagerPage {{
-                color: {dim};
-                font-size: {round(fs * 0.85)}pt;
-                background: transparent;
-            }}
-            QLabel#UsagePagerPage {{
-                min-width: {round(86 * zoom)}px;
-            }}
-            QPushButton#UsagePagerButton {{
-                background: transparent;
-                color: {dim};
-                border: 1px solid {border};
-                border-radius: 7px;
-                padding: {round(5 * zoom)}px {round(12 * zoom)}px;
-                font-size: {round(fs * 0.85)}pt;
-                font-weight: 500;
-            }}
-            QPushButton#UsagePagerButton:hover {{
-                background-color: {hover};
-                color: {text};
-                border-color: {dim};
-            }}
-            QPushButton#UsagePagerButton:pressed {{
-                background-color: {hover};
-            }}
-            QPushButton#UsagePagerButton:disabled {{
-                color: {dim};
-                border-color: {sep};
-            }}
-
-            QFrame#UsageRowSep {{
-                color: {sep};
-                border: none;
-                border-top: 1px solid {sep};
-                max-height: 1px;
-                background: transparent;
-            }}
-
-            QFrame#UsageEmptyCard {{
-                background-color: {soft_bg};
-                border: 1px solid {border};
-                border-radius: 8px;
-            }}
-            QFrame#UsageEmptyCard QLabel {{
-                background: transparent;
-            }}
-            QLabel#UsageEmptyTitle {{
-                color: {text};
-                font-size: {round(fs * 1.08)}pt;
-                font-weight: bold;
-            }}
-            QLabel#UsageEmptyMessage {{
-                color: {dim};
-                font-size: {round(fs)}pt;
-            }}
-
-            QPushButton#UsageResetBtn {{
-                background: transparent;
-                color: {dim};
-                border: 1px solid {border};
-                border-radius: 7px;
-                padding: {round(7 * zoom)}px {round(20 * zoom)}px;
-                font-size: {round(fs)}pt;
-                font-weight: 500;
-            }}
-            QPushButton#UsageResetBtn:hover {{
-                background-color: {hover};
-                color: {text};
-                border-color: {dim};
-            }}
-            QPushButton#UsageResetBtn:pressed {{
-                background-color: {hover};
-            }}
-            QPushButton#UsageResetBtn:disabled {{
-                color: {dim};
-                border-color: {sep};
-            }}
-
-            {self._style_manager.get_scrollbar_stylesheet()}
-        """)

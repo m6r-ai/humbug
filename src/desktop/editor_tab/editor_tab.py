@@ -14,6 +14,7 @@ from desktop.editor_tab.editor_goto_line_dialog import EditorGotoLineDialog
 from desktop.language.language_manager import LanguageManager
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
+from desktop.color_role import ColorRole
 from desktop.editor_tab.editor_widget import EditorWidget
 from desktop.widgets import FindWidget
 from desktop.tab import TabBase, TabState
@@ -102,6 +103,8 @@ class EditorTab(TabBase):
         # Start file watching if we have a path
         if self._path:
             self._start_file_watching(self._path)
+
+        self.apply_style()
         self.update_status()
 
     def tool_name(self) -> str:
@@ -567,7 +570,36 @@ class EditorTab(TabBase):
     def apply_style(self) -> None:
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
+        style_manager = StyleManager()
+        self._editor_widget.setMaximumWidth(int(style_manager.nice_tab_width() * style_manager.zoom_factor()))
         self._editor_widget.apply_style()
+
+        new_stylesheet = self._build_stylesheet()
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
+
+    def _build_stylesheet(self) -> str:
+        """Build the stylesheet for this tab."""
+        style_manager = StyleManager()
+        return f"""
+            #EditorWidget {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            {style_manager.get_menu_stylesheet()}
+
+            QPlainTextEdit {{
+                border: none;
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                selection-color: none;
+            }}
+
+            {style_manager.get_scrollbar_stylesheet()}
+
+            QAbstractScrollArea::corner {{
+                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+        """
 
     def preferred_width(self) -> int | None:
         """Return the preferred column width for the editor tab."""

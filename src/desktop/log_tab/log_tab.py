@@ -7,8 +7,8 @@ This tab provides a read-only view of the mindspace message log for viewing syst
 import logging
 from typing import Dict, Any
 
-from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
-from PySide6.QtCore import QObject, QRegularExpression
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtCore import QObject, Qt, QRegularExpression
 
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -17,6 +17,7 @@ from desktop.widgets import FindWidget
 from desktop.log_tab.log_widget import LogWidget
 from desktop.tab import TabBase, TabState
 from desktop.style_manager import StyleManager
+from desktop.color_role import ColorRole
 
 
 class LogTab(TabBase):
@@ -57,12 +58,21 @@ class LogTab(TabBase):
         # Create log widget
         self._log_widget = LogWidget(self)
         self._log_widget.status_updated.connect(self.update_status)
-        layout.addWidget(self._log_widget)
         self._log_widget.update_label.connect(self._on_update_label)
         self._log_widget.has_seen_latest_update_changed.connect(self._on_has_seen_latest_update_changed)
 
+        log_container = QWidget()
+        log_container_layout = QHBoxLayout(log_container)
+        log_container_layout.setContentsMargins(0, 0, 0, 0)
+        log_container_layout.setSpacing(0)
+        log_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self._log_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        log_container_layout.addWidget(self._log_widget)
+        layout.addWidget(log_container)
+
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
+        self.apply_style()
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""
@@ -392,4 +402,77 @@ class LogTab(TabBase):
     def apply_style(self) -> None:
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
+        style_manager = StyleManager()
+        self._log_widget.setMaximumWidth(int(style_manager.nice_tab_width() * style_manager.zoom_factor()))
         self._log_widget.apply_style()
+
+        new_stylesheet = self._build_stylesheet()
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
+
+    def _build_stylesheet(self) -> str:
+        """Build the stylesheet for this tab."""
+        style_manager = StyleManager()
+        border_radius = int(style_manager.message_bubble_spacing())
+        return f"""
+            #LogWidget {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            #LogWidget QWidget {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            #LogWidget #LogMessage {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
+            }}
+            #LogWidget #LogMessage[border="spotlighted"] {{
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)};
+            }}
+
+            #LogWidget #LogMessage #_header {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+
+            #LogWidget #LogMessage #_level_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                margin: 0;
+                padding: 0;
+                border: none;
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
+            #LogWidget #LogMessage #_level_label[log_level="trace"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_TRACE)};
+            }}
+            #LogWidget #LogMessage #_level_label[log_level="info"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_INFORMATION)};
+            }}
+            #LogWidget #LogMessage #_level_label[log_level="warn"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_WARNING)};
+            }}
+            #LogWidget #LogMessage #_level_label[log_level="error"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_ERROR)};
+            }}
+
+            #LogWidget #LogMessage #_text_area {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
+            {style_manager.get_scrollbar_stylesheet("#LogWidget #LogMessage #_text_area QScrollBar")}
+
+            {style_manager.get_scrollbar_stylesheet("#LogWidget QScrollBar")}
+        """

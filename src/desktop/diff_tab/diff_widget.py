@@ -15,7 +15,6 @@ from git import GitCommandError, GitNotFoundError, GitNotRepositoryError, find_r
 
 from syntax import ProgrammingLanguageUtils
 
-from desktop.color_role import ColorRole
 from desktop.style_manager import StyleManager
 from desktop.diff_tab.diff_pane import DiffPane
 from desktop.diff_tab.diff_row import DiffRow, DiffRowType
@@ -54,6 +53,7 @@ class DiffWidget(QWidget):
         self._logger = logging.getLogger("DiffWidget")
         self._path = path
         self._style_manager = StyleManager()
+        self.setObjectName("DiffWidget")
         self._rows: list[DiffRow] = []
         self._syncing = False
         self._cached_hunks: List[Tuple[int, int]] = []
@@ -110,8 +110,6 @@ class DiffWidget(QWidget):
         # (both panes always have the same row count so either would do).
         self._left_pane.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
         self._scrollbar.valueChanged.connect(self._update_active_hunk)
-
-        self.apply_style()
 
         # Find state: flat list of (pane, start, end) tuples across both panes,
         # ordered by row position so navigation feels natural.
@@ -420,35 +418,12 @@ class DiffWidget(QWidget):
         visible_lines = left_pane.viewport().height() // max(1, left_pane.fontMetrics().lineSpacing())
         self._centre_block_before_style = self._scrollbar.value() + visible_lines // 2
 
-        fg = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-        splitter_color = self._style_manager.get_color_str(ColorRole.SPLITTER)
         base_size = self._style_manager.base_font_size()
         zoom = self._style_manager.zoom_factor()
 
         label_font = self.font()
         label_font.setPointSizeF(base_size * zoom)
         self._message_label.setFont(label_font)
-
-        new_stylesheet = f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                color: {fg};
-            }}
-
-            QAbstractScrollArea {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
-            }}
-
-            QLabel {{
-                color: {fg};
-            }}
-            QSplitter::handle {{
-                background-color: {splitter_color};
-            }}
-            {self._style_manager.get_scrollbar_stylesheet()}
-        """
-        if new_stylesheet != self.styleSheet():
-            self.setStyleSheet(new_stylesheet)
 
         self._left_pane.apply_style()
         self._right_pane.apply_style()

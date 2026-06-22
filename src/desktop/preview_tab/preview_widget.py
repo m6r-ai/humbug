@@ -6,7 +6,7 @@ import re
 from typing import Dict, List, Any, Set, Tuple
 
 from PySide6.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QScrollArea, QSizePolicy
+    QWidget, QVBoxLayout, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QTimer
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
@@ -58,6 +58,7 @@ class PreviewWidget(QWidget):
         """
         super().__init__(parent)
         self._logger = logging.getLogger("PreviewWidget")
+        self.setObjectName("PreviewWidget")
         self._path = path
 
         self._preview = PreviewContent(mindspace_manager.mindspace())
@@ -106,16 +107,8 @@ class PreviewWidget(QWidget):
         self._content_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setWidget(self._content_container)
 
-        # Wrap scroll area in a centring container so the scrollbar sits
-        # adjacent to the content rather than at the far right of the column.
-        scroll_container = QWidget()
-        scroll_container.setObjectName("PreviewScrollContainer")
-        scroll_container_layout = QHBoxLayout(scroll_container)
-        scroll_container_layout.setContentsMargins(0, 0, 0, 0)
-        scroll_container_layout.setSpacing(0)
-        scroll_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        scroll_container_layout.addWidget(self._scroll_area)
-        content_layout.addWidget(scroll_container)
+        self._scroll_area.viewport().setAutoFillBackground(True)
+        content_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
         self._search_highlights: Dict[PreviewContentWidget, List[Tuple[int, int, int]]] = {}
@@ -154,7 +147,6 @@ class PreviewWidget(QWidget):
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
-        self.apply_style()
 
         # Find functionality
         self._matches: List[Tuple[PreviewContentWidget, List[Tuple[int, int, int]]]] = []
@@ -665,204 +657,11 @@ class PreviewWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_top()
 
-    def _build_widget_style(self) -> str:
-        """Build styles for the conversation widget."""
-        style_manager = self._style_manager
-
-        return f"""
-            QWidget {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-
-            #PreviewScrollContainer {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
-            }}
-
-            QScrollArea {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            {style_manager.get_scrollbar_stylesheet()}
-        """
-
-    def _build_preview_file_content_style(self) -> str:
-        """Build styles for the PreviewFileContent widget."""
-        style_manager = self._style_manager
-        bubble_spacing = int(style_manager.message_bubble_spacing())
-
-        return f"""
-            #PreviewFileContent {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                margin: 0;
-                border-radius: {bubble_spacing}px;
-                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
-            }}
-
-            #PreviewFileContent #_content_container {{
-                background-color: transparent;
-                margin: 0;
-                padding: 0;
-            }}
-
-            #PreviewFileContent #_header_container {{
-                background-color: transparent;
-                margin: 0;
-                padding: 0;
-            }}
-
-            #PreviewFileContent #_syntax_header {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYNTAX)};
-                background-color: transparent;
-                margin: 0;
-                padding: 0;
-            }}
-
-            #PreviewFileContent #_text_area {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-                background-color: transparent;
-            }}
-
-            {style_manager.get_scrollbar_stylesheet("#PreviewFileContent #_text_area QScrollBar")}
-
-            #PreviewFileContent #_edit_button {{
-                background-color: transparent;
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 0;
-                padding: 0px;
-            }}
-            #PreviewFileContent #_edit_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-            }}
-            #PreviewFileContent #_edit_button:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-            }}
-        """
-
-    def _build_preview_markdown_content_styles(self) -> str:
-        """Build styles for the main container."""
-        style_manager = self._style_manager
-        return f"""
-            QWidget#PreviewMarkdownContent {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            QWidget#PreviewMarkdownContent[contained="true"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-
-            #PreviewMarkdownContent QWidget#_sections_container {{
-                background-color: transparent;
-                border: none;
-                margin: 0;
-                padding: 0;
-            }}
-        """
-
-    def _build_preview_markdown_content_section_styles(self) -> str:
-        """Build styles for language headers within sections."""
-        style_manager = self._style_manager
-        border_radius = int(style_manager.message_bubble_spacing())
-
-        return f"""
-            /* Default section styling */
-            QFrame#PreviewMarkdownContentSection {{
-                margin: 0;
-                border-radius: {border_radius}px;
-                border: 0;
-            }}
-
-            /* Text sections - normal (not contained) */
-            QFrame#PreviewMarkdownContentSection[section_type="text"][contained="false"] {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            /* Text sections - contained */
-            QFrame#PreviewMarkdownContentSection[section_type="text"][contained="true"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-
-            /* Code sections - normal (not contained) */
-            QFrame#PreviewMarkdownContentSection[section_type="code"][contained="false"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
-            }}
-
-            /* Code sections - contained */
-            QFrame#PreviewMarkdownContentSection[section_type="code"][contained="true"] {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
-                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
-            }}
-
-            QFrame#PreviewMarkdownContentSection QLabel {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYNTAX)};
-                background-color: transparent;
-                margin: 0;
-                padding: 0;
-            }}
-
-            /* Text areas within sections */
-            #PreviewMarkdownContentSection QTextEdit {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: transparent;
-                border: none;
-                padding: 0;
-                margin: 0;
-                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-            }}
-
-            /* Header containers within sections */
-            #PreviewMarkdownContentSection QWidget {{
-                background-color: transparent;
-                margin: 0;
-                padding: 0;
-            }}
-
-            {style_manager.get_scrollbar_stylesheet("#PreviewMarkdownContentSection QScrollBar")}
-        """
-
-    def _build_preview_markdown_preview_content_style(self) -> str:
-        """Build styles for the PreviewMarkdownPreviewContent widget."""
-        style_manager = self._style_manager
-        bubble_spacing = int(style_manager.message_bubble_spacing())
-
-        return f"""
-            QFrame#PreviewMarkdownPreviewContent {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                margin: 0;
-                border-radius: {bubble_spacing}px;
-                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER )};
-            }}
-        """
-
     def apply_style(self) -> None:
         """Apply current style settings."""
-        zoom_factor = self._style_manager.zoom_factor()
-        self._scroll_area.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
-
         # Apply style to all content blocks
         for content_block in self._content_blocks:
             content_block.apply_style()
-
-        stylesheet_parts = [
-            self._build_widget_style(),
-            self._build_preview_file_content_style(),
-            self._build_preview_markdown_content_styles(),
-            self._build_preview_markdown_content_section_styles(),
-            self._build_preview_markdown_preview_content_style(),
-        ]
-
-        new_stylesheet = "\n".join(stylesheet_parts)
-
-        # Style sheet changes are very expensive.  Don't do them unless we must.
-        if new_stylesheet != self.styleSheet():
-            self.setStyleSheet(new_stylesheet)
 
     def _show_context_menu(self, pos: QPoint) -> None:
         """

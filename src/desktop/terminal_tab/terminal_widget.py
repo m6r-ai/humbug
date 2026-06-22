@@ -57,10 +57,9 @@ class TerminalWidget(QAbstractScrollArea):
         super().__init__(parent)
         self._logger = logging.getLogger("TerminalWidget")
         self._style_manager = StyleManager()
+        self.setObjectName("TerminalWidget")
         self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
 
-        # Cached stylesheet to avoid redundant setStyleSheet calls
-        self._current_stylesheet: str = ""
 
         self.viewport().setLayoutDirection(Qt.LayoutDirection.LeftToRight)
 
@@ -137,7 +136,6 @@ class TerminalWidget(QAbstractScrollArea):
         # Initialize size and connect signals
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_terminal_context_menu)
-        self.apply_style()
 
         # Find functionality attributes
         self._matches: List[TerminalMatch] = []
@@ -222,29 +220,6 @@ class TerminalWidget(QAbstractScrollArea):
         # unnecessary work.
         self.setFont(font)
         self.viewport().setFont(font)
-
-        new_stylesheet = f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            QAbstractScrollArea {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-            QAbstractScrollArea::viewport {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-            QAbstractScrollArea::corner {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-
-            {self._style_manager.get_scrollbar_stylesheet()}
-        """
-        if new_stylesheet != self._current_stylesheet:
-            self._current_stylesheet = new_stylesheet
-            self.setStyleSheet(new_stylesheet)
 
         # Force redraw with new colors
         self.viewport().update()

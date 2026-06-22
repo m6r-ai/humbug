@@ -4,14 +4,13 @@ import logging
 from typing import Dict, List, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QScrollArea, QSizePolicy
+    QWidget, QVBoxLayout, QScrollArea, QSizePolicy
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
 from mindspace.mindspace_message import MindspaceMessage
 
-from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
@@ -46,6 +45,7 @@ class LogWidget(QWidget):
         """
         super().__init__(parent)
         self._logger = logging.getLogger("LogWidget")
+        self.setObjectName("LogWidget")
 
         self._mindspace_manager = MindspaceManager()
         self._mindspace_manager.interactions_updated.connect(self.load_messages)
@@ -87,16 +87,8 @@ class LogWidget(QWidget):
         self._messages_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setWidget(self._messages_container)
 
-        # Wrap scroll area in a centring container so the scrollbar sits
-        # adjacent to the content rather than at the far right of the column.
-        scroll_container = QWidget()
-        scroll_container.setObjectName("LogScrollContainer")
-        scroll_container_layout = QHBoxLayout(scroll_container)
-        scroll_container_layout.setContentsMargins(0, 0, 0, 0)
-        scroll_container_layout.setSpacing(0)
-        scroll_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        scroll_container_layout.addWidget(self._scroll_area)
-        log_layout.addWidget(scroll_container)
+        self._scroll_area.viewport().setAutoFillBackground(True)
+        log_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
         self._search_highlights: Dict[LogMessage, List[Tuple[int, int]]] = {}
@@ -136,7 +128,6 @@ class LogWidget(QWidget):
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
-        self.apply_style()
 
         # Find functionality
         self._matches: List[Tuple[LogMessage, List[Tuple[int, int]]]] = []
@@ -613,88 +604,9 @@ class LogWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
-    def _build_widget_style(self) -> str:
-        """Build styles for the log widget."""
-
-        return f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            #LogScrollContainer {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
-            }}
-
-            QScrollArea {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            {self._style_manager.get_scrollbar_stylesheet()}
-        """
-
-    def _build_log_message_styles(self) -> str:
-        """Build styles for the main message frame."""
-        style_manager = self._style_manager
-        border_radius = int(style_manager.message_bubble_spacing())
-
-        return f"""
-            #LogMessage {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                margin: 0;
-                border-radius: {border_radius}px;
-                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
-            }}
-            #LogMessage[border="spotlighted"] {{
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)};
-            }}
-
-            #LogMessage #_header {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-            }}
-
-            #LogMessage #_level_label {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                margin: 0;
-                padding: 0;
-                border: none;
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-
-            #LogMessage #_level_label[log_level="trace"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_TRACE)};
-            }}
-            #LogMessage #_level_label[log_level="info"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_INFORMATION)};
-            }}
-            #LogMessage #_level_label[log_level="warn"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_WARNING)};
-            }}
-            #LogMessage #_level_label[log_level="error"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_ERROR)};
-            }}
-
-            #LogMessage #_text_area {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-
-            {style_manager.get_scrollbar_stylesheet("#LogMessage #_text_area QScrollBar")}
-        """
-
     def apply_style(self) -> None:
         """Apply the current style to this widget."""
         zoom_factor = self._style_manager.zoom_factor()
-        self._scroll_area.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
-
         font = self.font()
         base_font_size = self._style_manager.base_font_size()
         font.setPointSizeF(base_font_size * zoom_factor)
@@ -702,15 +614,6 @@ class LogWidget(QWidget):
 
         for message in self._messages:
             message.apply_style()
-
-        new_stylesheet = "\n".join([
-            self._build_widget_style(),
-            self._build_log_message_styles()
-        ])
-
-        # Style sheet changes are very expensive.  Don't do them unless we must.
-        if new_stylesheet != self.styleSheet():
-            self.setStyleSheet(new_stylesheet)
 
     def _show_log_context_menu(self, pos: QPoint) -> None:
         """

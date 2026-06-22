@@ -17,6 +17,8 @@ from terminal_context.terminal_context import TerminalContext
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
+from desktop.style_manager import StyleManager
+from desktop.color_role import ColorRole
 from desktop.widgets import FindWidget
 from desktop.tab import TabBase, TabState
 from desktop.terminal_tab.terminal_status import TerminalStatusInfo
@@ -165,6 +167,7 @@ class TerminalTab(TabBase):
         # Start local shell process
         if start_process:
             self._create_tracked_task(self._start_process())
+        self.apply_style()
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""
@@ -731,3 +734,26 @@ class TerminalTab(TabBase):
             self._terminal_widget.setMaximumWidth(pixel_width + 1)
         else:
             self._terminal_widget.setMaximumWidth(16777215)  # QWIDGETSIZE_MAX
+
+        new_stylesheet = self._build_stylesheet()
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
+
+    def _build_stylesheet(self) -> str:
+        """Build the stylesheet for this tab."""
+        style_manager = StyleManager()
+        return f"""
+            #TerminalWidget {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+            #TerminalWidget::viewport {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+            #TerminalWidget::corner {{
+                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+
+            {style_manager.get_scrollbar_stylesheet("#TerminalWidget QScrollBar")}
+        """

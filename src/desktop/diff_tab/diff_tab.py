@@ -16,6 +16,7 @@ from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.status_message import StatusMessage
 from desktop.tab import TabBase, TabState
 from desktop.style_manager import StyleManager
+from desktop.color_role import ColorRole
 from desktop.widgets import FindWidget
 
 
@@ -66,6 +67,7 @@ class DiffTab(TabBase):
         self._vcs_poller.status_changed.connect(self._on_vcs_status_changed)
 
         self.update_status()
+        self.apply_style()
 
     def _open_in_editor(self, line: int, column: int) -> None:
         """Open this tab's file in an editor tab, navigating to the given line and column."""
@@ -372,3 +374,37 @@ class DiffTab(TabBase):
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
         self._diff_widget.apply_style()
+
+        new_stylesheet = self._build_stylesheet()
+        if new_stylesheet != self.styleSheet():
+            self.setStyleSheet(new_stylesheet)
+
+    def _build_stylesheet(self) -> str:
+        """Build the stylesheet for this tab."""
+        style_manager = StyleManager()
+        fg = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        return f"""
+            #DiffWidget {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                color: {fg};
+            }}
+
+            #DiffWidget QLabel {{
+                color: {fg};
+            }}
+
+            #DiffWidget QSplitter::handle {{
+                background-color: {style_manager.get_color_str(ColorRole.SPLITTER)};
+            }}
+
+            #DiffWidget #DiffPane {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                color: {fg};
+                border: none;
+                padding: 0px;
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                selection-color: none;
+            }}
+
+            {style_manager.get_scrollbar_stylesheet("#DiffWidget QScrollBar")}
+        """
