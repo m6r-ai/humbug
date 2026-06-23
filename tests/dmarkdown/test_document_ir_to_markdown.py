@@ -150,6 +150,48 @@ class TestInlineFormattingCombinations:
 
 
 # ---------------------------------------------------------------------------
+# Adjacent span coalescing
+# ---------------------------------------------------------------------------
+
+class TestAdjacentSpanCoalescing:
+    def test_adjacent_bold_spans_coalesced(self):
+        result = _md(_doc(_para(_span("Hello", bold=True), _span(" World", bold=True))))
+        assert result == "**Hello World**\n"
+
+    def test_adjacent_italic_spans_coalesced(self):
+        result = _md(_doc(_para(_span("Hello", italic=True), _span(" World", italic=True))))
+        assert result == "*Hello World*\n"
+
+    def test_adjacent_plain_spans_coalesced(self):
+        result = _md(_doc(_para(_span("Hello"), _span(" World"))))
+        assert result == "Hello World\n"
+
+    def test_adjacent_bold_mid_word_coalesced(self):
+        result = _md(_doc(_para(_span("R", bold=True), _span("edemption", bold=True))))
+        assert result == "**Redemption**\n"
+
+    def test_different_formatting_not_coalesced(self):
+        result = _md(_doc(_para(_span("Hello", bold=True), _span(" World", italic=True))))
+        assert result == "**Hello*** World*\n"
+
+    def test_non_span_node_breaks_coalescing(self):
+        para = DocumentIRParagraphNode()
+        para.add_child(_span("Before", bold=True))
+        para.add_child(DocumentIRLineBreakNode())
+        para.add_child(_span("After", bold=True))
+        result = _md(_doc(para))
+        assert result == "**Before**  \n**After**\n"
+
+    def test_three_adjacent_bold_spans_coalesced(self):
+        result = _md(_doc(_para(
+            _span("Launch Phase", bold=True),
+            _span(":", bold=True),
+            _span(" 2", bold=True),
+        )))
+        assert result == "**Launch Phase: 2**\n"
+
+
+# ---------------------------------------------------------------------------
 # Markdown escaping
 # ---------------------------------------------------------------------------
 

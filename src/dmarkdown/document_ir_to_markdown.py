@@ -382,12 +382,47 @@ class _DocumentIRToMarkdownSerialiser:
         return "| " + " | ".join(padded) + " |"
 
     def _serialise_inline_children(self, children: Sequence[DocumentIRNode]) -> str:
-        """Serialise a list of inline nodes to a Markdown string."""
-        parts: List[str] = []
-        for child in children:
-            parts.append(self._serialise_inline(child))
+        """Serialise a list of inline nodes to a Markdown string.
 
-        return "".join(parts)
+        Adjacent DocumentIRTextSpanNodes with identical formatting are coalesced
+        into a single span before serialisation.  This prevents artefacts such as
+        **word1****word2** that arise when the source document (e.g. a DOCX) splits
+        a single logical bold run across multiple physical runs.
+        """
+        coalesced: List[DocumentIRNode] = []
+        for child in children:
+            if (
+                coalesced
+                and isinstance(child, DocumentIRTextSpanNode)
+                and isinstance(coalesced[-1], DocumentIRTextSpanNode)
+                and self._spans_match(coalesced[-1], child)
+            ):
+                prev = coalesced[-1]
+                coalesced[-1] = DocumentIRTextSpanNode(
+                    content=prev.content + child.content,
+                    bold=prev.bold,
+                    italic=prev.italic,
+                    strikethrough=prev.strikethrough,
+                    code=prev.code,
+                    superscript=prev.superscript,
+                    subscript=prev.subscript,
+                )
+            else:
+                coalesced.append(child)
+
+        return "".join(self._serialise_inline(child) for child in coalesced)
+
+    @staticmethod
+    def _spans_match(a: DocumentIRTextSpanNode, b: DocumentIRTextSpanNode) -> bool:
+        """Return True if two text spans have identical formatting flags."""
+        return (
+            a.bold == b.bold
+            and a.italic == b.italic
+            and a.strikethrough == b.strikethrough
+            and a.code == b.code
+            and a.superscript == b.superscript
+            and a.subscript == b.subscript
+        )
 
     def _serialise_inline(self, node: DocumentIRNode) -> str:
         """Serialise a single inline node."""
