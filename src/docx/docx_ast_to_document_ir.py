@@ -340,15 +340,19 @@ class _DocxToDocumentIRMapper:
 
             if isinstance(node, DocxASTParagraphNode):
                 num_pr = self._get_num_pr(node)
-                if num_pr is not None:
+                if num_pr is not None and not self._para_is_heading(node):
                     # Start of a list — consume all consecutive list paragraphs
                     list_paras: List[DocxASTParagraphNode] = []
-                    while i < len(nodes) and isinstance(nodes[i], DocxASTParagraphNode):
-                        np = self._get_num_pr(nodes[i])  # type: ignore[arg-type]
-                        if np is None:
+                    while i < len(nodes):
+                        next_node = nodes[i]
+                        if not isinstance(next_node, DocxASTParagraphNode):
                             break
 
-                        list_paras.append(nodes[i])  # type: ignore[arg-type]
+                        np = self._get_num_pr(next_node)
+                        if np is None or self._para_is_heading(next_node):
+                            break
+
+                        list_paras.append(next_node)
                         i += 1
 
                     list_node = self._build_list_tree(list_paras)
@@ -362,7 +366,11 @@ class _DocxToDocumentIRMapper:
                     target.add_child(mapped)
 
             elif isinstance(node, DocxASTTableNode):
-                target.add_child(self._map_table(node))
+                if self._is_single_cell_table(node):
+                    self._unwrap_single_cell_table(node, target)
+
+                else:
+                    target.add_child(self._map_table(node))
 
             # Section properties and other nodes are silently skipped
             i += 1
@@ -382,6 +390,26 @@ class _DocxToDocumentIRMapper:
             (c for c in ppr.children if isinstance(c, DocxASTNumberingPropertiesNode)),
             None,
         )
+
+    def _para_is_heading(self, para: DocxASTParagraphNode) -> bool:
+        """Return True if the paragraph resolves to a heading via style or outline level.
+
+        Used to prevent numbered heading paragraphs from being consumed as list
+        items: Word documents commonly attach auto-numbering to heading styles,
+        but the semantic intent is a heading, not a list.
+        """
+        ppr = next(
+            (c for c in para.children if isinstance(c, DocxASTParagraphPropertiesNode)),
+            None,
+        )
+        if ppr is None:
+            return False
+
+        resolved = self._get_style(ppr.style_id)
+        if resolved and resolved.heading_level is not None:
+            return True
+
+        return ppr.outline_level is not None
 
     def _build_list_tree(
         self, paras: List[DocxASTParagraphNode]
@@ -642,6 +670,36 @@ class _DocxToDocumentIRMapper:
 
         return None
 
+    def _is_single_cell_table(self, table: DocxASTTableNode) -> bool:
+        """Return True if the table has exactly one row containing exactly one cell."""
+        rows = [c for c in table.children if isinstance(c, DocxASTTableRowNode)]
+        if len(rows) != 1:
+            return False
+
+        cells = [c for c in rows[0].children if isinstance(c, DocxASTTableCellNode)]
+        return len(cells) == 1
+
+    def _unwrap_single_cell_table(
+        self, table: DocxASTTableNode, target: DocumentIRNode
+    ) -> None:
+        """Emit the content of a 1×1 table's cell directly into target.
+
+        A single-cell table is a Word layout artefact (used for image frames,
+        text boxes, callouts, etc.) with no semantic table meaning.  Rather
+        than emitting a pointless one-cell Markdown/HTML table we discard the
+        table wrapper and let the cell's block content flow into the surrounding
+        document as normal block-level nodes.
+        """
+        rows = [c for c in table.children if isinstance(c, DocxASTTableRowNode)]
+        cells = [c for c in rows[0].children if isinstance(c, DocxASTTableCellNode)]
+        cell = cells[0]
+
+        block_nodes: List[DocxASTNode] = [
+            c for c in cell.children
+            if isinstance(c, (DocxASTParagraphNode, DocxASTTableNode))
+        ]
+        self._map_block_sequence(block_nodes, target)
+
     def _map_table(self, table: DocxASTTableNode) -> DocumentIRTableNode:
         """Map a DOCX table to a DocumentIRTableNode.
 
@@ -733,7 +791,11 @@ class _DocxToDocumentIRMapper:
                     ir_cell.add_child(mapped)
 
             elif isinstance(child, DocxASTTableNode):
-                ir_cell.add_child(self._map_table(child))
+                if self._is_single_cell_table(child):
+                    self._unwrap_single_cell_table(child, ir_cell)
+
+                else:
+                    ir_cell.add_child(self._map_table(child))
 
         return ir_cell
 

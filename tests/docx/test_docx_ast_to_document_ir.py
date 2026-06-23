@@ -571,6 +571,48 @@ class TestOrderedListGrouping:
 
 
 # ---------------------------------------------------------------------------
+# Numbered headings
+# ---------------------------------------------------------------------------
+
+class TestNumberedHeadings:
+    def test_heading_with_numpr_is_not_a_list(self):
+        styles = _styles_node(_style("heading1", "heading 1", outline_level=0))
+        numbering = _numbering_node(num_id="1", num_fmt="decimal")
+        result = _map(_doc(styles, numbering, _body(
+            _para("Introduction", style_id="heading1", num_id="1", ilvl=0),
+        )))
+        assert isinstance(result.children[0], DocumentIRHeadingNode)
+
+    def test_heading_with_numpr_correct_level(self):
+        styles = _styles_node(_style("heading1", "heading 1", outline_level=0))
+        numbering = _numbering_node(num_id="1", num_fmt="decimal")
+        result = _map(_doc(styles, numbering, _body(
+            _para("Introduction", style_id="heading1", num_id="1", ilvl=0),
+        )))
+        assert result.children[0].level == 1
+
+    def test_heading_with_numpr_correct_text(self):
+        styles = _styles_node(_style("heading1", "heading 1", outline_level=0))
+        numbering = _numbering_node(num_id="1", num_fmt="decimal")
+        result = _map(_doc(styles, numbering, _body(
+            _para("Introduction", style_id="heading1", num_id="1", ilvl=0),
+        )))
+        assert result.children[0].children[0].content == "Introduction"
+
+    def test_heading_does_not_break_adjacent_list(self):
+        styles = _styles_node(_style("heading1", "heading 1", outline_level=0))
+        numbering = _numbering_node(num_id="1", num_fmt="decimal")
+        result = _map(_doc(styles, numbering, _body(
+            _para("Section", style_id="heading1", num_id="1", ilvl=0),
+            _para("Item one", num_id="1", ilvl=0),
+            _para("Item two", num_id="1", ilvl=0),
+        )))
+        assert isinstance(result.children[0], DocumentIRHeadingNode)
+        assert isinstance(result.children[1], DocumentIROrderedListNode)
+        assert len(result.children[1].children) == 2
+
+
+# ---------------------------------------------------------------------------
 # Table mapping
 # ---------------------------------------------------------------------------
 
@@ -634,7 +676,7 @@ class TestTableMapping:
         assert len(row.children) == 3
 
     def test_cell_text(self):
-        result = _map(_doc(_body(_simple_table([["Hello"]]))))
+        result = _map(_doc(_body(_simple_table([["Hello", "World"]]))))
         table = result.children[0]
         body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
         cell = body.children[0].children[0]
@@ -643,7 +685,7 @@ class TestTableMapping:
         assert para.children[0].content == "Hello"
 
     def test_table_row_node(self):
-        result = _map(_doc(_body(_simple_table([["A"]]))))
+        result = _map(_doc(_body(_simple_table([["A", "B"]]))))
         table = result.children[0]
         body = next(c for c in table.children if isinstance(c, DocumentIRTableBodyNode))
         assert isinstance(body.children[0], DocumentIRTableRowNode)
@@ -652,6 +694,7 @@ class TestTableMapping:
         table = DocxASTTableNode()
         row = DocxASTTableRowNode()
         cell = DocxASTTableCellNode()
+        extra_cell = DocxASTTableCellNode()
         para = DocxASTParagraphNode()
         ppr = DocxASTParagraphPropertiesNode(justification="center")
         para.add_child(ppr)
@@ -659,7 +702,13 @@ class TestTableMapping:
         run.add_child(DocxASTTextNode("Centered"))
         para.add_child(run)
         cell.add_child(para)
+        extra_para = DocxASTParagraphNode()
+        extra_run = DocxASTRunNode()
+        extra_run.add_child(DocxASTTextNode("Other"))
+        extra_para.add_child(extra_run)
+        extra_cell.add_child(extra_para)
         row.add_child(cell)
+        row.add_child(extra_cell)
         table.add_child(row)
 
         result = _map(_doc(_body(table)))
@@ -676,6 +725,38 @@ class TestTableMapping:
         assert len(headers) == 0
         assert len(bodies) == 1
         assert len(bodies[0].children) == 2
+
+    def test_single_cell_table_with_text_is_unwrapped(self):
+        result = _map(_doc(_body(_simple_table([["Hello"]]))))
+        assert len(result.children) == 1
+        assert isinstance(result.children[0], DocumentIRParagraphNode)
+        assert result.children[0].children[0].content == "Hello"
+
+    def test_single_cell_table_with_image_is_unwrapped(self):
+        table = DocxASTTableNode()
+        row = DocxASTTableRowNode()
+        cell = DocxASTTableCellNode()
+        para = DocxASTParagraphNode()
+        run = DocxASTRunNode()
+        drawing = DocxASTDrawingNode(
+            relationship_id="rId1",
+            resolved_path=None,
+            description="logo",
+            width_emu=None,
+            height_emu=None,
+            image_data=None,
+        )
+        run.add_child(drawing)
+        para.add_child(run)
+        cell.add_child(para)
+        row.add_child(cell)
+        table.add_child(row)
+        result = _map(_doc(_body(table)))
+        assert len(result.children) == 0
+
+    def test_single_cell_table_two_rows_is_not_unwrapped(self):
+        result = _map(_doc(_body(_simple_table([["A"], ["B"]]))))
+        assert isinstance(result.children[0], DocumentIRTableNode)
 
 
 # ---------------------------------------------------------------------------
