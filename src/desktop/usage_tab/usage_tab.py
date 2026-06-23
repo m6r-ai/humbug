@@ -225,68 +225,32 @@ class UsageTab(TabBase):
                 background: transparent;
             }}
 
-            #UsageWidget QFrame#UsageProviderCard {{
+            #UsageWidget QFrame#UsageDetailCard {{
                 background-color: {msg_bg};
                 border: 1px solid {sep};
                 border-radius: {border_radius}px;
             }}
-            #UsageWidget QFrame#UsageProviderCard QWidget,
-            #UsageWidget QFrame#UsageProviderCard QLabel {{
+            #UsageWidget QFrame#UsageDetailCard QWidget,
+            #UsageWidget QFrame#UsageDetailCard QLabel {{
                 background: transparent;
             }}
-            #UsageWidget QLabel#UsageProviderName {{
+
+            #UsageWidget QWidget#UsageDetailHeader {{
+                background: transparent;
+            }}
+            #UsageWidget QLabel#UsageDetailProviderName {{
                 color: {dim};
                 font-size: {round(fs * 0.9)}pt;
                 font-weight: bold;
                 letter-spacing: 0;
+                background: transparent;
             }}
-            #UsageWidget QLabel#UsageProviderTokens {{
-                color: {text};
-                font-size: {round(fs * 1.18)}pt;
-                font-weight: bold;
-                font-family: "{mono}";
-            }}
-            #UsageWidget QLabel#UsageProviderDetail {{
+            #UsageWidget QLabel#UsageDetailProviderSub {{
                 color: {dim};
                 font-size: {round(fs * 0.85)}pt;
-            }}
-
-            #UsageWidget QFrame#UsageTableCard {{
-                background-color: {msg_bg};
-                border: 1px solid {sep};
-                border-radius: {border_radius}px;
-            }}
-            #UsageWidget QFrame#UsageTableCard QWidget,
-            #UsageWidget QFrame#UsageTableCard QLabel {{
                 background: transparent;
             }}
 
-            #UsageWidget QWidget#UsageTableHeader {{
-                background: transparent;
-            }}
-            #UsageWidget QLabel#UsageTableHeaderCell {{
-                color: {dim};
-                font-size: {round(fs * 0.9)}pt;
-                font-weight: bold;
-                letter-spacing: 0;
-                background: transparent;
-            }}
-
-            #UsageWidget QLabel#UsageProviderLabel {{
-                color: {dim};
-                font-size: {round(fs * 0.9)}pt;
-                font-weight: bold;
-                letter-spacing: 0;
-                background: transparent;
-            }}
-
-            #UsageWidget QWidget#UsageModelRow {{
-                background: transparent;
-                border-radius: {border_radius}px;
-            }}
-            #UsageWidget QWidget#UsageModelRow:hover {{
-                background-color: {hover};
-            }}
             #UsageWidget QLabel#UsageModelName {{
                 color: {text};
                 font-size: {round(fs)}pt;
@@ -304,40 +268,6 @@ class UsageTab(TabBase):
                 font-size: {round(fs * 0.85)}pt;
                 font-family: "{mono}";
                 background: transparent;
-            }}
-
-            #UsageWidget QWidget#UsagePager {{
-                background: transparent;
-            }}
-            #UsageWidget QLabel#UsagePagerLabel,
-            #UsageWidget QLabel#UsagePagerPage {{
-                color: {dim};
-                font-size: {round(fs * 0.85)}pt;
-                background: transparent;
-            }}
-            #UsageWidget QLabel#UsagePagerPage {{
-                min-width: {round(86 * zoom)}px;
-            }}
-            #UsageWidget QPushButton#UsagePagerButton {{
-                background: transparent;
-                color: {dim};
-                border: 1px solid {border};
-                border-radius: {border_radius}px;
-                padding: {round(5 * zoom)}px {round(12 * zoom)}px;
-                font-size: {round(fs * 0.85)}pt;
-                font-weight: 500;
-            }}
-            #UsageWidget QPushButton#UsagePagerButton:hover {{
-                background-color: {hover};
-                color: {text};
-                border-color: {dim};
-            }}
-            #UsageWidget QPushButton#UsagePagerButton:pressed {{
-                background-color: {hover};
-            }}
-            #UsageWidget QPushButton#UsagePagerButton:disabled {{
-                color: {dim};
-                border-color: {sep};
             }}
 
             #UsageWidget QFrame#UsageRowSep {{

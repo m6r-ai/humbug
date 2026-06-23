@@ -21,11 +21,13 @@ New features:
 - Replaced MiniMax M2.5 with MiniMax M3 on Ollama.com.
 - Added Kimi K2.7 Code on Ollama.com.
 - Added GLM 5.2 on Z.ai and Ollama.com.
+- Added Gemini 3.5 Flash.
 - Added support for animated GIF files in markdown.
 - When converting from `.docx` files, images are now extracted into a sidecar directory.  When converting to `.docx` files
   images are now inserted.
 - Conversation message banners are now "sticky" at the top of the conversation tab when scrolling.  This provides context
   on the conversation you're viewing.
+- Added cache usage tracking on API commands.
 - Added a new "token usage" tab to keep track of token usage within the mindspace.
 - Colour theme changes in the menu are now persistent.
 

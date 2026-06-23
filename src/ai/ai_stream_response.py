@@ -85,7 +85,7 @@ class AIStreamResponse(ABC):
             completion_tokens: Number of tokens in the completion
             total_tokens: Total number of tokens used
             cache_write_tokens: Tokens written to provider cache (Anthropic only)
-            cache_read_tokens: Tokens read from provider cache (Anthropic only)
+            cache_read_tokens: Tokens read from provider cache
         """
         self.usage = AIUsage(
             prompt_tokens=prompt_tokens,

@@ -23,8 +23,6 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
 from mindspace.mindspace_usage import ModelUsageEntry
 
-_PAGE_SIZE = 5
-
 
 def _fmt(n: int) -> str:
     if n >= 1_000_000:
@@ -53,8 +51,6 @@ class UsageWidget(QWidget):
         self._mindspace_manager = MindspaceManager()
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
-        self._provider_page = 0
-        self._model_page = 0
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -183,26 +179,11 @@ class UsageWidget(QWidget):
         for e in entries:
             by_provider[e.provider].append(e)
 
-        provider_count = len(by_provider)
-        model_count = len(entries)
-        self._provider_page = self._clamped_page(self._provider_page, provider_count)
-        self._model_page = self._clamped_page(self._model_page, model_count)
-
-        cl.addWidget(self._section_label("By provider"))
+        cl.addWidget(self._section_label("Details"))
         cl.addSpacing(int(self._style_manager.message_bubble_spacing()))
-        cl.addWidget(self._provider_grid(by_provider))
-        if provider_count > _PAGE_SIZE:
-            cl.addSpacing(int(self._style_manager.message_bubble_spacing()))
-            cl.addWidget(self._pagination_row("providers", self._provider_page, provider_count))
-
-        cl.addSpacing(int(self._style_manager.message_bubble_spacing()) * 2)
-
-        cl.addWidget(self._section_label("Model detail"))
-        cl.addSpacing(int(self._style_manager.message_bubble_spacing()))
-        cl.addWidget(self._model_table(by_provider, color_map, model_colors, max(total_in + total_out, 1)))
-        if model_count > _PAGE_SIZE:
-            cl.addSpacing(int(self._style_manager.message_bubble_spacing()))
-            cl.addWidget(self._pagination_row("models", self._model_page, model_count))
+        cl.addWidget(self._details_section(
+            by_provider, color_map, model_colors, max(total_in + total_out, 1),
+        ))
 
         self._reset_btn.setEnabled(self._mindspace_manager.has_mindspace())
 
@@ -246,7 +227,7 @@ class UsageWidget(QWidget):
         pv.addWidget(tok_val)
 
         tok_sub = QLabel(
-            f"in {_fmt(total_in)} / out {_fmt(total_out)}  ·  "
+            f"in {_fmt(total_in)} / out {_fmt(total_out)}  \u00b7  "
             f"{_count_label(provider_count, 'provider', 'providers')} / "
             f"{_count_label(model_count, 'model', 'models')}"
         )
@@ -283,24 +264,6 @@ class UsageWidget(QWidget):
 
         return card
 
-    def _provider_grid(self, by_provider: dict[str, list[ModelUsageEntry]]) -> QWidget:
-        widget = QWidget()
-        widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        grid = QGridLayout(widget)
-        grid.setContentsMargins(0, 0, 0, 0)
-        grid.setSpacing(int(self._style_manager.message_bubble_spacing()))
-        cols = 2
-        for c in range(cols):
-            grid.setColumnStretch(c, 1)
-
-        providers = self._sorted_providers(by_provider)
-        page_providers = providers[self._provider_page * _PAGE_SIZE:(self._provider_page + 1) * _PAGE_SIZE]
-        for idx, (provider, entries) in enumerate(page_providers):
-            r, c = divmod(idx, cols)
-            grid.addWidget(self._provider_card(provider, entries), r, c)
-
-        return widget
-
     def _sorted_providers(
         self,
         by_provider: dict[str, list[ModelUsageEntry]],
@@ -311,121 +274,83 @@ class UsageWidget(QWidget):
             reverse=True,
         )
 
-    def _provider_card(self, provider: str, entries: list[ModelUsageEntry]) -> QFrame:
-        card = QFrame()
-        card.setObjectName("UsageProviderCard")
-        card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-
-        tokens = sum(e.input_tokens + e.output_tokens for e in entries)
-
-        s = int(self._style_manager.message_bubble_spacing())
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(s, s, s, s)
-        layout.setSpacing(s)
-
-        top = QWidget()
-        top.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        hl = QHBoxLayout(top)
-        hl.setContentsMargins(0, 0, 0, 0)
-        hl.setSpacing(s)
-
-        name = QLabel(provider.upper())
-        name.setObjectName("UsageProviderName")
-        hl.addWidget(name)
-        hl.addStretch()
-
-        token_total = QLabel(_fmt(tokens))
-        token_total.setObjectName("UsageProviderTokens")
-        hl.addWidget(token_total)
-        layout.addWidget(top)
-
-        detail = QLabel(f"tokens across {_count_label(len(entries), 'model', 'models')}")
-        detail.setObjectName("UsageProviderDetail")
-        layout.addWidget(detail)
-
-        return card
-
-    def _model_table(
+    def _details_section(
         self,
         by_provider: dict[str, list[ModelUsageEntry]],
         color_map: dict[str, str],
         model_colors: list[str],
         total_tokens: int,
-    ) -> QFrame:
-        table = QFrame()
-        table.setObjectName("UsageTableCard")
-        table.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+    ) -> QWidget:
+        container = QWidget()
+        container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        cl = QVBoxLayout(container)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(int(self._style_manager.message_bubble_spacing()))
 
-        vl = QVBoxLayout(table)
+        for provider, models in self._sorted_providers(by_provider):
+            cl.addWidget(self._provider_detail_card(
+                provider, models, color_map, model_colors, total_tokens,
+            ))
+
+        return container
+
+    def _provider_detail_card(
+        self,
+        provider: str,
+        entries: list[ModelUsageEntry],
+        color_map: dict[str, str],
+        model_colors: list[str],
+        total_tokens: int,
+    ) -> QFrame:
+        card = QFrame()
+        card.setObjectName("UsageDetailCard")
+        card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+        s = int(self._style_manager.message_bubble_spacing())
+        vl = QVBoxLayout(card)
         vl.setContentsMargins(0, 0, 0, 0)
         vl.setSpacing(0)
 
-        vl.addWidget(self._table_header())
+        header = QWidget()
+        header.setObjectName("UsageDetailHeader")
+        header.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        hl = QHBoxLayout(header)
+        hl.setContentsMargins(s, s, s, s)
+        hl.setSpacing(s)
+
+        tokens = sum(e.input_tokens + e.output_tokens for e in entries)
+        name = QLabel(provider.upper())
+        name.setObjectName("UsageDetailProviderName")
+        hl.addWidget(name)
+
+        sub = QLabel(
+            f"{_fmt(tokens)} tokens \u00b7 {_count_label(len(entries), 'model', 'models')}"
+        )
+        sub.setObjectName("UsageDetailProviderSub")
+        hl.addWidget(sub)
+        hl.addStretch()
+
+        vl.addWidget(header)
         vl.addWidget(self._row_separator())
 
-        visible_entries = self._paginated_models(by_provider)
-        visible_by_provider: dict[str, list[ModelUsageEntry]] = defaultdict(list)
-        for entry in visible_entries:
-            visible_by_provider[entry.provider].append(entry)
+        sorted_models = sorted(
+            entries,
+            key=lambda e: e.input_tokens + e.output_tokens,
+            reverse=True,
+        )
+        for m_idx, entry in enumerate(sorted_models):
+            key = f"{entry.provider}/{entry.model}"
+            color = color_map.get(key, model_colors[0])
+            vl.addWidget(self._model_row(entry, color, total_tokens))
+            if m_idx < len(sorted_models) - 1:
+                vl.addWidget(self._row_separator(indent=s))
 
-        providers = self._sorted_providers(visible_by_provider)
-        s = int(self._style_manager.message_bubble_spacing())
-        for p_idx, (provider, models) in enumerate(providers):
-            ph = QWidget()
-            ph_hl = QHBoxLayout(ph)
-            ph_hl.setContentsMargins(s, s, s, s // 2)
-            provider_lbl = QLabel(provider.upper())
-            provider_lbl.setObjectName("UsageProviderLabel")
-            ph_hl.addWidget(provider_lbl)
-            ph_hl.addStretch()
-            vl.addWidget(ph)
-
-            for m_idx, entry in enumerate(models):
-                key = f"{entry.provider}/{entry.model}"
-                color = color_map.get(key, model_colors[0])
-                vl.addWidget(self._model_row(entry, color, total_tokens))
-                if m_idx < len(models) - 1:
-                    vl.addWidget(self._row_separator(indent=s))
-
-            if p_idx < len(providers) - 1:
-                vl.addWidget(self._row_separator())
-
-        return table
-
-    def _paginated_models(
-        self,
-        by_provider: dict[str, list[ModelUsageEntry]],
-    ) -> list[ModelUsageEntry]:
-        entries = [
-            entry
-            for _, models in self._sorted_providers(by_provider)
-            for entry in sorted(models, key=lambda e: e.input_tokens + e.output_tokens, reverse=True)
-        ]
-        start = self._model_page * _PAGE_SIZE
-        return entries[start:start + _PAGE_SIZE]
-
-    def _table_header(self) -> QWidget:
-        row = QWidget()
-        row.setObjectName("UsageTableHeader")
-        hl = QHBoxLayout(row)
-        s = int(self._style_manager.message_bubble_spacing())
-        hl.setContentsMargins(s, s, s, s)
-        hl.setSpacing(0)
-
-        def _h(text: str, align: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft) -> QLabel:
-            lbl = QLabel(text)
-            lbl.setObjectName("UsageTableHeaderCell")
-            lbl.setAlignment(align)
-            return lbl
-
-        hl.addWidget(_h("Model"), stretch=3)
-        hl.addWidget(_h("Tokens", Qt.AlignmentFlag.AlignRight), stretch=2)
-        return row
+        return card
 
     def _model_row(self, entry: ModelUsageEntry, color: str, total_tokens: int) -> QWidget:
         row = QWidget()
         row.setObjectName("UsageModelRow")
-        row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
 
         s = int(self._style_manager.message_bubble_spacing())
         vl = QVBoxLayout(row)
@@ -483,53 +408,6 @@ class UsageWidget(QWidget):
 
         return row
 
-    def _pagination_row(self, item_name: str, page: int, item_count: int) -> QWidget:
-        row = QWidget()
-        row.setObjectName("UsagePager")
-        row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(int(self._style_manager.message_bubble_spacing()))
-
-        page_count = self._page_count(item_count)
-        start = page * _PAGE_SIZE + 1
-        end = min((page + 1) * _PAGE_SIZE, item_count)
-
-        label = QLabel(f"{start}-{end} of {item_count} {item_name}")
-        label.setObjectName("UsagePagerLabel")
-        layout.addWidget(label)
-        layout.addStretch()
-
-        previous_button = QPushButton("Previous")
-        previous_button.setObjectName("UsagePagerButton")
-        previous_button.setEnabled(page > 0)
-        previous_button.clicked.connect(
-            self._previous_provider_page if item_name == "providers" else self._previous_model_page
-        )
-        layout.addWidget(previous_button)
-
-        page_label = QLabel(f"Page {page + 1} of {page_count}")
-        page_label.setObjectName("UsagePagerPage")
-        page_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(page_label)
-
-        next_button = QPushButton("Next")
-        next_button.setObjectName("UsagePagerButton")
-        next_button.setEnabled(page < page_count - 1)
-        next_button.clicked.connect(
-            self._next_provider_page if item_name == "providers" else self._next_model_page
-        )
-        layout.addWidget(next_button)
-
-        return row
-
-    def _page_count(self, item_count: int) -> int:
-        return max((item_count + _PAGE_SIZE - 1) // _PAGE_SIZE, 1)
-
-    def _clamped_page(self, page: int, item_count: int) -> int:
-        return min(max(page, 0), self._page_count(item_count) - 1)
-
     def _row_separator(self, indent: int = 0) -> QFrame:
         line = QFrame()
         line.setObjectName("UsageRowSep")
@@ -571,22 +449,4 @@ class UsageWidget(QWidget):
 
     def _on_reset(self) -> None:
         if self._mindspace_manager.has_mindspace():
-            self._provider_page = 0
-            self._model_page = 0
             self._mindspace_manager.mindspace().reset_usage()
-
-    def _previous_provider_page(self) -> None:
-        self._provider_page = max(self._provider_page - 1, 0)
-        self.refresh()
-
-    def _next_provider_page(self) -> None:
-        self._provider_page += 1
-        self.refresh()
-
-    def _previous_model_page(self) -> None:
-        self._model_page = max(self._model_page - 1, 0)
-        self.refresh()
-
-    def _next_model_page(self) -> None:
-        self._model_page += 1
-        self.refresh()

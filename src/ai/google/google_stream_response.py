@@ -59,7 +59,8 @@ class GoogleStreamResponse(AIStreamResponse):
             self._update_usage(
                 prompt_tokens=metadata.get("promptTokenCount", 0),
                 completion_tokens=metadata.get("candidatesTokenCount", 0),
-                total_tokens=metadata.get("totalTokenCount", 0)
+                total_tokens=metadata.get("totalTokenCount", 0),
+                cache_read_tokens=metadata.get("cachedContentTokenCount", 0),
             )
 
             # Process all accumulated tool calls
