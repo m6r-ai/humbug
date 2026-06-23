@@ -154,6 +154,15 @@ class EditorDiffApplier(DiffApplier):
                         'current file content.'
                     )
 
+                if match_result.ambiguous_locations is not None:
+                    error_details['ambiguous_locations'] = match_result.ambiguous_locations
+                    error_details['suggestion'] = (
+                        f'Multiple exact matches found at lines '
+                        f'{match_result.ambiguous_locations}. '
+                        'Add more surrounding context lines to the hunk so that only '
+                        'one location matches.'
+                    )
+
                 raise DiffMatchError(
                     f'Could not locate hunk {idx + 1} with sufficient confidence',
                     error_details

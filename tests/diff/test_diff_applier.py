@@ -655,3 +655,92 @@ class TestDiffApplierResultMessages:
         error = exc_info.value
         assert 'hunk1_range' in error.error_details
         assert 'hunk2_range' in error.error_details
+
+
+class TestDiffApplierAmbiguity:
+    """Test ambiguity detection during diff application."""
+
+    def test_ambiguous_match_raises_error(self, simple_applier, helpers):
+        """Ambiguous match raises DiffMatchError."""
+        document = helpers.create_simple_document([
+            "header",
+            "duplicate",
+            "middle",
+            "duplicate",
+            "footer"
+        ])
+
+        diff_text = """@@ -1,1 +1,1 @@
+-duplicate
++new
+"""
+
+        with pytest.raises(DiffMatchError):
+            simple_applier.apply_diff(diff_text, document)
+
+    def test_ambiguous_match_error_includes_locations(self, simple_applier, helpers):
+        """Ambiguous match error includes the candidate locations."""
+        document = helpers.create_simple_document([
+            "header",
+            "duplicate",
+            "middle",
+            "duplicate",
+            "footer"
+        ])
+
+        diff_text = """@@ -1,1 +1,1 @@
+-duplicate
++new
+"""
+
+        with pytest.raises(DiffMatchError) as exc_info:
+            simple_applier.apply_diff(diff_text, document)
+
+        error = exc_info.value
+        assert 'ambiguous_locations' in error.error_details
+        assert sorted(error.error_details['ambiguous_locations']) == [2, 4]
+        assert 'context lines' in error.error_details['suggestion'].lower()
+
+    def test_ambiguous_match_does_not_modify_document(self, simple_applier, helpers):
+        """Ambiguous match leaves document unchanged (atomicity)."""
+        document = helpers.create_simple_document([
+            "header",
+            "duplicate",
+            "middle",
+            "duplicate",
+            "footer"
+        ])
+        original = document.copy()
+
+        diff_text = """@@ -1,1 +1,1 @@
+-duplicate
++new
+"""
+
+        with pytest.raises(DiffMatchError):
+            simple_applier.apply_diff(diff_text, document)
+
+        assert document == original
+
+    def test_ambiguous_match_in_multi_hunk_rejects_all(self, simple_applier, helpers):
+        """Ambiguity in one hunk of a multi-hunk diff rejects everything."""
+        document = helpers.create_simple_document([
+            "unique target",
+            "filler",
+            "duplicate",
+            "filler",
+            "duplicate",
+        ])
+
+        diff_text = """@@ -1,1 +1,1 @@
+-unique target
++changed
+@@ -3,1 +3,1 @@
+-duplicate
++new
+"""
+
+        with pytest.raises(DiffMatchError):
+            simple_applier.apply_diff(diff_text, document)
+
+        assert document[0] == "unique target"

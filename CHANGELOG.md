@@ -1,47 +1,48 @@
 # Change log for Humbug
 
-## v50 (2026-06-21)
+## v50 (2026-06-23)
 
 New features:
 
-- Right-clicking a tab label now shows a context menu with options to open a new tab to the left or right, and to close
-  tabs to the left, tabs to the right, or all other tabs in the column.
-- Added a tab overview (View -> Show Open Tabs, Ctrl+Shift+E) that shows all open tabs as thumbnail cards, like a
-  mobile recents screen.  Click a card to switch to that tab, swipe/drag it upwards or use its close button to close
-  the tab.  Pressing the shortcut again cycles the selection through the cards; Enter activates the selected tab.
-- Added a tab carousel (View -> Show Tab Carousel, Ctrl+Shift+T) that shows open tabs as a horizontally scrollable
-  card strip with the current tab nearly filling the view.  Scroll, drag the strip sideways, use the arrow keys, or
-  press the shortcut again to flip through tabs; click the centred card (or press Enter) to switch to it, and close
-  a tab with its close button or by swiping its card upwards.
-- Added a `cat` shell command that emulates the functionality of the filesystem AI tool's file read operation.
-- Made VCS (git) polling an async task so it doesn't block the main thread.  Useful on Windows with anti-malware scanners.
-- Added a colour picker and high contrast colour scheme.
 - Split out mindspace operations into a new "Mindspace" menu.
-- Improved the Menai tool description to encourage AIs to read the help if they haven't already done so.
 - Replaced MiniMax M2.5 with MiniMax M3 on Ollama.com.
 - Added Kimi K2.7 Code on Ollama.com.
 - Added GLM 5.2 on Z.ai and Ollama.com.
 - Added Gemini 3.5 Flash.
-- Added support for animated GIF files in markdown.
-- When converting from `.docx` files, images are now extracted into a sidecar directory.  When converting to `.docx` files
-  images are now inserted.
-- Conversation message banners are now "sticky" at the top of the conversation tab when scrolling.  This provides context
-  on the conversation you're viewing.
 - Added cache usage tracking on API commands.
 - Added a new "token usage" tab to keep track of token usage within the mindspace.
+- Added a tab carousel (View -> Show Tab Carousel, Ctrl+Shift+T) that shows open tabs as a horizontally scrollable
+  card strip with the current tab nearly filling the view.  Scroll, drag the strip sideways, use the arrow keys, or
+  press the shortcut again to flip through tabs; click the centred card (or press Enter) to switch to it, and close
+  a tab with its close button or by swiping its card upwards.
+- Added a tab overview (View -> Show Open Tabs, Ctrl+Shift+E) that shows all open tabs as thumbnail cards, like a
+  mobile recents screen.  Click a card to switch to that tab, swipe/drag it upwards or use its close button to close
+  the tab.  Pressing the shortcut again cycles the selection through the cards; Enter activates the selected tab.
+- Right-clicking a tab label now shows a context menu with options to open a new tab to the left or right, and to close
+  tabs to the left, tabs to the right, or all other tabs in the column.
+- Conversation message banners are now "sticky" at the top of the conversation tab when scrolling.  This provides context
+  on the conversation you're viewing.
+- Added a `cat` shell command that emulates the functionality of the filesystem AI tool's file read operation.
+- Made VCS (git) polling an async task so it doesn't block the main thread.  Useful on Windows with anti-malware scanners.
 - Colour theme changes in the menu are now persistent.
+- Added a colour picker and high contrast colour scheme.
+- When converting from `.docx` files, images are now extracted into a sidecar directory.  When converting to `.docx` files
+  images are now inserted.
+- Improved the Menai tool description to encourage AIs to read the help if they haven't already done so.
+- Added support for animated GIF files in markdown.
 
 Bug fixes:
 
-- Improved the PDF text extraction.
-- Conversation inputs now scale with the zoom factor.
-- When an AI was opening tabs, if another tab of a different type existed for the same file then the open would not work correctly.
 - Dramatically sped up zoom operations.
-- The correct icon is now set on the Windows taskbar.
+- Conversation inputs now scale with the zoom factor.
 - Resolved problem with application zoom shortcuts interacting with terminal tabs.
 - Resolved `.docx` document rendering problems with spacing and list numbering.
 - Resolved subtle rendering problems with Markdown documents and "tight" lists.
 - Improved the Markdown syntax highlighter to make things consistent between different block types.
+- The diff applier now looks for potentially ambiguous diffs and rejects them, providing context to allow an AI to improve the
+  diff and resubmit.
+- Improved the PDF text extraction.
+- When an AI was opening tabs, if another tab of a different type existed for the same file then the open would not work correctly.
 
 ## v49 (2026-06-07)
 

@@ -32,6 +32,7 @@ class MatchResult:
     confidence: float  # 0.0 to 1.0
     actual_lines: List[str]  # The actual lines found at this location
     out_of_range_location: int | None = None  # Exact match found outside the search window
+    ambiguous_locations: List[int] | None = None  # All exact-match locations when ambiguous
 
 
 @dataclass

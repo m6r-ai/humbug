@@ -252,7 +252,7 @@ class TestDiffMatcherFuzzyMatching:
         assert result.confidence < 0.75
 
     def test_fuzzy_match_prefers_closer_location(self, simple_matcher):
-        """Test that fuzzy matching prefers locations closer to expected."""
+        """Test that ambiguous matches (multiple exact matches) are rejected."""
         document = [
             "target line",  # Line 1
             "other content",
@@ -262,7 +262,7 @@ class TestDiffMatcherFuzzyMatching:
             "other content"
         ]
 
-        # Expect at line 3, should prefer line 1 over line 5
+        # Two exact matches within the window: ambiguity must be flagged.
         hunk = DiffHunk(
             old_start=3,
             old_count=1,
@@ -276,10 +276,8 @@ class TestDiffMatcherFuzzyMatching:
 
         result = simple_matcher.find_match(hunk, document)
 
-        assert result.success is True
-        # Should prefer line 1 (distance 2) over line 5 (distance 2)
-        # Actually both have same distance, so might pick first found
-        assert result.location in [1, 5]
+        assert result.success is False
+        assert result.ambiguous_locations == [1, 5]
 
 
 class TestDiffMatcherConfiguration:
@@ -804,3 +802,161 @@ class TestDiffMatcherDefaultLineCount:
 
         assert result.success is True
         assert result.location == 3
+
+
+class TestDiffMatcherAmbiguity:
+    """Test ambiguity detection when multiple exact matches exist."""
+
+    def test_ambiguous_within_search_window(self, simple_matcher):
+        """Two exact matches within the search window are flagged as ambiguous."""
+        document = [
+            "filler 1",
+            "duplicate",
+            "filler 2",
+            "duplicate",
+            "filler 3"
+        ]
+
+        hunk = DiffHunk(
+            old_start=1,
+            old_count=1,
+            new_start=1,
+            new_count=1,
+            lines=[
+                DiffLine('-', 'duplicate'),
+                DiffLine('+', 'new')
+            ]
+        )
+
+        result = simple_matcher.find_match(hunk, document)
+
+        assert result.success is False
+        assert result.ambiguous_locations is not None
+        assert sorted(result.ambiguous_locations) == [2, 4]
+
+    def test_ambiguous_with_context_lines(self, simple_matcher):
+        """Ambiguity detected when context + deletion lines match multiple places."""
+        document = [
+            "header",
+            "same context",
+            "same target",
+            "footer",
+            "same context",
+            "same target",
+            "end"
+        ]
+
+        hunk = DiffHunk(
+            old_start=1,
+            old_count=2,
+            new_start=1,
+            new_count=2,
+            lines=[
+                DiffLine(' ', 'same context'),
+                DiffLine('-', 'same target'),
+                DiffLine('+', 'new target')
+            ]
+        )
+
+        result = simple_matcher.find_match(hunk, document)
+
+        assert result.success is False
+        assert result.ambiguous_locations is not None
+        assert sorted(result.ambiguous_locations) == [2, 5]
+
+    def test_no_ambiguity_when_unique_context_disambiguates(self, simple_matcher):
+        """Extra unique context lines eliminate ambiguity."""
+        document = [
+            "header",
+            "unique A",
+            "target",
+            "footer",
+            "unique B",
+            "target",
+            "end"
+        ]
+
+        hunk = DiffHunk(
+            old_start=1,
+            old_count=2,
+            new_start=1,
+            new_count=2,
+            lines=[
+                DiffLine(' ', 'unique A'),
+                DiffLine('-', 'target'),
+                DiffLine('+', 'new')
+            ]
+        )
+
+        result = simple_matcher.find_match(hunk, document)
+
+        assert result.success is True
+        assert result.location == 2
+        assert result.ambiguous_locations is None
+
+    def test_ambiguous_out_of_range_normal_hunk(self, simple_matcher_custom):
+        """Multiple out-of-range matches for a normal hunk are flagged as ambiguous."""
+        matcher = simple_matcher_custom(search_window=2)
+
+        document = ["filler " + str(i) for i in range(1, 30)]
+        document[9] = "duplicate"   # line 10
+        document[19] = "duplicate"  # line 20
+
+        hunk = DiffHunk(
+            old_start=1,
+            old_count=1,
+            new_start=1,
+            new_count=1,
+            lines=[
+                DiffLine('-', 'duplicate'),
+                DiffLine('+', 'new')
+            ]
+        )
+
+        result = matcher.find_match(hunk, document)
+
+        assert result.success is False
+        assert result.ambiguous_locations is not None
+        assert sorted(result.ambiguous_locations) == [10, 20]
+
+    def test_ambiguous_bare_at_at_hunk(self, simple_matcher):
+        """A bare @@ hunk with multiple matches anywhere is flagged as ambiguous."""
+        document = ["line 1", "target", "line 3", "target", "line 5"]
+
+        hunk = DiffHunk(
+            old_start=1,
+            old_count=0,
+            new_start=1,
+            new_count=0,
+            lines=[
+                DiffLine('-', 'target'),
+                DiffLine('+', 'replacement')
+            ]
+        )
+
+        result = simple_matcher.find_match(hunk, document)
+
+        assert result.success is False
+        assert result.ambiguous_locations is not None
+        assert sorted(result.ambiguous_locations) == [2, 4]
+
+    def test_bare_at_at_single_match_still_succeeds(self, simple_matcher):
+        """A bare @@ hunk with a unique match still succeeds."""
+        document = ["line 1", "unique target", "line 3"]
+
+        hunk = DiffHunk(
+            old_start=1,
+            old_count=0,
+            new_start=1,
+            new_count=0,
+            lines=[
+                DiffLine('-', 'unique target'),
+                DiffLine('+', 'replacement')
+            ]
+        )
+
+        result = simple_matcher.find_match(hunk, document)
+
+        assert result.success is True
+        assert result.location == 2
+        assert result.ambiguous_locations is None

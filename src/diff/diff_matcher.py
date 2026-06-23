@@ -75,28 +75,44 @@ class DiffMatcher(ABC):
                 actual_lines=[]
             )
 
-        # Try exact match at expected location first
-        exact_match = self._try_exact_match(hunk.old_start, expected_lines, document)
-        if exact_match.success:
-            return exact_match
-
-        # Try fuzzy matching within search window
+        # Run fuzzy search within the window.  This subsumes the exact-match
+        # check at the expected location and also detects ambiguity when
+        # multiple positions match exactly.
         fuzzy_result = self._fuzzy_search(hunk.old_start, expected_lines, document)
         if fuzzy_result.success:
             return fuzzy_result
 
-        # Fuzzy search failed - scan the entire file for an exact match outside the window.
-        # If found, record its location so the caller can report a more actionable error.
-        out_of_range = self._full_file_exact_search(hunk.old_start, expected_lines, document)
+        if fuzzy_result.ambiguous_locations is not None:
+            return fuzzy_result
 
-        # When the hunk had no line numbers (bare @@), old_count and new_count are both 0
-        # as a sentinel. In that case an out-of-range exact match is still a valid result
-        # rather than an error, because the diff had no position hint to begin with.
-        if out_of_range is not None and hunk.old_count == 0 and hunk.new_count == 0:
-            actual = self._get_document_lines(document, out_of_range, len(expected_lines))
-            return MatchResult(success=True, location=out_of_range, confidence=1.0, actual_lines=actual)
+        # Fuzzy search failed - scan the entire file for exact matches outside
+        # the window.  If found, record locations so the caller can report a
+        # more actionable error.
+        out_of_range_matches = self._full_file_exact_search(hunk.old_start, expected_lines, document)
 
-        fuzzy_result.out_of_range_location = out_of_range
+        # When the hunk had no line numbers (bare @@), old_count and new_count
+        # are both 0 as a sentinel. In that case an out-of-range exact match is
+        # still a valid result rather than an error, because the diff had no
+        # position hint to begin with.
+        if hunk.old_count == 0 and hunk.new_count == 0:
+            if len(out_of_range_matches) == 1:
+                loc = out_of_range_matches[0]
+                actual = self._get_document_lines(document, loc, len(expected_lines))
+                return MatchResult(success=True, location=loc, confidence=1.0, actual_lines=actual)
+
+            if len(out_of_range_matches) > 1:
+                fuzzy_result.ambiguous_locations = out_of_range_matches
+                return fuzzy_result
+
+        # For normal hunks, report the first out-of-range match if there is
+        # exactly one, or report ambiguity if there are several.
+        if len(out_of_range_matches) == 1:
+            fuzzy_result.out_of_range_location = out_of_range_matches[0]
+
+        elif len(out_of_range_matches) > 1:
+            fuzzy_result.out_of_range_location = out_of_range_matches[0]
+            fuzzy_result.ambiguous_locations = out_of_range_matches
+
         return fuzzy_result
 
     def _try_exact_match(
@@ -140,7 +156,8 @@ class DiffMatcher(ABC):
         document: Any
     ) -> MatchResult:
         """
-        Search for an exact match within the search window.
+        Search for an exact match within the search window, collecting all
+        exact-match locations to detect ambiguity.
 
         The purpose of fuzzy search is to find the correct location when line
         numbers have drifted, not to accept approximately-matching content.
@@ -155,6 +172,8 @@ class DiffMatcher(ABC):
         Returns:
             MatchResult with best match found
         """
+        exact_locations: List[int] = []
+
         # Get total line count from document
         total_lines = self._get_document_line_count(document)
 
@@ -183,6 +202,9 @@ class DiffMatcher(ABC):
             # error information, but a non-exact match must never succeed.
             is_exact = self._lines_match_exactly(expected_lines, actual_lines)
 
+            if is_exact:
+                exact_locations.append(line_num)
+
             # Prefer matches closer to expected location if confidence is equal
             distance_penalty = abs(line_num - expected_line) * 0.001
             adjusted_confidence = confidence - distance_penalty
@@ -195,6 +217,11 @@ class DiffMatcher(ABC):
                     actual_lines=actual_lines
                 )
 
+        if len(exact_locations) > 1:
+            best_match.success = False
+            best_match.ambiguous_locations = exact_locations
+            return best_match
+
         return best_match
 
     def _full_file_exact_search(
@@ -202,7 +229,7 @@ class DiffMatcher(ABC):
         expected_line: int,
         expected_lines: List[str],
         document: Any
-    ) -> int | None:
+    ) -> List[int]:
         """
         Scan the entire file for an exact match outside the search window.
 
@@ -216,20 +243,22 @@ class DiffMatcher(ABC):
             document: Document to search
 
         Returns:
-            Line number of the exact match, or None if not found anywhere
+            List of line numbers where exact matches were found
         """
         total_lines = self._get_document_line_count(document)
         window_start = max(1, expected_line - self._search_window)
         window_end = min(total_lines, expected_line + self._search_window)
 
+        matches: List[int] = []
         for line_num in range(1, total_lines + 1):
             if window_start <= line_num <= window_end:
                 continue
+
             actual_lines = self._get_document_lines(document, line_num, len(expected_lines))
             if self._lines_match_exactly(expected_lines, actual_lines):
-                return line_num
+                matches.append(line_num)
 
-        return None
+        return matches
 
     def _get_document_line_count(self, document: Any) -> int:
         """
