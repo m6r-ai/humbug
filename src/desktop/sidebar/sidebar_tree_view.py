@@ -66,7 +66,6 @@ class SidebarTreeView(QTreeView):
         # platforms (e.g. Linux) that do not override this default.
         self.setVerticalScrollMode(QTreeView.ScrollMode.ScrollPerPixel)
         self.header().setSortIndicator(0, Qt.SortOrder.AscendingOrder)
-        self.setSortingEnabled(True)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setMouseTracking(True)
         self.setToolTipDuration(10000)

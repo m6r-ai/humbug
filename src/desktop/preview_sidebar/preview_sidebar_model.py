@@ -21,8 +21,9 @@ class PreviewSidebarModel(QSortFilterProxyModel):
         self._user_manager.settings_changed.connect(self._on_user_settings_changed)
 
     def _on_user_settings_changed(self) -> None:
-        """Handle user settings changes by re-sorting."""
-        self.invalidate()  # This triggers a resort
+        """Handle user settings changes by re-filtering and re-sorting."""
+        self.invalidateFilter()
+        self.sort(0, self.sortOrder())
 
     def set_mindspace_root(self, path: str) -> None:
         """Set the mindspace root path for relative path calculations."""
@@ -31,13 +32,16 @@ class PreviewSidebarModel(QSortFilterProxyModel):
 
     def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlag:
         """Return the item flags for the given index, making all items editable."""
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+
+        source_index = self.mapToSource(index)
+        if not source_index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+
         base_flags = super().flags(index)
 
-        # Make all items editable so Qt's editing system works
-        if index.isValid():
-            return base_flags | Qt.ItemFlag.ItemIsEditable
-
-        return base_flags
+        return base_flags | Qt.ItemFlag.ItemIsEditable
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex) -> bool:
         """Filter out .humbug directory."""

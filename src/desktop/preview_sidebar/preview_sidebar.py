@@ -101,6 +101,7 @@ class PreviewSidebar(SidebarBase):
 
         # Set model on tree view
         self._tree_view.setModel(self._filter_model)
+        self._filter_model.sort(0, Qt.SortOrder.AscendingOrder)
 
         # Connect signals
         self._tree_view.clicked.connect(self._on_tree_clicked)
