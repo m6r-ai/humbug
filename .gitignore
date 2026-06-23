@@ -39,3 +39,6 @@ src/menai/*.so
 *.pdf
 *.docx
 
+# A place to put things that will never go into git by accident
+/gitsafe
+
