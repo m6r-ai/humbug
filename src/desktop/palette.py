@@ -770,7 +770,7 @@ _OCEAN_LIGHT_COLORS: Dict[ColorRole, str] = {
     ColorRole.TAB_BACKGROUND_INACTIVE: "#e7edf5",
     ColorRole.TAB_BACKGROUND_HOVER: "#edf3f9",
     ColorRole.TAB_BACKGROUND_UPDATED: "#f0d0f8",
-    ColorRole.TAB_BORDER_ACTIVE: "#1f5f99",
+    ColorRole.TAB_BORDER_ACTIVE: "#1f6fff",
 
     # Button colours
     ColorRole.BUTTON_BACKGROUND: "#e3ebf4",
