@@ -566,6 +566,7 @@ class PreviewTab(TabBase):
 
             #PreviewWidget QWidget#PreviewMarkdownContent {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
             }}
 
             #PreviewWidget QWidget#PreviewMarkdownContent[contained="true"] {{
