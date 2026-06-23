@@ -22,7 +22,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("claude-sonnet-4-6", "anthropic"): AIModel(
             name="claude-sonnet-4-6",
@@ -34,8 +37,11 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.NONE, AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM,
-                AIReasoningEffort.HIGH, AIReasoningEffort.MAX,
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
             ],
             temperature_incompatible_efforts={AIReasoningEffort.HIGH},
         ),
@@ -49,8 +55,12 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.NONE, AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM,
-                AIReasoningEffort.HIGH, AIReasoningEffort.XHIGH, AIReasoningEffort.MAX,
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
             ],
             adaptive_thinking_only=True,
         ),
@@ -64,8 +74,12 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.NONE, AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM,
-                AIReasoningEffort.HIGH, AIReasoningEffort.XHIGH, AIReasoningEffort.MAX,
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
             ],
             adaptive_thinking_only=True,
         ),
@@ -80,7 +94,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("deepseek-v4-pro", "deepseek"): AIModel(
             name="deepseek-v4-pro",
@@ -91,7 +108,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
 
         # Google models
@@ -195,7 +215,11 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("qwen3.6:35b", "ollama"): AIModel(
             name="qwen3.6:35b",
@@ -206,7 +230,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
 
         # Ollama Cloud models
@@ -219,7 +246,11 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("gpt-oss:120b", "ollama-cloud"): AIModel(
             name="gpt-oss:120b",
@@ -230,7 +261,11 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.LOW, AIReasoningEffort.MEDIUM, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("gemma4:31b-cloud", "ollama-cloud"): AIModel(
             name="gemma4:31b-cloud",
@@ -241,7 +276,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("glm-5.2:cloud", "ollama-cloud"): AIModel(
             name="glm-5.2:cloud",
@@ -252,7 +290,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("glm-5.1:cloud", "ollama-cloud"): AIModel(
             name="glm-5.1:cloud",
@@ -263,7 +304,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("kimi-k2.7-code:cloud", "ollama-cloud"): AIModel(
             name="kimi-k2.7-code:cloud",
@@ -274,7 +318,9 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("kimi-k2.6:cloud", "ollama-cloud"): AIModel(
             name="kimi-k2.6:cloud",
@@ -285,7 +331,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("minimax-m3:cloud", "ollama-cloud"): AIModel(
             name="minimax-m3:cloud",
@@ -296,7 +345,9 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("minimax-m2.7:cloud", "ollama-cloud"): AIModel(
             name="minimax-m2.7:cloud",
@@ -307,7 +358,9 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("mistral-large-3:675b-cloud", "ollama-cloud"): AIModel(
             name="mistral-large-3:675b-cloud",
@@ -328,7 +381,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
 
         # OpenAI models
@@ -342,7 +398,7 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.MEDIUM
             ],
         ),
         ("gpt-5.4-mini", "openai"): AIModel(
@@ -355,7 +411,7 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.MEDIUM
             ],
         ),
         ("gpt-5.5", "openai"): AIModel(
@@ -382,7 +438,7 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.NONE,
-                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.MEDIUM
             ],
         ),
 
@@ -412,7 +468,7 @@ class AIConversationSettings:
                 AIReasoningEffort.NONE,
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
-                AIReasoningEffort.HIGH,
+                AIReasoningEffort.HIGH
             ],
         ),
 
@@ -426,7 +482,11 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
+            ],
         ),
         ("glm-5.1", "zai"): AIModel(
             name="glm-5.1",
@@ -437,7 +497,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("glm-4.7", "zai"): AIModel(
             name="glm-4.7",
@@ -448,7 +511,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("glm-4.5-x", "zai"): AIModel(
             name="glm-4.5-x",
@@ -459,7 +525,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("glm-4.5-air", "zai"): AIModel(
             name="glm-4.5-air",
@@ -470,7 +539,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
         ("glm-4.5-airx", "zai"): AIModel(
             name="glm-4.5-airx",
@@ -481,7 +553,10 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[AIReasoningEffort.NONE, AIReasoningEffort.HIGH],
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH
+            ],
         ),
     }
 
