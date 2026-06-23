@@ -136,7 +136,7 @@ class EditorWidget(QPlainTextEdit):
             content = f.read()
 
         self.setPlainText(content)
-        self._last_save_content = content
+        self._last_save_content = self.toPlainText()
         self._set_modified(False)
 
     def refresh_content(self) -> None:
@@ -162,7 +162,7 @@ class EditorWidget(QPlainTextEdit):
 
                 self._logger.debug("Refreshing content from file: %s", self._path)
                 self.setPlainText(content)
-                self._last_save_content = content
+                self._last_save_content = self.toPlainText()
                 self._set_modified(False)
 
                 # Restore scroll position.  setPlainText resets both scrollbars to
