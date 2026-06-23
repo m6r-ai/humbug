@@ -43,6 +43,8 @@ Bug fixes:
   diff and resubmit.
 - Improved the PDF text extraction.
 - When an AI was opening tabs, if another tab of a different type existed for the same file then the open would not work correctly.
+- Dragging and dropping a binary image file from the files sidebar will now open the image in a preview tab.
+- Attempting to edit binary image files is now prevented.
 
 ## v49 (2026-06-07)
 

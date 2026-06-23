@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 from desktop.language.language_manager import LanguageManager
+from desktop.file_utils import is_binary_image_file
 from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -714,6 +715,7 @@ class PreviewSidebar(SidebarBase):
                 preview_view_action = menu.addAction(strings.open_in_preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
                 edit_action = menu.addAction(strings.open_in_editor)
+                edit_action.setEnabled(not is_binary_image_file(path))
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
                 if self._vcs_poller.has_repo():
                     diff_action = menu.addAction(strings.open_in_diff)

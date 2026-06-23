@@ -14,6 +14,7 @@ from mindspace.mindspace_log_level import MindspaceLogLevel
 
 from desktop.file_sidebar.file_sidebar_model import FileSidebarModel
 from desktop.file_sidebar.file_sidebar_tree_view import FileSidebarTreeView
+from desktop.file_utils import is_binary_image_file
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -728,6 +729,7 @@ class FileSidebar(SidebarBase):
             else:
                 # File context menu
                 edit_action = menu.addAction(strings.open_in_editor)
+                edit_action.setEnabled(not is_binary_image_file(path))
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
                 preview_view_action = menu.addAction(strings.open_in_preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))

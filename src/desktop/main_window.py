@@ -44,6 +44,7 @@ from desktop.diff_tab.diff_tab import DiffTab
 from desktop.editor_tab.editor_tab import EditorTab
 from desktop.exception_notifier import get_exception_notifier
 from desktop.file_sidebar.file_sidebar import FileSidebar
+from desktop.file_utils import is_binary_image_file
 from desktop.language.language_manager import LanguageManager
 from desktop.log_tab.log_tab import LogTab
 from desktop.message_box import MessageBox, MessageBoxType
@@ -1407,6 +1408,9 @@ class MainWindow(QMainWindow):
             context_type = "conversation"
 
         elif panel_id == "preview":
+            context_type = "preview"
+
+        elif is_binary_image_file(path):
             context_type = "preview"
 
         else:

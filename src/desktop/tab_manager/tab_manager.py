@@ -11,6 +11,7 @@ from context.context_info import ContextInfo
 from context.context_registry import ContextEvent, ContextRegistry
 
 from desktop.language.language_manager import LanguageManager
+from desktop.file_utils import is_binary_image_file
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
@@ -1657,6 +1658,9 @@ class TabManager(QWidget):
             return self._find_tab_by_path("diff", path)
 
         if source_type == "preview":
+            return self._find_tab_by_path("preview", path)
+
+        if is_binary_image_file(path):
             return self._find_tab_by_path("preview", path)
 
         return self._find_tab_by_path("editor", path)

@@ -13,6 +13,7 @@ from git import VCSFileStatus, VCSStatusCode
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 from desktop.color_role import ColorRole
+from desktop.file_utils import is_binary_image_file
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -243,6 +244,7 @@ class VCSSidebar(SidebarBase):
         # Edit and preview are only meaningful for files that still exist on disk.
         if os.path.exists(path):
             edit_action = menu.addAction(strings.open_in_editor)
+            edit_action.setEnabled(not is_binary_image_file(path))
             edit_action.triggered.connect(lambda: self.file_opened_in_editor.emit(path, False))
 
             preview_action = menu.addAction(strings.open_in_preview)

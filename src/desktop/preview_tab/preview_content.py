@@ -9,6 +9,7 @@ from typing import List, Tuple, Set
 
 from mindspace.mindspace import Mindspace
 from desktop.preview_tab.preview_error import PreviewIOError
+from desktop.file_utils import BINARY_IMAGE_EXTENSIONS
 
 
 class PreviewContentType(Enum):
@@ -348,8 +349,7 @@ class PreviewContent:
         """
         ext = os.path.splitext(file_path.lower())[1]
 
-        image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.tif', '.webp', '.svg', '.ico'}
-        if ext in image_extensions:
+        if ext in BINARY_IMAGE_EXTENSIONS:
             return 'image'
 
         markdown_extensions = {'.md', '.markdown'}
