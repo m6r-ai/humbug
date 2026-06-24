@@ -80,4 +80,4 @@ restored when you reopen a mindspace.
 
 ---
 
-*[Index](index.md) · Previous: [Attaching Files to Conversations](14-attachments.md) · Next: [Delegating Tasks Between AIs](16-delegation.md)*
+*[Index](index.md) · Previous: [Attaching Files to Conversations](attachments.md) · Next: [Delegating Tasks Between AIs](delegation.md)*

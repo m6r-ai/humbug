@@ -46,4 +46,4 @@ the AI should focus on in a given turn.
 
 ---
 
-*[Index](index.md) · Previous: [Searching](13-searching.md) · Next: [Forking & Managing Conversations](15-forking-conversations.md)*
+*[Index](index.md) · Previous: [Searching](searching.md) · Next: [Forking & Managing Conversations](forking-conversations.md)*

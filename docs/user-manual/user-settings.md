@@ -15,7 +15,7 @@ Configure the AI providers you want to use. For each backend you can:
 - **Set a custom URL** for backends that support alternative endpoints (Ollama, vLLM, or
   compatible third-party APIs)
 
-See [AI Models & Backends](07-ai-models-and-backends.md) for full details.
+See [AI Models & Backends](ai-models-and-backends.md) for full details.
 
 ---
 
@@ -71,4 +71,4 @@ startup and notifies you if one is available. You can also check manually from t
 
 ---
 
-*[Index](index.md) · Previous: [Delegating Tasks Between AIs](16-delegation.md) · Next: [Mindspace Settings](18-mindspace-settings.md)*
+*[Index](index.md) · Previous: [Token Usage](token-usage.md) · Next: [Mindspace Settings](mindspace-settings.md)*

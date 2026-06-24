@@ -66,4 +66,4 @@ your working copy and HEAD.
 
 ---
 
-*[Index](index.md) · Previous: [Previewing Content](11-preview.md) · Next: [Searching](13-searching.md)*
+*[Index](index.md) · Previous: [Previewing Content](preview.md) · Next: [Searching](searching.md)*

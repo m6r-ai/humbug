@@ -78,4 +78,4 @@ always remain in control of what actually executes.
 
 ---
 
-*[Index](index.md) · Previous: [Editing Files](09-editing-files.md) · Next: [Previewing Content](11-preview.md)*
+*[Index](index.md) · Previous: [Editing Files](editing-files.md) · Next: [Previewing Content](preview.md)*

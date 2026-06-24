@@ -67,4 +67,4 @@ indicator when content has been updated while the tab was not active.
 
 ---
 
-*[Index](index.md) · Previous: [Using the Terminal](10-terminal.md) · Next: [Viewing Git Diffs](12-git-diffs.md)*
+*[Index](index.md) · Previous: [Using the Terminal](terminal.md) · Next: [Viewing Git Diffs](git-diffs.md)*

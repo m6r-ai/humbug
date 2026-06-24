@@ -9,7 +9,7 @@ without disrupting what you are looking at.
 
 ## Tab types
 
-Humbug has seven types of tab, each serving a distinct purpose:
+Humbug has eight types of tab, each serving a distinct purpose:
 
 | Type | What it contains |
 |---|---|
@@ -17,9 +17,10 @@ Humbug has seven types of tab, each serving a distinct purpose:
 | **Editor** | A file open for editing, with syntax highlighting |
 | **Preview** | A read-only rendered view of a file (Markdown is rendered; source files show with highlighting) |
 | **Terminal** | A fully interactive shell session |
-| **Diff** | A side-by-side comparison of a file against its last git commit |
-| **Log** | The Humbug system log, showing internal events and activity |
 | **Shell** | The Humbug shell — a command-line interface for Humbug-specific operations |
+| **Diff** | A side-by-side comparison of a file against its last git commit |
+| **Log** | The mindspace log, showing a record of AI and human activity within the mindspace |
+| **Usage** | Token usage for the current mindspace, broken down by provider and model |
 
 Each tab type is identified by a small icon in its label.
 
@@ -240,4 +241,4 @@ so you can see them side by side without the conversation being hidden.
 
 ---
 
-*[Index](index.md) · Previous: [Mindspaces](04-mindspaces.md) · Next: [Conversations](06-conversations.md)*
+*[Index](index.md) · Previous: [Mindspaces](mindspaces.md) · Next: [Conversations](conversations.md)*

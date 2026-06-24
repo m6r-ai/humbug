@@ -94,4 +94,4 @@ can be caught early, before they become expensive to fix.
 
 ---
 
-*[Index](index.md) · Next: [Installation & First Launch](02-installation.md)*
+*[Index](index.md) · Next: [Installation & First Launch](installation.md)*

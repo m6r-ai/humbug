@@ -7,32 +7,38 @@ to get started and to make the most of working with Humbug day to day.
 
 ## Part 1 — Getting Started
 
-1. [What is Humbug?](01-what-is-humbug.md)
-2. [Installation & First Launch](02-installation.md)
-3. [Your First Conversation with an AI](03-first-conversation.md)
+1. [What is Humbug?](what-is-humbug.md)
+2. [Installation & First Launch](installation.md)
+3. [Your First Conversation with an AI](first-conversation.md)
 
 ## Part 2 — Core Concepts
 
-4. [Mindspaces](04-mindspaces.md)
-5. [Tabs & Columns](05-tabs-and-columns.md)
-6. [Conversations](06-conversations.md)
-7. [AI Models & Backends](07-ai-models-and-backends.md)
+4. [Mindspaces](mindspaces.md)
+5. [Tabs & Columns](tabs-and-columns.md)
+6. [Conversations](conversations.md)
+7. [AI Models & Backends](ai-models-and-backends.md)
 
 ## Part 3 — Working with Humbug
 
-8. [Managing Files & Folders](08-managing-files.md)
-9. [Editing Files](09-editing-files.md)
-10. [Using the Terminal](10-terminal.md)
-11. [Previewing Content](11-preview.md)
-12. [Viewing Git Diffs](12-git-diffs.md)
-13. [Searching](13-searching.md)
-14. [Attaching Files to Conversations](14-attachments.md)
-15. [Forking & Managing Conversations](15-forking-conversations.md)
-16. [Delegating Tasks Between AIs](16-delegation.md)
+8. [Managing Files & Folders](managing-files.md)
+9. [Editing Files](editing-files.md)
+10. [Using the Terminal](terminal.md)
+11. [Previewing Content](preview.md)
+12. [Viewing Git Diffs](git-diffs.md)
+13. [Searching](searching.md)
+14. [Attaching Files to Conversations](attachments.md)
+15. [Forking & Managing Conversations](forking-conversations.md)
+16. [Delegating Tasks Between AIs](delegation.md)
+17. [Token Usage](token-usage.md)
 
 ## Part 4 — Settings & Configuration
 
-17. [User Settings](17-user-settings.md)
-18. [Mindspace Settings](18-mindspace-settings.md)
-19. [Conversation Settings](19-conversation-settings.md)
-20. [Keyboard Shortcuts](20-keyboard-shortcuts.md)
+18. [User Settings](user-settings.md)
+19. [Mindspace Settings](mindspace-settings.md)
+20. [Conversation Settings](conversation-settings.md)
+21. [Keyboard Shortcuts](keyboard-shortcuts.md)
+
+## Part 5 — Reference
+
+22. [The Humbug Shell](humbug-shell.md)
+23. [Mindspace Log](mindspace-log.md)

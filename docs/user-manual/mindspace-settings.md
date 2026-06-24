@@ -69,4 +69,4 @@ unwanted side effects.
 
 ---
 
-*[Index](index.md) · Previous: [User Settings](17-user-settings.md) · Next: [Conversation Settings](19-conversation-settings.md)*
+*[Index](index.md) · Previous: [User Settings](user-settings.md) · Next: [Conversation Settings](conversation-settings.md)*

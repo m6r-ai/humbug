@@ -12,7 +12,7 @@ programming and markup languages. This chapter covers the editor's features.
 - Right-click a file and choose **Edit** to open it persistently
 - The AI can open files in editor tabs as part of its work
 
-See [Tabs & Columns](05-tabs-and-columns.md) for an explanation of ephemeral vs persistent tabs.
+See [Tabs & Columns](tabs-and-columns.md) for an explanation of ephemeral vs persistent tabs.
 
 ---
 
@@ -112,4 +112,4 @@ distinct colour to let you know something has happened.
 
 ---
 
-*[Index](index.md) · Previous: [Managing Files & Folders](08-managing-files.md) · Next: [Using the Terminal](10-terminal.md)*
+*[Index](index.md) · Previous: [Managing Files & Folders](managing-files.md) · Next: [Using the Terminal](terminal.md)*

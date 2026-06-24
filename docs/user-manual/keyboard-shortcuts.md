@@ -15,8 +15,9 @@ differences and are noted in their rows.
 | Close Mindspace | Cmd+Alt+W | Ctrl+Alt+W |
 | Mindspace Search | Cmd+Shift+F | Ctrl+Shift+F |
 | Mindspace Settings | Cmd+Alt+, | Ctrl+Alt+, |
-| Open Mindspace Log | Cmd+Shift+L | Ctrl+Shift+L |
-| Open Humbug Shell | Cmd+Shift+Y | Ctrl+Shift+Y |
+| Mindspace Log | Cmd+Shift+L | Ctrl+Shift+L |
+| Humbug Shell | Cmd+Shift+Y | Ctrl+Shift+Y |
+| Token Usage | Cmd+Shift+U | Ctrl+Shift+U |
 
 ## File
 
@@ -119,4 +120,4 @@ differences and are noted in their rows.
 
 ---
 
-*[Index](index.md) · Previous: [Conversation Settings](19-conversation-settings.md)*
+*[Index](index.md) · Previous: [Conversation Settings](conversation-settings.md) · Next: [The Humbug Shell](humbug-shell.md)*

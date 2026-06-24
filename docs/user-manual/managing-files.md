@@ -13,7 +13,7 @@ within a mindspace. This chapter covers everything you can do from it.
 Clicking a folder expands or collapses it in the tree. Folders cannot be opened as tabs directly,
 but you can open a read-only preview of a folder's contents via the right-click context menu.
 
-See [Tabs & Columns](05-tabs-and-columns.md) for an explanation of ephemeral vs persistent tabs.
+See [Tabs & Columns](tabs-and-columns.md) for an explanation of ephemeral vs persistent tabs.
 
 ---
 
@@ -120,4 +120,4 @@ content if needed.
 
 ---
 
-*[Index](index.md) · Previous: [AI Models & Backends](07-ai-models-and-backends.md) · Next: [Editing Files](09-editing-files.md)*
+*[Index](index.md) · Previous: [AI Models & Backends](ai-models-and-backends.md) · Next: [Editing Files](editing-files.md)*

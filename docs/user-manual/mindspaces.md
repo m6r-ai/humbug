@@ -13,8 +13,8 @@ how to use the mindspace panel to navigate your work.
 
 A mindspace is simply a folder on your computer, recognised by Humbug as a project home. Humbug
 marks a folder as a mindspace by creating a hidden `.humbug` subdirectory inside it. This
-directory holds your settings, your session state (which tabs were open and where), and the system
-log. Everything else in the folder is yours to organise however you like.
+directory holds your settings, your session state (which tabs were open and where), the system
+log, and token usage data. Everything else in the folder is yours to organise however you like.
 
 You can have as many mindspaces as you like — one per project, or one per area of work. Humbug
 remembers the last mindspace you had open and restores it automatically on the next launch.
@@ -155,4 +155,4 @@ user settings.
 
 ---
 
-*[Index](index.md) · Previous: [Your First Conversation with an AI](03-first-conversation.md) · Next: [Tabs & Columns](05-tabs-and-columns.md)*
+*[Index](index.md) · Previous: [Your First Conversation with an AI](first-conversation.md) · Next: [Tabs & Columns](tabs-and-columns.md)*

@@ -4,7 +4,7 @@ A conversation is the core unit of work in Humbug. It is a persistent, structure
 between you and an AI: your messages, the AI's responses, any reasoning the AI shows, and a
 full record of every tool action the AI took along the way. This chapter covers everything about
 working with conversations beyond the basics introduced in
-[Your First Conversation with an AI](03-first-conversation.md).
+[Your First Conversation with an AI](first-conversation.md).
 
 ---
 
@@ -158,6 +158,9 @@ While a conversation tab is active, the status bar at the bottom of the window s
 This lets you keep an eye on how much context has been used and how close you are to the model's
 limits.
 
+For a mindspace-wide breakdown of token usage across all conversations and models, see
+[Token Usage](token-usage.md).
+
 ---
 
 ## Conversation files
@@ -173,4 +176,4 @@ automatically deleted when you close the tab to avoid cluttering the conversatio
 
 ---
 
-*[Index](index.md) · Previous: [Tabs & Columns](05-tabs-and-columns.md) · Next: [AI Models & Backends](07-ai-models-and-backends.md)*
+*[Index](index.md) · Previous: [Tabs & Columns](tabs-and-columns.md) · Next: [AI Models & Backends](ai-models-and-backends.md)*

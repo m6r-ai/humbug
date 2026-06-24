@@ -138,4 +138,4 @@ at the top of the left panel.
 
 ---
 
-*[Index](index.md) · Previous: [What is Humbug?](01-what-is-humbug.md) · Next: [Your First Conversation with an AI](03-first-conversation.md)*
+*[Index](index.md) · Previous: [What is Humbug?](what-is-humbug.md) · Next: [Your First Conversation with an AI](first-conversation.md)*
