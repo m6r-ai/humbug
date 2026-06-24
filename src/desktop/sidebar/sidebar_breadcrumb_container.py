@@ -98,6 +98,7 @@ class SidebarBreadcrumbContainer(QWidget):
 
         tree_view.verticalScrollBar().rangeChanged.connect(self._on_tree_range_changed)
         tree_view.viewport().installEventFilter(self)
+        tree_view.installEventFilter(self)
         breadcrumb_bar.viewport().installEventFilter(self)
         tree_view.expanded.connect(self._on_tree_expanded)
 
@@ -130,7 +131,7 @@ class SidebarBreadcrumbContainer(QWidget):
     def _dbg(self, msg: str) -> None:
         """Print a debug message if debug logging is enabled."""
         if self._debug:
-            print(msg)
+            print(msg, flush=True)
 
     def set_root_path(self, root_path: str) -> None:
         """
@@ -204,9 +205,12 @@ class SidebarBreadcrumbContainer(QWidget):
             True if the event was consumed, False to pass it on.
         """
         if event.type() == QEvent.Type.Wheel and obj in (
-            self._tree_view.viewport(), self._breadcrumb_bar.viewport()
+            self._tree_view.viewport(), self._breadcrumb_bar.viewport(), self._tree_view
         ):
-            source = "tree" if obj is self._tree_view.viewport() else "bc"
+            if obj is self._tree_view.viewport() or obj is self._tree_view:
+                source = "tree"
+            else:
+                source = "bc"
             self._dbg(f"[BC] WHEEL event on {source}, sb_before={self._scrollbar.value()}")
             QApplication.sendEvent(self._scrollbar, event)
             self._dbg(f"[BC] WHEEL done, sb_after={self._scrollbar.value()}")
