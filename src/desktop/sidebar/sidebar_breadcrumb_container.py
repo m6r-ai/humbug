@@ -204,6 +204,14 @@ class SidebarBreadcrumbContainer(QWidget):
         Returns:
             True if the event was consumed, False to pass it on.
         """
+        if event.type() == QEvent.Type.Wheel:
+            obj_name = obj.objectName() if hasattr(obj, "objectName") else str(obj)
+            obj_class = obj.__class__.__name__ if hasattr(obj, "__class__") else "?"
+            is_viewport = obj is self._tree_view.viewport()
+            is_tree = obj is self._tree_view
+            self._dbg(f"[BC] WHEEL on obj={obj_class}/{obj_name!r} "
+                      f"is_tree_vp={is_viewport} is_tree={is_tree}")
+
         if event.type() == QEvent.Type.Wheel and obj in (
             self._tree_view.viewport(), self._breadcrumb_bar.viewport(), self._tree_view
         ):
