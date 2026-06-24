@@ -79,6 +79,7 @@ class FileSidebar(SidebarBase):
         self._tree_view.delete_requested.connect(self._on_delete_requested)
 
         self._bc_container = SidebarBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
+        self._bc_container.set_debug(True)
         layout.addWidget(self._bc_container, 1)
 
         # Create file system model
