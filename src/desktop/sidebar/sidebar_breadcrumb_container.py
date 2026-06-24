@@ -206,7 +206,10 @@ class SidebarBreadcrumbContainer(QWidget):
         if event.type() == QEvent.Type.Wheel and obj in (
             self._tree_view.viewport(), self._breadcrumb_bar.viewport()
         ):
+            source = "tree" if obj is self._tree_view.viewport() else "bc"
+            self._dbg(f"[BC] WHEEL event on {source}, sb_before={self._scrollbar.value()}")
             QApplication.sendEvent(self._scrollbar, event)
+            self._dbg(f"[BC] WHEEL done, sb_after={self._scrollbar.value()}")
             return True
 
         if obj is self._tree_view.viewport() and event.type() == QEvent.Type.Paint:

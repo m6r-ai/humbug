@@ -1,0 +1,61 @@
+[BC] _apply_geometry: bc_rows=0 bc_h=0 scrollbar_before=0
+[BC] _apply_geometry: tree range=[0,0] scrollbar_before_setRange=0
+
+[BC] === _on_tree_range_changed(min=0, max=82) ===
+[BC]   ENTER: scrollbar=0 tree_sb=0 bc_rows=0 row_h=0 scrolling=False
+[BC]   after setRange: scrollbar=0
+[BC]   bc_h=0 tree_sb.val=0 external_value=0 scrollbar.val=0
+[BC]   → _breadcrumb_refresh_timer.start()
+
+[BC] === _on_breadcrumb_refresh ===
+[BC]   clearing last_spine (was '')
+
+[BC] === scroll(value=0) sb=0 tree_sb=0 rows=0 rh=0 spine=None
+[BC] tree_sb.setValue(0+0=0) -> 0
+[BC] top='conversations' exp=False match_last=False
+[BC] UPDATE None -> 'CBDC AI'
+[BC] tree_sb.setValue(0+0=0) [after update]
+[BC] _apply_geometry: bc_rows=1 bc_h=28 scrollbar_before=0
+[BC] _apply_geometry: tree range=[0,82] scrollbar_before_setRange=0
+
+[BC] === _on_tree_range_changed(min=0, max=84) ===
+[BC]   ENTER: scrollbar=0 tree_sb=0 bc_rows=1 row_h=28 scrolling=False
+[BC]   after setRange: scrollbar=0
+[BC]   bc_h=0 tree_sb.val=0 external_value=0 scrollbar.val=0
+[BC]   → _breadcrumb_refresh_timer.start()
+
+[BC] === _on_breadcrumb_refresh ===
+[BC]   clearing last_spine (was 'C:\\Users\\david.hudson\\Documents\\CBDC AI')
+
+[BC] === scroll(value=0) sb=0 tree_sb=0 rows=1 rh=28 spine=None
+[BC] tree_sb.setValue(0+0=0) -> 0
+[BC] top='conversations' exp=False match_last=False
+[BC] UPDATE None -> 'CBDC AI'
+[BC] tree_sb.setValue(0+0=0) [after update]
+[BC] _apply_geometry: bc_rows=1 bc_h=28 scrollbar_before=0
+[BC] _apply_geometry: tree range=[0,84] scrollbar_before_setRange=0
+35.072: event <PySide6.QtGui.QKeyEvent(KeyPress, Key_V, ControlModifier, text="\u0016")>, type 6, object EditorWidget, took 408.978 msec
+35.073: event <PySide6.QtGui.QKeyEvent(KeyPress, Key_V, ControlModifier, text="\u0016")>, type 6, object MainWindowClassWindow, took 409.303 msec
+36.741: event <PySide6.QtGui.QKeyEvent(KeyPress, Key_V, ControlModifier, text="\u0016")>, type 6, object EditorWidget, took 22.428 msec
+36.742: event <PySide6.QtGui.QKeyEvent(KeyPress, Key_V, ControlModifier, text="\u0016")>, type 6, object MainWindowClassWindow, took 22.667 msec
+57.437: event <PySide6.QtCore.QEvent(QEvent::UpdateRequest)>, type 77, object , took 39.522 msec
+67.150: event <PySide6.QtGui.QMouseEvent(MouseButtonRelease ts=1239840296 LeftButton pos=81,221 scn=81,221 gbl=456,376 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3))>, type 3, object , took 10928.315 msec
+67.150: event <PySide6.QtGui.QMouseEvent(MouseButtonRelease ts=1239840296 LeftButton pos=81,221 scn=81,221 gbl=456,376 dev=QInputDevice(QPointingDevice("core pointer" Mouse id=1 buttonCount=3))>, type 3, object QMenuClassWindow, took 10928.669 msec
+67.186: event <PySide6.QtCore.QEvent(QEvent::UpdateRequest)>, type 77, object , took 21.838 msec
+
+[BC] === _on_tree_range_changed(min=0, max=112) ===
+[BC]   ENTER: scrollbar=0 tree_sb=0 bc_rows=1 row_h=28 scrolling=False
+[BC]   after setRange: scrollbar=0
+[BC]   bc_h=0 tree_sb.val=0 external_value=0 scrollbar.val=0
+[BC]   → _breadcrumb_refresh_timer.start()
+
+[BC] === _on_breadcrumb_refresh ===
+[BC]   clearing last_spine (was 'C:\\Users\\david.hudson\\Documents\\CBDC AI')
+
+[BC] === scroll(value=0) sb=0 tree_sb=0 rows=1 rh=28 spine=None
+[BC] tree_sb.setValue(0+0=0) -> 0
+[BC] top='conversations' exp=False match_last=False
+[BC] UPDATE None -> 'CBDC AI'
+[BC] tree_sb.setValue(0+0=0) [after update]
+[BC] _apply_geometry: bc_rows=1 bc_h=28 scrollbar_before=0
+[BC] _apply_geometry: tree range=[0,112] scrollbar_before_setRange=0
