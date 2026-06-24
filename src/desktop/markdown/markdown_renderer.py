@@ -625,7 +625,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
             return True
 
         # Handle Windows-style paths (C:/, D:/, etc.)
-        if len(url) > 1 and url[1] == ':' and url[0].isalpha() and url[2] == '/':
+        if len(url) > 2 and url[0].isalpha() and url[1] == ':' and url[2] in ('/', '\\'):
             return True
 
         return False

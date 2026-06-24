@@ -2,6 +2,10 @@
 
 ## v51 (2026-06-xx)
 
+Bug fixes:
+
+- Resolved problem with image previews on Windows.
+
 ## v50 (2026-06-24)
 
 New features:
