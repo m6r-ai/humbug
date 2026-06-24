@@ -315,12 +315,19 @@ class SidebarBreadcrumbContainer(QWidget):
         bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
         tree_sb.setValue(value + bc_h)
 
+        # When scrolling fast, the tree viewport may not have settled by the time
+        # we read it.  If indexAt returns nothing usable, defer a refresh so the
+        # breadcrumb converges to the correct state on the next event-loop tick.
+        # Without this, the re-entrancy guard in _on_external_scroll consumes the
+        # scroll event and no subsequent breadcrumb update ever runs.
         index = self._tree_view.indexAt(QPoint(0, 0))
         if not index.isValid():
+            self._breadcrumb_refresh_timer.start()
             return
 
         row_height = self._tree_view.rowHeight(index)
         if row_height <= 0:
+            self._breadcrumb_refresh_timer.start()
             return
 
         self._row_height = row_height
@@ -329,6 +336,7 @@ class SidebarBreadcrumbContainer(QWidget):
             bc_rh = self._breadcrumb_bar.rowHeight(bc_index)
             if bc_rh > 0:
                 self._bc_row_height = bc_rh
+
         topmost_path = self._tree_view.get_path_from_index(index) or ""
         topmost_is_expanded = self._tree_view.isExpanded(index)
 
