@@ -72,6 +72,7 @@ _DARK_COLORS: Dict[ColorRole, str] = {
     ColorRole.BACKGROUND_TERTIARY_HOVER: "#303030",
     ColorRole.BACKGROUND_TERTIARY_PRESSED: "#505050",
     ColorRole.BACKGROUND_DIALOG: "#1e1e1e",
+    ColorRole.LOGO_BACKGROUND: "#303030",
 
     # Text colours
     ColorRole.TEXT_PRIMARY: "#d8d8d8",
@@ -292,6 +293,7 @@ _LIGHT_COLORS: Dict[ColorRole, str] = {
     ColorRole.BACKGROUND_TERTIARY_HOVER: "#e0e0e0",
     ColorRole.BACKGROUND_TERTIARY_PRESSED: "#c8c8c8",
     ColorRole.BACKGROUND_DIALOG: "#d8d8d8",
+    ColorRole.LOGO_BACKGROUND: "#f8f8f8",
 
     # Text colours
     ColorRole.TEXT_PRIMARY: "#202020",
@@ -512,6 +514,7 @@ _COLOR_BLIND_COLORS: Dict[ColorRole, str] = {
     ColorRole.BACKGROUND_TERTIARY_HOVER: "#24303a",
     ColorRole.BACKGROUND_TERTIARY_PRESSED: "#344450",
     ColorRole.BACKGROUND_DIALOG: "#1f242a",
+    ColorRole.LOGO_BACKGROUND: "#2f3640",
 
     # Text colours
     ColorRole.TEXT_PRIMARY: "#d7dde3",
@@ -730,6 +733,7 @@ _OCEAN_LIGHT_COLORS: Dict[ColorRole, str] = {
     ColorRole.BACKGROUND_TERTIARY_HOVER: "#dfe8f2",
     ColorRole.BACKGROUND_TERTIARY_PRESSED: "#cfdbe8",
     ColorRole.BACKGROUND_DIALOG: "#ffffff",
+    ColorRole.LOGO_BACKGROUND: "#e9f0f8",
 
     # Text colours
     ColorRole.TEXT_PRIMARY: "#1f2933",

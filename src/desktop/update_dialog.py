@@ -5,6 +5,7 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from desktop.color_role import ColorRole
+from desktop.gradient_label import GradientBorderLabel
 from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
 from desktop.url_opener import open_url
@@ -38,9 +39,13 @@ class UpdateDialog(QDialog):
         layout.setSpacing(8)
         layout.addSpacing(24)
 
-        logo_label = QLabel()
-        logo_label.setAutoFillBackground(False)
-        logo_label.setStyleSheet("background: transparent;")
+        logo_label = GradientBorderLabel(
+            self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_START),
+            self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END),
+            radius=16.0,
+            border_width=2.0,
+            fill_color=self._style_manager.get_color_str(ColorRole.LOGO_BACKGROUND),
+        )
         logo_pixmap = QPixmap(self._style_manager.get_app_logo_path())
         zoom_factor = self._style_manager.zoom_factor()
         scaled_size = int(160 * zoom_factor)

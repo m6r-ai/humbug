@@ -22,6 +22,7 @@ class ColorRole(Enum):
     BACKGROUND_TERTIARY_PRESSED = auto()
                                         # Tertiary elements background pressed
     BACKGROUND_DIALOG = auto()          # Dialog box background
+    LOGO_BACKGROUND = auto()            # Logo panel background (subtle lift from surrounding)
 
     # Text colours
     TEXT_PRIMARY = auto()               # Primary text color

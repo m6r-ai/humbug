@@ -41,6 +41,7 @@ class AboutDialog(QDialog):
             style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END),
             radius=16.0,
             border_width=2.0,
+            fill_color=style_manager.get_color_str(ColorRole.LOGO_BACKGROUND),
         )
         logo_pixmap = QPixmap(style_manager.get_app_logo_path())
         scaled_size = int(200 * zoom_factor)

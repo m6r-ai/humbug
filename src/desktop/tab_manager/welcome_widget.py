@@ -43,6 +43,7 @@ class WelcomeWidget(QFrame):
             self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END),
             radius=16.0,
             border_width=2.0,
+            fill_color=self._style_manager.get_color_str(ColorRole.LOGO_BACKGROUND),
         )
         self._logo_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
         layout.addStretch()
@@ -226,6 +227,8 @@ class WelcomeWidget(QFrame):
         grad_end = self._style_manager.get_color_str(ColorRole.BRAND_GRADIENT_END)
         self._logo_label.update_colors(grad_start, grad_end)
         self._title_label.update_colors(grad_start, grad_end)
+        self._logo_label.update_fill_color(
+            self._style_manager.get_color_str(ColorRole.LOGO_BACKGROUND))
 
         # Update logo
         logo_pixmap = QPixmap(self._style_manager.get_app_logo_path())

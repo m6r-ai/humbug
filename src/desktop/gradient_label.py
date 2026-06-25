@@ -51,6 +51,7 @@ class GradientBorderLabel(QLabel):
         end_color: str,
         radius: float = 16.0,
         border_width: float = 2.0,
+        fill_color: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -58,6 +59,7 @@ class GradientBorderLabel(QLabel):
         self._end = QColor(end_color)
         self._radius = radius
         self._bw = border_width
+        self._fill = QColor(fill_color) if fill_color else None
         self._angle = 0.0
         self.setAutoFillBackground(False)
         self.setStyleSheet("background: transparent;")
@@ -75,6 +77,11 @@ class GradientBorderLabel(QLabel):
         """Update the gradient start and end colours and trigger a repaint."""
         self._start = QColor(start_color)
         self._end = QColor(end_color)
+        self.update()
+
+    def update_fill_color(self, fill_color: str | None) -> None:
+        """Update the fill colour and trigger a repaint."""
+        self._fill = QColor(fill_color) if fill_color else None
         self.update()
 
     def paintEvent(self, _event: QPaintEvent) -> None:
@@ -98,9 +105,8 @@ class GradientBorderLabel(QLabel):
         # Centre the scaled pixmap inside the label
         px = (self.rect().width() - scaled.width()) // 2
         py = (self.rect().height() - scaled.height()) // 2
-        painter.drawPixmap(px, py, scaled)
 
-        # Border rect tightly around the pixmap
+        # Fill the rounded-rect interior behind the pixmap
         half = self._bw / 2.0
         border_rect = QRectF(
             px - half - 1,
@@ -108,6 +114,12 @@ class GradientBorderLabel(QLabel):
             scaled.width() + self._bw + 2,
             scaled.height() + self._bw + 2,
         )
+        if self._fill is not None:
+            fill_path = QPainterPath()
+            fill_path.addRoundedRect(border_rect, self._radius, self._radius)
+            painter.fillPath(fill_path, self._fill)
+
+        painter.drawPixmap(px, py, scaled)
 
         # Rotating gradient: project start/end points from centre along _angle
         cx = border_rect.x() + border_rect.width() / 2.0
