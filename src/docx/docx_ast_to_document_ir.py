@@ -375,6 +375,26 @@ class _DocxToDocumentIRMapper:
 
                     continue
 
+                if self._para_is_code(node):
+                    # Start of a code block — consume all consecutive code paragraphs
+                    code_paras: List[DocxASTParagraphNode] = []
+                    while i < len(nodes):
+                        next_node = nodes[i]
+                        if not isinstance(next_node, DocxASTParagraphNode):
+                            break
+
+                        if self._get_num_pr(next_node) is not None:
+                            break
+
+                        if not self._para_is_code(next_node):
+                            break
+
+                        code_paras.append(next_node)
+                        i += 1
+
+                    target.add_child(self._merge_code_paragraphs(code_paras))
+                    continue
+
                 mapped = self._map_paragraph(node)
                 if mapped is not None:
                     target.add_child(mapped)
@@ -388,6 +408,38 @@ class _DocxToDocumentIRMapper:
 
             # Section properties and other nodes are silently skipped
             i += 1
+
+    def _para_is_code(self, para: DocxASTParagraphNode) -> bool:
+        """Return True if the paragraph is classified as a code block.
+
+        Mirrors the classification logic in _map_paragraph: a paragraph is
+        code if its resolved style has is_code set, or if all its runs use
+        a monospace font.
+        """
+        ppr = next(
+            (c for c in para.children if isinstance(c, DocxASTParagraphPropertiesNode)),
+            None,
+        )
+        resolved = self._get_style(ppr.style_id if ppr else None)
+
+        if resolved and resolved.is_code:
+            return True
+
+        return self._para_is_monospace(para, resolved)
+
+    def _merge_code_paragraphs(
+        self, paras: List[DocxASTParagraphNode],
+    ) -> DocumentIRCodeBlockNode:
+        """Merge a sequence of code paragraphs into a single code block node.
+
+        Each paragraph represents one line of the original code block.  The
+        lines are joined with newlines to reconstruct the multi-line content.
+        """
+        lines = [self._extract_plain_text(p) for p in paras]
+        return DocumentIRCodeBlockNode(
+            language="",
+            content="\n".join(lines),
+        )
 
     def _get_num_pr(
         self, para: DocxASTParagraphNode

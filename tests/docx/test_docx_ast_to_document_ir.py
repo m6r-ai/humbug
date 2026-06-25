@@ -421,6 +421,73 @@ class TestCodeBlockDetection:
 
 
 # ---------------------------------------------------------------------------
+# Code block merging — consecutive code paragraphs become a single block
+# ---------------------------------------------------------------------------
+
+class TestCodeBlockMerging:
+    def test_consecutive_code_paras_merged_into_single_block(self):
+        styles = _styles_node(_style("CodeBlock", "Code Block"))
+        result = _map(_doc(styles, _body(
+            _para("line 1", style_id="CodeBlock"),
+            _para("line 2", style_id="CodeBlock"),
+            _para("line 3", style_id="CodeBlock"),
+        )))
+        assert len(result.children) == 1
+        cb = result.children[0]
+        assert isinstance(cb, DocumentIRCodeBlockNode)
+        assert cb.content == "line 1\nline 2\nline 3"
+
+    def test_single_code_para_still_works(self):
+        styles = _styles_node(_style("CodeBlock", "Code Block"))
+        result = _map(_doc(styles, _body(
+            _para("x = 1", style_id="CodeBlock"),
+        )))
+        assert len(result.children) == 1
+        cb = result.children[0]
+        assert isinstance(cb, DocumentIRCodeBlockNode)
+        assert cb.content == "x = 1"
+
+    def test_code_block_separated_by_non_code(self):
+        styles = _styles_node(_style("CodeBlock", "Code Block"))
+        result = _map(_doc(styles, _body(
+            _para("code line 1", style_id="CodeBlock"),
+            _para("normal text"),
+            _para("code line 2", style_id="CodeBlock"),
+        )))
+        assert len(result.children) == 3
+        assert isinstance(result.children[0], DocumentIRCodeBlockNode)
+        assert result.children[0].content == "code line 1"
+        assert isinstance(result.children[1], DocumentIRParagraphNode)
+        assert isinstance(result.children[2], DocumentIRCodeBlockNode)
+        assert result.children[2].content == "code line 2"
+
+    def test_code_block_inside_unwrapped_single_cell_table(self):
+        styles = _styles_node(_style("CodeBlock", "Code Block"))
+        cell = DocxASTTableCellNode()
+        for line in ["brd", " └── fsd", "      └── usr-man"]:
+            cell.add_child(_para(line, style_id="CodeBlock"))
+        row = DocxASTTableRowNode()
+        row.add_child(cell)
+        table = DocxASTTableNode()
+        table.add_child(row)
+        result = _map(_doc(styles, _body(table)))
+        assert len(result.children) == 1
+        cb = result.children[0]
+        assert isinstance(cb, DocumentIRCodeBlockNode)
+        assert cb.content == "brd\n └── fsd\n      └── usr-man"
+
+    def test_consecutive_monospace_paras_merged(self):
+        result = _map(_doc(_body(
+            _para("line 1", font="Consolas"),
+            _para("line 2", font="Consolas"),
+        )))
+        assert len(result.children) == 1
+        cb = result.children[0]
+        assert isinstance(cb, DocumentIRCodeBlockNode)
+        assert cb.content == "line 1\nline 2"
+
+
+# ---------------------------------------------------------------------------
 # Blockquote detection
 # ---------------------------------------------------------------------------
 
