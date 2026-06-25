@@ -835,7 +835,7 @@ _OCEAN_LIGHT_COLORS: Dict[ColorRole, str] = {
     ColorRole.MESSAGE_USER_BACKGROUND_HOVER: "#deedf8",
     ColorRole.MESSAGE_USER_BACKGROUND_PRESSED: "#d0e4f4",
     # The input background has an alpha channel so it allows a small amount of what's underneath it to show through.
-    ColorRole.MESSAGE_INPUT_BACKGROUND: "#eac5d3e1",
+    ColorRole.MESSAGE_INPUT_BACKGROUND: "#ead5e3f1",
     ColorRole.MESSAGE_ATTACHMENT_BACKGROUND: "#eef3f8",
     ColorRole.MESSAGE_BORDER: "#c5d3e1",
     ColorRole.MESSAGE_USER_BORDER: "#9fbede",
