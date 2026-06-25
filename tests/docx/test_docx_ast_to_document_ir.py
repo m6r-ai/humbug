@@ -710,6 +710,22 @@ class TestNonContiguousListLevels:
         nested1 = [c for c in first_item.children if isinstance(c, DocumentIRUnorderedListNode)]
         assert len(nested1) == 2
 
+    def test_pop_below_root_ilvl(self):
+        """Popping to an ilvl shallower than the root should start a new
+        root list rather than crashing with IndexError."""
+        numbering = self._three_level_numbering()
+        result = _map(_doc(numbering, _body(
+            _para("Deep", num_id="1", ilvl=2),
+            _para("Shallow", num_id="1", ilvl=0),
+        )))
+        # Should produce two separate root-level lists
+        assert len(result.children) == 2
+        assert isinstance(result.children[0], DocumentIRUnorderedListNode)
+        assert isinstance(result.children[1], DocumentIRUnorderedListNode)
+        # First list has one item at ilvl=2
+        assert len(result.children[0].children) == 1
+        # Second list has one item at ilvl=0
+        assert len(result.children[1].children) == 1
 
 # ---------------------------------------------------------------------------
 # Ordered list grouping

@@ -369,8 +369,8 @@ class _DocxToDocumentIRMapper:
                         list_paras.append(next_node)
                         i += 1
 
-                    list_node = self._build_list_tree(list_paras)
-                    if list_node is not None:
+                    list_nodes = self._build_list_tree(list_paras)
+                    for list_node in list_nodes:
                         target.add_child(list_node)
 
                     continue
@@ -443,7 +443,7 @@ class _DocxToDocumentIRMapper:
 
     def _build_list_tree(
         self, paras: List[DocxASTParagraphNode]
-    ) -> DocumentIRNode | None:
+    ) -> List[DocumentIRNode]:
         """Build a nested list tree from a flat sequence of list paragraphs.
 
         The paragraphs are grouped by ilvl (indent level).  When ilvl
@@ -454,11 +454,12 @@ class _DocxToDocumentIRMapper:
             paras: Flat list of paragraphs all having numPr set.
 
         Returns:
-            The root list node (DocumentIRUnorderedListNode or DocumentIROrderedListNode),
-            or None if paras is empty.
+            A list of root list nodes.  Normally a single list, but when
+            ilvl values drop below the root level mid-sequence, multiple
+            separate root lists are produced.
         """
         if not paras:
-            return None
+            return []
 
         # Stack of (list_node, current_item_node) pairs.
         # list_node is the DocumentIRUnorderedListNode/DocumentIROrderedListNode.
@@ -467,6 +468,10 @@ class _DocxToDocumentIRMapper:
         # nesting decisions are based on actual ilvl values rather than
         # assuming they are contiguous and zero-based.
         stack: List[Tuple[DocumentIRNode, DocumentIRListItemNode, int]] = []
+
+        # Completed root lists — normally just one, but if ilvl drops below
+        # the root mid-sequence, we save the old root and start a new one.
+        roots: List[DocumentIRNode] = []
 
         def _make_list(num_id: str, ilvl: int) -> DocumentIRNode:
             num_level = self._get_num_level(num_id, ilvl)
@@ -491,6 +496,7 @@ class _DocxToDocumentIRMapper:
             if not stack:
                 # Start the root list
                 root_list = _make_list(num_id, ilvl)
+                roots.append(root_list)
                 item = DocumentIRListItemNode()
                 root_list.add_child(item)
                 stack.append((root_list, item, ilvl))
@@ -517,8 +523,20 @@ class _DocxToDocumentIRMapper:
                 # If we've popped back to exactly the right ilvl, add a sibling.
                 # If the target ilvl doesn't exist on the stack (non-contiguous
                 # levels), create a new sub-list at this level under the
-                # nearest shallower ancestor.
-                if stack and stack[-1][2] == ilvl:
+                # nearest shallower ancestor.  If the stack is empty (the
+                # current ilvl is shallower than the root), start a new root
+                # list — this happens when consecutive list paragraphs are
+                # grouped together but their ilvl values don't start at the
+                # shallowest level seen so far.
+                if not stack:
+                    root_list = _make_list(num_id, ilvl)
+                    roots.append(root_list)
+                    item = DocumentIRListItemNode()
+                    root_list.add_child(item)
+                    stack.append((root_list, item, ilvl))
+                    self._fill_list_item(item, para)
+
+                elif stack[-1][2] == ilvl:
                     current_list, _, _ = stack[-1]
                     item = DocumentIRListItemNode()
                     current_list.add_child(item)
@@ -542,10 +560,7 @@ class _DocxToDocumentIRMapper:
                 stack[-1] = (current_list, item, ilvl)
                 self._fill_list_item(item, para)
 
-        if not stack:
-            return None
-
-        return stack[0][0]
+        return roots
 
     def _fill_list_item(
         self, item: DocumentIRListItemNode, para: DocxASTParagraphNode
