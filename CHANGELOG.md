@@ -9,6 +9,7 @@ Bug fixes:
 - Resolved a problem where bullet lists were not always correctly extracted from docx files.
 - Resolved a problem in the generation of Markdown code blocks from docx files.
 - Resolved a problem with hyperlinks when converting docx files to Markdown.
+- Resolved a performance issue with scrolling Markdown documents that contain images.
 
 ## v50 (2026-06-24)
 
