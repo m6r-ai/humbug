@@ -439,22 +439,24 @@ class DocxASTDrawingNode(DocxASTNode):
 
 class DocxASTHyperlinkNode(DocxASTNode):
     """
-    Node representing an external hyperlink (<w:hyperlink r:id="...">).
+    Node representing a hyperlink (<w:hyperlink>).
 
-    The URL is stored directly on the node; the serialiser resolves it to a
-    relationship ID when assembling the ZIP.  Children are DocxASTRunNode
-    instances that form the visible link text.
+    External hyperlinks carry a URL (resolved from r:id via relationships).
+    Internal hyperlinks carry an anchor (bookmark name from w:anchor).
+    Children are DocxASTRunNode instances that form the visible link text.
     """
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str = "", anchor: str = "") -> None:
         """
         Initialise a hyperlink node.
 
         Args:
-            url: The target URL for the hyperlink.
+            url: The target URL for an external hyperlink.
+            anchor: The bookmark name for an internal hyperlink.
         """
         super().__init__()
         self.url = url
+        self.anchor = anchor
 
 
 class DocxASTTableNode(DocxASTNode):

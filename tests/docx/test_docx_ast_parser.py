@@ -13,6 +13,7 @@ from docx import (
     parse_docx,
     DocxASTDocumentNode,
     DocxASTBodyNode,
+    DocxASTHyperlinkNode,
     DocxASTStylesNode,
     DocxASTStyleNode,
     DocxASTNumberingNode,
@@ -581,6 +582,115 @@ class TestBookmarkParsing:
         ends = [c for c in para.children if isinstance(c, DocxASTBookmarkEndNode)]
         assert starts[0].name == "section-a"
         assert ends[0].bookmark_id == "1"
+
+
+# ---------------------------------------------------------------------------
+# Hyperlink parsing
+# ---------------------------------------------------------------------------
+
+_R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+
+class TestHyperlinkParsing:
+    def test_internal_hyperlink_anchor(self):
+        body_xml = (
+            f'<w:p xmlns:w="{_W}" xmlns:r="{_R_NS}">'
+            f'<w:hyperlink w:anchor="_Toc123">'
+            f'<w:r><w:t>link text</w:t></w:r>'
+            f'</w:hyperlink>'
+            f'</w:p>'
+        )
+        doc = parse_docx(_build_docx(body_xml))
+        para = _first_para(doc)
+        links = [c for c in para.children if isinstance(c, DocxASTHyperlinkNode)]
+        assert len(links) == 1
+        assert links[0].anchor == "_Toc123"
+        assert links[0].url == ""
+        runs = [c for c in links[0].children if isinstance(c, DocxASTRunNode)]
+        assert len(runs) == 1
+
+    def test_external_hyperlink_resolves_url(self):
+        word_rels = (
+            '<Relationship Id="rId5"'
+            ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
+            ' Target="https://example.com" TargetMode="External"/>'
+        )
+        body_xml = (
+            f'<w:p xmlns:w="{_W}" xmlns:r="{_R_NS}">'
+            f'<w:hyperlink r:id="rId5">'
+            f'<w:r><w:t>click here</w:t></w:r>'
+            f'</w:hyperlink>'
+            f'</w:p>'
+        )
+        doc = parse_docx(_build_docx(body_xml, word_rels_extra=word_rels))
+        para = _first_para(doc)
+        links = [c for c in para.children if isinstance(c, DocxASTHyperlinkNode)]
+        assert len(links) == 1
+        assert links[0].url == "https://example.com"
+
+    def test_hyperlink_with_bookmark_discards_url(self):
+        word_rels = (
+            '<Relationship Id="rId5"'
+            ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
+            ' Target="http://f.pp.pt/" TargetMode="External"/>'
+        )
+        body_xml = (
+            f'<w:p xmlns:w="{_W}" xmlns:r="{_R_NS}">'
+            f'<w:hyperlink r:id="rId5">'
+            f'<w:bookmarkStart w:id="1" w:name="_Toc999"/>'
+            f'<w:r><w:t>F.PP.PT</w:t></w:r>'
+            f'<w:bookmarkEnd w:id="1"/>'
+            f'</w:hyperlink>'
+            f'<w:r><w:t>.008 Title</w:t></w:r>'
+            f'</w:p>'
+        )
+        doc = parse_docx(_build_docx(body_xml, word_rels_extra=word_rels))
+        para = _first_para(doc)
+        links = [c for c in para.children if isinstance(c, DocxASTHyperlinkNode)]
+        assert len(links) == 1
+        assert links[0].url == ""
+        runs = [c for c in links[0].children if isinstance(c, DocxASTRunNode)]
+        assert len(runs) == 1
+
+    def test_hyperlink_text_extracted_in_heading(self):
+        body_xml = (
+            f'<w:p xmlns:w="{_W}" xmlns:r="{_R_NS}">'
+            f'<w:pPr><w:pStyle w:val="Heading5"/></w:pPr>'
+            f'<w:hyperlink r:id="rId5">'
+            f'<w:bookmarkStart w:id="1" w:name="_Toc999"/>'
+            f'<w:r><w:t>F.PP.PT</w:t></w:r>'
+            f'</w:hyperlink>'
+            f'<w:r><w:t>.008 \u2013 Title</w:t></w:r>'
+            f'</w:p>'
+        )
+        word_rels = (
+            '<Relationship Id="rId5"'
+            ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
+            ' Target="http://f.pp.pt/" TargetMode="External"/>'
+        )
+        doc = parse_docx(_build_docx(body_xml, word_rels_extra=word_rels))
+        para = _first_para(doc)
+        links = [c for c in para.children if isinstance(c, DocxASTHyperlinkNode)]
+        assert len(links) == 1
+        runs = [c for c in links[0].children if isinstance(c, DocxASTRunNode)]
+        text_nodes = [c for c in runs[0].children if isinstance(c, DocxASTTextNode)]
+        assert text_nodes[0].content == "F.PP.PT"
+
+    def test_hyperlink_with_multiple_runs(self):
+        body_xml = (
+            f'<w:p xmlns:w="{_W}" xmlns:r="{_R_NS}">'
+            f'<w:hyperlink w:anchor="_Toc1">'
+            f'<w:r><w:t>part 1</w:t></w:r>'
+            f'<w:r><w:t>part 2</w:t></w:r>'
+            f'</w:hyperlink>'
+            f'</w:p>'
+        )
+        doc = parse_docx(_build_docx(body_xml))
+        para = _first_para(doc)
+        links = [c for c in para.children if isinstance(c, DocxASTHyperlinkNode)]
+        assert len(links) == 1
+        runs = [c for c in links[0].children if isinstance(c, DocxASTRunNode)]
+        assert len(runs) == 2
 
 
 # ---------------------------------------------------------------------------

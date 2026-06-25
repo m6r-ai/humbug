@@ -11,6 +11,7 @@ from docx.docx_ast_node import (
     DocxASTBreakNode,
     DocxASTDocumentNode,
     DocxASTDrawingNode,
+    DocxASTHyperlinkNode,
     DocxASTLastRenderedPageBreakNode,
     DocxASTNumLevelNode,
     DocxASTNumNode,
@@ -43,8 +44,9 @@ _WP = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
 _A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 _PIC = "http://schemas.openxmlformats.org/drawingml/2006/picture"
 
-# Relationship type suffixes used to identify image relationships
+# Relationship type suffixes used to identify image and hyperlink relationships
 _REL_IMAGE = "relationships/image"
+_REL_HYPERLINK = "relationships/hyperlink"
 
 # ZIP paths
 _DOCUMENT_PATH = "word/document.xml"
@@ -195,30 +197,35 @@ class DocxASTParser:
     def _parse_relationships(self, root: ET.Element) -> Dict[str, str]:
         """Parse a .rels file and return a map from Id to Target.
 
-        Only image relationships are included; others are silently skipped.
+        Image relationships are stored as ZIP paths (e.g. 'word/media/image1.png').
+        Hyperlink relationships are stored as URLs verbatim.  Other relationship
+        types are silently skipped.
 
         Args:
             root: Root element of the .rels XML.
 
         Returns:
-            Dict mapping relationship Id (e.g. 'rId6') to target path
-            (e.g. 'media/image1.png').  Paths are relative to the word/
-            directory.
+            Dict mapping relationship Id (e.g. 'rId6') to target.  Image
+            targets are normalised to paths within the ZIP; hyperlink targets
+            are the raw URL.
         """
         relationships: Dict[str, str] = {}
 
         for rel in root:
             rel_type = rel.get("Type", "")
-            if _REL_IMAGE not in rel_type:
+            is_image = _REL_IMAGE in rel_type
+            is_hyperlink = _REL_HYPERLINK in rel_type
+            if not is_image and not is_hyperlink:
                 continue
 
             rel_id = rel.get("Id")
             target = rel.get("Target")
             if rel_id and target:
-                # Targets are relative to word/, e.g. "media/image1.png"
-                # Normalise to a path within the ZIP: "word/media/image1.png"
-                if not target.startswith("/"):
-                    target = f"word/{target}"
+                if is_image:
+                    # Targets are relative to word/, e.g. "media/image1.png"
+                    # Normalise to a path within the ZIP: "word/media/image1.png"
+                    if not target.startswith("/"):
+                        target = f"word/{target}"
 
                 relationships[rel_id] = target
 
@@ -498,9 +505,57 @@ class DocxASTParser:
             elif local == "bookmarkEnd":
                 para_node.add_child(self._parse_bookmark_end(child))
 
-            # hyperlinks, sdts, etc. are skipped at this stage
+            elif local == "hyperlink":
+                para_node.add_child(self._parse_hyperlink(child, relationships))
+
+            # sdts and other elements are skipped at this stage
 
         return para_node
+
+    def _parse_hyperlink(
+        self,
+        elem: ET.Element,
+        relationships: Dict[str, str],
+    ) -> DocxASTHyperlinkNode:
+        """Parse a <w:hyperlink> element.
+
+        Handles both external hyperlinks (r:id referencing a URL via
+        relationships) and internal hyperlinks (w:anchor referencing a
+        bookmark).  Runs inside the hyperlink are parsed as children.
+
+        Args:
+            elem: The <w:hyperlink> element.
+            relationships: Relationship map for URL resolution.
+
+        Returns:
+            A DocxASTHyperlinkNode with run children.
+        """
+        anchor = _wattr(elem, "anchor") or ""
+        rel_id = elem.get(f"{{{_R}}}id")
+        url = ""
+        if rel_id and rel_id in relationships:
+            url = relationships[rel_id]
+
+        # Word sometimes wraps heading text in an external hyperlink that also
+        # contains bookmark elements.  These are cross-reference structures
+        # (the bookmark is the TOC anchor) and the external URL is an autoformat
+        # artefact (e.g. F.PP.PT -> http://f.pp.pt/).  Discard the URL so the
+        # text is emitted without a link wrapper.
+        has_bookmark = elem.find(_w("bookmarkStart")) is not None
+        if has_bookmark:
+            url = ""
+
+        node = DocxASTHyperlinkNode(url=url, anchor=anchor)
+
+        for child in elem:
+            local = child.tag.split("}")[-1]
+
+            if local == "r":
+                node.add_child(self._parse_run(child, relationships))
+
+            # bookmarkStart, bookmarkEnd, proofErr, etc. are skipped
+
+        return node
 
     def _parse_paragraph_properties(
         self, elem: ET.Element

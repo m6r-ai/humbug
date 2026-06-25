@@ -6,6 +6,7 @@ from docx.docx_ast_node import (
     DocxASTBreakNode,
     DocxASTDocumentNode,
     DocxASTDrawingNode,
+    DocxASTHyperlinkNode,
     DocxASTLastRenderedPageBreakNode,
     DocxASTNode,
     DocxASTNumLevelNode,
@@ -31,6 +32,7 @@ from document_ir import (
     DocumentIRDocumentNode,
     DocumentIRHeadingNode,
     DocumentIRImageNode,
+    DocumentIRLinkNode,
     DocumentIRLineBreakNode,
     DocumentIRListItemNode,
     DocumentIRNode,
@@ -915,12 +917,42 @@ class _DocxToDocumentIRMapper:
     def _append_inline_content(
         self, para: DocxASTParagraphNode, target: DocumentIRNode
     ) -> None:
-        """Collect inline nodes from a paragraph's runs and append to target."""
+        """Collect inline nodes from a paragraph's runs and hyperlinks, append to target."""
         for child in para.children:
             if isinstance(child, DocxASTRunNode):
                 for ir_node in self._map_run(child):
                     target.add_child(ir_node)
+
+            elif isinstance(child, DocxASTHyperlinkNode):
+                for ir_node in self._map_hyperlink(child):
+                    target.add_child(ir_node)
+
             # Bookmarks are silently skipped
+
+    def _map_hyperlink(
+        self, hyperlink: DocxASTHyperlinkNode,
+    ) -> List[DocumentIRNode]:
+        """Map a hyperlink to document_ir inline nodes.
+
+        External hyperlinks (url is set) become a DocumentIRLinkNode wrapping
+        the runs inside the hyperlink.  Internal hyperlinks (anchor only, no
+        url) have their runs emitted as plain inline nodes without a link
+        wrapper — they are cross-reference artefacts, not user-facing links.
+        """
+        if hyperlink.url:
+            link = DocumentIRLinkNode(url=hyperlink.url)
+            for run_child in hyperlink.children:
+                if isinstance(run_child, DocxASTRunNode):
+                    for ir_node in self._map_run(run_child):
+                        link.add_child(ir_node)
+            return [link] if link.children else []
+
+        # Internal hyperlink: emit runs as plain inline content
+        result: List[DocumentIRNode] = []
+        for run_child in hyperlink.children:
+            if isinstance(run_child, DocxASTRunNode):
+                result.extend(self._map_run(run_child))
+        return result
 
     def _map_run(self, run: DocxASTRunNode) -> List[DocumentIRNode]:
         """Map a single run to a list of document_ir inline nodes.
@@ -1033,5 +1065,15 @@ class _DocxToDocumentIRMapper:
 
                     elif isinstance(item, DocxASTTabNode):
                         parts.append("\t")
+
+            elif isinstance(child, DocxASTHyperlinkNode):
+                for run_child in child.children:
+                    if isinstance(run_child, DocxASTRunNode):
+                        for item in run_child.children:
+                            if isinstance(item, DocxASTTextNode):
+                                parts.append(item.content)
+
+                            elif isinstance(item, DocxASTTabNode):
+                                parts.append("\t")
 
         return "".join(parts)

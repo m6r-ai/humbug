@@ -8,6 +8,7 @@ Bug fixes:
 - Resolved a problem with the sidebar breadcrumb folders now always unlatching a folder correctly.
 - Resolved a problem where bullet lists were not always correctly extracted from docx files.
 - Resolved a problem in the generation of Markdown code blocks from docx files.
+- Resolved a problem with hyperlinks when converting docx files to Markdown.
 
 ## v50 (2026-06-24)
 

@@ -9,6 +9,7 @@ from docx.docx_ast_node import (
     DocxASTBreakNode,
     DocxASTDocumentNode,
     DocxASTDrawingNode,
+    DocxASTHyperlinkNode,
     DocxASTLastRenderedPageBreakNode,
     DocxASTNumLevelNode,
     DocxASTNumNode,
@@ -34,6 +35,7 @@ from document_ir import (
     DocumentIRDocumentNode,
     DocumentIRHeadingNode,
     DocumentIRImageNode,
+    DocumentIRLinkNode,
     DocumentIRLineBreakNode,
     DocumentIRListItemNode,
     DocumentIROrderedListNode,
@@ -1136,6 +1138,55 @@ class TestInlineContent:
         spans = result.children[0].children
         assert len(spans) == 3
         assert "".join(s.content for s in spans) == "Hello world!"
+
+    def test_internal_hyperlink_text_emitted_plain(self):
+        para = DocxASTParagraphNode()
+        link = DocxASTHyperlinkNode(anchor="_Toc123")
+        run = DocxASTRunNode()
+        run.add_child(DocxASTTextNode("F.PP.PT"))
+        link.add_child(run)
+        para.add_child(link)
+        run2 = DocxASTRunNode()
+        run2.add_child(DocxASTTextNode(".008 Title"))
+        para.add_child(run2)
+        result = _map(_doc(_body(para)))
+        spans = result.children[0].children
+        assert len(spans) == 2
+        assert spans[0].content == "F.PP.PT"
+        assert spans[1].content == ".008 Title"
+        assert not isinstance(spans[0], DocumentIRLinkNode)
+
+    def test_external_hyperlink_becomes_link_node(self):
+        para = DocxASTParagraphNode()
+        link = DocxASTHyperlinkNode(url="https://example.com")
+        run = DocxASTRunNode()
+        run.add_child(DocxASTTextNode("click here"))
+        link.add_child(run)
+        para.add_child(link)
+        result = _map(_doc(_body(para)))
+        children = result.children[0].children
+        assert isinstance(children[0], DocumentIRLinkNode)
+        assert children[0].url == "https://example.com"
+        assert children[0].children[0].content == "click here"
+
+    def test_heading_with_hyperlink_preserves_full_text(self):
+        styles = _styles_node(_style("Heading5", "heading 5", outline_level=4))
+        para = DocxASTParagraphNode()
+        para.add_child(DocxASTParagraphPropertiesNode(style_id="Heading5"))
+        link = DocxASTHyperlinkNode(anchor="_Toc999")
+        run = DocxASTRunNode()
+        run.add_child(DocxASTTextNode("F.PP.PT"))
+        link.add_child(run)
+        para.add_child(link)
+        run2 = DocxASTRunNode()
+        run2.add_child(DocxASTTextNode(".008 \u2013 Title"))
+        para.add_child(run2)
+        result = _map(_doc(styles, _body(para)))
+        heading = result.children[0]
+        assert isinstance(heading, DocumentIRHeadingNode)
+        assert heading.level == 5
+        text = "".join(s.content for s in heading.children)
+        assert text == "F.PP.PT.008 \u2013 Title"
 
 
 # ---------------------------------------------------------------------------
