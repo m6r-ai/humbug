@@ -4,7 +4,8 @@
 
 Bug fixes:
 
-- Resolved problem with image previews on Windows.
+- Resolved a problem with image previews on Windows.
+- Resolved a problem with the sidebar breadcrumb folders now always unlatching a folder correctly.
 
 ## v50 (2026-06-24)
 
