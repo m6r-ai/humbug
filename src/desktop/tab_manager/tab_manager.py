@@ -104,6 +104,11 @@ class TabManager(QWidget):
 
         # Connect to the splitter's moved signal
         self._column_splitter.splitterMoved.connect(self._on_column_splitter_splitter_moved)
+        self._column_splitter.user_resize_started.connect(self._on_column_resize_started)
+        self._column_splitter.user_resize_finished.connect(self._on_column_resize_finished)
+
+        # Track whether the user has manually resized columns so we can preserve their widths.
+        self._user_column_widths: List[int] | None = None
 
         self._style_manager = StyleManager()
 
@@ -763,6 +768,18 @@ class TabManager(QWidget):
         self.show_all_columns()
         self._update_tabs()
 
+    def _on_column_resize_started(self) -> None:
+        """Record current column sizes when the user begins dragging a splitter handle."""
+        self._user_column_widths = self._column_splitter.sizes()
+
+    def _on_column_resize_finished(self) -> None:
+        """Store the user's customised column widths after dragging ends."""
+        # A merge during the drag clears _user_column_widths to signal that
+        # show_all_columns should reset to preferred widths.  Don't override
+        # that if it happened.
+        if self._user_column_widths is not None:
+            self._user_column_widths = self._column_splitter.sizes()
+
     def _on_column_splitter_splitter_moved(self, _pos: int, _index: int) -> None:
         """Handle splitter movement and potential column merging."""
         sizes = self._column_splitter.sizes()
@@ -784,6 +801,11 @@ class TabManager(QWidget):
                     while source_column.count() > 0:
                         tab = cast(TabBase, source_column.widget(0))
                         self._move_tab_between_columns(tab, source_column, target_column, remove_if_empty=False)
+
+                    # The merge destroys the splitter handle the user was dragging,
+                    # so mouseReleaseEvent will never fire.  Reset the flag now so
+                    # show_all_columns can run and recompute preferred widths.
+                    self._column_splitter.set_user_resizing(False)
 
                     self._remove_column_and_resize(i, source_column)
                     self._update_tabs()
@@ -1057,6 +1079,9 @@ class TabManager(QWidget):
         self._column_splitter.insertWidget(index, column_widget)
         self._tab_columns.insert(index, column_widget)
 
+        # Column layout changed; discard user-customised widths.
+        self._user_column_widths = None
+
         self._column_mru_order[column_widget] = []
 
         tab_bar = column_widget.tabBar()
@@ -1086,6 +1111,9 @@ class TabManager(QWidget):
         if self._active_column == column and len(self._tab_columns) > 1:
             new_active_index = column_number - 1 if column_number > 0 else 1
             self._active_column = self._tab_columns[new_active_index]
+
+        # Column layout changed; discard user-customised widths.
+        self._user_column_widths = None
 
         del self._tab_columns[column_number]
         column.deleteLater()
@@ -1598,6 +1626,11 @@ class TabManager(QWidget):
         self._tab_columns[current_column_number], self._tab_columns[target_column_number] = \
             self._tab_columns[target_column_number], self._tab_columns[current_column_number]
 
+        # Swap user-customised widths to follow their columns.
+        if self._user_column_widths is not None and len(self._user_column_widths) == len(self._tab_columns):
+            self._user_column_widths[current_column_number], self._user_column_widths[target_column_number] = \
+                self._user_column_widths[target_column_number], self._user_column_widths[current_column_number]
+
         temp_source.deleteLater()
         temp_target.deleteLater()
 
@@ -1886,6 +1919,10 @@ class TabManager(QWidget):
         """Reapply column sizing and margins when the widget is resized."""
         super().resizeEvent(event)
 
+        # Don't fight the user while they are dragging a splitter handle.
+        if self._column_splitter.user_resizing():
+            return
+
         if self._tab_columns:
             self.show_all_columns()
 
@@ -1897,20 +1934,49 @@ class TabManager(QWidget):
         elif self._tab_carousel is not None and self._tab_carousel.isVisible():
             self.show_tab_carousel()
 
-    def show_all_columns(self) -> None:
+    def show_all_columns(self, reset_layout: bool = False) -> None:
         """Show all columns, sizing each to its preferred width where possible.
 
         Each column is sized to its preferred width. Tabs that return None from preferred_width()
         are treated as having the zoom-scaled default preferred width. If the total of all column
         widths is less than the available width, symmetric spacers centre the content.
+
+        When reset_layout is True, any user-customised column widths are discarded so
+        that columns return to their preferred sizes.
         """
+        # Don't reset sizes while the user is actively dragging a handle.
+        if self._column_splitter.user_resizing():
+            return
+
         if len(self._tab_columns) == 0:
             return
+
+        # Discard user-customised widths when an explicit reset is requested.
+        if reset_layout:
+            self._user_column_widths = None
 
         min_col_width = 200
         style_manager = self._style_manager
         default_col_width = style_manager.scaled_tab_width()
         available = self.width()
+        num_columns = len(self._tab_columns)
+
+        # If the user has manually resized columns, honour their widths instead of
+        # resetting to preferred sizes.  Scale proportionally when the available
+        # width has changed (e.g. window resize) so the relative proportions persist.
+        if self._user_column_widths is not None and len(self._user_column_widths) == num_columns:
+            user_widths = self._user_column_widths
+            user_total = sum(user_widths)
+            handle_total = self._column_splitter.handleWidth() * (num_columns - 1)
+            target_total = available - handle_total
+            if user_total > 0 and target_total > 0:
+                scale = target_total / user_total
+                sizes = [max(min_col_width, math.ceil(w * scale)) for w in user_widths]
+                self._left_spacer.setFixedWidth(0)
+                self._right_spacer.setFixedWidth(0)
+                self._column_splitter.setSizes(sizes)
+                self._columns_layout.invalidate()
+                return
 
         # Compute each column's preferred width. Tabs returning None use the default.
         col_preferred: List[int] = []

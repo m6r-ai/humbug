@@ -1700,7 +1700,7 @@ class MainWindow(QMainWindow):
 
     def _on_show_all_columns(self) -> None:
         """Show all columns equally."""
-        self._tab_manager.show_all_columns()
+        self._tab_manager.show_all_columns(reset_layout=True)
 
     def _on_split_column(self, split_left: bool) -> None:
         """Split the current column."""
