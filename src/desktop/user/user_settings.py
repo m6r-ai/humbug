@@ -26,6 +26,10 @@ class UserSettings:
     font_size: float| None = None  # None means use the default font size
     theme: ColorTheme = ColorTheme.SYSTEM
     custom_colors: Dict[str, Dict[str, str]] = field(default_factory=dict)
+    # Named custom colour themes the user has saved: name -> {role: {mode: hex}}.
+    saved_color_themes: Dict[str, Dict[str, Dict[str, str]]] = field(default_factory=dict)
+    # Name of the saved custom theme currently in use, or None for the live ("Manually") custom set.
+    active_custom_theme_name: str | None = None
     file_sort_order: UserFileSortOrder = UserFileSortOrder.DIRECTORIES_FIRST
     font_ligatures: bool = True
     allow_external_file_access: bool = True
@@ -357,6 +361,51 @@ class UserSettings:
                 path
             )
 
+        # Load saved (named) custom colour themes
+        saved_themes_raw = data.get("savedColorThemes", {})
+        if isinstance(saved_themes_raw, dict):
+            validated_themes: Dict[str, Dict[str, Dict[str, str]]] = {}
+            for theme_name, theme_colors in saved_themes_raw.items():
+                if not isinstance(theme_name, str) or not isinstance(theme_colors, dict):
+                    continue
+
+                validated_theme: Dict[str, Dict[str, str]] = {}
+                for role_key, mode_map in theme_colors.items():
+                    if not isinstance(role_key, str) or not isinstance(mode_map, dict):
+                        continue
+
+                    validated_modes = {
+                        mode_key: color_val
+                        for mode_key, color_val in mode_map.items()
+                        if isinstance(mode_key, str) and isinstance(color_val, str)
+                    }
+                    if validated_modes:
+                        validated_theme[role_key] = validated_modes
+
+                validated_themes[theme_name] = validated_theme
+
+            settings.saved_color_themes = validated_themes
+
+        else:
+            cls._logger.warning(
+                "Invalid savedColorThemes in %s: expected dict. Using empty.",
+                path
+            )
+
+        # Load the name of the active saved custom theme (None means the live custom set)
+        active_custom_theme = data.get("activeCustomThemeName", None)
+        if active_custom_theme is None or (
+            isinstance(active_custom_theme, str) and active_custom_theme in settings.saved_color_themes
+        ):
+            settings.active_custom_theme_name = active_custom_theme
+
+        else:
+            cls._logger.warning(
+                "Invalid activeCustomThemeName in %s. Using live custom colours.",
+                path
+            )
+            settings.active_custom_theme_name = None
+
         return settings
 
     @classmethod
@@ -480,6 +529,8 @@ class UserSettings:
             "fontLigatures": self.font_ligatures,
             "theme": self.theme.name,
             "customColors": self.custom_colors,
+            "savedColorThemes": self.saved_color_themes,
+            "activeCustomThemeName": self.active_custom_theme_name,
             "fileSortOrder": self.file_sort_order.name,
             "checkForUpdates": self.check_for_updates,
             "allowExternalFileAccess": self.allow_external_file_access,
