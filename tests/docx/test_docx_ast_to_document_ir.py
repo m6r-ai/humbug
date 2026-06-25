@@ -527,6 +527,190 @@ class TestUnorderedListGrouping:
         assert len(nested_lists) == 1
 
 
+def _style_with_num(
+    style_id: str,
+    name: str,
+    num_id: str,
+    ilvl: int = 0,
+    based_on: str = "",
+) -> DocxASTStyleNode:
+    """Build a style node that carries numbering properties in its pPr."""
+    node = DocxASTStyleNode(
+        style_type="paragraph",
+        style_id=style_id,
+        name=name,
+        based_on=based_on or None,
+    )
+    ppr = DocxASTParagraphPropertiesNode()
+    ppr.add_child(DocxASTNumberingPropertiesNode(num_id=num_id, ilvl=ilvl))
+    node.add_child(ppr)
+    return node
+
+
+class TestStyleBasedNumbering:
+    """Tests for list detection when numPr comes from the paragraph style."""
+
+    def test_bullet_via_style_numpr(self):
+        """A paragraph using a style that carries numPr is detected as a list item."""
+        styles = _styles_node(_style_with_num("ListBullet", "List Bullet", num_id="1"))
+        numbering = _numbering_node(num_id="1", num_fmt="bullet")
+        result = _map(_doc(styles, numbering, _body(
+            _para("Item A", style_id="ListBullet"),
+            _para("Item B", style_id="ListBullet"),
+        )))
+        assert isinstance(result.children[0], DocumentIRUnorderedListNode)
+        assert len(result.children[0].children) == 2
+
+    def test_single_bullet_via_style_numpr(self):
+        styles = _styles_node(_style_with_num("ListBullet", "List Bullet", num_id="1"))
+        numbering = _numbering_node(num_id="1", num_fmt="bullet")
+        result = _map(_doc(styles, numbering, _body(
+            _para("Only item", style_id="ListBullet"),
+        )))
+        assert isinstance(result.children[0], DocumentIRUnorderedListNode)
+
+    def test_ordered_via_style_numpr(self):
+        styles = _styles_node(_style_with_num("ListNumber", "List Number", num_id="1"))
+        numbering = _numbering_node(num_id="1", num_fmt="decimal")
+        result = _map(_doc(styles, numbering, _body(
+            _para("First", style_id="ListNumber"),
+            _para("Second", style_id="ListNumber"),
+        )))
+        assert isinstance(result.children[0], DocumentIROrderedListNode)
+        assert len(result.children[0].children) == 2
+
+    def test_style_numpr_inherited_via_based_on(self):
+        """A child style that inherits from a style with numPr also gets numbering."""
+        styles = _styles_node(
+            _style_with_num("ListBullet", "List Bullet", num_id="1"),
+            _style("MyBullet", "My Bullet", based_on="ListBullet"),
+        )
+        numbering = _numbering_node(num_id="1", num_fmt="bullet")
+        result = _map(_doc(styles, numbering, _body(
+            _para("Item", style_id="MyBullet"),
+        )))
+        assert isinstance(result.children[0], DocumentIRUnorderedListNode)
+
+    def test_direct_numpr_takes_precedence_over_style(self):
+        """When both the paragraph and its style carry numPr, the direct one wins."""
+        styles = _styles_node(_style_with_num("ListBullet", "List Bullet", num_id="2"))
+        # numbering 1 = bullet, numbering 2 = ordered
+        numbering = DocxASTNumberingNode()
+        abstract = DocxASTAbstractNumNode(abstract_num_id="0")
+        abstract.add_child(DocxASTNumLevelNode(ilvl=0, num_fmt="bullet", start=1, lvl_text="\u2022"))
+        numbering.add_child(abstract)
+        abstract2 = DocxASTAbstractNumNode(abstract_num_id="1")
+        abstract2.add_child(DocxASTNumLevelNode(ilvl=0, num_fmt="decimal", start=1, lvl_text="%1."))
+        numbering.add_child(abstract2)
+        numbering.add_child(DocxASTNumNode(num_id="1", abstract_num_id="0"))
+        numbering.add_child(DocxASTNumNode(num_id="2", abstract_num_id="1"))
+
+        result = _map(_doc(styles, numbering, _body(
+            _para("Item", style_id="ListBullet", num_id="1", ilvl=0),
+        )))
+        # Direct numId="1" (bullet) should win over style's numId="2" (ordered)
+        assert isinstance(result.children[0], DocumentIRUnorderedListNode)
+
+    def test_style_numpr_followed_by_plain_paragraph(self):
+        styles = _styles_node(_style_with_num("ListBullet", "List Bullet", num_id="1"))
+        numbering = _numbering_node(num_id="1", num_fmt="bullet")
+        result = _map(_doc(styles, numbering, _body(
+            _para("Item", style_id="ListBullet"),
+            _para("After list"),
+        )))
+        assert isinstance(result.children[0], DocumentIRUnorderedListNode)
+        assert isinstance(result.children[1], DocumentIRParagraphNode)
+
+    def test_style_numpr_item_text(self):
+        styles = _styles_node(_style_with_num("ListBullet", "List Bullet", num_id="1"))
+        numbering = _numbering_node(num_id="1", num_fmt="bullet")
+        result = _map(_doc(styles, numbering, _body(
+            _para("Hello", style_id="ListBullet"),
+        )))
+        item = result.children[0].children[0]
+        assert isinstance(item, DocumentIRListItemNode)
+        para = item.children[0]
+        assert isinstance(para, DocumentIRParagraphNode)
+        assert para.children[0].content == "Hello"
+
+    def test_mixed_style_and_direct_numpr_in_one_list(self):
+        """Paragraphs with direct numPr and style-based numPr using the same
+        numId should be grouped into a single list."""
+        styles = _styles_node(_style_with_num("ListBullet", "List Bullet", num_id="1"))
+        numbering = _numbering_node(num_id="1", num_fmt="bullet")
+        result = _map(_doc(styles, numbering, _body(
+            _para("Direct", num_id="1", ilvl=0),
+            _para("Via style", style_id="ListBullet"),
+        )))
+        assert isinstance(result.children[0], DocumentIRUnorderedListNode)
+        assert len(result.children[0].children) == 2
+
+
+class TestNonContiguousListLevels:
+    """Tests for nesting when ilvl values skip levels (e.g. 0 then 2)."""
+
+    def _three_level_numbering(self) -> DocxASTNumberingNode:
+        numbering = DocxASTNumberingNode()
+        abstract = DocxASTAbstractNumNode(abstract_num_id="0")
+        for i in range(3):
+            abstract.add_child(DocxASTNumLevelNode(
+                ilvl=i, num_fmt="bullet", start=1, lvl_text="\u2022",
+            ))
+        numbering.add_child(abstract)
+        numbering.add_child(DocxASTNumNode(num_id="1", abstract_num_id="0"))
+        return numbering
+
+    def test_skip_from_0_to_2(self):
+        """Jumping from ilvl=0 to ilvl=2 nests one level, placing L2 as a
+        direct child of L0's item since intermediate levels can't be
+        represented in a list tree."""
+        numbering = self._three_level_numbering()
+        result = _map(_doc(numbering, _body(
+            _para("Level 0", num_id="1", ilvl=0),
+            _para("Level 2", num_id="1", ilvl=2),
+            _para("Back to 0", num_id="1", ilvl=0),
+        )))
+        ul = result.children[0]
+        assert isinstance(ul, DocumentIRUnorderedListNode)
+        assert len(ul.children) == 2  # L0 item and "Back to 0" item
+        first_item = ul.children[0]
+        # first_item should contain one nested list for the L2 content
+        nested1 = [c for c in first_item.children if isinstance(c, DocumentIRUnorderedListNode)]
+        assert len(nested1) == 1
+        # The nested list contains one item for L2
+        assert len(nested1[0].children) == 1
+        assert isinstance(nested1[0].children[0], DocumentIRListItemNode)
+
+    def test_start_at_non_zero_ilvl(self):
+        """A list that starts at ilvl=1 (no ilvl=0) should still work."""
+        numbering = self._three_level_numbering()
+        result = _map(_doc(numbering, _body(
+            _para("Item A", num_id="1", ilvl=1),
+            _para("Item B", num_id="1", ilvl=1),
+        )))
+        ul = result.children[0]
+        assert isinstance(ul, DocumentIRUnorderedListNode)
+        assert len(ul.children) == 2
+
+    def test_pop_to_non_contiguous_level(self):
+        """Going 0, 2, 1: L1 pops out of the L2 sublist and becomes a
+        second child list of the L0 item, since there is no ilvl=1
+        list on the stack to rejoin."""
+        numbering = self._three_level_numbering()
+        result = _map(_doc(numbering, _body(
+            _para("L0", num_id="1", ilvl=0),
+            _para("L2", num_id="1", ilvl=2),
+            _para("L1", num_id="1", ilvl=1),
+        )))
+        ul = result.children[0]
+        assert isinstance(ul, DocumentIRUnorderedListNode)
+        assert len(ul.children) == 1
+        first_item = ul.children[0]
+        # L0 item contains two child lists: one for L2, one for L1
+        nested1 = [c for c in first_item.children if isinstance(c, DocumentIRUnorderedListNode)]
+        assert len(nested1) == 2
+
+
 # ---------------------------------------------------------------------------
 # Ordered list grouping
 # ---------------------------------------------------------------------------

@@ -106,7 +106,7 @@ class _ResolvedStyle:
     __slots__ = (
         "style_id", "style_type", "name",
         "heading_level",
-        "is_code", "is_blockquote",
+        "is_code", "is_blockquote", "num_id", "ilvl",
         "bold", "italic", "sz",
         "font_ascii",
     )
@@ -118,6 +118,8 @@ class _ResolvedStyle:
         self.heading_level: int | None = None
         self.is_code: bool = False
         self.is_blockquote: bool = False
+        self.num_id: str | None = None
+        self.ilvl: int = 0
         self.bold: bool = False
         self.italic: bool = False
         self.sz: int | None = None
@@ -229,6 +231,8 @@ class _DocxToDocumentIRMapper:
             resolved.heading_level = parent.heading_level
             resolved.is_code = parent.is_code
             resolved.is_blockquote = parent.is_blockquote
+            resolved.num_id = parent.num_id
+            resolved.ilvl = parent.ilvl
             resolved.bold = parent.bold
             resolved.italic = parent.italic
             resolved.sz = parent.sz
@@ -272,9 +276,19 @@ class _DocxToDocumentIRMapper:
 
         # Paragraph outline_level from <w:pPr>
         ppr = next((c for c in node.children if isinstance(c, DocxASTParagraphPropertiesNode)), None)
-        if ppr is not None and ppr.outline_level is not None:
-            # outline_level 0-5 → heading 1-6
-            resolved.heading_level = ppr.outline_level + 1
+        if ppr is not None:
+            if ppr.outline_level is not None:
+                # outline_level 0-5 → heading 1-6
+                resolved.heading_level = ppr.outline_level + 1
+
+            # Numbering properties from this style's <w:pPr><w:numPr>
+            num_pr = next(
+                (c for c in ppr.children if isinstance(c, DocxASTNumberingPropertiesNode)),
+                None,
+            )
+            if num_pr is not None:
+                resolved.num_id = num_pr.num_id
+                resolved.ilvl = num_pr.ilvl
 
         self._styles[style_id] = resolved
         return resolved
@@ -378,18 +392,34 @@ class _DocxToDocumentIRMapper:
     def _get_num_pr(
         self, para: DocxASTParagraphNode
     ) -> DocxASTNumberingPropertiesNode | None:
-        """Return the numbering properties of a paragraph, or None."""
+        """Return the numbering properties of a paragraph, or None.
+
+        Checks the paragraph's own ``<w:numPr>`` first.  If the paragraph
+        does not carry numbering directly, falls back to the numbering
+        inherited from its paragraph style.  This mirrors Word's behaviour
+        where a style such as "List Bullet" can supply ``numPr`` that
+        applies to every paragraph using that style.
+        """
         ppr = next(
             (c for c in para.children if isinstance(c, DocxASTParagraphPropertiesNode)),
             None,
         )
-        if ppr is None:
-            return None
+        if ppr is not None:
+            direct = next(
+                (c for c in ppr.children if isinstance(c, DocxASTNumberingPropertiesNode)),
+                None,
+            )
+            if direct is not None:
+                return direct
 
-        return next(
-            (c for c in ppr.children if isinstance(c, DocxASTNumberingPropertiesNode)),
-            None,
-        )
+        # Fall back to numbering inherited from the paragraph's style
+        resolved = self._get_style(ppr.style_id if ppr else None)
+        if resolved and resolved.num_id is not None:
+            return DocxASTNumberingPropertiesNode(
+                num_id=resolved.num_id, ilvl=resolved.ilvl,
+            )
+
+        return None
 
     def _para_is_heading(self, para: DocxASTParagraphNode) -> bool:
         """Return True if the paragraph resolves to a heading via style or outline level.
@@ -433,7 +463,10 @@ class _DocxToDocumentIRMapper:
         # Stack of (list_node, current_item_node) pairs.
         # list_node is the DocumentIRUnorderedListNode/DocumentIROrderedListNode.
         # current_item_node is the DocumentIRListItemNode currently being built.
-        stack: List[Tuple[DocumentIRNode, DocumentIRListItemNode]] = []
+        # The third element is the ilvl at which this list lives, so that
+        # nesting decisions are based on actual ilvl values rather than
+        # assuming they are contiguous and zero-based.
+        stack: List[Tuple[DocumentIRNode, DocumentIRListItemNode, int]] = []
 
         def _make_list(num_id: str, ilvl: int) -> DocumentIRNode:
             num_level = self._get_num_level(num_id, ilvl)
@@ -460,40 +493,53 @@ class _DocxToDocumentIRMapper:
                 root_list = _make_list(num_id, ilvl)
                 item = DocumentIRListItemNode()
                 root_list.add_child(item)
-                stack.append((root_list, item))
+                stack.append((root_list, item, ilvl))
                 self._fill_list_item(item, para)
                 continue
 
-            current_ilvl = len(stack) - 1
+            current_ilvl = stack[-1][2]
 
             if ilvl > current_ilvl:
                 # Nest deeper: create a new sub-list inside the current item
-                _, parent_item = stack[-1]
+                _, parent_item, _ = stack[-1]
                 sub_list = _make_list(num_id, ilvl)
                 parent_item.add_child(sub_list)
                 item = DocumentIRListItemNode()
                 sub_list.add_child(item)
-                stack.append((sub_list, item))
+                stack.append((sub_list, item, ilvl))
                 self._fill_list_item(item, para)
 
             elif ilvl < current_ilvl:
                 # Pop back up to the right level
-                while len(stack) - 1 > ilvl:
+                while stack and stack[-1][2] > ilvl:
                     stack.pop()
 
-                # Add a new item to the list at this level
-                current_list, _ = stack[-1]
-                item = DocumentIRListItemNode()
-                current_list.add_child(item)
-                stack[-1] = (current_list, item)
-                self._fill_list_item(item, para)
+                # If we've popped back to exactly the right ilvl, add a sibling.
+                # If the target ilvl doesn't exist on the stack (non-contiguous
+                # levels), create a new sub-list at this level under the
+                # nearest shallower ancestor.
+                if stack and stack[-1][2] == ilvl:
+                    current_list, _, _ = stack[-1]
+                    item = DocumentIRListItemNode()
+                    current_list.add_child(item)
+                    stack[-1] = (current_list, item, ilvl)
+                    self._fill_list_item(item, para)
+
+                else:
+                    _, parent_item, _ = stack[-1]
+                    sub_list = _make_list(num_id, ilvl)
+                    parent_item.add_child(sub_list)
+                    item = DocumentIRListItemNode()
+                    sub_list.add_child(item)
+                    stack.append((sub_list, item, ilvl))
+                    self._fill_list_item(item, para)
 
             else:
                 # Same level: add a new sibling item
-                current_list, _ = stack[-1]
+                current_list, _, _ = stack[-1]
                 item = DocumentIRListItemNode()
                 current_list.add_child(item)
-                stack[-1] = (current_list, item)
+                stack[-1] = (current_list, item, ilvl)
                 self._fill_list_item(item, para)
 
         if not stack:
