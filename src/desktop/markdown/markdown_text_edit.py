@@ -4,7 +4,7 @@ import logging
 from typing import cast
 
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import Qt, Signal, QMimeData, QUrl
+from PySide6.QtCore import Qt, Signal, QMimeData, QUrl, QSize
 from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
 )
@@ -100,7 +100,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
         self._animated_gifs.clear()
 
-    def register_animated_gif(self, resource_name: str, path: str) -> None:
+    def register_animated_gif(self, resource_name: str, path: str, display_width: int = 0, display_height: int = 0) -> None:
         """
         Register an animated GIF to be played inside the document.
 
@@ -112,6 +112,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         Args:
             resource_name: The document resource name used for this image
             path: Absolute local file path to the GIF
+            display_width: Target display width in pixels (0 for natural size)
+            display_height: Target display height in pixels (0 for natural size)
         """
         existing = self._animated_gifs.get(resource_name)
         if existing is not None:
@@ -119,6 +121,9 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
         movie = QMovie(path)
         self._animated_gifs[resource_name] = movie
+
+        if display_width > 0 and display_height > 0:
+            movie.setScaledSize(QSize(display_width, display_height))
 
         def _on_frame_changed(_frame: int) -> None:
             try:
@@ -535,6 +540,11 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
                 block_rect = layout.blockBoundingRect(block).translated(content_offset_x, content_offset_y)
 
+                # Blocks are laid out in document order, so once we are past the bottom of
+                # the dirty region all subsequent blocks are further down and can be skipped.
+                if block_rect.top() > event.rect().bottom():
+                    break
+
                 # blockBoundingRect excludes top and bottom margins.  We extend the bar
                 # upward through the top margin and downward through the bottom margin so
                 # adjacent blocks produce a seamless bar.  round() rather than int() is
@@ -623,6 +633,11 @@ class MarkdownTextEdit(MinHeightTextEdit):
                     continue
 
                 block_rect = layout.blockBoundingRect(block).translated(content_offset_x, content_offset_y)
+
+                # Blocks are laid out in document order, so once we are past the bottom of
+                # the dirty region all subsequent blocks are further down and can be skipped.
+                if block_rect.top() > event.rect().bottom():
+                    break
 
                 if block_rect.bottom() >= event.rect().top() and block_rect.top() <= event.rect().bottom():
                     fmt = block.blockFormat()

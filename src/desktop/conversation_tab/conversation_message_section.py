@@ -128,6 +128,8 @@ class ConversationMessageSection(QFrame):
 
         self._content_node: MarkdownASTNode | None = None
 
+        self._rendered_width: int = -1
+
         # Connect signals
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
@@ -233,9 +235,15 @@ class ConversationMessageSection(QFrame):
         Fixed-width table frames are sized at render time, so a width change
         requires a full re-render to recompute the correct table dimensions.
         """
-        if self._renderer is not None and self._content_node is not None and isinstance(self._text_area, MarkdownTextEdit):
+        if (self._renderer is not None and self._content_node is not None
+                and isinstance(self._text_area, MarkdownTextEdit)):
+            new_width = self._text_area.viewport().width()
+            if new_width == self._rendered_width:
+                return
+
+            self._rendered_width = new_width
             self._text_area.clear_animated_gifs()
-            self._text_area.document().setTextWidth(self._text_area.viewport().width())
+            self._text_area.document().setTextWidth(new_width)
             self._renderer.visit(self._content_node)
 
     def _on_mouse_released(self, _event: QMouseEvent) -> None:
@@ -323,6 +331,7 @@ class ConversationMessageSection(QFrame):
 
         if self._renderer is not None:
             self._text_area.clear_animated_gifs()
+            self._rendered_width = self._text_area.viewport().width()
             self._text_area.document().setTextWidth(self._text_area.viewport().width())
             self._renderer.visit(content)
             return
@@ -512,4 +521,5 @@ class ConversationMessageSection(QFrame):
         if self._renderer is not None and self._content_node is not None and isinstance(self._text_area, MarkdownTextEdit):
             self._renderer.apply_style()
             self._text_area.clear_animated_gifs()
+            self._rendered_width = self._text_area.viewport().width()
             self._renderer.visit(self._content_node)

@@ -39,15 +39,16 @@ class MarkdownRenderer(MarkdownASTVisitor):
     def __init__(
         self,
         document: QTextDocument,
-        animated_gif_callback: Callable[[str, str], None] | None = None
+        animated_gif_callback: Callable[[str, str, int, int], None] | None = None
     ) -> None:
         """
         Initialize the document renderer.
 
         Args:
             document: The QTextDocument to render into
-            animated_gif_callback: Optional callback invoked with (resource_name, path)
-                for each animated GIF image encountered during rendering
+            animated_gif_callback: Optional callback invoked with
+                (resource_name, path, display_width, display_height) for each
+                animated GIF image encountered during rendering
         """
         super().__init__()
         self._logger = logging.getLogger("MarkdownRenderer")
@@ -721,23 +722,56 @@ class MarkdownRenderer(MarkdownASTVisitor):
         if self._is_local_file(node.url):
             image, loaded_successfully, is_animated = self._load_local_image(node.url)
 
-        # Create a resource for this image if it doesn't already exist
+        # Compute display dimensions and pre-scale static images so Qt doesn't have to
+        # rescale on every layout pass.  When a PercentageLength is used Qt must recompute
+        # the scaled dimensions from the full-resolution source on each layout, which is
+        # very expensive for large images during scrolling.  Animated GIFs are not
+        # pre-scaled here — the QMovie handles frame scaling via setScaledSize instead.
+        display_width = 0
+        display_height = 0
+        if loaded_successfully:
+            doc_width = self._document.textWidth()
+            if 0 < doc_width < image.width():
+                scale = doc_width / image.width()
+                display_width = int(doc_width)
+                display_height = int(image.height() * scale)
+                if not is_animated:
+                    scaled = image.scaled(
+                        display_width, display_height,
+                        Qt.AspectRatioMode.IgnoreAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    if not scaled.isNull():
+                        image = scaled
+
+            else:
+                display_width = image.width()
+                display_height = image.height()
+
+        # Create a resource for this image.  We always update the resource (even on
+        # re-renders) because the image may have been pre-scaled to a different document width.
         resource_name = f"image_{hash(node.url)}"
-        if not self._document.resource(QTextDocument.ResourceType.ImageResource, resource_name):
+        existing = self._document.resource(QTextDocument.ResourceType.ImageResource, resource_name)
+        needs_update = existing is None
+        if not needs_update and loaded_successfully and isinstance(existing, QImage):
+            needs_update = existing.width() != image.width() or existing.height() != image.height()
+        if needs_update:
             self._document.addResource(QTextDocument.ResourceType.ImageResource, resource_name, image)
 
         if is_animated and self._animated_gif_callback is not None:
-            self._animated_gif_callback(resource_name, node.url)
+            self._animated_gif_callback(resource_name, node.url, display_width, display_height)
 
         # Create an image format
         img_format = QTextImageFormat()
         img_format.setName(resource_name)
 
-        # If the image loaded successfully, preserve its aspect ratio
+        # Set explicit pixel dimensions for the pre-scaled image so Qt can use
+        # cached layout metrics instead of recomputing on every layout pass.
         if loaded_successfully:
-            # Set the maximum width to 100% of the document width.  This lets the image
-            # scale down to fit the document width but not scale up.
-            img_format.setMaximumWidth(QTextLength(QTextLength.Type.PercentageLength, 100))
+            if display_width > 0:
+                img_format.setWidth(display_width)
+            if display_height > 0:
+                img_format.setHeight(display_height)
 
         # Add alt text and title if available
         tooltip = ""
