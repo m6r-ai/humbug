@@ -109,6 +109,8 @@ class SettingsDialog(QDialog):
         self._ai_backend_controls: Dict[str, Dict[str, QWidget | None]] = {}
         self._tool_switches: Dict[str, QWidget] = {}
         self._pending_custom_colors: Dict[str, Dict[str, str]] = {}
+        self._pending_saved_color_themes: Dict[str, Dict[str, Dict[str, str]]] = {}
+        self._pending_active_custom_theme_name: str | None = None
         self._fetched_models_cache_path = _FETCHED_MODELS_CACHE
 
         # Map section id -> (list item, stack page widget)
@@ -317,6 +319,7 @@ class SettingsDialog(QDialog):
             (strings.theme_dark, ColorTheme.DARK),
             (strings.theme_color_blind, ColorTheme.COLOR_BLIND),
             (strings.theme_ocean_light, ColorTheme.OCEAN_LIGHT),
+            (strings.theme_glossy_light, ColorTheme.GLOSSY_LIGHT),
             (strings.theme_custom, ColorTheme.CUSTOM),
         ])
 
@@ -670,6 +673,8 @@ class SettingsDialog(QDialog):
             font_ligatures=self._font_ligatures_check.get_value(),
             theme=self._theme_combo.get_value(),
             custom_colors=dict(self._pending_custom_colors),
+            saved_color_themes={k: dict(v) for k, v in self._pending_saved_color_themes.items()},
+            active_custom_theme_name=self._pending_active_custom_theme_name,
             file_sort_order=self._file_sort_combo.get_value(),
             allow_external_file_access=self._allow_external_access_switch.get_value(),
             external_file_allowlist=self._external_allowlist_area.get_value(),
@@ -723,6 +728,8 @@ class SettingsDialog(QDialog):
         self._file_sort_combo.set_value(settings.file_sort_order)
         self._check_for_updates_check.set_value(settings.check_for_updates)
         self._pending_custom_colors = dict(settings.custom_colors)
+        self._pending_saved_color_themes = {k: dict(v) for k, v in settings.saved_color_themes.items()}
+        self._pending_active_custom_theme_name = settings.active_custom_theme_name
 
         # File access
         self._allow_external_access_switch.set_value(settings.allow_external_file_access)
@@ -1126,13 +1133,45 @@ class SettingsDialog(QDialog):
         current_mode: ColorTheme = self._theme_combo.get_value()
         dialog = ThemeColorPickerDialog(initial_mode=current_mode, parent=self)
         dialog.theme_settings_changed.connect(self._on_color_picker_applied)
+        dialog.saved_color_themes_changed.connect(self._on_saved_color_themes_changed)
         dialog.exec()
 
-    def _on_color_picker_applied(self, mode: ColorTheme, custom_colors: Dict[str, Dict[str, str]]) -> None:
-        """Receive theme mode + custom colors from the color picker dialog."""
+    def _on_color_picker_applied(
+        self,
+        mode: ColorTheme,
+        custom_colors: Dict[str, Dict[str, str]],
+        active_custom_theme_name: str | None,
+    ) -> None:
+        """Receive theme mode + custom colors + active saved-theme name from the color picker dialog."""
         self._theme_combo.set_value(mode)
-        self._pending_custom_colors = custom_colors
+        # Only the live ("Manually") custom set is stored in custom_colors. When a saved theme is
+        # selected unchanged, leave the manual set intact so it stays distinct from the saved theme.
+        if active_custom_theme_name is None:
+            self._pending_custom_colors = custom_colors
+
+        self._pending_active_custom_theme_name = active_custom_theme_name
         self.apply_button.setEnabled(True)
+
+    def _on_saved_color_themes_changed(
+        self,
+        saved_themes: Dict[str, Dict[str, Dict[str, str]]],
+        theme: ColorTheme,
+        active_custom_theme_name: str | None,
+    ) -> None:
+        """
+        Receive the updated set of saved (named) custom themes from the color picker dialog.
+
+        Saving or deleting a theme persists immediately so saved themes show up in the View
+        menu right away, and deleting the active theme reverts the app to the default theme.
+        """
+        self._pending_saved_color_themes = saved_themes
+        self._pending_active_custom_theme_name = active_custom_theme_name
+        self._theme_combo.set_value(theme)
+
+        user_settings = self.get_user_settings()
+        self._current_user_settings = user_settings
+        self.user_settings_changed.emit(user_settings)
+        self.apply_button.setEnabled(False)
 
     def _on_apply_clicked(self) -> None:
         """Apply all settings changes to both managers."""
@@ -1232,6 +1271,7 @@ class SettingsDialog(QDialog):
             (strings.theme_dark, ColorTheme.DARK),
             (strings.theme_color_blind, ColorTheme.COLOR_BLIND),
             (strings.theme_ocean_light, ColorTheme.OCEAN_LIGHT),
+            (strings.theme_glossy_light, ColorTheme.GLOSSY_LIGHT),
             (strings.theme_custom, ColorTheme.CUSTOM),
         ])
         self._theme_combo.set_value(current_theme)
@@ -1377,6 +1417,8 @@ class SettingsDialog(QDialog):
             font_ligatures=settings.font_ligatures,
             theme=settings.theme,
             custom_colors=dict(settings.custom_colors),
+            saved_color_themes={k: dict(v) for k, v in settings.saved_color_themes.items()},
+            active_custom_theme_name=settings.active_custom_theme_name,
             file_sort_order=settings.file_sort_order,
             allow_external_file_access=settings.allow_external_file_access,
             external_file_allowlist=list(settings.external_file_allowlist),
