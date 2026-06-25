@@ -57,7 +57,6 @@ class SidebarBreadcrumbContainer(QWidget):
         self._row_height: int = 0
         self._bc_row_height: int = 0
         self._scrolling: bool = False
-        self._debug: bool = False
         self._root_path: str = ""
         self._pending_expand_path: str = ""
         self._dot_click_handler: Callable[[], None] | None = None
@@ -98,7 +97,6 @@ class SidebarBreadcrumbContainer(QWidget):
 
         tree_view.verticalScrollBar().rangeChanged.connect(self._on_tree_range_changed)
         tree_view.viewport().installEventFilter(self)
-        tree_view.installEventFilter(self)
         breadcrumb_bar.viewport().installEventFilter(self)
         tree_view.expanded.connect(self._on_tree_expanded)
 
@@ -123,15 +121,6 @@ class SidebarBreadcrumbContainer(QWidget):
             handler: Callable to invoke with no arguments.
         """
         self._dot_double_click_handler = handler
-
-    def set_debug(self, enabled: bool) -> None:
-        """Enable or disable debug logging to stdout."""
-        self._debug = enabled
-
-    def _dbg(self, msg: str) -> None:
-        """Print a debug message if debug logging is enabled."""
-        if self._debug:
-            print(msg, flush=True)
 
     def set_root_path(self, root_path: str) -> None:
         """
@@ -204,24 +193,10 @@ class SidebarBreadcrumbContainer(QWidget):
         Returns:
             True if the event was consumed, False to pass it on.
         """
-        if event.type() == QEvent.Type.Wheel:
-            obj_name = obj.objectName() if hasattr(obj, "objectName") else str(obj)
-            obj_class = obj.__class__.__name__ if hasattr(obj, "__class__") else "?"
-            is_viewport = obj is self._tree_view.viewport()
-            is_tree = obj is self._tree_view
-            self._dbg(f"[BC] WHEEL on obj={obj_class}/{obj_name!r} "
-                      f"is_tree_vp={is_viewport} is_tree={is_tree}")
-
         if event.type() == QEvent.Type.Wheel and obj in (
-            self._tree_view.viewport(), self._breadcrumb_bar.viewport(), self._tree_view
+            self._tree_view.viewport(), self._breadcrumb_bar.viewport()
         ):
-            if obj is self._tree_view.viewport() or obj is self._tree_view:
-                source = "tree"
-            else:
-                source = "bc"
-            self._dbg(f"[BC] WHEEL event on {source}, sb_before={self._scrollbar.value()}")
             QApplication.sendEvent(self._scrollbar, event)
-            self._dbg(f"[BC] WHEEL done, sb_after={self._scrollbar.value()}")
             return True
 
         if obj is self._tree_view.viewport() and event.type() == QEvent.Type.Paint:
@@ -257,12 +232,7 @@ class SidebarBreadcrumbContainer(QWidget):
             maximum: New maximum value from the tree's internal scrollbar.
         """
         tree_sb = self._tree_view.verticalScrollBar()
-        self._dbg(f"\n[BC] === _on_tree_range_changed(min={minimum}, max={maximum}) ===")
-        self._dbg(f"[BC]   ENTER: scrollbar={self._scrollbar.value()} tree_sb={tree_sb.value()} "
-              f"bc_rows={self._breadcrumb_rows} row_h={self._row_height} "
-              f"scrolling={self._scrolling}")
         self._scrollbar.setRange(minimum, maximum)
-        self._dbg(f"[BC]   after setRange: scrollbar={self._scrollbar.value()}")
         page_step = tree_sb.pageStep()
         self._scrollbar.setPageStep(page_step)
         single_step = self._row_height if self._row_height > 0 else tree_sb.singleStep()
@@ -273,20 +243,14 @@ class SidebarBreadcrumbContainer(QWidget):
 
         bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
         external_value = max(minimum, tree_sb.value() - bc_h)
-        self._dbg(f"[BC]   bc_h={bc_h} tree_sb.val={tree_sb.value()} "
-              f"external_value={external_value} scrollbar.val={self._scrollbar.value()}")
         if self._scrollbar.value() != external_value:
-            self._dbg(f"[BC]   → setValue({external_value}) [will trigger _on_external_scroll]")
             self._scrollbar.setValue(external_value)
 
         else:
-            self._dbg("[BC]   → _breadcrumb_refresh_timer.start()")
             self._breadcrumb_refresh_timer.start()
 
     def _on_breadcrumb_refresh(self) -> None:
         """Recalculate the breadcrumb after a tree expand/collapse has settled."""
-        self._dbg("\n[BC] === _on_breadcrumb_refresh ===")
-        self._dbg(f"[BC]   clearing last_spine (was {self._last_spine_path!r})")
         self._last_spine_path = ""
         self._on_external_scroll(self._scrollbar.value())
 
@@ -333,9 +297,6 @@ class SidebarBreadcrumbContainer(QWidget):
             value: New scrollbar position in tree-internal pixel units.
         """
         if self._scrolling:
-            self._dbg(f"[BC] SKIP(value={value}) sb={self._scrollbar.value()} "
-                  f"spine={os.path.basename(self._last_spine_path) if self._last_spine_path else None!r} "
-                  f"rows={self._breadcrumb_rows}")
             return
 
         self._scrolling = True
@@ -348,99 +309,91 @@ class SidebarBreadcrumbContainer(QWidget):
     def _do_external_scroll(self, value: int) -> None:
         """Perform the actual scroll update. Called only when not re-entering."""
         tree_sb = self._tree_view.verticalScrollBar()
-        self._dbg(f"\n[BC] === scroll(value={value}) sb={self._scrollbar.value()} "
-              f"tree_sb={tree_sb.value()} rows={self._breadcrumb_rows} "
-              f"rh={self._row_height} spine={os.path.basename(self._last_spine_path) if self._last_spine_path else None!r}")
+        # When a latched folder unlatches, bc_h shrinks and the tree viewport
+        # shifts, potentially exposing another latched ancestor at indexAt(0,0).
+        # During fast scrolling the scrollbar can jump to its final position in a
+        # single step, so multiple nested folders may need to unlatch at once.
+        # Loop until the spine stabilises so that all necessary unlatches happen
+        # even when no further valueChanged signals will arrive (the scrollbar is
+        # already clamped at its boundary).
+        for _ in range(self._breadcrumb_rows + 1):
+            # The "." sentinel row is always present in the breadcrumb bar but does
+            # not represent a scrolled-away tree row.  Only the real directory rows
+            # above it (breadcrumb_rows - 1) contribute to the tree scroll offset.
+            bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
+            tree_sb.setValue(value + bc_h)
 
-        # The "." sentinel row is always present in the breadcrumb bar but does
-        # not represent a scrolled-away tree row.  Only the real directory rows
-        # above it (breadcrumb_rows - 1) contribute to the tree scroll offset.
-        bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
-        tree_sb.setValue(value + bc_h)
-        self._dbg(f"[BC] tree_sb.setValue({value}+{bc_h}={value + bc_h}) -> {tree_sb.value()}")
+            index = self._tree_view.indexAt(QPoint(0, 0))
+            if not index.isValid():
+                break
 
-        index = self._tree_view.indexAt(QPoint(0, 0))
-        if not index.isValid():
-            return
+            row_height = self._tree_view.rowHeight(index)
+            if row_height <= 0:
+                break
 
-        row_height = self._tree_view.rowHeight(index)
-        if row_height <= 0:
-            return
+            self._row_height = row_height
+            bc_index = self._breadcrumb_bar.indexAt(QPoint(0, 0))
+            if bc_index.isValid():
+                bc_rh = self._breadcrumb_bar.rowHeight(bc_index)
+                if bc_rh > 0:
+                    self._bc_row_height = bc_rh
+            topmost_path = self._tree_view.get_path_from_index(index) or ""
+            topmost_is_expanded = self._tree_view.isExpanded(index)
 
-        self._row_height = row_height
-        bc_index = self._breadcrumb_bar.indexAt(QPoint(0, 0))
-        if bc_index.isValid():
-            bc_rh = self._breadcrumb_bar.rowHeight(bc_index)
-            if bc_rh > 0:
-                self._bc_row_height = bc_rh
+            # If any ancestor of the first visible item (at the same depth as the
+            # second visible item) is a sibling of the second visible item, the
+            # viewport is straddling a sibling boundary — the spine should be
+            # their common parent.
+            second_index = self._tree_view.indexAt(QPoint(0, row_height))
+            second_path = (self._tree_view.get_path_from_index(second_index) or "") if second_index.isValid() else ""
 
-        topmost_path = self._tree_view.get_path_from_index(index) or ""
-        topmost_is_expanded = self._tree_view.isExpanded(index)
-        self._dbg(f"[BC] top={os.path.basename(topmost_path)!r} exp={topmost_is_expanded} "
-              f"match_last={topmost_path == self._last_spine_path}")
+            straddling_sibling_boundary = False
+            if second_path and second_path != topmost_path:
+                second_parent = os.path.dirname(second_path)
+                ancestor = topmost_path
+                while ancestor:
+                    if os.path.dirname(ancestor) == second_parent and ancestor != second_path:
+                        straddling_sibling_boundary = True
+                        break
 
-        # If any ancestor of the first visible item (at the same depth as the second
-        # visible item) is a sibling of the second visible item, the viewport is
-        # straddling a sibling boundary — the spine should be their common parent.
-        second_index = self._tree_view.indexAt(QPoint(0, row_height))
-        second_path = (self._tree_view.get_path_from_index(second_index) or "") if second_index.isValid() else ""
+                    parent_of_ancestor = os.path.dirname(ancestor)
+                    if parent_of_ancestor == ancestor:
+                        break
 
-        straddling_sibling_boundary = False
-        if second_path and second_path != topmost_path:
-            second_parent = os.path.dirname(second_path)
-            ancestor = topmost_path
-            while ancestor:
-                if os.path.dirname(ancestor) == second_parent and ancestor != second_path:
-                    straddling_sibling_boundary = True
-                    break
+                    ancestor = parent_of_ancestor
 
-                parent_of_ancestor = os.path.dirname(ancestor)
-                if parent_of_ancestor == ancestor:
-                    break
+            if straddling_sibling_boundary:
+                # Spine is the common parent of the straddled siblings.
+                spine_path = os.path.dirname(second_path)
+                spine_path = spine_path if spine_path and spine_path != second_path else ""
+                # Only apply the straddling result if it doesn't move the spine
+                # upward — moving up is handled by the normal unlatch logic.
+                if self._last_spine_path and not spine_path.startswith(self._last_spine_path):
+                    straddling_sibling_boundary = False
 
-                ancestor = parent_of_ancestor
+            if not straddling_sibling_boundary:
+                if topmost_path == self._last_spine_path:
+                    # Unlatch: the latched folder's header has scrolled back into view.
+                    parent = os.path.dirname(topmost_path)
+                    spine_path = parent if parent and parent != topmost_path else ""
 
-        if straddling_sibling_boundary:
-            # Spine is the common parent of the straddled siblings.
-            spine_path = os.path.dirname(second_path)
-            spine_path = spine_path if spine_path and spine_path != second_path else ""
-            # Only apply the straddling result if it doesn't move the spine upward —
-            # moving up is handled by the normal unlatch logic.
-            if self._last_spine_path and not spine_path.startswith(self._last_spine_path):
-                straddling_sibling_boundary = False
+                elif os.path.isdir(topmost_path) and topmost_is_expanded and self._tree_view.visualRect(index).top() < 0:
+                    spine_path = topmost_path
 
-        if not straddling_sibling_boundary:
-            if topmost_path == self._last_spine_path:
-                self._dbg(f"[BC] UNLATCH top={os.path.basename(topmost_path)!r}")
-                # Unlatch: the latched folder's header has scrolled back into view.
-                parent = os.path.dirname(topmost_path)
-                spine_path = parent if parent and parent != topmost_path else ""
+                else:
+                    parent = os.path.dirname(topmost_path)
+                    spine_path = parent if parent and parent != topmost_path else ""
 
-            elif os.path.isdir(topmost_path) and topmost_is_expanded and self._tree_view.visualRect(index).top() < 0:
-                self._dbg(f"[BC] LATCH top={os.path.basename(topmost_path)!r}")
-                spine_path = topmost_path
+            if spine_path == self._last_spine_path:
+                break
 
-            else:
-                self._dbg(f"[BC] DEFAULT top={os.path.basename(topmost_path)!r} "
-                      f"parent={os.path.basename(os.path.dirname(topmost_path))!r}")
-                parent = os.path.dirname(topmost_path)
-                spine_path = parent if parent and parent != topmost_path else ""
+            self._last_spine_path = spine_path
+            self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(spine_path)
+            self._apply_geometry()
 
-        if spine_path == self._last_spine_path:
-            return
-
-        self._dbg(f"[BC] UPDATE {os.path.basename(self._last_spine_path) if self._last_spine_path else None!r} "
-              f"-> {os.path.basename(spine_path) if spine_path else None!r}")
-        self._last_spine_path = spine_path
-        self._breadcrumb_rows = self._breadcrumb_bar.update_from_path(spine_path)
-        bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
-        self._dbg(f"[BC] tree_sb.setValue({value}+{bc_h}={value + bc_h}) [after update]")
-        self._tree_view.verticalScrollBar().setValue(value + bc_h)
-        self._apply_geometry()
-
-        # _apply_geometry resizes the tree viewport, which causes the tree's
-        # internal rangeChanged to fire with a new maximum.  Re-read the tree's
-        # actual range now and clamp the external scrollbar to it so the
+        # _apply_geometry may have resized the tree viewport, which can cause the
+        # tree's internal rangeChanged to fire with a new maximum.  Re-read the
+        # tree's actual range now and clamp the external scrollbar to it so the
         # external bar never exceeds the tree's real scrollable extent.
         tree_sb = self._tree_view.verticalScrollBar()
         self._scrollbar.setRange(tree_sb.minimum(), tree_sb.maximum())
@@ -580,9 +533,6 @@ class SidebarBreadcrumbContainer(QWidget):
         bc_row_height = self._bc_row_height if self._bc_row_height > 0 else self._row_height
         bc_h = self._breadcrumb_rows * bc_row_height
 
-        sb_before = scrollbar.value()
-        self._dbg(f"[BC] _apply_geometry: bc_rows={self._breadcrumb_rows} bc_h={bc_h} scrollbar_before={sb_before}")
-
         # Disconnect rangeChanged while adjusting geometry to prevent the tree's
         # internal range change from causing a spurious external scrollbar value
         # recalculation during an active drag.
@@ -603,11 +553,7 @@ class SidebarBreadcrumbContainer(QWidget):
         # never received the update.  Sync the external scrollbar now so that
         # scrollbar_needed reflects reality.
         tree_sb = self._tree_view.verticalScrollBar()
-        self._dbg(f"[BC] _apply_geometry: tree range=[{tree_sb.minimum()},{tree_sb.maximum()}] "
-              f"scrollbar_before_setRange={self._scrollbar.value()}")
         self._scrollbar.setRange(tree_sb.minimum(), tree_sb.maximum())
-        if self._scrollbar.value() != sb_before:
-            self._dbg(f"[BC] _apply_geometry: *** setRange CHANGED scrollbar {sb_before} → {self._scrollbar.value()} ***")
         self._scrollbar.setPageStep(tree_sb.pageStep())
 
         scrollbar_needed = scrollbar.maximum() > scrollbar.minimum()
