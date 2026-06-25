@@ -954,6 +954,7 @@ _GLOSSY_LIGHT_COLORS: Dict[ColorRole, str] = {
     ColorRole.BACKGROUND_TERTIARY_HOVER: "#e8edf4",
     ColorRole.BACKGROUND_TERTIARY_PRESSED: "#d6dde8",
     ColorRole.BACKGROUND_DIALOG: "#ffffff",
+    ColorRole.LOGO_BACKGROUND: "#eef2fb",
 
     # Text colours
     ColorRole.TEXT_PRIMARY: "#1c2330",
