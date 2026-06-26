@@ -68,36 +68,6 @@ class UserManager(QObject):
         """Get path to legacy API keys file."""
         return os.path.join(self._user_path, self.API_KEYS_FILE)
 
-    def _migrate_settings_file(self, path: str) -> None:
-        """
-        Upgrade legacy values in the on-disk settings file (run once at startup).
-
-        The former "Glossy Light" theme is now the default Light palette, so a
-        saved "GLOSSY_LIGHT" is rewritten to "LIGHT".  Rewriting the file here
-        means the rest of the app never has to know the legacy value existed.
-        """
-        if not os.path.exists(path):
-            return
-
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-        except (OSError, json.JSONDecodeError):
-            return
-
-        if not isinstance(data, dict):
-            return
-
-        if data.get("theme") == "GLOSSY_LIGHT":
-            data["theme"] = "LIGHT"
-            try:
-                with open(path, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, indent=4)
-
-            except OSError as e:
-                self._logger.warning("Failed to migrate settings file %s: %s", path, str(e))
-
     def _load_settings(self) -> None:
         """
         Load user settings from config files.
@@ -112,9 +82,6 @@ class UserManager(QObject):
 
             settings_path = self._get_settings_path()
             legacy_path = self._get_legacy_api_keys_path()
-
-            # Upgrade any legacy values in the on-disk file before loading.
-            self._migrate_settings_file(settings_path)
 
             # Try to load from new format first
             if os.path.exists(settings_path):
