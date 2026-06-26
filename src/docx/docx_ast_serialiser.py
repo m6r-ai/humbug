@@ -855,6 +855,7 @@ class _DocxASTSerialiser:
         # OOXML requires at least one paragraph in every cell
         if not any("<w:p" in p for p in content_parts):
             content_parts.append("<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\"/></w:pPr></w:p>")
+
         # OOXML also requires the last child of a cell to be a paragraph
         elif not content_parts[-1].startswith("<w:p"):
             content_parts.append("<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\"/></w:pPr></w:p>")
