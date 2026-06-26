@@ -161,7 +161,6 @@ def get_english_strings() -> LanguageStrings:
         theme_light="Light",
         theme_color_blind="Color Blind",
         theme_ocean_light="Ocean Light",
-        theme_glossy_light="Glossy Light",
         theme_light_default="Default",
         theme_custom="Custom Theme",
         theme_custom_manually="Manual",

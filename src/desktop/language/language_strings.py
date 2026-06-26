@@ -152,7 +152,6 @@ class LanguageStrings:
     theme_light: str
     theme_color_blind: str
     theme_ocean_light: str
-    theme_glossy_light: str
     theme_light_default: str
     theme_custom: str
     theme_custom_manually: str

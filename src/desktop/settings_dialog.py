@@ -319,7 +319,6 @@ class SettingsDialog(QDialog):
             (strings.theme_dark, ColorTheme.DARK),
             (strings.theme_color_blind, ColorTheme.COLOR_BLIND),
             (strings.theme_ocean_light, ColorTheme.OCEAN_LIGHT),
-            (strings.theme_glossy_light, ColorTheme.GLOSSY_LIGHT),
             (strings.theme_custom, ColorTheme.CUSTOM),
         ])
 
@@ -1271,7 +1270,6 @@ class SettingsDialog(QDialog):
             (strings.theme_dark, ColorTheme.DARK),
             (strings.theme_color_blind, ColorTheme.COLOR_BLIND),
             (strings.theme_ocean_light, ColorTheme.OCEAN_LIGHT),
-            (strings.theme_glossy_light, ColorTheme.GLOSSY_LIGHT),
             (strings.theme_custom, ColorTheme.CUSTOM),
         ])
         self._theme_combo.set_value(current_theme)

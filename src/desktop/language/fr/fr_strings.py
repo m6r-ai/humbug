@@ -161,7 +161,6 @@ def get_french_strings() -> LanguageStrings:
         theme_light="Clair",
         theme_color_blind="Daltonien",
         theme_ocean_light="Océan Clair",
-        theme_glossy_light="Clair Brillant",
         theme_light_default="Par défaut",
         theme_custom="Thème personnalisé",
         theme_custom_manually="Manuel",
