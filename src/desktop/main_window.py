@@ -380,6 +380,7 @@ class MainWindow(QMainWindow):
         self._theme_menu: QMenu | None = None
         self._theme_separator: QAction | None = None
         self._theme_actions: Dict[ColorTheme, QAction] = {}
+        self._custom_theme_actions: Dict[str | None, QAction] = {}
 
         self._zoom_in_action = QAction(strings.zoom_in, self)
         self._zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
@@ -636,8 +637,10 @@ class MainWindow(QMainWindow):
 
         # Set theme from user settings
         self._style_manager.set_color_theme(user_settings.theme)
-        self._style_manager.apply_custom_colors(user_settings.custom_colors)
-        self._update_theme_menu()
+        self._style_manager.set_saved_color_themes(user_settings.saved_color_themes)
+        self._style_manager.set_active_custom_theme_name(user_settings.active_custom_theme_name)
+        self._apply_custom_colors_for_settings(user_settings)
+        self._rebuild_theme_menu()
 
         # Update welcome widget with initial user settings
         self._tab_manager.update_welcome_widget(user_settings)
@@ -850,14 +853,7 @@ class MainWindow(QMainWindow):
         self._open_token_usage_action.setText(strings.open_token_usage)
 
         # Recreate the theme menu with updated language strings
-        if self._theme_menu is not None:
-            self._view_menu.removeAction(self._theme_menu.menuAction())
-        if self._theme_separator is not None:
-            self._view_menu.removeAction(self._theme_separator)
-
-        self._theme_menu = self._create_theme_menu()
-        self._view_menu.insertMenu(self._zoom_in_action, self._theme_menu)
-        self._theme_separator = self._view_menu.insertSeparator(self._zoom_in_action)
+        self._rebuild_theme_menu()
 
         self._zoom_in_action.setText(strings.zoom_in)
         self._zoom_out_action.setText(strings.zoom_out)
@@ -930,14 +926,25 @@ class MainWindow(QMainWindow):
         theme_menu.addAction(system_action)
         self._theme_actions[ColorTheme.SYSTEM] = system_action
 
-        # Add Light theme action
-        light_action = QAction(strings.theme_light, self)
-        light_action.setCheckable(True)
-        light_action.setChecked(self._style_manager.user_color_theme() == ColorTheme.LIGHT)
-        light_action.triggered.connect(lambda: self._set_color_theme(ColorTheme.LIGHT))
-        theme_action_group.addAction(light_action)
-        theme_menu.addAction(light_action)
-        self._theme_actions[ColorTheme.LIGHT] = light_action
+        # Add Light theme submenu with the light variants.  "Default" is the
+        # built-in light palette; Ocean Light and Glossy Light are fixed light
+        # variants listed beneath it.
+        light_menu = self._style_manager.create_menu(self)
+        light_menu.setTitle(strings.theme_light)
+        theme_menu.addMenu(light_menu)
+
+        for light_theme, light_label in (
+            (ColorTheme.LIGHT, strings.theme_light_default),
+            (ColorTheme.OCEAN_LIGHT, strings.theme_ocean_light),
+            (ColorTheme.GLOSSY_LIGHT, strings.theme_glossy_light),
+        ):
+            light_variant_action = QAction(light_label, self)
+            light_variant_action.setCheckable(True)
+            light_variant_action.setChecked(self._style_manager.user_color_theme() == light_theme)
+            light_variant_action.triggered.connect(lambda _checked=False, t=light_theme: self._set_color_theme(t))
+            theme_action_group.addAction(light_variant_action)
+            light_menu.addAction(light_variant_action)
+            self._theme_actions[light_theme] = light_variant_action
 
         # Add Dark theme action
         dark_action = QAction(strings.theme_dark, self)
@@ -957,31 +964,125 @@ class MainWindow(QMainWindow):
         theme_menu.addAction(color_blind_action)
         self._theme_actions[ColorTheme.COLOR_BLIND] = color_blind_action
 
-        # Add Ocean Light theme action
-        ocean_light_action = QAction(strings.theme_ocean_light, self)
-        ocean_light_action.setCheckable(True)
-        ocean_light_action.setChecked(self._style_manager.user_color_theme() == ColorTheme.OCEAN_LIGHT)
-        ocean_light_action.triggered.connect(lambda: self._set_color_theme(ColorTheme.OCEAN_LIGHT))
-        theme_action_group.addAction(ocean_light_action)
-        theme_menu.addAction(ocean_light_action)
-        self._theme_actions[ColorTheme.OCEAN_LIGHT] = ocean_light_action
+        # Custom theme.  Maps a saved-theme name (or None for "Manually") to its action.
+        self._custom_theme_actions = {}
+        saved_themes = self._style_manager.saved_color_themes()
+        is_custom = self._style_manager.user_color_theme() == ColorTheme.CUSTOM
+        active_custom_name = self._style_manager.active_custom_theme_name()
 
-        # Add Custom theme action
-        custom_action = QAction(strings.theme_custom, self)
-        custom_action.setCheckable(True)
-        custom_action.setChecked(self._style_manager.user_color_theme() == ColorTheme.CUSTOM)
-        custom_action.triggered.connect(lambda: self._set_color_theme(ColorTheme.CUSTOM))
-        theme_action_group.addAction(custom_action)
-        theme_menu.addAction(custom_action)
-        self._theme_actions[ColorTheme.CUSTOM] = custom_action
+        if not saved_themes:
+            # No saved themes: keep a single "Custom Theme" entry that edits the live custom set.
+            custom_action = QAction(strings.theme_custom, self)
+            custom_action.setCheckable(True)
+            custom_action.setChecked(is_custom)
+            custom_action.triggered.connect(lambda: self._set_custom_theme(None))
+            theme_action_group.addAction(custom_action)
+            theme_menu.addAction(custom_action)
+            self._custom_theme_actions[None] = custom_action
+
+        else:
+            # Saved themes exist: "Custom Theme" becomes a submenu with "Manually" plus each saved name.
+            custom_menu = self._style_manager.create_menu(self)
+            custom_menu.setTitle(strings.theme_custom)
+            theme_menu.addMenu(custom_menu)
+
+            manually_action = QAction(strings.theme_custom_manually, self)
+            manually_action.setCheckable(True)
+            manually_action.setChecked(is_custom and active_custom_name is None)
+            manually_action.triggered.connect(lambda: self._set_custom_theme(None))
+            theme_action_group.addAction(manually_action)
+            custom_menu.addAction(manually_action)
+            self._custom_theme_actions[None] = manually_action
+
+            custom_menu.addSeparator()
+
+            for theme_name in saved_themes:
+                saved_action = QAction(theme_name, self)
+                saved_action.setCheckable(True)
+                saved_action.setChecked(is_custom and active_custom_name == theme_name)
+                saved_action.triggered.connect(lambda _checked=False, n=theme_name: self._set_custom_theme(n))
+                theme_action_group.addAction(saved_action)
+                custom_menu.addAction(saved_action)
+                self._custom_theme_actions[theme_name] = saved_action
 
         return theme_menu
 
+    def _apply_custom_colors_for_settings(self, settings: UserSettings) -> None:
+        """
+        Apply the custom colour overrides implied by the given settings.
+
+        When a saved custom theme is active, its colours are applied; otherwise the
+        live ("Manually") custom colours are used.
+        """
+        name = settings.active_custom_theme_name
+        if name is not None and name in settings.saved_color_themes:
+            self._style_manager.apply_custom_colors(settings.saved_color_themes[name])
+
+        else:
+            self._style_manager.apply_custom_colors(settings.custom_colors)
+
+    def _rebuild_theme_menu(self) -> None:
+        """Remove and recreate the display-theme menu (e.g. after saved themes or language change)."""
+        if self._theme_menu is not None:
+            self._view_menu.removeAction(self._theme_menu.menuAction())
+
+        if self._theme_separator is not None:
+            self._view_menu.removeAction(self._theme_separator)
+
+        self._theme_menu = self._create_theme_menu()
+        self._view_menu.insertMenu(self._zoom_in_action, self._theme_menu)
+        self._theme_separator = self._view_menu.insertSeparator(self._zoom_in_action)
+
     def _update_theme_menu(self) -> None:
         """Update the theme menu to reflect the current selected theme."""
-        # Set the checked state for the appropriate theme action
+        current_theme = self._style_manager.user_color_theme()
+
+        # Set the checked state for the built-in (non-custom) theme actions
         for theme, action in self._theme_actions.items():
-            action.setChecked(theme == self._style_manager.user_color_theme())
+            action.setChecked(theme == current_theme)
+
+        # Set the checked state for the custom theme actions ("Manually" + saved names)
+        active_custom_name = self._style_manager.active_custom_theme_name()
+        for name, action in self._custom_theme_actions.items():
+            action.setChecked(current_theme == ColorTheme.CUSTOM and name == active_custom_name)
+
+    def _set_custom_theme(self, name: str | None) -> None:
+        """
+        Switch to the CUSTOM theme, using either the live custom colours (name is None,
+        "Manually") or a saved custom theme's colours (name is a saved theme name).
+
+        Persists both the theme choice and which saved theme is active so the selection
+        survives restarts.
+
+        Args:
+            name: Saved theme name to apply, or None for the live custom set
+        """
+        self._style_manager.set_active_custom_theme_name(name)
+        self._style_manager.set_color_theme(ColorTheme.CUSTOM)
+
+        try:
+            settings = self._user_manager.settings()
+            settings.theme = ColorTheme.CUSTOM
+            settings.active_custom_theme_name = name
+            if name is not None and name in settings.saved_color_themes:
+                self._style_manager.apply_custom_colors(settings.saved_color_themes[name])
+
+            else:
+                self._style_manager.apply_custom_colors(settings.custom_colors)
+
+            self._user_manager.update_settings(settings)
+
+            if self._mindspace_manager.has_mindspace():
+                label = name if name is not None else "Manually"
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"Theme changed to Custom ({label})"
+                )
+
+        except UserError as e:
+            self._logger.error("Failed to persist custom theme change: %s", str(e))
+
+        self._update_theme_menu()
 
     def _set_color_theme(self, theme: ColorTheme) -> None:
         """
@@ -2070,8 +2171,10 @@ class MainWindow(QMainWindow):
                 if new_theme != self._style_manager.user_color_theme():
                     self._style_manager.set_color_theme(new_theme)
 
-                self._style_manager.apply_custom_colors(new_settings.custom_colors)
-                self._update_theme_menu()
+                self._style_manager.set_saved_color_themes(new_settings.saved_color_themes)
+                self._style_manager.set_active_custom_theme_name(new_settings.active_custom_theme_name)
+                self._apply_custom_colors_for_settings(new_settings)
+                self._rebuild_theme_menu()
 
                 self._tab_manager.update_welcome_widget(new_settings)
                 self._logger.info("User settings saved successfully")

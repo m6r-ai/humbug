@@ -258,6 +258,14 @@ THEME_ICON_PACK: Final[Dict[str, str]] = {
             <path stroke="{color}" stroke-width="6" fill="none" d="M20,28, L32,40, L44,28"/>
         </svg>
     ''',
+    "floppy": '''
+        <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <path stroke="{color}" stroke-width="6" fill="none" stroke-linejoin="miter"
+                d="M8,8 L44,8 L56,20 L56,56 L8,56 Z"/>
+            <path stroke="{color}" stroke-width="6" fill="none" stroke-linejoin="miter" d="M18,8 L18,24 L42,24 L42,8"/>
+            <rect x="20" y="36" width="24" height="16" stroke="{color}" stroke-width="6" fill="none"/>
+        </svg>
+    ''',
     "cog": '''
         <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
             <path stroke="{color}" stroke-width="4" fill="none" stroke-linejoin="miter"

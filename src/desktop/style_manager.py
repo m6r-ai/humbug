@@ -22,7 +22,9 @@ from syntax import TokenType
 
 from desktop.color_role import ColorRole
 from desktop.icons.icon_pack import active_inactive_icon_names, app_icon_svg, theme_icon_svg, update_icon_svg
-from desktop.palette import COLOR_BLIND_PALETTE, DARK_PALETTE, LIGHT_PALETTE, OCEAN_LIGHT_PALETTE, OverlayPalette, Palette
+from desktop.palette import (
+    COLOR_BLIND_PALETTE, DARK_PALETTE, GLOSSY_LIGHT_PALETTE, LIGHT_PALETTE, OCEAN_LIGHT_PALETTE, OverlayPalette, Palette
+)
 from desktop.color_theme import ColorTheme
 
 class ColorMode(Enum):
@@ -76,6 +78,10 @@ class StyleManager(QObject):
             self._custom_color_mode: ColorMode = ColorMode.DARK
             self._active_palette: Palette = self._palette_for_mode(ColorTheme.SYSTEM)
             self._active_preset_name: str | None = "Default"
+            # Named custom colour themes the user has saved: name -> {role: {mode: hex}}.
+            self._saved_color_themes: Dict[str, Dict[str, Dict[str, str]]] = {}
+            # Name of the saved custom theme in use, or None for the live ("Manually") custom set.
+            self._active_custom_theme_name: str | None = None
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
             self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
             self._highlights_version: int = 0
@@ -273,7 +279,7 @@ class StyleManager(QObject):
             for icon_name in (
                 "arrow-right", "arrow-left", "arrow-up", "arrow-down", "close", "check",
                 "expand-right", "expand-left", "expand-down", "info", "warning", "critical",
-                "question", "save", "cog", "copy", "fork", "delete", "edit", "submit",
+                "question", "save", "floppy", "cog", "copy", "fork", "delete", "edit", "submit",
                 "stop", "paperclip", "minimize", "maximize", "restore"
             ):
                 self._write_icon(f'{icon_name}-{suffix}.svg', theme_icon_svg(icon_name, color))
@@ -563,6 +569,9 @@ class StyleManager(QObject):
         if self._theme_mode == ColorTheme.OCEAN_LIGHT:
             return ColorMode.LIGHT
 
+        if self._theme_mode == ColorTheme.GLOSSY_LIGHT:
+            return ColorMode.LIGHT
+
         if self._theme_mode == ColorTheme.LIGHT:
             return ColorMode.LIGHT
 
@@ -614,6 +623,9 @@ class StyleManager(QObject):
         if mode == ColorTheme.OCEAN_LIGHT:
             return OCEAN_LIGHT_PALETTE
 
+        if mode == ColorTheme.GLOSSY_LIGHT:
+            return GLOSSY_LIGHT_PALETTE
+
         if mode == ColorTheme.CUSTOM:
             return self._dark_custom_palette if self._custom_color_mode == ColorMode.DARK else self._light_custom_palette
 
@@ -632,6 +644,32 @@ class StyleManager(QObject):
     def set_active_preset(self, name: str | None) -> None:
         """Record which preset is currently active (persists across color picker dialog opens)."""
         self._active_preset_name = name
+
+    def saved_color_themes(self) -> Dict[str, Dict[str, Dict[str, str]]]:
+        """Return a copy of the user's saved (named) custom colour themes."""
+        return {name: dict(colors) for name, colors in self._saved_color_themes.items()}
+
+    def set_saved_color_themes(self, themes: Dict[str, Dict[str, Dict[str, str]]]) -> None:
+        """Replace the set of saved (named) custom colour themes."""
+        self._saved_color_themes = {name: dict(colors) for name, colors in themes.items()}
+
+    def save_color_theme(self, name: str) -> None:
+        """Snapshot the current custom colours under the given name."""
+        self._saved_color_themes[name] = self.get_custom_colors()
+
+    def delete_color_theme(self, name: str) -> None:
+        """Remove a saved custom colour theme, if present."""
+        self._saved_color_themes.pop(name, None)
+        if self._active_custom_theme_name == name:
+            self._active_custom_theme_name = None
+
+    def active_custom_theme_name(self) -> str | None:
+        """Name of the saved custom theme in use, or None for the live ("Manually") custom set."""
+        return self._active_custom_theme_name
+
+    def set_active_custom_theme_name(self, name: str | None) -> None:
+        """Record which saved custom theme is active (None for the live custom set)."""
+        self._active_custom_theme_name = name
 
     def set_custom_color(self, role: ColorRole, color: str) -> None:
         """Override a single color role for the current resolved mode and emit style_changed."""

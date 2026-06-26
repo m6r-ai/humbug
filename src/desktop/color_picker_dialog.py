@@ -6,15 +6,19 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QWidget, QFrame, QListWidget, QListWidgetItem, QStackedWidget,
     QSplitter, QScrollArea, QColorDialog, QSizePolicy, QStyledItemDelegate,
-    QStyleOptionViewItem
+    QStyleOptionViewItem, QInputDialog, QMessageBox
 )
 from PySide6.QtCore import QEvent, QModelIndex, QPersistentModelIndex, QPointF, QRectF, QSize, Signal, Qt, QTimer
-from PySide6.QtGui import QColor, QFont, QPainter, QPen
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen
 
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
 from desktop.color_theme import ColorTheme
+
+
+# Theme the app falls back to when the saved theme currently in use is deleted.
+_DEFAULT_THEME = ColorTheme.SYSTEM
 
 
 # Preset themes: (name, gradient_start, gradient_end, {role_name: {mode_name: hex}})
@@ -754,7 +758,13 @@ class ThemeColorPickerDialog(QDialog):
     live via StyleManager and can be reverted on Cancel.
     """
 
-    theme_settings_changed = Signal(ColorTheme, dict)
+    # Emits (mode, custom_colors, active_custom_theme_name). The active name is None when the
+    # user is hand-editing ("Manually"), or a saved theme name when one is selected unchanged.
+    theme_settings_changed = Signal(ColorTheme, dict, object)
+    # Emits (saved_themes_map, theme_to_use, active_custom_theme_name) after a save or delete.
+    # This persists immediately so saved themes appear in the menu and a deleted active theme
+    # reverts the app to the default theme without needing a separate Apply.
+    saved_color_themes_changed = Signal(dict, object, object)
 
     def __init__(self, initial_mode: ColorTheme | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -765,6 +775,7 @@ class ThemeColorPickerDialog(QDialog):
         self._snapshot_mode = self._style_manager.user_color_theme()
         self._snapshot_colors = self._style_manager.get_custom_colors()
         self._snapshot_preset = self._style_manager.active_preset()
+        self._snapshot_active_custom = self._style_manager.active_custom_theme_name()
 
         # Apply the initial mode (e.g. passed from Settings dialog combo)
         if initial_mode is not None and initial_mode != self._snapshot_mode:
@@ -772,13 +783,14 @@ class ThemeColorPickerDialog(QDialog):
 
         self._section_pages: List[_SectionPage] = []
         self._committed = False  # True only after Apply / OK — revert on close otherwise
+        self._editing_theme_name: str | None = None  # saved theme last loaded for editing
         # Read persisted preset name so the right chip is highlighted on reopen
         self._active_preset_name: str | None = self._style_manager.active_preset()
         self._preset_button_map: Dict[str, QPushButton] = {}
 
         self.setWindowTitle("Customize Colors")
         self.setMinimumWidth(980)
-        self.setMinimumHeight(620)
+        self.setMinimumHeight(700)
         self.setModal(True)
 
         self._build_ui()
@@ -827,8 +839,8 @@ class ThemeColorPickerDialog(QDialog):
         right_layout.addWidget(mode_title)
 
         mode_row = QVBoxLayout()
-        mode_row.setContentsMargins(0, 0, 0, 0)
-        mode_row.setSpacing(int(8 * zoom))
+        mode_row.setContentsMargins(0, 0, int(6 * zoom), 0)
+        mode_row.setSpacing(int(14 * zoom))
 
         self._mode_buttons: Dict[ColorTheme, QPushButton] = {}
         for mode, label in [
@@ -837,6 +849,7 @@ class ThemeColorPickerDialog(QDialog):
             (ColorTheme.SYSTEM, "System"),
             (ColorTheme.COLOR_BLIND, "Color Blind"),
             (ColorTheme.OCEAN_LIGHT, "Ocean Light"),
+            (ColorTheme.GLOSSY_LIGHT, "Glossy Light"),
             (ColorTheme.CUSTOM, "Custom"),
         ]:
             btn = QPushButton(label)
@@ -846,18 +859,71 @@ class ThemeColorPickerDialog(QDialog):
             self._mode_buttons[mode] = btn
             mode_row.addWidget(btn)
 
+        mode_row.addStretch()
         self._update_mode_buttons(self._style_manager.user_color_theme())
 
         mode_widget = QWidget()
         mode_widget.setObjectName("ModeBar")
         mode_widget.setLayout(mode_row)
-        right_layout.addWidget(mode_widget)
 
-        # Separator
+        # Wrap the mode buttons in a scroll area so the list scrolls when there are
+        # more modes than fit, instead of pushing the rest of the panel off-screen.
+        mode_scroll = QScrollArea()
+        mode_scroll.setObjectName("ModeScroll")
+        mode_scroll.setWidgetResizable(True)
+        mode_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        mode_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        mode_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        # Fixed height so the mode list keeps a stable size and never gets squeezed
+        # when the saved-themes list below it grows with more themes. It scrolls
+        # internally when there are more modes than fit.
+        mode_scroll.setFixedHeight(int(200 * zoom))
+        mode_scroll.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        mode_scroll.setWidget(mode_widget)
+        right_layout.addWidget(mode_scroll)
+
+        # Single separator line below the mode container
         sep_top = QFrame()
         sep_top.setFrameShape(QFrame.Shape.HLine)
         sep_top.setObjectName("ColorPickerSep")
         right_layout.addWidget(sep_top)
+
+        # Saved themes section: lists the user's named themes, each with edit + delete buttons.
+        saved_title = QLabel("Saved Themes")
+        saved_title.setObjectName("ThemePanelSectionLabel")
+        right_layout.addWidget(saved_title)
+
+        # Banner shown while a saved theme is being edited.
+        self._editing_banner = QLabel("")
+        self._editing_banner.setObjectName("EditingThemeBanner")
+        self._editing_banner.setWordWrap(True)
+        self._editing_banner.setVisible(False)
+        right_layout.addWidget(self._editing_banner)
+
+        self._saved_themes_layout = QVBoxLayout()
+        self._saved_themes_layout.setContentsMargins(0, 0, int(6 * zoom), 0)
+        # Match the mode-list spacing so the cards share the same rhythm.
+        self._saved_themes_layout.setSpacing(int(14 * zoom))
+
+        saved_themes_widget = QWidget()
+        saved_themes_widget.setObjectName("SavedThemesBar")
+        saved_themes_widget.setLayout(self._saved_themes_layout)
+
+        self._saved_themes_scroll = QScrollArea()
+        self._saved_themes_scroll.setObjectName("SavedThemesScroll")
+        self._saved_themes_scroll.setWidgetResizable(True)
+        self._saved_themes_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._saved_themes_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._saved_themes_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        # Sits below the (fixed-height) mode list and expands to fill the remaining
+        # panel space, scrolling internally when there are more themes than fit. This
+        # keeps the two containers from overlapping at the dialog's minimum size.
+        self._saved_themes_scroll.setMinimumHeight(int(210 * zoom))
+        self._saved_themes_scroll.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self._saved_themes_scroll.setWidget(saved_themes_widget)
+        right_layout.addWidget(self._saved_themes_scroll)
+
+        self._rebuild_saved_themes_list()
 
         # Presets bar — always visible; clicking a preset switches to Custom + applies colors
         presets_scroll = QScrollArea()
@@ -992,22 +1058,20 @@ class ThemeColorPickerDialog(QDialog):
         # Show sections only in Custom mode
         self._update_sections_visibility(self._style_manager.user_color_theme())
 
-        # Separator above footer buttons
-        sep_bot = QFrame()
-        sep_bot.setFrameShape(QFrame.Shape.HLine)
-        sep_bot.setObjectName("ColorPickerSep")
-        right_layout.addWidget(sep_bot)
-
         # Footer buttons
         min_w = int(90 * zoom)
         min_h = 36
+
+        self._save_theme_btn = QPushButton("Save as theme…")
+        self._save_theme_btn.setMinimumHeight(min_h)
+        self._save_theme_btn.setToolTip("Save the current colours as a named theme you can pick from the View menu.")
+        self._save_theme_btn.clicked.connect(self._on_save_theme)
+        right_layout.addWidget(self._save_theme_btn)
 
         self._reset_all_btn = QPushButton("Reset all to defaults")
         self._reset_all_btn.setMinimumHeight(min_h)
         self._reset_all_btn.setProperty("destructive", True)
         self._reset_all_btn.clicked.connect(self._on_reset_all)
-        right_layout.addWidget(self._reset_all_btn)
-        right_layout.addStretch()
 
         self._cancel_btn = QPushButton("Cancel")
         self._cancel_btn.setMinimumWidth(min_w)
@@ -1033,12 +1097,28 @@ class ThemeColorPickerDialog(QDialog):
         self._ok_btn.setMinimumHeight(min_h)
         self._ok_btn.clicked.connect(self._on_ok)
 
-        for btn in [self._preview_btn, self._apply_btn, self._ok_btn, self._cancel_btn]:
-            right_layout.addWidget(btn)
-
         body_layout.addWidget(left_widget, 1)
         body_layout.addWidget(right_panel)
         main_layout.addLayout(body_layout, 1)
+
+        # Footer spanning the full dialog width with the standard dialog actions.
+        sep_footer = QFrame()
+        sep_footer.setFrameShape(QFrame.Shape.HLine)
+        sep_footer.setObjectName("ColorPickerSep")
+        main_layout.addWidget(sep_footer)
+
+        footer = QWidget()
+        footer.setObjectName("ColorPickerFooter")
+        footer_layout = QHBoxLayout()
+        footer_layout.setContentsMargins(int(18 * zoom), int(12 * zoom), int(18 * zoom), int(12 * zoom))
+        footer_layout.setSpacing(int(8 * zoom))
+        footer_layout.addWidget(self._reset_all_btn)
+        footer_layout.addStretch()
+        for btn in [self._preview_btn, self._apply_btn, self._cancel_btn, self._ok_btn]:
+            footer_layout.addWidget(btn)
+        footer.setLayout(footer_layout)
+        main_layout.addWidget(footer)
+
         self.setLayout(main_layout)
 
     # ------------------------------------------------------------------
@@ -1050,6 +1130,9 @@ class ThemeColorPickerDialog(QDialog):
         self._update_mode_buttons(mode)
         self._update_sections_visibility(mode)
         self._refresh_all_swatches()
+        self._editing_theme_name = None
+        self._update_editing_banner()
+        self._rebuild_saved_themes_list()
 
     def _on_nav_changed(self, current: QListWidgetItem | None, _prev: QListWidgetItem | None) -> None:
         if current is None:
@@ -1059,11 +1142,21 @@ class ThemeColorPickerDialog(QDialog):
 
     def _on_swatch_color_changed(self, role: ColorRole, hex_color: str) -> None:
         self._style_manager.set_custom_color(role, hex_color)
+        # Hand-editing diverges from any selected saved theme: switch back to "Manually"
+        # so the edited colours are applied and persisted as the live custom set.
+        self._diverge_from_saved_theme()
         # Deselect preset since colors no longer match exactly
         self._update_preset_highlight(None)
 
+    def _diverge_from_saved_theme(self) -> None:
+        """Mark the custom colours as hand-edited (no saved theme selected) and refresh the list."""
+        if self._style_manager.active_custom_theme_name() is not None:
+            self._style_manager.set_active_custom_theme_name(None)
+            self._rebuild_saved_themes_list()
+
     def _on_reset_section(self, page: _SectionPage) -> None:
         self._style_manager.clear_section_custom_colors(page.roles())
+        self._diverge_from_saved_theme()
         page.refresh_swatches()
 
     def _on_accessibility_preset_clicked(self, colors: Dict[str, Dict[str, str]]) -> None:
@@ -1075,6 +1168,7 @@ class ThemeColorPickerDialog(QDialog):
             self._update_mode_buttons(ColorTheme.CUSTOM)
             self._update_sections_visibility(ColorTheme.CUSTOM)
         self._style_manager.apply_custom_colors(current)
+        self._diverge_from_saved_theme()
         self._refresh_all_swatches()
 
     def _on_preset_clicked(self, name: str, colors: Dict[str, Dict[str, str]]) -> None:
@@ -1084,13 +1178,259 @@ class ThemeColorPickerDialog(QDialog):
             self._update_mode_buttons(ColorTheme.CUSTOM)
             self._update_sections_visibility(ColorTheme.CUSTOM)
         self._style_manager.apply_custom_colors(colors)
+        self._diverge_from_saved_theme()
         self._update_preset_highlight(name)
         self._refresh_all_swatches()
 
     def _on_reset_all(self) -> None:
         self._style_manager.apply_custom_colors({})
+        self._diverge_from_saved_theme()
         self._update_preset_highlight("Default")
         self._refresh_all_swatches()
+
+    def _on_save_theme(self) -> None:
+        """Prompt for a name and save the current custom colours as a named theme."""
+        existing = self._style_manager.saved_color_themes()
+        name, ok = QInputDialog.getText(self, "Save Theme", "Theme name:", text=self._editing_theme_name or "")
+        if not ok:
+            return
+
+        name = name.strip()
+        if not name:
+            return
+
+        if name in existing:
+            confirm = QMessageBox.question(
+                self,
+                "Overwrite Theme",
+                f"A theme named \"{name}\" already exists. Overwrite it?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if confirm != QMessageBox.StandardButton.Yes:
+                return
+
+        self._style_manager.save_color_theme(name)
+
+        # A freshly saved theme becomes the active selection.
+        if self._style_manager.user_color_theme() != ColorTheme.CUSTOM:
+            self._style_manager.set_color_theme(ColorTheme.CUSTOM)
+            self._update_mode_buttons(ColorTheme.CUSTOM)
+            self._update_sections_visibility(ColorTheme.CUSTOM)
+            self._refresh_all_swatches()
+
+        self._style_manager.set_active_custom_theme_name(name)
+        self._committed = True  # the save was persisted; don't revert on close
+        self._editing_theme_name = None
+        self._update_editing_banner()
+        self._rebuild_saved_themes_list()
+        self.saved_color_themes_changed.emit(
+            self._style_manager.saved_color_themes(),
+            self._style_manager.user_color_theme(),
+            self._style_manager.active_custom_theme_name(),
+        )
+
+    def _on_select_theme(self, name: str) -> None:
+        """Apply a saved theme's colours and make it the active selection."""
+        colors = self._style_manager.saved_color_themes().get(name)
+        if colors is None:
+            return
+
+        if self._style_manager.user_color_theme() != ColorTheme.CUSTOM:
+            self._style_manager.set_color_theme(ColorTheme.CUSTOM)
+            self._update_mode_buttons(ColorTheme.CUSTOM)
+            self._update_sections_visibility(ColorTheme.CUSTOM)
+
+        self._style_manager.apply_custom_colors(colors)
+        self._style_manager.set_active_custom_theme_name(name)
+        self._committed = True  # the selection was persisted; don't revert on close
+        self._editing_theme_name = None
+        self._update_editing_banner()
+        self._update_preset_highlight(None)
+        self._refresh_all_swatches()
+        self._rebuild_saved_themes_list()
+        self.saved_color_themes_changed.emit(
+            self._style_manager.saved_color_themes(),
+            ColorTheme.CUSTOM,
+            name,
+        )
+
+    def _on_edit_theme(self, name: str) -> None:
+        """Load a saved theme's colours into the editor so the user can modify and re-save them."""
+        colors = self._style_manager.saved_color_themes().get(name)
+        if colors is None:
+            return
+
+        if self._style_manager.user_color_theme() != ColorTheme.CUSTOM:
+            self._style_manager.set_color_theme(ColorTheme.CUSTOM)
+            self._update_mode_buttons(ColorTheme.CUSTOM)
+            self._update_sections_visibility(ColorTheme.CUSTOM)
+
+        # Editing works on the live custom set ("Manual"); saving updates the same theme.
+        self._style_manager.apply_custom_colors(colors)
+        self._style_manager.set_active_custom_theme_name(None)
+        self._editing_theme_name = name
+        self._update_editing_banner()
+        self._update_preset_highlight(None)
+        self._refresh_all_swatches()
+        self._rebuild_saved_themes_list()
+
+        # Jump to the first colour section so the editable swatches are visible.
+        if self._nav_list.count() > 0:
+            self._nav_list.setCurrentRow(0)
+
+    def _on_save_edited_theme(self, name: str) -> None:
+        """Save the in-progress edits back to the theme being edited and make it the selection."""
+        self._style_manager.save_color_theme(name)
+        self._style_manager.set_active_custom_theme_name(name)
+        self._editing_theme_name = None
+        self._committed = True  # persisted; don't revert on close
+        self._update_editing_banner()
+        self._rebuild_saved_themes_list()
+        self.saved_color_themes_changed.emit(
+            self._style_manager.saved_color_themes(),
+            ColorTheme.CUSTOM,
+            name,
+        )
+
+    def _update_editing_banner(self) -> None:
+        """Show or hide the 'currently editing' banner based on the editing state."""
+        if self._editing_theme_name:
+            self._editing_banner.setText(f"Editing “{self._editing_theme_name}” — click the save icon to update it.")
+            self._editing_banner.setVisible(True)
+
+        else:
+            self._editing_banner.clear()
+            self._editing_banner.setVisible(False)
+
+    def _on_delete_theme(self, name: str) -> None:
+        """Delete a saved theme. If it is the one currently in use, revert to the default theme."""
+        confirm = QMessageBox.question(
+            self,
+            "Delete Theme",
+            f"Delete the saved theme \"{name}\"?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+
+        was_active = (
+            self._style_manager.user_color_theme() == ColorTheme.CUSTOM
+            and self._style_manager.active_custom_theme_name() == name
+        )
+
+        self._style_manager.delete_color_theme(name)
+
+        if self._editing_theme_name == name:
+            self._editing_theme_name = None
+            self._update_editing_banner()
+
+        if was_active:
+            # The deleted theme was in use — fall back to the application default theme.
+            self._style_manager.set_color_theme(_DEFAULT_THEME)
+            self._snapshot_mode = _DEFAULT_THEME
+            self._snapshot_colors = self._style_manager.get_custom_colors()
+            self._snapshot_active_custom = None
+            self._update_mode_buttons(_DEFAULT_THEME)
+            self._update_sections_visibility(_DEFAULT_THEME)
+            self._refresh_all_swatches()
+
+        self._committed = True  # the deletion was persisted; don't revert on close
+        self._rebuild_saved_themes_list()
+        self.saved_color_themes_changed.emit(
+            self._style_manager.saved_color_themes(),
+            self._style_manager.user_color_theme(),
+            self._style_manager.active_custom_theme_name(),
+        )
+
+    def _rebuild_saved_themes_list(self) -> None:
+        """Rebuild the list of saved-theme rows (name + delete button) in the side panel."""
+        # Clear existing rows
+        while self._saved_themes_layout.count():
+            item = self._saved_themes_layout.takeAt(0)
+            if item:
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+
+        zoom = self._style_manager.zoom_factor()
+        saved_themes = self._style_manager.saved_color_themes()
+
+        if not saved_themes:
+            self._saved_themes_layout.addStretch()
+            empty = QLabel("No saved themes yet")
+            empty.setObjectName("SavedThemesEmpty")
+            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            empty.setWordWrap(True)
+            self._saved_themes_layout.addWidget(empty)
+            hint = QLabel("Save your custom colours as a named theme to see it here.")
+            hint.setObjectName("SavedThemesEmptyHint")
+            hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            hint.setWordWrap(True)
+            self._saved_themes_layout.addWidget(hint)
+            self._saved_themes_layout.addStretch()
+            return
+
+        active_name = self._style_manager.active_custom_theme_name()
+        is_custom = self._style_manager.user_color_theme() == ColorTheme.CUSTOM
+        icon_size = int(16 * zoom)
+        edit_icon = QIcon(self._style_manager.scale_icon("edit", icon_size))
+        save_icon = QIcon(self._style_manager.scale_icon("floppy", icon_size))
+        delete_icon = QIcon(self._style_manager.scale_icon("delete", icon_size))
+        for theme_name in saved_themes:
+            selected = is_custom and theme_name == active_name
+            editing = theme_name == self._editing_theme_name
+
+            row = QWidget()
+            row.setObjectName("SavedThemeRow")
+            row.setProperty("selected", selected)
+            row.setProperty("editing", editing)
+            row_layout = QHBoxLayout()
+            # Match the mode-button padding so each saved-theme card is the same size.
+            row_layout.setContentsMargins(int(10 * zoom), int(6 * zoom), int(6 * zoom), int(6 * zoom))
+            row_layout.setSpacing(int(6 * zoom))
+
+            # The name acts as a selectable button that applies the saved theme.
+            select_btn = QPushButton(theme_name)
+            select_btn.setObjectName("SavedThemeSelect")
+            select_btn.setProperty("selected", selected)
+            select_btn.setMinimumHeight(int(28 * zoom))
+            select_btn.clicked.connect(lambda _checked=False, n=theme_name: self._on_select_theme(n))
+            row_layout.addWidget(select_btn, 1)
+
+            # The edit button toggles to a save button while this theme is being edited.
+            edit_btn = QPushButton()
+            edit_btn.setObjectName("SavedThemeEdit")
+            edit_btn.setProperty("iconButton", True)
+            edit_btn.setIcon(save_icon if editing else edit_icon)
+            edit_btn.setIconSize(QSize(icon_size, icon_size))
+            edit_btn.setFixedSize(int(28 * zoom), int(28 * zoom))
+            if editing:
+                edit_btn.setToolTip(f"Save changes to \"{theme_name}\"")
+                edit_btn.clicked.connect(lambda _checked=False, n=theme_name: self._on_save_edited_theme(n))
+
+            else:
+                edit_btn.setToolTip(f"Edit \"{theme_name}\"")
+                edit_btn.clicked.connect(lambda _checked=False, n=theme_name: self._on_edit_theme(n))
+
+            row_layout.addWidget(edit_btn)
+
+            delete_btn = QPushButton()
+            delete_btn.setObjectName("SavedThemeDelete")
+            delete_btn.setProperty("iconButton", True)
+            delete_btn.setIcon(delete_icon)
+            delete_btn.setIconSize(QSize(icon_size, icon_size))
+            delete_btn.setFixedSize(int(28 * zoom), int(28 * zoom))
+            delete_btn.setToolTip(f"Delete \"{theme_name}\"")
+            delete_btn.clicked.connect(lambda _checked=False, n=theme_name: self._on_delete_theme(n))
+            row_layout.addWidget(delete_btn)
+
+            row.setLayout(row_layout)
+            self._saved_themes_layout.addWidget(row)
+
+        # Keep cards compact at the top instead of stretching to fill the fixed-height area.
+        self._saved_themes_layout.addStretch()
 
     def _on_preview(self) -> None:
         """Make the dialog transparent so the user can see the live changes in the app."""
@@ -1108,7 +1448,8 @@ class ThemeColorPickerDialog(QDialog):
         self._committed = True
         mode = self._style_manager.user_color_theme()
         colors = self._style_manager.get_custom_colors()
-        self.theme_settings_changed.emit(mode, colors)
+        active_name = self._style_manager.active_custom_theme_name()
+        self.theme_settings_changed.emit(mode, colors, active_name)
 
     def _on_ok(self) -> None:
         self._on_apply()
@@ -1124,6 +1465,7 @@ class ThemeColorPickerDialog(QDialog):
             self._style_manager.set_color_theme(self._snapshot_mode)
             self._style_manager.apply_custom_colors(self._snapshot_colors)
             self._style_manager.set_active_preset(self._snapshot_preset)
+            self._style_manager.set_active_custom_theme_name(self._snapshot_active_custom)
         super().reject()
 
     # ------------------------------------------------------------------
@@ -1183,6 +1525,9 @@ class ThemeColorPickerDialog(QDialog):
                 background-color: {bg_secondary};
                 border-left: 1px solid {splitter_col};
             }}
+            #ColorPickerFooter {{
+                background-color: {bg_dialog};
+            }}
             QLabel#ThemePanelTitle {{
                 color: {text_primary};
                 font-size: {font_pt * 1.1}pt;
@@ -1205,6 +1550,71 @@ class ThemeColorPickerDialog(QDialog):
             }}
             #ModeBar {{
                 background-color: transparent;
+            }}
+            #ModeScroll, #ModeScroll > QWidget > QWidget,
+            #SavedThemesScroll, #SavedThemesScroll > QWidget > QWidget {{
+                background-color: transparent;
+            }}
+            QLabel#SavedThemesEmpty {{
+                color: {text_primary};
+                font-size: {font_pt}pt;
+                font-weight: bold;
+            }}
+            QLabel#SavedThemesEmptyHint {{
+                color: {text_disabled};
+                font-size: {font_pt * 0.85}pt;
+            }}
+            #SavedThemeRow {{
+                background-color: {btn_bg};
+                border: 1px solid {splitter_col};
+                border-radius: 6px;
+                min-height: {round(40 * zoom)}px;
+                max-height: {round(40 * zoom)}px;
+            }}
+            #SavedThemeRow:hover {{
+                background-color: {btn_hover};
+                border-color: {btn_rec};
+            }}
+            #SavedThemeRow[selected="true"] {{
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {nav_selected}, stop:1 {btn_bg});
+                border: 1px solid {btn_rec};
+            }}
+            #SavedThemeRow[editing="true"] {{
+                background-color: {btn_hover};
+                border: 1px solid {btn_rec};
+            }}
+            QPushButton#SavedThemeSelect {{
+                background-color: transparent;
+                color: {text_primary};
+                border: none;
+                padding: 2px 4px;
+                text-align: left;
+                font-size: {font_pt}pt;
+            }}
+            QPushButton#SavedThemeSelect[selected="true"] {{
+                font-weight: bold;
+            }}
+            QPushButton#SavedThemeEdit, QPushButton#SavedThemeDelete {{
+                background-color: transparent;
+                border: none;
+                border-radius: 4px;
+            }}
+            QPushButton#SavedThemeEdit:hover {{
+                background-color: {btn_hover};
+            }}
+            QPushButton#SavedThemeDelete:hover {{
+                background-color: {btn_dest_hover};
+            }}
+            QPushButton#SavedThemeDelete:pressed {{
+                background-color: {btn_dest_pressed};
+            }}
+            QLabel#EditingThemeBanner {{
+                color: {text_rec};
+                background-color: {btn_rec};
+                border-radius: 4px;
+                padding: 6px 8px;
+                font-size: {font_pt * 0.9}pt;
             }}
             QPushButton[colorMode] {{
                 background-color: {btn_bg};
@@ -1309,7 +1719,8 @@ class ThemeColorPickerDialog(QDialog):
             QPushButton[a11yPreset="true"]:pressed {{
                 background-color: {btn_pressed};
             }}
-        """)
+        """ + self._style_manager.get_scrollbar_stylesheet("#ModeScroll QScrollBar")
+            + self._style_manager.get_scrollbar_stylesheet("#SavedThemesScroll QScrollBar"))
 
         # Refresh swatches in case colors changed
         current_mode = self._style_manager.user_color_theme()
