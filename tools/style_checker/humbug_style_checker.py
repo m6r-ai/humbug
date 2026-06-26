@@ -110,7 +110,7 @@ class HumbugRawChecker(BaseRawFileChecker):
         lines = node.stream().read().decode("utf-8").splitlines()
 
         self._check_aligned_assignments(node, lines)
-        self._check_blank_before_else(lines)
+        self._check_blank_before_else(node, lines)
         self._check_docstrings(node, lines)
 
     def _check_aligned_assignments(self, node: nodes.Module, lines: list[str]) -> None:
@@ -161,19 +161,25 @@ class HumbugRawChecker(BaseRawFileChecker):
                     for lineno in linenos:
                         self.add_message(MSG_NO_ALIGNED_ASSIGNS, line=lineno)
 
-    def _check_blank_before_else(self, lines: list[str]) -> None:
-        """Flag ``elif`` / ``else`` keywords not preceded by a blank line."""
-        for lineno, text in enumerate(lines, start=1):
-            stripped = text.lstrip()
-            if not _is_block_else_or_elif(stripped):
+    def _check_blank_before_else(self, node: nodes.Module, lines: list[str]) -> None:
+        """
+        Flag block-level ``elif`` / ``else`` keywords not preceded by a blank line.
+
+        Uses the AST to identify block-level ``else`` / ``elif`` keywords.  This
+        avoids false positives on ternary conditional expressions (``x if cond
+        else y``), which are ``IfExp`` nodes rather than ``If`` nodes, and
+        correctly handles multi-line ``elif`` conditions where the colon is not
+        on the keyword line.
+        """
+        for keyword_line, keyword in _block_else_elif_lines(node, lines):
+            if keyword_line <= 1:
                 continue
 
-            if lineno == 1:
-                continue
-
-            if lines[lineno - 2].strip() != "":
-                keyword = "elif" if stripped.startswith("elif") else "else"
-                self.add_message(MSG_BLANK_BEFORE_ELSE, line=lineno, args=(keyword,))
+            # A blank line or a comment-only line before the keyword is fine.
+            # We only flag when actual code runs directly into the else/elif.
+            prev = lines[keyword_line - 2].strip()
+            if prev != "" and not prev.startswith("#"):
+                self.add_message(MSG_BLANK_BEFORE_ELSE, line=keyword_line, args=(keyword,))
 
     def _check_docstrings(self, node: nodes.Module, lines: list[str]) -> None:
         """Validate docstring layout for the module and all its nested definitions."""
@@ -227,12 +233,60 @@ def _target_length(line: str, eq_col: int) -> int:
     return len(prefix.lstrip())
 
 
-def _is_block_else_or_elif(stripped: str) -> bool:
-    """Return True if *stripped* (an already-left-stripped line) starts an elif/else block."""
-    if stripped.startswith("elif") and (len(stripped) == 4 or stripped[4] in " \t:"):
-        return True
+def _block_else_elif_lines(
+    module: nodes.Module, lines: list[str]
+) -> list[tuple[int, str]]:
+    """
+    Find all block-level ``else:`` and ``elif`` keyword lines in *module*.
 
-    return stripped.startswith("else") and (len(stripped) == 4 or stripped[4] in " \t:")
+    Returns a list of ``(lineno, keyword)`` pairs where *keyword* is either
+    ``"elif"`` or ``"else"``.  Only block-level keywords are returned; ternary
+    conditional expressions (``IfExp`` nodes) are never included because they
+    are a different AST node type.
+    """
+    results: list[tuple[int, str]] = []
+
+    for if_node in module.nodes_of_class(nodes.If):
+        if not if_node.orelse:
+            continue
+
+        first = if_node.orelse[0]
+
+        # elif: orelse is a single If at the same indent as the parent.
+        if isinstance(first, nodes.If) and first.col_offset == if_node.col_offset:
+            results.append((first.lineno, "elif"))
+            continue
+
+        # else: orelse is a block of statements.  The ``else:`` keyword line is
+        # not stored in the AST, so we scan backwards from the first body
+        # statement for a line ending in ``:`` at the if's indentation.
+        else_line = _find_else_keyword_line(lines, first.lineno, if_node.col_offset)
+        if else_line is not None:
+            results.append((else_line, "else"))
+
+    return results
+
+
+def _find_else_keyword_line(
+    lines: list[str], body_start: int, target_indent: int
+) -> int | None:
+    """Scan backwards from *body_start* for the ``else:`` keyword line."""
+    for lineno in range(body_start - 1, 0, -1):
+        raw = lines[lineno - 1]
+        code = raw.split("#", 1)[0].rstrip()
+
+        if code == "":
+            continue
+
+        indent = len(raw) - len(raw.lstrip())
+
+        if indent == target_indent and code.endswith(":"):
+            return lineno
+
+        if indent <= target_indent:
+            break  # we've gone past the else without finding it
+
+    return None
 
 
 def _find_assign_eq_column(lines: list[str], lineno: int) -> int | None:

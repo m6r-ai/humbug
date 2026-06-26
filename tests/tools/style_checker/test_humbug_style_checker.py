@@ -275,6 +275,65 @@ def foo(x: int) -> str:
         assert MSG_BLANK_BEFORE_ELSE not in _msg_ids(results)
 
 
+    def test_ternary_else_is_not_flagged(self):
+        """A ternary ``else`` should never be flagged as a block-level else."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int) -> str:
+    """Do something."""
+    result = (
+        "yes"
+        if x > 0
+        else "no"
+    )
+    return result
+'''
+        results = _run_pylint(source)
+        assert MSG_BLANK_BEFORE_ELSE not in _msg_ids(results)
+
+    def test_multiline_elif_condition_is_flagged(self):
+        """An elif with a multi-line condition should still be detected."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int) -> str:
+    """Do something."""
+    if x > 0:
+        return "pos"
+    elif (
+        x < 0
+        and x > -100
+    ):
+        return "neg"
+'''
+        results = _run_pylint(source)
+        assert MSG_BLANK_BEFORE_ELSE in _msg_ids(results)
+
+
+    def test_comment_before_else_is_ok(self):
+        """A comment line before else/elif is acceptable (no blank line required)."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int) -> str:
+    """Do something."""
+    if x > 0:
+        return "pos"
+    # Handle the zero case
+    elif x == 0:
+        return "zero"
+    # Everything else
+    else:
+        return "neg"
+'''
+        results = _run_pylint(source)
+        assert MSG_BLANK_BEFORE_ELSE not in _msg_ids(results)
+
+
 # ===========================================================================
 # Multiline docstring tests
 # ===========================================================================
