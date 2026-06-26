@@ -22,9 +22,6 @@ from astroid import nodes
 from pylint.checkers import BaseChecker, BaseRawFileChecker
 from pylint.typing import MessageDefinitionTuple
 
-# astroid.nodes is used at runtime (not just for type hints) by the
-# aligned-assignment checker, so it is imported unconditionally above.
-
 
 # ---------------------------------------------------------------------------
 # Public message-ID constants (shared with tests)
@@ -35,6 +32,8 @@ MSG_NO_OPTIONAL = "humbug-no-optional"
 MSG_NO_ALIGNED_ASSIGNS = "humbug-no-aligned-assigns"
 MSG_BLANK_BEFORE_ELSE = "humbug-blank-before-else"
 MSG_MULTILINE_DOCSTRING = "humbug-multiline-docstring"
+
+_SCOPE_NODE_TYPES = (nodes.Module, nodes.ClassDef, nodes.FunctionDef, nodes.AsyncFunctionDef)
 
 
 # ===========================================================================
@@ -73,20 +72,17 @@ class HumbugNameChecker(BaseChecker):
 
 
 # ===========================================================================
-# Checker 2: Aligned consecutive assignments
+# Checker 2: Raw-source checks (assignments, else/elif, docstrings)
+#
+# All checks that need the raw source are combined into a single
+# BaseRawFileChecker so the file is read and decoded once and the AST is
+# walked once.
 # ===========================================================================
 
-class HumbugAlignedAssignmentChecker(BaseRawFileChecker):
-    """
-    Detect consecutive assignment statements whose ``=`` signs have been padded into alignment.
+class HumbugRawChecker(BaseRawFileChecker):
+    """Enforce assignment, else/elif, and docstring formatting conventions."""
 
-    Only actual assignment statements (``Assign`` and ``AnnAssign`` nodes) are
-    considered; keyword arguments in function calls are not affected.  When two
-    assignments have the same target length the ``=`` naturally lines up without
-    padding -- that is fine and not flagged.
-    """
-
-    name = "humbug-aligned-assigns"
+    name = "humbug-style"
 
     msgs: dict[str, MessageDefinitionTuple] = {
         "C6411": (
@@ -95,57 +91,6 @@ class HumbugAlignedAssignmentChecker(BaseRawFileChecker):
             "Used when two or more consecutive assignment lines share an = column "
             "through extra padding.  Aligned assignments are a maintenance burden.",
         ),
-    }
-
-    def process_module(self, node: nodes.Module) -> None:
-        """Find padded-alignment ``=`` runs among assignment statements."""
-        source = _module_source(node)
-        lines = source.decode("utf-8").splitlines()
-
-        # For each assignment line, record (column of ``=``, length of the
-        # target expression).  Two lines are "aligned" only when their ``=``
-        # columns match but their target lengths differ -- that is the case
-        # where extra padding was inserted to force alignment.
-        assign_info: dict[int, tuple[int, int]] = {}
-
-        for assign_node in node.nodes_of_class((nodes.Assign, nodes.AnnAssign)):
-            lineno = assign_node.lineno
-            col = _find_assign_eq_column(lines, lineno)
-            if col is None:
-                continue
-
-            target_len = _target_length(lines[lineno - 1], col)
-            assign_info[lineno] = (col, target_len)
-
-        if not assign_info:
-            return
-
-        for group in _consecutive_groups(assign_info):
-            col_entries: dict[int, list[tuple[int, int]]] = {}
-
-            for lineno in group:
-                col_val, target_len = assign_info[lineno]
-                col_entries.setdefault(col_val, []).append((lineno, target_len))
-
-            for _, entries in col_entries.items():
-                # Flag only when at least two different target lengths share the
-                # same = column, which means padding was used.
-                target_lengths = {tlen for _, tlen in entries}
-                if len(entries) >= 2 and len(target_lengths) >= 2:
-                    for lineno, _ in entries:
-                        self.add_message(MSG_NO_ALIGNED_ASSIGNS, line=lineno)
-
-
-# ===========================================================================
-# Checker 3: Raw-source format checks (blank before else, docstring layout)
-# ===========================================================================
-
-class HumbugFormatChecker(BaseRawFileChecker):
-    """Flag missing blank lines before ``elif``/``else`` and bad docstring layout."""
-
-    name = "humbug-format"
-
-    msgs: dict[str, MessageDefinitionTuple] = {
         "C6421": (
             "Missing blank line before block-level '%s'",
             MSG_BLANK_BEFORE_ELSE,
@@ -161,12 +106,60 @@ class HumbugFormatChecker(BaseRawFileChecker):
     }
 
     def process_module(self, node: nodes.Module) -> None:
-        """Run both format checks over the raw source."""
-        source = _module_source(node)
-        lines = source.decode("utf-8").splitlines()
+        """Run all raw-source checks over a single decode of the file."""
+        lines = node.stream().read().decode("utf-8").splitlines()
 
+        self._check_aligned_assignments(node, lines)
         self._check_blank_before_else(lines)
         self._check_docstrings(node, lines)
+
+    def _check_aligned_assignments(self, node: nodes.Module, lines: list[str]) -> None:
+        """
+        Find padded-alignment ``=`` runs among assignment statements.
+
+        Only actual assignment statements (``Assign`` and ``AnnAssign`` nodes)
+        are considered; keyword arguments in function calls are not affected.
+        When two assignments have the same target length the ``=`` naturally
+        lines up without padding -- that is fine and not flagged.
+        """
+        # Collect assignment lines in a single tree walk.  Record (column of
+        # ``=``, length of the target expression) for each.  Two lines are
+        # "aligned" only when their ``=`` columns match but their target lengths
+        # differ -- that is the case where extra padding was inserted.
+        assign_info: dict[int, tuple[int, int]] = {}
+
+        for assign_node in node.nodes_of_class((nodes.Assign, nodes.AnnAssign)):
+            lineno = assign_node.lineno
+            col = _find_assign_eq_column(lines, lineno)
+            if col is None:
+                continue
+
+            target_len = _target_length(lines[lineno - 1], col)
+            assign_info[lineno] = (col, target_len)
+
+        if len(assign_info) < 2:
+            return
+
+        for group in _consecutive_groups(assign_info):
+            if len(group) < 2:
+                continue
+
+            col_entries: dict[int, list[int]] = {}
+
+            for lineno in group:
+                col_val, _ = assign_info[lineno]
+                col_entries.setdefault(col_val, []).append(lineno)
+
+            for col_val, linenos in col_entries.items():
+                if len(linenos) < 2:
+                    continue
+
+                # Flag only when at least two different target lengths share the
+                # same = column, which means padding was used.
+                target_lengths = {assign_info[ln][1] for ln in linenos}
+                if len(target_lengths) >= 2:
+                    for lineno in linenos:
+                        self.add_message(MSG_NO_ALIGNED_ASSIGNS, line=lineno)
 
     def _check_blank_before_else(self, lines: list[str]) -> None:
         """Flag ``elif`` / ``else`` keywords not preceded by a blank line."""
@@ -178,14 +171,17 @@ class HumbugFormatChecker(BaseRawFileChecker):
             if lineno == 1:
                 continue
 
-            prev_line = lines[lineno - 2].strip()
-            if prev_line != "":
+            if lines[lineno - 2].strip() != "":
                 keyword = "elif" if stripped.startswith("elif") else "else"
                 self.add_message(MSG_BLANK_BEFORE_ELSE, line=lineno, args=(keyword,))
 
     def _check_docstrings(self, node: nodes.Module, lines: list[str]) -> None:
         """Validate docstring layout for the module and all its nested definitions."""
-        for doc_node in _all_docstrings(node):
+        for child in node.nodes_of_class(_SCOPE_NODE_TYPES):
+            doc_node = getattr(child, "doc_node", None)
+            if doc_node is None or not isinstance(doc_node, nodes.Const):
+                continue
+
             self._check_single_docstring(doc_node, lines)
 
     def _check_single_docstring(self, doc_node: nodes.Const, lines: list[str]) -> None:
@@ -199,13 +195,10 @@ class HumbugFormatChecker(BaseRawFileChecker):
         if start_line == end_line:
             return  # single-line docstring -- always fine
 
-        opening = lines[start_line - 1].strip()
-        closing = lines[end_line - 1].strip()
-
-        if opening != '"""':
+        if lines[start_line - 1].strip() != '"""':
             self.add_message(MSG_MULTILINE_DOCSTRING, line=start_line)
 
-        if closing != '"""':
+        if lines[end_line - 1].strip() != '"""':
             self.add_message(MSG_MULTILINE_DOCSTRING, line=end_line)
 
 
@@ -219,15 +212,6 @@ def _dotted_name(node: nodes.NodeNG) -> str | None:
         return node.as_string()
     except Exception:  # pylint: disable=broad-exception-caught
         return None
-
-
-def _module_source(node: nodes.Module) -> bytes:
-    """Return the raw source bytes for a module node."""
-    stream = node.stream()
-    if isinstance(stream, bytes):
-        return stream
-
-    return stream.read()
 
 
 def _target_length(line: str, eq_col: int) -> int:
@@ -330,20 +314,6 @@ def _consecutive_groups(line_map: dict[int, object]) -> list[list[int]]:
     return groups
 
 
-def _all_docstrings(node: nodes.NodeNG) -> list[nodes.Const]:
-    """Collect docstring nodes from *node* and all nested classes/functions."""
-    results: list[nodes.Const] = []
-
-    for child in node.nodes_of_class(
-        (nodes.Module, nodes.ClassDef, nodes.FunctionDef, nodes.AsyncFunctionDef)
-    ):
-        doc_node = getattr(child, "doc_node", None)
-        if doc_node is not None and isinstance(doc_node, nodes.Const):
-            results.append(doc_node)
-
-    return results
-
-
 # ===========================================================================
 # Plugin registration
 # ===========================================================================
@@ -351,5 +321,4 @@ def _all_docstrings(node: nodes.NodeNG) -> list[nodes.Const]:
 def register(linter: object) -> None:
     """Register the plugin's checkers with pylint."""
     linter.register_checker(HumbugNameChecker(linter))
-    linter.register_checker(HumbugAlignedAssignmentChecker(linter))
-    linter.register_checker(HumbugFormatChecker(linter))
+    linter.register_checker(HumbugRawChecker(linter))
