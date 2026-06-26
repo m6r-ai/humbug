@@ -569,9 +569,6 @@ class StyleManager(QObject):
         if self._theme_mode == ColorTheme.OCEAN_LIGHT:
             return ColorMode.LIGHT
 
-        if self._theme_mode == ColorTheme.GLOSSY_LIGHT:
-            return ColorMode.LIGHT
-
         if self._theme_mode == ColorTheme.LIGHT:
             return ColorMode.LIGHT
 
@@ -622,9 +619,6 @@ class StyleManager(QObject):
 
         if mode == ColorTheme.OCEAN_LIGHT:
             return OCEAN_LIGHT_PALETTE
-
-        if mode == ColorTheme.GLOSSY_LIGHT:
-            return GLOSSY_LIGHT_PALETTE
 
         if mode == ColorTheme.CUSTOM:
             return self._dark_custom_palette if self._custom_color_mode == ColorMode.DARK else self._light_custom_palette

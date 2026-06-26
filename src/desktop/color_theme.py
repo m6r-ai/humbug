@@ -13,14 +13,10 @@ class ColorTheme(Enum):
 
     OCEAN_LIGHT selects a fixed light palette with a blue-tinted
     "ocean" aesthetic for a professional look.
-
-    GLOSSY_LIGHT selects a fixed light palette with crisp white
-    surfaces and polished, glossy accents.
     """
     LIGHT = auto()
     DARK = auto()
     SYSTEM = auto()
     COLOR_BLIND = auto()
     OCEAN_LIGHT = auto()
-    GLOSSY_LIGHT = auto()
     CUSTOM = auto()
