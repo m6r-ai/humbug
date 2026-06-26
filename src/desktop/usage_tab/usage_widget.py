@@ -4,10 +4,12 @@ import logging
 from collections import defaultdict
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QPainter, QPaintEvent
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QLabel,
+    QLayout,
     QProgressBar,
     QPushButton,
     QScrollArea,
@@ -21,6 +23,7 @@ from ai.ai_conversation_settings import AIConversationSettings
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
+from desktop.widgets import Accordion, ElidedLabel
 from mindspace.mindspace_usage import ModelUsageEntry
 
 
@@ -39,6 +42,25 @@ def _count_label(count: int, singular: str, plural: str) -> str:
     return f"{count} {word}"
 
 
+class _Dot(QWidget):
+    """A small filled circle painted in a provider's accent colour."""
+
+    def __init__(self, color: str, size: int, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._color = color
+        self.setFixedSize(size, size)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        del event
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(self._color))
+        painter.drawEllipse(self.rect())
+        painter.end()
+
+
 class UsageWidget(QWidget):
     """Widget showing per-mindspace token usage by provider and model."""
 
@@ -52,37 +74,60 @@ class UsageWidget(QWidget):
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
+        # Providers whose accordion section is expanded, remembered across refreshes.
+        self._expanded_providers: set[str] = set()
 
-        self._scroll = QScrollArea(self)
-        self._scroll.setWidgetResizable(True)
-        self._scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
-        self._scroll.viewport().setAutoFillBackground(True)
-        root.addWidget(self._scroll)
-
-        self._body_widget = QWidget()
-        self._body_widget.setObjectName("UsageTabBody")
-        self._body_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self._body_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self._scroll.setWidget(self._body_widget)
-
-        self._body = QVBoxLayout(self._body_widget)
+        self._body = QVBoxLayout(self)
         self._body.setSpacing(0)
-        self._body.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._body.setContentsMargins(0, 0, 0, 0)
 
-        self._content = QWidget()
-        self._content.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        self._content_layout = QVBoxLayout(self._content)
-        self._content_layout.setContentsMargins(0, 0, 0, 0)
-        self._content_layout.setSpacing(0)
-        self._content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._body.addWidget(self._content)
-        self._body.addSpacing(int(self._style_manager.message_bubble_spacing() * 2))
+        self._summary = QWidget()
+        self._summary.setObjectName("UsageSummaryContainer")
+        self._summary.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        self._summary.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._summary_layout = QVBoxLayout(self._summary)
+        self._summary_layout.setContentsMargins(0, 0, 0, 0)
+        self._summary_layout.setSpacing(0)
+        self._summary_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._body.addWidget(self._summary)
+
+        self._details = QWidget()
+        self._details.setObjectName("UsageDetailsContainer")
+        self._details.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        self._details.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._details_container_layout = QVBoxLayout(self._details)
+        self._details_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._details_container_layout.setSpacing(0)
+
+        self._details_label = self._section_label("Details")
+        self._details_container_layout.addWidget(self._details_label)
+
+        self._details_scroll = QScrollArea()
+        self._details_scroll.setObjectName("UsageDetailsScroll")
+        self._details_scroll.setWidgetResizable(True)
+        self._details_scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._details_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._details_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._details_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._details_scroll.viewport().setAutoFillBackground(False)
+        # Permanently reserve the scrollbar's width so it can appear/disappear
+        # (as-needed) without changing the content width — otherwise expanding a
+        # section that crosses the overflow point would shift the headers sideways.
+        self._details_scroll.setViewportMargins(0, 0, self._style_manager.get_scrollbar_size(), 0)
+        self._details_container_layout.addWidget(self._details_scroll, 1)
+
+        self._details_body = QWidget()
+        self._details_body.setObjectName("UsageDetailsBody")
+        self._details_body.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        self._details_body.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self._details_layout = QVBoxLayout(self._details_body)
+        self._details_layout.setContentsMargins(0, 0, 0, 0)
+        self._details_layout.setSpacing(int(self._style_manager.message_bubble_spacing()))
+        self._details_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._details_scroll.setWidget(self._details_body)
+        self._body.addWidget(self._details, 1)
 
         reset_row = QWidget()
         reset_row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
@@ -95,7 +140,6 @@ class UsageWidget(QWidget):
         rl.addWidget(self._reset_btn)
         rl.addStretch()
         self._body.addWidget(reset_row)
-        self._body.addStretch()
 
         self._mindspace_manager.usage_updated.connect(self.refresh)
         self._language_manager.language_changed.connect(self.refresh)
@@ -106,15 +150,22 @@ class UsageWidget(QWidget):
         """Apply current style settings."""
         s = int(self._style_manager.message_bubble_spacing())
         self._body.setContentsMargins(s, s, s, s)
+        self._body.setSpacing(s)
+        self._summary.setFixedHeight(self._summary_height())
+        self._details_container_layout.setSpacing(s)
+        self._details_layout.setSpacing(s)
         self.refreshed.emit()
 
     def refresh(self) -> None:
         """Rebuild the usage dashboard content from current mindspace usage data."""
-        self._clear(self._content_layout)
-        cl = self._content_layout
+        self._clear(self._summary_layout)
+        self._clear(self._details_layout)
+        sl = self._summary_layout
+        dl = self._details_layout
 
         if not self._mindspace_manager.has_mindspace():
-            cl.addWidget(self._empty_state("No mindspace open", "Open a mindspace to track model token usage."))
+            sl.addWidget(self._empty_state("No mindspace open", "Open a mindspace to track model token usage."))
+            self._details.setVisible(False)
             self._reset_btn.setEnabled(False)
             self.refreshed.emit()
             return
@@ -129,21 +180,23 @@ class UsageWidget(QWidget):
         model_colors = self._style_manager.model_colors()
 
         if not entries:
-            cl.addWidget(self._hero_card(total_in, total_out, 0, 0))
-            cl.addSpacing(int(self._style_manager.message_bubble_spacing()))
-            cl.addWidget(self._empty_state(
+            sl.addWidget(self._hero_card(total_in, total_out, 0, 0))
+            sl.addSpacing(int(self._style_manager.message_bubble_spacing()))
+            sl.addWidget(self._empty_state(
                 "No usage recorded yet",
                 "Complete an AI response in this mindspace to populate this dashboard."
             ))
+            self._details.setVisible(False)
             self._reset_btn.setEnabled(False)
             self.refreshed.emit()
             return
 
-        cl.addWidget(self._hero_card(total_in, total_out, len(entries), len({e.provider for e in entries})))
-        cl.addSpacing(int(self._style_manager.message_bubble_spacing()) * 2)
+        self._details.setVisible(True)
+        sl.addWidget(self._hero_card(total_in, total_out, len(entries), len({e.provider for e in entries})))
+        sl.addSpacing(int(self._style_manager.message_bubble_spacing()) * 2)
 
-        cl.addWidget(self._section_label("Token mix"))
-        cl.addSpacing(int(self._style_manager.message_bubble_spacing()))
+        sl.addWidget(self._section_label("Token mix"))
+        sl.addSpacing(int(self._style_manager.message_bubble_spacing()))
 
         stat_defs = [
             ("Input", _fmt(total_in), "Prompt and context tokens"),
@@ -168,8 +221,8 @@ class UsageWidget(QWidget):
             r, c = divmod(idx, cols)
             grid.addWidget(self._stat_card(label, value, note), r, c)
 
-        cl.addWidget(cards_w)
-        cl.addSpacing(int(self._style_manager.message_bubble_spacing()) * 2)
+        sl.addWidget(cards_w)
+        sl.addStretch()
 
         color_map: dict[str, str] = {}
         for i, e in enumerate(entries):
@@ -179,15 +232,19 @@ class UsageWidget(QWidget):
         for e in entries:
             by_provider[e.provider].append(e)
 
-        cl.addWidget(self._section_label("Details"))
-        cl.addSpacing(int(self._style_manager.message_bubble_spacing()))
-        cl.addWidget(self._details_section(
+        dl.addWidget(self._details_section(
             by_provider, color_map, model_colors, max(total_in + total_out, 1),
         ))
+        dl.addStretch()
 
         self._reset_btn.setEnabled(self._mindspace_manager.has_mindspace())
 
         self.refreshed.emit()
+
+    def _summary_height(self) -> int:
+        """Return the fixed height reserved for non-details usage content."""
+        zoom = self._style_manager.zoom_factor()
+        return max(300, int(330 * zoom))
 
     def _section_label(self, text: str) -> QLabel:
         lbl = QLabel(text.upper())
@@ -287,7 +344,14 @@ class UsageWidget(QWidget):
         cl.setContentsMargins(0, 0, 0, 0)
         cl.setSpacing(int(self._style_manager.message_bubble_spacing()))
 
-        for provider, models in self._sorted_providers(by_provider):
+        sorted_providers = self._sorted_providers(by_provider)
+
+        # On first display, expand the highest-usage provider so the page isn't
+        # entirely collapsed; subsequent toggles are remembered across refreshes.
+        if not self._expanded_providers and sorted_providers:
+            self._expanded_providers.add(sorted_providers[0][0])
+
+        for provider, models in sorted_providers:
             cl.addWidget(self._provider_detail_card(
                 provider, models, color_map, model_colors, total_tokens,
             ))
@@ -302,50 +366,66 @@ class UsageWidget(QWidget):
         model_colors: list[str],
         total_tokens: int,
     ) -> QFrame:
-        card = QFrame()
-        card.setObjectName("UsageDetailCard")
-        card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-
         s = int(self._style_manager.message_bubble_spacing())
-        vl = QVBoxLayout(card)
-        vl.setContentsMargins(0, 0, 0, 0)
-        vl.setSpacing(0)
-
-        header = QWidget()
-        header.setObjectName("UsageDetailHeader")
-        header.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        hl = QHBoxLayout(header)
-        hl.setContentsMargins(s, s, s, s)
-        hl.setSpacing(s)
+        zoom = self._style_manager.zoom_factor()
 
         tokens = sum(e.input_tokens + e.output_tokens for e in entries)
-        name = QLabel(provider.upper())
-        name.setObjectName("UsageDetailProviderName")
-        hl.addWidget(name)
-
-        sub = QLabel(
-            f"{_fmt(tokens)} tokens \u00b7 {_count_label(len(entries), 'model', 'models')}"
-        )
-        sub.setObjectName("UsageDetailProviderSub")
-        hl.addWidget(sub)
-        hl.addStretch()
-
-        vl.addWidget(header)
-        vl.addWidget(self._row_separator())
 
         sorted_models = sorted(
             entries,
             key=lambda e: e.input_tokens + e.output_tokens,
             reverse=True,
         )
+
+        top_key = f"{sorted_models[0].provider}/{sorted_models[0].model}"
+        accent_color = color_map.get(top_key, model_colors[0])
+
+        accordion = Accordion(expanded=provider in self._expanded_providers)
+        accordion.toggled.connect(
+            lambda expanded, name=provider: self._on_provider_toggled(name, expanded)
+        )
+
+        header = accordion.header_layout()
+        header.addWidget(_Dot(accent_color, max(8, int(9 * zoom))))
+        header.addSpacing(int(s * 0.25))
+
+        name = ElidedLabel()
+        name.setText(provider.upper())
+        name.setObjectName("UsageDetailProviderName")
+        name.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        header.addWidget(name, 1)
+
+        models_lbl = QLabel(_count_label(len(entries), "model", "models"))
+        models_lbl.setObjectName("UsageDetailProviderMeta")
+        models_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        models_lbl.setFixedWidth(max(models_lbl.sizeHint().width(), int(76 * zoom)))
+        header.addWidget(models_lbl)
+
+        tokens_lbl = QLabel(f"{_fmt(tokens)} tokens")
+        tokens_lbl.setObjectName("UsageDetailProviderTokens")
+        tokens_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        tokens_lbl.setFixedWidth(max(tokens_lbl.sizeHint().width(), int(112 * zoom)))
+        header.addWidget(tokens_lbl)
+
+        body = accordion.body_layout()
+        s_pad = int(s * 0.5)
+        body.setContentsMargins(0, s_pad, 0, s_pad)
+
         for m_idx, entry in enumerate(sorted_models):
             key = f"{entry.provider}/{entry.model}"
             color = color_map.get(key, model_colors[0])
-            vl.addWidget(self._model_row(entry, color, total_tokens))
+            body.addWidget(self._model_row(entry, color, total_tokens))
             if m_idx < len(sorted_models) - 1:
-                vl.addWidget(self._row_separator(indent=s))
+                body.addWidget(self._row_separator(indent=s))
 
-        return card
+        return accordion
+
+    def _on_provider_toggled(self, provider: str, expanded: bool) -> None:
+        if expanded:
+            self._expanded_providers.add(provider)
+
+        else:
+            self._expanded_providers.discard(provider)
 
     def _model_row(self, entry: ModelUsageEntry, color: str, total_tokens: int) -> QWidget:
         row = QWidget()
@@ -439,7 +519,7 @@ class UsageWidget(QWidget):
 
         return card
 
-    def _clear(self, layout: QVBoxLayout) -> None:
+    def _clear(self, layout: QLayout) -> None:
         while layout.count():
             item = layout.takeAt(0)
             if item:

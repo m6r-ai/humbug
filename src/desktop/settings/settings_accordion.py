@@ -1,82 +1,47 @@
-"""Collapsible accordion section with animated slide expand/collapse."""
+"""Collapsible settings section built on the shared Accordion widget."""
 
 from typing import List
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QSizePolicy
-from PySide6.QtGui import QIcon
-from PySide6.QtCore import QEvent, QPropertyAnimation, QEasingCurve, Qt
+from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from desktop.color_role import ColorRole
 from desktop.settings.settings_item import SettingsItem
-from desktop.ui_constants import ACCORDION_ANIM_DURATION_MS, QWIDGETSIZE_MAX
+from desktop.widgets import Accordion
 
 
 class SettingsAccordion(SettingsItem):
     """
     Collapsible accordion that groups settings under a clickable header.
 
-    Expand/collapse is animated by sliding the content area's maximumHeight
-    from 0 to its natural height (or back).  No setVisible() is needed —
-    a maximumHeight of 0 with minimumHeight of 0 makes the widget invisible.
+    A thin SettingsItem wrapper around the shared Accordion widget: the title
+    sits in the accordion header and settings items are added into its body, so
+    the expand/collapse animation and chrome are shared with the rest of the app.
     """
 
     def __init__(self, title: str, expanded: bool = False, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self._expanded = expanded
-        self._content_visible = expanded
         self._content_items: List[SettingsItem] = []
-        self._animation: QPropertyAnimation | None = None
 
-        outer = QVBoxLayout()
-        outer.setSpacing(0)
+        outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 5, 0, 5)
+        outer.setSpacing(0)
 
-        self._header_btn = QPushButton()
-        self._header_btn.setObjectName("AccordionHeader")
-        self._header_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._header_btn.setFlat(True)
-        self._header_btn.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
-        self._header_btn.clicked.connect(self._on_toggle)
-
-        header_layout = QHBoxLayout(self._header_btn)
-        header_layout.setContentsMargins(12, 10, 14, 10)
-        header_layout.setSpacing(10)
+        self._accordion = Accordion(expanded=expanded)
+        self._accordion.body_layout().setContentsMargins(14, 8, 14, 14)
+        self._accordion.body_layout().setSpacing(0)
 
         self._title_label = QLabel(title)
         self._title_label.setObjectName("AccordionTitle")
+        self._accordion.header_layout().addWidget(self._title_label, 1)
 
-        self._chevron = QLabel()
-        self._chevron.setObjectName("AccordionChevron")
-        self._chevron.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        header_layout.addWidget(self._title_label, 1)
-        header_layout.addWidget(self._chevron)
-
-        self._content_widget = QWidget()
-        self._content_widget.setObjectName("AccordionContent")
-
-        # Clipping ensures content never overflows the animated boundary.
-        self._content_widget.setProperty("AccordionContent", True)
-        self._content_layout = QVBoxLayout(self._content_widget)
-        self._content_layout.setSpacing(0)
-        self._content_layout.setContentsMargins(14, 8, 14, 14)
-
-        # Start collapsed: zero max-height acts as invisible without setVisible.
-        self._content_widget.setMinimumHeight(0)
-        self._content_widget.setMaximumHeight(0 if not expanded else QWIDGETSIZE_MAX)
-
-        outer.addWidget(self._header_btn)
-        outer.addWidget(self._content_widget)
-        self.setLayout(outer)
+        outer.addWidget(self._accordion)
 
         self._on_style_changed()
 
     def add_content(self, item: SettingsItem) -> None:
         """Add a settings item into the collapsible content area."""
-        self._content_layout.addWidget(item)
+        self._accordion.body_layout().addWidget(item)
         self._content_items.append(item)
         item.value_changed.connect(self.value_changed)
 
@@ -91,109 +56,11 @@ class SettingsAccordion(SettingsItem):
         for item in self._content_items:
             item.reset_modified_state()
 
-    def _on_toggle(self) -> None:
-        target_expanded = not self._expanded
-
-        # Stop any in-progress animation so direction changes feel responsive.
-        if self._animation and self._animation.state() == QPropertyAnimation.State.Running:
-            active_animation = self._animation
-            self._animation = None
-            active_animation.stop()
-
-        start_h = self._content_widget.height()
-        self._expanded = target_expanded
-
-        if target_expanded:
-            self._content_visible = True
-            self._on_style_changed()
-            # Measure the natural height before constraining it.
-            self._content_widget.setMaximumHeight(QWIDGETSIZE_MAX)
-            target_h = self._content_widget.sizeHint().height()
-            self._content_widget.setMaximumHeight(start_h)
-
-        else:
-            target_h = 0
-            self._on_style_changed()
-
-        anim = QPropertyAnimation(self._content_widget, b"maximumHeight", self)
-        anim.setDuration(ACCORDION_ANIM_DURATION_MS)
-        anim.setStartValue(start_h)
-        anim.setEndValue(target_h)
-        anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
-        anim.finished.connect(lambda: self._on_animation_finished(anim, target_expanded))
-        anim.start()
-        self._animation = anim
-
-    def _on_animation_finished(self, anim: QPropertyAnimation, expanded: bool) -> None:
-        if anim is not self._animation:
-            return
-
-        self._animation = None
-        self._content_visible = expanded
-        self._content_widget.setMaximumHeight(QWIDGETSIZE_MAX if expanded else 0)
-        self._on_style_changed()
-
-    def _update_chevron(self) -> None:
-        if self._expanded:
-            icon_name = "arrow-down"
-
-        else:
-            is_rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
-            icon_name = "arrow-left" if is_rtl else "arrow-right"
-
-        path = self._style_manager.get_icon_path(icon_name)
-        pixmap = QIcon(path).pixmap(self._chevron.size())
-        self._chevron.setPixmap(pixmap)
-
-    def changeEvent(self, event: QEvent) -> None:
-        super().changeEvent(event)
-        if event.type() == QEvent.Type.LayoutDirectionChange:
-            self._update_chevron()
-
     def _on_style_changed(self) -> None:
         super()._on_style_changed()
 
-        font_size = self._style_manager.base_font_size()
-        zoom = self._style_manager.zoom_factor()
-        font_pt = int(font_size * zoom)
-        chevron_size = max(14, int(16 * zoom))
-        header_min_height = max(42, int(44 * zoom))
-
+        font_pt = int(self._style_manager.base_font_size() * self._style_manager.zoom_factor())
         text_color = self._style_manager.get_color_str(ColorRole.TEXT_BRIGHT)
-        disabled_text = self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)
-        bg = self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
-        content_bg = self._style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)
-        bg_hover = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
-        bg_pressed = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)
-        border_color = self._style_manager.get_color_str(ColorRole.MENU_BORDER)
-        radius = 8
-
-        self._chevron.setFixedSize(chevron_size, chevron_size)
-        self._header_btn.setMinimumHeight(header_min_height)
-
-        header_bottom_radius = 0 if self._content_visible else radius
-
-        self._header_btn.setStyleSheet(f"""
-            QPushButton#AccordionHeader {{
-                background-color: {bg};
-                border: 1px solid {border_color};
-                border-top-left-radius: {radius}px;
-                border-top-right-radius: {radius}px;
-                border-bottom-left-radius: {header_bottom_radius}px;
-                border-bottom-right-radius: {header_bottom_radius}px;
-                text-align: left;
-                padding: 0px;
-            }}
-            QPushButton#AccordionHeader:hover {{
-                background-color: {bg_hover};
-            }}
-            QPushButton#AccordionHeader:pressed {{
-                background-color: {bg_pressed};
-            }}
-            QPushButton#AccordionHeader:disabled {{
-                color: {disabled_text};
-            }}
-        """)
 
         self._title_label.setStyleSheet(f"""
             QLabel#AccordionTitle {{
@@ -206,26 +73,3 @@ class SettingsAccordion(SettingsItem):
                 margin: 0px;
             }}
         """)
-
-        self._chevron.setStyleSheet("""
-            QLabel#AccordionChevron {
-                background: transparent;
-                border: none;
-                padding: 0px;
-                margin: 0px;
-            }
-        """)
-
-        self._content_widget.setStyleSheet(f"""
-            QWidget#AccordionContent {{
-                background-color: {content_bg};
-                border: 1px solid {border_color};
-                border-top: 0px;
-                border-top-left-radius: 0px;
-                border-top-right-radius: 0px;
-                border-bottom-left-radius: {radius}px;
-                border-bottom-right-radius: {radius}px;
-            }}
-        """)
-
-        self._update_chevron()
