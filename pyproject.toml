@@ -92,7 +92,11 @@ max-attributes = 12
 # Message control
 output-format = "colorized"
 
+[tool.pylint.main]
+load-plugins = "tools.style_checker.humbug_style_checker"
+
 [tool.pylint.master]
+init-hook = "import sys, os; sys.path.insert(0, os.getcwd())"
 extension-pkg-whitelist = "PySide6"
 
 [tool.pylint.typecheck]

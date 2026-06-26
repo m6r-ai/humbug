@@ -1,0 +1,339 @@
+"""
+Tests for the Humbug style checker pylint plugin.
+
+Each test runs the full plugin (all checkers) against a source snippet and
+verifies the expected set of message IDs.
+"""
+
+import json
+import os
+import subprocess
+import tempfile
+
+from tools.style_checker.humbug_style_checker import (
+    MSG_NO_PROPERTY,
+    MSG_NO_OPTIONAL,
+    MSG_NO_ALIGNED_ASSIGNS,
+    MSG_BLANK_BEFORE_ELSE,
+    MSG_MULTILINE_DOCSTRING,
+)
+
+
+def _run_pylint(source: str) -> list[tuple[str, int]]:
+    """
+    Run the Humbug style plugin on *source* and return (msg_id, line) pairs.
+
+    The source is written to a temporary .py file so that both AST-based and
+    raw-file checkers run correctly.
+    """
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".py", delete=False, encoding="utf-8"
+    ) as f:
+        f.write(source)
+        path = f.name
+
+    try:
+        env = os.environ.copy()
+        env["PYTHONPATH"] = os.getcwd()
+
+        result = subprocess.run(
+            [
+                "python", "-m", "pylint",
+                "--load-plugins=tools.style_checker.humbug_style_checker",
+                "--disable=all",
+                f"--enable={MSG_NO_PROPERTY},{MSG_NO_OPTIONAL},{MSG_NO_ALIGNED_ASSIGNS},{MSG_BLANK_BEFORE_ELSE},{MSG_MULTILINE_DOCSTRING}",
+                "--score=n",
+                "--output-format=json",
+                path,
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+
+        messages = json.loads(result.stdout) if result.stdout.strip() else []
+        return [(msg["symbol"], msg["line"]) for msg in messages]
+    finally:
+        os.unlink(path)
+
+
+def _msg_ids(results: list[tuple[str, int]]) -> set[str]:
+    """Extract just the message IDs from a results list."""
+    return {msg_id for msg_id, _ in results}
+
+
+# ===========================================================================
+# @property tests
+# ===========================================================================
+
+class TestNoProperty:
+    """Tests for the humbug-no-property check."""
+
+    def test_property_is_flagged(self):
+        """@property decorator should be flagged."""
+        source = '''\
+class Foo:
+    """Test class."""
+
+    @property
+    def bar(self) -> int:
+        """Get bar."""
+        return 1
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_PROPERTY in _msg_ids(results)
+
+    def test_plain_getter_is_ok(self):
+        """A plain getter method should not be flagged."""
+        source = '''\
+class Foo:
+    """Test class."""
+
+    def bar(self) -> int:
+        """Get bar."""
+        return 1
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_PROPERTY not in _msg_ids(results)
+
+
+# ===========================================================================
+# Optional tests
+# ===========================================================================
+
+class TestNoOptional:
+    """Tests for the humbug-no-optional check."""
+
+    def test_optional_is_flagged(self):
+        """Optional[X] should be flagged."""
+        source = '''\
+"""Module."""
+from typing import Optional
+
+
+def foo(x: Optional[int] = None) -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_OPTIONAL in _msg_ids(results)
+
+    def test_pipe_none_is_ok(self):
+        """X | None should not be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int | None = None) -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_OPTIONAL not in _msg_ids(results)
+
+
+# ===========================================================================
+# Aligned assignment tests
+# ===========================================================================
+
+class TestNoAlignedAssigns:
+    """Tests for the humbug-no-aligned-assigns check."""
+
+    def test_aligned_assigns_are_flagged(self):
+        """Consecutive assignments with aligned = should be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo() -> None:
+    """Do something."""
+    short_name      = 1
+    long_name_here  = 2
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_ALIGNED_ASSIGNS in _msg_ids(results)
+
+    def test_misaligned_assigns_are_ok(self):
+        """Assignments with different = columns should not be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo() -> None:
+    """Do something."""
+    x = 1
+    yyy = 2
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_ALIGNED_ASSIGNS not in _msg_ids(results)
+
+    def test_single_assignment_is_ok(self):
+        """A single assignment should never be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo() -> None:
+    """Do something."""
+    x = 1
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_ALIGNED_ASSIGNS not in _msg_ids(results)
+
+    def test_blank_line_breaks_group(self):
+        """A blank line between assignments breaks the alignment group."""
+        source = '''\
+"""Module."""
+
+
+def foo() -> None:
+    """Do something."""
+    short_name = 1
+
+    long_name_here = 2
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_ALIGNED_ASSIGNS not in _msg_ids(results)
+
+
+# ===========================================================================
+# Blank line before else/elif tests
+# ===========================================================================
+
+class TestBlankBeforeElse:
+    """Tests for the humbug-blank-before-else check."""
+
+    def test_else_without_blank_is_flagged(self):
+        """else: without a preceding blank line should be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int) -> int:
+    """Do something."""
+    if x > 0:
+        return x
+    else:
+        return -x
+'''
+        results = _run_pylint(source)
+        assert MSG_BLANK_BEFORE_ELSE in _msg_ids(results)
+
+    def test_else_with_blank_is_ok(self):
+        """else: with a preceding blank line should not be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int) -> int:
+    """Do something."""
+    if x > 0:
+        return x
+
+    else:
+        return -x
+'''
+        results = _run_pylint(source)
+        assert MSG_BLANK_BEFORE_ELSE not in _msg_ids(results)
+
+    def test_elif_without_blank_is_flagged(self):
+        """elif: without a preceding blank line should be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int) -> str:
+    """Do something."""
+    if x > 0:
+        return "pos"
+    elif x < 0:
+        return "neg"
+    else:
+        return "zero"
+'''
+        results = _run_pylint(source)
+        ids = _msg_ids(results)
+        assert MSG_BLANK_BEFORE_ELSE in ids
+
+    def test_elif_with_blank_is_ok(self):
+        """elif: with a preceding blank line should not be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int) -> str:
+    """Do something."""
+    if x > 0:
+        return "pos"
+
+    elif x < 0:
+        return "neg"
+
+    else:
+        return "zero"
+'''
+        results = _run_pylint(source)
+        assert MSG_BLANK_BEFORE_ELSE not in _msg_ids(results)
+
+
+# ===========================================================================
+# Multiline docstring tests
+# ===========================================================================
+
+class TestMultilineDocstring:
+    """Tests for the humbug-multiline-docstring check."""
+
+    def test_good_multiline_docstring_is_ok(self):
+        """A correctly formatted multi-line docstring should not be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo() -> None:
+    """
+    Do something.
+
+    Details here.
+    """
+'''
+        results = _run_pylint(source)
+        assert MSG_MULTILINE_DOCSTRING not in _msg_ids(results)
+
+    def test_single_line_docstring_is_ok(self):
+        """A single-line docstring should never be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo() -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_MULTILINE_DOCSTRING not in _msg_ids(results)
+
+    def test_text_on_opening_line_is_flagged(self):
+        """Text after the opening triple-quote should be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo() -> None:
+    """Do something.
+    More text.
+    """
+'''
+        results = _run_pylint(source)
+        assert MSG_MULTILINE_DOCSTRING in _msg_ids(results)
+
+    def test_text_on_closing_line_is_flagged(self):
+        """Text before the closing triple-quote should be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo() -> None:
+    """
+    Do something.
+    More text."""
+'''
+        results = _run_pylint(source)
+        assert MSG_MULTILINE_DOCSTRING in _msg_ids(results)

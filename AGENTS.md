@@ -39,6 +39,12 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
   Functions/methods have doc strings and we don't need comments about grouping of things because they go stale.
 - We use modern Python, so never use `Optional`, always use `type | None`.
 - Do not use `@property`.  Simple getter methods (e.g. `def foo(self) -> T:`) are used instead.
+- Do not pad-align `=` signs in consecutive assignment statements.  Each assignment should have a single space before
+  the `=`, regardless of surrounding assignments.
+- Put a blank line before any block-level `elif` or `else`.
+- Multi-line docstrings must have the opening `"""` and closing `"""` on their own lines, with no other text.
+- These and other style rules are enforced by the style checker pylint plugin (`tools/style_checker/`), which runs
+  automatically as part of `python -m tools.code_checker`.
 
 ## Code restructuring
 
@@ -240,6 +246,7 @@ Development and debugging utilities:
 - `convert_document/` - Document conversion between docx, html, and md formats
 - `code_checker/` - Runs all static analysis tools (dependency checker, mypy, pylint) in sequence
 - `dependency_checker/` - Module dependency validation
+- `style_checker/` - Pylint plugin enforcing Humbug-specific code style conventions
 - `pdf/` - PDF-related tooling
 - `pipeline-runner/` - Pipeline execution
 
