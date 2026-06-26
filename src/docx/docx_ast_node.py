@@ -260,7 +260,8 @@ class DocxASTRunNode(DocxASTNode):
 
 
 class DocxASTRunPropertiesNode(DocxASTNode):
-    """Node representing run properties (<w:rPr>).
+    """
+    Node representing run properties (<w:rPr>).
 
     Captures character-level formatting.
     """
@@ -350,7 +351,8 @@ class DocxASTBreakNode(DocxASTNode):
     """
 
     def __init__(self, break_type: str = "textWrapping") -> None:
-        """Initialise a break node.
+        """
+        Initialise a break node.
 
         Args:
             break_type: The w:type attribute value.  Common values are
@@ -374,7 +376,8 @@ class DocxASTBookmarkStartNode(DocxASTNode):
     """Node representing a bookmark start (<w:bookmarkStart>)."""
 
     def __init__(self, bookmark_id: str, name: str) -> None:
-        """Initialise a bookmark start node.
+        """
+        Initialise a bookmark start node.
 
         Args:
             bookmark_id: The w:id attribute value.
@@ -389,7 +392,8 @@ class DocxASTBookmarkEndNode(DocxASTNode):
     """Node representing a bookmark end (<w:bookmarkEnd>)."""
 
     def __init__(self, bookmark_id: str) -> None:
-        """Initialise a bookmark end node.
+        """
+        Initialise a bookmark end node.
 
         Args:
             bookmark_id: The w:id attribute value matching a start node.

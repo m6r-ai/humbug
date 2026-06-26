@@ -10,7 +10,8 @@ _ENCRYPTED_ENTRY = "EncryptedPackage"
 
 
 def extract_text(data: bytes) -> str:
-    """Extract body text from a DOCX file given its raw bytes.
+    """
+    Extract body text from a DOCX file given its raw bytes.
 
     Paragraphs are extracted in document order and joined with newlines.
     Headers, footers, and text boxes are ignored.

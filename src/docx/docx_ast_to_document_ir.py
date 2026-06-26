@@ -87,7 +87,8 @@ _SIZE_TO_HEADING_LEVEL: List[Tuple[int, int]] = [
 
 
 def docx_ast_to_document_ir(document: DocxASTDocumentNode) -> DocumentIRDocumentNode:
-    """Convert a DOCX AST document into a document_ir document.
+    """
+    Convert a DOCX AST document into a document_ir document.
 
     This is the public entry point for the mapper.
 
@@ -139,7 +140,8 @@ class _NumLevel:
 
 
 class _DocxToDocumentIRMapper:
-    """Maps a DOCX AST to a document_ir tree.
+    """
+    Maps a DOCX AST to a document_ir tree.
 
     Handles:
     - Style resolution with inheritance chains
@@ -180,7 +182,8 @@ class _DocxToDocumentIRMapper:
         return document_ir
 
     def _build_style_index(self, styles_node: DocxASTStylesNode) -> None:
-        """Build a flat map of style_id → _ResolvedStyle from the styles tree.
+        """
+        Build a flat map of style_id → _ResolvedStyle from the styles tree.
 
         Resolves inheritance chains so each entry holds the effective
         properties after applying basedOn ancestors.
@@ -202,7 +205,8 @@ class _DocxToDocumentIRMapper:
         raw: Dict[str, DocxASTStyleNode],
         visiting: set,
     ) -> _ResolvedStyle:
-        """Resolve a style by walking its basedOn chain.
+        """
+        Resolve a style by walking its basedOn chain.
 
         Args:
             style_id: The style to resolve.
@@ -341,7 +345,8 @@ class _DocxToDocumentIRMapper:
         nodes: List[DocxASTNode],
         target: DocumentIRNode,
     ) -> None:
-        """Map a sequence of block-level DOCX nodes into target.
+        """
+        Map a sequence of block-level DOCX nodes into target.
 
         Handles list grouping: consecutive paragraphs sharing the same
         numId are collected and built into a list tree before appending.
@@ -412,7 +417,8 @@ class _DocxToDocumentIRMapper:
             i += 1
 
     def _para_is_code(self, para: DocxASTParagraphNode) -> bool:
-        """Return True if the paragraph is classified as a code block.
+        """
+        Return True if the paragraph is classified as a code block.
 
         Mirrors the classification logic in _map_paragraph: a paragraph is
         code if its resolved style has is_code set, or if all its runs use
@@ -432,7 +438,8 @@ class _DocxToDocumentIRMapper:
     def _merge_code_paragraphs(
         self, paras: List[DocxASTParagraphNode],
     ) -> DocumentIRCodeBlockNode:
-        """Merge a sequence of code paragraphs into a single code block node.
+        """
+        Merge a sequence of code paragraphs into a single code block node.
 
         Each paragraph represents one line of the original code block.  The
         lines are joined with newlines to reconstruct the multi-line content.
@@ -446,7 +453,8 @@ class _DocxToDocumentIRMapper:
     def _get_num_pr(
         self, para: DocxASTParagraphNode
     ) -> DocxASTNumberingPropertiesNode | None:
-        """Return the numbering properties of a paragraph, or None.
+        """
+        Return the numbering properties of a paragraph, or None.
 
         Checks the paragraph's own ``<w:numPr>`` first.  If the paragraph
         does not carry numbering directly, falls back to the numbering
@@ -476,7 +484,8 @@ class _DocxToDocumentIRMapper:
         return None
 
     def _para_is_heading(self, para: DocxASTParagraphNode) -> bool:
-        """Return True if the paragraph resolves to a heading via style or outline level.
+        """
+        Return True if the paragraph resolves to a heading via style or outline level.
 
         Used to prevent numbered heading paragraphs from being consumed as list
         items: Word documents commonly attach auto-numbering to heading styles,
@@ -498,7 +507,8 @@ class _DocxToDocumentIRMapper:
     def _build_list_tree(
         self, paras: List[DocxASTParagraphNode]
     ) -> List[DocumentIRNode]:
-        """Build a nested list tree from a flat sequence of list paragraphs.
+        """
+        Build a nested list tree from a flat sequence of list paragraphs.
 
         The paragraphs are grouped by ilvl (indent level).  When ilvl
         increases we start a nested list; when it decreases we close
@@ -628,7 +638,8 @@ class _DocxToDocumentIRMapper:
     def _map_paragraph(
         self, para: DocxASTParagraphNode
     ) -> DocumentIRNode | None:
-        """Map a single paragraph to the appropriate document_ir node.
+        """
+        Map a single paragraph to the appropriate document_ir node.
 
         Classification order:
         1. Style-based: heading, code, blockquote
@@ -731,7 +742,8 @@ class _DocxToDocumentIRMapper:
         para: DocxASTParagraphNode,
         resolved: _ResolvedStyle | None,
     ) -> int | None:
-        """Infer a heading level from direct formatting (bold + large font).
+        """
+        Infer a heading level from direct formatting (bold + large font).
 
         Returns None if the paragraph doesn't look like a heading.
         """
@@ -797,7 +809,8 @@ class _DocxToDocumentIRMapper:
     def _unwrap_single_cell_table(
         self, table: DocxASTTableNode, target: DocumentIRNode
     ) -> None:
-        """Emit the content of a 1×1 table's cell directly into target.
+        """
+        Emit the content of a 1×1 table's cell directly into target.
 
         A single-cell table is a Word layout artefact (used for image frames,
         text boxes, callouts, etc.) with no semantic table meaning.  Rather
@@ -816,7 +829,8 @@ class _DocxToDocumentIRMapper:
         self._map_block_sequence(block_nodes, target)
 
     def _map_table(self, table: DocxASTTableNode) -> DocumentIRTableNode:
-        """Map a DOCX table to a DocumentIRTableNode.
+        """
+        Map a DOCX table to a DocumentIRTableNode.
 
         Rows marked as header rows (via tblHeader) go into a
         DocumentIRTableHeaderNode; all others go into a DocumentIRTableBodyNode.
@@ -872,7 +886,8 @@ class _DocxToDocumentIRMapper:
     def _map_table_cell(
         self, cell: DocxASTTableCellNode, is_header: bool
     ) -> DocumentIRTableCellNode:
-        """Map a table cell.
+        """
+        Map a table cell.
 
         Cell alignment is taken from the first paragraph's justification,
         or from the cell properties if available.
@@ -932,7 +947,8 @@ class _DocxToDocumentIRMapper:
     def _map_hyperlink(
         self, hyperlink: DocxASTHyperlinkNode,
     ) -> List[DocumentIRNode]:
-        """Map a hyperlink to document_ir inline nodes.
+        """
+        Map a hyperlink to document_ir inline nodes.
 
         External hyperlinks (url is set) become a DocumentIRLinkNode wrapping
         the runs inside the hyperlink.  Internal hyperlinks (anchor only, no
@@ -955,7 +971,8 @@ class _DocxToDocumentIRMapper:
         return result
 
     def _map_run(self, run: DocxASTRunNode) -> List[DocumentIRNode]:
-        """Map a single run to a list of document_ir inline nodes.
+        """
+        Map a single run to a list of document_ir inline nodes.
 
         A run may contain text, tabs, breaks, and drawings.  Text content
         is emitted as DocumentIRTextSpanNode with formatting flags from the rPr.

@@ -1,4 +1,5 @@
-"""Serialises a DocxASTDocumentNode to a .docx file (ZIP/OOXML).
+"""
+Serialises a DocxASTDocumentNode to a .docx file (ZIP/OOXML).
 
 The serialiser walks the AST and produces XML strings for each component,
 then assembles them into a valid .docx ZIP archive using only the Python
@@ -174,7 +175,8 @@ def _esc(text: str) -> str:
 
 
 def _read_image_dimensions(data: bytes) -> tuple[int, int] | None:
-    """Read the intrinsic pixel dimensions from image bytes.
+    """
+    Read the intrinsic pixel dimensions from image bytes.
 
     Supports PNG, JPEG, GIF, and WEBP using only the Python standard library.
     Returns (width_px, height_px), or None if the format is unrecognised or
@@ -260,7 +262,8 @@ _DEFAULT_DPI = 96
 
 
 def serialise_docx(document: DocxASTDocumentNode) -> bytes:
-    """Serialise a DocxASTDocumentNode to raw .docx bytes.
+    """
+    Serialise a DocxASTDocumentNode to raw .docx bytes.
 
     Args:
         document: The DocxASTDocumentNode to serialise.  Should contain
@@ -620,7 +623,8 @@ class _DocxASTSerialiser:
         return f"<w:t{space_attr}>{_esc(node.content)}</w:t>"
 
     def _serialise_drawing(self, node: DocxASTDrawingNode) -> str:
-        """Serialise a <w:drawing> element, embedding the image into the ZIP.
+        """
+        Serialise a <w:drawing> element, embedding the image into the ZIP.
 
         Image bytes are sourced from, in order of preference:
         1. ``node.image_data`` — bytes already in memory (from a parsed DOCX).
@@ -703,7 +707,8 @@ class _DocxASTSerialiser:
         return None
 
     def _register_image(self, hint_path: str, image_bytes: bytes) -> str:
-        """Register image bytes for ZIP embedding and return the relationship ID.
+        """
+        Register image bytes for ZIP embedding and return the relationship ID.
 
         If the same bytes have already been registered (e.g. the same image
         used twice), a new entry is still created so each drawing has its own
