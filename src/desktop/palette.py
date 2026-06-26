@@ -937,7 +937,229 @@ _OCEAN_LIGHT_COLORS: Dict[ColorRole, str] = {
     ColorRole.TERM_BRIGHT_WHITE: "#ffffff",
 }
 
+_GLOSSY_LIGHT_COLORS: Dict[ColorRole, str] = {
+    # Brand colours
+    ColorRole.BRAND_PRIMARY: "#6248e8",
+    ColorRole.BRAND_GRADIENT_START: "#29c5ff",
+    ColorRole.BRAND_GRADIENT_END: "#c050ff",
+    ColorRole.BRAND_ICON_BG_START: "#1e0e50",
+    ColorRole.BRAND_ICON_BG_END: "#060612",
+
+    # Background colours
+    ColorRole.BACKGROUND_PRIMARY: "#fbfcfe",
+    ColorRole.BACKGROUND_SECONDARY: "#eef1f6",
+    ColorRole.BACKGROUND_GRADIENT_START: "#ffffff",
+    ColorRole.BACKGROUND_GRADIENT_END: "#eef1f6",
+    ColorRole.BACKGROUND_TERTIARY: "#ffffff",
+    ColorRole.BACKGROUND_TERTIARY_HOVER: "#e8edf4",
+    ColorRole.BACKGROUND_TERTIARY_PRESSED: "#d6dde8",
+    ColorRole.BACKGROUND_DIALOG: "#ffffff",
+    ColorRole.LOGO_BACKGROUND: "#eef2fb",
+
+    # Text colours
+    ColorRole.TEXT_PRIMARY: "#1c2330",
+    ColorRole.TEXT_BRIGHT: "#0b1018",
+    ColorRole.TEXT_HEADING: "#2540a0",
+    ColorRole.TEXT_HEADING_BRIGHT: "#1f389a",
+    ColorRole.TEXT_DISABLED: "#9aa3b2",
+    ColorRole.TEXT_SELECTED: "#d4e2fb",
+    ColorRole.TEXT_FOUND: "#e0b4b4",
+    ColorRole.TEXT_FOUND_DIM: "#f4d8d8",
+    ColorRole.TEXT_RECOMMENDED: "#ffffff",
+    ColorRole.TEXT_LINK: "#2563eb",
+    ColorRole.TEXT_INACTIVE: "#707070",
+    ColorRole.TEXT_EPHEMERAL: "#a0785c",
+    ColorRole.TEXT_EPHEMERAL_INACTIVE: "#c09070",
+    ColorRole.TEXT_ERROR: "#f04030",
+    ColorRole.TEXT_ERROR_INACTIVE: "#f07060",
+    ColorRole.TEXT_SUCCESS: "#16a34a",
+
+    # Edit box colours
+    ColorRole.EDIT_BOX_BORDER: "#c0cad8",
+    ColorRole.EDIT_BOX_BACKGROUND: "#ffffff",
+    ColorRole.EDIT_BOX_ERROR: "#d04030",
+
+    # Mindspace colours
+    ColorRole.MINDSPACE_BACKGROUND: "#f5f7fb",
+    ColorRole.MINDSPACE_NAME_BACKGROUND: "#d0d0d0",
+    ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER: "#b0b0b0",
+    ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED: "#909090",
+    ColorRole.MINDSPACE_HEADING: "#2a3b55",
+    ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND: "#eaeef6",
+    ColorRole.MINDSPACE_FOLDER: "#3b82f6",
+    ColorRole.MINDSPACE_FOLDER_BREADCRUMB: "#2563eb",
+
+    # Tab colours
+    ColorRole.TAB_BAR_BACKGROUND: "#e6ebf3",
+    ColorRole.TAB_BACKGROUND_ACTIVE: "#ffffff",
+    ColorRole.TAB_BACKGROUND_INACTIVE: "#eef1f6",
+    ColorRole.TAB_BACKGROUND_HOVER: "#f5f7fb",
+    ColorRole.TAB_BACKGROUND_UPDATED: "#f0d0f8",
+    ColorRole.TAB_BORDER_ACTIVE: "#2563eb",
+
+    # Button colours
+    ColorRole.BUTTON_BACKGROUND: "#eef1f6",
+    ColorRole.BUTTON_BACKGROUND_PRESSED: "#d2dae6",
+    ColorRole.BUTTON_BACKGROUND_HOVER: "#e2e8f1",
+    ColorRole.BUTTON_SECONDARY_BACKGROUND: "#d8d8d8",
+    ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED: "#b0b0b0",
+    ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER: "#c0c0c0",
+    ColorRole.BUTTON_BACKGROUND_RECOMMENDED: "#3b82f6",
+    ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED: "#1d4ed8",
+    ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER: "#2563eb",
+    ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: "#e0503c",
+    ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: "#b53626",
+    ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: "#cc4433",
+    ColorRole.BUTTON_BACKGROUND_EDIT: "#a06008",
+    ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED: "#804800",
+    ColorRole.BUTTON_BACKGROUND_EDIT_HOVER: "#b07018",
+    ColorRole.BUTTON_BACKGROUND_DISABLED: "#e0e0e0",
+
+    # Switch colours
+    ColorRole.SWITCH_TRACK_ON: "#3b82f6",
+    ColorRole.SWITCH_TRACK_OFF: "#dde3ec",
+    ColorRole.SWITCH_TRACK_DISABLED_ON: "#c0d2f0",
+    ColorRole.SWITCH_TRACK_BORDER: "#aab4c2",
+    ColorRole.SWITCH_KNOB: "#ffffff",
+    ColorRole.SWITCH_KNOB_DISABLED: "#707070",
+
+    # Menu elements
+    ColorRole.MENU_BACKGROUND: "#ffffff",
+    ColorRole.MENU_HOVER: "#70a0f0",
+    ColorRole.MENU_BORDER: "#cdd5e0",
+    ColorRole.COMBO_ITEM_HOVER: "#e2e8f1",
+
+    # Splitter bars
+    ColorRole.SPLITTER: "#cdd5e0",
+    ColorRole.TAB_SPLITTER: "#fcfcfc",
+
+    # Scroll bar elements
+    ColorRole.SCROLLBAR_BACKGROUND: "#eef1f6",
+    ColorRole.SCROLLBAR_HANDLE: "#c0cad8",
+
+    # Code block border
+    ColorRole.CODE_BORDER: "#dde3ec",
+
+    # Blockquote elements
+    ColorRole.BLOCKQUOTE_BORDER: "#b4b4cd",
+    ColorRole.BLOCKQUOTE_BACKGROUND: "#eef1f8",
+
+    # Table elements
+    ColorRole.TABLE_BORDER: "#dde3ec",
+    ColorRole.TABLE_HEADER_BACKGROUND: "#dfe5ef",
+
+    # Message colours
+    ColorRole.MESSAGE_BACKGROUND: "#fbfcfe",
+    ColorRole.MESSAGE_BACKGROUND_HOVER: "#e8edf4",
+    ColorRole.MESSAGE_BACKGROUND_PRESSED: "#dde3ec",
+    ColorRole.MESSAGE_USER_BACKGROUND: "#eef3fb",
+    ColorRole.MESSAGE_USER_BACKGROUND_HOVER: "#e2eaf7",
+    ColorRole.MESSAGE_USER_BACKGROUND_PRESSED: "#d4e0f4",
+    # The input background has an alpha channel so it allows a small amount of what's underneath it to show through.
+    ColorRole.MESSAGE_INPUT_BACKGROUND: "#eadde3ec",
+    ColorRole.MESSAGE_ATTACHMENT_BACKGROUND: "#eef1f6",
+    ColorRole.MESSAGE_BORDER: "#dde3ec",
+    ColorRole.MESSAGE_USER_BORDER: "#bcd0ef",
+    ColorRole.MESSAGE_INPUT_BORDER: "#a0aab8",
+    ColorRole.MESSAGE_SPOTLIGHTED: "#607488",
+    ColorRole.MESSAGE_USER: "#2563eb",
+    ColorRole.MESSAGE_AI: "#1d7a4d",
+    ColorRole.MESSAGE_REASONING: "#7a4fa3",
+    ColorRole.MESSAGE_TOOL_CALL: "#526578",
+    ColorRole.MESSAGE_TOOL_RESULT: "#526578",
+    ColorRole.MESSAGE_USER_QUEUED: "#606060",
+    ColorRole.MESSAGE_SYSTEM_ERROR: "#a04040",
+    ColorRole.MESSAGE_SYSTEM_SUCCESS: "#40a040",
+    ColorRole.MESSAGE_SYNTAX: "#2563eb",
+    ColorRole.MESSAGE_STREAMING: "#a07050",
+    ColorRole.MESSAGE_TRACE: "#606060",
+    ColorRole.MESSAGE_INFORMATION: "#2563eb",
+    ColorRole.MESSAGE_WARNING: "#7a5d00",
+    ColorRole.MESSAGE_ERROR: "#b53626",
+
+    # Status bar elements
+    ColorRole.STATUS_BAR_BACKGROUND: "#eef1f6",
+    ColorRole.CANARY_BACKGROUND: "#ff8080",
+
+    # Close button states
+    ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER: "#ff7070",
+
+    # Drop target highlights
+    ColorRole.DROP_TARGET_HIGHLIGHT: "#a8b8f8",
+    ColorRole.DROP_TARGET_SEPARATOR_HIGHLIGHT: "#142454",
+
+    # Line numbers
+    ColorRole.LINE_NUMBER: "#c0c0c0",
+
+    # Diff view colours
+    ColorRole.DIFF_REMOVED_BACKGROUND: "#f0c8c8",
+    ColorRole.DIFF_ADDED_BACKGROUND: "#c8f0c8",
+    ColorRole.DIFF_CHANGED_BACKGROUND: "#c8c8f0",
+    ColorRole.DIFF_HUNK_LINE_NUMBER: "#202020",
+
+    # VCS status colours
+    ColorRole.VCS_MODIFIED: "#c0a020",
+    ColorRole.VCS_ADDED: "#207020",
+    ColorRole.VCS_DELETED: "#c03030",
+    ColorRole.VCS_RENAMED: "#4040a0",
+
+    # Usage model colours
+    ColorRole.USAGE_MODEL_COLOR_1: "#2878c8",
+    ColorRole.USAGE_MODEL_COLOR_2: "#28a060",
+    ColorRole.USAGE_MODEL_COLOR_3: "#c07800",
+    ColorRole.USAGE_MODEL_COLOR_4: "#c03050",
+    ColorRole.USAGE_MODEL_COLOR_5: "#6050c8",
+    ColorRole.USAGE_MODEL_COLOR_6: "#c04820",
+    ColorRole.USAGE_MODEL_COLOR_7: "#2090a0",
+    ColorRole.USAGE_MODEL_COLOR_8: "#608020",
+
+    # Syntax highlighting
+    ColorRole.SYNTAX_ERROR: "#ff0000",
+    ColorRole.SYNTAX_01: "#007070",
+    ColorRole.SYNTAX_02: "#202020",
+    ColorRole.SYNTAX_03: "#40a040",
+    ColorRole.SYNTAX_04: "#c000a0",
+    ColorRole.SYNTAX_05: "#606060",
+    ColorRole.SYNTAX_06: "#0080a0",
+    ColorRole.SYNTAX_07: "#a0a000",
+    ColorRole.SYNTAX_08: "#5040c0",
+    ColorRole.SYNTAX_09: "#0080a0",
+    ColorRole.SYNTAX_10: "#a000a0",
+    ColorRole.SYNTAX_11: "#0040c0",
+    ColorRole.SYNTAX_12: "#c03030",
+    ColorRole.SYNTAX_13: "#c080a0",
+    ColorRole.SYNTAX_14: "#a09040",
+    ColorRole.SYNTAX_15: "#2090a0",
+    ColorRole.SYNTAX_16: "#508020",
+    ColorRole.SYNTAX_17: "#404040",
+    ColorRole.SYNTAX_18: "#609060",
+    ColorRole.SYNTAX_19: "#a04020",
+    ColorRole.SYNTAX_20: "#b03828",
+    ColorRole.SYNTAX_21: "#24906c",
+
+    # Terminal basic colors
+    ColorRole.TERM_BLACK: "#000000",
+    ColorRole.TERM_RED: "#cd0000",
+    ColorRole.TERM_GREEN: "#00cd00",
+    ColorRole.TERM_YELLOW: "#cdcd00",
+    ColorRole.TERM_BLUE: "#0000ee",
+    ColorRole.TERM_MAGENTA: "#cd00cd",
+    ColorRole.TERM_CYAN: "#00cdcd",
+    ColorRole.TERM_WHITE: "#e5e5e5",
+
+    # Terminal bright colors
+    ColorRole.TERM_BRIGHT_BLACK: "#7f7f7f",
+    ColorRole.TERM_BRIGHT_RED: "#ff0000",
+    ColorRole.TERM_BRIGHT_GREEN: "#00ff00",
+    ColorRole.TERM_BRIGHT_YELLOW: "#ffff00",
+    ColorRole.TERM_BRIGHT_BLUE: "#5c5cff",
+    ColorRole.TERM_BRIGHT_MAGENTA: "#ff00ff",
+    ColorRole.TERM_BRIGHT_CYAN: "#00ffff",
+    ColorRole.TERM_BRIGHT_WHITE: "#ffffff",
+}
+
 DARK_PALETTE = FixedPalette(_DARK_COLORS)
 LIGHT_PALETTE = FixedPalette(_LIGHT_COLORS)
 COLOR_BLIND_PALETTE = FixedPalette(_COLOR_BLIND_COLORS)
 OCEAN_LIGHT_PALETTE = FixedPalette(_OCEAN_LIGHT_COLORS)
+GLOSSY_LIGHT_PALETTE = FixedPalette(_GLOSSY_LIGHT_COLORS)

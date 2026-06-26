@@ -107,17 +107,18 @@ class UserManager(QObject):
             self._settings = UserSettings.create_default()
 
     def _save_settings(self) -> None:
-        """Save current settings to file."""
+        """
+        Save current settings to file.
+
+        Raises:
+            OSError: If the settings file cannot be written
+        """
         if not self._settings:
             return
 
-        try:
-            settings_path = self._get_settings_path()
-            self._settings.save(settings_path)
-            self._logger.info("Saved user settings to %s", settings_path)
-
-        except OSError as e:
-            self._logger.error("Failed to save user settings: %s", str(e))
+        settings_path = self._get_settings_path()
+        self._settings.save(settings_path)
+        self._logger.info("Saved user settings to %s", settings_path)
 
     def _load_fetched_models(self) -> None:
         """Load previously fetched model IDs from the on-disk cache."""
@@ -162,18 +163,25 @@ class UserManager(QObject):
         Raises:
             UserError: If settings cannot be saved
         """
+        self._settings = new_settings
+
         try:
-            self._settings = new_settings
             self._save_settings()
 
-            # Update AI backends with new settings
-            self._ai_manager.update_backend_settings(new_settings.ai_backends)
+        except OSError as e:
+            raise UserError(str(e)) from e
 
-            # Emit signal to notify listeners
+        # Update AI backends with new settings
+        self._ai_manager.update_backend_settings(new_settings.ai_backends)
+
+        # Notify listeners.  A listener that hits an error while reacting to the change
+        # has not caused a save failure — the settings are already persisted — so log it
+        # rather than surfacing it as a failed save.
+        try:
             self.settings_changed.emit()
 
-        except OSError as e:
-            raise UserError(f"Failed to save user settings: {str(e)}") from e
+        except Exception:  # pylint: disable=broad-except
+            self._logger.exception("Error notifying listeners of user settings change")
 
     def settings(self) -> UserSettings:
         """
