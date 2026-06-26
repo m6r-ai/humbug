@@ -4,7 +4,6 @@ import logging
 from collections import defaultdict
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPaintEvent
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -12,7 +11,6 @@ from PySide6.QtWidgets import (
     QLayout,
     QProgressBar,
     QPushButton,
-    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QHBoxLayout,
@@ -40,25 +38,6 @@ def _fmt(n: int) -> str:
 def _count_label(count: int, singular: str, plural: str) -> str:
     word = singular if count == 1 else plural
     return f"{count} {word}"
-
-
-class _Dot(QWidget):
-    """A small filled circle painted in a provider's accent colour."""
-
-    def __init__(self, color: str, size: int, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self._color = color
-        self.setFixedSize(size, size)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-
-    def paintEvent(self, event: QPaintEvent) -> None:
-        del event
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(self._color))
-        painter.drawEllipse(self.rect())
-        painter.end()
 
 
 class UsageWidget(QWidget):
@@ -101,32 +80,16 @@ class UsageWidget(QWidget):
         self._details_container_layout.setContentsMargins(0, 0, 0, 0)
         self._details_container_layout.setSpacing(0)
 
+        self._details_container_layout.addSpacing(int(self._style_manager.message_bubble_spacing()))
         self._details_label = self._section_label("Details")
         self._details_container_layout.addWidget(self._details_label)
 
-        self._details_scroll = QScrollArea()
-        self._details_scroll.setObjectName("UsageDetailsScroll")
-        self._details_scroll.setWidgetResizable(True)
-        self._details_scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self._details_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._details_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self._details_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._details_scroll.viewport().setAutoFillBackground(False)
-        # Permanently reserve the scrollbar's width so it can appear/disappear
-        # (as-needed) without changing the content width — otherwise expanding a
-        # section that crosses the overflow point would shift the headers sideways.
-        self._details_scroll.setViewportMargins(0, 0, self._style_manager.get_scrollbar_size(), 0)
-        self._details_container_layout.addWidget(self._details_scroll, 1)
-
-        self._details_body = QWidget()
-        self._details_body.setObjectName("UsageDetailsBody")
-        self._details_body.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        self._details_body.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        self._details_layout = QVBoxLayout(self._details_body)
+        self._details_layout = QVBoxLayout()
         self._details_layout.setContentsMargins(0, 0, 0, 0)
         self._details_layout.setSpacing(int(self._style_manager.message_bubble_spacing()))
         self._details_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._details_scroll.setWidget(self._details_body)
+        self._details_container_layout.addLayout(self._details_layout, 1)
+
         self._body.addWidget(self._details, 1)
 
         reset_row = QWidget()
@@ -377,18 +340,12 @@ class UsageWidget(QWidget):
             reverse=True,
         )
 
-        top_key = f"{sorted_models[0].provider}/{sorted_models[0].model}"
-        accent_color = color_map.get(top_key, model_colors[0])
-
         accordion = Accordion(expanded=provider in self._expanded_providers)
         accordion.toggled.connect(
             lambda expanded, name=provider: self._on_provider_toggled(name, expanded)
         )
 
         header = accordion.header_layout()
-        header.addWidget(_Dot(accent_color, max(8, int(9 * zoom))))
-        header.addSpacing(int(s * 0.25))
-
         name = ElidedLabel()
         name.setText(provider.upper())
         name.setObjectName("UsageDetailProviderName")

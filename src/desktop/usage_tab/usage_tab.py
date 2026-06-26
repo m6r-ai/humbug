@@ -160,7 +160,7 @@ class UsageTab(TabBase):
             }}
 
             #UsageWidget QLabel#UsageSectionLabel {{
-                color: {dim};
+                color: {heading};
                 font-size: {round(fs * 0.9)}pt;
                 font-weight: bold;
                 letter-spacing: 0;
@@ -229,9 +229,8 @@ class UsageTab(TabBase):
             }}
 
             #UsageWidget QLabel#UsageDetailProviderName {{
-                color: {heading};
+                color: {text};
                 font-size: {round(fs * 1.02)}pt;
-                font-weight: bold;
                 letter-spacing: 1px;
                 background: transparent;
             }}
