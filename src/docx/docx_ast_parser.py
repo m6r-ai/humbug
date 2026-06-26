@@ -89,7 +89,8 @@ def _int_or_none(value: str | None) -> int | None:
 
 
 class DocxASTParser:
-    """Parses a DOCX file from raw bytes into a DocxASTDocumentNode.
+    """
+    Parses a DOCX file from raw bytes into a DocxASTDocumentNode.
 
     Usage::
 
@@ -111,7 +112,8 @@ class DocxASTParser:
         data: bytes,
         source_path: str | None = None,
     ) -> DocxASTDocumentNode:
-        """Parse DOCX bytes into a document AST.
+        """
+        Parse DOCX bytes into a document AST.
 
         Args:
             data: Raw bytes of the .docx file.
@@ -172,7 +174,8 @@ class DocxASTParser:
         return document
 
     def _read_xml(self, zf: zipfile.ZipFile, path: str) -> ET.Element:
-        """Read and parse an XML entry from the ZIP.
+        """
+        Read and parse an XML entry from the ZIP.
 
         Args:
             zf: Open ZipFile.
@@ -195,7 +198,8 @@ class DocxASTParser:
             raise DocxParseError(f"Malformed XML in {path!r}: {e}") from e
 
     def _parse_relationships(self, root: ET.Element) -> Dict[str, str]:
-        """Parse a .rels file and return a map from Id to Target.
+        """
+        Parse a .rels file and return a map from Id to Target.
 
         Image relationships are stored as ZIP paths (e.g. 'word/media/image1.png').
         Hyperlink relationships are stored as URLs verbatim.  Other relationship
@@ -232,7 +236,8 @@ class DocxASTParser:
         return relationships
 
     def _parse_styles(self, root: ET.Element) -> DocxASTStylesNode:
-        """Parse styles.xml into a DocxASTStylesNode.
+        """
+        Parse styles.xml into a DocxASTStylesNode.
 
         Args:
             root: Root <w:styles> element.
@@ -265,7 +270,8 @@ class DocxASTParser:
         return styles_node
 
     def _parse_style(self, elem: ET.Element) -> DocxASTStyleNode:
-        """Parse a single <w:style> element.
+        """
+        Parse a single <w:style> element.
 
         Args:
             elem: The <w:style> element.
@@ -310,7 +316,8 @@ class DocxASTParser:
         return style_node
 
     def _parse_numbering(self, root: ET.Element) -> DocxASTNumberingNode:
-        """Parse numbering.xml into a DocxASTNumberingNode.
+        """
+        Parse numbering.xml into a DocxASTNumberingNode.
 
         Args:
             root: Root <w:numbering> element.
@@ -331,7 +338,8 @@ class DocxASTParser:
         return numbering_node
 
     def _parse_abstract_num(self, elem: ET.Element) -> DocxASTAbstractNumNode:
-        """Parse a <w:abstractNum> element.
+        """
+        Parse a <w:abstractNum> element.
 
         Args:
             elem: The <w:abstractNum> element.
@@ -353,7 +361,8 @@ class DocxASTParser:
         return node
 
     def _parse_num_level(self, elem: ET.Element) -> DocxASTNumLevelNode:
-        """Parse a <w:lvl> element.
+        """
+        Parse a <w:lvl> element.
 
         Args:
             elem: The <w:lvl> element.
@@ -416,7 +425,8 @@ class DocxASTParser:
         )
 
     def _parse_num(self, elem: ET.Element) -> DocxASTNumNode:
-        """Parse a <w:num> element.
+        """
+        Parse a <w:num> element.
 
         Args:
             elem: The <w:num> element.
@@ -440,7 +450,8 @@ class DocxASTParser:
         root: ET.Element,
         relationships: Dict[str, str],
     ) -> DocxASTBodyNode:
-        """Parse the document.xml root into a DocxASTBodyNode.
+        """
+        Parse the document.xml root into a DocxASTBodyNode.
 
         Args:
             root: Root <w:document> element.
@@ -479,7 +490,8 @@ class DocxASTParser:
         elem: ET.Element,
         relationships: Dict[str, str],
     ) -> DocxASTParagraphNode:
-        """Parse a <w:p> element.
+        """
+        Parse a <w:p> element.
 
         Args:
             elem: The <w:p> element.
@@ -517,7 +529,8 @@ class DocxASTParser:
         elem: ET.Element,
         relationships: Dict[str, str],
     ) -> DocxASTHyperlinkNode:
-        """Parse a <w:hyperlink> element.
+        """
+        Parse a <w:hyperlink> element.
 
         Handles both external hyperlinks (r:id referencing a URL via
         relationships) and internal hyperlinks (w:anchor referencing a
@@ -560,7 +573,8 @@ class DocxASTParser:
     def _parse_paragraph_properties(
         self, elem: ET.Element
     ) -> DocxASTParagraphPropertiesNode:
-        """Parse a <w:pPr> element.
+        """
+        Parse a <w:pPr> element.
 
         Args:
             elem: The <w:pPr> element.
@@ -648,7 +662,8 @@ class DocxASTParser:
         elem: ET.Element,
         relationships: Dict[str, str],
     ) -> DocxASTRunNode:
-        """Parse a <w:r> element.
+        """
+        Parse a <w:r> element.
 
         Args:
             elem: The <w:r> element.
@@ -690,7 +705,8 @@ class DocxASTParser:
         return run_node
 
     def _parse_run_properties(self, elem: ET.Element) -> DocxASTRunPropertiesNode:
-        """Parse a <w:rPr> element.
+        """
+        Parse a <w:rPr> element.
 
         Args:
             elem: The <w:rPr> element.
@@ -801,7 +817,8 @@ class DocxASTParser:
         elem: ET.Element,
         relationships: Dict[str, str],
     ) -> DocxASTDrawingNode | None:
-        """Parse a <w:drawing> element and return a DocxASTDrawingNode.
+        """
+        Parse a <w:drawing> element and return a DocxASTDrawingNode.
 
         Extracts the relationship ID (for image lookup), dimensions, and
         description from the drawing's inline or anchor child.
@@ -889,7 +906,8 @@ class DocxASTParser:
         elem: ET.Element,
         relationships: Dict[str, str],
     ) -> DocxASTTableNode:
-        """Parse a <w:tbl> element.
+        """
+        Parse a <w:tbl> element.
 
         Args:
             elem: The <w:tbl> element.
@@ -905,8 +923,10 @@ class DocxASTParser:
 
             if local == "tblPr":
                 table_node.add_child(self._parse_table_properties(child))
+
             elif local == "tblGrid":
                 table_node.add_child(self._parse_table_grid(child))
+
             elif local == "tr":
                 table_node.add_child(self._parse_table_row(child, relationships))
 
@@ -1107,7 +1127,8 @@ def parse_docx(
     data: bytes,
     source_path: str | None = None,
 ) -> DocxASTDocumentNode:
-    """Parse a DOCX file from raw bytes into a document AST.
+    """
+    Parse a DOCX file from raw bytes into a document AST.
 
     Convenience wrapper around DocxASTParser.
 
