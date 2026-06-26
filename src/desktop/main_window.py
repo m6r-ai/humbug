@@ -927,8 +927,7 @@ class MainWindow(QMainWindow):
         self._theme_actions[ColorTheme.SYSTEM] = system_action
 
         # Add Light theme submenu with the light variants.  "Default" is the
-        # built-in light palette; Ocean Light and Glossy Light are fixed light
-        # variants listed beneath it.
+        # built-in light palette; Ocean Light is a fixed light variant beneath it.
         light_menu = self._style_manager.create_menu(self)
         light_menu.setTitle(strings.theme_light)
         theme_menu.addMenu(light_menu)
@@ -936,7 +935,6 @@ class MainWindow(QMainWindow):
         for light_theme, light_label in (
             (ColorTheme.LIGHT, strings.theme_light_default),
             (ColorTheme.OCEAN_LIGHT, strings.theme_ocean_light),
-            (ColorTheme.GLOSSY_LIGHT, strings.theme_glossy_light),
         ):
             light_variant_action = QAction(light_label, self)
             light_variant_action.setCheckable(True)

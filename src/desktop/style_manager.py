@@ -23,7 +23,7 @@ from syntax import TokenType
 from desktop.color_role import ColorRole
 from desktop.icons.icon_pack import active_inactive_icon_names, app_icon_svg, theme_icon_svg, update_icon_svg
 from desktop.palette import (
-    COLOR_BLIND_PALETTE, DARK_PALETTE, GLOSSY_LIGHT_PALETTE, LIGHT_PALETTE, OCEAN_LIGHT_PALETTE, OverlayPalette, Palette
+    COLOR_BLIND_PALETTE, DARK_PALETTE, LIGHT_PALETTE, OCEAN_LIGHT_PALETTE, OverlayPalette, Palette
 )
 from desktop.color_theme import ColorTheme
 
@@ -569,9 +569,6 @@ class StyleManager(QObject):
         if self._theme_mode == ColorTheme.OCEAN_LIGHT:
             return ColorMode.LIGHT
 
-        if self._theme_mode == ColorTheme.GLOSSY_LIGHT:
-            return ColorMode.LIGHT
-
         if self._theme_mode == ColorTheme.LIGHT:
             return ColorMode.LIGHT
 
@@ -622,9 +619,6 @@ class StyleManager(QObject):
 
         if mode == ColorTheme.OCEAN_LIGHT:
             return OCEAN_LIGHT_PALETTE
-
-        if mode == ColorTheme.GLOSSY_LIGHT:
-            return GLOSSY_LIGHT_PALETTE
 
         if mode == ColorTheme.CUSTOM:
             return self._dark_custom_palette if self._custom_color_mode == ColorMode.DARK else self._light_custom_palette

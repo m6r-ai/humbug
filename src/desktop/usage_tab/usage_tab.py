@@ -141,7 +141,6 @@ class UsageTab(TabBase):
         border_radius = int(style_manager.message_bubble_spacing())
 
         soft_bg = style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
-        msg_bg = style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
         border = style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)
         sep = style_manager.get_color_str(ColorRole.MESSAGE_BORDER)
         hover_qc = style_manager.get_color(ColorRole.TEXT_PRIMARY)
@@ -152,8 +151,12 @@ class UsageTab(TabBase):
         mono = style_manager.make_monospace_font().family()
 
         return f"""
-            #UsageWidget QWidget {{
+            #UsageWidget, #UsageWidget QWidget {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+            /* Let the accordion's own card colour show through its body content. */
+            #UsageWidget QWidget#AccordionBody, #UsageWidget #AccordionBody QWidget {{
+                background: transparent;
             }}
 
             #UsageWidget QLabel#UsageSectionLabel {{
@@ -225,29 +228,24 @@ class UsageTab(TabBase):
                 background: transparent;
             }}
 
-            #UsageWidget QFrame#UsageDetailCard {{
-                background-color: {msg_bg};
-                border: 1px solid {sep};
-                border-radius: {border_radius}px;
-            }}
-            #UsageWidget QFrame#UsageDetailCard QWidget,
-            #UsageWidget QFrame#UsageDetailCard QLabel {{
-                background: transparent;
-            }}
-
-            #UsageWidget QWidget#UsageDetailHeader {{
-                background: transparent;
-            }}
             #UsageWidget QLabel#UsageDetailProviderName {{
-                color: {dim};
-                font-size: {round(fs * 0.9)}pt;
+                color: {heading};
+                font-size: {round(fs * 1.02)}pt;
                 font-weight: bold;
-                letter-spacing: 0;
+                letter-spacing: 1px;
                 background: transparent;
             }}
-            #UsageWidget QLabel#UsageDetailProviderSub {{
+            #UsageWidget QLabel#UsageDetailProviderMeta {{
                 color: {dim};
-                font-size: {round(fs * 0.85)}pt;
+                font-size: {round(fs * 0.82)}pt;
+                font-weight: 500;
+                background: transparent;
+            }}
+            #UsageWidget QLabel#UsageDetailProviderTokens {{
+                color: {text};
+                font-size: {round(fs * 0.86)}pt;
+                font-weight: 600;
+                font-family: "{mono}";
                 background: transparent;
             }}
 
