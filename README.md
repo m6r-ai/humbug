@@ -25,7 +25,16 @@ Humbug's tool framework helps the AI "discover" whatever it needs, then lets it 
 
 We designed computers to give humans better, faster, and more reliable tools.
 Humbug's tool framework sets out to do the same for AIs.
-It enables your LLMs to do task delegation, dynamic filesystem operations, deal with time, apply complex logic with a custom pure functional programming language (Menai), and orchestrate its own UI.
+It enables your LLMs to:
+
+- Delegate tasks
+- Read, write, modify, and search your mindspace filesystem
+- Check the time, wait for time to pass
+- Apply complex logic with a custom pure functional programming language (Menai)
+- Interact with local shells (Linux and MacOS) and command prompts (Windows)
+- Convert documents between different formats
+- Get detailed help if it runs into any problems with tools
+- Orchestrate its own UI.
 
 Humbug’s tool system is flexible, secure, and designed to make it easy to add new capabilities.
 
@@ -36,6 +45,10 @@ While other AI frameworks hide what's going on, Humbug's approach is to give you
 You get to see potential problems and apply course-corrections before they lead to expensive mistakes.
 
 Other software doesn't do this, but this approach keeps you aware of the decisions being made, and what's being created.
+
+Human oversight is also a key mitigation against AIs doing strange and dangerous things.
+If an AI wants to do something that might have dangerous consequencs it has to seek approval first.
+If you say no, or aren't sure then that operation will not happen (no need to hope the AI will do the right thing).
 
 ### LLMs, lots of LLMs
 
@@ -78,6 +91,8 @@ Humbug provides OS-like concepts but doesn't try to replace your computer's oper
 It runs on top of Microsoft Windows, macOS, or Linux, and provides a unified experience on all of them.
 
 Other platforms often leave Windows as a second-class citizen, but Humbug tries to give everyone the same first-class experience.
+
+Humbug is identical on all three platforms, other than minor OS-specific requirements such as keyboard shortcuts and task bar interactions.
 
 ### Rich user interactions
 
