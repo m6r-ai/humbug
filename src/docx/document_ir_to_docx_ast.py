@@ -91,7 +91,8 @@ _CELL_MARGIN_DXA = 120
 
 
 def document_ir_to_docx_ast(document: DocumentIRDocumentNode) -> DocxASTDocumentNode:
-    """Convert a document_ir document into a DOCX AST document.
+    """
+    Convert a document_ir document into a DOCX AST document.
 
     This is the public entry point for the write-side mapper.
 
@@ -113,7 +114,8 @@ def document_ir_to_docx_ast(document: DocumentIRDocumentNode) -> DocxASTDocument
 
 
 class _DocumentIRToDocxASTMapper:
-    """Maps a document_ir tree to a DOCX AST tree.
+    """
+    Maps a document_ir tree to a DOCX AST tree.
 
     Generates the styles and numbering definitions required by the content,
     then maps each document_ir node to the appropriate DOCX AST structure.
@@ -129,7 +131,8 @@ class _DocumentIRToDocxASTMapper:
         self._next_num_id: int = 2
 
     def map(self, document: DocumentIRDocumentNode) -> DocxASTDocumentNode:
-        """Perform the full mapping.
+        """
+        Perform the full mapping.
 
         Args:
             document: The source DocumentIRDocumentNode.
@@ -218,7 +221,8 @@ class _DocumentIRToDocxASTMapper:
         return styles
 
     def _build_numbering_node(self) -> DocxASTNumberingNode:
-        """Build a DocxASTNumberingNode with bullet and ordered list definitions.
+        """
+        Build a DocxASTNumberingNode with bullet and ordered list definitions.
 
         Defines two abstractNum entries (bullet and decimal).  A single bullet
         num instance (numId=1) is pre-created.  Ordered list num instances are
@@ -264,7 +268,8 @@ class _DocumentIRToDocxASTMapper:
         return numbering
 
     def _allocate_ordered_num_id(self, start: int) -> str:
-        """Allocate a fresh numId for an ordered list and register it.
+        """
+        Allocate a fresh numId for an ordered list and register it.
 
         Each ordered list gets its own <w:num> instance so that Word resets
         the counter independently for each list.  A lvlOverride startOverride
@@ -287,7 +292,8 @@ class _DocumentIRToDocxASTMapper:
         return num_id
 
     def _map_block(self, node: DocumentIRNode, parent: DocxASTBodyNode) -> None:
-        """Map a block-level document_ir node and append result(s) to parent.
+        """
+        Map a block-level document_ir node and append result(s) to parent.
 
         Args:
             node: The document_ir block node to map.
@@ -345,7 +351,8 @@ class _DocumentIRToDocxASTMapper:
         shading: str | None = None,
         indent_left: int | None = None,
     ) -> DocxASTParagraphNode | None:
-        """Map a paragraph to a styled paragraph.
+        """
+        Map a paragraph to a styled paragraph.
 
         Returns None if the paragraph would be empty.
         """
@@ -368,7 +375,8 @@ class _DocumentIRToDocxASTMapper:
         indent_base: int = 0,
         available_width: int = _TEXT_WIDTH_DXA,
     ) -> None:
-        """Map a blockquote as a borderless table with a shaded cell.
+        """
+        Map a blockquote as a borderless table with a shaded cell.
 
         Using a table cell background gives a full-width fill across the entire
         blockquote region regardless of content indentation, which paragraph-level
@@ -452,7 +460,8 @@ class _DocumentIRToDocxASTMapper:
         trailing_spacing: bool = True,
         available_width: int = _TEXT_WIDTH_DXA,
     ) -> None:
-        """Map a code block as a borderless single-cell table with shaded background.
+        """
+        Map a code block as a borderless single-cell table with shaded background.
 
         The table provides full-width shading independent of text indentation.
         Cell margins supply the padding.  trailing_spacing controls whether a
@@ -509,7 +518,8 @@ class _DocumentIRToDocxASTMapper:
         suppress_trailing_spacing: bool = False,
         available_width: int = _TEXT_WIDTH_DXA,
     ) -> None:
-        """Recursively map a list node, emitting paragraphs with numPr.
+        """
+        Recursively map a list node, emitting paragraphs with numPr.
 
         Args:
             node: DocumentIRUnorderedListNode or DocumentIROrderedListNode.
@@ -654,7 +664,8 @@ class _DocumentIRToDocxASTMapper:
         tight: bool,
         available_width: int = _TEXT_WIDTH_DXA,
     ) -> None:
-        """Map a table that is a direct child of a list item.
+        """
+        Map a table that is a direct child of a list item.
 
         Word supports <w:tblInd> on a top-level table to shift it right from
         the page margin, so we emit the table directly with the list-level
@@ -675,7 +686,8 @@ class _DocumentIRToDocxASTMapper:
 
     def _map_table(self, node: DocumentIRTableNode, indent: int = 0,
                    available_width: int = _TEXT_WIDTH_DXA) -> DocxASTTableNode:
-        """Map a table node.
+        """
+        Map a table node.
 
         Args:
             node: The DocumentIRTableNode to map.
@@ -812,7 +824,8 @@ class _DocumentIRToDocxASTMapper:
         return para
 
     def _make_spacer_para(self) -> DocxASTParagraphNode:
-        """Create a zero-height spacer paragraph to follow a table.
+        """
+        Create a zero-height spacer paragraph to follow a table.
 
         OOXML provides no table-level spacing_after equivalent, so a spacer
         paragraph is inserted after every table.  It uses Normal style with
@@ -828,7 +841,8 @@ class _DocumentIRToDocxASTMapper:
         return para
 
     def _apply_list_trailing_spacing(self, parent: DocxASTBodyNode) -> None:
-        """Apply the standard trailing gap after a list.
+        """
+        Apply the standard trailing gap after a list.
 
         Walks back through the paragraphs most recently added to parent and
         applies the appropriate end-of-list gap:
@@ -865,7 +879,8 @@ class _DocumentIRToDocxASTMapper:
             pass
 
     def _suppress_list_trailing_spacing(self, parent: DocxASTBodyNode) -> None:
-        """Suppress the trailing gap on the last paragraph emitted by a list.
+        """
+        Suppress the trailing gap on the last paragraph emitted by a list.
 
         Called when a nested list is inside a tight outer item.  The outer
         tight context owns all spacing decisions, so the last paragraph of
@@ -898,7 +913,8 @@ class _DocumentIRToDocxASTMapper:
     def _map_definition_list(
         self, node: DocumentIRDefinitionListNode, parent: DocxASTBodyNode
     ) -> None:
-        """Map a definition list to a sequence of Normal paragraphs.
+        """
+        Map a definition list to a sequence of Normal paragraphs.
 
         Definition terms are emitted as bold Normal paragraphs.  Definition
         descriptions are emitted as indented Normal paragraphs (indent_left=360).
@@ -954,7 +970,8 @@ class _DocumentIRToDocxASTMapper:
             para.add_child(run)
 
     def _build_runs(self, children: Sequence[DocumentIRNode]) -> List[DocxASTNode]:
-        """Convert a list of inline document_ir nodes to DocxASTRunNode instances.
+        """
+        Convert a list of inline document_ir nodes to DocxASTRunNode instances.
 
         Consecutive text spans with identical formatting are merged into a
         single run for cleaner output.
@@ -977,7 +994,8 @@ class _DocumentIRToDocxASTMapper:
         children: Sequence[DocumentIRNode],
         items: List[Tuple],
     ) -> None:
-        """Recursively collect run items from inline nodes.
+        """
+        Recursively collect run items from inline nodes.
 
         Each item is a tuple:
           ('text', bold, italic, strike, code, superscript, subscript, content)
@@ -1026,7 +1044,8 @@ class _DocumentIRToDocxASTMapper:
             # Other inline types are silently skipped
 
     def _items_to_runs(self, items: List[Tuple]) -> List[DocxASTNode]:
-        """Convert collected run items to DocxASTRunNode instances.
+        """
+        Convert collected run items to DocxASTRunNode instances.
 
         Consecutive text items with the same formatting are merged.
         """
