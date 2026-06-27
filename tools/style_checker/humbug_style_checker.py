@@ -19,15 +19,15 @@ Checks implemented:
 
 from __future__ import annotations
 
-from astroid import nodes
+from collections.abc import Mapping
+
+from astroid import nodes  # type: ignore[import-untyped]
 from pylint.checkers import BaseRawFileChecker
+from pylint.lint import PyLinter
 from pylint.typing import MessageDefinitionTuple
 
 
-# ---------------------------------------------------------------------------
 # Public message-ID constants (shared with tests)
-# ---------------------------------------------------------------------------
-
 MSG_NO_PROPERTY = "humbug-no-property"
 MSG_NO_OPTIONAL = "humbug-no-optional"
 MSG_NO_ALIGNED_ASSIGNS = "humbug-no-aligned-assigns"
@@ -37,14 +37,12 @@ MSG_MULTILINE_DOCSTRING = "humbug-multiline-docstring"
 _SCOPE_NODE_TYPES = (nodes.Module, nodes.ClassDef, nodes.FunctionDef, nodes.AsyncFunctionDef)
 
 
-# ===========================================================================
 # Single checker: all Humbug style checks
 #
 # All checks run from one BaseRawFileChecker so the file is read and decoded
 # once and the AST is walked once per check.  Messages are buffered and emitted
 # in line-number order so that violations appear top-to-bottom regardless of
 # which check detects them first.
-# ===========================================================================
 
 class HumbugStyleChecker(BaseRawFileChecker):
     """Enforce Humbug-specific style conventions across all checks."""
@@ -219,10 +217,6 @@ class HumbugStyleChecker(BaseRawFileChecker):
             pending.append((end_line, MSG_MULTILINE_DOCSTRING, ()))
 
 
-# ===========================================================================
-# Dedent scanner
-# ===========================================================================
-
 class _DedentScanner:
     """
     Scan source lines and find dedents that lack a preceding blank line.
@@ -384,10 +378,6 @@ def _is_triple_at(line: str, i: int, quote_ch: str) -> bool:
     return line[i:i + 3] == quote_ch * 3
 
 
-# ===========================================================================
-# Helper functions
-# ===========================================================================
-
 def _dotted_name(node: nodes.NodeNG) -> str | None:
     """Return the dotted name of a Name/Attribute node, or None."""
     try:
@@ -465,7 +455,7 @@ def _find_assign_eq_column(lines: list[str], lineno: int) -> int | None:
     return None
 
 
-def _consecutive_groups(line_map: dict[int, object]) -> list[list[int]]:
+def _consecutive_groups(line_map: Mapping[int, object]) -> list[list[int]]:
     """
     Split the keys of *line_map* into maximal runs of consecutive integers.
 
@@ -488,10 +478,6 @@ def _consecutive_groups(line_map: dict[int, object]) -> list[list[int]]:
     return groups
 
 
-# ===========================================================================
-# Plugin registration
-# ===========================================================================
-
-def register(linter: object) -> None:
+def register(linter: PyLinter) -> None:
     """Register the plugin's checker with pylint."""
     linter.register_checker(HumbugStyleChecker(linter))
