@@ -14,7 +14,7 @@ from tools.style_checker.humbug_style_checker import (
     MSG_NO_PROPERTY,
     MSG_NO_OPTIONAL,
     MSG_NO_ALIGNED_ASSIGNS,
-    MSG_BLANK_BEFORE_ELSE,
+    MSG_BLANK_BEFORE_DEDENT,
     MSG_MULTILINE_DOCSTRING,
 )
 
@@ -41,7 +41,7 @@ def _run_pylint(source: str) -> list[tuple[str, int]]:
                 "python", "-m", "pylint",
                 "--load-plugins=tools.style_checker.humbug_style_checker",
                 "--disable=all",
-                f"--enable={MSG_NO_PROPERTY},{MSG_NO_OPTIONAL},{MSG_NO_ALIGNED_ASSIGNS},{MSG_BLANK_BEFORE_ELSE},{MSG_MULTILINE_DOCSTRING}",
+                f"--enable={MSG_NO_PROPERTY},{MSG_NO_OPTIONAL},{MSG_NO_ALIGNED_ASSIGNS},{MSG_BLANK_BEFORE_DEDENT},{MSG_MULTILINE_DOCSTRING}",
                 "--score=n",
                 "--output-format=json",
                 path,
@@ -196,11 +196,11 @@ def foo() -> None:
 
 
 # ===========================================================================
-# Blank line before else/elif tests
+# Blank line before dedent tests
 # ===========================================================================
 
-class TestBlankBeforeElse:
-    """Tests for the humbug-blank-before-else check."""
+class TestBlankBeforeDedent:
+    """Tests for the humbug-blank-before-dedent check."""
 
     def test_else_without_blank_is_flagged(self):
         """else: without a preceding blank line should be flagged."""
@@ -216,7 +216,7 @@ def foo(x: int) -> int:
         return -x
 '''
         results = _run_pylint(source)
-        assert MSG_BLANK_BEFORE_ELSE in _msg_ids(results)
+        assert MSG_BLANK_BEFORE_DEDENT in _msg_ids(results)
 
     def test_else_with_blank_is_ok(self):
         """else: with a preceding blank line should not be flagged."""
@@ -233,7 +233,7 @@ def foo(x: int) -> int:
         return -x
 '''
         results = _run_pylint(source)
-        assert MSG_BLANK_BEFORE_ELSE not in _msg_ids(results)
+        assert MSG_BLANK_BEFORE_DEDENT not in _msg_ids(results)
 
     def test_elif_without_blank_is_flagged(self):
         """elif: without a preceding blank line should be flagged."""
@@ -247,12 +247,12 @@ def foo(x: int) -> str:
         return "pos"
     elif x < 0:
         return "neg"
+
     else:
         return "zero"
 '''
         results = _run_pylint(source)
-        ids = _msg_ids(results)
-        assert MSG_BLANK_BEFORE_ELSE in ids
+        assert MSG_BLANK_BEFORE_DEDENT in _msg_ids(results)
 
     def test_elif_with_blank_is_ok(self):
         """elif: with a preceding blank line should not be flagged."""
@@ -272,11 +272,10 @@ def foo(x: int) -> str:
         return "zero"
 '''
         results = _run_pylint(source)
-        assert MSG_BLANK_BEFORE_ELSE not in _msg_ids(results)
-
+        assert MSG_BLANK_BEFORE_DEDENT not in _msg_ids(results)
 
     def test_ternary_else_is_not_flagged(self):
-        """A ternary ``else`` should never be flagged as a block-level else."""
+        """A ternary ``else`` should never be flagged as a dedent."""
         source = '''\
 """Module."""
 
@@ -288,10 +287,11 @@ def foo(x: int) -> str:
         if x > 0
         else "no"
     )
+
     return result
 '''
         results = _run_pylint(source)
-        assert MSG_BLANK_BEFORE_ELSE not in _msg_ids(results)
+        assert MSG_BLANK_BEFORE_DEDENT not in _msg_ids(results)
 
     def test_multiline_elif_condition_is_flagged(self):
         """An elif with a multi-line condition should still be detected."""
@@ -310,11 +310,10 @@ def foo(x: int) -> str:
         return "neg"
 '''
         results = _run_pylint(source)
-        assert MSG_BLANK_BEFORE_ELSE in _msg_ids(results)
+        assert MSG_BLANK_BEFORE_DEDENT in _msg_ids(results)
 
-
-    def test_comment_before_else_is_ok(self):
-        """A comment line before else/elif is acceptable (no blank line required)."""
+    def test_comment_before_dedent_is_ok(self):
+        """A comment line before a dedent is acceptable (no blank line required)."""
         source = '''\
 """Module."""
 
@@ -331,7 +330,110 @@ def foo(x: int) -> str:
         return "neg"
 '''
         results = _run_pylint(source)
-        assert MSG_BLANK_BEFORE_ELSE not in _msg_ids(results)
+        assert MSG_BLANK_BEFORE_DEDENT not in _msg_ids(results)
+
+    def test_return_after_if_without_blank_is_flagged(self):
+        """A return at function level after an if body should be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int) -> int:
+    """Do something."""
+    if x > 0:
+        do_something()
+    result = x + 1
+
+    return result
+'''
+        results = _run_pylint(source)
+        dedent_lines = [line for msg_id, line in results if msg_id == MSG_BLANK_BEFORE_DEDENT]
+        # "result = x + 1" on line 8 dedents from the if body and lacks a blank line
+        assert 8 in dedent_lines
+
+    def test_statement_after_if_body_without_blank_is_flagged(self):
+        """A statement dedenting from an if block body must be preceded by a blank."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int) -> None:
+    """Do something."""
+    if x > 0:
+        do_first_thing()
+
+    do_second_thing()
+'''
+        results = _run_pylint(source)
+        assert MSG_BLANK_BEFORE_DEDENT not in _msg_ids(results)
+
+    def test_statement_after_if_body_with_blank_is_ok(self):
+        """A statement after an if body with a blank line is fine."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int) -> None:
+    """Do something."""
+    if x > 0:
+        do_first_thing()
+
+    do_second_thing()
+'''
+        results = _run_pylint(source)
+        assert MSG_BLANK_BEFORE_DEDENT not in _msg_ids(results)
+
+    def test_nested_function_without_blank_is_flagged(self):
+        """A nested function dedenting from a block must have a blank line."""
+        source = '''\
+"""Module."""
+
+
+def foo() -> None:
+    """Do something."""
+    if True:
+        x = 1
+
+    def bar() -> None:
+        """Inner function."""
+'''
+        results = _run_pylint(source)
+        assert MSG_BLANK_BEFORE_DEDENT not in _msg_ids(results)
+
+    def test_multiline_string_contents_ignored(self):
+        """Lines inside a multi-line string should not trigger dedent checks."""
+        source = '''\
+"""Module."""
+
+
+def foo() -> None:
+    """Do something."""
+    text = """
+    deeply_indented_line
+    another_line
+    """
+    pass
+'''
+        results = _run_pylint(source)
+        assert MSG_BLANK_BEFORE_DEDENT not in _msg_ids(results)
+
+    def test_bracket_continuation_not_flagged(self):
+        """Continuation lines inside brackets should not trigger dedent checks."""
+        source = '''\
+"""Module."""
+
+
+def foo() -> None:
+    """Do something."""
+    result = some_function(
+        arg_one,
+        arg_two,
+    )
+
+    return result
+'''
+        results = _run_pylint(source)
+        assert MSG_BLANK_BEFORE_DEDENT not in _msg_ids(results)
 
 
 # ===========================================================================
@@ -425,6 +527,7 @@ class Foo:
         """Do something."""
         if True:
             pass
+
         else:
             pass
 '''

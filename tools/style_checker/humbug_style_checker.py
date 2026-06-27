@@ -11,8 +11,8 @@ Checks implemented:
 * ``humbug-no-optional``         -- ``Optional[X]`` is banned; use ``X | None``.
 * ``humbug-no-aligned-assigns``  -- consecutive assignments must not have their
                                     ``=`` signs padded into alignment.
-* ``humbug-blank-before-else``   -- a blank line is required before block-level
-                                    ``elif`` / ``else``.
+* ``humbug-blank-before-dedent`` -- a blank line is required before any line
+                                    that dedents from the previous statement.
 * ``humbug-multiline-docstring`` -- multi-line docstring ``\"\"\"`` delimiters must
                                     sit on their own lines.
 """
@@ -31,7 +31,7 @@ from pylint.typing import MessageDefinitionTuple
 MSG_NO_PROPERTY = "humbug-no-property"
 MSG_NO_OPTIONAL = "humbug-no-optional"
 MSG_NO_ALIGNED_ASSIGNS = "humbug-no-aligned-assigns"
-MSG_BLANK_BEFORE_ELSE = "humbug-blank-before-else"
+MSG_BLANK_BEFORE_DEDENT = "humbug-blank-before-dedent"
 MSG_MULTILINE_DOCSTRING = "humbug-multiline-docstring"
 
 _SCOPE_NODE_TYPES = (nodes.Module, nodes.ClassDef, nodes.FunctionDef, nodes.AsyncFunctionDef)
@@ -69,10 +69,11 @@ class HumbugStyleChecker(BaseRawFileChecker):
             "through extra padding.  Aligned assignments are a maintenance burden.",
         ),
         "C6421": (
-            "Missing blank line before block-level '%s'",
-            MSG_BLANK_BEFORE_ELSE,
-            "Used when an ``elif`` or ``else`` clause at the start of a logical "
-            "block is not preceded by a blank line.",
+            "Missing blank line before dedent",
+            MSG_BLANK_BEFORE_DEDENT,
+            "Used when a line of code dedents (has less indentation than the "
+            "previous statement) without a blank line separating it from the "
+            "preceding block.",
         ),
         "C6422": (
             "Multi-line docstring delimiter must be on its own line",
@@ -91,7 +92,7 @@ class HumbugStyleChecker(BaseRawFileChecker):
         self._check_property(node, pending)
         self._check_optional(node, pending)
         self._check_aligned_assignments(node, lines, pending)
-        self._check_blank_before_else(node, lines, pending)
+        self._check_blank_before_dedent(node, lines, pending)
         self._check_docstrings(node, lines, pending)
 
         for line, msg_id, args in sorted(pending, key=lambda m: m[0]):
@@ -169,27 +170,23 @@ class HumbugStyleChecker(BaseRawFileChecker):
                     for lineno in linenos:
                         pending.append((lineno, MSG_NO_ALIGNED_ASSIGNS, ()))
 
-    def _check_blank_before_else(
+    def _check_blank_before_dedent(
         self, node: nodes.Module, lines: list[str], pending: list[tuple[int, str, tuple[str, ...]]]
     ) -> None:
         """
-        Flag block-level ``elif`` / ``else`` keywords not preceded by a blank line.
+        Flag any dedent line not preceded by a blank line.
 
-        Uses the AST to identify block-level ``else`` / ``elif`` keywords.  This
-        avoids false positives on ternary conditional expressions (``x if cond
-        else y``), which are ``IfExp`` nodes rather than ``If`` nodes, and
-        correctly handles multi-line ``elif`` conditions where the colon is not
-        on the keyword line.
+        A dedent occurs when a line of code has strictly less indentation than
+        the previous statement.  This generalises the old else/elif check:
+        any block exit (``else``, ``elif``, ``return`` after an ``if`` body,
+        the next function after a nested block, etc.) must be visually
+        separated by a blank line.
+
+        A comment-only line before the dedent is acceptable.
         """
-        for keyword_line, keyword in _block_else_elif_lines(node, lines):
-            if keyword_line <= 1:
-                continue
-
-            # A blank line or a comment-only line before the keyword is fine.
-            # We only flag when actual code runs directly into the else/elif.
-            prev = lines[keyword_line - 2].strip()
-            if prev != "" and not prev.startswith("#"):
-                pending.append((keyword_line, MSG_BLANK_BEFORE_ELSE, (keyword,)))
+        state = _DedentScanner(lines)
+        for lineno in state.find_dedents_without_blank():
+            pending.append((lineno, MSG_BLANK_BEFORE_DEDENT, ()))
 
     def _check_docstrings(
         self, node: nodes.Module, lines: list[str], pending: list[tuple[int, str, tuple[str, ...]]]
@@ -223,6 +220,171 @@ class HumbugStyleChecker(BaseRawFileChecker):
 
 
 # ===========================================================================
+# Dedent scanner
+# ===========================================================================
+
+class _DedentScanner:
+    """
+    Scan source lines and find dedents that lack a preceding blank line.
+
+    The scanner walks lines sequentially, tracking:
+
+    * **Bracket depth** — lines inside ``()``, ``[]``, ``{}`` are continuation
+      lines, not statements.  Their indentation is irrelevant.
+    * **String state** — lines inside a multi-line string are skipped entirely.
+    * **Code indent** — the indentation of the last real statement line.
+
+    A dedent is flagged when a real statement line has strictly less indentation
+    than the previous real statement line and there is no blank line between
+    them.  Comment-only lines between the two do not prevent the flag, but a
+    blank line or the start of the file does.
+    """
+
+    def __init__(self, lines: list[str]) -> None:
+        self._lines = lines
+
+    def find_dedents_without_blank(self) -> list[int]:
+        """Return line numbers (1-based) of dedents lacking a preceding blank line."""
+        results: list[int] = []
+
+        bracket_depth = 0
+        in_triple: str | None = None
+        prev_indent: int | None = None
+        blank_since_last_code = True
+
+        for idx, raw in enumerate(self._lines):
+            lineno = idx + 1
+
+            # If we are inside a multi-line string, consume the line and check
+            # whether the string ends here.  Indentation of string-body lines
+            # is irrelevant.
+            if in_triple is not None:
+                in_triple = _update_triple_state(raw, in_triple)
+                continue
+
+            stripped = raw.strip()
+
+            # Blank lines reset the "no blank" condition.
+            if stripped == "":
+                blank_since_last_code = True
+                continue
+
+            # Comment-only lines are skipped.  They provide visual separation
+            # equivalent to a blank line, so they satisfy the requirement.
+            if stripped.startswith("#"):
+                blank_since_last_code = True
+                continue
+
+            indent = len(raw) - len(raw.lstrip())
+
+            # If we're inside brackets, this is a continuation line.  Track
+            # bracket/string state but don't compare indentation.
+            if bracket_depth > 0:
+                bracket_depth, in_triple = _scan_line_brackets_and_strings(
+                    raw, bracket_depth, in_triple
+                )
+                continue
+
+            # This is a real statement line.  Check for dedent.
+            if prev_indent is not None and indent < prev_indent:
+                if not blank_since_last_code:
+                    results.append(lineno)
+
+            prev_indent = indent
+            blank_since_last_code = False
+
+            # Update bracket and string state for this line.
+            bracket_depth, in_triple = _scan_line_brackets_and_strings(
+                raw, bracket_depth, in_triple
+            )
+
+        return results
+
+
+def _scan_line_brackets_and_strings(
+    line: str, bracket_depth: int, in_triple: str | None
+) -> tuple[int, str | None]:
+    """
+    Update bracket depth and triple-string state after scanning *line*.
+
+    Handles all string types (single-quoted, double-quoted, triple-quoted)
+    and bracket characters, correctly skipping characters inside strings.
+    """
+    i = 0
+
+    while i < len(line):
+        ch = line[i]
+
+        if in_triple is not None:
+            if _is_triple_at(line, i, in_triple):
+                i += 3
+
+                in_triple = None
+
+                continue
+
+            i += 1
+            continue
+
+        # Not inside any string.
+        if ch in ("'", '"'):
+            triple_ch = ch * 3
+
+            if line[i:i + 3] == triple_ch:
+                in_triple = ch
+                i += 3
+
+                continue
+
+            # Single-line string — skip to the matching quote.
+            close = line.find(ch, i + 1)
+
+            if close == -1:
+                # Unterminated string on this line (shouldn't happen in valid
+                # Python, but be safe).
+                return bracket_depth, in_triple
+
+            i = close + 1
+            continue
+
+        if ch == "#":
+            break  # rest of line is a comment
+
+        if ch in "([{":
+            bracket_depth += 1
+
+        elif ch in ")]}":
+            bracket_depth = max(0, bracket_depth - 1)
+
+        i += 1
+
+    return bracket_depth, in_triple
+
+
+def _update_triple_state(line: str, in_triple: str) -> str | None:
+    """
+    Check whether *line* closes the current triple-quoted string.
+
+    Returns None if the string is closed on this line, or *in_triple*
+    unchanged if still open.
+    """
+    for i in range(len(line) - 2):
+        if _is_triple_at(line, i, in_triple):
+            # Check there isn't a second closing triple later (rare, but
+            # e.g. """text""" all on one line).  For simplicity, return None
+            # — the next call to _scan_line_brackets_and_strings from the
+            # caller will handle any further triples on the same line.
+            return None
+
+    return in_triple
+
+
+def _is_triple_at(line: str, i: int, quote_ch: str) -> bool:
+    """Return True if *line* has three consecutive *quote_ch* characters at index *i*."""
+    return line[i:i + 3] == quote_ch * 3
+
+
+# ===========================================================================
 # Helper functions
 # ===========================================================================
 
@@ -245,62 +407,6 @@ def _target_length(line: str, eq_col: int) -> int:
     """
     prefix = line[:eq_col].rstrip()
     return len(prefix.lstrip())
-
-
-def _block_else_elif_lines(
-    module: nodes.Module, lines: list[str]
-) -> list[tuple[int, str]]:
-    """
-    Find all block-level ``else:`` and ``elif`` keyword lines in *module*.
-
-    Returns a list of ``(lineno, keyword)`` pairs where *keyword* is either
-    ``"elif"`` or ``"else"``.  Only block-level keywords are returned; ternary
-    conditional expressions (``IfExp`` nodes) are never included because they
-    are a different AST node type.
-    """
-    results: list[tuple[int, str]] = []
-
-    for if_node in module.nodes_of_class(nodes.If):
-        if not if_node.orelse:
-            continue
-
-        first = if_node.orelse[0]
-
-        # elif: orelse is a single If at the same indent as the parent.
-        if isinstance(first, nodes.If) and first.col_offset == if_node.col_offset:
-            results.append((first.lineno, "elif"))
-            continue
-
-        # else: orelse is a block of statements.  The ``else:`` keyword line is
-        # not stored in the AST, so we scan backwards from the first body
-        # statement for a line ending in ``:`` at the if's indentation.
-        else_line = _find_else_keyword_line(lines, first.lineno, if_node.col_offset)
-        if else_line is not None:
-            results.append((else_line, "else"))
-
-    return results
-
-
-def _find_else_keyword_line(
-    lines: list[str], body_start: int, target_indent: int
-) -> int | None:
-    """Scan backwards from *body_start* for the ``else:`` keyword line."""
-    for lineno in range(body_start - 1, 0, -1):
-        raw = lines[lineno - 1]
-        code = raw.split("#", 1)[0].rstrip()
-
-        if code == "":
-            continue
-
-        indent = len(raw) - len(raw.lstrip())
-
-        if indent == target_indent and code.endswith(":"):
-            return lineno
-
-        if indent <= target_indent:
-            break  # we've gone past the else without finding it
-
-    return None
 
 
 def _find_assign_eq_column(lines: list[str], lineno: int) -> int | None:
