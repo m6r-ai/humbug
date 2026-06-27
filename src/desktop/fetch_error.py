@@ -34,7 +34,8 @@ def pull_error_message(exc: Exception) -> str:
 
 
 def fetch_error_message(exc: Exception, backend_id: str = "") -> str:
-    """Return a localised one-line message for a fetch_models() exception.
+    """
+    Return a localised one-line message for a fetch_models() exception.
 
     Args:
         exc: The exception raised by fetch_models().

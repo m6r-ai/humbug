@@ -19,6 +19,7 @@ from menai.menai_vm_bytecode_validator import validate_bytecode
 try:
     from menai.menai_vm_c import execute as _c_vm_execute  # type: ignore[import-not-found]
     _C_VM_AVAILABLE = True
+
 except ImportError:
     _c_vm_execute = None
     _C_VM_AVAILABLE = False
@@ -620,12 +621,14 @@ class MenaiVM:
                 message="error: message must be a string",
                 received=f"Got: {error_msg.describe()} ({error_msg.type_name()})"
             )
+
         raise MenaiEvalError(error_msg.value)
 
     def _op_make_closure(  # pylint: disable=useless-return
         self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """MAKE_CLOSURE dest, src0, 0: Create closure with all capture slots pre-set to None.
+        """
+        MAKE_CLOSURE dest, src0, 0: Create closure with all capture slots pre-set to None.
 
         capture_count is always 0: all capture wiring is done by subsequent PATCH_CLOSURE
         instructions (both for letrec mutual-recursion and for ordinary non-letrec closures).
@@ -672,7 +675,8 @@ class MenaiVM:
     def _op_call(
         self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> _FrameChange | MenaiValue | None:
-        """CALL dest, src0, src1: Call func in src0 with src1 args already in callee window; result to dest.
+        """
+        CALL dest, src0, src1: Call func in src0 with src1 args already in callee window; result to dest.
 
         The caller has written the arguments into regs[base+local_count .. base+local_count+src1-1].
         Those slots are exactly the callee's r0..r(src1-1) once the new frame is pushed.
@@ -917,7 +921,8 @@ class MenaiVM:
     def _op_tail_apply(
         self, frame: Frame, _dest: int, src0: int, src1: int, _src2: int
     ) -> _FrameChange | MenaiValue:
-        """TAIL_APPLY src0, src1: Tail apply func in src0 to arg_list in register src1.
+        """
+        TAIL_APPLY src0, src1: Tail apply func in src0 to arg_list in register src1.
 
         Scatters list elements into regs[base+local_count..], moves them down to base+0..,
         then resets the frame in place.
@@ -1009,7 +1014,8 @@ class MenaiVM:
     def _op_return(
         self, frame: Frame, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | _FrameChange:
-        """RETURN src0: Pop frame, write return value into caller's dest register.
+        """
+        RETURN src0: Pop frame, write return value into caller's dest register.
 
         If the caller is the sentinel frame, return the value to the loop so it
         can exit.  Otherwise write into caller's register window at return_dest and return

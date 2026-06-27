@@ -1195,7 +1195,8 @@ class Menai:
         return result.describe()
 
     def _get_prelude_dict(self) -> Dict[str, MenaiValue]:
-        """Return the prelude bindings as a plain dict, executing and caching if necessary.
+        """
+        Return the prelude bindings as a plain dict, executing and caching if necessary.
 
         The result is cached at the class level so the prelude is only evaluated once
         per process, consistent with how _prelude_code itself is cached.
@@ -1203,7 +1204,9 @@ class Menai:
         if Menai._prelude_dict is None:
             result = self.vm.execute(self._prelude, None)
             if not isinstance(result, MenaiDict):
+
                 raise RuntimeError("Prelude must evaluate to a dict")
+
             Menai._prelude_dict = {k.to_python(): v for k, v in result.pairs}
         return Menai._prelude_dict
 
@@ -1212,7 +1215,8 @@ class Menai:
         expression: str,
         bindings: Dict[str, MenaiValue]
     ) -> MenaiValue:
-        """Evaluate a Menai expression with additional pre-bound name bindings.
+        """
+        Evaluate a Menai expression with additional pre-bound name bindings.
 
         The bindings are merged with the prelude globals so the expression can
         reference both prelude functions and the injected names.  Bindings shadow
@@ -1241,7 +1245,8 @@ class Menai:
         expression: str,
         bindings: Dict[str, MenaiValue]
     ) -> str:
-        """Evaluate a Menai expression with pre-bound bindings, returning a formatted string.
+        """
+        Evaluate a Menai expression with pre-bound bindings, returning a formatted string.
 
         Equivalent to evaluate_raw_with_bindings but returns the Menai describe()
         string representation of the result, matching the format returned by

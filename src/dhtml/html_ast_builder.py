@@ -108,7 +108,8 @@ class _Lexer:
     """Tokenises an HTML string into a flat sequence of _Token objects."""
 
     def __init__(self, source: str) -> None:
-        """Initialise the lexer with the full HTML source.
+        """
+        Initialise the lexer with the full HTML source.
 
         Args:
             source: The complete HTML document or fragment as a string.
@@ -238,7 +239,8 @@ class _Lexer:
         return _Token(type=_TokenType.CLOSE_TAG, tag_name=tag_name.lower())
 
     def _read_raw_text(self, tag_name: str) -> _Token:
-        """Read raw text content until the matching close tag.
+        """
+        Read raw text content until the matching close tag.
 
         Args:
             tag_name: The tag whose close tag terminates the raw block.
@@ -340,7 +342,8 @@ class _Lexer:
 
 
 def _decode_entities(text: str) -> str:
-    """Decode HTML entities in a string using the stdlib html module.
+    """
+    Decode HTML entities in a string using the stdlib html module.
 
     Args:
         text: Raw text that may contain HTML entities.
@@ -352,7 +355,8 @@ def _decode_entities(text: str) -> str:
 
 
 class HtmlASTBuilder:
-    """Builds an HTML AST from a source string.
+    """
+    Builds an HTML AST from a source string.
 
     Usage::
 
@@ -361,7 +365,8 @@ class HtmlASTBuilder:
     """
 
     def build(self, source: str, source_path: str | None = None) -> HtmlASTDocumentNode:
-        """Parse an HTML string and return the root document node.
+        """
+        Parse an HTML string and return the root document node.
 
         Args:
             source: The HTML source text.
@@ -457,7 +462,8 @@ class HtmlASTBuilder:
 
 
 def parse_html(source: str, source_path: str | None = None) -> HtmlASTDocumentNode:
-    """Parse an HTML string and return the root document node.
+    """
+    Parse an HTML string and return the root document node.
 
     Args:
         source: The HTML source text.

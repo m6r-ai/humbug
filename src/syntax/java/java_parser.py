@@ -57,6 +57,7 @@ class JavaParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, JavaParserState), \
                 f"Expected JavaParserState, got {type(prev_parser_state).__name__}"
+
             in_element = prev_parser_state.in_element
             in_generic = prev_parser_state.in_generic
             generic_depth = prev_parser_state.generic_depth
@@ -179,6 +180,7 @@ class JavaParser(Parser):
                     # This is a bounded type parameter
                     token.type = TokenType.TYPE_PARAMETER
                     self._tokens.append(token)
+
                 else:
                     # This is a generic type
                     token.type = TokenType.GENERIC_TYPE
@@ -357,6 +359,7 @@ class JavaParser(Parser):
             if peeked_token.type == TokenType.OPERATOR:
                 if peeked_token.value == '<':
                     peek_depth += 1
+
                 elif peeked_token.value == '>':
                     peek_depth -= 1
                     if peek_depth == 0:

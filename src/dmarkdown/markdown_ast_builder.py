@@ -829,6 +829,7 @@ class MarkdownASTBuilder:
         if code_block_match:
             language_name = code_block_match.group(1) or ""
             self._start_code_block_in_list_item(item, indent + marker_length, language_name, line_num)
+
         else:
             self._parse_list_item_inline_content(item, content, line_num)
 
@@ -1588,6 +1589,7 @@ class MarkdownASTBuilder:
         if line_type == 'heading':
             if not self._is_in_blockquote():
                 self._reset_container_stack()
+
             return
 
         # 4. Close containers that require more indentation than we have

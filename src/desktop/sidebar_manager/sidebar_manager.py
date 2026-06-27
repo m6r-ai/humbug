@@ -23,7 +23,8 @@ from desktop.url_opener import open_url
 
 
 class SidebarManager(QWidget):
-    """Sidebar container: manages the icon rail and the active panel pane.
+    """
+    Sidebar container: manages the icon rail and the active panel pane.
 
     The manager is generic — it has no knowledge of individual panel types.
     Panels are registered via ``register_panel`` after construction.
@@ -164,7 +165,8 @@ class SidebarManager(QWidget):
         visibility_signal: str | None = None,
         on_activated: "Callable[[SidebarBase], None] | None" = None,
     ) -> None:
-        """Register a sidebar panel.
+        """
+        Register a sidebar panel.
 
         Must be called before the sidebar is shown.  Panels appear in the rail
         in registration order.
@@ -218,7 +220,8 @@ class SidebarManager(QWidget):
             self._set_active_panel(panel_id)
 
     def _create_panel_button(self, panel_id: str, icon_name: str) -> QToolButton:
-        """Create a rail button for a panel without connecting its click signal.
+        """
+        Create a rail button for a panel without connecting its click signal.
 
         Args:
             panel_id: The panel identifier string.
@@ -241,7 +244,8 @@ class SidebarManager(QWidget):
         checked: bool,
         on_activated: "Callable[[SidebarBase], None] | None",
     ) -> None:
-        """Handle rail button click: switch active panel and expand if collapsed.
+        """
+        Handle rail button click: switch active panel and expand if collapsed.
 
         Args:
             panel_id: The panel to activate.
@@ -261,7 +265,8 @@ class SidebarManager(QWidget):
                 on_activated(panel)
 
     def _set_active_panel(self, panel_id: str) -> None:
-        """Make the given panel current in the stacked pane.
+        """
+        Make the given panel current in the stacked pane.
 
         Args:
             panel_id: ID of the panel to activate.
@@ -280,7 +285,8 @@ class SidebarManager(QWidget):
         self._update_button_styling()
 
     def _on_panel_visibility_changed(self, panel_id: str, visible: bool) -> None:
-        """Show or hide a panel's rail button based on its visibility signal.
+        """
+        Show or hide a panel's rail button based on its visibility signal.
 
         If the panel being hidden is currently active, fall back to the first
         visible panel.
@@ -309,7 +315,8 @@ class SidebarManager(QWidget):
         self.toggle_requested.emit()
 
     def set_collapsed(self, collapsed: bool) -> None:
-        """Record the collapsed state after the splitter has moved.
+        """
+        Record the collapsed state after the splitter has moved.
 
         Args:
             collapsed: Whether the sidebar content pane is now hidden.
@@ -331,7 +338,8 @@ class SidebarManager(QWidget):
         return self._expanded_sidebar_width
 
     def set_expanded_sidebar_width(self, width: int) -> None:
-        """Record the expanded sidebar width.
+        """
+        Record the expanded sidebar width.
 
         Args:
             width: Width in pixels.
@@ -343,7 +351,8 @@ class SidebarManager(QWidget):
         return self._content_min_width
 
     def reveal_and_select_file(self, panel_id: str, file_path: str) -> None:
-        """Reveal and select a file in the named panel.
+        """
+        Reveal and select a file in the named panel.
 
         The panel must already be the active panel — this method never switches
         the sidebar view.  Callers that want to force a panel switch first should
@@ -366,7 +375,8 @@ class SidebarManager(QWidget):
         panel.reveal_and_select_file(file_path)
 
     def show_panel(self, panel_id: str) -> None:
-        """Activate a panel by ID and expand the sidebar if collapsed.
+        """
+        Activate a panel by ID and expand the sidebar if collapsed.
 
         Args:
             panel_id: ID of the panel to show.
@@ -376,7 +386,8 @@ class SidebarManager(QWidget):
             self.toggle_requested.emit()
 
     def set_mindspace(self, path: str) -> None:
-        """Propagate a mindspace change to all registered panels.
+        """
+        Propagate a mindspace change to all registered panels.
 
         Args:
             path: Absolute path to the new mindspace root, or empty string to clear.
@@ -391,7 +402,8 @@ class SidebarManager(QWidget):
             panel.set_mindspace(path)
 
     def show_update_available(self, version: str, release_url: str) -> None:
-        """Show the update rail button.
+        """
+        Show the update rail button.
 
         Args:
             version: Latest version string, e.g. ``"v49"``.
@@ -485,7 +497,8 @@ class SidebarManager(QWidget):
             self._update_button.setIconSize(QSize(update_icon_size, update_icon_size))
 
     def _set_button_hover_icon(self, button: QToolButton, hovered: bool) -> None:
-        """Update a rail button's icon for hover state.
+        """
+        Update a rail button's icon for hover state.
 
         Args:
             button: The button whose icon should change.

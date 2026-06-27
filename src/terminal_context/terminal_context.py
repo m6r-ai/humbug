@@ -60,6 +60,7 @@ class TerminalContext:
 
         if max_lines is None:
             start_line = 0
+
         else:
             start_line = max(0, end_line - max_lines)
 
@@ -72,6 +73,7 @@ class TerminalContext:
                 for col in range(cols):
                     char, _, _, _ = line.get_character(col)
                     line_text += char
+
                 extracted_lines.append(line_text.rstrip())
 
         return '\n'.join(extracted_lines)

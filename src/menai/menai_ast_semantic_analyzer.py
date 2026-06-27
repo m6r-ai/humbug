@@ -573,7 +573,9 @@ class MenaiASTSemanticAnalyzer:
                         column=param.column,
                         source=self.source
                     )
+
                 dot_index = i
+
             else:
                 param_names.append(param.name)
 
@@ -914,6 +916,7 @@ class MenaiASTSemanticAnalyzer:
                         column=expr.column,
                         source=self.source
                     )
+
                 primitive_arity = MenaiBuiltinRegistry.get_primitive_arity(base)
                 n_args = len(expr.elements) - 1
                 if n_args != primitive_arity:
@@ -925,8 +928,10 @@ class MenaiASTSemanticAnalyzer:
                         column=expr.column,
                         source=self.source
                     )
+
                 for elem in expr.elements[1:]:
                     self.analyze(elem, self.source)
+
                 return expr
 
             arity = MenaiBuiltinRegistry.get_function_arity(name)
@@ -987,7 +992,8 @@ class MenaiASTSemanticAnalyzer:
         return expr
 
     def _analyze_struct(self, expr: MenaiASTList, binding_name: str) -> MenaiASTStruct:
-        """Validate and transform a (struct (field ...)) form into a MenaiASTStruct node.
+        """
+        Validate and transform a (struct (field ...)) form into a MenaiASTStruct node.
 
         Called only when (struct ...) appears as the RHS of a let or let* binding.
         Assigns a fresh compile-time tag and extracts the field names.

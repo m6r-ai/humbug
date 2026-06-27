@@ -1,4 +1,5 @@
-"""Menai Compiler - Orchestrates the complete compilation pipeline.
+"""
+Menai Compiler - Orchestrates the complete compilation pipeline.
 
 This is the main entry point for compiling Menai source code to bytecode.
 It chains together all compilation passes in the correct order.

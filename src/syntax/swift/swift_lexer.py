@@ -62,6 +62,7 @@ class SwiftLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, SwiftLexerState), \
                 f"Expected SwiftLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_multiline_string = prev_lexer_state.in_multiline_string
 
@@ -167,6 +168,7 @@ class SwiftLexer(Lexer):
                     self._input[self._position + 1] == '#'):
                 self._position += 2
                 break
+
             self._position += 1
 
         self._tokens.append(Token(
@@ -258,6 +260,7 @@ class SwiftLexer(Lexer):
                     ch = self._input[self._position]
                     if not (self._is_hex_digit(ch) or ch == '_'):
                         break
+
                     self._position += 1
 
             elif next_char == 'o':  # Octal
@@ -266,6 +269,7 @@ class SwiftLexer(Lexer):
                     ch = self._input[self._position]
                     if not (self._is_octal_digit(ch) or ch == '_'):
                         break
+
                     self._position += 1
 
             elif next_char == 'b':  # Binary
@@ -274,6 +278,7 @@ class SwiftLexer(Lexer):
                     ch = self._input[self._position]
                     if not (self._is_binary_digit(ch) or ch == '_'):
                         break
+
                     self._position += 1
 
             else:
@@ -296,6 +301,7 @@ class SwiftLexer(Lexer):
             ch = self._input[self._position]
             if not (self._is_digit(ch) or ch == '_'):
                 break
+
             self._position += 1
 
         # Handle decimal point and fractional part
@@ -306,6 +312,7 @@ class SwiftLexer(Lexer):
                 ch = self._input[self._position]
                 if not (self._is_digit(ch) or ch == '_'):
                     break
+
                 self._position += 1
 
         # Handle exponent
@@ -315,10 +322,12 @@ class SwiftLexer(Lexer):
                 self._position += 1
                 if self._input[self._position] in ('+', '-'):
                     self._position += 1
+
                 while self._position < self._input_len:
                     ch = self._input[self._position]
                     if not (self._is_digit(ch) or ch == '_'):
                         break
+
                     self._position += 1
 
     def _read_forward_slash(self) -> None:

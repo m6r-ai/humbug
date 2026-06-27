@@ -132,6 +132,7 @@ class WindowControlsWidget(QWidget):
             restore_icon = QIcon()
             restore_icon.addPixmap(restore_pixmap, QIcon.Mode.Normal, QIcon.State.Off)
             self._maximise_button.setIcon(restore_icon)
+
         else:
             maximize_pixmap = style_manager.scale_icon("maximize", icon_px)
             maximize_icon = QIcon()

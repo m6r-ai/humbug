@@ -99,6 +99,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
         if not has_selection:
             if self._section_with_selection == section:
                 self._section_with_selection = None
+
             return
 
         # Clear selection in other sections

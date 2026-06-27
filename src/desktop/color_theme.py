@@ -4,7 +4,8 @@ from enum import Enum, auto
 
 
 class ColorTheme(Enum):
-    """The user's chosen colour theme.
+    """
+    The user's chosen colour theme.
 
     LIGHT, DARK, and SYSTEM select the built-in default palette with the
     corresponding light/dark axis.  COLOR_BLIND selects the fixed

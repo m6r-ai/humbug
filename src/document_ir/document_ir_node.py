@@ -10,7 +10,8 @@ class DocumentIRNode:
         self.children: List["DocumentIRNode"] = []
 
     def add_child(self, child: "DocumentIRNode") -> "DocumentIRNode":
-        """Add a child node to this node.
+        """
+        Add a child node to this node.
 
         Args:
             child: The child node to add.
@@ -23,7 +24,8 @@ class DocumentIRNode:
         return child
 
     def remove_child(self, child: "DocumentIRNode") -> None:
-        """Remove a child node from this node.
+        """
+        Remove a child node from this node.
 
         Args:
             child: The child node to remove.
@@ -49,7 +51,8 @@ class DocumentIRVisitor:
     """Base visitor class for document IR tree traversal."""
 
     def visit(self, node: DocumentIRNode) -> Any:
-        """Visit a node and dispatch to the appropriate visit method.
+        """
+        Visit a node and dispatch to the appropriate visit method.
 
         Args:
             node: The node to visit.
@@ -62,7 +65,8 @@ class DocumentIRVisitor:
         return visitor(node)
 
     def generic_visit(self, node: DocumentIRNode) -> List[Any]:
-        """Default visit method for nodes without specific handlers.
+        """
+        Default visit method for nodes without specific handlers.
 
         Args:
             node: The node to visit.
@@ -81,7 +85,8 @@ class DocumentIRDocumentNode(DocumentIRNode):
     """Root node representing an entire document."""
 
     def __init__(self, source_path: str | None = None) -> None:
-        """Initialise a document node.
+        """
+        Initialise a document node.
 
         Args:
             source_path: Optional path to the source file.
@@ -94,7 +99,8 @@ class DocumentIRHeadingNode(DocumentIRNode):
     """Node representing a heading at a given level (1-6)."""
 
     def __init__(self, level: int) -> None:
-        """Initialise a heading node.
+        """
+        Initialise a heading node.
 
         Args:
             level: The heading level (1-6).
@@ -115,7 +121,8 @@ class DocumentIRCodeBlockNode(DocumentIRNode):
     """Node representing a fenced code block."""
 
     def __init__(self, language: str, content: str) -> None:
-        """Initialise a code block node.
+        """
+        Initialise a code block node.
 
         Args:
             language: The language identifier (may be empty string).
@@ -130,7 +137,8 @@ class DocumentIRUnorderedListNode(DocumentIRNode):
     """Node representing an unordered (bullet) list."""
 
     def __init__(self, tight: bool = True) -> None:
-        """Initialise an unordered list node.
+        """
+        Initialise an unordered list node.
 
         Args:
             tight: Whether the list is tight (no spacing between items).
@@ -143,7 +151,8 @@ class DocumentIROrderedListNode(DocumentIRNode):
     """Node representing an ordered (numbered) list."""
 
     def __init__(self, start: int = 1, tight: bool = True) -> None:
-        """Initialise an ordered list node.
+        """
+        Initialise an ordered list node.
 
         Args:
             start: The starting number for the list.
@@ -190,7 +199,8 @@ class DocumentIRTableCellNode(DocumentIRNode):
     """Node representing a single cell within a table row."""
 
     def __init__(self, is_header: bool = False, alignment: str = "left") -> None:
-        """Initialise a table cell node.
+        """
+        Initialise a table cell node.
 
         Args:
             is_header: Whether this cell is a header cell.
@@ -206,7 +216,8 @@ class DocumentIRHorizontalRuleNode(DocumentIRNode):
 
 
 class DocumentIRTextSpanNode(DocumentIRNode):
-    """Node representing a run of inline text with optional formatting.
+    """
+    Node representing a run of inline text with optional formatting.
 
     Formatting properties are held as flags rather than through nesting,
     since a single span of text may carry any combination of bold, italic,
@@ -223,7 +234,8 @@ class DocumentIRTextSpanNode(DocumentIRNode):
         superscript: bool = False,
         subscript: bool = False,
     ) -> None:
-        """Initialise a text span node.
+        """
+        Initialise a text span node.
 
         Args:
             content: The text content.
@@ -245,13 +257,15 @@ class DocumentIRTextSpanNode(DocumentIRNode):
 
 
 class DocumentIRLinkNode(DocumentIRNode):
-    """Node representing a hyperlink.
+    """
+    Node representing a hyperlink.
 
     Children are the inline nodes forming the display text.
     """
 
     def __init__(self, url: str, title: str | None = None) -> None:
-        """Initialise a link node.
+        """
+        Initialise a link node.
 
         Args:
             url: The link target URL.
@@ -273,7 +287,8 @@ class DocumentIRImageNode(DocumentIRNode):
         data: bytes | None = None,
         mime_type: str | None = None,
     ) -> None:
-        """Initialise an image node.
+        """
+        Initialise an image node.
 
         Args:
             url: The image URL or path.

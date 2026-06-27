@@ -237,6 +237,7 @@ class UserSettings:
                 "Invalid fontSize type in %s: expected number, got %s. Using default.",
                 path, type(font_size).__name__
             )
+
         else:
             settings.font_size = font_size
 
@@ -288,6 +289,7 @@ class UserSettings:
                 "Invalid fontLigatures type in %s: expected bool, got %s. Using default.",
                 path, type(font_ligatures).__name__
             )
+
         else:
             settings.font_ligatures = font_ligatures
 

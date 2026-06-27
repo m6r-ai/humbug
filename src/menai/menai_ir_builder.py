@@ -92,6 +92,7 @@ class AnalysisContext:
             if result == 'local' and name not in self.free_vars_seen:
                 self.free_vars.append(name)
                 self.free_vars_seen.add(name)
+
             return result
 
         self.names.add(name)
@@ -414,6 +415,7 @@ class MenaiIRBuilder:
             if param.name == '.':
                 is_variadic = True
                 continue
+
             param_names.append(param.name)
 
         lambda_ctx = ctx.create_child_context()

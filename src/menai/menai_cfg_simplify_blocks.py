@@ -315,6 +315,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
                     if contributing is None:
                         # Predecessor not listed in phi incomings — skip.
                         continue
+
                     pred.terminator = MenaiCFGReturnTerm(value=contributing)
 
                 else:

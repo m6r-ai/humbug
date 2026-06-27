@@ -8,7 +8,8 @@ from PySide6.QtCore import QSize
 
 @dataclass
 class ConversationMessageStyle:
-    """Pre-computed style values shared across all ConversationMessage instances.
+    """
+    Pre-computed style values shared across all ConversationMessage instances.
 
     Built once per style epoch by ConversationWidget and passed to each message's
     apply_style() call, avoiding redundant icon and font construction per message.

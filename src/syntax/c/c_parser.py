@@ -56,6 +56,7 @@ class CParser(Parser):
         if prev_parser_state is not None:
             assert isinstance(prev_parser_state, CParserState), \
                 f"Expected CParserState, got {type(prev_parser_state).__name__}"
+
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 

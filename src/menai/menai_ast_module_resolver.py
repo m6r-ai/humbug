@@ -1,4 +1,5 @@
-"""Menai Module Resolver Pass - resolves import expressions at compile-time.
+"""
+Menai Module Resolver Pass - resolves import expressions at compile-time.
 
 This pass walks the AST looking for (import "module-name") expressions and
 replaces them with the loaded module's dict value. It uses a MenaiASTModuleLoader
@@ -12,7 +13,8 @@ from menai.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiAST
 
 
 class MenaiASTModuleLoader(Protocol):
-    """Interface for loading Menai modules at compile-time.
+    """
+    Interface for loading Menai modules at compile-time.
 
     The module loader is responsible for:
     - Locating module files in the search path

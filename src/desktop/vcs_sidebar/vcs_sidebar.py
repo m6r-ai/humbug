@@ -222,7 +222,8 @@ class VCSSidebar(SidebarBase):
             self._list_widget.addItem(item)
 
     def _show_context_menu(self, position: QPoint) -> None:
-        """Show a context menu for the item under the cursor.
+        """
+        Show a context menu for the item under the cursor.
 
         Args:
             position: Cursor position in list-widget viewport coordinates.
@@ -256,7 +257,8 @@ class VCSSidebar(SidebarBase):
         menu.exec_(self._list_widget.viewport().mapToGlobal(position))
 
     def _handle_delete_file(self, path: str) -> None:
-        """Handle request to delete a file.
+        """
+        Handle request to delete a file.
 
         Args:
             path: Path to the file to delete
@@ -327,6 +329,7 @@ class VCSSidebar(SidebarBase):
             Relative path string, or the basename if conversion fails.
         """
         if self._mindspace_path:
+
             try:
                 return os.path.relpath(abs_path, self._mindspace_path)
             except ValueError:

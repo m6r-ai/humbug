@@ -52,6 +52,7 @@ class CSSLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, CSSLexerState), \
                 f"Expected CSSLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_comment = prev_lexer_state.in_comment
 
         if self._in_comment:

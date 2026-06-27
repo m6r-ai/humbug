@@ -10,7 +10,8 @@ class HtmlASTNode:
         self.children: List["HtmlASTNode"] = []
 
     def add_child(self, child: "HtmlASTNode") -> "HtmlASTNode":
-        """Add a child node to this node.
+        """
+        Add a child node to this node.
 
         Args:
             child: The child node to add.
@@ -23,7 +24,8 @@ class HtmlASTNode:
         return child
 
     def remove_child(self, child: "HtmlASTNode") -> None:
-        """Remove a child node from this node.
+        """
+        Remove a child node from this node.
 
         Args:
             child: The child node to remove.
@@ -49,7 +51,8 @@ class HtmlASTVisitor:
     """Base visitor class for HTML AST traversal."""
 
     def visit(self, node: HtmlASTNode) -> Any:
-        """Visit a node and dispatch to the appropriate visit method.
+        """
+        Visit a node and dispatch to the appropriate visit method.
 
         Args:
             node: The node to visit.
@@ -62,7 +65,8 @@ class HtmlASTVisitor:
         return visitor(node)
 
     def generic_visit(self, node: HtmlASTNode) -> List[Any]:
-        """Default visit method for nodes without specific handlers.
+        """
+        Default visit method for nodes without specific handlers.
 
         Args:
             node: The node to visit.
@@ -81,7 +85,8 @@ class HtmlASTDocumentNode(HtmlASTNode):
     """Root node representing a complete HTML document."""
 
     def __init__(self, source_path: str | None = None) -> None:
-        """Initialise a document node.
+        """
+        Initialise a document node.
 
         Args:
             source_path: Optional path to the source file.
@@ -92,7 +97,8 @@ class HtmlASTDocumentNode(HtmlASTNode):
 
 
 class HtmlASTElementNode(HtmlASTNode):
-    """Node representing an HTML element with a tag name and attributes.
+    """
+    Node representing an HTML element with a tag name and attributes.
 
     This single class covers all element types (div, p, h1, table, etc.).
     The tag_name is always lower-cased. Children may be HtmlASTElementNode
@@ -100,7 +106,8 @@ class HtmlASTElementNode(HtmlASTNode):
     """
 
     def __init__(self, tag_name: str, attributes: Dict[str, str] | None = None) -> None:
-        """Initialise an element node.
+        """
+        Initialise an element node.
 
         Args:
             tag_name: The lower-cased HTML tag name (e.g. 'div', 'p', 'a').
@@ -115,7 +122,8 @@ class HtmlASTTextNode(HtmlASTNode):
     """Node representing a text run within an element."""
 
     def __init__(self, content: str) -> None:
-        """Initialise a text node.
+        """
+        Initialise a text node.
 
         Args:
             content: The decoded text content (HTML entities already resolved).
@@ -128,7 +136,8 @@ class HtmlASTCommentNode(HtmlASTNode):
     """Node representing an HTML comment."""
 
     def __init__(self, content: str) -> None:
-        """Initialise a comment node.
+        """
+        Initialise a comment node.
 
         Args:
             content: The raw comment text (between <!-- and -->).

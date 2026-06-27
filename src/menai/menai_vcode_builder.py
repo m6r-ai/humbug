@@ -164,6 +164,7 @@ class MenaiVCodeBuilder:
                 for instr in succ.instrs:
                     if not isinstance(instr, MenaiCFGPhiInstr):
                         break
+
                     for inc_val, inc_pred in instr.incoming:
                         if inc_pred.id == block.id:
                             dst = self._reg(instr.result)
@@ -207,6 +208,7 @@ class MenaiVCodeBuilder:
             for dst, src in phi_moves[block.id]:
                 if dst.id != src.id:
                     instrs.append(MenaiVCodeMove(dst=dst, src=src))
+
                 max_reg_id = max(max_reg_id, dst.id, src.id)
 
             # Emit the terminator.
@@ -411,6 +413,7 @@ class MenaiVCodeBuilder:
         if reg is None:
             reg = MenaiVCodeReg(id=value.id, hint=value.hint)
             self._reg_cache[value.id] = reg
+
         return reg
 
     def _label(self, block: MenaiCFGBlock) -> str:
@@ -430,6 +433,7 @@ class MenaiVCodeBuilder:
         def dfs(block: MenaiCFGBlock) -> None:
             if block.id in visited:
                 return
+
             visited.add(block.id)
             term = block.terminator
             if isinstance(term, MenaiCFGJumpTerm):

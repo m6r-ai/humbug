@@ -49,6 +49,7 @@ class PythonParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, PythonParserState), \
                 f"Expected PythonParserState, got {type(prev_parser_state).__name__}"
+
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 

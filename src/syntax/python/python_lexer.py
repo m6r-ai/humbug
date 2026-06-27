@@ -58,6 +58,7 @@ class PythonLexer(Lexer):
         if prev_lexer_state:
             assert isinstance(prev_lexer_state, PythonLexerState), \
                 f"Expected PythonLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_docstring = prev_lexer_state.in_docstring
             self._docstring_quote = prev_lexer_state.docstring_quote
 
@@ -145,18 +146,22 @@ class PythonLexer(Lexer):
                 while (self._position < self._input_len and
                        self._is_hex_digit(self._input[self._position])):
                     self._position += 1
+
             elif next_char == 'b':  # Binary
                 self._position += 2
                 while (self._position < self._input_len and
                        self._is_binary_digit(self._input[self._position])):
                     self._position += 1
+
             elif next_char == 'o':  # Octal
                 self._position += 2
                 while (self._position < self._input_len and
                        self._is_octal_digit(self._input[self._position])):
                     self._position += 1
+
             else:  # Decimal or floating-point
                 self._read_decimal_number()
+
         else:
             self._read_decimal_number()
 

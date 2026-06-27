@@ -207,6 +207,7 @@ class LogWidget(QWidget):
         if len(mindspace_messages) > matching_count:
             if self._auto_scroll:
                 self._scroll_to_bottom()
+
             else:
                 # User is scrolled up, notify them there's new content below
                 self.update_label.emit()
@@ -1011,6 +1012,7 @@ class LogWidget(QWidget):
                     "content": msg.content,
                     "timestamp": msg.timestamp.isoformat()
                 }
+
             return None
 
         # Find by ID

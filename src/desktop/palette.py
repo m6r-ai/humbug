@@ -14,7 +14,8 @@ class Palette:
 
 
 class FixedPalette(Palette):
-    """A palette backed by a flat role-to-colour mapping.
+    """
+    A palette backed by a flat role-to-colour mapping.
 
     Raises ValueError at construction time if any ColorRole is missing,
     so gaps are caught immediately rather than silently falling back.
@@ -33,7 +34,8 @@ class FixedPalette(Palette):
 
 
 class OverlayPalette(Palette):
-    """A palette that applies per-role overrides on top of a base palette.
+    """
+    A palette that applies per-role overrides on top of a base palette.
 
     Used for the custom theme: most roles fall through to the base palette,
     only the overridden roles return the custom colour.

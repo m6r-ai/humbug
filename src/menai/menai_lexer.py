@@ -609,6 +609,7 @@ class MenaiLexer:
                         expected="Hexadecimal digits (0-9, A-F)",
                         example="Valid: #xFF, -#xFF, #x2A, #xDEADBEEF"
                     )
+
                 value = int(digits, 16)
 
             elif format_char == 'b':
@@ -622,6 +623,7 @@ class MenaiLexer:
                         expected="Binary digits (0-1)",
                         example="Valid: #b1010, -#b1010, #b11111111"
                     )
+
                 value = int(digits, 2)
 
             elif format_char == 'o':
@@ -635,6 +637,7 @@ class MenaiLexer:
                         expected="Octal digits (0-7)",
                         example="Valid: #o755, -#o755, #o644"
                     )
+
                 value = int(digits, 8)
 
             elif format_char == 'd':
@@ -648,6 +651,7 @@ class MenaiLexer:
                         expected="Decimal digits (0-9)",
                         example="Valid: #d42, -#d42, #d255"
                     )
+
                 value = int(digits, 10)
 
             else:

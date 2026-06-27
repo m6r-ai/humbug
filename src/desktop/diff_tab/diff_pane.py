@@ -102,6 +102,7 @@ class _DiffPaneHighlighter(QSyntaxHighlighter):
                             len(text) - last_token_pos,
                             self._style_manager.get_highlight(TokenType.TEXT)
                         )
+
                     break
 
                 highlight_len = len(token.value) + token.start - last_token_pos
@@ -373,7 +374,8 @@ class DiffPane(QPlainTextEdit):
             self._update_gutter_width()
 
     def find_matches(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> list[tuple[int, int]]:
-        """Find all occurrences of *text* in this pane's document.
+        """
+        Find all occurrences of *text* in this pane's document.
 
         Args:
             text: The search string.  An empty string returns an empty list.

@@ -142,6 +142,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
                         try:
                             timestamp = datetime.fromisoformat(ts).timestamp()
                             break
+
                         except (ValueError, AttributeError):
                             continue
 
@@ -152,8 +153,10 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
                 # Fall back to filesystem timestamps
                 if hasattr(stat_info, 'st_birthtime') and stat_info.st_birthtime > 0:  # type: ignore[attr-defined]
                     timestamp = stat_info.st_birthtime  # type: ignore[attr-defined]
+
                 elif hasattr(stat_info, 'st_ctime'):
                     timestamp = stat_info.st_ctime
+
                 else:
                     timestamp = stat_info.st_mtime
 
@@ -230,6 +233,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
 
         try:
             raw_entries = os.listdir(dir_path)
+
         except OSError as e:
             self._logger.warning("Cannot list directory %s: %s", dir_path, e)
             return
@@ -241,6 +245,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
             is_dir = os.path.isdir(entry_path)
             if is_dir:
                 entry_infos.append((entry_path, True))
+
             elif entry.lower().endswith('.conv'):
                 entry_infos.append((entry_path, False))
 
@@ -253,6 +258,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
                 self._nodes[dir_key] = _DirNode(path=entry_path, parent_key=parent_key)
                 self._children[parent_key].append(dir_key)
                 self._build_dir_subtree(entry_path, dir_key, shared_paths)
+
             else:
                 node = self._index.get_node(entry_path)
                 if node is None:
@@ -363,6 +369,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
         siblings = self._children.get(grandparent_key, [])
         try:
             row = siblings.index(node.parent_key)
+
         except ValueError:
             return QModelIndex()
 

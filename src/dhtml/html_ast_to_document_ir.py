@@ -46,7 +46,8 @@ _INLINE_CODE = frozenset({"code", "kbd", "samp", "tt"})
 def html_ast_to_document_ir(
     document: HtmlASTDocumentNode,
 ) -> DocumentIRDocumentNode:
-    """Convert an HTML AST document to a document_ir tree.
+    """
+    Convert an HTML AST document to a document_ir tree.
 
     Structural HTML elements (headings, paragraphs, lists, tables, blockquotes,
     code blocks) are mapped to their document_ir equivalents. Inline formatting
@@ -68,7 +69,8 @@ def _convert_children(
     html_node: HtmlASTNode,
     ir_parent: DocumentIRNode,
 ) -> None:
-    """Convert all children of an HTML node into children of an IR node.
+    """
+    Convert all children of an HTML node into children of an IR node.
 
     Args:
         html_node: The HTML node whose children are to be converted.
@@ -82,7 +84,8 @@ def _convert_node(
     node: HtmlASTNode,
     ir_parent: DocumentIRNode,
 ) -> None:
-    """Convert a single HTML AST node and attach the result to ir_parent.
+    """
+    Convert a single HTML AST node and attach the result to ir_parent.
 
     Args:
         node: The HTML AST node to convert.
@@ -92,6 +95,7 @@ def _convert_node(
         return
 
     if isinstance(node, HtmlASTTextNode):
+
         text = node.content
         if text.strip():
             ir_parent.add_child(DocumentIRTextSpanNode(content=text))
@@ -248,10 +252,12 @@ def _convert_list(
     ordered: bool,
 ) -> None:
     """Convert a <ul> or <ol> element."""
+
     if ordered:
         try:
             start = int(node.attributes.get("start", "1"))
         except ValueError:
+
             start = 1
 
         ir_list: DocumentIRNode = DocumentIROrderedListNode(start=start)
@@ -335,7 +341,8 @@ def _convert_table_row_list(
     ir_parent: DocumentIRNode,
     is_header: bool,
 ) -> None:
-    """Convert a list of <tr> elements with shared rowspan state.
+    """
+    Convert a list of <tr> elements with shared rowspan state.
 
     Pending spans are scoped to this call so rowspans do not cross section
     boundaries (thead/tbody/tfoot are each processed independently).
@@ -521,7 +528,8 @@ def _convert_inline_children(
 
 
 def _collect_text(node: HtmlASTNode, parts: list[str]) -> None:
-    """Recursively collect all text content from a node into parts.
+    """
+    Recursively collect all text content from a node into parts.
 
     Args:
         node: The node to collect text from.

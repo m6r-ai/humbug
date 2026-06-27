@@ -175,6 +175,7 @@ class ShellCommandConversation(ShellCommand):
                 initial_model=initial_model,
                 requester_id=requester_id,
             )
+
         except MindspaceError as e:
             self._history_manager.add_message(ShellEventSource.ERROR, f"Failed to create conversation: {str(e)}")
             self._mindspace.add_interaction(

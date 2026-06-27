@@ -45,6 +45,7 @@ class SchemeParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, SchemeParserState), \
                 f"Expected SchemeParserState, got {type(prev_parser_state).__name__}"
+
             in_vector = prev_parser_state.in_vector
             prev_lexer_state = prev_parser_state.lexer_state
             continuation_state = prev_parser_state.continuation_state

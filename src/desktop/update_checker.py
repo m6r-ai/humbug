@@ -13,7 +13,8 @@ _REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=10)
 
 
 class UpdateChecker(QObject):
-    """Checks GitHub for a newer Humbug release.
+    """
+    Checks GitHub for a newer Humbug release.
 
     Emits update_available when a newer version is found on startup check.
     Emits check_complete for the result of a manual check (always fired).
@@ -45,7 +46,8 @@ class UpdateChecker(QObject):
         return self._cached_url
 
     async def check(self, *, manual: bool = False) -> None:
-        """Fetch the latest GitHub release and emit the appropriate signal.
+        """
+        Fetch the latest GitHub release and emit the appropriate signal.
 
         Args:
             manual: True when triggered by the user via the menu item.
@@ -54,6 +56,7 @@ class UpdateChecker(QObject):
                     update_available when a newer version is found.
         """
         if self._check_done and not manual:
+
             if self._cached_latest is not None:
                 self.update_available.emit(self._cached_latest, self._cached_url or "")
             return
@@ -76,7 +79,8 @@ class UpdateChecker(QObject):
             self.update_available.emit(self._cached_latest, self._cached_url or "")
 
     async def _fetch_latest(self) -> tuple[str | None, str | None]:
-        """Fetch the latest release tag and URL from the GitHub API.
+        """
+        Fetch the latest release tag and URL from the GitHub API.
 
         Returns:
             A (tag_name, html_url) tuple, or (None, None) on any failure.
@@ -106,10 +110,12 @@ class UpdateChecker(QObject):
             return None, None
 
     def _is_newer(self, tag: str) -> bool:
-        """Return True if tag represents a version newer than CURRENT_VERSION.
+        """
+        Return True if tag represents a version newer than CURRENT_VERSION.
 
         Args:
             tag: GitHub release tag, e.g. "v47" or "47".
+
         """
         try:
             version_str = tag.lstrip("vV")

@@ -85,7 +85,8 @@ class AIConversationHistory:
         return dict(self._attachments)
 
     def set_parent(self, parent: AIConversationParent) -> None:
-        """Set the parent delegation reference.
+        """
+        Set the parent delegation reference.
 
         Args:
             parent: Parent delegation reference to set

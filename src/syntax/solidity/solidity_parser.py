@@ -58,6 +58,7 @@ class SolidityParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, SolidityParserState), \
                 f"Expected SolidityParserState, got {type(prev_parser_state).__name__}"
+
             in_element = prev_parser_state.in_element
             in_import = prev_parser_state.in_import
             prev_lexer_state = prev_parser_state.lexer_state

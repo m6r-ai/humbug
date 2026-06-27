@@ -15,7 +15,8 @@ class DiffRowType(Enum):
 
 @dataclass
 class DiffRow:
-    """A single row in the side-by-side diff view.
+    """
+    A single row in the side-by-side diff view.
 
     For CONTEXT and CHANGED rows both sides carry text.
     For REMOVED rows only left_text is set; right_text is empty.

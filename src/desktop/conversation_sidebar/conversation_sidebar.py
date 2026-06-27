@@ -119,6 +119,7 @@ class ConversationSidebar(SidebarBase):
 
         # Auto-scroll state for drag operations
         self._auto_scroll_active = False
+
     def _is_conversation_file(self, file_path: str) -> bool:
         """
         Check if a file is a conversation file based on its extension.
@@ -191,6 +192,7 @@ class ConversationSidebar(SidebarBase):
             # Start auto-scrolling - the tree view will handle the actual scrolling
             # We just need to ensure the tree view's scroll bars are properly configured
             pass
+
         else:
             # Stop auto-scrolling
             pass
@@ -485,6 +487,7 @@ class ConversationSidebar(SidebarBase):
 
             self._logger.info("Cleaned up cancelled temporary %s: '%s'",
                             "folder" if is_folder else "file", temp_path)
+
         except OSError as e:
             self._logger.warning("Failed to clean up temporary %s '%s': %s",
                                "folder" if is_folder else "file", temp_path, str(e))
@@ -788,6 +791,7 @@ class ConversationSidebar(SidebarBase):
         current = self._tree_view.currentIndex()
         if current.isValid():
             self._selected_path = self._dag_model.path_for_index(current)
+
         else:
             self._selected_path = None
 
@@ -976,6 +980,7 @@ class ConversationSidebar(SidebarBase):
             full_path = os.path.join(parent_path, name)
             if not os.path.exists(full_path):
                 return name
+
             counter += 1
 
     def _start_rename(self, index: QModelIndex) -> None:
@@ -1005,7 +1010,8 @@ class ConversationSidebar(SidebarBase):
         self.file_opened_in_preview.emit(path)
 
     def _handle_delete_file(self, path: str) -> None:
-        """Handle request to delete a file.
+        """
+        Handle request to delete a file.
 
         Args:
             path: Path to the file to delete
@@ -1057,7 +1063,8 @@ class ConversationSidebar(SidebarBase):
                     )
 
     def _handle_delete_folder(self, path: str) -> None:
-        """Handle request to delete a folder.
+        """
+        Handle request to delete a folder.
 
         Args:
             path: Path to the folder to delete

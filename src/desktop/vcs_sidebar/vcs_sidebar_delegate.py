@@ -87,6 +87,7 @@ class VCSSidebarDelegate(QStyledItemDelegate):
         foreground = index.data(Qt.ItemDataRole.ForegroundRole)
         if isinstance(foreground, QBrush):
             badge_color = foreground.color()
+
         elif isinstance(foreground, QColor):
             badge_color = foreground
 

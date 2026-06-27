@@ -68,6 +68,7 @@ class UTF8Buffer:
 
                 # If we get here, we found an incomplete sequence
                 return i
+
         return 0
 
 
@@ -167,6 +168,7 @@ class TerminalTab(TabBase):
         # Start local shell process
         if start_process:
             self._create_tracked_task(self._start_process())
+
         self.apply_style()
 
     def tool_name(self) -> str:
@@ -177,6 +179,7 @@ class TerminalTab(TabBase):
         """Return a display title derived from the command, or 'Terminal'."""
         if self._command:
             return os.path.basename(self._command)
+
         return "Terminal"
 
     def on_path_renamed(self, new_path: str) -> None:
@@ -596,6 +599,7 @@ class TerminalTab(TabBase):
             # Only use selection if it's on a single line
             if '\n' not in text:
                 self._find_widget.set_search_text(text)
+
             else:
                 self._find_widget.set_search_text("")
 
@@ -732,6 +736,7 @@ class TerminalTab(TabBase):
         pixel_width = self._terminal_widget.preferred_pixel_width()
         if pixel_width is not None:
             self._terminal_widget.setMaximumWidth(pixel_width + 1)
+
         else:
             self._terminal_widget.setMaximumWidth(16777215)  # QWIDGETSIZE_MAX
 

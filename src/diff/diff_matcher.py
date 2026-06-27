@@ -321,6 +321,7 @@ class DiffMatcher(ABC):
             if exp_stripped == act_stripped:
                 exact_matches += 1
                 total_similarity += 1.0
+
             else:
                 # Calculate similarity using SequenceMatcher
                 similarity = difflib.SequenceMatcher(None, exp_stripped, act_stripped).ratio()

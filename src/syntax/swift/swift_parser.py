@@ -63,6 +63,7 @@ class SwiftParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, SwiftParserState), \
                 f"Expected SwiftParserState, got {type(prev_parser_state).__name__}"
+
             in_element = prev_parser_state.in_element
             in_closure = prev_parser_state.in_closure
             closure_brace_count = prev_parser_state.closure_brace_count

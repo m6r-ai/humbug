@@ -1,4 +1,5 @@
-"""Carousel overlay showing open tabs as a horizontally scrollable card strip.
+"""
+Carousel overlay showing open tabs as a horizontally scrollable card strip.
 
 Like tab_overview, this module is purely presentational: it consumes
 TabOverviewEntry display records and emits signals when the user activates,

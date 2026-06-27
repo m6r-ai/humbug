@@ -64,6 +64,7 @@ class SolidityLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, SolidityLexerState), \
                 f"Expected SolidityLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_natspec_comment = prev_lexer_state.in_natspec_comment
 

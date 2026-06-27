@@ -80,5 +80,6 @@ class EditorGotoLineDialog(QDialog):
         """Return the validated line number entered by the user."""
         try:
             return int(self._input.text())
+
         except ValueError:
             return 1

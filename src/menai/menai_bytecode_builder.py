@@ -548,6 +548,7 @@ class MenaiBytecodeBuilder:
         if key not in ctx.constant_map:
             ctx.constant_map[key] = len(ctx.constants)
             ctx.constants.append(func_val)
+
         ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key], dest=ctx.slot_of(instr.dst))
 
     def _emit_lambda(self, func: MenaiVCodeFunction) -> CodeObject:

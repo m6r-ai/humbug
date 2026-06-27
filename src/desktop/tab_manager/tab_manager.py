@@ -142,7 +142,8 @@ class TabManager(QWidget):
         self._tab_carousel: TabCarouselWidget | None = None
 
     def register_tab_factory(self, tool_name: str, factory: TabFactory) -> None:
-        """Register a tab factory for session restore.
+        """
+        Register a tab factory for session restore.
 
         Args:
             tool_name: The tool name string (e.g. 'editor', 'conversation').
@@ -151,7 +152,8 @@ class TabManager(QWidget):
         self._tab_factories[tool_name] = factory
 
     def register_context_factory(self, tool_name: str, factory: ContextFactory) -> None:
-        """Register a context factory for live context-open events.
+        """
+        Register a context factory for live context-open events.
 
         Args:
             tool_name: The tool name string (e.g. 'editor', 'conversation').
@@ -833,6 +835,7 @@ class TabManager(QWidget):
         if source_column == target_column:
             # Simple reorder within the same column — no teardown needed
             adjusted_index = target_index if source_index > target_index else target_index - 1
+
             if adjusted_index != source_index:
                 target_column.tabBar().moveTab(source_index, adjusted_index)
         else:
@@ -878,7 +881,8 @@ class TabManager(QWidget):
         self._update_tabs()
 
     def reposition_tab(self, tab_id: str, column_index: int, target_index: int) -> None:
-        """Reposition a tab to a specific index within a specific column.
+        """
+        Reposition a tab to a specific index within a specific column.
 
         Args:
             tab_id: ID of the tab to reposition.
@@ -1367,7 +1371,8 @@ class TabManager(QWidget):
         return None
 
     def _find_tab_bar_and_index(self, tab: TabBase) -> tuple[int, TabBar | None]:
-        """Find the TabBar and index for the given tab.
+        """
+        Find the TabBar and index for the given tab.
 
         Returns:
             Tuple of (index, TabBar) or (-1, None) if not found.
@@ -1423,7 +1428,8 @@ class TabManager(QWidget):
             tab_bar.set_tab_ephemeral(tab_index, False)
 
     def make_tab_permanent(self, tab_id: str) -> None:
-        """Make an ephemeral tab permanent.
+        """
+        Make an ephemeral tab permanent.
 
         Args:
             tab_id: ID of the tab to make permanent.
@@ -1653,7 +1659,8 @@ class TabManager(QWidget):
         return self._tabs.get(tab_id)
 
     def _find_tab_by_path(self, tool_name: str, path: str) -> TabBase | None:
-        """Find an open tab by tool name and path.
+        """
+        Find an open tab by tool name and path.
 
         Args:
             tool_name: The tool name to match (e.g. 'editor', 'conversation').
@@ -1669,7 +1676,8 @@ class TabManager(QWidget):
         return None
 
     def _find_existing_tab(self, source_type: str, path: str) -> TabBase | None:
-        """Find an already-open tab matching the given drag-drop source type and path.
+        """
+        Find an already-open tab matching the given drag-drop source type and path.
 
         Handles the source_type to tool_name mapping and any path transformation
         needed (e.g. relative→absolute for conversations), then delegates to
@@ -1935,7 +1943,8 @@ class TabManager(QWidget):
             self.show_tab_carousel()
 
     def show_all_columns(self, reset_layout: bool = False) -> None:
-        """Show all columns, sizing each to its preferred width where possible.
+        """
+        Show all columns, sizing each to its preferred width where possible.
 
         Each column is sized to its preferred width. Tabs that return None from preferred_width()
         are treated as having the zoom-scaled default preferred width. If the total of all column

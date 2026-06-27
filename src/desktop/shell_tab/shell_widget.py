@@ -870,7 +870,8 @@ class ShellWidget(QWidget):
                 self._messages[self._spotlighted_message_index].setFocus()
 
     def _set_cursor_position(self, position: Dict[str, int]) -> None:
-        """Set cursor position in input area.
+        """
+        Set cursor position in input area.
 
         Args:
             position: Dictionary with 'line' and 'column' keys
@@ -881,7 +882,8 @@ class ShellWidget(QWidget):
         self._input.set_cursor_position(position)
 
     def _get_cursor_position(self) -> Dict[str, int]:
-        """Get current cursor position from input area.
+        """
+        Get current cursor position from input area.
 
         Returns:
             Dictionary with 'line' and 'column' keys

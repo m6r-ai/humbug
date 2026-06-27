@@ -353,6 +353,7 @@ class MenaiCFGBuilder:
 
         if then_falls_through:
             then_exit.terminator = MenaiCFGJumpTerm(target=join_block)
+
         if else_falls_through:
             else_exit.terminator = MenaiCFGJumpTerm(target=join_block)
 
@@ -473,6 +474,7 @@ class MenaiCFGBuilder:
         for name, value_plan in ir.bindings:
             if isinstance(value_plan, MenaiIRLambda):
                 continue
+
             real_val, block = self._build_expr(value_plan, block, letrec_scope, state, tail=False)
             letrec_scope.bind(name, real_val)
 
@@ -488,6 +490,7 @@ class MenaiCFGBuilder:
         for name, value_plan in ir.bindings:
             if not isinstance(value_plan, MenaiIRLambda):
                 continue  # Non-lambda bindings have no closure captures to patch
+
             closure_val = binding_vals[name]
 
             for capture_index, fv_name in enumerate(

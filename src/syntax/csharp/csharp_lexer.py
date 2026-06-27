@@ -69,6 +69,7 @@ class CSharpLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, CSharpLexerState), \
                 f"Expected CSharpLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_xml_doc = prev_lexer_state.in_xml_doc
             self._in_verbatim_string = prev_lexer_state.in_verbatim_string
@@ -208,6 +209,7 @@ class CSharpLexer(Lexer):
             if self._input[self._position] == '\\':
                 self._position += 2  # Skip escape sequence
                 continue
+
             self._position += 1
 
         if self._position < self._input_len:

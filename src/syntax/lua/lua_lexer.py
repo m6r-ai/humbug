@@ -73,6 +73,7 @@ class LuaLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, LuaLexerState), \
                 f"Expected LuaLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_multiline_string = prev_lexer_state.in_multiline_string
             self._string_bracket_level = prev_lexer_state.string_bracket_level
@@ -388,9 +389,11 @@ class LuaLexer(Lexer):
                 self._position += 1
                 if self._position < self._input_len and self._input[self._position] in ('+', '-'):
                     self._position += 1
+
                 while (self._position < self._input_len and
                        self._is_digit(self._input[self._position])):
                     self._position += 1
+
         else:
             # Decimal number
             # Read integer part
@@ -412,6 +415,7 @@ class LuaLexer(Lexer):
                 self._position += 1
                 if self._position < self._input_len and self._input[self._position] in ('+', '-'):
                     self._position += 1
+
                 while (self._position < self._input_len and
                        self._is_digit(self._input[self._position])):
                     self._position += 1

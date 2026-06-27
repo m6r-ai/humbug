@@ -55,8 +55,10 @@ class MindspaceSearchEngine:
         flags = 0 if case_sensitive else re.IGNORECASE
         if regexp:
             pattern_text = normalized_query
+
         elif whole_word:
             pattern_text = rf"\b{re.escape(normalized_query)}\b"
+
         else:
             pattern_text = ""
 
@@ -98,8 +100,10 @@ class MindspaceSearchEngine:
                     content_matches = self._iter_matching_conversation_messages(
                         path, lowered_query, pattern, case_sensitive
                     )
+
                 elif self._is_binary_file(path):
                     continue
+
                 else:
                     content_matches = [
                         (line_number, line, None)
@@ -108,6 +112,7 @@ class MindspaceSearchEngine:
 
                 if content_type == MindspaceContentType.CONVERSATIONS:
                     per_file_cap = self._MAX_CONVERSATION_MATCHES_PER_FILE
+
                 else:
                     per_file_cap = self._MAX_MATCHES_PER_FILE
 
@@ -141,6 +146,7 @@ class MindspaceSearchEngine:
         try:
             with open(path, "rb") as file:
                 sample = file.read(self._BINARY_SAMPLE_SIZE)
+
         except OSError:
             return True
 
@@ -165,6 +171,7 @@ class MindspaceSearchEngine:
                     results.append((line_number, snippet))
                     if len(results) >= self._MAX_MATCHES_PER_FILE:
                         break
+
         except OSError:
             return []
 
@@ -188,6 +195,7 @@ class MindspaceSearchEngine:
         try:
             with open(path, encoding="utf-8", errors="ignore") as f:
                 data = json.load(f)
+
         except (OSError, json.JSONDecodeError):
             return results
 

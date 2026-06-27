@@ -53,6 +53,7 @@ class RustParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, RustParserState), \
                 f"Expected RustParserState, got {type(prev_parser_state).__name__}"
+
             in_element = prev_parser_state.in_element
             in_generic_params = prev_parser_state.in_generic_params
             generic_depth = prev_parser_state.generic_depth

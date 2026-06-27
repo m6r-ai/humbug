@@ -24,7 +24,8 @@ class ShellCommand:
         self._requester_id = ""
 
     def set_requester_id(self, requester_id: str) -> None:
-        """Set the tab ID of the shell tab executing this command.
+        """
+        Set the tab ID of the shell tab executing this command.
 
         Args:
             requester_id: Tab ID of the shell tab, used as requester when opening new tabs.
@@ -198,6 +199,7 @@ class ShellCommand:
         """
         for token in tokens:
             if token.type == TokenType.COMMAND:
+
                 return token
         return None
 

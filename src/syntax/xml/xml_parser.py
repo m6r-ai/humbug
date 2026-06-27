@@ -37,6 +37,7 @@ class XMLParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, XMLParserState), \
                 f"Expected XMLParserState, got {type(prev_parser_state).__name__}"
+
             prev_lexer_state = prev_parser_state.lexer_state
 
         lexer = XMLLexer()

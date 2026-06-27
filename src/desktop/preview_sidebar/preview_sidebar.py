@@ -335,6 +335,7 @@ class PreviewSidebar(SidebarBase):
 
             self._logger.info("Cleaned up cancelled temporary %s: '%s'",
                             "folder" if is_folder else "file", temp_path)
+
         except OSError as e:
             self._logger.warning("Failed to clean up temporary %s '%s': %s",
                                "folder" if is_folder else "file", temp_path, str(e))
@@ -722,6 +723,7 @@ class PreviewSidebar(SidebarBase):
                     diff_action = menu.addAction(strings.open_in_diff)
                     diff_action.setEnabled(self._vcs_poller.has_vcs_changes(path))
                     diff_action.triggered.connect(lambda: self._handle_diff_file(path))
+
                 duplicate_action = menu.addAction(strings.duplicate)
                 duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
                 rename_action = menu.addAction(strings.rename)
@@ -813,6 +815,7 @@ class PreviewSidebar(SidebarBase):
             full_path = os.path.join(parent_path, name)
             if not os.path.exists(full_path):
                 return name
+
             counter += 1
 
     def _get_default_file_name(self, parent_path: str) -> str:
@@ -883,7 +886,8 @@ class PreviewSidebar(SidebarBase):
             self.file_clicked.emit("preview", os.path.normpath(self._mindspace_path), False)
 
     def _handle_delete_file(self, path: str) -> None:
-        """Handle request to delete a file.
+        """
+        Handle request to delete a file.
 
         Args:
             path: Path to the file to delete
@@ -926,7 +930,8 @@ class PreviewSidebar(SidebarBase):
                 )
 
     def _handle_delete_folder(self, path: str) -> None:
-        """Handle request to delete a folder.
+        """
+        Handle request to delete a folder.
 
         Args:
             path: Path to the folder to delete

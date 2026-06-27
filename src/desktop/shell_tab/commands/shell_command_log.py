@@ -37,6 +37,7 @@ class ShellCommandLog(ShellCommand):
         existing = next((i for i in contexts.list_all() if i.context_type == "log"), None)
         if existing:
             contexts.focus(existing.context_id)
+
         else:
             contexts.open(
                 context_type="log",

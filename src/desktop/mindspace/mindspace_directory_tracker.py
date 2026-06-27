@@ -55,6 +55,7 @@ class MindspaceDirectoryTracker:
         try:
             with open(tracking_path, 'w', encoding='utf-8') as f:
                 json.dump(self._tracking.to_dict(), f, indent=2)
+
         except OSError as e:
             self._logger.error("Failed to save directory tracking: %s", str(e))
 

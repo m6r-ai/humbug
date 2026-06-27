@@ -323,6 +323,7 @@ class EditorAITool(AITool):
 
             if not content:
                 context_object[1] = ""
+
             else:
                 content_lines = content.splitlines()
                 for line_num, line_text in enumerate(content_lines):
@@ -331,6 +332,7 @@ class EditorAITool(AITool):
             if start_line is not None or end_line is not None:
                 range_desc = f"lines {start_line or 1}-{end_line or 'end'}"
                 log_msg = f"AI read editor content ({range_desc})\ntab ID: {context_id}"
+
             else:
                 log_msg = f"AI read editor content\ntab ID: {context_id}"
 
@@ -580,6 +582,7 @@ class EditorAITool(AITool):
                 editor_info = context.get_editor_info()
                 if not editor_info.get('file_path'):
                     message = "No diff available: file has never been saved (untitled)"
+
                 else:
                     message = "No changes: buffer matches saved file content"
 
@@ -711,7 +714,8 @@ class EditorAITool(AITool):
         content: str,
         expression: str
     ) -> tuple[str, list[str], bool]:
-        """Apply a Menai transform to buffer content synchronously.
+        """
+        Apply a Menai transform to buffer content synchronously.
 
         Args:
             content: The current buffer text.
@@ -747,6 +751,7 @@ class EditorAITool(AITool):
             if not all(isinstance(e, MenaiString) for e in raw_result.elements):
                 raise AIToolExecutionError(
                     "Transform program returned a list containing non-string elements"
+
                 )
             new_content = '\n'.join(cast(MenaiString, e).value for e in raw_result.elements)
 

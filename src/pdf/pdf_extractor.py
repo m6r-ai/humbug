@@ -22,7 +22,8 @@ _LIGATURE_MAP: dict[str, str] = {
 
 
 def extract_text(doc: PDFDocument) -> str:
-    """Extract all text from a parsed PDFDocument, in page order.
+    """
+    Extract all text from a parsed PDFDocument, in page order.
 
     Returns a single string with pages separated by form-feed characters.
 
@@ -113,6 +114,7 @@ def _resolve_resources(doc: PDFDocument, page: dict[str, Any]) -> dict[str, Any]
     """Resolve the Resources dictionary for a page, following indirect refs."""
     resources = page.get("Resources")
     if isinstance(resources, PDFObjectRef):
+
         resources = doc.get_object(resources)
     return resources if isinstance(resources, dict) else {}
 
@@ -347,7 +349,8 @@ def _emit_text(
     prev_width: float,
     font_size: float,
 ) -> tuple[float, float, float]:
-    """Append text to text_parts with a position-aware separator, return updated prev state.
+    """
+    Append text to text_parts with a position-aware separator, return updated prev state.
 
     Uses the current and previous text positions to decide whether to insert a
     newline, a space, or nothing between the previous chunk and this one.
@@ -383,6 +386,7 @@ def _emit_text(
 def _resolve_font(doc: PDFDocument, resources: dict[str, Any], font_name: str) -> dict[str, Any]:
     """Resolve a font resource dictionary by name."""
     font_dict = resources.get("Font", {})
+
     if isinstance(font_dict, PDFObjectRef):
         font_dict = doc.get_object(font_dict)
     if not isinstance(font_dict, dict):
@@ -441,7 +445,8 @@ def _decode_pdf_doc_encoding(data: bytes) -> str:
 
 
 def _apply_to_unicode(data: bytes, cmap: dict[bytes, str]) -> str:
-    """Apply a ToUnicode CMap to decode a byte string.
+    """
+    Apply a ToUnicode CMap to decode a byte string.
 
     Bytes that have no CMap entry are replaced with U+FFFD (REPLACEMENT CHARACTER)
     rather than being passed through as raw ASCII, since their true value is unknown.
@@ -503,15 +508,18 @@ def _parse_to_unicode_cmap(data: bytes) -> dict[bytes, str]:
 
 
 def _hex_to_unicode_str(hex_str: str) -> str:
-    """Convert a CMap destination hex string to a Unicode string.
+    """
+    Convert a CMap destination hex string to a Unicode string.
 
     Handles single codepoints (<0041> -> 'A') and multi-codepoint sequences
     (<00660069> -> 'fi') used for ligature mappings.
+
     """
     raw = bytes.fromhex(hex_str)
     if len(raw) % 2 != 0:
         raise ValueError(f"Odd-length hex sequence in CMap: {hex_str}")
     result = []
+
     for i in range(0, len(raw), 2):
         cp = (raw[i] << 8) | raw[i + 1]
         ch = chr(cp)

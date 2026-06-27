@@ -99,6 +99,7 @@ class ContextRegistry:
         self._contexts[context_id] = info
         if initial_model is not None:
             self._models[context_id] = initial_model
+
         self._emit(ContextEvent.OPENED, info, is_ephemeral, requester_id)
         return context_id
 
@@ -112,6 +113,7 @@ class ContextRegistry:
         if context_id in self._contexts:
             del self._contexts[context_id]
             self._emit(ContextEvent.CLOSED, context_id)
+
         self._models.pop(context_id, None)
 
     def update(self, context_id: str, **kwargs: Any) -> None:

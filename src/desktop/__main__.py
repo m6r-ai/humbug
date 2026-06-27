@@ -156,6 +156,7 @@ def load_fonts() -> None:
 
     if getattr(sys, 'frozen', False):
         base_path = Path(getattr(sys, '_MEIPASS'))
+
     else:
         base_path = Path(__file__).parent.parent.parent
 

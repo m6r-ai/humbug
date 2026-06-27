@@ -125,6 +125,7 @@ class UserManager(QObject):
         """Load previously fetched model IDs from the on-disk cache."""
         try:
             AIConversationSettings.load_fetched_models_cache(self._get_fetched_models_path())
+
         except Exception:  # pylint: disable=broad-except
             self._logger.exception("Failed to load fetched models cache")
 

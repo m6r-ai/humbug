@@ -206,6 +206,7 @@ class PreviewWidget(QWidget):
             # entirely so we don't create a feedback loop.
             try:
                 new_content_list, new_dependencies = self._preview.get_preview_content(self._path)
+
             except Exception:
                 # If we can't read the content, fall through to the normal reload path
                 # which will handle the error properly.
@@ -541,6 +542,7 @@ class PreviewWidget(QWidget):
             distance_out = -self._last_mouse_pos.y()
             if distance_out > viewport_height * 2:
                 scrollbar.setValue(scrollbar.minimum())
+
             else:
                 screen = QGuiApplication.screenAt(QCursor.pos())
                 if screen is None or QCursor.pos().y() <= screen.availableGeometry().top() + 4:
@@ -555,6 +557,7 @@ class PreviewWidget(QWidget):
             distance_out = self._last_mouse_pos.y() - viewport_height
             if distance_out > viewport_height * 2:
                 scrollbar.setValue(scrollbar.maximum())
+
             else:
                 screen = QGuiApplication.screenAt(QCursor.pos())
                 if screen is None or QCursor.pos().y() >= screen.availableGeometry().bottom() - 4:
@@ -696,6 +699,7 @@ class PreviewWidget(QWidget):
         existing = contexts.get_by_path_and_type(self._path, "editor")
         if existing:
             contexts.focus(existing.context_id)
+
         else:
             contexts.open(
                 context_type="editor",
@@ -709,6 +713,7 @@ class PreviewWidget(QWidget):
         existing = contexts.get_by_path_and_type(self._path, "diff")
         if existing:
             contexts.focus(existing.context_id)
+
         else:
             contexts.open(
                 context_type="diff",

@@ -161,7 +161,8 @@ class FindWidget(QWidget):
             self._replace_input.setFocus()
 
     def show_replace(self) -> None:
-        """Show the widget with the replace row expanded, focusing the search input.
+        """
+        Show the widget with the replace row expanded, focusing the search input.
 
         If the replace row is not yet expanded, expands it.  Idempotent if already expanded.
         """
@@ -175,7 +176,8 @@ class FindWidget(QWidget):
         self.setFocus()
 
     def show_find(self) -> None:
-        """Show the widget in find-only mode, collapsing the replace row if expanded.
+        """
+        Show the widget in find-only mode, collapsing the replace row if expanded.
 
         Idempotent if the replace row is already collapsed.
         """
@@ -470,7 +472,8 @@ class FindWidget(QWidget):
         self._replace_all_button.setEnabled(enabled)
 
     def set_match_status(self, current: int, total: int, truncated: bool = False) -> None:
-        """Set the match status display.
+        """
+        Set the match status display.
 
         Args:
             current: Current match index (1-based)

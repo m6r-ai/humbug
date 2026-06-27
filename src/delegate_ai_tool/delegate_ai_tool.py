@@ -255,6 +255,7 @@ class DelegateAITool(AITool):
         session_info = "continue an existing session" if session_path else "start a new session"
         model_info = f" using model '{model}'" + (f" ({provider})" if provider else "") \
             if model else " using the default model"
+
         temp_info = f" with temperature {temperature}" if temperature is not None else ""
         effort_info = f" with reasoning effort '{reasoning_effort}'" if reasoning_effort else ""
         context = (
@@ -345,6 +346,7 @@ class DelegateAITool(AITool):
         # For a resumed session we use the existing path; for a new session we generate one.
         if session_path:
             transcript_path = session_path
+
         else:
             transcript_path = self._new_conversation_path()
 
@@ -613,6 +615,7 @@ class DelegateAITool(AITool):
                 requester_id=parent_context_id or "",
             )
             self._context_ids[session_id] = context_id
+
         except Exception:
             pass
 

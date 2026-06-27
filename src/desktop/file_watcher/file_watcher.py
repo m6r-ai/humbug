@@ -185,6 +185,7 @@ class FileWatcher(QObject):
                         changed = True
                         if current_info.exists:
                             self._logger.debug("File appeared: %s", file_path)
+
                         else:
                             self._logger.debug("File disappeared: %s", file_path)
 

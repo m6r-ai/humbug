@@ -338,7 +338,8 @@ class DiffWidget(QWidget):
             return None
 
     def _parse_diff(self, diff_text: str) -> List[DiffHunk] | None:
-        """Parse diff text into hunks.
+        """
+        Parse diff text into hunks.
 
         Returns the hunk list, or None if parsing failed.
         """
@@ -467,6 +468,7 @@ class DiffWidget(QWidget):
         """
         if (text, case_sensitive, regexp) != self._find_key:
             # New search term — rebuild the match list from scratch.
+
             self._run_find(text, forward=forward, reset=True, case_sensitive=case_sensitive, regexp=regexp)
         else:
             self._run_find(text, forward=forward, reset=False, case_sensitive=case_sensitive, regexp=regexp)
@@ -546,6 +548,7 @@ class DiffWidget(QWidget):
         left_current_local = -1
         right_current_local = -1
         if pane_id == "left":
+
             left_current_local = sum(1 for p, s, e in self._find_matches[:self._find_current] if p == "left")
         elif pane_id == "right":
             right_current_local = sum(1 for p, s, e in self._find_matches[:self._find_current] if p == "right")
@@ -623,7 +626,8 @@ class DiffWidget(QWidget):
         self._right_pane.clear_find()
 
     def get_selected_text(self) -> str:
-        """Return the selected text from whichever pane has an active selection.
+        """
+        Return the selected text from whichever pane has an active selection.
 
         If neither pane has a selection, returns an empty string.  If both
         panes somehow have a selection, the left pane takes priority.

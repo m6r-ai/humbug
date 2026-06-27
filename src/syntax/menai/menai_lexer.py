@@ -43,6 +43,7 @@ class MenaiLexer(Lexer):
         if prev_lexer_state:
             assert isinstance(prev_lexer_state, MenaiLexerState), \
                 f"Expected MenaiLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_string = prev_lexer_state.in_string
 
         if self._in_string:

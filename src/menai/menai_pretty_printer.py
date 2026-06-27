@@ -353,6 +353,7 @@ class FormatPlanner:
                     compact_expr = self._try_compact_expr(elem.expr)
                     if not compact_expr:
                         return None
+
                     parts.append(compact_expr)
 
             elif isinstance(elem, ASTList):
@@ -498,6 +499,7 @@ class Renderer:
                 parts.append(' ')
 
             parts.append(self._render_node(elem, 0))
+
         parts.append(')')
         return ''.join(parts)
 

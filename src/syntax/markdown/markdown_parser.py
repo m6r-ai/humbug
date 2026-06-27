@@ -537,6 +537,7 @@ class MarkdownParser(Parser):
         if prev_parser_state is not None:
             assert isinstance(prev_parser_state, MarkdownParserState), \
                 f"Expected MarkdownParserState, got {type(prev_parser_state).__name__}"
+
             in_fence_block = prev_parser_state.in_fence_block
             fence_depth = prev_parser_state.fence_depth
             nested_fence_depth = prev_parser_state.nested_fence_depth
@@ -678,6 +679,7 @@ class MarkdownParser(Parser):
 
                 else:
                     new_stack.append(ctx)
+
             block_stack = new_stack
 
         elif bq_tokens_count > current_bq_depth:
@@ -793,6 +795,7 @@ class MarkdownParser(Parser):
                 if list_ctx_index is None:
                     # No list active yet — start one.
                     block_stack.append(BlockContext(type=TokenType.LIST_MARKER, indent=current_indent))
+
                 else:
                     top_indent = block_stack[list_ctx_index].indent
                     if current_indent > top_indent:
@@ -828,6 +831,7 @@ class MarkdownParser(Parser):
                     # plain TEXT tokens; structural tokens keep their own type.
                     if token.type == TokenType.TEXT:
                         token = Token(type=TokenType.LIST_MARKER, value=token.value, start=token.start)
+
                     self._tokens.append(token)
                     continue
 

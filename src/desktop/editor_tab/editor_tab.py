@@ -388,6 +388,7 @@ class EditorTab(TabBase):
             # Only use selection if it's on a single line
             if '\u2029' not in text:  # Qt uses this character for line breaks
                 self._find_widget.set_search_text(text)
+
             else:
                 self._find_widget.set_search_text("")
 
@@ -444,6 +445,7 @@ class EditorTab(TabBase):
         self._close_find()
         if line_number is not None:
             self._editor_widget.find_text_at_line(text, line_number, case_sensitive=case_sensitive, regexp=regexp)
+
         else:
             self._editor_widget.find_text(text, forward=True, move_cursor=True, case_sensitive=case_sensitive, regexp=regexp)
 

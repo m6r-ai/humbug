@@ -133,6 +133,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
                     movie.currentImage()
                 )
                 self.viewport().update()
+
             except RuntimeError:
                 movie.stop()
 
@@ -170,7 +171,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         self.mouse_released.emit(e)
 
     def _indent_single_line_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
-        """Indent a single line using soft tabs (spaces).
+        """
+        Indent a single line using soft tabs (spaces).
 
         Args:
             cursor: The current text cursor
@@ -181,7 +183,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         cursor.insertText(" " * spaces_needed)
 
     def _indent_single_line_hard_tabs(self, cursor: QTextCursor) -> None:
-        """Indent a single line using hard tabs.
+        """
+        Indent a single line using hard tabs.
 
         Args:
             cursor: The current text cursor
@@ -189,7 +192,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         cursor.insertText("\t")
 
     def _indent_block_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
-        """Indent a block of text using soft tabs (spaces).
+        """
+        Indent a block of text using soft tabs (spaces).
 
         Args:
             cursor: The current text cursor
@@ -222,7 +226,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
     def _indent_block_hard_tabs(self, cursor: QTextCursor) -> None:
-        """Indent a block of text using hard tabs.
+        """
+        Indent a block of text using hard tabs.
 
         Args:
             cursor: The current text cursor
@@ -254,7 +259,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
     def _outdent_single_line_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
-        """Outdent a single line using soft tabs (spaces).
+        """
+        Outdent a single line using soft tabs (spaces).
 
         Args:
             cursor: The current text cursor
@@ -274,7 +280,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
             deletes_needed -= 1
 
     def _outdent_single_line_hard_tabs(self, cursor: QTextCursor) -> None:
-        """Outdent a single line using hard tabs.
+        """
+        Outdent a single line using hard tabs.
 
         Args:
             cursor: The current text cursor
@@ -286,7 +293,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
                 cursor.deletePreviousChar()
 
     def _outdent_block_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
-        """Outdent a block of text using soft tabs (spaces).
+        """
+        Outdent a block of text using soft tabs (spaces).
 
         Args:
             cursor: The current text cursor
@@ -333,7 +341,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         cursor.setPosition(end if not reverse else start, QTextCursor.MoveMode.KeepAnchor)
 
     def _outdent_block_hard_tabs(self, cursor: QTextCursor) -> None:
-        """Outdent a block of text using hard tabs.
+        """
+        Outdent a block of text using hard tabs.
 
         Args:
             cursor: The current text cursor
@@ -433,6 +442,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
                         self._indent_single_line_soft_tabs(cursor, settings.tab_size)
 
                     else:
+
                         self._indent_single_line_hard_tabs(cursor)
 
                 else:
@@ -672,7 +682,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         painter.end()
 
     def find_text(self, text: str) -> bool:
-        """Find text in the widget.
+        """
+        Find text in the widget.
 
         Args:
             text: Text to search for

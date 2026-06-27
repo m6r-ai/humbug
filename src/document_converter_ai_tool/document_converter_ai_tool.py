@@ -252,10 +252,12 @@ class DocumentConverterAITool(AITool):
 
         try:
             return self._resolve_path(path_str)
+
         except ValueError as e:
             raise AIToolExecutionError(
                 f"'{key}': path '{path_str}' is outside the mindspace: {e}"
             ) from e
+
         except Exception as e:
             raise AIToolExecutionError(
                 f"'{key}': failed to resolve path '{path_str}': {e}"

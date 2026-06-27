@@ -46,6 +46,7 @@ class SchemeLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, SchemeLexerState), \
                 f"Expected SchemeLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_comment = prev_lexer_state.in_comment
             self._in_string = prev_lexer_state.in_string
 
@@ -421,6 +422,7 @@ class SchemeLexer(Lexer):
                 self._position += 1
                 if self._position < self._input_len:
                     self._position += 1
+
                 continue
 
             if ch == '"':
@@ -457,6 +459,7 @@ class SchemeLexer(Lexer):
                 self._position += 1
                 if self._position < self._input_len:
                     self._position += 1
+
                 continue
 
             if ch == '"':

@@ -234,6 +234,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
             state = node.states_by_line[line_num]
             state_info = f", state: {type(state).__name__ if state else 'None'}"
             print(f"{self._indent()}Line {line_num}: {len(tokens)} tokens{state_info}")
+
         self.indent_level -= 1
 
         self.indent_level -= 1

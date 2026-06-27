@@ -49,7 +49,8 @@ class MenaiIRError:
 
 @dataclass
 class MenaiIRLet:
-    """Plan for compiling a let expression.
+    """
+    Plan for compiling a let expression.
 
     Bindings are (name, value_plan) pairs.
     """
@@ -60,7 +61,8 @@ class MenaiIRLet:
 
 @dataclass
 class MenaiIRLetrec:
-    """Plan for compiling a letrec expression.
+    """
+    Plan for compiling a letrec expression.
 
     After letrec splitting in the desugarer, every letrec reaching this point
     is guaranteed to be a single fully-mutually-recursive group of lambdas.
@@ -73,7 +75,8 @@ class MenaiIRLetrec:
 
 @dataclass
 class MenaiIRLambda:
-    """Plan for compiling a lambda expression.
+    """
+    Plan for compiling a lambda expression.
 
     """
     params: List[str]
@@ -101,7 +104,8 @@ class MenaiIRCall:
 
 @dataclass
 class MenaiIRBuildList:
-    """Plan for compiling a (list e1 e2 ... eN) literal.
+    """
+    Plan for compiling a (list e1 e2 ... eN) literal.
 
     Carries a flat list of element plans.  The constant folder can evaluate
     this to a MenaiIRConstant when all elements are compile-time constants.
@@ -124,7 +128,8 @@ class MenaiIRReturn:
 
 @dataclass
 class MenaiIRBuildDict:
-    """Plan for compiling a (dict (list k1 v1) (list k2 v2) ...) literal.
+    """
+    Plan for compiling a (dict (list k1 v1) (list k2 v2) ...) literal.
 
     Carries a flat list of (key_plan, value_plan) pairs.  The constant folder
     can evaluate this to a MenaiIRConstant when all keys and values are
@@ -140,7 +145,8 @@ class MenaiIRBuildDict:
 
 @dataclass
 class MenaiIRBuildSet:
-    """Plan for compiling a (set e1 e2 ... eN) literal.
+    """
+    Plan for compiling a (set e1 e2 ... eN) literal.
 
     Carries a flat list of element plans.  The VM codegen lowers it to
     LOAD_EMPTY_SET followed by N SET_ADD register ops, accumulating the
@@ -159,7 +165,8 @@ class MenaiIRTrace:
 
 @dataclass
 class MenaiIRBuildStruct:
-    """Plan for compiling a struct constructor call (TypeName f1 f2 ... fN).
+    """
+    Plan for compiling a struct constructor call (TypeName f1 f2 ... fN).
 
     Carries the MenaiStructType descriptor (known at compile time) and a flat
     list of field value plans.  The VM codegen lowers it to LOAD_STRUCT_TYPE

@@ -243,6 +243,7 @@ class MenaiASTBuilder:
         if self.current_token is not None:
             self.last_close_line = self.current_token.line
             self.last_close_column = self.current_token.column
+
         else:
             self.last_close_line = self.last_token_end_line
             self.last_close_column = self.last_token_end_column

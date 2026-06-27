@@ -74,6 +74,7 @@ class MenaiASTDependencyAnalyzer:
         dependencies: Dict[str, Set[str]] = {name: set() for name, _ in bindings}
         for name, expr in bindings:
             self._scan_refs(expr, binding_names, frozenset(), dependencies[name])
+
         return dependencies
 
     def _scan_refs(
@@ -94,6 +95,7 @@ class MenaiASTDependencyAnalyzer:
         if isinstance(expr, MenaiASTSymbol):
             if expr.name in targets and expr.name not in shadowed:
                 refs.add(expr.name)
+
             return
 
         if not isinstance(expr, MenaiASTList) or expr.is_empty():
@@ -103,6 +105,7 @@ class MenaiASTDependencyAnalyzer:
         if not isinstance(first, MenaiASTSymbol):
             for elem in expr.elements:
                 self._scan_refs(elem, targets, shadowed, refs)
+
             return
 
         name = first.name
@@ -118,7 +121,9 @@ class MenaiASTDependencyAnalyzer:
                     )
                     if extra:
                         new_shadowed = shadowed | extra
+
                 self._scan_refs(body, targets, new_shadowed, refs)
+
             return
 
         if name == 'let':
@@ -132,7 +137,9 @@ class MenaiASTDependencyAnalyzer:
                             var = binding.elements[0]
                             if isinstance(var, MenaiASTSymbol):
                                 new_shadowed = new_shadowed | frozenset({var.name})
+
                 self._scan_refs(body, targets, new_shadowed, refs)
+
             return
 
         if name == 'letrec':
@@ -149,10 +156,13 @@ class MenaiASTDependencyAnalyzer:
                     )
                     if extra:
                         new_shadowed = shadowed | extra
+
                     for binding in binding_list.elements:
                         if isinstance(binding, MenaiASTList) and len(binding.elements) == 2:
                             self._scan_refs(binding.elements[1], targets, new_shadowed, refs)
+
                 self._scan_refs(body, targets, new_shadowed, refs)
+
             return
 
         if name == 'let*':
@@ -166,7 +176,9 @@ class MenaiASTDependencyAnalyzer:
                             var = binding.elements[0]
                             if isinstance(var, MenaiASTSymbol):
                                 new_shadowed = new_shadowed | frozenset({var.name})
+
                 self._scan_refs(body, targets, new_shadowed, refs)
+
             return
 
         for elem in expr.elements:

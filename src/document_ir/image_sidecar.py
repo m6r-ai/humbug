@@ -31,7 +31,8 @@ _EXT_BY_MIME: dict[str, str] = {
 
 
 def mime_type_for_extension(ext: str) -> str | None:
-    """Return the MIME type for a file extension, or None if unrecognised.
+    """
+    Return the MIME type for a file extension, or None if unrecognised.
 
     Args:
         ext: File extension with or without a leading dot (case-insensitive).
@@ -43,7 +44,8 @@ def mime_type_for_extension(ext: str) -> str | None:
 
 
 def extension_for_mime_type(mime_type: str) -> str:
-    """Return the preferred file extension for a MIME type.
+    """
+    Return the preferred file extension for a MIME type.
 
     Args:
         mime_type: A MIME type string (e.g. 'image/png').
@@ -59,7 +61,8 @@ def extract_images_to_sidecar(
     document: DocumentIRNode,
     sidecar_dir: Path,
 ) -> int:
-    """Walk a document IR tree and write embedded image data to a sidecar directory.
+    """
+    Walk a document IR tree and write embedded image data to a sidecar directory.
 
     For every DocumentIRImageNode that carries inline ``data``, the bytes are
     written to a file inside ``sidecar_dir`` and the node's ``url`` is updated

@@ -225,6 +225,7 @@ class CppLexer(CLexer):
             if self._input[self._position:self._position + len(closing_sequence)] == closing_sequence:
                 self._position += len(closing_sequence)
                 break
+
             self._position += 1
 
         self._tokens.append(Token(

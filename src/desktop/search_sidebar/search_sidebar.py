@@ -266,6 +266,7 @@ class SearchSidebar(SidebarBase):
         if regexp_enabled:
             try:
                 re.compile(query, 0 if case_sensitive else re.IGNORECASE)
+
             except re.error:
                 self._regexp_invalid = True
                 self._status_label.setText(self._language_manager.strings().find_invalid_regexp)
@@ -335,6 +336,7 @@ class SearchSidebar(SidebarBase):
         if match.line_number is None:
             if match.line_text:
                 return match.line_text
+
             return match.relative_path
 
         return f"L{match.line_number}: {match.line_text}"
@@ -372,6 +374,7 @@ class SearchSidebar(SidebarBase):
         if regexp:
             try:
                 pattern = re.compile(query, 0 if case_sensitive else re.IGNORECASE)
+
             except re.error:
                 return []
 

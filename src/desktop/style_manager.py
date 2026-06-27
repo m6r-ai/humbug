@@ -1,4 +1,5 @@
-"""Style manager for handling application-wide style and zoom settings.
+"""
+Style manager for handling application-wide style and zoom settings.
 
 Implements a singleton pattern to maintain consistent styling across components.
 Provides signals for style changes and utilities for scaled size calculations.
@@ -28,7 +29,8 @@ from desktop.palette import (
 from desktop.color_theme import ColorTheme
 
 class ColorMode(Enum):
-    """Resolved light/dark display axis, used internally for palette selection.
+    """
+    Resolved light/dark display axis, used internally for palette selection.
 
     This is not part of the public API — callers use ColorTheme to express their
     preference and ColorRole to request colours.  ColorMode is the internal
@@ -691,6 +693,7 @@ class StyleManager(QObject):
         changed = False
         for role in roles:
             if role in light_overrides:
+
                 del light_overrides[role]
                 changed = True
             if role in dark_overrides:
@@ -708,13 +711,15 @@ class StyleManager(QObject):
             self.style_changed.emit()
 
     def apply_custom_colors(self, custom: Dict[str, Dict[str, str]]) -> None:
-        """Replace all custom color overrides from a string-keyed dict (loaded from settings).
+        """
+        Replace all custom color overrides from a string-keyed dict (loaded from settings).
 
         Emits style_changed only when the colours actually differ from the current state,
         so clicking Settings Apply without changing anything produces no visual update.
         """
         new_light_overrides: Dict[ColorRole, str] = {}
         new_dark_overrides: Dict[ColorRole, str] = {}
+
         for role_name, mode_map in custom.items():
             try:
                 role = ColorRole[role_name]
@@ -807,7 +812,8 @@ class StyleManager(QObject):
         return space_width
 
     def base_font_pixel_height(self) -> float:
-        """Get the pixel height of the base font at the current zoom level.
+        """
+        Get the pixel height of the base font at the current zoom level.
 
         Returns the line height (ascent + descent + leading) in device pixels,
         which is the quantity that gets rounded to an integer by the font rasteriser.

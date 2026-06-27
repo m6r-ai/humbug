@@ -57,6 +57,7 @@ class MoveParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, MoveParserState), \
                 f"Expected MoveParserState, got {type(prev_parser_state).__name__}"
+
             in_element = prev_parser_state.in_element
             in_module_access = prev_parser_state.in_module_access
             prev_lexer_state = prev_parser_state.lexer_state
@@ -73,6 +74,7 @@ class MoveParser(Parser):
                 next_token = lexer.peek_next_token()
                 if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '::':
                     in_module_access = True
+
                 self._tokens.append(token)
                 continue
 

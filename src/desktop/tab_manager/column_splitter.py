@@ -26,6 +26,7 @@ class ColumnSplitterHandle(QSplitterHandle):
         parent = self.splitter()
         if isinstance(parent, ColumnSplitter):
             parent.set_user_resizing(True)
+
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
@@ -33,6 +34,7 @@ class ColumnSplitterHandle(QSplitterHandle):
         parent = self.splitter()
         if isinstance(parent, ColumnSplitter):
             parent.set_user_resizing(False)
+
         super().mouseReleaseEvent(event)
 
 
@@ -67,6 +69,7 @@ class ColumnSplitter(QSplitter):
         self._user_resizing = resizing
         if resizing:
             self.user_resize_started.emit()
+
         else:
             self.user_resize_finished.emit()
 

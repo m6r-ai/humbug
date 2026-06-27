@@ -443,6 +443,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Set foreground color based on context
         if is_in_heading:
             bold_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_HEADING_BRIGHT))
+
         else:
             bold_format.setForeground(self._style_manager.get_color(ColorRole.TEXT_BRIGHT))
 
@@ -755,6 +756,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         needs_update = existing is None
         if not needs_update and loaded_successfully and isinstance(existing, QImage):
             needs_update = existing.width() != image.width() or existing.height() != image.height()
+
         if needs_update:
             self._document.addResource(QTextDocument.ResourceType.ImageResource, resource_name, image)
 
@@ -770,6 +772,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         if loaded_successfully:
             if display_width > 0:
                 img_format.setWidth(display_width)
+
             if display_height > 0:
                 img_format.setHeight(display_height)
 

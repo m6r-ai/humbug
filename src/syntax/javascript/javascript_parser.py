@@ -48,6 +48,7 @@ class JavaScriptParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, JavaScriptParserState), \
                 f"Expected JavaScriptParserState, got {type(prev_parser_state).__name__}"
+
             in_element = prev_parser_state.in_element
             prev_lexer_state = prev_parser_state.lexer_state
 

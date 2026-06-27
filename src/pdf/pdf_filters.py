@@ -6,7 +6,8 @@ from pdf.pdf_errors import PDFParseError, PDFUnsupportedError
 
 
 def decode_stream(data: bytes, filter_name: str, decode_parms: dict[str, Any] | None = None) -> bytes:
-    """Decode a PDF stream using the named filter.
+    """
+    Decode a PDF stream using the named filter.
 
     Raises:
         PDFParseError: if the data is malformed for the given filter.
@@ -36,7 +37,8 @@ def decode_stream_filters(
     filters: list[str],
     decode_parms_list: list[dict[str, Any] | None]
 ) -> bytes:
-    """Apply a chain of filters in sequence, as PDF allows.
+    """
+    Apply a chain of filters in sequence, as PDF allows.
 
     Raises:
         PDFParseError: if any stage produces malformed data.
@@ -49,6 +51,7 @@ def decode_stream_filters(
 
 
 def _decode_flate(data: bytes, decode_parms: dict[str, Any] | None) -> bytes:
+
     try:
         decompressed = zlib.decompress(data)
     except zlib.error as e:
@@ -133,8 +136,10 @@ def _paeth(a: int, b: int, c: int) -> int:
     pa = abs(p - a)
     pb = abs(p - b)
     pc = abs(p - c)
+
     if pa <= pb and pa <= pc:
         return a
+
     if pb <= pc:
         return b
     return c
@@ -144,6 +149,7 @@ def _decode_ascii_hex(data: bytes) -> bytes:
     try:
         # Strip whitespace, stop at '>'
         hex_str = data.split(b">")[0]
+
         hex_str = hex_str.replace(b" ", b"").replace(b"\n", b"").replace(b"\r", b"").replace(b"\t", b"")
         return bytes.fromhex(hex_str.decode("ascii"))
     except (ValueError, UnicodeDecodeError) as e:
@@ -151,6 +157,7 @@ def _decode_ascii_hex(data: bytes) -> bytes:
 
 
 def _decode_ascii85(data: bytes) -> bytes:
+
     try:
         return base64.a85decode(data, adobe=True, ignorechars=b" \t\n\r")
     except ValueError as e:

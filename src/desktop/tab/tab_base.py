@@ -135,7 +135,8 @@ class TabBase(QFrame):
         return self._path
 
     def tool_name(self) -> str:
-        """Return the registered tool name for this tab type (e.g. 'editor', 'conversation').
+        """
+        Return the registered tool name for this tab type (e.g. 'editor', 'conversation').
 
         Used by TabManager for context type registration, tab info reporting, and
         icon selection.  Every concrete tab subclass must override this.
@@ -143,14 +144,16 @@ class TabBase(QFrame):
         raise NotImplementedError("Subclasses must implement tool_name")
 
     def tab_icon(self) -> str:
-        """Return the icon name used in the tab bar (e.g. 'editor', 'conversation').
+        """
+        Return the icon name used in the tab bar (e.g. 'editor', 'conversation').
 
         Defaults to tool_name().  Override only when the icon name differs.
         """
         return self.tool_name()
 
     def tab_title_from_path(self) -> str:
-        """Derive a display title from the tab's current path.
+        """
+        Derive a display title from the tab's current path.
 
         Used when restoring tabs and when updating labels after a rename.
         The default returns the basename of the path, which is correct for most
@@ -160,7 +163,8 @@ class TabBase(QFrame):
         return os.path.basename(self._path) if self._path else ""
 
     def on_modified_changed(self, modified: bool) -> None:
-        """Called by TabManager when this tab's modified state changes.
+        """
+        Called by TabManager when this tab's modified state changes.
 
         Override to implement tab-type-specific behaviour such as updating the
         tab label or making an ephemeral tab permanent.
@@ -170,7 +174,8 @@ class TabBase(QFrame):
         """
 
     def on_path_renamed(self, new_path: str) -> None:
-        """Called by TabManager when the file at this tab's path has been renamed.
+        """
+        Called by TabManager when the file at this tab's path has been renamed.
 
         The default implementation calls set_path() so file watching is updated.
         Override to also update the tab bar label or perform other tab-specific
@@ -183,10 +188,12 @@ class TabBase(QFrame):
         self.set_path(new_path)
 
     def register_context_models(self, registry: ContextRegistry) -> None:
-        """Register context models for this tab with the given registry.
+        """
+        Register context models for this tab with the given registry.
 
         Called after the tab is added to a column and after a tab is moved
         between columns.  The default implementation is a no-op.  Tabs that
+
         own a context model (editor, terminal, preview, conversation) override
         this to register it.
 
@@ -515,27 +522,31 @@ class TabBase(QFrame):
         raise NotImplementedError("Subclasses must implement update_status")
 
     def clear_history(self) -> None:
-        """Clear the tab's history if it has one.
+        """
+        Clear the tab's history if it has one.
 
         No-op by default.  Override in tab types that maintain a command or
         message history (e.g. ShellTab).
         """
 
     def can_show_conversation_settings_dialog(self) -> bool:
-        """Return True if this tab can show a conversation settings dialog.
+        """
+        Return True if this tab can show a conversation settings dialog.
 
         False by default.  Override in ConversationTab.
         """
         return False
 
     def show_conversation_settings_dialog(self) -> None:
-        """Show the conversation settings dialog if supported.
+        """
+        Show the conversation settings dialog if supported.
 
         No-op by default.  Override in ConversationTab.
         """
 
     def handle_esc_key(self) -> bool:
-        """Handle the Escape key if this tab has a use for it.
+        """
+        Handle the Escape key if this tab has a use for it.
 
         Returns True if the key was consumed, False otherwise.
         No-op by default.  Override in ConversationTab.
@@ -543,7 +554,8 @@ class TabBase(QFrame):
         return False
 
     def can_navigate_next_message(self) -> bool:
-        """Return True if this tab supports forward message/hunk navigation.
+        """
+        Return True if this tab supports forward message/hunk navigation.
 
         False by default.  Override in tabs that support navigation
         (ConversationTab, DiffTab, LogTab, ShellTab).
@@ -551,26 +563,30 @@ class TabBase(QFrame):
         return False
 
     def navigate_next_message(self) -> None:
-        """Navigate to the next message or hunk if supported.
+        """
+        Navigate to the next message or hunk if supported.
 
         No-op by default.  Override in tabs that support navigation.
         """
 
     def can_navigate_previous_message(self) -> bool:
-        """Return True if this tab supports backward message/hunk navigation.
+        """
+        Return True if this tab supports backward message/hunk navigation.
 
         False by default.  Override in tabs that support navigation.
         """
         return False
 
     def navigate_previous_message(self) -> None:
-        """Navigate to the previous message or hunk if supported.
+        """
+        Navigate to the previous message or hunk if supported.
 
         No-op by default.  Override in tabs that support navigation.
         """
 
     def is_navigating_as_hunks(self) -> bool:
-        """Return True if this tab navigates by diff hunks rather than messages.
+        """
+        Return True if this tab navigates by diff hunks rather than messages.
 
         False by default.  Override in DiffTab.
         """
@@ -586,7 +602,8 @@ class TabBase(QFrame):
         return None
 
     def apply_style(self) -> None:
-        """Apply current style settings to the tab and its content.
+        """
+        Apply current style settings to the tab and its content.
 
         Called by TabManager when the application style changes.  The default
         implementation is a no-op.  Subclasses that own styled content widgets

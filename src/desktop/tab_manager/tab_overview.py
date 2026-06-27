@@ -1,4 +1,5 @@
-"""Overview ("recents screen") overlay showing all open tabs as swipeable cards.
+"""
+Overview ("recents screen") overlay showing all open tabs as swipeable cards.
 
 This module is purely presentational.  It knows nothing about tabs, contexts
 or the mindspace: it consumes a list of TabOverviewEntry display records and

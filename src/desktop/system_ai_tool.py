@@ -405,6 +405,7 @@ class SystemAITool(AITool):
         if temperature is not None:
             if not isinstance(temperature, (int, float)):
                 raise AIToolExecutionError("'temperature' must be a number")
+
             if not 0.0 <= temperature <= 1.0:
                 raise AIToolExecutionError("'temperature' must be between 0.0 and 1.0")
 
@@ -427,6 +428,7 @@ class SystemAITool(AITool):
                 raise AIToolExecutionError(
                     f"Model '{model}' is not available. Available models: {', '.join(available_display)}"
                 )
+
             effective_model, effective_provider = matched_key
             model_config = AIConversationSettings.MODELS.get(matched_key)
             if model_config:
@@ -437,6 +439,7 @@ class SystemAITool(AITool):
                 raise AIToolExecutionError(
                     f"'reasoning_effort' must be one of: {', '.join(AIReasoningEffort.values())}"
                 )
+
             if effective_model and effective_provider:
                 supported = AIConversationSettings.get_supported_reasoning_efforts(effective_model, effective_provider)
                 if supported and reasoning_effort_arg not in supported:
@@ -444,6 +447,7 @@ class SystemAITool(AITool):
                         f"Model '{effective_model}' does not support reasoning_effort '{reasoning_effort_arg}'. "
                         f"Supported efforts: {', '.join(supported)}"
                     )
+
             reasoning_effort = reasoning_effort_arg
 
         try:
@@ -494,8 +498,10 @@ class SystemAITool(AITool):
             result_parts = [f"Created new conversation, tab ID: {context_id}"]
             if model:
                 result_parts.append(f"model: {model}")
+
             if temperature is not None:
                 result_parts.append(f"temperature: {temperature}")
+
             if reasoning_effort:
                 result_parts.append(f"reasoning_effort: {reasoning_effort}")
 
@@ -523,6 +529,7 @@ class SystemAITool(AITool):
 
         if file_path_arg:
             preview_path = self._validate_and_resolve_path(file_path_arg)
+
         else:
             preview_path = self._mindspace.get_absolute_path(".")
 
@@ -635,6 +642,7 @@ class SystemAITool(AITool):
             current_tab = self._tab_manager.get_current_tab()
             if not current_tab:
                 raise AIToolExecutionError("No current tab is open")
+
             tab_id = current_tab.tab_id()
 
         if not isinstance(tab_id, str):
@@ -824,11 +832,13 @@ class SystemAITool(AITool):
 
             if sys.platform == 'win32':
                 shell_env = os.environ.get('COMSPEC', 'cmd.exe')
+
             else:
                 shell_env = os.environ.get('SHELL', '/bin/sh')
 
             if os.path.isabs(shell_env):
                 shell_path = shell_env
+
             else:
                 shell_path = shell_env
                 for path_dir in os.environ.get('PATH', '').split(os.pathsep):

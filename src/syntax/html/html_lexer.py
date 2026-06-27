@@ -64,6 +64,7 @@ class HTMLLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, HTMLLexerState), \
                 f"Expected HTMLLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_tag = prev_lexer_state.in_tag
             self._tag_name = prev_lexer_state.tag_name
             self._seen_equals = prev_lexer_state.seen_equals

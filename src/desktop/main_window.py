@@ -1442,6 +1442,7 @@ class MainWindow(QMainWindow):
         if existing:
             if not ephemeral:
                 self._tab_manager.make_tab_permanent(existing.context_id)
+
             contexts.focus(existing.context_id)
 
         else:
@@ -1678,6 +1679,7 @@ class MainWindow(QMainWindow):
             tab = self._tab_manager.get_current_tab()
             if tab is None or not tab.can_save_as():
                 return
+
             tab.save_as()
             path = tab.path()
             self._sidebar_manager.reveal_and_select_file("files", path)
@@ -1962,6 +1964,7 @@ class MainWindow(QMainWindow):
                 path=full_path,
                 title=title,
             )
+
         except Exception as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
@@ -2093,6 +2096,7 @@ class MainWindow(QMainWindow):
                 path=path,
                 title=title,
             )
+
         except Exception as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
@@ -2367,7 +2371,8 @@ class MainWindow(QMainWindow):
             self.setCursor(Qt.CursorShape.SizeVerCursor)
 
     def _build_zoom_levels(self) -> None:
-        """Build the list of valid zoom factors from the current base font size.
+        """
+        Build the list of valid zoom factors from the current base font size.
 
         Zoom levels are chosen so that base_font_size * zoom is always an integer
         number of points.  Steps are ~10% of the current size (minimum 1pt), built

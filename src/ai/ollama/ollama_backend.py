@@ -30,8 +30,10 @@ class OllamaBackend(AIBackend):
         path = split.path.rstrip("/")
         if "/api/" in path:
             base_path = path.split("/api/", 1)[0]
+
         elif path.endswith("/api"):
             base_path = path[:-4]
+
         else:
             base_path = path
 
@@ -85,17 +87,22 @@ class OllamaBackend(AIBackend):
                     line = raw_line.decode().strip()
                     if not line:
                         continue
+
                     try:
                         obj = json.loads(line)
+
                     except json.JSONDecodeError:
                         continue
+
                     if "error" in obj:
                         raise ValueError(obj["error"])
+
                     if "status" in obj:
                         on_progress(obj["status"])
 
     def __init__(self, api_key: str, api_url: str | None) -> None:
-        """Initialize the Ollama backend.
+        """
+        Initialize the Ollama backend.
 
         Args:
             api_key: API key for authentication (not used in this case)

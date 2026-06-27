@@ -58,6 +58,7 @@ class MoveLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, MoveLexerState), \
                 f"Expected MoveLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_block_comment = prev_lexer_state.in_block_comment
 
         if self._in_block_comment:
@@ -170,9 +171,11 @@ class MoveLexer(Lexer):
             if self._position < self._input_len:
                 if self._input[self._position] == '8':
                     self._position += 1
+
                 elif (self._position + 1 < self._input_len and
                       self._input[self._position:self._position + 2] == '64'):
                     self._position += 2
+
                 elif (self._position + 2 < self._input_len and
                       self._input[self._position:self._position + 3] == '128'):
                     self._position += 3

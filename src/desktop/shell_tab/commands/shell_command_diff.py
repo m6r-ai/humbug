@@ -59,6 +59,7 @@ class ShellCommandDiff(ShellCommand):
         if existing:
             contexts.focus(existing.context_id)
             context_id = existing.context_id
+
         else:
             context_id = contexts.open(
                 context_type="diff",

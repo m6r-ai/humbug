@@ -56,6 +56,7 @@ class ShellCommandPreview(ShellCommand):
         existing = contexts.get_by_path_and_type(full_path, "preview")
         if existing:
             contexts.focus(existing.context_id)
+
         else:
             contexts.open(
                 context_type="preview",

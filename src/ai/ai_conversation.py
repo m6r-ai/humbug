@@ -1072,7 +1072,8 @@ class AIConversation:
         self._state = ConversationState.IDLE
 
     async def retry_last_request(self) -> List[str]:
-        """Retry the last request by removing all messages since the last user/tool input.
+        """
+        Retry the last request by removing all messages since the last user/tool input.
 
         This should only be called when the conversation is idle and the last message in history
         is a SYSTEM error message.  It removes that message plus any partial AI/reasoning/connected

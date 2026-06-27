@@ -362,6 +362,7 @@ class ConversationTab(TabBase):
             reasoning_display = strings.conversation_status_reasoning.format(
                 effort=settings.reasoning_effort.title()
             )
+
         else:
             reasoning_display = strings.conversation_status_no_reasoning
 
@@ -895,6 +896,7 @@ class ConversationTab(TabBase):
         self._close_find()
         if message_id is not None:
             self._conversation_widget.find_text_at_message(text, message_id, case_sensitive=case_sensitive, regexp=regexp)
+
         else:
             self._conversation_widget.find_text(text, True, case_sensitive=case_sensitive, regexp=regexp)
 

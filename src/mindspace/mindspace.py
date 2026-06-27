@@ -324,6 +324,7 @@ class Mindspace:
                 if 'path' in tab_state and os.path.isabs(tab_state['path']):
                     try:
                         tab_state['path'] = os.path.relpath(tab_state['path'], self._path)
+
                     except ValueError:
                         pass  # Path outside mindspace — keep absolute
 

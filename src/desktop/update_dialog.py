@@ -12,7 +12,8 @@ from desktop.url_opener import open_url
 
 
 class UpdateDialog(QDialog):
-    """Dialog shown when the user selects 'Check for Updates'.
+    """
+    Dialog shown when the user selects 'Check for Updates'.
 
     Displays the current version and the latest available version from GitHub,
     or a 'you are up to date' message if no newer version was found.
@@ -93,7 +94,8 @@ class UpdateDialog(QDialog):
         self._status_label.setText("")
 
     def set_result(self, current: str, latest: str | None, release_url: str | None) -> None:
-        """Update the dialog with the check result.
+        """
+        Update the dialog with the check result.
 
         Args:
             current: Current version string, e.g. "v46".

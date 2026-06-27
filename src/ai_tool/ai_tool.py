@@ -191,6 +191,7 @@ class AITool(ABC):
         class_name = self.__class__.__name__
         if class_name.endswith("AITool"):
             return class_name[:-6].lower()
+
         return class_name.lower()
 
     def _build_definition_from_operations(
@@ -383,6 +384,7 @@ class AITool(ABC):
                 sections.append(param.description)
                 if param.enum:
                     sections.append(f"Valid values: {', '.join(param.enum)}")
+
                 sections.append("")
 
             return "\n".join(sections)

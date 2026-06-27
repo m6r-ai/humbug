@@ -13,7 +13,8 @@ def _int_value(value: object) -> int:
 
 
 def parse(data: bytes) -> PDFDocument:
-    """Parse a PDF byte stream into a PDFDocument.
+    """
+    Parse a PDF byte stream into a PDFDocument.
 
     Raises:
         PDFParseError: if the file structure is invalid.
@@ -56,7 +57,8 @@ def _find_xref_offset(data: bytes) -> int:
 
 
 def _load_xref(tokenizer: PDFTokenizer, doc: PDFDocument, offset: int) -> None:
-    """Load cross-reference table(s) and trailer(s) starting from the given offset.
+    """
+    Load cross-reference table(s) and trailer(s) starting from the given offset.
 
     Handles chained xref tables via the /Prev trailer entry.
     """
@@ -72,10 +74,12 @@ def _load_xref(tokenizer: PDFTokenizer, doc: PDFDocument, offset: int) -> None:
         token = tokenizer.next_token()
 
         if token.type == TokenType.KEYWORD and token.value == "xref":
+
             _parse_xref_table(tokenizer, doc)
             trailer = _parse_trailer_dict(tokenizer)
         elif token.type == TokenType.INTEGER:
             # Could be an xref stream object: "N G obj"
+
             tokenizer.pos = saved_pos
             trailer = _parse_xref_stream(tokenizer, doc)
         else:
@@ -87,6 +91,7 @@ def _load_xref(tokenizer: PDFTokenizer, doc: PDFDocument, offset: int) -> None:
                 doc.trailer[key] = value
 
         prev = trailer.get("Prev")
+
         if isinstance(prev, int):
             offset = prev
         else:
@@ -194,10 +199,12 @@ def _parse_xref_stream(tokenizer: PDFTokenizer, doc: PDFDocument) -> dict[str, A
 
             fields = []
             for width in w:
+
                 if width == 0:
                     fields.append(0)
                 else:
                     val = 0
+
                     for byte in data[pos:pos + width]:
                         val = (val << 8) | byte
                     fields.append(val)
@@ -211,6 +218,7 @@ def _parse_xref_stream(tokenizer: PDFTokenizer, doc: PDFDocument) -> dict[str, A
 
             if entry_type == 0:
                 doc.xref[obj_num] = PDFXRefEntry(offset=fields[1], gen_num=fields[2], in_use=False)
+
             elif entry_type == 1:
                 doc.xref[obj_num] = PDFXRefEntry(offset=fields[1], gen_num=fields[2], in_use=True)
             elif entry_type == 2:
@@ -232,8 +240,10 @@ def _load_objects(tokenizer: PDFTokenizer, doc: PDFDocument) -> None:
             continue
 
         try:
+
             tokenizer.pos = entry.offset
             _parse_indirect_object(tokenizer, doc, obj_num)
+
         except (PDFParseError, PDFUnsupportedError):
             pass  # Skip unreadable objects; partial extraction is better than none
         except Exception:  # pylint: disable=broad-except
@@ -398,6 +408,7 @@ def _parse_value(tokenizer: PDFTokenizer) -> Any:
         gen_token = tokenizer.next_token()
         if gen_token.type == TokenType.INTEGER:
             ref_token = tokenizer.next_token()
+
             if ref_token.type == TokenType.REF_KW:
                 return PDFObjectRef(obj_num=_int_value(token.value), gen_num=_int_value(gen_token.value))
             tokenizer.pos = saved

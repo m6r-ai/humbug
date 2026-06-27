@@ -27,7 +27,8 @@ from document_ir import (
 
 
 def document_ir_to_markdown(document: DocumentIRDocumentNode) -> str:
-    """Convert a document_ir document tree to a Markdown string.
+    """
+    Convert a document_ir document tree to a Markdown string.
 
     Args:
         document: The root DocumentIRDocumentNode to serialise.
@@ -43,7 +44,8 @@ class _DocumentIRToMarkdownSerialiser:
     """Walks a document_ir tree and emits Markdown text."""
 
     def serialise(self, document: DocumentIRDocumentNode) -> str:
-        """Serialise a document to a Markdown string.
+        """
+        Serialise a document to a Markdown string.
 
         Args:
             document: The root document node.
@@ -65,7 +67,8 @@ class _DocumentIRToMarkdownSerialiser:
         depth: int,
         ordered_index: int | None,  # pylint: disable=unused-argument
     ) -> str | None:
-        """Serialise a single block node to a Markdown string.
+        """
+        Serialise a single block node to a Markdown string.
 
         Args:
             node: The block node to serialise.
@@ -168,7 +171,8 @@ class _DocumentIRToMarkdownSerialiser:
         depth: int,
         ordered_index: int | None,
     ) -> List[str]:
-        """Serialise a list item, returning a list of output lines.
+        """
+        Serialise a list item, returning a list of output lines.
 
         The first paragraph of the item is emitted on the marker line.
         Continuation paragraphs and nested lists are indented to align
@@ -181,6 +185,7 @@ class _DocumentIRToMarkdownSerialiser:
 
         Returns:
             A list of strings, one per output line.
+
         """
         indent = "    " * depth
         if ordered_index is not None:
@@ -196,6 +201,7 @@ class _DocumentIRToMarkdownSerialiser:
 
         for child in item.children:
             if isinstance(child, DocumentIRParagraphNode):
+
                 text = self._serialise_inline_children(child.children)
                 if is_first_para:
                     lines.append(f"{indent}{marker} {text}")
@@ -224,7 +230,8 @@ class _DocumentIRToMarkdownSerialiser:
         return lines
 
     def _serialise_definition_list(self, node: DocumentIRDefinitionListNode) -> str | None:
-        """Serialise a definition list using PHP Markdown Extra style.
+        """
+        Serialise a definition list using PHP Markdown Extra style.
 
         Definition terms are rendered as bold text.  Definition descriptions
         are rendered with a leading colon and three spaces (': ' style).
@@ -242,7 +249,8 @@ class _DocumentIRToMarkdownSerialiser:
         return "\n".join(lines) if lines else None
 
     def _serialise_table(self, node: DocumentIRTableNode) -> str | None:
-        """Serialise a table to GFM pipe-table syntax.
+        """
+        Serialise a table to GFM pipe-table syntax.
 
         If a header section is present it is emitted first with a separator
         row.  If there is no header, the first body row is treated as the
@@ -263,6 +271,7 @@ class _DocumentIRToMarkdownSerialiser:
                         body_rows.append(row)
 
         if not header_rows and not body_rows:
+
             return None
 
         # Determine the effective header and data rows
@@ -302,6 +311,7 @@ class _DocumentIRToMarkdownSerialiser:
 
         # Build separator row based on alignment
         sep_cells: List[str] = []
+
         for c, alignment in enumerate(alignments):
             w = col_widths[c]
             if alignment == "center":
@@ -347,7 +357,8 @@ class _DocumentIRToMarkdownSerialiser:
         return cells[:col_count]
 
     def _serialise_cell(self, cell: DocumentIRTableCellNode) -> str:
-        """Serialise a table cell's content to a single-line string.
+        """
+        Serialise a table cell's content to a single-line string.
 
         Inline children are serialised directly; block children (paragraphs,
         etc.) have their text extracted and joined with spaces.
@@ -382,7 +393,8 @@ class _DocumentIRToMarkdownSerialiser:
         return "| " + " | ".join(padded) + " |"
 
     def _serialise_inline_children(self, children: Sequence[DocumentIRNode]) -> str:
-        """Serialise a list of inline nodes to a Markdown string.
+        """
+        Serialise a list of inline nodes to a Markdown string.
 
         Adjacent DocumentIRTextSpanNodes with identical formatting are coalesced
         into a single span before serialisation.  This prevents artefacts such as
@@ -399,6 +411,7 @@ class _DocumentIRToMarkdownSerialiser:
             ):
                 prev = coalesced[-1]
                 coalesced[-1] = DocumentIRTextSpanNode(
+
                     content=prev.content + child.content,
                     bold=prev.bold,
                     italic=prev.italic,

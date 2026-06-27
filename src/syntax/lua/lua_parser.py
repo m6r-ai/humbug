@@ -49,6 +49,7 @@ class LuaParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, LuaParserState), \
                 f"Expected LuaParserState, got {type(prev_parser_state).__name__}"
+
             in_table_access = prev_parser_state.in_table_access
             prev_lexer_state = prev_parser_state.lexer_state
 

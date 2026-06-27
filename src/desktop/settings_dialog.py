@@ -929,6 +929,7 @@ class SettingsDialog(QDialog):
         for provider_id, display in provider_names.items():
             if provider_id in providers_with_models:
                 items.append((display, provider_id))
+
         self._model_filter_combo.set_items(items)
 
     def _populate_model_combo(self, ai_backends: Dict, filter_provider: str | None) -> None:
@@ -988,6 +989,7 @@ class SettingsDialog(QDialog):
         pull_row = controls.get("pull_row")
         if pull_row is None:
             return
+
         enabled = cast(SettingsSwitch, controls["enable"]).get_value()
         name = cast(SettingsTextField, controls["pull_name"]).get_value().strip()
         cast(SettingsActionRow, pull_row).button().setEnabled(bool(enabled and name))
@@ -1009,6 +1011,7 @@ class SettingsDialog(QDialog):
         backend_class = self._ai_manager.get_backend_class(backend_id)
         if backend_class is None:
             return
+
         api_url = url or self._ai_manager.get_default_url(backend_id)
         backend = backend_class(api_key="", api_url=api_url)
 
@@ -1025,9 +1028,11 @@ class SettingsDialog(QDialog):
                 self._refresh_model_combo()
                 self._update_manage_button_state(backend_id)
                 pull_row.set_success(strings.ollama_pull_success.format(model_name))
+
             except Exception as exc:  # pylint: disable=broad-except
                 pull_row.set_error(_pull_error_message(exc))
                 self._logger.warning("pull_model failed for %s: %s", model_name, exc)
+
             finally:
                 self._update_pull_button_state(backend_id)
 
@@ -1047,6 +1052,7 @@ class SettingsDialog(QDialog):
         if backend_class is None:
             fetch_row.set_status("Unknown provider.")
             return
+
         api_url = url or self._ai_manager.get_default_url(backend_id)
         backend = backend_class(api_key=api_key, api_url=api_url)
 
@@ -1112,6 +1118,7 @@ class SettingsDialog(QDialog):
         self._update_manage_button_state(backend_id)
         if newly_added:
             fetch_row.set_success(f"Added {len(newly_added)} model(s).")
+
         else:
             fetch_row.set_status("Local model list already up to date.")
 

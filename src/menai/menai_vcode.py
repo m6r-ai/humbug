@@ -38,6 +38,7 @@ class MenaiVCodeReg:
     def __str__(self) -> str:
         if self.hint:
             return f"r{self.id}({self.hint})"
+
         return f"r{self.id}"
 
     def __repr__(self) -> str:

@@ -325,7 +325,8 @@ class DiffTab(TabBase):
         self._diff_widget.clear_highlights()
 
     def _find_next(self, forward: bool = True) -> None:
-        """Find the next or previous match and update the status label.
+        """
+        Find the next or previous match and update the status label.
 
         Args:
             forward: If True search forward; if False search backward.

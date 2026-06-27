@@ -1,4 +1,5 @@
-"""Menai AST Node hierarchy - compile-time representation with source location metadata.
+"""
+Menai AST Node hierarchy - compile-time representation with source location metadata.
 
 This module defines the Abstract Syntax Tree node types used during compilation.
 These are separate from runtime MenaiValue types to avoid carrying metadata overhead
@@ -174,6 +175,7 @@ class MenaiASTString(MenaiASTNode):
                 result.append(f'\\u{ord(char):04x}')
 
             else:
+
                 result.append(char)  # Keep Unicode as-is
         return ''.join(result)
 
@@ -258,7 +260,8 @@ class MenaiASTList(MenaiASTNode):
 
 @dataclass(frozen=True)
 class MenaiASTListLiteral(MenaiASTNode):
-    """A fully-constant list literal produced by the constant folder.
+    """
+    A fully-constant list literal produced by the constant folder.
 
     Distinct from MenaiASTList (which represents a call or special form) so
     that the IR builder can unambiguously treat it as a single constant rather
@@ -279,7 +282,8 @@ class MenaiASTListLiteral(MenaiASTNode):
 
 @dataclass(frozen=True)
 class MenaiASTSet(MenaiASTNode):
-    """A fully-constant set literal produced by the constant folder.
+    """
+    A fully-constant set literal produced by the constant folder.
 
     Distinct from a (set ...) call so the IR builder can treat it as a single
     constant rather than a runtime construction.  All elements must be
@@ -300,7 +304,8 @@ class MenaiASTSet(MenaiASTNode):
 
 @dataclass(frozen=True)
 class MenaiASTDict(MenaiASTNode):
-    """Represents a dict literal in the AST.
+    """
+    Represents a dict literal in the AST.
 
     Carries key-value pairs as parallel tuples of already-converted
     MenaiValue objects (not AST nodes), mirroring MenaiASTList's approach

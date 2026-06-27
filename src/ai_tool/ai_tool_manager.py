@@ -43,6 +43,7 @@ class AIToolManager:
                 description=definition.description,
                 enabled_by_default=registered_tool.enabled_by_default
             ))
+
         return configs
 
     def register_tool(self, tool: AITool, display_name: str, enabled_by_default: bool = True) -> None:

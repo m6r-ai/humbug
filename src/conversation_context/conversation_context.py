@@ -171,6 +171,7 @@ class ConversationContext:
                 msg_dict = msg.to_transcript_dict()
                 msg_dict["index"] = message_index
                 return msg_dict
+
             return None
 
         for idx, msg in enumerate(messages):
@@ -231,8 +232,10 @@ class ConversationContext:
             flags = 0 if case_sensitive else re.IGNORECASE
             try:
                 pattern = re.compile(search_text, flags)
+
             except re.error as e:
                 raise ValueError(f"Invalid regular expression: {e}") from e
+
         else:
             pattern = None
 
@@ -268,6 +271,7 @@ class ConversationContext:
                     pos = haystack.find(search_str, pos)
                     if pos == -1:
                         break
+
                     context_start = max(0, pos - 50)
                     context_end = min(len(content), pos + len(search_text) + 50)
                     matches.append({
@@ -282,6 +286,7 @@ class ConversationContext:
                     })
                     if len(matches) >= max_results:
                         break
+
                     pos += 1
 
             if len(matches) >= max_results:

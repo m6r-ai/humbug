@@ -195,18 +195,21 @@ class EditorContext:
                 cursor = self._document.find(pattern, cursor, find_flags)
                 if cursor.isNull():
                     break
+
                 matches.append({
                     'line': cursor.blockNumber() + 1,
                     'column': cursor.columnNumber() + 1,
                     'match_text': cursor.selectedText(),
                     'context': cursor.block().text(),
                 })
+
         else:
             cursor = QTextCursor(self._document)
             while True:
                 cursor = self._document.find(search_text, cursor, find_flags)
                 if cursor.isNull():
                     break
+
                 matches.append({
                     'line': cursor.blockNumber() + 1,
                     'column': cursor.columnNumber() + 1,
@@ -258,6 +261,7 @@ class EditorContext:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 saved_content = f.read()
+
         except OSError:
             return ''
 

@@ -337,6 +337,7 @@ class SidebarBreadcrumbContainer(QWidget):
                 bc_rh = self._breadcrumb_bar.rowHeight(bc_index)
                 if bc_rh > 0:
                     self._bc_row_height = bc_rh
+
             topmost_path = self._tree_view.get_path_from_index(index) or ""
             topmost_is_expanded = self._tree_view.isExpanded(index)
 

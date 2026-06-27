@@ -75,6 +75,7 @@ class JavaLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, JavaLexerState), \
                 f"Expected JavaLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_javadoc = prev_lexer_state.in_javadoc
             self._in_text_block = prev_lexer_state.in_text_block
@@ -155,6 +156,7 @@ class JavaLexer(Lexer):
             if self._input[self._position] == '\\':
                 self._position += 2  # Skip escape sequence
                 continue
+
             self._position += 1
 
         if self._position < self._input_len:
@@ -250,11 +252,14 @@ class JavaLexer(Lexer):
             if next_char == 'x':  # Hexadecimal
                 self._position += 2
                 self._read_hex_digits()
+
             elif next_char == 'b':  # Binary
                 self._position += 2
                 self._read_binary_digits()
+
             else:  # Octal or decimal
                 self._read_decimal_number()
+
         else:
             self._read_decimal_number()
 
@@ -276,6 +281,7 @@ class JavaLexer(Lexer):
             ch = self._input[self._position]
             if not (self._is_hex_digit(ch) or ch == '_'):
                 break
+
             self._position += 1
 
     def _read_binary_digits(self) -> None:
@@ -284,6 +290,7 @@ class JavaLexer(Lexer):
             ch = self._input[self._position]
             if not (self._is_binary_digit(ch) or ch == '_'):
                 break
+
             self._position += 1
 
     def _read_decimal_number(self) -> None:
@@ -296,6 +303,7 @@ class JavaLexer(Lexer):
             ch = self._input[self._position]
             if not (self._is_digit(ch) or ch == '_'):
                 break
+
             self._position += 1
 
         # Check for decimal point
@@ -306,6 +314,7 @@ class JavaLexer(Lexer):
                 ch = self._input[self._position]
                 if not (self._is_digit(ch) or ch == '_'):
                     break
+
                 self._position += 1
 
         # Check for exponent
@@ -315,10 +324,12 @@ class JavaLexer(Lexer):
                 self._position += 1
                 if self._position < self._input_len and self._input[self._position] in ('+', '-'):
                     self._position += 1
+
                 while self._position < self._input_len:
                     ch = self._input[self._position]
                     if not (self._is_digit(ch) or ch == '_'):
                         break
+
                     self._position += 1
 
     def _read_identifier_or_keyword(self) -> None:
@@ -335,6 +346,7 @@ class JavaLexer(Lexer):
         value = self._input[start:self._position]
         if self._is_keyword(value):
             self._tokens.append(Token(type=TokenType.KEYWORD, value=value, start=start))
+
         else:
             self._tokens.append(Token(type=TokenType.IDENTIFIER, value=value, start=start))
 
@@ -374,13 +386,16 @@ class JavaLexer(Lexer):
         next_char = self._input[self._position + 1]
         if next_char == '/':
             self._read_line_comment()
+
         elif next_char == '*':
             if (self._position + 2 < self._input_len and
                 self._input[self._position + 2] == '*'):
                 self._in_javadoc = True
                 self._read_block_comment(3)
+
             else:
                 self._read_block_comment(2)
+
         else:
             self._read_operator()
 
@@ -411,6 +426,7 @@ class JavaLexer(Lexer):
                 self._in_javadoc = False
                 self._position += 2
                 break
+
             self._position += 1
 
         if self._in_block_comment:

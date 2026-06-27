@@ -141,6 +141,7 @@ class PreviewFileContent(PreviewContentWidget):
                 syntax=ProgrammingLanguageUtils.get_display_name(self._syntax)
             )
             self._syntax_header.setText(syntax_header)
+
         if self._edit_button:
             self._edit_button.setToolTip(strings.tooltip_edit_file)
 

@@ -62,6 +62,7 @@ class CSharpParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, CSharpParserState), \
                 f"Expected CSharpParserState, got {type(prev_parser_state).__name__}"
+
             in_element = prev_parser_state.in_element
             in_generic = prev_parser_state.in_generic
             generic_depth = prev_parser_state.generic_depth

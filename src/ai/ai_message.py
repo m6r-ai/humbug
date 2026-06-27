@@ -211,7 +211,8 @@ class AIMessage:
 
     @classmethod
     def from_transcript_dict(cls, data: Dict) -> 'AIMessage':
-        """Create a Message instance from transcript dictionary format.
+        """
+        Create a Message instance from transcript dictionary format.
 
         Args:
             data: Dictionary containing message data

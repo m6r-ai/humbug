@@ -965,6 +965,7 @@ class ConversationWidget(QWidget):
                         MindspaceLogLevel.INFO,
                         f"Human indicated uncertainty about tool call: {label}"
                     )
+
             self._pending_tool_call_approval.remove_tool_approval_ui()
             self._pending_tool_call_approval = None
 
@@ -2583,7 +2584,8 @@ class ConversationWidget(QWidget):
             )
 
     def _extract_pdf_text(self, path: str) -> str | None:
-        """Extract text from a PDF file, showing an error dialog on failure.
+        """
+        Extract text from a PDF file, showing an error dialog on failure.
 
         Returns the extracted text, or None if extraction failed or was unsupported.
         """
@@ -2621,13 +2623,15 @@ class ConversationWidget(QWidget):
             return None
 
     def _extract_docx_text(self, path: str) -> str | None:
-        """Extract text from a DOCX file, showing an error dialog on failure.
+        """
+        Extract text from a DOCX file, showing an error dialog on failure.
 
         Returns the extracted text, or None if extraction failed or was unsupported.
         """
         strings = self._language_manager.strings()
         filename = os.path.basename(path)
         try:
+
             with open(path, "rb") as f:
                 data = f.read()
             return extract_docx_text(data)
@@ -2849,7 +2853,8 @@ class ConversationWidget(QWidget):
         self.status_updated.emit()
 
     def _set_cursor_position(self, position: Dict[str, int]) -> None:
-        """Set cursor position in input area.
+        """
+        Set cursor position in input area.
 
         Args:
             position: Dictionary with 'line' and 'column' keys
@@ -2860,7 +2865,8 @@ class ConversationWidget(QWidget):
         self._input.set_cursor_position(position)
 
     def _get_cursor_position(self) -> Dict[str, int]:
-        """Get current cursor position from input area.
+        """
+        Get current cursor position from input area.
 
         Returns:
             Dictionary with 'line' and 'column' keys
@@ -2990,7 +2996,8 @@ class ConversationWidget(QWidget):
         case_sensitive: bool = False,
         regexp: bool = False,
     ) -> Tuple[int, int, bool]:
-        """Highlight all matches and scroll to the first match in the message with the given ID.
+        """
+        Highlight all matches and scroll to the first match in the message with the given ID.
 
         Falls back to the first match in the conversation if the message is not found or has no matches.
 
@@ -3009,6 +3016,7 @@ class ConversationWidget(QWidget):
 
         for widget_index, (widget, widget_matches) in enumerate(self._matches):
             if isinstance(widget, ConversationMessage) and widget.message_id() == message_id:
+
                 if self._current_widget_index == widget_index:
                     self._current_match_index = (self._current_match_index + 1) % len(widget_matches)
                 else:
@@ -3021,7 +3029,8 @@ class ConversationWidget(QWidget):
         return self.get_match_status()
 
     def _ensure_matches(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:
-        """Populate _matches for the given search without navigating.
+        """
+        Populate _matches for the given search without navigating.
 
         If the search parameters have changed, clears existing state and re-scans.
         If they are unchanged and matches are already populated, does nothing.
@@ -3316,6 +3325,7 @@ class ConversationWidget(QWidget):
         messages = history.get_messages()
 
         # Find by index
+
         if message_index is not None:
             if 0 <= message_index < len(messages):
                 msg = messages[message_index]

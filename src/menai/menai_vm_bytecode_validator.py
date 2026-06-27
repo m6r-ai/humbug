@@ -50,6 +50,7 @@ class ValidationError(Exception):
 
         if self.context:
             parts.append(f"  context: {self.context}")
+
         return "\n".join(parts)
 
 
@@ -329,6 +330,7 @@ class BytecodeValidator:
         initial_initialized: Set[int] = set()
         if code.param_count > 0:
             initial_initialized.update(range(code.param_count))
+
         n_captured = len(code.free_vars)
         if n_captured > 0:
             initial_initialized.update(range(code.param_count, code.param_count + n_captured))
@@ -477,6 +479,7 @@ class BytecodeValidator:
             if opcode == Opcode.MAKE_CLOSURE:
                 current_initialized.add(instr.dest)
                 current_closures[instr.dest] = instr.src0
+
             elif opcode not in self.NO_DEST_OPCODES:
                 current_initialized.add(instr.dest)
                 current_closures.pop(instr.dest, None)
@@ -501,6 +504,7 @@ class BytecodeValidator:
                     if merged_init != existing_init or merged_closures != existing_closures:
                         initialized_at[succ_idx] = (merged_init, merged_closures)
                         worklist.append(succ_idx)
+
                 else:
                     initialized_at[succ_idx] = (
                         current_initialized.copy() if need_copy else current_initialized,
@@ -593,6 +597,7 @@ class BytecodeValidator:
             idx = worklist.popleft()
             if idx not in blocks or blocks[idx].visited:
                 continue
+
             blocks[idx].visited = True
             worklist.extend(blocks[idx].successors)
 

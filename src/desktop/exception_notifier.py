@@ -18,6 +18,7 @@ class ExceptionNotifier(QObject):
         """Ensure only one instance exists."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+
         return cls._instance
 
     def __init__(self) -> None:

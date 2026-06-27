@@ -64,6 +64,7 @@ class IRUseCounts:
         if frame_id >= len(self.frames):
 
             return 0
+
         return self.frames[frame_id].counts.get(binding_id, 0)
 
 
@@ -118,6 +119,7 @@ class MenaiIRUseCounter:
         for scope in reversed(scope_stack):
             if name in scope:
                 return scope[name]
+
         return None
 
     def _walk(
@@ -174,6 +176,7 @@ class MenaiIRUseCounter:
         elif isinstance(ir, MenaiIRTrace):
             for msg in ir.message_plans:
                 self._walk(msg, result, scope_stack, current_frame_id)
+
             self._walk(ir.value_plan, result, scope_stack, current_frame_id)
 
         elif isinstance(ir, (MenaiIRConstant, MenaiIRQuote, MenaiIREmptyList, MenaiIRError)):

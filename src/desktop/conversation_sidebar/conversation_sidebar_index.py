@@ -383,6 +383,7 @@ class ConversationSidebarIndex(QObject):
             result = self._refresh_file_if_changed(path)
             if result == "structure":
                 structure_changed = True
+
             elif result == "content":
                 content_changed = True
 
@@ -390,6 +391,7 @@ class ConversationSidebarIndex(QObject):
             self._recompute_fork_edges()
             self.structure_changed.emit()
             self.changed.emit()
+
         elif content_changed:
             self.changed.emit()
 

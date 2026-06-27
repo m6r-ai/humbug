@@ -63,6 +63,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
             new_ir = self._opt(new_ir, frame_stack=[0])
             if self._eliminations == prev_eliminations:
                 break
+
         return new_ir, self._eliminations > 0
 
     def _opt(self, ir: MenaiIRExpr, frame_stack: List[int]) -> MenaiIRExpr:
@@ -129,6 +130,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
             if counts.total_count(current_frame, id(binding)) == 0:
                 self._eliminations += 1
                 continue
+
             live.append((name, self._opt(value_plan, frame_stack)))
 
         opt_body = self._opt(ir.body_plan, frame_stack)

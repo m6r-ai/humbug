@@ -183,6 +183,7 @@ class MenaiASTDesugarer:
             # MenaiASTStruct nodes are already fully resolved — pass through as-is
             if isinstance(expr, MenaiASTStruct):
                 self._struct_registry[expr.name] = expr
+
             return expr
 
         if expr.is_empty():
@@ -499,6 +500,7 @@ class MenaiASTDesugarer:
                     runs.append(('let', current_batch))
                     current_batch = []
                     current_batch_names = set()
+
                 runs.append(('letrec', [group]))
 
             else:
@@ -1155,6 +1157,7 @@ class MenaiASTDesugarer:
                 MenaiASTList(tuple(binding_list)),
                 result_expr
             ))
+
         else:
             then_expr = result_expr
 
@@ -1468,6 +1471,7 @@ class MenaiASTDesugarer:
             # Regular pattern - add test and bindings
             if not (isinstance(test, MenaiASTBoolean) and test.value):
                 element_tests.append(test)
+
             pattern_bindings.extend(bindings)
 
     def _build_list_pattern_clause(
@@ -1669,7 +1673,8 @@ class MenaiASTDesugarer:
         expr: MenaiASTList,
         struct_node: MenaiASTStruct
     ) -> MenaiASTNode:
-        """Desugar a struct constructor call (TypeName field1 field2 ...).
+        """
+        Desugar a struct constructor call (TypeName field1 field2 ...).
 
         Validates arity against the struct definition and emits a
         (MenaiASTStruct field1 field2 ...) list where the MenaiASTStruct node
@@ -1708,7 +1713,8 @@ class MenaiASTDesugarer:
         temp_var: str,
         struct_node: MenaiASTStruct
     ) -> Tuple[MenaiASTNode, List[Tuple[str, Any]]]:
-        """Desugar a struct destructuring pattern (TypeName field1 field2 ...).
+        """
+        Desugar a struct destructuring pattern (TypeName field1 field2 ...).
 
         Emits a ($struct-type? TypeName tmp) type check as the test, then
         uses the same list-pattern machinery to extract and bind each field

@@ -196,7 +196,8 @@ class ConversationInput(ConversationMessage):
         self._role_label.style().polish(self._role_label)
 
     def chrome_height(self) -> int:
-        """Return the height of all chrome in the input widget except the text area.
+        """
+        Return the height of all chrome in the input widget except the text area.
 
         This accounts for layout margins, inter-widget spacing, the 1px top spacing
         item, the banner, and the attachments bar when it is visible.

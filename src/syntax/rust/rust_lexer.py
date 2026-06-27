@@ -64,6 +64,7 @@ class RustLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, RustLexerState), \
                 f"Expected RustLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._block_comment_depth = prev_lexer_state.block_comment_depth
 
@@ -231,6 +232,7 @@ class RustLexer(Lexer):
                     start=start
                 ))
                 return
+
             if ch == '<':
                 self._position += 1
                 # Check for <<=
@@ -243,6 +245,7 @@ class RustLexer(Lexer):
                         start=start
                     ))
                     return
+
                 self._tokens.append(Token(
                     type=TokenType.OPERATOR,
                     value='<<',
@@ -359,6 +362,7 @@ class RustLexer(Lexer):
                 if (self._position < self._input_len and
                         self._input[self._position] in '+-'):
                     self._position += 1
+
                 self._read_digits(self._is_digit)
 
         # Read type suffix
@@ -378,9 +382,11 @@ class RustLexer(Lexer):
             if is_valid_digit(ch):
                 has_digit = True
                 self._position += 1
+
             elif ch == '_' and has_digit:
                 # Ensure we've seen at least one digit before a separator
                 self._position += 1
+
             else:
                 break
 
@@ -402,9 +408,11 @@ class RustLexer(Lexer):
                 if (self._position < self._input_len and
                         self._is_digit(self._input[self._position])):
                     self._position += 1
+
             else:
                 # Invalid float suffix, reset position
                 self._position = suffix_start
+
             return
 
         # Check for integer suffix
@@ -419,6 +427,7 @@ class RustLexer(Lexer):
         if self._position < self._input_len:
             if self._input[self._position:].startswith('size'):
                 self._position += 4
+
             elif (self._position + 1 < self._input_len and
                     self._is_digit(self._input[self._position]) and
                     self._is_digit(self._input[self._position + 1])):
@@ -426,6 +435,7 @@ class RustLexer(Lexer):
                 if (self._position < self._input_len and
                         self._is_digit(self._input[self._position])):
                     self._position += 1
+
             else:
                 # Invalid suffix, reset position
                 self._position = suffix_start

@@ -108,6 +108,7 @@ class FilesystemDiffApplier(DiffApplier):
                     raise DiffApplicationError(
                         f"Cannot delete line {current_line + 1}: document only has {len(document)} lines"
                     )
+
                 del document[current_line]
                 # Don't increment current_line (next line moved into this position)
 

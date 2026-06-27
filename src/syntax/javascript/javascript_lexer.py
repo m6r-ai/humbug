@@ -60,6 +60,7 @@ class JavaScriptLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, JavaScriptLexerState), \
                 f"Expected JavaScriptLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_template_literal = prev_lexer_state.in_template_literal
 

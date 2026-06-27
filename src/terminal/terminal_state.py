@@ -165,6 +165,7 @@ class TerminalState:
             def component_to_value(component: int) -> int:
                 if component == 0:
                     return 0
+
                 return 40 * component + 55
 
             r = component_to_value(red)
@@ -371,6 +372,7 @@ class TerminalState:
                 if len(color_parts) >= 2:
                     if len(color_parts) == 1:  # Query
                         pass
+
                     else:  # Set
                         pass
 
@@ -543,6 +545,7 @@ class TerminalState:
 
             if mode == 0:  # Clear tab stop at current position
                 buffer.clear_tab_stop()
+
             elif mode == 3:  # Clear all tab stops
                 buffer.clear_all_tab_stops()
 
@@ -751,6 +754,7 @@ class TerminalState:
                     False,
                     None
                 )
+
             self._alternate_buffer.restore_state(metadata['alternate_buffer'])
 
         # Restore terminal settings

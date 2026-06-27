@@ -69,8 +69,10 @@ class JSONParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, JSONParserState), \
                 f"Expected JSONParserState, got {type(prev_parser_state).__name__}"
+
             assert isinstance(prev_parser_state.context_stack, list), \
                 f"Expected context_stack to be a list, got {type(prev_parser_state.context_stack).__name__}"
+
             context_stack = prev_parser_state.context_stack.copy()
             current_state = prev_parser_state.current_state
             prev_lexer_state = prev_parser_state.lexer_state
@@ -99,6 +101,7 @@ class JSONParser(Parser):
                 if token.value == '}':
                     if context_stack and context_stack[-1] == JSONContext.OBJECT:
                         context_stack.pop()
+
                     current_state = self._get_state_after_value(context_stack)
                     self._tokens.append(token)
                     continue
@@ -112,6 +115,7 @@ class JSONParser(Parser):
                 if token.value == ']':
                     if context_stack and context_stack[-1] == JSONContext.ARRAY:
                         context_stack.pop()
+
                     current_state = self._get_state_after_value(context_stack)
                     self._tokens.append(token)
                     continue

@@ -29,7 +29,8 @@ from document_ir.document_ir_node import (
 
 
 def document_ir_to_html(document: DocumentIRDocumentNode) -> str:
-    """Serialise a document_ir tree to a complete HTML document string.
+    """
+    Serialise a document_ir tree to a complete HTML document string.
 
     The output is a well-formed HTML5 document with a minimal <head> (charset
     meta tag and a title derived from the first H1, if present) and a <body>
@@ -94,7 +95,8 @@ class _HtmlSerialiser(DocumentIRVisitor):
     """Visitor that serialises document_ir nodes to HTML lines."""
 
     def __init__(self, lines: List[str]) -> None:
-        """Initialise the serialiser.
+        """
+        Initialise the serialiser.
 
         Args:
             lines: The list to which output lines are appended.
@@ -210,6 +212,7 @@ class _HtmlSerialiser(DocumentIRVisitor):
     def visit_DocumentIRListItemNode(self, node: DocumentIRListItemNode) -> None:  # pylint: disable=invalid-name
         """Serialise a list item."""
         inner = self._emit_inline(node)
+
         if inner:
             self._emit(f"<li>{inner}</li>")
         else:

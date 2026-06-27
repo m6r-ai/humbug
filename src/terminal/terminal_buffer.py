@@ -232,6 +232,7 @@ class TerminalBuffer:
                     'fg_color': fg,
                     'bg_color': bg
                 })
+
             lines_data.append({'continuation': line.continuation, 'cells': cells})
 
         return BufferState(
@@ -299,6 +300,7 @@ class TerminalBuffer:
                     char_data['fg_color'],
                     char_data['bg_color']
                 )
+
             self._lines.append(line)
 
         # Restore cursor state
@@ -461,6 +463,7 @@ class TerminalBuffer:
                 cell_offset = 0
                 for k in range(lines_before_cursor):
                     cell_offset += physical_lines[logical_start + k].width
+
                 cell_offset += cursor_col_before
 
             # Strip trailing spaces from the logical line so that re-wrapping
@@ -578,7 +581,8 @@ class TerminalBuffer:
         cursor_delayed_wrap: bool,
         max_cursor_abs: int,
     ) -> None:
-        """Apply cursor, max_cursor, scroll region, and tab stop updates after a resize.
+        """
+        Apply cursor, max_cursor, scroll region, and tab stop updates after a resize.
 
         Called by resize() after the line list has been committed and trimmed.
         Both the rows-only fast path and the full reflow path share this tail.

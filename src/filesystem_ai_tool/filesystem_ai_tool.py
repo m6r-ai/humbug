@@ -583,6 +583,7 @@ class FileSystemAITool(AITool):
                 f"This file is not in your pre-approved list. "
                 f"Review the paths carefully before approving."
             )
+
         else:
             context = (
                 f"The AI is requesting to read a file outside the mindspace:\n\n"
@@ -894,6 +895,7 @@ class FileSystemAITool(AITool):
         if path.exists():
             context = f"This will write content to '{display_path}'. " \
                 "It will overwrite the existing file and the previous contents will be lost."
+
             destructive = True
 
         else:
@@ -1288,6 +1290,7 @@ class FileSystemAITool(AITool):
         if destination_path.exists():
             context = f"Copy '{source_display_path}' to '{dest_display_path}'. " \
                 "This will overwrite the existing destination file and its contents will be lost."
+
             destructive = True
 
         else:
@@ -1485,6 +1488,7 @@ class FileSystemAITool(AITool):
         if regexp:
             try:
                 return re.compile(search_text, flags)
+
             except re.error as e:
                 raise AIToolExecutionError(f"Invalid regular expression: {e}") from e
 
@@ -1657,6 +1661,7 @@ class FileSystemAITool(AITool):
                 await self._validate_and_resolve_path(
                     "path", str(file_path), tool_call, request_authorization, allow_external=True
                 )
+
             except (AIToolExecutionError, AIToolAuthorizationDenied):
                 continue
 
@@ -1677,6 +1682,7 @@ class FileSystemAITool(AITool):
                             f"Search results exceed the {max_response_bytes // 1024}KB response size limit. "
                             "Use a more specific search pattern, the include filter, or reduce max_results."
                         )
+
                     response_bytes += match_bytes
                     file_matches.append({"line": line_num, "content": content})
                     total_matches += 1
@@ -1719,12 +1725,14 @@ class FileSystemAITool(AITool):
                         await self._validate_and_resolve_path(
                             "path", str(file_path), tool_call, request_authorization, allow_external=True
                         )
+
                     except (AIToolExecutionError, AIToolAuthorizationDenied):
                         continue
 
                     try:
                         with open(file_path, 'r', encoding=encoding) as f:
                             lines = f.readlines()
+
                     except (UnicodeDecodeError, PermissionError, OSError):
                         continue
 
@@ -1738,6 +1746,7 @@ class FileSystemAITool(AITool):
                                     f"Search results exceed the {max_response_bytes // 1024}KB response size limit. "
                                     "Use a more specific search pattern, the include filter, or reduce max_results."
                                 )
+
                             response_bytes += match_bytes
                             file_matches.append({"line": line_num, "content": content})
                             total_matches += 1
@@ -1808,6 +1817,7 @@ class FileSystemAITool(AITool):
             path, display_path = await self._validate_and_resolve_path(
                 "path", path_arg, tool_call, request_authorization, allow_external=True
             )
+
         except AIToolAuthorizationDenied:
             result: dict[str, object] = {
                 "directory": path_arg,
@@ -2036,7 +2046,8 @@ class FileSystemAITool(AITool):
         expression: str,
         encoding: str
     ) -> tuple[str, str, List[str], bool]:
-        """Read a file, run a Menai transform program, return results synchronously.
+        """
+        Read a file, run a Menai transform program, return results synchronously.
 
         Args:
             path: Resolved path to the file.
@@ -2053,6 +2064,7 @@ class FileSystemAITool(AITool):
         """
         try:
             with open(path, encoding=encoding) as f:
+
                 original_content = f.read()
         except OSError as e:
             raise AIToolExecutionError(f"Cannot read file: {e}") from e
@@ -2068,17 +2080,21 @@ class FileSystemAITool(AITool):
         try:
             raw_result = self._menai.evaluate_raw_with_bindings(expression, bindings)
             traces = watcher.get_traces()
+
             was_clipped = watcher.is_clipped()
         finally:
             self._menai.set_trace_watcher(None)
 
         if isinstance(raw_result, MenaiString):
+
             new_content = raw_result.value
         elif isinstance(raw_result, MenaiList):
             if not all(isinstance(e, MenaiString) for e in raw_result.elements):
                 raise AIToolExecutionError(
                     "Transform program returned a list containing non-string elements"
+
                 )
+
             new_content = '\n'.join(cast(MenaiString, e).value for e in raw_result.elements)
         else:
             raise AIToolExecutionError(
@@ -2123,16 +2139,20 @@ class FileSystemAITool(AITool):
             try:
                 original_content, new_content, traces, watcher_clipped = await asyncio.wait_for(
                     task, timeout=30.0
+
                 )
             except asyncio.TimeoutError:
                 self._logger.warning("Menai transform timed out for '%s'", display_path)
                 self._menai.vm.cancel()
                 if not task.done():
                     try:
+
                         await asyncio.wait_for(task, timeout=1.0)
                     except (asyncio.TimeoutError, asyncio.CancelledError, MenaiCancelledException):
+
                         pass
                     except Exception as e:
+
                         self._logger.debug("Exception during transform cancellation: %s", e)
                 raise AIToolTimeoutError("Menai transform timed out", 30.0)  # pylint: disable=raise-missing-from
 
@@ -2192,12 +2212,15 @@ class FileSystemAITool(AITool):
                 suffix='.tmp'
             ) as tmp_file:
                 tmp_file.write(new_content)
+
                 tmp_path = Path(tmp_file.name)
             tmp_path.replace(path)
             umask = os.umask(0)
             os.umask(umask)
+
             path.chmod(0o666 & ~umask)
         except PermissionError as e:
+
             raise AIToolExecutionError(f"Permission denied writing file: {str(e)}") from e
         except OSError as e:
             raise AIToolExecutionError(f"Failed to write file: {str(e)}") from e

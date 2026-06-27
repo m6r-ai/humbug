@@ -55,6 +55,7 @@ class PreviewContext:
         """
         if os.path.isdir(self._path):
             content_type = "directory"
+
         else:
             ext = os.path.splitext(self._path.lower())[1]
             image_extensions = {
@@ -118,6 +119,7 @@ class PreviewContext:
 
             except re.error as e:
                 raise ValueError(f"Invalid regular expression: {e}") from e
+
         else:
             pattern = None
 

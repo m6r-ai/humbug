@@ -193,6 +193,7 @@ class SidebarTreeView(QTreeView):
         index = self.index_for_path(path)
         if index.isValid():
             self.collapse(index)
+
         return index
 
     def index_for_path(self, path: str) -> QModelIndex:

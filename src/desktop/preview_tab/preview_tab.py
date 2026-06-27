@@ -172,6 +172,7 @@ class PreviewTab(TabBase):
                             is_ephemeral=True,
                             requester_id=self._tab_id,
                         )
+
                 return
 
             # Otherwise, it's an external link - open in browser

@@ -94,6 +94,7 @@ class MetaphorParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, MetaphorParserState), \
                 f"Expected MetaphorParserState, got {type(prev_parser_state).__name__}"
+
             in_fence_block = prev_parser_state.in_fence_block
             language = prev_parser_state.language
             embedded_parser_state = prev_parser_state.embedded_parser_state

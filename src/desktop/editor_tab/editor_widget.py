@@ -233,6 +233,7 @@ class EditorWidget(QPlainTextEdit):
             if self._is_modified:
                 # If we have unsaved changes, start backup immediately
                 self._auto_backup_timer.start()
+
             return
 
         clear_backups = self._auto_backup_timer.isActive()
@@ -1202,7 +1203,8 @@ class EditorWidget(QPlainTextEdit):
         case_sensitive: bool = False,
         regexp: bool = False,
     ) -> None:
-        """Highlight all matches and scroll to the first match on the given 1-based line number.
+        """
+        Highlight all matches and scroll to the first match on the given 1-based line number.
 
         If already positioned on a match on this line, advances to the next match on the
         same line (wrapping within the line). Falls back to the first match in the document
@@ -1249,7 +1251,8 @@ class EditorWidget(QPlainTextEdit):
             self._highlight_matches()
 
     def refresh_find(self) -> None:
-        """Re-run the current search after a document edit, restoring the match index.
+        """
+        Re-run the current search after a document edit, restoring the match index.
 
         Clears the cached match list and re-scans the document using the same
         search parameters as the last search.  After re-scanning, _current_match

@@ -230,7 +230,8 @@ class ConversationMessageSection(QFrame):
             self._mouse_left_button_pressed = True
 
     def _on_text_width_changed(self) -> None:
-        """Re-render content when the document text width changes.
+        """
+        Re-render content when the document text width changes.
 
         Fixed-width table frames are sized at render time, so a width change
         requires a full re-render to recompute the correct table dimensions.

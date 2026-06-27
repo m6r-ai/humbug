@@ -77,6 +77,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
             round_changed = self._run_one_round(func)
             if not round_changed:
                 break
+
             changed_overall = True
 
         if changed_overall:
@@ -112,6 +113,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
                         if incoming_val.id in phi_defs:
                             total_uses[incoming_val.id] += 1
                             phi_uses[incoming_val.id] += 1
+
                 else:
                     for vid in value_ids_in_instr(instr):
                         if vid in phi_defs:
@@ -187,6 +189,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
                         MenaiCFGPhiInstr(result=instr.result, incoming=expanded_incoming)
                     )
                     changed = True
+
                 else:
                     new_instrs.append(instr)
 
@@ -202,7 +205,9 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
                         instr for instr in block.instrs
                         if not (isinstance(instr, MenaiCFGPhiInstr) and instr.result.id in dead)
                     ]
+
                 return True
+
             return False
 
         # Phase 2: remove phi instructions that are now unreferenced.

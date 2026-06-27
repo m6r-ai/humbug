@@ -61,6 +61,7 @@ class KotlinParser(Parser):
         if prev_parser_state:
             assert isinstance(prev_parser_state, KotlinParserState), \
                 f"Expected KotlinParserState, got {type(prev_parser_state).__name__}"
+
             in_element = prev_parser_state.in_element
             in_lambda = prev_parser_state.in_lambda
             lambda_brace_count = prev_parser_state.lambda_brace_count
@@ -105,6 +106,7 @@ class KotlinParser(Parser):
                         lambda_brace_count -= 1
                         if lambda_brace_count == 0:
                             in_lambda = False
+
                     if template_expression_count > 0:
                         template_expression_count -= 1
 

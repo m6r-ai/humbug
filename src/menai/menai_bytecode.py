@@ -9,7 +9,8 @@ from menai.menai_value import MenaiValue
 
 
 def _op(n: int, arg_count: int = 0) -> Tuple[int, int]:
-    """Helper to construct an Opcode value: (integer_value, arg_count).
+    """
+    Helper to construct an Opcode value: (integer_value, arg_count).
 
     arg_count is the number of instruction-stream arguments the opcode encodes
     """
@@ -17,7 +18,8 @@ def _op(n: int, arg_count: int = 0) -> Tuple[int, int]:
 
 
 class Opcode(IntEnum):
-    """Bytecode operation codes.
+    """
+    Bytecode operation codes.
 
     Each member's value is a (integer_value, arg_count) tuple.
     The integer value is used for fast VM dispatch (IntEnum identity).
@@ -497,7 +499,8 @@ def pack_instruction(opcode: int, dest: int, src0: int, src1: int, src2: int) ->
 
 
 def unpack_instruction(word: int) -> 'Instruction':
-    """Unpack a 64-bit instruction word into an Instruction object.
+    """
+    Unpack a 64-bit instruction word into an Instruction object.
 
     Used by the validator, disassembler, and the pure-Python VM shim.
     """
@@ -511,7 +514,8 @@ def unpack_instruction(word: int) -> 'Instruction':
 
 
 def make_instructions_array(words: List[int] | None = None) -> 'array.array[int]':
-    """Create an unsigned 64-bit array for storing packed instructions.
+    """
+    Create an unsigned 64-bit array for storing packed instructions.
 
     Args:
         words: Optional initial list of packed instruction words.
@@ -523,7 +527,8 @@ def make_instructions_array(words: List[int] | None = None) -> 'array.array[int]
 
 
 def reg_name(slot: int, code: 'CodeObject') -> str:
-    """Return the symbolic register name for a slot index within a CodeObject.
+    """
+    Return the symbolic register name for a slot index within a CodeObject.
 
     Slot layout (all boundaries are fields on CodeObject):
       i0..i(P-1)   inputs     slots 0..P-1
@@ -548,7 +553,8 @@ def reg_name(slot: int, code: 'CodeObject') -> str:
 
 @dataclass(slots=True)
 class Instruction:
-    """Single bytecode instruction.
+    """
+    Single bytecode instruction.
 
     Stores opcode and arguments for easier debugging and manipulation.
 
@@ -565,7 +571,8 @@ class Instruction:
     src2: int = 0   # third source operand (used by PATCH_CLOSURE for value_reg)
 
     def arg_count(self) -> int:
-        """Return the number of instruction-stream immediates this instruction takes (0, 1, or 2).
+        """
+        Return the number of instruction-stream immediates this instruction takes (0, 1, or 2).
 
         For PUSH: 1 (src0 is the register index, encoded in the stream).
         For POP:  0 (dest is the register index, encoded in the stream as dest, not src0).
@@ -574,7 +581,8 @@ class Instruction:
         return Opcode(self.opcode).arg_count()
 
     def __repr__(self) -> str:
-        """Return a human-readable disassembly using raw slot indices (r0, r1, …).
+        """
+        Return a human-readable disassembly using raw slot indices (r0, r1, …).
 
         For fully symbolic register names (rp*, rc*, rs*, ro*) use
         ``format(code)`` with a CodeObject.
@@ -582,7 +590,8 @@ class Instruction:
         return self._disassemble(lambda slot: f"r{slot}")
 
     def format(self, code: 'CodeObject') -> str:
-        """Return a symbolic disassembly string using register names derived from code.
+        """
+        Return a symbolic disassembly string using register names derived from code.
 
         Register naming convention:
           rp0..rp(P-1)   params         slots 0..P-1
@@ -656,7 +665,8 @@ class Instruction:
 
 @dataclass(slots=True)
 class CodeObject:
-    """Compiled code object containing bytecode and metadata.
+    """
+    Compiled code object containing bytecode and metadata.
 
     This represents a compiled Menai expression or function body.
     """
@@ -690,7 +700,8 @@ class CodeObject:
     _constants_converted: object = field(default=None, init=False, repr=False, compare=False, hash=False)
 
     def __post_init__(self) -> None:
-        """Convert a plain list of Instruction objects to a packed array if needed.
+        """
+        Convert a plain list of Instruction objects to a packed array if needed.
 
         This allows test code and other callers to construct CodeObject with
         instructions=[Instruction(...), ...] and have it automatically converted

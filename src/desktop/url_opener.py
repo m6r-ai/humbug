@@ -16,7 +16,8 @@ def _is_wsl() -> bool:
 
 
 def open_url(url: str) -> None:
-    """Open a URL in the system browser.
+    """
+    Open a URL in the system browser.
 
     On WSL2, delegates to the Windows host browser via cmd.exe since
     xdg-open/gio cannot handle https URLs without a desktop environment.

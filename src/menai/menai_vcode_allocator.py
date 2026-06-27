@@ -296,6 +296,7 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
         move_start = jump_idx - 1
         while move_start >= 0 and isinstance(func.instrs[move_start], MenaiVCodeMove):
             move_start -= 1
+
         move_start += 1
 
         for move_idx in range(move_start, jump_idx):

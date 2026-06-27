@@ -1,4 +1,5 @@
-"""Menai Value hierarchy - immutable runtime value types.
+"""
+Menai Value hierarchy - immutable runtime value types.
 
 These are lightweight runtime values used by the VM and bytecode.
 They do NOT carry source location metadata - that's only in MenaiASTNode.
@@ -94,7 +95,8 @@ class MenaiFunction(MenaiValue):
 
 @dataclass(slots=True, unsafe_hash=True)
 class MenaiNone(MenaiValue):
-    """Represents the absence of a value (#none).
+    """
+    Represents the absence of a value (#none).
 
     This is a distinct type from boolean false (#f).  It is returned by
     operations that produce no meaningful result (missing dict key, item not

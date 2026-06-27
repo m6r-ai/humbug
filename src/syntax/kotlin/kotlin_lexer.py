@@ -65,6 +65,7 @@ class KotlinLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, KotlinLexerState), \
                 f"Expected KotlinLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_block_comment = prev_lexer_state.in_block_comment
             self._in_string_template = prev_lexer_state.in_string_template
             self._string_template_braces = prev_lexer_state.string_template_braces
@@ -245,6 +246,7 @@ class KotlinLexer(Lexer):
                         start=start
                     ))
                     return
+
                 if self._is_letter(next_ch):
                     self._position += 1
                     continue
@@ -345,6 +347,7 @@ class KotlinLexer(Lexer):
                     ch = self._input[self._position]
                     if not (self._is_binary_digit(ch) or ch == '_'):
                         break
+
                     self._position += 1
 
             else:

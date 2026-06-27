@@ -38,7 +38,8 @@ _WHITESPACE = b" \t\n\r\f\x00"
 
 
 class PDFTokenizer:
-    """Scans a PDF byte stream into tokens.
+    """
+    Scans a PDF byte stream into tokens.
 
     Operates on a bytes buffer with an integer position cursor.
     """
@@ -176,6 +177,7 @@ class PDFTokenizer:
             if b == ord("\\"):
                 self.pos += 1
                 if self.pos >= length:
+
                     break
                 esc = data[self.pos]
                 self.pos += 1
@@ -226,6 +228,7 @@ class PDFTokenizer:
             elif b == ord(")"):
                 depth -= 1
                 if depth > 0:
+
                     result.append(b)
                 self.pos += 1
 

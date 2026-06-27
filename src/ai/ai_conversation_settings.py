@@ -1004,13 +1004,17 @@ class AIConversationSettings:
         """
         if not os.path.exists(path):
             return
+
         try:
             with open(path, encoding="utf-8") as f:
                 cache = json.load(f)
+
         except (json.JSONDecodeError, OSError):
             return
+
         if not isinstance(cache, dict):
             return
+
         for provider, model_ids in cache.items():
             if isinstance(model_ids, list):
                 cls.register_fetched_models(

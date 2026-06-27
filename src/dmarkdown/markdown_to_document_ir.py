@@ -51,7 +51,8 @@ from document_ir import (
 def markdown_ast_to_document_ir(
     document: MarkdownASTDocumentNode,
 ) -> DocumentIRDocumentNode:
-    """Convert a dmarkdown AST document into a document_ir document.
+    """
+    Convert a dmarkdown AST document into a document_ir document.
 
     This is the public entry point for the mapper.
 
@@ -67,7 +68,8 @@ def markdown_ast_to_document_ir(
 
 
 class _MarkdownToDocumentIRMapper:
-    """Maps a dmarkdown AST to a document_ir tree.
+    """
+    Maps a dmarkdown AST to a document_ir tree.
 
     Implements the visitor pattern manually rather than using
     MarkdownASTVisitor, because several mapping decisions require
@@ -76,7 +78,8 @@ class _MarkdownToDocumentIRMapper:
     """
 
     def map_document(self, node: MarkdownASTDocumentNode) -> DocumentIRDocumentNode:
-        """Map the root document node.
+        """
+        Map the root document node.
 
         Args:
             node: The MarkdownASTDocumentNode to map.
@@ -93,7 +96,8 @@ class _MarkdownToDocumentIRMapper:
         return document_ir
 
     def _map_block(self, node: MarkdownASTNode) -> DocumentIRNode | None:
-        """Dispatch a block-level markdown node to the appropriate mapper.
+        """
+        Dispatch a block-level markdown node to the appropriate mapper.
 
         Args:
             node: A block-level MarkdownASTNode.
@@ -141,7 +145,8 @@ class _MarkdownToDocumentIRMapper:
         return None
 
     def _map_heading(self, node: MarkdownASTHeadingNode) -> DocumentIRHeadingNode:
-        """Map a heading node.
+        """
+        Map a heading node.
 
         Args:
             node: The MarkdownASTHeadingNode.
@@ -154,7 +159,8 @@ class _MarkdownToDocumentIRMapper:
         return heading
 
     def _map_paragraph(self, node: MarkdownASTParagraphNode) -> DocumentIRParagraphNode:
-        """Map a paragraph node.
+        """
+        Map a paragraph node.
 
         Args:
             node: The MarkdownASTParagraphNode.
@@ -167,7 +173,8 @@ class _MarkdownToDocumentIRMapper:
         return para
 
     def _map_blockquote(self, node: MarkdownASTBlockquoteNode) -> DocumentIRBlockquoteNode:
-        """Map a blockquote node.
+        """
+        Map a blockquote node.
 
         Blockquote children are block-level nodes (paragraphs, nested
         blockquotes, etc.) and are mapped recursively.
@@ -187,7 +194,8 @@ class _MarkdownToDocumentIRMapper:
         return blockquote
 
     def _map_code_block(self, node: MarkdownASTCodeBlockNode) -> DocumentIRCodeBlockNode:
-        """Map a fenced code block.
+        """
+        Map a fenced code block.
 
         The syntax token information (tokens_by_line, states_by_line) is
         intentionally dropped here — it is rendering metadata specific to
@@ -207,7 +215,8 @@ class _MarkdownToDocumentIRMapper:
     def _map_unordered_list(
         self, node: MarkdownASTUnorderedListNode
     ) -> DocumentIRUnorderedListNode:
-        """Map an unordered list.
+        """
+        Map an unordered list.
 
         Args:
             node: The MarkdownASTUnorderedListNode.
@@ -230,7 +239,8 @@ class _MarkdownToDocumentIRMapper:
     def _map_ordered_list(
         self, node: MarkdownASTOrderedListNode
     ) -> DocumentIROrderedListNode:
-        """Map an ordered list.
+        """
+        Map an ordered list.
 
         Args:
             node: The MarkdownASTOrderedListNode.
@@ -251,7 +261,8 @@ class _MarkdownToDocumentIRMapper:
         return ol
 
     def _map_list_item(self, node: MarkdownASTListItemNode) -> DocumentIRListItemNode:
-        """Map a list item.
+        """
+        Map a list item.
 
         A list item may contain inline content and/or nested lists.
         Inline content is gathered into an implicit paragraph; nested
@@ -306,7 +317,8 @@ class _MarkdownToDocumentIRMapper:
         return item
 
     def _map_table(self, node: MarkdownASTTableNode) -> DocumentIRTableNode:
-        """Map a table node.
+        """
+        Map a table node.
 
         Args:
             node: The MarkdownASTTableNode.
@@ -365,7 +377,8 @@ class _MarkdownToDocumentIRMapper:
     def _append_inline_children(
         self, source: MarkdownASTNode, target: DocumentIRNode
     ) -> None:
-        """Walk the inline children of source and append spans/links/images
+        """
+        Walk the inline children of source and append spans/links/images
         to target.
 
         This is the bridge between the nested bold/italic/code structure of
@@ -388,7 +401,8 @@ class _MarkdownToDocumentIRMapper:
         strikethrough: bool,
         code: bool,
     ) -> List[DocumentIRNode]:
-        """Recursively collect inline document_ir nodes from a markdown AST node.
+        """
+        Recursively collect inline document_ir nodes from a markdown AST node.
 
         Formatting flags are accumulated as we descend through Bold/Emphasis/
         InlineCode wrappers, so that a bold-italic run correctly produces a

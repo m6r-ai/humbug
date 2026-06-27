@@ -74,4 +74,5 @@ class MenaiCFGOptimizationPass:
                             needs_patching=instr.needs_patching,
                         )
                         changed = True
+
         return func, changed

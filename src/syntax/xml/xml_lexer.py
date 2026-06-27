@@ -61,6 +61,7 @@ class XMLLexer(Lexer):
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, XMLLexerState), \
                 f"Expected XMLLexerState, got {type(prev_lexer_state).__name__}"
+
             self._in_tag = prev_lexer_state.in_tag
             self._tag_name = prev_lexer_state.tag_name
             self._seen_equals = prev_lexer_state.seen_equals
@@ -245,6 +246,7 @@ class XMLLexer(Lexer):
                 self._in_cdata = False
                 self._position += 3
                 break
+
             self._position += 1
 
         # If we're still in CDATA, we've reached the end of the line
@@ -272,6 +274,7 @@ class XMLLexer(Lexer):
                 self._in_processing_instruction = False
                 self._position += 2
                 break
+
             self._position += 1
 
         # If we're still in a processing instruction, we've reached the end of the line

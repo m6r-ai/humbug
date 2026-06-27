@@ -212,7 +212,8 @@ class MenaiBuiltinRegistry:
 
     @staticmethod
     def get_function_arity(name: str) -> Tuple[int, int | None] | None:
-        """Return (min_args, max_args) for a known builtin function, or None if unknown.
+        """
+        Return (min_args, max_args) for a known builtin function, or None if unknown.
 
         max_args is None for truly variadic functions (no upper bound).
         Used by the semantic analyser for call-site arity validation.
@@ -221,7 +222,8 @@ class MenaiBuiltinRegistry:
 
     @staticmethod
     def is_primitive_name(name: str) -> bool:
-        """Return True if name is a valid primitive function name.
+        """
+        Return True if name is a valid primitive function name.
 
         A primitive name has a direct $-prefixed form that the desugarer and
         semantic analyser can use.  The $ prefix is the source-level syntax
@@ -231,7 +233,8 @@ class MenaiBuiltinRegistry:
 
     @staticmethod
     def get_primitive_arity(name: str) -> int | None:
-        """Return the exact argument count of the primitive form of this builtin, or None.
+        """
+        Return the exact argument count of the primitive form of this builtin, or None.
 
         Returns None if this name has no primitive form (i.e. it is a pure-Menai
         stdlib function with no direct primitive backing).
