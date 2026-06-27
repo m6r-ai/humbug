@@ -14,8 +14,8 @@ Bug fixes:
 
 Internal structure changes:
 
-- Added `style_checker` to augment `pylint` with Humbug style checking.  Modified all code in `src` to be compliant.
-- Extended `mypy` checking to the `tools` directory.
+- Added `style_checker` to augment `pylint` with Humbug style checking.
+- Extended `mypy` and `pylint` checking to the `tools` directory.
 
 ## v50 (2026-06-24)
 
