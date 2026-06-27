@@ -2,13 +2,14 @@
 """Command-line interface for the pipeline engine."""
 
 import argparse
+from collections.abc import Callable
 import cProfile
 import io
+from pathlib import Path
 import pstats
 import sys
 import time
-from pathlib import Path
-from typing import Callable, Optional, Tuple
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
@@ -43,7 +44,7 @@ def _make_step_callbacks(
     verbosity: int,
     timings: bool,
     color: bool,
-) -> Tuple[Callable[[str], None], Callable[[StepResult], None], Callable[[], None]]:
+) -> tuple[Callable[[str], None], Callable[[StepResult], None], Callable[[], None]]:
     """
     Build live step callbacks for verbose pipeline execution.
 
@@ -164,7 +165,7 @@ def _run_with_profile(
     lines: int,
     on_step_start: Optional[Callable[[str], None]],
     on_step_done: Optional[Callable[[StepResult], None]],
-) -> Tuple[PipelineResult, str]:
+) -> tuple[PipelineResult, str]:
     """
     Execute a pipeline under cProfile and return (result, profile_stats_string).
 

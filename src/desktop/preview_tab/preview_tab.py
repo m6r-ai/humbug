@@ -2,7 +2,7 @@
 
 import os
 import logging
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, cast
 
 from PySide6.QtCore import Qt, QUrl, QRegularExpression
 from PySide6.QtGui import QDesktopServices
@@ -431,7 +431,7 @@ class PreviewTab(TabBase):
         current, total, truncated = self._preview_content_widget.find_text(text, True, case_sensitive=case_sensitive, regexp=regexp)
         self._find_widget.set_match_status(current, total, truncated)
 
-    def get_preview_info(self) -> Dict[str, Any]:
+    def get_preview_info(self) -> dict[str, Any]:
         """
         Get high-level metadata about the preview content.
 
@@ -440,7 +440,7 @@ class PreviewTab(TabBase):
         """
         return self._preview_content_widget.get_preview_info()
 
-    def get_content_blocks(self) -> List[Tuple[Any, str]]:
+    def get_content_blocks(self) -> list[tuple[Any, str]]:
         """
         Return the cached raw content blocks for the PreviewContext.
 
@@ -455,7 +455,7 @@ class PreviewTab(TabBase):
         case_sensitive: bool = False,
         max_results: int = 50,
         regexp: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search for text across all content blocks.
 

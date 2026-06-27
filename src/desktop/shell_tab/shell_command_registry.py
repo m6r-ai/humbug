@@ -1,4 +1,3 @@
-from typing import Dict, List
 
 from PySide6.QtCore import QObject
 
@@ -22,8 +21,8 @@ class ShellCommandRegistry(QObject):
         """Initialize QObject base class if not already done."""
         if not hasattr(self, '_initialized'):
             super().__init__()
-            self._commands: Dict[str, ShellCommand] = {}
-            self._aliases: Dict[str, str] = {}
+            self._commands: dict[str, ShellCommand] = {}
+            self._aliases: dict[str, str] = {}
             self._initialized = True
             self._history_manager = ShellHistoryManager()
 
@@ -58,7 +57,7 @@ class ShellCommandRegistry(QObject):
 
         return self._commands.get(name)
 
-    def get_all_commands(self) -> Dict[str, ShellCommand]:
+    def get_all_commands(self) -> dict[str, ShellCommand]:
         """
         Get all registered commands.
 
@@ -67,7 +66,7 @@ class ShellCommandRegistry(QObject):
         """
         return self._commands.copy()
 
-    def get_command_names(self) -> List[str]:
+    def get_command_names(self) -> list[str]:
         """
         Get all command names and aliases.
 

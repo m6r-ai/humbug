@@ -5,7 +5,7 @@ import os
 import json
 from pathlib import Path
 import difflib
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Any, Optional
 
 from dmarkdown import MarkdownASTBuilder
 
@@ -37,7 +37,7 @@ def load_markdown_file(file_path: str) -> str:
         return f.read()
 
 
-def find_test_files() -> List[Tuple[str, str]]:
+def find_test_files() -> list[tuple[str, str]]:
     """
     Find all test files (markdown files with corresponding JSON files).
 
@@ -58,9 +58,9 @@ def find_test_files() -> List[Tuple[str, str]]:
 
 
 def compare_ast_with_expected(
-    actual_ast: Dict[str, Any],
-    expected_ast: Dict[str, Any]
-) -> Tuple[bool, Optional[str]]:
+    actual_ast: dict[str, Any],
+    expected_ast: dict[str, Any]
+) -> tuple[bool, Optional[str]]:
     """
     Compare an actual AST with an expected AST.
 
@@ -94,7 +94,7 @@ def parse_and_compare(
     markdown_path: str,
     expected_json_path: str,
     no_underscores: bool = False
-) -> Tuple[bool, Optional[str]]:
+) -> tuple[bool, Optional[str]]:
     """
     Parse a markdown file and compare the result with an expected JSON file.
 

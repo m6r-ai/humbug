@@ -2,7 +2,7 @@
 
 import difflib
 from abc import ABC, abstractmethod
-from typing import Any, List
+from typing import Any
 
 from diff.diff_types import DiffHunk, MatchResult
 
@@ -27,7 +27,7 @@ class DiffMatcher(ABC):
         document: Any,
         start_line: int,
         count: int
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get lines from document.
 
@@ -118,7 +118,7 @@ class DiffMatcher(ABC):
     def _try_exact_match(
         self,
         line_num: int,
-        expected_lines: List[str],
+        expected_lines: list[str],
         document: Any
     ) -> MatchResult:
         """
@@ -152,7 +152,7 @@ class DiffMatcher(ABC):
     def _fuzzy_search(
         self,
         expected_line: int,
-        expected_lines: List[str],
+        expected_lines: list[str],
         document: Any
     ) -> MatchResult:
         """
@@ -172,7 +172,7 @@ class DiffMatcher(ABC):
         Returns:
             MatchResult with best match found
         """
-        exact_locations: List[int] = []
+        exact_locations: list[int] = []
 
         # Get total line count from document
         total_lines = self._get_document_line_count(document)
@@ -227,9 +227,9 @@ class DiffMatcher(ABC):
     def _full_file_exact_search(
         self,
         expected_line: int,
-        expected_lines: List[str],
+        expected_lines: list[str],
         document: Any
-    ) -> List[int]:
+    ) -> list[int]:
         """
         Scan the entire file for an exact match outside the search window.
 
@@ -249,7 +249,7 @@ class DiffMatcher(ABC):
         window_start = max(1, expected_line - self._search_window)
         window_end = min(total_lines, expected_line + self._search_window)
 
-        matches: List[int] = []
+        matches: list[int] = []
         for line_num in range(1, total_lines + 1):
             if window_start <= line_num <= window_end:
                 continue
@@ -277,7 +277,7 @@ class DiffMatcher(ABC):
         lines = self._get_document_lines(document, 1, 1000000)
         return len(lines)
 
-    def _lines_match_exactly(self, expected: List[str], actual: List[str]) -> bool:
+    def _lines_match_exactly(self, expected: list[str], actual: list[str]) -> bool:
         """
         Check if lines match exactly (after trimming whitespace).
 
@@ -297,7 +297,7 @@ class DiffMatcher(ABC):
 
         return True
 
-    def _calculate_confidence(self, expected: List[str], actual: List[str]) -> float:
+    def _calculate_confidence(self, expected: list[str], actual: list[str]) -> float:
         """
         Calculate confidence score for a potential match.
 

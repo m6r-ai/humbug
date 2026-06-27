@@ -1,6 +1,6 @@
 """Deepseek backend implementation."""
 import json
-from typing import Dict, List, Any
+from typing import Any
 
 import aiohttp
 
@@ -16,7 +16,7 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 class DeepseekBackend(AIBackend):
     """Deepseek API backend implementation with streaming support."""
 
-    async def fetch_models(self) -> List[str]:
+    async def fetch_models(self) -> list[str]:
         """Fetch available model IDs from the DeepSeek API."""
         url = self._api_url.replace("/chat/completions", "/models")
         headers = {"Authorization": f"Bearer {self._api_key}"}
@@ -26,7 +26,7 @@ class DeepseekBackend(AIBackend):
                 data = await response.json()
                 return [m["id"] for m in data.get("data", [])]
 
-    def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
+    def _format_tool_definition(self, tool_def: AIToolDefinition) -> dict[str, Any]:
         """
         Convert tool definition to Deepseek format.
 
@@ -36,7 +36,7 @@ class DeepseekBackend(AIBackend):
         Returns:
             Tool definition in Deepseek format
         """
-        properties: Dict[str, Any] = {}
+        properties: dict[str, Any] = {}
         required = []
 
         for param in tool_def.parameters:
@@ -83,7 +83,7 @@ class DeepseekBackend(AIBackend):
             }
         }
 
-    def _build_user_message(self, content: str, tool_results: List[AIToolResult] | None = None) -> List[Dict[str, Any]]:
+    def _build_user_message(self, content: str, tool_results: list[AIToolResult] | None = None) -> list[dict[str, Any]]:
         """
         Build user message(s) for Deepseek format.
 
@@ -119,9 +119,9 @@ class DeepseekBackend(AIBackend):
     def _build_assistant_message(
         self,
         content: str,
-        tool_calls: List[AIToolCall] | None = None,
+        tool_calls: list[AIToolCall] | None = None,
         reasoning_content: str = ""
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Build assistant message for Deepseek format.
 
@@ -133,7 +133,7 @@ class DeepseekBackend(AIBackend):
         Returns:
             Assistant message dictionary
         """
-        message: Dict[str, Any] = {
+        message: dict[str, Any] = {
             "role": "assistant",
             "content": content
         }
@@ -161,7 +161,7 @@ class DeepseekBackend(AIBackend):
         self,
         conversation_history: AIConversationHistory,
         settings: AIConversationSettings
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Format conversation history for Deepseek's API format in a single pass.
 
@@ -172,7 +172,7 @@ class DeepseekBackend(AIBackend):
         Returns:
             List of messages formatted for Deepseek API
         """
-        result: List[Dict[str, Any]] = []
+        result: list[dict[str, Any]] = []
         last_user_message_index = -1
         current_turn_message_index = -1
         last_reasoning_message: AIMessage | None = None

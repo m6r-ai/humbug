@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict
 import uuid
 
 from mindspace.mindspace_log_level import MindspaceLogLevel
@@ -32,7 +31,7 @@ class MindspaceMessage:
             timestamp=timestamp
         )
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert message to dictionary for storage."""
         return {
             "message_id": self.message_id,
@@ -42,7 +41,7 @@ class MindspaceMessage:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'MindspaceMessage':
+    def from_dict(cls, data: dict) -> 'MindspaceMessage':
         """Create a MindspaceMessage instance from dictionary."""
         return cls(
             message_id=data["message_id"],

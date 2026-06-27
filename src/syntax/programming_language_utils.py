@@ -7,7 +7,6 @@ file extensions, and display names, eliminating code duplication across the appl
 
 import os
 import logging
-from typing import Dict, List, Tuple
 
 from syntax.programming_language import ProgrammingLanguage
 
@@ -27,7 +26,7 @@ class ProgrammingLanguageUtils:
     _logger = logging.getLogger("LanguageUtils")
 
     # Mapping from lowercase language names to enum members
-    _NAME_TO_LANGUAGE: Dict[str, ProgrammingLanguage] = {
+    _NAME_TO_LANGUAGE: dict[str, ProgrammingLanguage] = {
         "aifpl": ProgrammingLanguage.MENAI,
         "bash": ProgrammingLanguage.BASH,
         "c": ProgrammingLanguage.C,
@@ -83,7 +82,7 @@ class ProgrammingLanguageUtils:
     }
 
     # Mapping from enum members to lowercase language names
-    _LANGUAGE_TO_NAME: Dict[ProgrammingLanguage, str] = {
+    _LANGUAGE_TO_NAME: dict[ProgrammingLanguage, str] = {
         ProgrammingLanguage.BASH: "bash",
         ProgrammingLanguage.C: "c",
         ProgrammingLanguage.CPP: "cpp",
@@ -117,7 +116,7 @@ class ProgrammingLanguageUtils:
     }
 
     # Mapping from file extensions to programming languages
-    _EXTENSION_TO_LANGUAGE: Dict[str, ProgrammingLanguage] = {
+    _EXTENSION_TO_LANGUAGE: dict[str, ProgrammingLanguage] = {
         '.aifpl': ProgrammingLanguage.MENAI,
         '.bash': ProgrammingLanguage.BASH,
         '.c': ProgrammingLanguage.C,
@@ -175,7 +174,7 @@ class ProgrammingLanguageUtils:
     }
 
     # Mapping from programming languages to display names
-    _LANGUAGE_TO_DISPLAY_NAME: Dict[ProgrammingLanguage, str] = {
+    _LANGUAGE_TO_DISPLAY_NAME: dict[ProgrammingLanguage, str] = {
         ProgrammingLanguage.BASH: "Bash",
         ProgrammingLanguage.C: "C",
         ProgrammingLanguage.CPP: "C++",
@@ -209,7 +208,7 @@ class ProgrammingLanguageUtils:
     }
 
     # Mapping from programming languages to file extensions (with leading dot)
-    _LANGUAGE_TO_EXTENSION: Dict[ProgrammingLanguage, str] = {
+    _LANGUAGE_TO_EXTENSION: dict[ProgrammingLanguage, str] = {
         ProgrammingLanguage.BASH: ".sh",
         ProgrammingLanguage.C: ".c",
         ProgrammingLanguage.CPP: ".cpp",
@@ -243,7 +242,7 @@ class ProgrammingLanguageUtils:
     }
 
     @classmethod
-    def get_all_programming_languages(cls) -> List[ProgrammingLanguage]:
+    def get_all_programming_languages(cls) -> list[ProgrammingLanguage]:
         """
         Get a list of all available programming languages.
 
@@ -253,7 +252,7 @@ class ProgrammingLanguageUtils:
         return [lang for lang in ProgrammingLanguage if lang != ProgrammingLanguage.UNKNOWN]
 
     @classmethod
-    def get_all_display_names(cls) -> List[Tuple[ProgrammingLanguage, str]]:
+    def get_all_display_names(cls) -> list[tuple[ProgrammingLanguage, str]]:
         """
         Get all language display names.
 
@@ -341,7 +340,7 @@ class ProgrammingLanguageUtils:
         return cls._LANGUAGE_TO_EXTENSION.get(language, ".txt")
 
     @classmethod
-    def get_supported_file_extensions(cls) -> List[str]:
+    def get_supported_file_extensions(cls) -> list[str]:
         """
         Get a list of all supported file extensions.
 

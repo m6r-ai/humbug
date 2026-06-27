@@ -7,7 +7,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import cast, Dict, Tuple
+from typing import cast
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
@@ -379,8 +379,8 @@ class MainWindow(QMainWindow):
         # View menu actions - Theme menu will be created in _on_language_changed
         self._theme_menu: QMenu | None = None
         self._theme_separator: QAction | None = None
-        self._theme_actions: Dict[ColorTheme, QAction] = {}
-        self._custom_theme_actions: Dict[str | None, QAction] = {}
+        self._theme_actions: dict[ColorTheme, QAction] = {}
+        self._custom_theme_actions: dict[str | None, QAction] = {}
 
         self._zoom_in_action = QAction(strings.zoom_in, self)
         self._zoom_in_action.setShortcut(QKeySequence("Ctrl+="))
@@ -2029,7 +2029,7 @@ class MainWindow(QMainWindow):
         # Get the absolute path of the current mindspace
         return self._mindspace_manager.get_relative_path(path)
 
-    def _resolve_mindspace_path(self, path: str) -> Tuple[Path, str]:
+    def _resolve_mindspace_path(self, path: str) -> tuple[Path, str]:
         if not self._mindspace_manager.has_mindspace():
             raise ValueError("No mindspace open")
 

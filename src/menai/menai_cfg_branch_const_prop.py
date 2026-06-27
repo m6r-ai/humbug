@@ -82,7 +82,6 @@ Example — return case, the (and A B) pattern:
           return %v
 """
 
-from typing import Dict, List, Tuple
 
 from menai.menai_cfg import (
     MenaiCFGBlock,
@@ -150,7 +149,7 @@ class MenaiCFGBranchConstProp(MenaiCFGOptimizationPass):
     def _run_one_round(
         self,
         func: MenaiCFGFunction,
-        def_block_map: Dict[int, 'MenaiCFGBlock'],
+        def_block_map: dict[int, 'MenaiCFGBlock'],
     ) -> bool:
         """
         Execute one round of constant propagation.
@@ -158,7 +157,7 @@ class MenaiCFGBranchConstProp(MenaiCFGOptimizationPass):
         Scans every block for a qualifying phi+terminal pair and re-wires all
         constant-valued defining blocks.  Returns True if any change was made.
         """
-        const_values: Dict[int, MenaiValue] = _collect_const_values(func)
+        const_values: dict[int, MenaiValue] = _collect_const_values(func)
         changed = False
 
         for block in func.blocks:
@@ -173,8 +172,8 @@ class MenaiCFGBranchConstProp(MenaiCFGOptimizationPass):
             # itself (needed to construct the return terminator).  The defining
             # block may differ from the phi's recorded predecessor when empty
             # intermediate blocks sit between the definer and the join.
-            const_arms: List[Tuple[MenaiCFGBlock, MenaiCFGValue]] = []
-            keep: List[Tuple[MenaiCFGValue, MenaiCFGBlock]] = []
+            const_arms: list[tuple[MenaiCFGBlock, MenaiCFGValue]] = []
+            keep: list[tuple[MenaiCFGValue, MenaiCFGBlock]] = []
 
             for val, pred in phi.incoming:
                 if val.id in const_values:
@@ -237,12 +236,12 @@ class MenaiCFGBranchConstProp(MenaiCFGOptimizationPass):
         return changed
 
 
-def _build_def_block_map(func: MenaiCFGFunction) -> Dict[int, 'MenaiCFGBlock']:
+def _build_def_block_map(func: MenaiCFGFunction) -> dict[int, 'MenaiCFGBlock']:
     """
     Return a map from SSA value id to the block that defines it, for every
     instruction in func that produces a result.
     """
-    result: Dict[int, MenaiCFGBlock] = {}
+    result: dict[int, MenaiCFGBlock] = {}
     for block in func.blocks:
         for instr in block.instrs:
             r = getattr(instr, 'result', None)
@@ -252,12 +251,12 @@ def _build_def_block_map(func: MenaiCFGFunction) -> Dict[int, 'MenaiCFGBlock']:
     return result
 
 
-def _collect_const_values(func: MenaiCFGFunction) -> Dict[int, MenaiValue]:
+def _collect_const_values(func: MenaiCFGFunction) -> dict[int, MenaiValue]:
     """
     Return a map from SSA value id to MenaiValue for every
     MenaiCFGConstInstr anywhere in func.
     """
-    result: Dict[int, MenaiValue] = {}
+    result: dict[int, MenaiValue] = {}
     for block in func.blocks:
         for instr in block.instrs:
             if isinstance(instr, MenaiCFGConstInstr):
@@ -302,7 +301,7 @@ def _rewire_predecessor(
     def_block: MenaiCFGBlock,
     terminal: MenaiCFGBranchTerm | MenaiCFGReturnTerm,
     const_ssa_val: MenaiCFGValue,
-    const_values: Dict[int, MenaiValue],
+    const_values: dict[int, MenaiValue],
 ) -> None:
     """
     Replace def_block's unconditional jump terminator with the appropriate

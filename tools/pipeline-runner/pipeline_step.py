@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -12,7 +12,7 @@ class ToolStep:
     step_id: str
     tool: str
     operation: str
-    arguments: Dict[str, Any] = field(default_factory=dict)
+    arguments: dict[str, Any] = field(default_factory=dict)
     value_from: Optional[str] = None
 
 
@@ -21,10 +21,10 @@ class MenaiStep:
     """A step that evaluates a Menai expression."""
 
     step_id: str
-    inputs: Dict[str, str]
+    inputs: dict[str, str]
     expression: str
     module: Optional[str]
-    outputs: Dict[str, str]
+    outputs: dict[str, str]
 
 
 PipelineStep = ToolStep | MenaiStep
@@ -34,7 +34,7 @@ PipelineStep = ToolStep | MenaiStep
 class Pipeline:
     """A parsed and validated pipeline ready for execution."""
 
-    steps: List[PipelineStep] = field(default_factory=list)
+    steps: list[PipelineStep] = field(default_factory=list)
     directory: Path = field(default_factory=Path)
 
 

@@ -3,7 +3,6 @@ Dependency analysis for letrec bindings to support mutual recursion.
 Note: This is only used for letrec, not for regular let (which uses simple sequential binding).
 """
 
-from typing import Dict, FrozenSet, List, Set, Tuple
 from dataclasses import dataclass
 
 from menai.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList
@@ -12,16 +11,16 @@ from menai.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList
 @dataclass
 class MenaiBindingGroup:
     """Represents a group of bindings that should be evaluated together."""
-    names: Set[str]
-    bindings: List[Tuple[str, MenaiASTNode]]
+    names: set[str]
+    bindings: list[tuple[str, MenaiASTNode]]
     is_recursive: bool
-    depends_on: Set[str]  # Other groups this depends on
+    depends_on: set[str]  # Other groups this depends on
 
 
 class MenaiASTDependencyAnalyzer:
     """Analyzes dependencies in let bindings to determine evaluation strategy."""
 
-    def analyze_letrec_bindings(self, bindings: List[Tuple[str, MenaiASTNode]]) -> List[MenaiBindingGroup]:
+    def analyze_letrec_bindings(self, bindings: list[tuple[str, MenaiASTNode]]) -> list[MenaiBindingGroup]:
         """
         Analyze letrec bindings and group them by dependencies.
 
@@ -62,16 +61,16 @@ class MenaiASTDependencyAnalyzer:
 
     def _collect_dependencies(
         self,
-        bindings: List[Tuple[str, MenaiASTNode]],
-        binding_names: FrozenSet[str],
-    ) -> Dict[str, Set[str]]:
+        bindings: list[tuple[str, MenaiASTNode]],
+        binding_names: frozenset[str],
+    ) -> dict[str, set[str]]:
         """
         Build the dependency map for all bindings in a single combined pass.
 
         For each binding name, returns the subset of binding_names that appear
         as free references in its expression (respecting inner shadowing).
         """
-        dependencies: Dict[str, Set[str]] = {name: set() for name, _ in bindings}
+        dependencies: dict[str, set[str]] = {name: set() for name, _ in bindings}
         for name, expr in bindings:
             self._scan_refs(expr, binding_names, frozenset(), dependencies[name])
 
@@ -80,9 +79,9 @@ class MenaiASTDependencyAnalyzer:
     def _scan_refs(
         self,
         expr: MenaiASTNode,
-        targets: FrozenSet[str],
-        shadowed: FrozenSet[str],
-        refs: Set[str],
+        targets: frozenset[str],
+        shadowed: frozenset[str],
+        refs: set[str],
     ) -> None:
         """
         Recursively scan expr for references to names in targets that are not
@@ -184,7 +183,7 @@ class MenaiASTDependencyAnalyzer:
         for elem in expr.elements:
             self._scan_refs(elem, targets, shadowed, refs)
 
-    def _find_strongly_connected_components(self, graph: Dict[str, Set[str]]) -> List[Set[str]]:
+    def _find_strongly_connected_components(self, graph: dict[str, set[str]]) -> list[set[str]]:
         """
         Find strongly connected components using Tarjan's algorithm.
         Note: SCCs are returned in topological order (dependencies before dependents).
@@ -196,11 +195,11 @@ class MenaiASTDependencyAnalyzer:
             List of sets, each representing a strongly connected component
         """
         index_counter = [0]
-        stack: List[str] = []
-        lowlinks: Dict[str, int] = {}
-        index: Dict[str, int] = {}
-        on_stack: Dict[str, bool] = {}
-        result: List[Set[str]] = []
+        stack: list[str] = []
+        lowlinks: dict[str, int] = {}
+        index: dict[str, int] = {}
+        on_stack: dict[str, bool] = {}
+        result: list[set[str]] = []
 
         def strongconnect(node: str) -> None:
             index[node] = index_counter[0]
@@ -220,7 +219,7 @@ class MenaiASTDependencyAnalyzer:
 
             # If node is a root, pop the stack and create SCC
             if lowlinks[node] == index[node]:
-                component: Set[str] = set()
+                component: set[str] = set()
                 while True:
                     w = stack.pop()
                     on_stack[w] = False

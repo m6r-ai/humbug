@@ -2,7 +2,6 @@
 
 import logging
 import os
-from typing import Dict, List
 
 from syntax import Token, TokenType
 
@@ -40,7 +39,7 @@ class ShellCommand:
         """
         raise NotImplementedError("Subclasses must implement name property")
 
-    def aliases(self) -> List[str]:
+    def aliases(self) -> list[str]:
         """
         Get alternate names for the command.
 
@@ -57,7 +56,7 @@ class ShellCommand:
         """
         return ""
 
-    def get_options_help(self) -> Dict[str, str]:
+    def get_options_help(self) -> dict[str, str]:
         """
         Get help text for all supported command options.
 
@@ -91,7 +90,7 @@ class ShellCommand:
         # Default case - subclasses should override for their options
         return 0
 
-    def execute(self, tokens: List[Token], _full_text: str) -> bool:
+    def execute(self, tokens: list[Token], _full_text: str) -> bool:
         """
         Execute the command with the given tokens.
 
@@ -124,7 +123,7 @@ class ShellCommand:
             )
             return False
 
-    def _has_flag(self, tokens: List[Token], flag_name: str) -> bool:
+    def _has_flag(self, tokens: list[Token], flag_name: str) -> bool:
         """
         Check if a flag is present in the tokens.
 
@@ -142,7 +141,7 @@ class ShellCommand:
 
         return False
 
-    def _get_options(self, tokens: List[Token]) -> Dict[str, List[str]]:
+    def _get_options(self, tokens: list[Token]) -> dict[str, list[str]]:
         """
         Get dictionary of options and their values.
 
@@ -155,7 +154,7 @@ class ShellCommand:
             - List with one item for single-value options
             - List with multiple items for multi-value options
         """
-        options: Dict[str, List[str]] = {}
+        options: dict[str, list[str]] = {}
         current_option = None
 
         for token in tokens:
@@ -170,7 +169,7 @@ class ShellCommand:
 
         return options
 
-    def _get_positional_arguments(self, tokens: List[Token]) -> List[str]:
+    def _get_positional_arguments(self, tokens: list[Token]) -> list[str]:
         """
         Get list of positional arguments (not associated with options).
 
@@ -187,7 +186,7 @@ class ShellCommand:
 
         return args
 
-    def _get_command_token(self, tokens: List[Token]) -> Token | None:
+    def _get_command_token(self, tokens: list[Token]) -> Token | None:
         """
         Find the command token in the token list.
 
@@ -203,7 +202,7 @@ class ShellCommand:
 
         return None
 
-    def _execute_command(self, tokens: List[Token]) -> bool:
+    def _execute_command(self, tokens: list[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
@@ -241,9 +240,9 @@ class ShellCommand:
     def get_token_completions(
         self,
         current_token: Token,
-        _tokens: List[Token],
+        _tokens: list[Token],
         _cursor_token_index: int
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get completions for the current token based on token information.
 
@@ -261,7 +260,7 @@ class ShellCommand:
 
         return []
 
-    def _get_option_completions(self, partial_option: str) -> List[str]:
+    def _get_option_completions(self, partial_option: str) -> list[str]:
         """
         Get completions for a partial option.
 
@@ -283,7 +282,7 @@ class ShellCommand:
 
         return options
 
-    def _get_mindspace_path_completions(self, partial_path: str, file_extension: str | None = None) -> List[str]:
+    def _get_mindspace_path_completions(self, partial_path: str, file_extension: str | None = None) -> list[str]:
         """
         Get path completions within the current mindspace.
 
@@ -339,7 +338,7 @@ class ShellCommand:
             self._logger.warning("Error completing path: %s", str(e))
             return []
 
-    def _list_directory(self, dir_path: str, file_extension: str | None = None) -> List[str]:
+    def _list_directory(self, dir_path: str, file_extension: str | None = None) -> list[str]:
         """
         List contents of a directory in mindspace.
 

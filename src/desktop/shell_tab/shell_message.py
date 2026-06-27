@@ -2,7 +2,6 @@
 
 from datetime import datetime
 import logging
-from typing import List, Tuple
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QTextEdit
@@ -246,7 +245,7 @@ class ShellMessage(QFrame):
 
         self._text_area.apply_style()
 
-    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> list[tuple[int, int]]:
         """
         Find all instances of text in this message.
 
@@ -303,7 +302,7 @@ class ShellMessage(QFrame):
 
     def highlight_matches(
         self,
-        matches: List[Tuple[int, int]],
+        matches: list[tuple[int, int]],
         current_match_index: int = -1,
         highlight_color: QColor | None = None,
         dim_highlight_color: QColor | None = None

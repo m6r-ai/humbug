@@ -1,7 +1,8 @@
 """Transcript-backed AI conversation."""
 
+from collections.abc import Callable
 import logging
-from typing import Any, Callable, Dict, List
+from typing import Any
 
 from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
@@ -144,7 +145,7 @@ class AITranscriptConversation:
 
         self._conversation.load_history(history)
 
-    def load_message_history(self, messages: List[AIMessage]) -> None:
+    def load_message_history(self, messages: list[AIMessage]) -> None:
         """
         Load a list of messages into the conversation history.
 
@@ -226,7 +227,7 @@ class AITranscriptConversation:
         """
         self._conversation.update_conversation_settings(new_settings)
 
-    def get_token_counts(self) -> Dict[str, int]:
+    def get_token_counts(self) -> dict[str, int]:
         """Return token counts from the last response."""
         return self._conversation.get_token_counts()
 
@@ -258,7 +259,7 @@ class AITranscriptConversation:
         self,
         requester: str | None,
         user_message: str,
-        attachment_guids: List[str] | None = None
+        attachment_guids: list[str] | None = None
     ) -> None:
         """
         Submit a user message to the conversation.
@@ -281,7 +282,7 @@ class AITranscriptConversation:
         """
         self._conversation.cancel_current_tasks(notify)
 
-    async def retry_last_request(self) -> List[str]:
+    async def retry_last_request(self) -> list[str]:
         """
         Retry the last failed request.
 

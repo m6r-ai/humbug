@@ -1,4 +1,4 @@
-from typing import Dict, Type, Callable
+from collections.abc import Callable
 
 from syntax.parser import Parser
 from syntax.programming_language import ProgrammingLanguage
@@ -17,7 +17,7 @@ class ParserRegistry:
     """
 
     _instance = None
-    _parser_classes: Dict[ProgrammingLanguage, Type[Parser]] = {}
+    _parser_classes: dict[ProgrammingLanguage, type[Parser]] = {}
 
     def __new__(cls) -> "ParserRegistry":
         """
@@ -32,7 +32,7 @@ class ParserRegistry:
         return cls._instance
 
     @classmethod
-    def register_parser(cls, language: ProgrammingLanguage) -> Callable[[Type[Parser]], Type[Parser]]:
+    def register_parser(cls, language: ProgrammingLanguage) -> Callable[[type[Parser]], type[Parser]]:
         """
         Register a parser class for a specific programming language.
 
@@ -49,7 +49,7 @@ class ParserRegistry:
             class PythonParser(Parser):
                 ...
         """
-        def decorator(parser_class: Type[Parser]) -> Type[Parser]:
+        def decorator(parser_class: type[Parser]) -> type[Parser]:
             cls._parser_classes[language] = parser_class
             return parser_class
 

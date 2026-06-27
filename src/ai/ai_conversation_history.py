@@ -1,7 +1,6 @@
 """AI conversation state management."""
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
 import uuid
 
 from ai.ai_message import AIMessage
@@ -20,16 +19,16 @@ class AIConversationHistory:
 
     def __init__(
         self,
-        messages: List[AIMessage] | None = None,
+        messages: list[AIMessage] | None = None,
         version: str = "0.1",
         parent: AIConversationParent | None = None,
-        attachments: Dict[str, Dict] | None = None
+        attachments: dict[str, dict] | None = None
     ) -> None:
         """Initialize conversation history with optional metadata."""
-        self._messages: List[AIMessage] = messages if messages is not None else []
+        self._messages: list[AIMessage] = messages if messages is not None else []
         self._version = version
         self._parent = parent
-        self._attachments: Dict[str, Dict] = attachments if attachments is not None else {}
+        self._attachments: dict[str, dict] = attachments if attachments is not None else {}
         self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
 
     def version(self) -> str:
@@ -63,7 +62,7 @@ class AIConversationHistory:
         }
         return guid
 
-    def get_attachment(self, guid: str) -> Dict | None:
+    def get_attachment(self, guid: str) -> dict | None:
         """
         Retrieve an attachment by GUID.
 
@@ -75,7 +74,7 @@ class AIConversationHistory:
         """
         return self._attachments.get(guid)
 
-    def attachments(self) -> Dict[str, Dict]:
+    def attachments(self) -> dict[str, dict]:
         """
         Return a copy of the full attachments store.
 
@@ -99,7 +98,7 @@ class AIConversationHistory:
         self._attachments.clear()
         self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
 
-    def restore_attachments(self, attachments: Dict[str, Dict]) -> None:
+    def restore_attachments(self, attachments: dict[str, dict]) -> None:
         """
         Replace the attachment store with the given dict.
 
@@ -169,20 +168,20 @@ class AIConversationHistory:
 
         return self._messages.pop()
 
-    def get_messages(self) -> List[AIMessage]:
+    def get_messages(self) -> list[AIMessage]:
         """
         Get a copy of all messages in the conversation history.
 
         Returns:
-            List[AIMessage]: Copy of all messages
+            list[AIMessage]: Copy of all messages
         """
         return self._messages.copy()
 
-    def get_token_counts(self) -> Dict[str, int]:
+    def get_token_counts(self) -> dict[str, int]:
         """Get token counts from last response."""
         return self._last_response_tokens
 
-    def get_attachment_content_for_request(self, guid: str) -> Tuple[str, str] | None:
+    def get_attachment_content_for_request(self, guid: str) -> tuple[str, str] | None:
         """
         Resolve an attachment GUID to (filename, content) for API request construction.
 

@@ -1,6 +1,7 @@
 """Tokenizer for Menai expressions with detailed error messages."""
 
-from typing import Callable, List, Union
+from collections.abc import Callable
+from typing import Union
 
 from menai.menai_error import MenaiTokenError
 from menai.menai_token import MenaiToken, MenaiTokenType
@@ -12,7 +13,7 @@ class MenaiLexer:
     def __init__(self) -> None:
         """Initialize the lexer with empty state."""
         self._expression = ""
-        self._tokens: List[MenaiToken] = []
+        self._tokens: list[MenaiToken] = []
         self._position = 0
         self._line = 1
         self._column = 1
@@ -20,7 +21,7 @@ class MenaiLexer:
 
         # Build jump table for ASCII characters (0-127)
         # This provides O(1) lookup instead of O(n) if/elif chain
-        self._jump_table: List[Callable[[], None]] = [self._handle_invalid_char] * 128
+        self._jump_table: list[Callable[[], None]] = [self._handle_invalid_char] * 128
 
         # Whitespace characters (except newline which is handled separately)
         for code in [9, 11, 12, 13, 32]:  # \t, \v, \f, \r, space
@@ -59,7 +60,7 @@ class MenaiLexer:
         for char in '*/%<>=!&|^~_?$':
             self._jump_table[ord(char)] = self._handle_symbol
 
-    def lex(self, expression: str, preserve_comments: bool = False) -> List[MenaiToken]:
+    def lex(self, expression: str, preserve_comments: bool = False) -> list[MenaiToken]:
         """
         Lex an Menai expression with detailed error reporting.
 

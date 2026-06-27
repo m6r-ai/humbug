@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 from ai_tool import (
     AITool,
@@ -111,7 +111,7 @@ class PreviewAITool(AITool):
         """Get brief one-line description for system prompt."""
         return "Search and navigate file/directory preview content."
 
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """
         Get operation definitions for this tool.
 
@@ -150,7 +150,7 @@ class PreviewAITool(AITool):
             ),
         }
 
-    def _get_preview_context(self, arguments: Dict[str, Any]) -> PreviewContext:
+    def _get_preview_context(self, arguments: dict[str, Any]) -> PreviewContext:
         """
         Retrieve the PreviewContext for the given context_id.
 

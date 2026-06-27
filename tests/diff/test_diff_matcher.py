@@ -2,6 +2,7 @@
 
 import pytest
 
+from typing import Any
 from diff.diff_matcher import DiffMatcher
 from diff.diff_types import DiffHunk, DiffLine, MatchResult
 
@@ -774,12 +775,10 @@ class TestDiffMatcherDefaultLineCount:
         """Test that the default _get_document_line_count works correctly by
         using a matcher subclass that does not override it."""
         from diff.diff_matcher import DiffMatcher
-        from typing import Any, List
-
         class MinimalMatcher(DiffMatcher):
             """Matcher that relies entirely on the base _get_document_line_count."""
 
-            def _get_document_lines(self, document: Any, start_line: int, count: int) -> List[str]:
+            def _get_document_lines(self, document: Any, start_line: int, count: int) -> list[str]:
                 lines = document
                 start = start_line - 1
                 return lines[start:start + count]

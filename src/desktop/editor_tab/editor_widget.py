@@ -2,7 +2,7 @@ import logging
 import os
 import time
 from difflib import unified_diff
-from typing import List, Tuple, Dict, Any, cast
+from typing import Any, cast
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
 from PySide6.QtCore import Qt, QRect, Signal, QTimer, QRegularExpression
@@ -86,7 +86,7 @@ class EditorWidget(QPlainTextEdit):
         self.setPalette(palette)
 
         # Initialize find functionality
-        self._matches: List[Tuple[int, int]] = []  # List of (start, end) positions
+        self._matches: list[tuple[int, int]] = []  # List of (start, end) positions
         self._current_match = -1
         self._last_search: tuple = ("", False, False)
 
@@ -511,7 +511,7 @@ class EditorWidget(QPlainTextEdit):
             )
             return False
 
-    def get_status_info(self) -> Dict[str, Any]:
+    def get_status_info(self) -> dict[str, Any]:
         """
         Get status information for the status bar.
 
@@ -537,7 +537,7 @@ class EditorWidget(QPlainTextEdit):
             'type': file_type
         }
 
-    def create_state_metadata(self, temp_state: bool) -> Dict[str, Any]:
+    def create_state_metadata(self, temp_state: bool) -> dict[str, Any]:
         """
         Create metadata dictionary capturing current widget state.
 
@@ -547,7 +547,7 @@ class EditorWidget(QPlainTextEdit):
         Returns:
             Dictionary containing editor state metadata
         """
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
 
         metadata["syntax"] = self._syntax.name
         metadata["cursor"] = self._get_cursor_position()
@@ -559,7 +559,7 @@ class EditorWidget(QPlainTextEdit):
 
         return metadata
 
-    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
         """
         Restore widget state from metadata.
 
@@ -588,7 +588,7 @@ class EditorWidget(QPlainTextEdit):
         if "vertical_scroll" in metadata:
             self.verticalScrollBar().setValue(metadata["vertical_scroll"])
 
-    def _set_cursor_position(self, position: Dict[str, int]) -> None:
+    def _set_cursor_position(self, position: dict[str, int]) -> None:
         """
         Set cursor position in editor.
 
@@ -614,7 +614,7 @@ class EditorWidget(QPlainTextEdit):
         self.setTextCursor(cursor)
         self._start_smooth_scroll_to_cursor(cursor)
 
-    def _get_cursor_position(self) -> Dict[str, int]:
+    def _get_cursor_position(self) -> dict[str, int]:
         """
         Get current cursor position from editor.
 
@@ -1393,7 +1393,7 @@ class EditorWidget(QPlainTextEdit):
         if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
-    def get_match_status(self) -> Tuple[int, int, bool]:
+    def get_match_status(self) -> tuple[int, int, bool]:
         """
         Get the current match status.
 
@@ -1588,7 +1588,7 @@ class EditorWidget(QPlainTextEdit):
 
         return text
 
-    def get_cursor_info(self) -> Dict[str, Any]:
+    def get_cursor_info(self) -> dict[str, Any]:
         """
         Get current cursor position and selection information.
 
@@ -1609,7 +1609,7 @@ class EditorWidget(QPlainTextEdit):
         current_line = cursor.blockNumber() + 1
         current_column = cursor.columnNumber() + 1
 
-        info: Dict[str, Any] = {
+        info: dict[str, Any] = {
             'line': current_line,
             'column': current_column,
             'has_selection': cursor.hasSelection()
@@ -1634,7 +1634,7 @@ class EditorWidget(QPlainTextEdit):
 
         return info
 
-    def get_editor_info(self) -> Dict[str, Any]:
+    def get_editor_info(self) -> dict[str, Any]:
         """
         Get editor metadata and document information.
 
@@ -1699,7 +1699,7 @@ class EditorWidget(QPlainTextEdit):
         self.setTextCursor(cursor)
         self._start_smooth_scroll_to_cursor(cursor)
 
-    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Dict[str, Any]]:
+    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False, regexp: bool = False) -> list[dict[str, Any]]:
         """
         Find all occurrences of text in the document.
 
@@ -1722,7 +1722,7 @@ class EditorWidget(QPlainTextEdit):
             return []
 
         document = self.document()
-        matches: List[Dict[str, Any]] = []
+        matches: list[dict[str, Any]] = []
 
         find_flags = QTextDocument.FindFlag(0)
         if case_sensitive:
@@ -1830,7 +1830,7 @@ class EditorWidget(QPlainTextEdit):
         )
         return ''.join(diff_lines)
 
-    def apply_unified_diff(self, diff_text: str) -> Dict[str, Any]:
+    def apply_unified_diff(self, diff_text: str) -> dict[str, Any]:
         """
         Apply a unified diff to the editor content.
 

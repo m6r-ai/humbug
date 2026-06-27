@@ -1,10 +1,11 @@
 """Pipeline execution engine."""
 
-import sys
-import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+import sys
+import time
+from typing import Any, Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
@@ -37,7 +38,7 @@ class PipelineResult:
     """Result from executing a complete pipeline."""
 
     success: bool
-    step_results: List[StepResult] = field(default_factory=list)
+    step_results: list[StepResult] = field(default_factory=list)
     error: str = ""
 
 
@@ -141,7 +142,7 @@ def _python_to_menai_literal(value: Any) -> str:
     )
 
 
-def _build_menai_expression(step: MenaiStep, step_outputs: Dict[str, str]) -> str:
+def _build_menai_expression(step: MenaiStep, step_outputs: dict[str, str]) -> str:
     """
     Build the complete Menai expression for a step by wrapping the step's
     expression body in a let binding that injects all named inputs.
@@ -165,7 +166,7 @@ def _build_menai_expression(step: MenaiStep, step_outputs: Dict[str, str]) -> st
     if not step.inputs:
         return expression
 
-    bindings: List[str] = []
+    bindings: list[str] = []
     for input_name, source_step_id in step.inputs.items():
         composite_key = f"{source_step_id}.{input_name}"
         if composite_key in step_outputs:
@@ -187,9 +188,9 @@ def _build_menai_expression(step: MenaiStep, step_outputs: Dict[str, str]) -> st
 
 def _execute_menai_step(
     step: MenaiStep,
-    step_outputs: Dict[str, str],
+    step_outputs: dict[str, str],
     menai: Menai
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Execute a Menai step and return a map of output key -> string value.
 
@@ -224,7 +225,7 @@ def _execute_menai_step(
             f"got '{type(result).__name__}'"
         )
 
-    outputs: Dict[str, str] = {}
+    outputs: dict[str, str] = {}
     for key_value, val in result.pairs:
         if not isinstance(key_value, MenaiString):
             raise PipelineExecutionError(
@@ -275,7 +276,7 @@ def _get_tool(tool_name: str) -> Any:
 
 def _resolve_value_from(
     value_from: Optional[str],
-    step_outputs: Dict[str, str],
+    step_outputs: dict[str, str],
     step_id: str
 ) -> Optional[str]:
     """
@@ -309,7 +310,7 @@ def _resolve_value_from(
 
 def _execute_tool_step(
     step: ToolStep,
-    step_outputs: Dict[str, str]
+    step_outputs: dict[str, str]
 ) -> str:
     """
     Execute a tool step and return its string output.
@@ -371,8 +372,8 @@ def execute_pipeline(
         str(Path(__file__).parent.parent.parent / "menai_modules"),
     ])
 
-    step_outputs: Dict[str, str] = {}
-    step_results: List[StepResult] = []
+    step_outputs: dict[str, str] = {}
+    step_results: list[StepResult] = []
 
     for step in pipeline.steps:
         if on_step_start is not None:

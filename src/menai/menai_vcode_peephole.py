@@ -68,7 +68,6 @@ Sub-passes
 The three sub-passes are composed and iterated to a joint fixed point.
 """
 
-from typing import List, Tuple
 
 from menai.menai_vcode import (
     MenaiVCodeFunction,
@@ -124,16 +123,16 @@ def peephole(func: MenaiVCodeFunction, slot_map: SlotMap) -> MenaiVCodeFunction:
 
 
 def _eliminate_redundant_moves(
-    instrs: List[MenaiVCodeInstr],
+    instrs: list[MenaiVCodeInstr],
     slot_map: SlotMap,
-) -> Tuple[List[MenaiVCodeInstr], bool]:
+) -> tuple[list[MenaiVCodeInstr], bool]:
     """
     Remove MenaiVCodeMove instructions where src and dst share a slot.
 
     These are produced by phi elimination when the incoming value and the
     phi result were assigned the same slot by the allocator.
     """
-    result: List[MenaiVCodeInstr] = []
+    result: list[MenaiVCodeInstr] = []
     changed = False
     for instr in instrs:
         if (
@@ -149,8 +148,8 @@ def _eliminate_redundant_moves(
 
 
 def _eliminate_jump_over_jump(
-    instrs: List[MenaiVCodeInstr],
-) -> Tuple[List[MenaiVCodeInstr], bool]:
+    instrs: list[MenaiVCodeInstr],
+) -> tuple[list[MenaiVCodeInstr], bool]:
     """
     Replace JUMP_IF_TRUE/FALSE @L1 immediately followed by JUMP @L2 with
     the inverted conditional JUMP_IF_FALSE/TRUE @L2, removing the JUMP.
@@ -163,7 +162,7 @@ def _eliminate_jump_over_jump(
     are left in place (they now point to the next real instruction), which
     is correct.
     """
-    result: List[MenaiVCodeInstr] = []
+    result: list[MenaiVCodeInstr] = []
     changed = False
     i = 0
     while i < len(instrs):
@@ -210,9 +209,9 @@ def _eliminate_jump_over_jump(
 
 
 def _fold_branch_load_return(
-    instrs: List[MenaiVCodeInstr],
+    instrs: list[MenaiVCodeInstr],
     slot_map: SlotMap,
-) -> Tuple[List[MenaiVCodeInstr], bool]:
+) -> tuple[list[MenaiVCodeInstr], bool]:
     """
     Fold JUMP_IF_TRUE/FALSE r / LOAD_CONST bool / RETURN r2 into
     JUMP_IF_TRUE/FALSE r / RETURN r.
@@ -229,7 +228,7 @@ def _fold_branch_load_return(
     known to hold at that point (#f after JUMP_IF_TRUE, #t after
     JUMP_IF_FALSE).  Intervening labels are skipped when scanning ahead.
     """
-    result: List[MenaiVCodeInstr] = []
+    result: list[MenaiVCodeInstr] = []
     changed = False
     i = 0
 

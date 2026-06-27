@@ -1,10 +1,11 @@
 """Enhanced AI conversation class with tool calling support."""
 
 import asyncio
+from collections.abc import Callable
+from enum import Enum, auto
 import json
 import logging
-from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Set
+from typing import Any
 
 from ai.ai_conversation_history import AIConversationHistory
 from ai.ai_conversation_settings import AIConversationSettings
@@ -57,23 +58,23 @@ class AIConversation:
         self._tool_manager = AIToolManager()
         self._settings = AIConversationSettings()
         self._conversation = AIConversationHistory()
-        self._current_tasks: List[asyncio.Task] = []
+        self._current_tasks: list[asyncio.Task] = []
         self._current_ai_message: AIMessage | None = None
         self._current_reasoning_message: AIMessage | None = None
         self._is_streaming = False
         self._expecting_cancellation = False
 
         # Tool approval state
-        self._pending_tool_calls: List[AIToolCall] = []
+        self._pending_tool_calls: list[AIToolCall] = []
         self._pending_tool_call_message: AIMessage | None = None
         self._pending_authorization_future: asyncio.Future[bool] | None = None
 
         # Conversation state and interruption handling
         self._state = ConversationState.IDLE
-        self._pending_user_messages: List[AIMessage] = []
+        self._pending_user_messages: list[AIMessage] = []
 
         # Callbacks for events
-        self._callbacks: Dict[AIConversationEvent, Set[Callable]] = {
+        self._callbacks: dict[AIConversationEvent, set[Callable]] = {
             event: set() for event in AIConversationEvent
         }
 
@@ -151,7 +152,7 @@ class AIConversation:
         """
         return self._conversation
 
-    def get_token_counts(self) -> Dict[str, int]:
+    def get_token_counts(self) -> dict[str, int]:
         """
         Get the current token counts for status display.
 
@@ -160,7 +161,7 @@ class AIConversation:
         """
         return self._conversation.get_token_counts()
 
-    def load_message_history(self, messages: List[AIMessage]) -> None:
+    def load_message_history(self, messages: list[AIMessage]) -> None:
         """
         Load existing message history.
 
@@ -216,7 +217,7 @@ class AIConversation:
         self,
         requester: str | None,
         user_message: str,
-        attachment_guids: List[str] | None = None
+        attachment_guids: list[str] | None = None
     ) -> None:
         """
         Submit a user message to the conversation.
@@ -373,7 +374,7 @@ class AIConversation:
     async def _request_tool_authorization(
         self,
         tool_name: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         reason: str,
         context: str | None,
         destructive: bool
@@ -533,13 +534,13 @@ class AIConversation:
                 context=f"`error` is:\n```text\n{str(e)}\n```"
             )
 
-    async def _execute_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
+    async def _execute_tool_calls(self, tool_calls: list[AIToolCall]) -> None:
         """Execute tool calls with support for parallel execution via continuations."""
         self._state = ConversationState.EXECUTING_TOOLS
         self._logger.debug("Executing tool calls with continuation support...")
 
         # Execute all tool calls and collect results and continuations
-        tool_results: List[AIToolResult] = []
+        tool_results: list[AIToolResult] = []
         continuations = []
 
         for tool_call in tool_calls:
@@ -613,7 +614,7 @@ class AIConversation:
         # If we have continuations, wait for them to complete.  Then we update the tool results.
         if continuations:
             self._logger.debug("Waiting for %d tool continuations to complete...", len(continuations))
-            continuation_results: List[AIToolResult] = await asyncio.gather(*continuations)
+            continuation_results: list[AIToolResult] = await asyncio.gather(*continuations)
             self._logger.debug("Tool continuations completed: %s", continuation_results)
 
             # We need to iterate the continuation results and update the tool results
@@ -809,7 +810,7 @@ class AIConversation:
         self,
         content: str,
         usage: AIUsage | None,
-        tool_calls: List[AIToolCall] | None,
+        tool_calls: list[AIToolCall] | None,
         redacted_reasoning: str | None = None
     ) -> None:
         """
@@ -867,7 +868,7 @@ class AIConversation:
         self,
         reasoning: str,
         usage: AIUsage | None,
-        tool_calls: List[AIToolCall] | None,
+        tool_calls: list[AIToolCall] | None,
         signature: str | None = None,
         redacted_reasoning: str | None = None
     ) -> None:
@@ -926,7 +927,7 @@ class AIConversation:
         self,
         reasoning: str,
         content: str,
-        tool_calls: List[AIToolCall] | None,
+        tool_calls: list[AIToolCall] | None,
         redacted_reasoning: str | None = None
     ) -> None:
         self._logger.debug("Finished AI response streaming")
@@ -998,7 +999,7 @@ class AIConversation:
         content: str,
         usage: AIUsage | None = None,
         error: AIError | None = None,
-        tool_calls: List[AIToolCall] | None = None,
+        tool_calls: list[AIToolCall] | None = None,
         signature: str | None = None,
         redacted_reasoning: str | None = None,
         connected: bool = False
@@ -1071,7 +1072,7 @@ class AIConversation:
 
         self._state = ConversationState.IDLE
 
-    async def retry_last_request(self) -> List[str]:
+    async def retry_last_request(self) -> list[str]:
         """
         Retry the last request by removing all messages since the last user/tool input.
 
@@ -1100,7 +1101,7 @@ class AIConversation:
 
         # Strip all messages back to (but not including) the last USER or TOOL_RESULT message.
         # That covers: SYSTEM(error), AI(partial), REASONING(partial), AI_CONNECTED.
-        removed_ids: List[str] = []
+        removed_ids: list[str] = []
         retry_sources = {AIMessageSource.USER, AIMessageSource.TOOL_RESULT}
         while self._conversation.get_messages() and self._conversation.get_messages()[-1].source not in retry_sources:
             removed = self._conversation.remove_last_message()

@@ -5,7 +5,7 @@ This tab provides a read-only view of the mindspace message log for viewing syst
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any
 
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 from PySide6.QtCore import QObject, Qt, QRegularExpression
@@ -326,7 +326,7 @@ class LogTab(TabBase):
 
     # AI Tool Support Methods
 
-    def get_log_info(self) -> Dict[str, Any]:
+    def get_log_info(self) -> dict[str, Any]:
         """
         Get high-level metadata about the log.
 
@@ -342,7 +342,7 @@ class LogTab(TabBase):
         levels: list[str] | None = None,
         limit: int | None = None,
         include_content: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Read log messages with filtering and pagination.
 
@@ -364,7 +364,7 @@ class LogTab(TabBase):
         self,
         message_id: str | None = None,
         message_index: int | None = None
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """
         Get a specific log message by ID or index.
 
@@ -383,7 +383,7 @@ class LogTab(TabBase):
         case_sensitive: bool = False,
         levels: list[str] | None = None,
         max_results: int = 50
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Search for text across log messages."""
         return self._log_widget.search_messages(
             search_text, case_sensitive, levels, max_results

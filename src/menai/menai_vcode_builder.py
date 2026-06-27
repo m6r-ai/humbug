@@ -42,7 +42,6 @@ builder recurses to produce a nested MenaiVCodeFunction, which is embedded
 in the MenaiVCodeMakeClosure instruction.
 """
 
-from typing import Dict, List, Tuple
 
 from menai.menai_cfg import (
     MenaiCFGApplyInstr,
@@ -109,7 +108,7 @@ class MenaiVCodeBuilder:
     """
 
     def __init__(self) -> None:
-        self._reg_cache: Dict[int, MenaiVCodeReg] = {}
+        self._reg_cache: dict[int, MenaiVCodeReg] = {}
 
     def build(self, func: MenaiCFGFunction) -> MenaiVCodeFunction:
         """
@@ -132,18 +131,18 @@ class MenaiVCodeBuilder:
 
         # Pre-compute phi moves: for each block, the list of (dst, src) moves
         # to emit before the block's terminator, one per phi in each successor.
-        phi_moves: Dict[int, List[Tuple[MenaiVCodeReg, MenaiVCodeReg]]] = {
+        phi_moves: dict[int, list[tuple[MenaiVCodeReg, MenaiVCodeReg]]] = {
             block.id: [] for block in rpo
         }
 
         # Pre-compute label strings — each block's label is needed in multiple
         # places (phi-move pre-computation and terminator emission).
-        labels: Dict[int, str] = {block.id: self._label(block) for block in rpo}
+        labels: dict[int, str] = {block.id: self._label(block) for block in rpo}
 
         # Pre-compute param and free-var register lookups from the entry block,
         # so SelfLoopTerm handling can do O(1) lookups instead of linear scans.
-        param_regs: Dict[int, MenaiVCodeReg] = {}
-        freevar_regs: Dict[str, MenaiVCodeReg] = {}
+        param_regs: dict[int, MenaiVCodeReg] = {}
+        freevar_regs: dict[str, MenaiVCodeReg] = {}
         for instr in func.blocks[0].instrs:
             if isinstance(instr, MenaiCFGParamInstr):
                 param_regs[instr.index] = self._reg(instr.result)
@@ -153,7 +152,7 @@ class MenaiVCodeBuilder:
 
         for block in rpo:
             term = block.terminator
-            successors: List[MenaiCFGBlock] = []
+            successors: list[MenaiCFGBlock] = []
             if isinstance(term, MenaiCFGJumpTerm):
                 successors = [term.target]
 
@@ -172,7 +171,7 @@ class MenaiVCodeBuilder:
                             phi_moves[block.id].append((dst, src))
 
         # Emit instructions for each block in RPO order.
-        instrs: List[MenaiVCodeInstr] = []
+        instrs: list[MenaiVCodeInstr] = []
         max_reg_id = -1
 
         for i, block in enumerate(rpo):
@@ -313,7 +312,7 @@ class MenaiVCodeBuilder:
     def _lower_instr(
         self,
         instr: object,
-        instrs: List[MenaiVCodeInstr],
+        instrs: list[MenaiVCodeInstr],
         max_reg_id: int,
     ) -> int:
         """
@@ -420,7 +419,7 @@ class MenaiVCodeBuilder:
         """Return the label string for a CFG block."""
         return f"__{block.id}_{block.label}__"
 
-    def _rpo(self, func: MenaiCFGFunction) -> List[MenaiCFGBlock]:
+    def _rpo(self, func: MenaiCFGFunction) -> list[MenaiCFGBlock]:
         """
         Return reachable blocks in reverse post-order.
 
@@ -428,7 +427,7 @@ class MenaiVCodeBuilder:
         back-edges to the entry that are handled by emitting JUMP __entry__.
         """
         visited: set = set()
-        post_order: List[MenaiCFGBlock] = []
+        post_order: list[MenaiCFGBlock] = []
 
         def dfs(block: MenaiCFGBlock) -> None:
             if block.id in visited:

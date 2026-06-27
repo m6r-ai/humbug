@@ -8,7 +8,7 @@ into the bytecode and VM execution.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Tuple
+from typing import Any
 
 from menai.menai_value import (
     MenaiValue, MenaiInteger, MenaiFloat, MenaiComplex,
@@ -217,7 +217,7 @@ class MenaiASTSymbol(MenaiASTNode):
 @dataclass(frozen=True)
 class MenaiASTList(MenaiASTNode):
     """Represents lists of Menai AST nodes."""
-    elements: Tuple[MenaiASTNode, ...] = ()
+    elements: tuple[MenaiASTNode, ...] = ()
 
     def to_runtime_value(self) -> MenaiList:
         """Convert to runtime list (recursively converts elements)."""
@@ -267,7 +267,7 @@ class MenaiASTListLiteral(MenaiASTNode):
     that the IR builder can unambiguously treat it as a single constant rather
     than a call expression.  All elements must be compile-time constants.
     """
-    elements: Tuple[MenaiASTNode, ...] = ()
+    elements: tuple[MenaiASTNode, ...] = ()
 
     def to_runtime_value(self) -> MenaiList:
         """Convert to a MenaiList constant."""
@@ -289,7 +289,7 @@ class MenaiASTSet(MenaiASTNode):
     constant rather than a runtime construction.  All elements must be
     compile-time constants.
     """
-    elements: Tuple[MenaiASTNode, ...] = ()
+    elements: tuple[MenaiASTNode, ...] = ()
 
     def to_runtime_value(self) -> MenaiSet:
         """Convert to a MenaiSet constant."""
@@ -316,7 +316,7 @@ class MenaiASTDict(MenaiASTNode):
     zero-argument (dict) calls.  Non-empty dict literals are handled by the
     desugarer as a fold of $dict-set calls over an empty seed.
     """
-    pairs: Tuple[Tuple['MenaiASTNode', 'MenaiASTNode'], ...] = ()
+    pairs: tuple[tuple['MenaiASTNode', 'MenaiASTNode'], ...] = ()
 
     def to_runtime_value(self) -> MenaiDict:
         return MenaiDict(
@@ -354,7 +354,7 @@ class MenaiASTStruct(MenaiASTNode):
     """
     name: str = ""
     tag: int = 0
-    field_names: Tuple[str, ...] = ()
+    field_names: tuple[str, ...] = ()
 
     def to_runtime_value(self) -> MenaiStructType:
         """Produce the MenaiStructType runtime value for this struct definition."""

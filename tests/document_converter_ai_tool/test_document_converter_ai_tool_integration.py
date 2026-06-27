@@ -24,7 +24,6 @@ import asyncio
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -48,7 +47,7 @@ def temp_dir():
 @pytest.fixture
 def real_tool(temp_dir):
     """DocumentConverterAITool wired to a real temp directory as the mindspace."""
-    def resolver(path: str) -> Tuple[Path, str]:
+    def resolver(path: str) -> tuple[Path, str]:
         if not path:
             raise ValueError("Path cannot be empty")
         if ".." in path:

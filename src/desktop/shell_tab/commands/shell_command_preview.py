@@ -1,7 +1,6 @@
 """Command for opening pages in a preview tab from the system shell."""
 
 import os
-from typing import List
 
 from syntax import Token, TokenType
 
@@ -20,7 +19,7 @@ class ShellCommandPreview(ShellCommand):
         """Get the help text for the command."""
         return "Opens a preview tab"
 
-    def _execute_command(self, tokens: List[Token]) -> bool:
+    def _execute_command(self, tokens: list[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
@@ -74,9 +73,9 @@ class ShellCommandPreview(ShellCommand):
     def get_token_completions(
         self,
         current_token: Token,
-        _tokens: List[Token],
+        _tokens: list[Token],
         _cursor_token_index: int
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get completions for the current token based on token information.
 

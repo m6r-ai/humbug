@@ -1,7 +1,6 @@
 """Per-mindspace token usage tracking."""
 
 from dataclasses import dataclass
-from typing import Dict, List
 
 
 @dataclass
@@ -23,7 +22,7 @@ class MindspaceUsage:
     """
 
     def __init__(self) -> None:
-        self._entries: Dict[tuple, ModelUsageEntry] = {}
+        self._entries: dict[tuple, ModelUsageEntry] = {}
 
     def record(
         self,
@@ -61,7 +60,7 @@ class MindspaceUsage:
         """Return total cache-read tokens across all models."""
         return sum(e.cache_read_tokens for e in self._entries.values())
 
-    def entries(self) -> List[ModelUsageEntry]:
+    def entries(self) -> list[ModelUsageEntry]:
         """Return per-model entries sorted by total tokens descending."""
         return sorted(
             self._entries.values(),

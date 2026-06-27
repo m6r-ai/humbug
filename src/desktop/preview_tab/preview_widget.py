@@ -3,7 +3,7 @@
 import logging
 import os
 import re
-from typing import Dict, List, Any, Set, Tuple
+from typing import Any
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy
@@ -65,13 +65,13 @@ class PreviewWidget(QWidget):
 
         # File watching integration
         self._file_watcher = FileWatcher()
-        self._watched_paths: Set[str] = set()
+        self._watched_paths: set[str] = set()
 
         # Cache of the last rendered content list for change detection
-        self._last_content_list: List[Tuple[PreviewContentType, str]] = []
+        self._last_content_list: list[tuple[PreviewContentType, str]] = []
 
         # Widget tracking
-        self._content_blocks: List[PreviewContentWidget] = []
+        self._content_blocks: list[PreviewContentWidget] = []
         self._content_with_selection: PreviewContentWidget | None = None
 
         # Initialize tracking variables
@@ -111,7 +111,7 @@ class PreviewWidget(QWidget):
         content_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
-        self._search_highlights: Dict[PreviewContentWidget, List[Tuple[int, int, int]]] = {}
+        self._search_highlights: dict[PreviewContentWidget, list[tuple[int, int, int]]] = {}
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -149,11 +149,11 @@ class PreviewWidget(QWidget):
 
 
         # Find functionality
-        self._matches: List[Tuple[PreviewContentWidget, List[Tuple[int, int, int]]]] = []
+        self._matches: list[tuple[PreviewContentWidget, list[tuple[int, int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search: tuple = ("", False, False)
-        self._highlighted_widgets: Set[PreviewContentWidget] = set()
+        self._highlighted_widgets: set[PreviewContentWidget] = set()
 
     def activate(self) -> None:
         """Activate the preview widget."""
@@ -164,7 +164,7 @@ class PreviewWidget(QWidget):
         # Update status if needed
         self.status_updated.emit()
 
-    def _register_file_watching(self, dependencies: Set[str]) -> None:
+    def _register_file_watching(self, dependencies: set[str]) -> None:
         """Register current path and any dependencies for file watching."""
         # Register each dependency with the file watcher
         for dep_path in dependencies:
@@ -257,7 +257,7 @@ class PreviewWidget(QWidget):
         else:
             self._scroll_area.verticalScrollBar().setValue(self._deferred_scroll_position)
 
-    def _restore_ui_state(self, scroll_pos: int, selection: str | None, find_state: Dict) -> None:
+    def _restore_ui_state(self, scroll_pos: int, selection: str | None, find_state: dict) -> None:
         """
         Restore UI state after content refresh.
 
@@ -409,7 +409,7 @@ class PreviewWidget(QWidget):
         """
         return self._preview.resolve_link(current_path, target_path)
 
-    def get_content_blocks(self) -> List[Tuple[PreviewContentType, str]]:
+    def get_content_blocks(self) -> list[tuple[PreviewContentType, str]]:
         """
         Return the cached raw content blocks for this preview.
 
@@ -736,7 +736,7 @@ class PreviewWidget(QWidget):
 
     def find_text(
         self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False
-    ) -> Tuple[int, int, bool]:
+    ) -> tuple[int, int, bool]:
         """
         Find all instances of text and highlight them.
 
@@ -879,7 +879,7 @@ class PreviewWidget(QWidget):
 
         self._highlighted_widgets.clear()
 
-    def get_match_status(self) -> Tuple[int, int, bool]:
+    def get_match_status(self) -> tuple[int, int, bool]:
         """
         Get the current match status.
 
@@ -907,14 +907,14 @@ class PreviewWidget(QWidget):
         """Remove find highlights without resetting match state."""
         self._clear_highlights()
 
-    def create_state_metadata(self) -> Dict[str, Any]:
+    def create_state_metadata(self) -> dict[str, Any]:
         """
         Create metadata dictionary capturing current widget state.
 
         Returns:
             Dictionary containing preview state metadata
         """
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
 
         # Store scroll position
         scrollbar = self._scroll_area.verticalScrollBar()
@@ -922,7 +922,7 @@ class PreviewWidget(QWidget):
 
         return metadata
 
-    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
         """
         Restore widget state from metadata.
 
@@ -940,7 +940,7 @@ class PreviewWidget(QWidget):
 
     # AI Tool Support Methods
 
-    def get_preview_info(self) -> Dict[str, Any]:
+    def get_preview_info(self) -> dict[str, Any]:
         """
         Get high-level metadata about the preview content.
 
@@ -979,7 +979,7 @@ class PreviewWidget(QWidget):
         case_sensitive: bool = False,
         max_results: int = 50,
         regexp: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search for text across all content blocks.
 

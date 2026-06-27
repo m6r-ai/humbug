@@ -1,15 +1,16 @@
 import asyncio
+from collections.abc import Callable
+from datetime import datetime, timezone
 import difflib
+import fnmatch
 import json
 import logging
 import os
+from pathlib import Path
 import re
-import fnmatch
 import shutil
 import tempfile
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Dict, Any, List, Callable, Tuple, cast
+from typing import Any, cast
 
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
@@ -39,7 +40,7 @@ class FileSystemAITool(AITool):
 
     def __init__(
         self,
-        resolve_path: Callable[[str], Tuple[Path, str]],
+        resolve_path: Callable[[str], tuple[Path, str]],
         get_access_settings: Callable[[], FilesystemAccessSettings],
         mindspace: Mindspace,
         max_file_size_mb: int = 10
@@ -227,7 +228,7 @@ class FileSystemAITool(AITool):
 
         return "File and directory operations in mindspace."
 
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """
         Get operation definitions for this tool.
 
@@ -403,7 +404,7 @@ class FileSystemAITool(AITool):
         tool_call: AIToolCall,
         request_authorization: AIToolAuthorizationCallback,
         allow_external: bool = False
-    ) -> Tuple[Path, str]:
+    ) -> tuple[Path, str]:
         """
         Validate path and resolve to absolute path with display path.
 
@@ -479,7 +480,7 @@ class FileSystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"{key}: failed to resolve path '{path_str}': {str(e)}") from e
 
-    def _match_glob_patterns(self, path_str: str, patterns: List[str]) -> bool:
+    def _match_glob_patterns(self, path_str: str, patterns: list[str]) -> bool:
         """
         Check if a path matches any of the glob patterns.
 
@@ -861,7 +862,7 @@ class FileSystemAITool(AITool):
             context="json"
         )
 
-    def _write_file_context(self, arguments: Dict[str, Any]) -> str | None:
+    def _write_file_context(self, arguments: dict[str, Any]) -> str | None:
         """Extract context for write_file operation."""
         path_arg = self._get_required_str_value("path", arguments)
         context = self._get_required_str_value("content", arguments)
@@ -959,7 +960,7 @@ class FileSystemAITool(AITool):
             content=f"File written successfully: {display_path} ({content_size:,} bytes)"
         )
 
-    def _append_to_file_context(self, arguments: Dict[str, Any]) -> str | None:
+    def _append_to_file_context(self, arguments: dict[str, Any]) -> str | None:
         """Extract context for append_to_file operation."""
         path_arg = self._get_required_str_value("path", arguments)
         if not path_arg:
@@ -1053,7 +1054,7 @@ class FileSystemAITool(AITool):
 
         # List directory contents
         try:
-            items: List[Dict[str, Any]] = []
+            items: list[dict[str, Any]] = []
             for path_item in path.iterdir():
                 try:
                     if path_item.is_file():
@@ -1431,7 +1432,7 @@ class FileSystemAITool(AITool):
                     items = list(path.iterdir())
                     file_count = sum(1 for item in items if item.is_file())
                     dir_count = sum(1 for item in items if item.is_dir())
-                    items_info: Dict[str, Any] = {
+                    items_info: dict[str, Any] = {
                         "total": len(items),
                         "files": file_count,
                         "directories": dir_count
@@ -1644,7 +1645,7 @@ class FileSystemAITool(AITool):
 
         total_matches = 0
         truncated = False
-        files_with_matches: List[Dict[str, Any]] = []
+        files_with_matches: list[dict[str, Any]] = []
 
         for file_path in sorted(path.rglob("*")):
             if not file_path.is_file():
@@ -1842,7 +1843,7 @@ class FileSystemAITool(AITool):
         name = self._get_optional_str_value("name", arguments, None)
         max_results = self._get_optional_int_value("max_results", arguments, 1000)
 
-        matches: List[str] = []
+        matches: list[str] = []
         truncated = False
 
         for file_path in sorted(path.rglob("*")):
@@ -1890,7 +1891,7 @@ class FileSystemAITool(AITool):
             context="json"
         )
 
-    def _apply_diff_to_file_context(self, arguments: Dict[str, Any]) -> str | None:
+    def _apply_diff_to_file_context(self, arguments: dict[str, Any]) -> str | None:
         """Extract context for append_to_file operation."""
         context = self._get_required_str_value("diff_content", arguments)
         return f"`diff_content` is:\n```diff\n{context}\n```"
@@ -2031,7 +2032,7 @@ class FileSystemAITool(AITool):
             content=f"Diff applied successfully to '{display_path}': {result.hunks_applied} hunk(s) applied"
         )
 
-    def _transform_file_context(self, arguments: Dict[str, Any]) -> str | None:
+    def _transform_file_context(self, arguments: dict[str, Any]) -> str | None:
         """Extract context for transform_file operation."""
         path_arg = arguments.get("path", "")
         program = arguments.get("program", "")
@@ -2045,7 +2046,7 @@ class FileSystemAITool(AITool):
         path: Path,
         expression: str,
         encoding: str
-    ) -> tuple[str, str, List[str], bool]:
+    ) -> tuple[str, str, list[str], bool]:
         """
         Read a file, run a Menai transform program, return results synchronously.
 
@@ -2071,7 +2072,7 @@ class FileSystemAITool(AITool):
             raise AIToolExecutionError(f"Cannot read file: {e}") from e
 
         lines = original_content.split('\n')
-        bindings: Dict[str, MenaiValue] = {
+        bindings: dict[str, MenaiValue] = {
             'input-text': MenaiString(original_content),
             'input-lines': MenaiList(tuple(MenaiString(line) for line in lines)),
         }
@@ -2238,7 +2239,7 @@ class FileSystemAITool(AITool):
             f"AI transformed file: '{display_path}' ({len(diff_lines)} diff lines)"
         )
         trace_str = '\n'.join(traces) if traces else ''
-        result_obj: Dict[str, Any] = {
+        result_obj: dict[str, Any] = {
             "message": f"Transform applied to '{display_path}' ({len(diff_lines)} diff lines).",
             "trace_data": trace_str,
             "trace_data_clipped": "yes" if watcher_clipped else "no"

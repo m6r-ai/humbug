@@ -1,14 +1,14 @@
 """Bytecode definitions for Menai virtual machine."""
 
 import array
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Callable, Dict, List, Tuple
 
 from menai.menai_value import MenaiValue
 
 
-def _op(n: int, arg_count: int = 0) -> Tuple[int, int]:
+def _op(n: int, arg_count: int = 0) -> tuple[int, int]:
     """
     Helper to construct an Opcode value: (integer_value, arg_count).
 
@@ -289,7 +289,7 @@ class Opcode(IntEnum):
 # 'dict-get' and 'range' have optional arguments; their stubs always use the
 # 3-argument opcode form (the codegen synthesises the missing default for direct
 # calls, and the stub will do likewise).
-BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
+BUILTIN_OPCODE_MAP: dict[str, tuple[Opcode, int]] = {
     'function?': (Opcode.FUNCTION_P, 1),
     'function=?': (Opcode.FUNCTION_EQ_P, 2),
     'function!=?': (Opcode.FUNCTION_NEQ_P, 2),
@@ -513,7 +513,7 @@ def unpack_instruction(word: int) -> 'Instruction':
     )
 
 
-def make_instructions_array(words: List[int] | None = None) -> 'array.array[int]':
+def make_instructions_array(words: list[int] | None = None) -> 'array.array[int]':
     """
     Create an unsigned 64-bit array for storing packed instructions.
 
@@ -675,17 +675,17 @@ class CodeObject:
     instructions: 'array.array[int]'
 
     # Constant pool (for LOAD_CONST)
-    constants: List[MenaiValue]
+    constants: list[MenaiValue]
 
     # Name pool (for LOAD_GLOBAL)
-    names: List[str]
+    names: list[str]
 
     # Nested code objects (for lambdas/closures)
-    code_objects: List['CodeObject']
+    code_objects: list['CodeObject']
 
     # Function metadata
-    free_vars: List[str] = field(default_factory=list)  # Free variables to capture
-    param_names: List[str] = field(default_factory=list)  # Parameter names (in order, parallel to param_count)
+    free_vars: list[str] = field(default_factory=list)  # Free variables to capture
+    param_names: list[str] = field(default_factory=list)  # Parameter names (in order, parallel to param_count)
     param_count: int = 0  # Number of parameters (for functions)
     local_count: int = 0  # Number of local variables
     outgoing_arg_slots: int = 0  # Max args passed in any single call

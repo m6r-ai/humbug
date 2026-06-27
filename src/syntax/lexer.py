@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import IntEnum, auto
-from typing import List, Callable, Set, ClassVar, Dict
+from typing import ClassVar
 
 
 class TokenType(IntEnum):
@@ -128,28 +129,28 @@ class Lexer(ABC):
     """
 
     # Character lookup tables - shared by all subclasses
-    _WHITESPACE_CHARS: ClassVar[Set[str]] = set(" \t\r\v\f\u00A0\u1680\u2028\u2029\u202F\u205F\u3000")
-    _LETTER_CHARS: ClassVar[Set[str]] = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-    _LETTER_DIGIT_CHARS: ClassVar[Set[str]] = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-    _LETTER_DIGIT_UNDERSCORE_CHARS: ClassVar[Set[str]] = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_")
-    _DIGIT_CHARS: ClassVar[Set[str]] = set("0123456789")
-    _HEX_CHARS: ClassVar[Set[str]] = set("0123456789abcdefABCDEF")
-    _BINARY_CHARS: ClassVar[Set[str]] = set("01")
-    _OCTAL_CHARS: ClassVar[Set[str]] = set("01234567")
+    _WHITESPACE_CHARS: ClassVar[set[str]] = set(" \t\r\v\f\u00A0\u1680\u2028\u2029\u202F\u205F\u3000")
+    _LETTER_CHARS: ClassVar[set[str]] = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    _LETTER_DIGIT_CHARS: ClassVar[set[str]] = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    _LETTER_DIGIT_UNDERSCORE_CHARS: ClassVar[set[str]] = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_")
+    _DIGIT_CHARS: ClassVar[set[str]] = set("0123456789")
+    _HEX_CHARS: ClassVar[set[str]] = set("0123456789abcdefABCDEF")
+    _BINARY_CHARS: ClassVar[set[str]] = set("01")
+    _OCTAL_CHARS: ClassVar[set[str]] = set("01234567")
 
     # Add the Unicode whitespace range \u2000-\u200A
     for i in range(0x2000, 0x200B):
         _WHITESPACE_CHARS.add(chr(i))
 
     # Default empty operator map - to be overridden by subclasses
-    _OPERATORS: ClassVar[List[str]] = []
-    _OPERATORS_MAP: ClassVar[Dict[str, List[str]]] = {}
+    _OPERATORS: ClassVar[list[str]] = []
+    _OPERATORS_MAP: ClassVar[dict[str, list[str]]] = {}
 
     def __init__(self) -> None:
         self._input: str = ""
         self._input_len: int = 0
         self._position: int = 0
-        self._tokens: List[Token] = []
+        self._tokens: list[Token] = []
         self._next_token: int = 0
 
     @abstractmethod
@@ -284,7 +285,7 @@ class Lexer(ABC):
         self._tokens.append(Token(type=TokenType.ERROR, value=ch, start=start))
 
     @staticmethod
-    def build_operator_map(operators: List[str]) -> Dict[str, List[str]]:
+    def build_operator_map(operators: list[str]) -> dict[str, list[str]]:
         """
         Build an operator map from a list of operators.
 
@@ -295,7 +296,7 @@ class Lexer(ABC):
             A dictionary mapping first characters to lists of operators
             starting with that character, sorted by length (longest first)
         """
-        operator_map: Dict[str, List[str]] = {}
+        operator_map: dict[str, list[str]] = {}
         for op in operators:
             if not op:
                 continue

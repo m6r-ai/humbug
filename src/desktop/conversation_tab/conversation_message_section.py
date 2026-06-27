@@ -1,7 +1,7 @@
 """Widget for displaying a section of a message."""
 
 import logging
-from typing import List, Tuple, cast
+from typing import cast
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout,
@@ -370,7 +370,7 @@ class ConversationMessageSection(QFrame):
         cursor.clearSelection()
         self._text_area.setTextCursor(cursor)
 
-    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> list[tuple[int, int]]:
         """
         Find all instances of text in this section.
 
@@ -427,7 +427,7 @@ class ConversationMessageSection(QFrame):
 
     def highlight_matches(
         self,
-        matches: List[Tuple[int, int]],
+        matches: list[tuple[int, int]],
         current_match_index: int = -1,
         highlight_color: QColor | None = None,
         dim_highlight_color: QColor | None = None

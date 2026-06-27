@@ -5,7 +5,6 @@ This module defines the SettingsTextArea class which provides a multiline text a
 setting widget.
 """
 
-from typing import List
 from PySide6.QtWidgets import QWidget
 
 from desktop.widgets import MinHeightPlainTextEdit
@@ -18,7 +17,7 @@ class SettingsTextArea(SettingsField):
 
     Attributes:
         _text_area (QPlainTextEdit): The text area control
-        _initial_value (List[str]): The initial value as list
+        _initial_value (list[str]): The initial value as list
     """
 
     def __init__(
@@ -43,7 +42,7 @@ class SettingsTextArea(SettingsField):
         self._text_area.setObjectName("SettingsTextArea")
 
         self._layout.addWidget(self._text_area)
-        self._initial_value: List[str] = []
+        self._initial_value: list[str] = []
         self._on_style_changed()
 
     def _on_text_changed(self) -> None:
@@ -58,13 +57,13 @@ class SettingsTextArea(SettingsField):
         """Reset the initial value to current value."""
         self._initial_value = self.get_value()
 
-    def get_value(self) -> List[str]:
+    def get_value(self) -> list[str]:
         """Get the current text area value as a list of strings."""
         text = self._text_area.toPlainText()
         # Split by newlines and filter out empty lines
         return [line.strip() for line in text.split('\n') if line.strip()]
 
-    def set_value(self, value: List[str]) -> None:
+    def set_value(self, value: list[str]) -> None:
         """Set the text area value from a list of strings."""
         if not value:
             text = ""

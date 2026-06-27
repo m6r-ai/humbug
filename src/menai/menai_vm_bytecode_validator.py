@@ -14,7 +14,6 @@ The validator checks:
 
 from dataclasses import dataclass, field
 from collections import deque
-from typing import Deque, List, Dict, Tuple, Set
 from enum import Enum
 
 from menai.menai_bytecode import CodeObject, Instruction, Opcode, unpack_instruction
@@ -59,8 +58,8 @@ class BasicBlock:
     """A basic block in the control flow graph."""
     start_index: int
     end_index: int  # Inclusive
-    successors: List[int] = field(default_factory=list)  # Instruction indices
-    predecessors: List[int] = field(default_factory=list)  # Instruction indices
+    successors: list[int] = field(default_factory=list)  # Instruction indices
+    predecessors: list[int] = field(default_factory=list)  # Instruction indices
     visited: bool = False
 
 
@@ -321,13 +320,13 @@ class BytecodeValidator:
         # Track which variables are definitely initialized at each instruction
         # Maps instruction index -> (set of initialized variable indices,
         #                            dict of slot -> code_object_index for closure slots)
-        initialized_at: Dict[int, Tuple[Set[int], Dict[int, int]]] = {}
+        initialized_at: dict[int, tuple[set[int], dict[int, int]]] = {}
 
         # Parameter slots (0..param_count-1) and captured-value slots
         # (param_count..param_count+len(free_vars)-1) are both pre-populated
         # by the caller/VM before the first instruction runs.
         # They survive back-edge merges by being unioned in on every step.
-        initial_initialized: Set[int] = set()
+        initial_initialized: set[int] = set()
         if code.param_count > 0:
             initial_initialized.update(range(code.param_count))
 
@@ -336,7 +335,7 @@ class BytecodeValidator:
             initial_initialized.update(range(code.param_count, code.param_count + n_captured))
 
         # Use a deque for O(1) popleft rather than O(N) pop(0) on a list.
-        worklist: Deque[int] = deque([0])
+        worklist: deque[int] = deque([0])
         initialized_at[0] = (initial_initialized.copy(), {})  # closure map starts empty
 
         while worklist:
@@ -512,7 +511,7 @@ class BytecodeValidator:
                     )
                     worklist.append(succ_idx)
 
-    def _get_successors(self, instr_idx: int, instr: Instruction, code: CodeObject) -> List[int]:
+    def _get_successors(self, instr_idx: int, instr: Instruction, code: CodeObject) -> list[int]:
         """Get successor instruction indices for an instruction."""
         opcode = instr.opcode  # instr is already unpacked by callers
 
@@ -543,7 +542,7 @@ class BytecodeValidator:
 
         return successors
 
-    def _build_cfg(self, code: CodeObject) -> Dict[int, BasicBlock]:
+    def _build_cfg(self, code: CodeObject) -> dict[int, BasicBlock]:
         """
         Build control flow graph.
 
@@ -569,7 +568,7 @@ class BytecodeValidator:
 
         # Create blocks
         leaders_list = sorted(leaders)
-        blocks: Dict[int, BasicBlock] = {}
+        blocks: dict[int, BasicBlock] = {}
 
         for i, start in enumerate(leaders_list):
             end = leaders_list[i + 1] - 1 if i + 1 < len(leaders_list) else len(code.instructions) - 1
@@ -590,9 +589,9 @@ class BytecodeValidator:
 
         return blocks
 
-    def _mark_reachable(self, blocks: Dict[int, BasicBlock], start: int) -> None:
+    def _mark_reachable(self, blocks: dict[int, BasicBlock], start: int) -> None:
         """Mark all blocks reachable from start using an iterative worklist."""
-        worklist: Deque[int] = deque([start])
+        worklist: deque[int] = deque([start])
         while worklist:
             idx = worklist.popleft()
             if idx not in blocks or blocks[idx].visited:

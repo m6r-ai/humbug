@@ -6,7 +6,6 @@ TabOverviewEntry display records and emits signals when the user activates,
 closes or dismisses.  The TabManager supplies the data and acts on the signals.
 """
 
-from typing import List
 
 from PySide6.QtCore import QEasingCurve, QEvent, QPoint, QRect, QRectF, Qt, QVariantAnimation, Signal
 from PySide6.QtGui import (
@@ -30,7 +29,7 @@ class TabCarouselWidget(QWidget):
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
         self._style_manager = StyleManager()
-        self._entries: List[TabOverviewEntry] = []
+        self._entries: list[TabOverviewEntry] = []
 
         self._scroll_pos = 0.0
         self._target_index = 0
@@ -50,7 +49,7 @@ class TabCarouselWidget(QWidget):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMouseTracking(True)
 
-    def set_entries(self, entries: List[TabOverviewEntry]) -> None:
+    def set_entries(self, entries: list[TabOverviewEntry]) -> None:
         """Replace the displayed entries, centring on the current tab."""
         self._entries = list(entries)
         current = next((i for i, e in enumerate(entries) if e.is_current), 0)
@@ -188,7 +187,7 @@ class TabCarouselWidget(QWidget):
             icon_size,
         )
 
-    def _visible_indices(self) -> List[int]:
+    def _visible_indices(self) -> list[int]:
         """Return entry indices near enough to the centre to be drawn."""
         return [
             i for i in range(len(self._entries))

@@ -3,7 +3,6 @@
 import os
 import sys
 import subprocess
-from typing import List
 
 from git.git_error import GitCommandError, GitNotFoundError, GitNotRepositoryError
 
@@ -11,7 +10,7 @@ from git.git_error import GitCommandError, GitNotFoundError, GitNotRepositoryErr
 _GIT_TIMEOUT = 10  # seconds
 
 
-def _run_git(args: List[str], cwd: str) -> str:
+def _run_git(args: list[str], cwd: str) -> str:
     """
     Run a git command and return its stdout.
 

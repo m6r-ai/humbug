@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 import zoneinfo
 
 from ai_tool import (
@@ -60,7 +60,7 @@ class ClockAITool(AITool):
         """Get brief one-line description for system prompt."""
         return "Time and date operations (get current time, sleep, set alarms)."
 
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """Get operation definitions for this tool."""
         return {
             "get_time": AIToolOperationDefinition(

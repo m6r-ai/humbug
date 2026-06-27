@@ -1,6 +1,5 @@
 """Palette abstractions and built-in palette instances for application colour themes."""
 
-from typing import Dict
 
 from desktop.color_role import ColorRole
 
@@ -21,7 +20,7 @@ class FixedPalette(Palette):
     so gaps are caught immediately rather than silently falling back.
     """
 
-    def __init__(self, colors: Dict[ColorRole, str]) -> None:
+    def __init__(self, colors: dict[ColorRole, str]) -> None:
         missing = [role for role in ColorRole if role not in colors]
         if missing:
             missing_names = ", ".join(r.name for r in missing)
@@ -41,7 +40,7 @@ class OverlayPalette(Palette):
     only the overridden roles return the custom colour.
     """
 
-    def __init__(self, base: FixedPalette, overrides: Dict[ColorRole, str]) -> None:
+    def __init__(self, base: FixedPalette, overrides: dict[ColorRole, str]) -> None:
         self._base = base
         self._overrides = overrides
 
@@ -52,12 +51,12 @@ class OverlayPalette(Palette):
 
         return self._base.resolve(role)
 
-    def overrides(self) -> Dict[ColorRole, str]:
+    def overrides(self) -> dict[ColorRole, str]:
         """Return the current override table."""
         return self._overrides
 
 
-_DARK_COLORS: Dict[ColorRole, str] = {
+_DARK_COLORS: dict[ColorRole, str] = {
     # Brand colours
     ColorRole.BRAND_PRIMARY: "#9b87f5",
     ColorRole.BRAND_GRADIENT_START: "#29c5ff",
@@ -278,7 +277,7 @@ _DARK_COLORS: Dict[ColorRole, str] = {
     ColorRole.TERM_BRIGHT_WHITE: "#ffffff",
 }
 
-_COLOR_BLIND_COLORS: Dict[ColorRole, str] = {
+_COLOR_BLIND_COLORS: dict[ColorRole, str] = {
     # Brand colours
     ColorRole.BRAND_PRIMARY: "#56b4e9",
     ColorRole.BRAND_GRADIENT_START: "#56b4e9",
@@ -497,7 +496,7 @@ _COLOR_BLIND_COLORS: Dict[ColorRole, str] = {
     ColorRole.TERM_BRIGHT_WHITE: "#ffffff",
 }
 
-_OCEAN_LIGHT_COLORS: Dict[ColorRole, str] = {
+_OCEAN_LIGHT_COLORS: dict[ColorRole, str] = {
     # Brand colours
     ColorRole.BRAND_PRIMARY: "#6248e8",
     ColorRole.BRAND_GRADIENT_START: "#29c5ff",
@@ -718,7 +717,7 @@ _OCEAN_LIGHT_COLORS: Dict[ColorRole, str] = {
     ColorRole.TERM_BRIGHT_WHITE: "#ffffff",
 }
 
-_LIGHT_COLORS: Dict[ColorRole, str] = {
+_LIGHT_COLORS: dict[ColorRole, str] = {
     # Brand colours
     ColorRole.BRAND_PRIMARY: "#6248e8",
     ColorRole.BRAND_GRADIENT_START: "#29c5ff",

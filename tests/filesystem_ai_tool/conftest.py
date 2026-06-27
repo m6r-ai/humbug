@@ -3,7 +3,6 @@ Shared fixtures and utilities for filesystem tool tests.
 """
 import tempfile
 from pathlib import Path
-from typing import Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,7 +14,7 @@ from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettin
 @pytest.fixture
 def mock_path_resolver():
     """Fixture providing a simple path resolver for testing."""
-    def resolver(path: str) -> Tuple[Path, str]:
+    def resolver(path: str) -> tuple[Path, str]:
         """
         Simple test path resolver that maps paths to a test sandbox.
 
@@ -195,7 +194,7 @@ def custom_path_resolver():
         Returns:
             Path resolver function
         """
-        def resolver(path: str) -> Tuple[Path, str]:
+        def resolver(path: str) -> tuple[Path, str]:
             if validation_func:
                 validation_func(path)
 

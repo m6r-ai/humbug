@@ -1,7 +1,6 @@
 """Updated file tree icon provider with theme-aware colors."""
 
 import os
-from typing import Dict, Tuple
 
 from PySide6.QtCore import Qt, QFileInfo
 from PySide6.QtGui import QIcon, QPainter, QPixmap, QColor
@@ -20,7 +19,7 @@ class SidebarTreeIconProvider(QFileIconProvider):
         """Initialize the icon provider."""
         super().__init__()
         self._style_manager = StyleManager()
-        self._cached_icons: Dict[str, QIcon] = {}
+        self._cached_icons: dict[str, QIcon] = {}
 
         self._initialize_icons()
 
@@ -66,7 +65,7 @@ class SidebarTreeIconProvider(QFileIconProvider):
         """Clear the icon cache to force regeneration."""
         self._cached_icons.clear()
 
-    def _get_theme_colors(self) -> Tuple[QColor, QColor]:
+    def _get_theme_colors(self) -> tuple[QColor, QColor]:
         """Get appropriate colors for current theme."""
         base_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
         accent_color = self._style_manager.get_color(ColorRole.BUTTON_BACKGROUND_HOVER)

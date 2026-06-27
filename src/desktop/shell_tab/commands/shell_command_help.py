@@ -1,6 +1,5 @@
 """Command for displaying help information in the shell."""
 
-from typing import List
 
 from syntax import Token, TokenType
 
@@ -25,13 +24,13 @@ class ShellCommandHelp(ShellCommand):
     def name(self) -> str:
         return "help"
 
-    def aliases(self) -> List[str]:
+    def aliases(self) -> list[str]:
         return ["?"]
 
     def help_text(self) -> str:
         return "Show help for available commands"
 
-    def _execute_command(self, tokens: List[Token]) -> bool:
+    def _execute_command(self, tokens: list[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
@@ -83,9 +82,9 @@ class ShellCommandHelp(ShellCommand):
     def get_token_completions(
         self,
         current_token: Token,
-        tokens: List[Token],
+        tokens: list[Token],
         _cursor_token_index: int
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get completions for the current token based on token information.
 

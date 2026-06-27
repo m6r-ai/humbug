@@ -18,7 +18,6 @@ Key properties
 """
 
 from dataclasses import dataclass, field
-from typing import List, Tuple
 
 from menai.menai_value import MenaiValue, MenaiStructType
 
@@ -93,7 +92,7 @@ class MenaiVCodeBuiltin:
     """
     dst: MenaiVCodeReg
     op: str
-    args: List[MenaiVCodeReg]
+    args: list[MenaiVCodeReg]
 
 
 @dataclass
@@ -101,14 +100,14 @@ class MenaiVCodeCall:
     """dst = call func(args...)"""
     dst: MenaiVCodeReg
     func: MenaiVCodeReg
-    args: List[MenaiVCodeReg]
+    args: list[MenaiVCodeReg]
 
 
 @dataclass
 class MenaiVCodeTailCall:
     """tail_call func(args...)  — no result, terminates the function."""
     func: MenaiVCodeReg
-    args: List[MenaiVCodeReg]
+    args: list[MenaiVCodeReg]
 
 
 @dataclass
@@ -138,7 +137,7 @@ class MenaiVCodeMakeClosure:
     """
     dst: MenaiVCodeReg
     function: 'MenaiVCodeFunction'
-    captures: List[MenaiVCodeReg]
+    captures: list[MenaiVCodeReg]
     needs_patching: bool = False
 
 
@@ -155,7 +154,7 @@ class MenaiVCodeMakeStruct:
     """
     dst: MenaiVCodeReg
     struct_type: MenaiStructType
-    args: List[MenaiVCodeReg]
+    args: list[MenaiVCodeReg]
 
 
 @dataclass
@@ -168,7 +167,7 @@ class MenaiVCodeMakeList:
     allocates the list in a single call.
     """
     dst: MenaiVCodeReg
-    args: List[MenaiVCodeReg]
+    args: list[MenaiVCodeReg]
 
 
 @dataclass
@@ -181,7 +180,7 @@ class MenaiVCodeMakeSet:
     allocates the set in a single call.
     """
     dst: MenaiVCodeReg
-    args: List[MenaiVCodeReg]
+    args: list[MenaiVCodeReg]
 
 
 @dataclass
@@ -194,7 +193,7 @@ class MenaiVCodeMakeDict:
     MAKE_DICT, which allocates the dict in a single call.
     """
     dst: MenaiVCodeReg
-    pairs: List[Tuple[MenaiVCodeReg, MenaiVCodeReg]]
+    pairs: list[tuple[MenaiVCodeReg, MenaiVCodeReg]]
 
 
 @dataclass
@@ -219,7 +218,7 @@ class MenaiVCodeTrace:
     as the result.
     """
     dst: MenaiVCodeReg
-    messages: List[MenaiVCodeReg]
+    messages: list[MenaiVCodeReg]
     value: MenaiVCodeReg
 
 
@@ -297,9 +296,9 @@ class MenaiVCodeFunction:
     `reg_count` is the number of virtual registers allocated during lowering,
     used by the slot allocator as the upper bound on register IDs.
     """
-    instrs: List[MenaiVCodeInstr] = field(default_factory=list)
-    params: List[str] = field(default_factory=list)
-    free_vars: List[str] = field(default_factory=list)
+    instrs: list[MenaiVCodeInstr] = field(default_factory=list)
+    params: list[str] = field(default_factory=list)
+    free_vars: list[str] = field(default_factory=list)
     is_variadic: bool = False
     binding_name: str | None = None
     reg_count: int = 0
@@ -323,7 +322,7 @@ class MenaiVCodeFunction:
         return "\n".join(lines)
 
 
-def _fmt_regs(regs: List[MenaiVCodeReg]) -> str:
+def _fmt_regs(regs: list[MenaiVCodeReg]) -> str:
     return "[" + ", ".join(str(r) for r in regs) + "]"
 
 

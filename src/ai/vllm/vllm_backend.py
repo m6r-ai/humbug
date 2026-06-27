@@ -1,6 +1,6 @@
 """vLLM backend implementation."""
 import json
-from typing import Dict, List, Any
+from typing import Any
 
 import aiohttp
 
@@ -20,7 +20,7 @@ class VLLMBackend(AIBackend):
     This backend is designed to work with vLLM's OpenAI-compatible endpoints.
     """
 
-    async def fetch_models(self) -> List[str]:
+    async def fetch_models(self) -> list[str]:
         """Fetch available model IDs from the vLLM API."""
         url = self._api_url.replace("/chat/completions", "/models")
         headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
@@ -40,7 +40,7 @@ class VLLMBackend(AIBackend):
         """
         return message.model == settings.model and message.provider == settings.provider
 
-    def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
+    def _format_tool_definition(self, tool_def: AIToolDefinition) -> dict[str, Any]:
         """
         Convert tool definition to vLLM format (OpenAI-compatible).
 
@@ -50,7 +50,7 @@ class VLLMBackend(AIBackend):
         Returns:
             Tool definition in vLLM format
         """
-        properties: Dict[str, Any] = {}
+        properties: dict[str, Any] = {}
         required = []
 
         for param in tool_def.parameters:
@@ -97,7 +97,7 @@ class VLLMBackend(AIBackend):
             }
         }
 
-    def _build_user_message(self, content: str, tool_results: List[AIToolResult] | None = None) -> List[Dict[str, Any]]:
+    def _build_user_message(self, content: str, tool_results: list[AIToolResult] | None = None) -> list[dict[str, Any]]:
         """
         Build user message(s) for vLLM format.
 
@@ -130,7 +130,7 @@ class VLLMBackend(AIBackend):
 
         return messages
 
-    def _build_assistant_message(self, content: str, tool_calls: List[AIToolCall] | None = None) -> Dict[str, Any]:
+    def _build_assistant_message(self, content: str, tool_calls: list[AIToolCall] | None = None) -> dict[str, Any]:
         """
         Build assistant message for vLLM format.
 
@@ -141,7 +141,7 @@ class VLLMBackend(AIBackend):
         Returns:
             Assistant message dictionary
         """
-        message: Dict[str, Any] = {
+        message: dict[str, Any] = {
             "role": "assistant",
             "content": content if content else "...",  # Never send empty content
         }
@@ -161,7 +161,7 @@ class VLLMBackend(AIBackend):
 
         return message
 
-    def _format_messages_for_provider(self, conversation_history: AIConversationHistory) -> List[Dict[str, Any]]:
+    def _format_messages_for_provider(self, conversation_history: AIConversationHistory) -> list[dict[str, Any]]:
         """
         Format conversation history for vLLM's API format in a single pass.
 
@@ -171,7 +171,7 @@ class VLLMBackend(AIBackend):
         Returns:
             List of messages formatted for vLLM API
         """
-        result: List[Dict[str, Any]] = []
+        result: list[dict[str, Any]] = []
         last_user_message_index = -1
         current_turn_message_index = -1
 

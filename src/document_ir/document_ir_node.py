@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 
 class DocumentIRNode:
@@ -7,7 +7,7 @@ class DocumentIRNode:
     def __init__(self) -> None:
         """Initialise a node with no parent and no children."""
         self.parent: "DocumentIRNode | None" = None
-        self.children: List["DocumentIRNode"] = []
+        self.children: list["DocumentIRNode"] = []
 
     def add_child(self, child: "DocumentIRNode") -> "DocumentIRNode":
         """
@@ -64,7 +64,7 @@ class DocumentIRVisitor:
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
 
-    def generic_visit(self, node: DocumentIRNode) -> List[Any]:
+    def generic_visit(self, node: DocumentIRNode) -> list[Any]:
         """
         Default visit method for nodes without specific handlers.
 

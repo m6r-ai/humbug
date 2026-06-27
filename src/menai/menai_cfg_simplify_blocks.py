@@ -18,7 +18,6 @@ Two sub-passes run to a joint fixed point:
    all jump predecessors are inlined the terminal block itself is removed.
 """
 
-from typing import Dict, List, Set, Tuple
 
 from menai.menai_cfg import (
     MenaiCFGBlock,
@@ -96,9 +95,9 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
         The entry block (blocks[0]) is never bypassed even if empty.
         """
         entry_id = func.blocks[0].id
-        block_map: Dict[int, MenaiCFGBlock] = {b.id: b for b in func.blocks}
+        block_map: dict[int, MenaiCFGBlock] = {b.id: b for b in func.blocks}
 
-        pred_map: Dict[int, List[MenaiCFGBlock]] = {b.id: [] for b in func.blocks}
+        pred_map: dict[int, list[MenaiCFGBlock]] = {b.id: [] for b in func.blocks}
         for block in func.blocks:
             term = block.terminator
             if isinstance(term, MenaiCFGJumpTerm):
@@ -124,7 +123,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
             return any(isinstance(i, MenaiCFGPhiInstr) for i in block.instrs)
 
         def chain_has_branch_predecessor(start: MenaiCFGBlock) -> bool:
-            seen: Set[int] = set()
+            seen: set[int] = set()
             block = start
             while is_empty(block) and block.id not in seen:
                 if any(
@@ -144,7 +143,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
             return False
 
         def ultimate_target(block: MenaiCFGBlock) -> MenaiCFGBlock:
-            seen: Set[int] = set()
+            seen: set[int] = set()
             while is_empty(block) and block.id not in seen:
                 seen.add(block.id)
                 assert isinstance(block.terminator, MenaiCFGJumpTerm)
@@ -156,7 +155,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
 
             return block
 
-        bypass: Dict[int, MenaiCFGBlock] = {}
+        bypass: dict[int, MenaiCFGBlock] = {}
         for block in func.blocks:
             if is_empty(block):
                 target = ultimate_target(block)
@@ -179,7 +178,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
                 if not isinstance(instr, MenaiCFGPhiInstr):
                     continue
 
-                new_incoming: List[Tuple[MenaiCFGValue, MenaiCFGBlock]] = []
+                new_incoming: list[tuple[MenaiCFGValue, MenaiCFGBlock]] = []
                 for val, pred in instr.incoming:
                     if pred.id in bypass:
                         actual_preds = pred_map.get(pred.id, [])
@@ -244,7 +243,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
 
         def trivial_return_content(
             block: MenaiCFGBlock,
-        ) -> Tuple[object, MenaiCFGReturnTerm] | None:
+        ) -> tuple[object, MenaiCFGReturnTerm] | None:
             """
             Return (content, return_term) if block is a trivial terminal block,
             or None if it does not qualify.
@@ -276,7 +275,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
             return None
 
         changed = False
-        inlined_block_ids: Set[int] = set()
+        inlined_block_ids: set[int] = set()
 
         for target in list(func.blocks):
             content = trivial_return_content(target)
@@ -295,7 +294,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
             if not jump_preds:
                 continue
 
-            actually_inlined: Set[int] = set()
+            actually_inlined: set[int] = set()
             for pred in jump_preds:
                 if isinstance(instr, MenaiCFGConstInstr):
                     # Duplicate the const with a fresh SSA value.
@@ -381,11 +380,11 @@ def _max_value_id(func: MenaiCFGFunction) -> int:
 
 def _find_non_empty_pred(
     block: MenaiCFGBlock,
-    bypass: Dict[int, MenaiCFGBlock],
-    pred_map: Dict[int, List[MenaiCFGBlock]],
+    bypass: dict[int, MenaiCFGBlock],
+    pred_map: dict[int, list[MenaiCFGBlock]],
 ) -> MenaiCFGBlock:
     """Walk up the predecessor chain until we find a non-bypassed block."""
-    seen: Set[int] = set()
+    seen: set[int] = set()
     while block.id in bypass and block.id not in seen:
         seen.add(block.id)
         preds = pred_map.get(block.id, [])

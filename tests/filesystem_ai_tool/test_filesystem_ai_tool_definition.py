@@ -3,7 +3,6 @@ Tests for the filesystem tool definition and basic validation.
 """
 import asyncio
 from pathlib import Path
-from typing import Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -137,7 +136,7 @@ class TestFileSystemAIToolValidation:
 
     def test_path_resolver_error(self, mock_access_settings, mock_authorization, make_tool_call):
         """Test error when path resolver raises an error."""
-        def failing_resolver(path: str) -> Tuple[Path, str]:
+        def failing_resolver(path: str) -> tuple[Path, str]:
             raise ValueError("Custom resolver error")
 
         filesystem_tool = FileSystemAITool(resolve_path=failing_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())

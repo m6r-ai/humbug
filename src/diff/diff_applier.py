@@ -1,7 +1,7 @@
 """Abstract diff applier."""
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Tuple
+from typing import Any
 
 from diff.diff_exceptions import DiffMatchError, DiffValidationError
 from diff.diff_matcher import DiffMatcher
@@ -81,7 +81,7 @@ class DiffApplier(ABC):
 
         # Phase 1: Locate all hunks
         matcher = self._create_matcher()
-        hunk_locations: List[Tuple[DiffHunk, MatchResult]] = []
+        hunk_locations: list[tuple[DiffHunk, MatchResult]] = []
 
         for idx, hunk in enumerate(hunks):
             match_result = matcher.find_match(hunk, document)
@@ -164,7 +164,7 @@ class DiffApplier(ABC):
 
     def _check_for_overlaps(
         self,
-        hunk_locations: List[Tuple[DiffHunk, MatchResult]]
+        hunk_locations: list[tuple[DiffHunk, MatchResult]]
     ) -> None:
         """
         Check if any hunks would overlap when applied.

@@ -13,7 +13,7 @@ All validation happens in a single pass to provide clear, precise error messages
 before any transformations occur.
 """
 
-from typing import List, cast
+from typing import cast
 
 from menai.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTString
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
@@ -167,8 +167,8 @@ class MenaiASTSemanticAnalyzer:
             )
 
         # Validate each binding
-        var_names: List[str] = []
-        new_bindings: List[MenaiASTNode] = []
+        var_names: list[str] = []
+        new_bindings: list[MenaiASTNode] = []
         for i, binding in enumerate(bindings_list.elements):
             if not isinstance(binding, MenaiASTList):
                 raise MenaiEvalError(
@@ -301,8 +301,8 @@ class MenaiASTSemanticAnalyzer:
             )
 
         # Validate each binding
-        var_names: List[str] = []
-        new_bindings: List[MenaiASTNode] = []
+        var_names: list[str] = []
+        new_bindings: list[MenaiASTNode] = []
         for i, binding in enumerate(bindings_list.elements):
             if not isinstance(binding, MenaiASTList):
                 raise MenaiEvalError(
@@ -419,8 +419,8 @@ class MenaiASTSemanticAnalyzer:
             )
 
         # Validate each binding
-        var_names: List[str] = []
-        new_bindings: List[MenaiASTNode] = []
+        var_names: list[str] = []
+        new_bindings: list[MenaiASTNode] = []
         for i, binding in enumerate(bindings_list.elements):
             if not isinstance(binding, MenaiASTList):
                 raise MenaiEvalError(
@@ -544,7 +544,7 @@ class MenaiASTSemanticAnalyzer:
         #   (lambda (a b) ...)          — fixed arity
         #   (lambda (a b . rest) ...)   — fixed prefix + rest
         #   (lambda (. rest) ...)       — pure variadic (dot as first element)
-        param_names: List[str] = []
+        param_names: list[str] = []
         elements = params_list.elements
         dot_index: int | None = None
 
@@ -1031,7 +1031,7 @@ class MenaiASTSemanticAnalyzer:
                 source=self.source
             )
 
-        field_names: List[str] = []
+        field_names: list[str] = []
         for i, field in enumerate(fields_expr.elements):
             if not isinstance(field, MenaiASTSymbol):
                 raise MenaiEvalError(

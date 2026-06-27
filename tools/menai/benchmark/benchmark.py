@@ -1,12 +1,10 @@
-from __future__ import annotations
-
-import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
-
+import time
 import sys
+from typing import Any
 
 from menai import Menai
 

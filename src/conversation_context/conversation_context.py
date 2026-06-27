@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 from ai import AIConversationHistory, AIMessage
 from ai_transcript_conversation import AITranscriptConversation
@@ -47,7 +47,7 @@ class ConversationContext:
         """Return the backing AITranscriptConversation."""
         return self._transcript
 
-    def get_conversation_info(self) -> Dict[str, Any]:
+    def get_conversation_info(self) -> dict[str, Any]:
         """
         Return high-level metadata about the conversation.
 
@@ -85,9 +85,9 @@ class ConversationContext:
         self,
         start_index: int | None = None,
         end_index: int | None = None,
-        message_types: List[str] | None = None,
+        message_types: list[str] | None = None,
         limit: int | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Read messages with optional filtering and pagination.
 
@@ -145,7 +145,7 @@ class ConversationContext:
         self,
         message_id: str | None = None,
         message_index: int | None = None,
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """
         Return a single message by UUID or 0-based index.
 
@@ -186,10 +186,10 @@ class ConversationContext:
         self,
         search_text: str,
         case_sensitive: bool = False,
-        message_types: List[str] | None = None,
+        message_types: list[str] | None = None,
         max_results: int = 50,
         regexp: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search for text across all messages.
 
@@ -226,7 +226,7 @@ class ConversationContext:
 
         history = self._transcript.get_conversation_history()
         messages = history.get_messages()
-        matches: List[Dict[str, Any]] = []
+        matches: list[dict[str, Any]] = []
 
         if regexp:
             flags = 0 if case_sensitive else re.IGNORECASE
@@ -304,7 +304,7 @@ class ConversationContext:
         self,
         message_id: str | None = None,
         message_index: int | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Request that the frontend scroll to a specific message.
 

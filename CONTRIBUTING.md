@@ -38,6 +38,9 @@ entirely with the contributor.
   docstrings; grouping comments just add clutter.
 - Use modern Python: `type | None` instead of `Optional`, no `@property` (use simple
   getter methods instead).
+- Use builtins (`dict`, `list`, `set`, `tuple`, `type`, `frozenset`) and
+  `collections.abc` (`Callable`, `Awaitable`, `AsyncGenerator`, `Generator`,
+  `Iterator`, `Sequence`, `Coroutine`) instead of legacy `typing.Dict`, `typing.List`, etc.
 - Tests must reflect correct and desired behaviour. Never write or patch a test to mask
   broken implementation logic — if the logic is wrong, the test must fail.
 - Test docstrings describe expected behaviour only. They must not reference historical

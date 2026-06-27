@@ -1,7 +1,6 @@
 """Terminal buffer state management."""
 
 from dataclasses import dataclass, field
-from typing import List, Tuple, Set
 
 from terminal.terminal_line import TerminalCharacterAttributes, TerminalLine
 
@@ -14,7 +13,7 @@ class CursorState:
     visible: bool = True
     blink: bool = True
     delayed_wrap: bool = False
-    saved_position: Tuple[int, int, bool, bool] | None = None  # row, col, delayed_wrap, origin_mode
+    saved_position: tuple[int, int, bool, bool] | None = None  # row, col, delayed_wrap, origin_mode
 
 
 @dataclass
@@ -54,7 +53,7 @@ class TabStopState:
 
     # Set of custom tab stop positions (column numbers)
     # Empty set means using default tab stops every 8 chars
-    custom_stops: Set[int] = field(default_factory=set)
+    custom_stops: set[int] = field(default_factory=set)
 
     def __init__(self, cols: int):
         """
@@ -204,7 +203,7 @@ class TerminalBuffer:
         self._max_cursor_row = 0
 
         # Initialize line storage
-        self._lines: List[TerminalLine] = []
+        self._lines: list[TerminalLine] = []
         self._add_new_lines(rows)
 
     def _trim_scrollback(self) -> None:
@@ -1121,7 +1120,7 @@ class TerminalBuffer:
         """Get the current scroll region."""
         return self._scroll_region
 
-    def lines(self) -> List[TerminalLine]:
+    def lines(self) -> list[TerminalLine]:
         """Get the list of terminal lines."""
         return self._lines
 

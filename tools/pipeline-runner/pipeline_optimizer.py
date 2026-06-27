@@ -1,6 +1,5 @@
 """Pipeline optimizer: collapses adjacent Menai steps into a single step."""
 
-from typing import List
 
 from pipeline_step import MenaiStep, Pipeline, PipelineStep, ToolStep, resolve_step_expression
 
@@ -66,7 +65,7 @@ def _merge_two_menai_steps(first: MenaiStep, second: MenaiStep) -> MenaiStep:
     )
 
 
-def _collapse_adjacent_menai_steps(steps: List[PipelineStep]) -> List[PipelineStep]:
+def _collapse_adjacent_menai_steps(steps: list[PipelineStep]) -> list[PipelineStep]:
     """
     Perform a single pass of adjacent Menai step collapsing.
 
@@ -87,7 +86,7 @@ def _collapse_adjacent_menai_steps(steps: List[PipelineStep]) -> List[PipelineSt
         if not isinstance(current, MenaiStep) or not isinstance(nxt, MenaiStep):
             continue
 
-        result: List[PipelineStep] = list(steps[:i])
+        result: list[PipelineStep] = list(steps[:i])
         result.append(_merge_two_menai_steps(current, nxt))
         result.extend(steps[i + 2:])
         return result

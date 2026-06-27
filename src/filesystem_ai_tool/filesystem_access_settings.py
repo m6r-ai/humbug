@@ -1,7 +1,6 @@
 """Settings for external file access control."""
 
 from dataclasses import dataclass, field
-from typing import List
 import sys
 
 
@@ -16,11 +15,11 @@ class FilesystemAccessSettings:
         external_denylist: List of glob patterns for blocked paths
     """
     allow_external_access: bool = True
-    external_allowlist: List[str] = field(default_factory=list)
-    external_denylist: List[str] = field(default_factory=list)
+    external_allowlist: list[str] = field(default_factory=list)
+    external_denylist: list[str] = field(default_factory=list)
 
     @staticmethod
-    def get_default_allowlist() -> List[str]:
+    def get_default_allowlist() -> list[str]:
         """Get platform-specific default allowlist."""
         if sys.platform == "win32":
             return []  # Windows doesn't have standard system header locations
@@ -32,7 +31,7 @@ class FilesystemAccessSettings:
         return ["/usr/include/**", "/usr/share/doc/**", "/usr/share/man/**"]
 
     @staticmethod
-    def get_default_denylist() -> List[str]:
+    def get_default_denylist() -> list[str]:
         """Get platform-specific default denylist."""
         if sys.platform == "win32":
             return [

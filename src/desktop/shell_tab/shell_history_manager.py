@@ -2,7 +2,6 @@
 
 import logging
 import os
-from typing import List
 
 from PySide6.QtCore import QObject, Signal
 
@@ -77,7 +76,7 @@ class ShellHistoryManager(QObject):
         self.history_updated.emit()
         return message
 
-    def get_messages(self) -> List[ShellEvent]:
+    def get_messages(self) -> list[ShellEvent]:
         """
         Get all shell messages in chronological order.
 
@@ -86,7 +85,7 @@ class ShellHistoryManager(QObject):
         """
         return self._history.get_messages()
 
-    def get_user_commands(self) -> List[str]:
+    def get_user_commands(self) -> list[str]:
         """
         Get list of user commands from history (newest first).
 

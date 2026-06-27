@@ -1,5 +1,4 @@
 from html import escape as _html_escape
-from typing import List
 
 from document_ir.document_ir_node import (
     DocumentIRBlockquoteNode,
@@ -43,7 +42,7 @@ def document_ir_to_html(document: DocumentIRDocumentNode) -> str:
         A UTF-8 HTML5 document as a string.
     """
     title = _find_title(document)
-    body_lines: List[str] = []
+    body_lines: list[str] = []
     visitor = _HtmlSerialiser(body_lines)
     visitor.generic_visit(document)
 
@@ -75,7 +74,7 @@ def _find_title(document: DocumentIRDocumentNode) -> str:
 
 def _collect_text(node: DocumentIRNode) -> str:
     """Recursively collect plain text from an IR node's descendants."""
-    parts: List[str] = []
+    parts: list[str] = []
     for child in node.children:
         if isinstance(child, DocumentIRTextSpanNode):
             parts.append(child.content)
@@ -94,7 +93,7 @@ def _esc(text: str) -> str:
 class _HtmlSerialiser(DocumentIRVisitor):
     """Visitor that serialises document_ir nodes to HTML lines."""
 
-    def __init__(self, lines: List[str]) -> None:
+    def __init__(self, lines: list[str]) -> None:
         """
         Initialise the serialiser.
 
@@ -109,7 +108,7 @@ class _HtmlSerialiser(DocumentIRVisitor):
 
     def _emit_inline(self, node: DocumentIRNode) -> str:
         """Serialise all children of node as an inline HTML string."""
-        parts: List[str] = []
+        parts: list[str] = []
         for child in node.children:
             parts.append(self._inline(child))
 
@@ -162,7 +161,7 @@ class _HtmlSerialiser(DocumentIRVisitor):
             return "<br>"
 
         # Fallback: recurse into children.
-        parts: List[str] = []
+        parts: list[str] = []
         for child in node.children:
             parts.append(self._inline(child))
 

@@ -5,7 +5,7 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, overload
+from typing import Any, overload
 
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt, QPersistentModelIndex
 from PySide6.QtCore import QObject, Signal
@@ -78,16 +78,16 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
         self._index.structure_changed.connect(self._on_index_changed)
         self._user_manager = UserManager()
         self._user_manager.settings_changed.connect(self._rebuild)
-        self._timestamp_cache: Dict[str, float] = {}
+        self._timestamp_cache: dict[str, float] = {}
 
         # Node registry: int key -> _DirNode | _ConvNode
-        self._nodes: Dict[int, _DirNode | _ConvNode] = {}
+        self._nodes: dict[int, _DirNode | _ConvNode] = {}
         self._next_key: int = 0
 
         # Lookup tables rebuilt on each reset
         # (parent_key, child_path) -> child_key  for ConvNodes
         # parent_key -> [child_key, ...]  ordered child list
-        self._children: Dict[int | None, List[int]] = {}
+        self._children: dict[int | None, list[int]] = {}
 
         self._build()
 

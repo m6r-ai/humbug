@@ -1,6 +1,6 @@
 """Menai IR builder - compiles AST to IR."""
 
-from typing import List, Dict, Tuple, Set, cast
+from typing import cast
 from dataclasses import dataclass, field
 
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP
@@ -25,7 +25,7 @@ class CompilationScope:
 
     Maps variable names to their index within the scope.
     """
-    bindings: Dict[str, int] = field(default_factory=dict)
+    bindings: dict[str, int] = field(default_factory=dict)
 
     def add_binding(self, name: str, index: int) -> None:
         """Add a binding to the current scope."""
@@ -44,15 +44,15 @@ class AnalysisContext:
     The scope chain is used only to determine var_type ('local' vs 'global')
     for each variable reference.
     """
-    scopes: List[CompilationScope] = field(default_factory=list)
+    scopes: list[CompilationScope] = field(default_factory=list)
     parent_ctx: 'AnalysisContext | None' = None
     current_binding_name: str | None = None  # Name of the binding currently being analysed.
-    current_letrec_names: Set[str] = field(default_factory=set)  # Names in the immediately enclosing
+    current_letrec_names: set[str] = field(default_factory=set)  # Names in the immediately enclosing
                                                                    # letrec group only.
-    names: Set[str] = field(default_factory=set)
-    free_vars: List[str] = field(default_factory=list)   # Free variables discovered during analysis,
+    names: set[str] = field(default_factory=set)
+    free_vars: list[str] = field(default_factory=list)   # Free variables discovered during analysis,
                                                           # in order of first encounter.
-    free_vars_seen: Set[str] = field(default_factory=set) # Companion set for O(1) duplicate checks.
+    free_vars_seen: set[str] = field(default_factory=set) # Companion set for O(1) duplicate checks.
 
     def push_scope(self) -> None:
         """Enter a new lexical scope."""
@@ -325,7 +325,7 @@ class MenaiIRBuilder:
         ctx.push_scope()
 
         # Analyze all binding values in the outer scope (parallel let semantics).
-        analyzed_bindings: List[Tuple[str, MenaiIRExpr]] = []
+        analyzed_bindings: list[tuple[str, MenaiIRExpr]] = []
         for binding in bindings_list.elements:
             assert isinstance(binding, MenaiASTList) and len(binding.elements) == 2
             name_expr, value_expr = binding.elements
@@ -368,7 +368,7 @@ class MenaiIRBuilder:
         ctx.push_scope()
 
         # First pass: add all names to scope (so recursive references resolve).
-        binding_pairs: List[Tuple[str, MenaiASTNode]] = []
+        binding_pairs: list[tuple[str, MenaiASTNode]] = []
         for binding in bindings_list.elements:
             assert isinstance(binding, MenaiASTList) and len(binding.elements) == 2
             name_expr, value_expr = binding.elements
@@ -382,7 +382,7 @@ class MenaiIRBuilder:
         ctx.current_letrec_names = set(all_names)
 
         # Second pass: analyze each binding value with full letrec context.
-        binding_plans: List[Tuple[str, MenaiIRExpr]] = []
+        binding_plans: list[tuple[str, MenaiIRExpr]] = []
         for name, value_expr in binding_pairs:
             old_binding_name = ctx.current_binding_name
             ctx.current_binding_name = name
@@ -433,14 +433,14 @@ class MenaiIRBuilder:
 
         sibling_names = ctx.current_letrec_names
         free_vars = lambda_ctx.free_vars
-        sibling_free_vars: List[str] = [fv for fv in free_vars if fv in sibling_names]
-        outer_free_vars:   List[str] = [fv for fv in free_vars if fv not in sibling_names]
+        sibling_free_vars: list[str] = [fv for fv in free_vars if fv in sibling_names]
+        outer_free_vars:   list[str] = [fv for fv in free_vars if fv not in sibling_names]
 
-        sibling_free_var_plans: List[MenaiIRExpr] = [
+        sibling_free_var_plans: list[MenaiIRExpr] = [
             MenaiIRVariable(name=fv, var_type='local')
             for fv in sibling_free_vars
         ]
-        outer_free_var_plans: List[MenaiIRExpr] = [
+        outer_free_var_plans: list[MenaiIRExpr] = [
             MenaiIRVariable(name=fv, var_type='local')
             for fv in outer_free_vars
         ]

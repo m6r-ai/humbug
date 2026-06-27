@@ -1,7 +1,6 @@
 """Command for displaying file contents from the system shell."""
 
 import os
-from typing import List
 
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from pdf import PDFError, PDFUnsupportedError, extract_text as extract_pdf_text, parse as parse_pdf
@@ -24,7 +23,7 @@ class ShellCommandCat(ShellCommand):
         """Get the help text for the command."""
         return "Displays the text content of a file (PDF and DOCX supported)"
 
-    def _execute_command(self, tokens: List[Token]) -> bool:
+    def _execute_command(self, tokens: list[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
@@ -216,9 +215,9 @@ class ShellCommandCat(ShellCommand):
     def get_token_completions(
         self,
         current_token: Token,
-        _tokens: List[Token],
+        _tokens: list[Token],
         _cursor_token_index: int
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get completions for the current token based on token information.
 

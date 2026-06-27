@@ -9,6 +9,8 @@ Checks implemented:
 
 * ``humbug-no-property``         -- ``@property`` is banned; use a getter method.
 * ``humbug-no-optional``         -- ``Optional[X]`` is banned; use ``X | None``.
+* ``humbug-no-typing-aliases``   -- legacy ``typing.Dict``, ``typing.List``, etc. are
+                                    banned; use builtins or ``collections.abc``.
 * ``humbug-no-aligned-assigns``  -- consecutive assignments must not have their
                                     ``=`` signs padded into alignment.
 * ``humbug-blank-before-dedent`` -- a blank line is required before any line
@@ -16,8 +18,6 @@ Checks implemented:
 * ``humbug-multiline-docstring`` -- multi-line docstring ``\"\"\"`` delimiters must
                                     sit on their own lines.
 """
-
-from __future__ import annotations
 
 from collections.abc import Mapping
 
@@ -30,6 +30,7 @@ from pylint.typing import MessageDefinitionTuple
 # Public message-ID constants (shared with tests)
 MSG_NO_PROPERTY = "humbug-no-property"
 MSG_NO_OPTIONAL = "humbug-no-optional"
+MSG_NO_TYPING_ALIASES = "humbug-no-typing-aliases"
 MSG_NO_ALIGNED_ASSIGNS = "humbug-no-aligned-assigns"
 MSG_BLANK_BEFORE_DEDENT = "humbug-blank-before-dedent"
 MSG_MULTILINE_DOCSTRING = "humbug-multiline-docstring"
@@ -60,6 +61,13 @@ class HumbugStyleChecker(BaseRawFileChecker):
             MSG_NO_OPTIONAL,
             "Used when Optional[...] appears.  Humbug uses the modern X | None syntax.",
         ),
+        "C6403": (
+            "Legacy typing alias %s is banned; use the builtin or collections.abc equivalent",
+            MSG_NO_TYPING_ALIASES,
+            "Used when Dict, List, Set, Tuple, Type, FrozenSet, Deque, Callable, "
+            "Awaitable, AsyncGenerator, Generator, Iterator, Sequence, or Coroutine "
+            "is imported from typing instead of using builtins or collections.abc.",
+        ),
         "C6411": (
             "Consecutive assignments must not have their = signs aligned",
             MSG_NO_ALIGNED_ASSIGNS,
@@ -89,6 +97,7 @@ class HumbugStyleChecker(BaseRawFileChecker):
 
         self._check_property(node, pending)
         self._check_optional(node, pending)
+        self._check_typing_aliases(node, pending)
         self._check_aligned_assignments(node, lines, pending)
         self._check_blank_before_dedent(lines, pending)
         self._check_docstrings(node, lines, pending)
@@ -117,6 +126,26 @@ class HumbugStyleChecker(BaseRawFileChecker):
         for sub_node in node.nodes_of_class(nodes.Subscript):
             if _dotted_name(sub_node.value) == "Optional":
                 pending.append((sub_node.lineno, MSG_NO_OPTIONAL, ()))
+
+    def _check_typing_aliases(
+        self, node: nodes.Module, pending: list[tuple[int, str, tuple[str, ...]]]
+    ) -> None:
+        """Flag imports of legacy typing aliases that have modern replacements."""
+        # Names that should come from builtins (no import) or collections.abc
+        legacy_names = {
+            "Dict", "List", "Set", "Tuple", "Type", "FrozenSet", "Deque",
+            "Callable", "Awaitable", "AsyncGenerator", "Generator",
+            "Iterator", "Sequence", "Coroutine",
+        }
+        for imp_node in node.nodes_of_class(nodes.ImportFrom):
+            if imp_node.modname != "typing":
+                continue
+
+            for alias_name, _asname in imp_node.names:
+                if alias_name in legacy_names:
+                    pending.append(
+                        (imp_node.lineno, MSG_NO_TYPING_ALIASES, (alias_name,))
+                    )
 
     def _check_aligned_assignments(
         self, node: nodes.Module, lines: list[str], pending: list[tuple[int, str, tuple[str, ...]]]

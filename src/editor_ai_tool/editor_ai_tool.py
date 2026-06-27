@@ -2,7 +2,7 @@ import asyncio
 import difflib
 import json
 import logging
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 from ai_tool import (
     AITool,
@@ -142,7 +142,7 @@ class EditorAITool(AITool):
         """Get brief one-line description for system prompt."""
         return "Read, search, navigate, and modify text in open editor tabs."
 
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """
         Get operation definitions for this tool.
 
@@ -281,7 +281,7 @@ class EditorAITool(AITool):
         diff_content = arguments["diff_content"]
         return f"Diff content:\n```diff\n{diff_content}\n```"
 
-    def _get_editor_context(self, arguments: Dict[str, Any]) -> EditorContext:
+    def _get_editor_context(self, arguments: dict[str, Any]) -> EditorContext:
         """
         Retrieve the EditorContext for the given context_id.
 
@@ -700,7 +700,7 @@ class EditorAITool(AITool):
                 " changes to take effect."
             ) from e
 
-    def _transform_context(self, arguments: Dict[str, Any]) -> str | None:
+    def _transform_context(self, arguments: dict[str, Any]) -> str | None:
         """Extract context for transform operation."""
         tab_id = arguments.get("tab_id", "")
         program = arguments.get("program", "")
@@ -729,7 +729,7 @@ class EditorAITool(AITool):
             Various Menai exceptions: Propagated to the async caller.
         """
         lines = content.split('\n')
-        bindings: Dict[str, MenaiValue] = {
+        bindings: dict[str, MenaiValue] = {
             'input-text': MenaiString(content),
             'input-lines': MenaiList(tuple(MenaiString(line) for line in lines)),
         }
@@ -860,7 +860,7 @@ class EditorAITool(AITool):
         )
 
         trace_str = '\n'.join(traces) if traces else ''
-        result_obj: Dict[str, Any] = {
+        result_obj: dict[str, Any] = {
             "message": (
                 f"Transform applied to buffer ({result.get('hunks_applied', 0)} hunks). "
                 "Use save_file to persist."

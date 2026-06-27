@@ -2,7 +2,6 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Type
 
 from ai.ai_backend import AIBackend
 from ai.ai_backend_settings import AIBackendSettings
@@ -20,7 +19,7 @@ from ai.zai.zai_backend import ZaiBackend
 @dataclass
 class _BackendRegistration:
     """Registration entry for an AI backend."""
-    backend_class: Type[AIBackend]
+    backend_class: type[AIBackend]
     default_url: str
 
 
@@ -35,7 +34,7 @@ class AIManager:
     _instance: 'AIManager | None' = None
     _logger = logging.getLogger("AIManager")
 
-    _BACKEND_REGISTRY: Dict[str, _BackendRegistration] = {
+    _BACKEND_REGISTRY: dict[str, _BackendRegistration] = {
         "anthropic": _BackendRegistration(AnthropicBackend, "https://api.anthropic.com/v1/messages"),
         "deepseek": _BackendRegistration(DeepseekBackend, "https://api.deepseek.com/chat/completions"),
         "google": _BackendRegistration(GoogleBackend, "https://generativelanguage.googleapis.com/v1beta/models"),
@@ -58,10 +57,10 @@ class AIManager:
     def __init__(self) -> None:
         """Initialize the AIManager if not already initialized."""
         if not hasattr(self, '_initialized'):
-            self._ai_backends: Dict[str, AIBackend] = {}
+            self._ai_backends: dict[str, AIBackend] = {}
             self._initialized = True
 
-    def get_backends(self) -> Dict[str, AIBackend]:
+    def get_backends(self) -> dict[str, AIBackend]:
         """
         Get the current AI backends.
 
@@ -86,7 +85,7 @@ class AIManager:
 
         return ""
 
-    def get_backend_class(self, provider: str) -> Type[AIBackend] | None:
+    def get_backend_class(self, provider: str) -> type[AIBackend] | None:
         """
         Get the backend class for a provider.
 
@@ -102,7 +101,7 @@ class AIManager:
 
         return None
 
-    def _create_backends(self, backend_settings: Dict[str, AIBackendSettings]) -> Dict[str, AIBackend]:
+    def _create_backends(self, backend_settings: dict[str, AIBackendSettings]) -> dict[str, AIBackend]:
         """
         Create AI backends based on enabled backends and their settings.
 
@@ -112,7 +111,7 @@ class AIManager:
         Returns:
             Dictionary mapping provider names to backend instances
         """
-        backends: Dict[str, AIBackend] = {}
+        backends: dict[str, AIBackend] = {}
 
         for provider, registration in self._BACKEND_REGISTRY.items():
             provider_settings = backend_settings.get(provider)
@@ -127,7 +126,7 @@ class AIManager:
 
         return backends
 
-    def initialize_from_settings(self, ai_backend_settings: Dict[str, AIBackendSettings]) -> None:
+    def initialize_from_settings(self, ai_backend_settings: dict[str, AIBackendSettings]) -> None:
         """
         Initialize AI backends from settings.
 
@@ -137,7 +136,7 @@ class AIManager:
         self._ai_backends = self._create_backends(ai_backend_settings)
         self._logger.info("Initialized AI backends from settings")
 
-    def update_backend_settings(self, ai_backend_settings: Dict[str, AIBackendSettings]) -> None:
+    def update_backend_settings(self, ai_backend_settings: dict[str, AIBackendSettings]) -> None:
         """
         Update AI backend settings and reinitialize backends.
 

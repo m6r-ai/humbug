@@ -1,6 +1,6 @@
 """Multi-pass Menai pretty printer with clean separation of concerns."""
 
-from typing import List, Union
+from typing import Union
 from dataclasses import dataclass
 from enum import Enum
 
@@ -60,9 +60,9 @@ class ASTComment(ASTNode):
 @dataclass
 class ASTList(ASTNode):
     """A list with elements and associated comments."""
-    elements: List[Union[ASTNode, 'ASTComment']]  # Mix of nodes and comments
+    elements: list[Union[ASTNode, 'ASTComment']]  # Mix of nodes and comments
 
-    def __init__(self, elements: List[Union[ASTNode, 'ASTComment']], start_line: int):
+    def __init__(self, elements: list[Union[ASTNode, 'ASTComment']], start_line: int):
         self.elements = elements
         self.start_line = start_line
         self.end_line = start_line  # Will be updated when we know the closing paren line
@@ -98,13 +98,13 @@ class FormatDecision:
 class TreeBuilder:
     """Build tree from tokens (Pass 1)."""
 
-    def __init__(self, tokens: List[MenaiToken]):
+    def __init__(self, tokens: list[MenaiToken]):
         self.tokens = tokens
         self.pos = 0
 
-    def build(self) -> List[ASTNode]:
+    def build(self) -> list[ASTNode]:
         """Build list of top-level expressions."""
-        result: List[ASTNode] = []
+        result: list[ASTNode] = []
         last_code_line = -1  # Track the line of the last code element
 
         while self.pos < len(self.tokens):
@@ -192,7 +192,7 @@ class TreeBuilder:
         self.pos += 1  # consume '('
         end_line = start_line  # Track where the list ends
 
-        elements: List[Union[ASTNode, ASTComment]] = []
+        elements: list[Union[ASTNode, ASTComment]] = []
         last_code_line = start_line
 
         while self.pos < len(self.tokens) and self.tokens[self.pos].type != MenaiTokenType.RPAREN:
@@ -229,7 +229,7 @@ class FormatPlanner:
         self.options = options
         self.decisions: dict[int, FormatDecision] = {}  # Map from ASTList node id to FormatDecision
 
-    def plan(self, nodes: List[ASTNode], start_column: int = 0) -> None:
+    def plan(self, nodes: list[ASTNode], start_column: int = 0) -> None:
         """Plan formatting for all nodes."""
         for node in nodes:
             self._plan_node(node, start_column)
@@ -391,7 +391,7 @@ class Renderer:
         self.options = options
         self.decisions: dict[int, FormatDecision] = decisions
 
-    def render(self, nodes: List[ASTNode]) -> str:
+    def render(self, nodes: list[ASTNode]) -> str:
         """Render all top-level nodes."""
         parts: list[str] = []
         prev_was_comment = False
@@ -612,7 +612,7 @@ class Renderer:
         parts.append(')')
         return ''.join(parts)
 
-    def _find_next_code_element(self, elements: List, start_idx: int) -> ASTNode | None:
+    def _find_next_code_element(self, elements: list, start_idx: int) -> ASTNode | None:
         """Find the next non-comment element."""
         for i in range(start_idx + 1, len(elements)):
             if not isinstance(elements[i], ASTComment):

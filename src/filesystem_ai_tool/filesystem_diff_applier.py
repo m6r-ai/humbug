@@ -1,7 +1,6 @@
 """Filesystem-specific diff application."""
 
 import logging
-from typing import List
 
 from diff import DiffApplier, DiffApplicationError, DiffApplicationResult, DiffHunk, DiffMatcher
 
@@ -11,10 +10,10 @@ class FilesystemDiffMatcher(DiffMatcher):
 
     def _get_document_lines(
         self,
-        document: List[str],
+        document: list[str],
         start_line: int,
         count: int
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get lines from file content.
 
@@ -26,7 +25,7 @@ class FilesystemDiffMatcher(DiffMatcher):
         Returns:
             List of line contents
         """
-        lines: List[str] = []
+        lines: list[str] = []
 
         for i in range(count):
             line_idx = start_line + i - 1  # Convert to 0-indexed
@@ -38,7 +37,7 @@ class FilesystemDiffMatcher(DiffMatcher):
 
         return lines
 
-    def _get_document_line_count(self, document: List[str]) -> int:
+    def _get_document_line_count(self, document: list[str]) -> int:
         """
         Get total number of lines in file content.
 
@@ -82,7 +81,7 @@ class FilesystemDiffApplier(DiffApplier):
         self,
         hunk: DiffHunk,
         location: int,
-        document: List[str],
+        document: list[str],
         context: dict
     ) -> None:
         """

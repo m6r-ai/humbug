@@ -1,6 +1,7 @@
+from collections.abc import Callable
 import os
 import re
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any
 
 
 
@@ -22,7 +23,7 @@ class PreviewContext:
         self,
         context_id: str,
         path: str,
-        content_blocks: List[Tuple[Any, str]],
+        content_blocks: list[tuple[Any, str]],
         on_scroll_to_position: Callable | None = None,
     ) -> None:
         """
@@ -46,7 +47,7 @@ class PreviewContext:
         """Return the stable context identifier."""
         return self._context_id
 
-    def get_info(self) -> Dict[str, Any]:
+    def get_info(self) -> dict[str, Any]:
         """
         Return high-level metadata about the preview content.
 
@@ -85,7 +86,7 @@ class PreviewContext:
         case_sensitive: bool = False,
         max_results: int = 50,
         regexp: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search for text across all raw content strings.
 
@@ -123,7 +124,7 @@ class PreviewContext:
         else:
             pattern = None
 
-        matches: List[Dict[str, Any]] = []
+        matches: list[dict[str, Any]] = []
 
         for block_idx, (_content_type, raw_text) in enumerate(self._content_blocks):
             if pattern is not None:

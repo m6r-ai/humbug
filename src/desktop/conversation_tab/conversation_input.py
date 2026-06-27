@@ -1,7 +1,7 @@
 """Input widget that matches history message styling."""
 
 import sys
-from typing import Dict, List, Tuple, cast
+from typing import cast
 
 from PySide6.QtCore import Signal, Qt, QRect, QSize, QObject, QEvent
 from PySide6.QtGui import QFontMetrics, QTextCursor, QTextDocument, QIcon, QKeyEvent, QMouseEvent
@@ -35,7 +35,7 @@ class ConversationInput(ConversationMessage):
         self._stop_button: QToolButton | None = None
         self._settings_button: QToolButton | None = None
         self._attach_button: QToolButton | None = None
-        self._attachments: List[Tuple[str, str]] = []  # (filename, content)
+        self._attachments: list[tuple[str, str]] = []  # (filename, content)
         self._attachments_bar: QWidget | None = None
         self._attachments_layout: QHBoxLayout | None = None
 
@@ -257,7 +257,7 @@ class ConversationInput(ConversationMessage):
         self._rebuild_attachments_bar()
         self._update_button_states()
 
-    def get_attachments(self) -> List[Tuple[str, str]]:
+    def get_attachments(self) -> list[tuple[str, str]]:
         """Return the list of (filename, content) attachments."""
         return list(self._attachments)
 
@@ -403,7 +403,7 @@ class ConversationInput(ConversationMessage):
         """Paste text from clipboard."""
         self._text_area.paste()
 
-    def set_cursor_position(self, position: Dict[str, int]) -> None:
+    def set_cursor_position(self, position: dict[str, int]) -> None:
         """
         Set cursor position.
 
@@ -424,7 +424,7 @@ class ConversationInput(ConversationMessage):
 
         self._text_area.setTextCursor(cursor)
 
-    def get_cursor_position(self) -> Dict[str, int]:
+    def get_cursor_position(self) -> dict[str, int]:
         """
         Get current cursor position.
 

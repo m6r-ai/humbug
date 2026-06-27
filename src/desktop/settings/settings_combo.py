@@ -1,8 +1,9 @@
 """
 Combo box setting for selecting from a list of options.
 """
+from collections.abc import Callable
 import sys
-from typing import Any, Callable, List, Tuple, cast
+from typing import Any, cast
 
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QRectF, QTimer
 from PySide6.QtGui import QHideEvent, QIcon, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPainterPath
@@ -134,7 +135,7 @@ class _SettingsComboPopup(QFrame):
         if not searchable:
             self._search.clear()
 
-    def set_items(self, rows: List[Tuple[str, Any, bool]]) -> None:
+    def set_items(self, rows: list[tuple[str, Any, bool]]) -> None:
         """Repopulate the list from rows of (text, data, enabled) tuples."""
         current_data = self._owner.get_value()
         self._list.clear()
@@ -314,7 +315,7 @@ class _SettingsComboPopup(QFrame):
 
     def _filter_items(self, text: str) -> None:
         query = text.casefold()
-        group_rows: List[int] = []
+        group_rows: list[int] = []
         group_has_match = False
 
         for row in range(self._list.count()):
@@ -370,13 +371,13 @@ class SettingsCombo(SettingsField):
 
     Attributes:
         _initial_index (int): The initial selected index
-        _items (List[tuple]): The items and their data values
+        _items (list[tuple]): The items and their data values
     """
 
     def __init__(
         self,
         label_text: str,
-        items: List[Tuple[str, Any]] | None = None,
+        items: list[tuple[str, Any]] | None = None,
         parent: QWidget | None = None,
         searchable: bool = False
     ) -> None:
@@ -391,7 +392,7 @@ class SettingsCombo(SettingsField):
         """
         super().__init__(label_text, parent)
 
-        self._items: List[Tuple[str, Any, bool]] = []
+        self._items: list[tuple[str, Any, bool]] = []
         self._current_index = -1
         self._initial_index = -1
         self._searchable = False
@@ -481,7 +482,7 @@ class SettingsCombo(SettingsField):
                 self._emit_if_changed(previous_index)
                 return
 
-    def set_items(self, items: List[Tuple[str, Any]]) -> None:
+    def set_items(self, items: list[tuple[str, Any]]) -> None:
         """
         Update the items in the combo box.
 
@@ -493,7 +494,7 @@ class SettingsCombo(SettingsField):
         self._restore_selection(current_data)
         self._initial_index = self._current_index
 
-    def set_grouped_items(self, groups: List[Tuple[str, List[Tuple[str, Any]]]]) -> None:
+    def set_grouped_items(self, groups: list[tuple[str, list[tuple[str, Any]]]]) -> None:
         """
         Populate the combo with named groups acting as non-selectable headers.
 
@@ -501,7 +502,7 @@ class SettingsCombo(SettingsField):
             groups: List of (group_name, [(display_text, data_value), ...]).
         """
         current_data = self.get_value()
-        rows: List[Tuple[str, Any, bool]] = []
+        rows: list[tuple[str, Any, bool]] = []
         for group_name, items in groups:
             rows.append((f"── {group_name} ──", None, False))
             rows.extend((display_text, data_value, True) for display_text, data_value in items)

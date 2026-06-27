@@ -1,7 +1,6 @@
 """Single pane of the side-by-side diff view."""
 
 import logging
-from typing import List
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Qt, QRect, QRegularExpression, Signal
@@ -178,7 +177,7 @@ class DiffPane(QPlainTextEdit):
         """
         self._highlighter.set_syntax(language)
 
-    def load_rows(self, rows: List[DiffRow], use_left: bool) -> None:
+    def load_rows(self, rows: list[DiffRow], use_left: bool) -> None:
         """
         Populate the pane from a list of DiffRow objects.
 

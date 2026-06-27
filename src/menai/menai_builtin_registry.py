@@ -5,7 +5,6 @@ This module provides builtin function metadata and first-class function objects
 for all builtins, used by the VM to populate the global environment.
 """
 
-from typing import Dict, Tuple
 
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP
 
@@ -32,7 +31,7 @@ class MenaiBuiltinRegistry:
     # zip, unzip, find, any?, all?, etc.) are NOT in this table and must NOT
     # be added — the registry asserts every entry has a BUILTIN_OPCODE_MAP
     # entry, so adding a prelude-only name will cause an assertion failure.
-    BUILTIN_FUNCTION_ARITIES: Dict[str, Tuple[int, int | None]] = {
+    BUILTIN_FUNCTION_ARITIES: dict[str, tuple[int, int | None]] = {
         'function?': (1, 1),
         'function=?': (2, 2),
         'function!=?': (2, 2),
@@ -211,7 +210,7 @@ class MenaiBuiltinRegistry:
     }
 
     @staticmethod
-    def get_function_arity(name: str) -> Tuple[int, int | None] | None:
+    def get_function_arity(name: str) -> tuple[int, int | None] | None:
         """
         Return (min_args, max_args) for a known builtin function, or None if unknown.
 

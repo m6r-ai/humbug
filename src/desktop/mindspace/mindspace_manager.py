@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal
 
@@ -134,15 +133,15 @@ class MindspaceManager(QObject):
         """Append a message to the interaction log and persist it."""
         return self._mindspace.add_interaction(level, content)
 
-    def get_interactions(self) -> List[MindspaceMessage]:
+    def get_interactions(self) -> list[MindspaceMessage]:
         """Return all interaction log messages."""
         return self._mindspace.get_interactions()
 
-    def save_mindspace_state(self, state: Dict) -> None:
+    def save_mindspace_state(self, state: dict) -> None:
         """Persist session state (open tabs, layout) to disk."""
         self._mindspace.save_mindspace_state(state)
 
-    def load_mindspace_state(self) -> Dict:
+    def load_mindspace_state(self) -> dict:
         """Load session state from disk."""
         return self._mindspace.load_mindspace_state()
 

@@ -1,12 +1,11 @@
 """Exception classes for preview operations."""
 
-from typing import Dict
 
 
 class PreviewError(Exception):
     """Base class for preview-related exceptions."""
 
-    def __init__(self, message: str, details: Dict | None = None) -> None:
+    def __init__(self, message: str, details: dict | None = None) -> None:
         """
         Initialize preview error.
 

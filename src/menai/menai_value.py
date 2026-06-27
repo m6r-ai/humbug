@@ -8,7 +8,7 @@ This separation keeps runtime values fast and memory-efficient.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, List, Tuple
+from typing import Any
 
 from menai.menai_error import MenaiEvalError
 
@@ -68,10 +68,10 @@ class MenaiFunction(MenaiValue):
     The dataclass remains frozen; mutation is done via object.__setattr__ in
     the VM (the same pattern used by MenaiDict for its _lookup field).
     """
-    parameters: Tuple[str, ...]
+    parameters: tuple[str, ...]
     name: str | None = None
     bytecode: Any = None  # CodeObject for bytecode-compiled functions
-    captured_values: List[Any] = field(default_factory=list)  # Captured free variables for closures
+    captured_values: list[Any] = field(default_factory=list)  # Captured free variables for closures
     is_variadic: bool = False  # True if function accepts variable number of args
 
     def to_python(self) -> 'MenaiFunction | str':
@@ -284,9 +284,9 @@ class MenaiString(MenaiValue):
 @dataclass(slots=True, unsafe_hash=True)
 class MenaiList(MenaiValue):
     """Represents lists of Menai values."""
-    elements: Tuple[MenaiValue, ...] = ()
+    elements: tuple[MenaiValue, ...] = ()
 
-    def to_python(self) -> List[Any]:
+    def to_python(self) -> list[Any]:
         """Convert to Python list with Python values, iteratively to avoid stack overflow."""
         if not self.elements:
             return []
@@ -365,7 +365,7 @@ class MenaiDict(MenaiValue):
     """
     __slots__ = ('pairs', 'lookup')
 
-    def __init__(self, pairs: Tuple[Tuple[MenaiValue, MenaiValue], ...] = ()) -> None:
+    def __init__(self, pairs: tuple[tuple[MenaiValue, MenaiValue], ...] = ()) -> None:
         self.pairs = pairs
         lookup = {}
         for key, value in pairs:
@@ -417,7 +417,7 @@ class MenaiDict(MenaiValue):
         return f"{{{pairs_str}}}"
 
     @staticmethod
-    def to_hashable_key(key: MenaiValue) -> Tuple[str, Any]:
+    def to_hashable_key(key: MenaiValue) -> tuple[str, Any]:
         """Convert Menai key to hashable Python value."""
         if type(key) is MenaiString:  # pylint: disable=unidiomatic-typecheck
             return ('str', key.value)
@@ -469,7 +469,7 @@ class MenaiSet(MenaiValue):
     """
     __slots__ = ('elements', 'members')
 
-    def __init__(self, elements: Tuple['MenaiValue', ...] = ()) -> None:
+    def __init__(self, elements: tuple['MenaiValue', ...] = ()) -> None:
         seen: set = set()
         deduped = []
         for elem in elements:
@@ -478,7 +478,7 @@ class MenaiSet(MenaiValue):
                 seen.add(hk)
                 deduped.append(elem)
 
-        self.elements: Tuple['MenaiValue', ...] = tuple(deduped)
+        self.elements: tuple['MenaiValue', ...] = tuple(deduped)
         self.members: frozenset = frozenset(
             MenaiDict.to_hashable_key(e) for e in self.elements
         )
@@ -531,10 +531,10 @@ class MenaiStructType(MenaiValue):
     """
     __slots__ = ('name', 'tag', 'field_names', '_field_index')
 
-    def __init__(self, name: str, tag: int, field_names: Tuple[str, ...]) -> None:
+    def __init__(self, name: str, tag: int, field_names: tuple[str, ...]) -> None:
         self.name: str = name
         self.tag: int = tag
-        self.field_names: Tuple[str, ...] = field_names
+        self.field_names: tuple[str, ...] = field_names
         self._field_index: dict = {fname: idx for idx, fname in enumerate(field_names)}
 
     def field_index(self, name: str) -> int:
@@ -571,9 +571,9 @@ class MenaiStruct(MenaiValue):
     """
     __slots__ = ('struct_type', 'fields')
 
-    def __init__(self, struct_type: MenaiStructType, fields: Tuple['MenaiValue', ...]) -> None:
+    def __init__(self, struct_type: MenaiStructType, fields: tuple['MenaiValue', ...]) -> None:
         self.struct_type: MenaiStructType = struct_type
-        self.fields: Tuple['MenaiValue', ...] = fields
+        self.fields: tuple['MenaiValue', ...] = fields
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, MenaiStruct):

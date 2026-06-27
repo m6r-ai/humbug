@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 import logging
 import sys
-from typing import Tuple
 
 
 class TerminalBase(ABC):
@@ -23,7 +22,7 @@ class TerminalBase(ABC):
         self._running = True
 
     @abstractmethod
-    async def start(self, command: str | None = None) -> Tuple[int, int]:
+    async def start(self, command: str | None = None) -> tuple[int, int]:
         """
         Start terminal process.
 

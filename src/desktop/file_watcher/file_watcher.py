@@ -1,9 +1,9 @@
 """File change detection service."""
 
 import logging
-import os
-from typing import Dict, Set, Callable
+from collections.abc import Callable
 from dataclasses import dataclass
+import os
 
 from PySide6.QtCore import QObject, QTimer
 
@@ -14,7 +14,7 @@ class FileInfo:
     mtime: float
     exists: bool
     is_dir: bool
-    dir_contents: Set[str] | None = None  # For directories, track contents
+    dir_contents: set[str] | None = None  # For directories, track contents
 
 
 class FileWatcher(QObject):
@@ -54,9 +54,9 @@ class FileWatcher(QObject):
             super().__init__()
             self._poll_interval = poll_interval
             # Per-registration baseline: (path, callback) -> FileInfo
-            self._watched_files: Dict[tuple, FileInfo] = {}
+            self._watched_files: dict[tuple, FileInfo] = {}
             # Path -> set of callbacks, used to iterate callbacks per path
-            self._callbacks: Dict[str, Set[Callable[[str], None]]] = {}
+            self._callbacks: dict[str, set[Callable[[str], None]]] = {}
             self._timer = QTimer(self)
             self._timer.timeout.connect(self._poll_files)
             self._timer.setSingleShot(False)
@@ -159,7 +159,7 @@ class FileWatcher(QObject):
             # Stat each unique path once, then compare against each registration's
             # individual baseline.
             unique_paths = list(self._callbacks.keys())
-            current_infos: Dict[str, FileInfo] = {}
+            current_infos: dict[str, FileInfo] = {}
 
             for file_path in unique_paths:
                 try:
@@ -235,6 +235,6 @@ class FileWatcher(QObject):
         """Check if the file watcher is currently running."""
         return self._running
 
-    def get_watched_files(self) -> Set[str]:
+    def get_watched_files(self) -> set[str]:
         """Get a copy of all currently watched file paths."""
         return set(self._callbacks.keys())

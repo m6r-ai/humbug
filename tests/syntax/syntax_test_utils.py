@@ -5,7 +5,7 @@ import os
 import json
 import difflib
 from pathlib import Path
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Any, Optional
 
 from syntax import ParserRegistry, ProgrammingLanguageUtils
 
@@ -41,7 +41,7 @@ def load_source_file(file_path: str) -> str:
         return f.read()
 
 
-def find_test_files() -> List[Tuple[str, str]]:
+def find_test_files() -> list[tuple[str, str]]:
     """
     Find all test files (source files with corresponding JSON files).
 
@@ -69,9 +69,9 @@ def find_test_files() -> List[Tuple[str, str]]:
 
 
 def compare_token_data(
-    actual_data: Dict[str, Any],
-    expected_data: Dict[str, Any]
-) -> Tuple[bool, Optional[str]]:
+    actual_data: dict[str, Any],
+    expected_data: dict[str, Any]
+) -> tuple[bool, Optional[str]]:
     """
     Compare actual token data with expected token data.
 
@@ -104,7 +104,7 @@ def compare_token_data(
 def parse_and_compare(
     source_path: str,
     expected_json_path: str
-) -> Tuple[bool, Optional[str]]:
+) -> tuple[bool, Optional[str]]:
     """
     Parse a source file and compare the result with an expected JSON file.
 
@@ -168,4 +168,3 @@ def parse_and_compare(
 
     except Exception as e:
         return False, f"Error parsing {source_path}: {str(e)}"
-

@@ -7,7 +7,6 @@ variable, producing an IRUseCounts annotation that downstream passes
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple
 
 from menai.menai_ir import (
     MenaiIRExpr,
@@ -40,7 +39,7 @@ class FrameUseCounts:
     params/free-vars.  Using id() of the tuple object gives each binding a
     unique identity even when two bindings share the same name (shadowing).
     """
-    counts: Dict[int, int] = field(default_factory=dict)  # binding_id → use count
+    counts: dict[int, int] = field(default_factory=dict)  # binding_id → use count
 
 
 @dataclass
@@ -56,8 +55,8 @@ class IRUseCounts:
         Maps id(MenaiIRLambda) → frame_id so callers can look up the
         FrameUseCounts for a specific lambda node directly.
     """
-    frames: List[FrameUseCounts] = field(default_factory=list)
-    lambda_frame_ids: Dict[int, int] = field(default_factory=dict)
+    frames: list[FrameUseCounts] = field(default_factory=list)
+    lambda_frame_ids: dict[int, int] = field(default_factory=dict)
 
     def total_count(self, frame_id: int, binding_id: int) -> int:
         """Total uses of the binding identified by *binding_id* within *frame_id*."""
@@ -96,7 +95,7 @@ class MenaiIRUseCounter:
         # scope_stack: list of dicts mapping name → frame_id.
         # Each dict corresponds to one scope level; multiple levels can share
         # the same frame_id (let/letrec within a lambda do not create a new frame).
-        scope_stack: List[Dict[str, Tuple[int, int]]] = [{}]
+        scope_stack: list[dict[str, tuple[int, int]]] = [{}]
         self._walk(ir, result, scope_stack, module_frame_id)
         return result
 
@@ -111,7 +110,7 @@ class MenaiIRUseCounter:
         counts = result.frames[frame_id].counts
         counts[binding_id] = counts.get(binding_id, 0) + 1
 
-    def _resolve_name(self, name: str, scope_stack: List[Dict[str, Tuple[int, int]]]) -> Tuple[int, int] | None:
+    def _resolve_name(self, name: str, scope_stack: list[dict[str, tuple[int, int]]]) -> tuple[int, int] | None:
         """
         Search scope_stack (innermost first) for *name*.
         Returns (frame_id, binding_id) of the defining binding, or None if not found.
@@ -126,7 +125,7 @@ class MenaiIRUseCounter:
         self,
         ir: MenaiIRExpr,
         result: IRUseCounts,
-        scope_stack: List[Dict[str, Tuple[int, int]]],
+        scope_stack: list[dict[str, tuple[int, int]]],
         current_frame_id: int,
     ) -> None:
         """Recursively walk *ir*, updating *result* in place."""
@@ -189,7 +188,7 @@ class MenaiIRUseCounter:
         self,
         ir: MenaiIRVariable,
         result: IRUseCounts,
-        scope_stack: List[Dict[str, Tuple[int, int]]],
+        scope_stack: list[dict[str, tuple[int, int]]],
     ) -> None:
         """Count a variable reference."""
         if ir.var_type != 'local':
@@ -204,7 +203,7 @@ class MenaiIRUseCounter:
         self,
         ir: MenaiIRLambda,
         result: IRUseCounts,
-        scope_stack: List[Dict[str, Tuple[int, int]]],
+        scope_stack: list[dict[str, tuple[int, int]]],
         current_frame_id: int,
     ) -> None:
         """
@@ -227,7 +226,7 @@ class MenaiIRUseCounter:
         # Build the lambda's own scope: params + captured free vars → lambda_frame_id.
         # Each param/free-var gets a synthetic binding_id (a fresh negative integer
         # to avoid colliding with id() values from binding tuples).
-        lambda_scope: Dict[str, Tuple[int, int]] = {}
+        lambda_scope: dict[str, tuple[int, int]] = {}
         for name in ir.params + ir.sibling_free_vars + ir.outer_free_vars:
             synthetic_id = -id(ir) - hash(name)  # unique per (lambda, name)
             lambda_scope[name] = (lambda_frame_id, synthetic_id)
@@ -239,7 +238,7 @@ class MenaiIRUseCounter:
         self,
         ir: MenaiIRLet,
         result: IRUseCounts,
-        scope_stack: List[Dict[str, Tuple[int, int]]],
+        scope_stack: list[dict[str, tuple[int, int]]],
         current_frame_id: int,
     ) -> None:
         """
@@ -254,7 +253,7 @@ class MenaiIRUseCounter:
 
         # Each binding tuple gets a unique binding_id via id().
         # The scope maps name → (frame_id, binding_id) so shadowed names are distinct.
-        let_scope: Dict[str, Tuple[int, int]] = {
+        let_scope: dict[str, tuple[int, int]] = {
             name: (current_frame_id, id(binding))
             for binding in ir.bindings
             for name, *_ in [binding]
@@ -266,7 +265,7 @@ class MenaiIRUseCounter:
         self,
         ir: MenaiIRLetrec,
         result: IRUseCounts,
-        scope_stack: List[Dict[str, Tuple[int, int]]],
+        scope_stack: list[dict[str, tuple[int, int]]],
         current_frame_id: int,
     ) -> None:
         """
@@ -275,7 +274,7 @@ class MenaiIRUseCounter:
         All binding names are in scope for both binding values and the body
         (mutual recursion).  Like let, letrec does not create a new frame.
         """
-        letrec_scope: Dict[str, Tuple[int, int]] = {
+        letrec_scope: dict[str, tuple[int, int]] = {
             name: (current_frame_id, id(binding))
             for binding in ir.bindings
             for name, *_ in [binding]

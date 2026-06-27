@@ -2,13 +2,14 @@
 
 from abc import ABC, abstractmethod
 import asyncio
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 import json
 import logging
 import os
 import ssl
 import sys
-from typing import AsyncGenerator, Dict, List, Any
+from typing import Any
 
 import aiohttp
 from aiohttp import ClientConnectorError, ClientError
@@ -27,8 +28,8 @@ from syntax.programming_language_utils import ProgrammingLanguageUtils
 class RequestConfig:
     """Complete configuration for an API request."""
     url: str
-    headers: Dict[str, str]
-    data: Dict[str, Any]
+    headers: dict[str, str]
+    data: dict[str, Any]
 
 
 class AIBackend(ABC):
@@ -65,7 +66,7 @@ class AIBackend(ABC):
 
         self._ssl_context = ssl.create_default_context(cafile=cert_path)
 
-    async def fetch_models(self) -> List[str]:
+    async def fetch_models(self) -> list[str]:
         """Fetch available model IDs from the provider API. Returns empty list by default."""
         return []
 

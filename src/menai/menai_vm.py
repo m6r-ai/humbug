@@ -1,9 +1,10 @@
 """Menai Virtual Machine - executes bytecode."""
 
 import cmath
+from collections.abc import Callable
 import difflib
 import math
-from typing import List, Dict, Any, cast, Protocol, Callable
+from typing import Any, Protocol, cast
 
 from menai.menai_bytecode import CodeObject, Opcode, unpack_instruction
 from menai.menai_error import MenaiEvalError, MenaiCancelledException
@@ -71,20 +72,20 @@ class MenaiVM:
     # max_locals contribution from globals functions).  Shared across all VM
     # instances so the prelude is only executed and walked once per process,
     # mirroring the C VM's globals cache.
-    _prelude_cache: Dict[int, tuple] = {}
+    _prelude_cache: dict[int, tuple] = {}
 
     def __init__(self, validate: bool = True) -> None:
-        self.regs: List[MenaiValue] = []
+        self.regs: list[MenaiValue] = []
 
         # Maximum call depth; exceeded programs raise a stack-overflow error.
         self._max_frame_depth: int = 1024
 
         # Pre-allocate frame objects — reused across every execute() call.
-        self._frames: List[Frame] = [Frame() for _ in range(self._max_frame_depth + 1)]
+        self._frames: list[Frame] = [Frame() for _ in range(self._max_frame_depth + 1)]
         self._frames[0].is_sentinel = True
 
         self.frame_depth: int = 0
-        self.globals: Dict[str, MenaiValue] = {}
+        self.globals: dict[str, MenaiValue] = {}
         self.validate_bytecode = validate  # Whether to validate bytecode before execution
 
         # Trace watcher for debugging support
@@ -135,14 +136,14 @@ class MenaiVM:
         """
         self._cancelled = True
 
-    def _build_dispatch_table(self) -> List[Any]:
+    def _build_dispatch_table(self) -> list[Any]:
         """
         Build jump table for opcode dispatch.
 
         This replaces the if/elif chain with direct array indexing,
         significantly improving performance in the hot execution loop.
         """
-        table: List[Any] = [self._op_not_implemented] * 384
+        table: list[Any] = [self._op_not_implemented] * 384
         table[Opcode.LOAD_NONE] = self._op_load_none
         table[Opcode.LOAD_TRUE] = self._op_load_true
         table[Opcode.LOAD_FALSE] = self._op_load_false
@@ -367,7 +368,7 @@ class MenaiVM:
     def execute(
         self,
         code: CodeObject,
-        globals_dict: Dict[str, MenaiValue] | CodeObject | None = None
+        globals_dict: dict[str, MenaiValue] | CodeObject | None = None
     ) -> MenaiValue:
         """
         Execute a code object and return the result.
@@ -390,7 +391,7 @@ class MenaiVM:
         # If globals_dict is a CodeObject (the prelude), execute it to obtain
         # the actual globals dict, caching the result by object identity so the
         # prelude is only executed once per VM instance.
-        resolved_globals: Dict[str, MenaiValue] | None = None
+        resolved_globals: dict[str, MenaiValue] | None = None
         globals_max_locals: int = 0
         if isinstance(globals_dict, CodeObject):
             cache_key = id(globals_dict)

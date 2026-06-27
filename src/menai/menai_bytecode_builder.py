@@ -24,7 +24,6 @@ scratch slot so that the sequential bytecode MOVE instructions are correct.
 
 import array
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Tuple
 
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Opcode, pack_instruction, make_instructions_array
 from menai.menai_error import MenaiCodegenError
@@ -110,11 +109,11 @@ def _patch_instruction(instructions: 'array.array[int]', idx: int, field_name: s
 class _EmitContext:
     """Mutable state for emitting one MenaiVCodeFunction into a CodeObject."""
     instructions: 'array.array[int]' = field(default_factory=make_instructions_array)
-    constants: List[MenaiValue] = field(default_factory=list)
-    names: List[str] = field(default_factory=list)
-    code_objects: List[CodeObject] = field(default_factory=list)
-    constant_map: Dict[tuple, int] = field(default_factory=dict)
-    name_map: Dict[str, int] = field(default_factory=dict)
+    constants: list[MenaiValue] = field(default_factory=list)
+    names: list[str] = field(default_factory=list)
+    code_objects: list[CodeObject] = field(default_factory=list)
+    constant_map: dict[tuple, int] = field(default_factory=dict)
+    name_map: dict[str, int] = field(default_factory=dict)
     slot_map: SlotMap = field(default_factory=lambda: SlotMap(slots={}, slot_count=0))
     max_outgoing_args: int = 0
 
@@ -270,8 +269,8 @@ class MenaiBytecodeBuilder:
                  forward jump patch sites.
         Phase 2: back-patch all forward jump targets.
         """
-        label_index: Dict[str, int] = {}
-        forward_jumps: List[Tuple[int, str, str]] = []  # (instr_idx, label, field)
+        label_index: dict[str, int] = {}
+        forward_jumps: list[tuple[int, str, str]] = []  # (instr_idx, label, field)
 
         # The self-loop sentinel label resolves to instruction index 0 — the
         # start of the function body (after ENTER, which is emitted before
@@ -292,7 +291,7 @@ class MenaiBytecodeBuilder:
                 # Collect all consecutive moves into a batch and emit them as
                 # a parallel assignment group to avoid sequential-move hazards.
                 j = i
-                move_pairs: List[Tuple[int, int]] = []
+                move_pairs: list[tuple[int, int]] = []
                 while j < len(instrs) and isinstance(instrs[j], MenaiVCodeMove):
                     m = instrs[j]
                     assert isinstance(m, MenaiVCodeMove)
@@ -589,7 +588,7 @@ class MenaiBytecodeBuilder:
 
 
 def _emit_parallel_moves(
-    moves: List[Tuple[int, int]],
+    moves: list[tuple[int, int]],
     ctx: "_EmitContext",
 ) -> None:
     """
@@ -610,7 +609,7 @@ def _emit_parallel_moves(
                 slot is needed.
     """
     # Filter no-ops.
-    pending: Dict[int, int] = {}
+    pending: dict[int, int] = {}
     for dst, src in moves:
         if dst != src:
             pending[dst] = src
@@ -624,7 +623,7 @@ def _emit_parallel_moves(
         # A move is safe to emit when its destination is not needed as a source
         # by any other pending move — emitting it cannot corrupt another move's
         # input.
-        srcs: Set[int] = set(pending.values())
+        srcs: set[int] = set(pending.values())
         ready = [dst for dst in pending if dst not in srcs]
 
         if ready:

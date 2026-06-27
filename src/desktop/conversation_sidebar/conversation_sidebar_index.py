@@ -4,7 +4,6 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Set
 
 from PySide6.QtCore import QObject, Signal
 
@@ -15,7 +14,7 @@ from desktop.file_watcher import FileWatcher
 class ConversationNode:
     """All index data for a single conversation file."""
     path: str
-    message_ids: List[str]
+    message_ids: list[str]
     parent_message_id: str | None
     parent_tool_call_id: str | None
 
@@ -67,16 +66,16 @@ class ConversationSidebarIndex(QObject):
         self._conversations_dir: str = ""
 
         # path -> ConversationNode
-        self._nodes: Dict[str, ConversationNode] = {}
+        self._nodes: dict[str, ConversationNode] = {}
 
         # message_id -> set of paths that contain it
-        self._message_id_index: Dict[str, Set[str]] = {}
+        self._message_id_index: dict[str, set[str]] = {}
 
         # Computed fork edges (rebuilt incrementally)
-        self._fork_edges: List[ForkEdge] = []
+        self._fork_edges: list[ForkEdge] = []
 
         # Set of directories currently registered with the file watcher
-        self._watched_dirs: Set[str] = set()
+        self._watched_dirs: set[str] = set()
 
     def set_conversations_dir(self, conversations_dir: str) -> None:
         """
@@ -124,7 +123,7 @@ class ConversationSidebarIndex(QObject):
         """
         return self._nodes.get(os.path.normpath(path))
 
-    def get_all_paths(self) -> List[str]:
+    def get_all_paths(self) -> list[str]:
         """
         Get all indexed conversation file paths.
 
@@ -133,7 +132,7 @@ class ConversationSidebarIndex(QObject):
         """
         return list(self._nodes.keys())
 
-    def get_children(self, path: str) -> List[str]:
+    def get_children(self, path: str) -> list[str]:
         """
         Get all direct delegation children of a conversation.
 
@@ -159,7 +158,7 @@ class ConversationSidebarIndex(QObject):
 
         return children
 
-    def get_parent_paths(self, path: str) -> List[str]:
+    def get_parent_paths(self, path: str) -> list[str]:
         """
         Resolve all parent file paths for a delegated child conversation.
 
@@ -182,7 +181,7 @@ class ConversationSidebarIndex(QObject):
         norm_path = os.path.normpath(path)
         return [p for p in paths if p != norm_path]
 
-    def get_fork_edges(self) -> List[ForkEdge]:
+    def get_fork_edges(self) -> list[ForkEdge]:
         """
         Get all detected fork relationships.
 
@@ -191,7 +190,7 @@ class ConversationSidebarIndex(QObject):
         """
         return list(self._fork_edges)
 
-    def get_roots(self) -> List[str]:
+    def get_roots(self) -> list[str]:
         """
         Get all root conversations (those with no delegation parent).
 
@@ -203,7 +202,7 @@ class ConversationSidebarIndex(QObject):
             if not self.get_parent_paths(path)
         ]
 
-    def compute_operation_scope(self, paths: Set[str]) -> tuple[Set[str], Set[str]]:
+    def compute_operation_scope(self, paths: set[str]) -> tuple[set[str], set[str]]:
         """
         Compute which conversations can safely be moved or deleted as part of an operation.
 
@@ -223,16 +222,16 @@ class ConversationSidebarIndex(QObject):
             - excluded: descendant paths that must be left behind because they
               are shared with conversations outside the operation scope.
         """
-        included: Set[str] = set()
-        excluded: Set[str] = set()
+        included: set[str] = set()
+        excluded: set[str] = set()
 
         # Normalise the seed paths
-        queue: List[str] = [os.path.normpath(p) for p in paths]
+        queue: list[str] = [os.path.normpath(p) for p in paths]
         for p in queue:
             included.add(p)
 
         # BFS over descendants
-        visited: Set[str] = set(included)
+        visited: set[str] = set(included)
         while queue:
             current = queue.pop(0)
             for child in self.get_children(current):
@@ -307,7 +306,7 @@ class ConversationSidebarIndex(QObject):
 
         self._recompute_fork_edges()
 
-    def _reconcile_watched_dirs(self, current_dirs: Set[str]) -> bool:
+    def _reconcile_watched_dirs(self, current_dirs: set[str]) -> bool:
         """
         Reconcile the set of watched directories against the current filesystem state.
 
@@ -352,8 +351,8 @@ class ConversationSidebarIndex(QObject):
             self.structure_changed.emit()
             return
 
-        current_paths: Set[str] = set()
-        current_dirs: Set[str] = set()
+        current_paths: set[str] = set()
+        current_dirs: set[str] = set()
 
         for dirpath, _dirnames, filenames in os.walk(self._conversations_dir):
             current_dirs.add(os.path.normpath(dirpath))
@@ -395,7 +394,7 @@ class ConversationSidebarIndex(QObject):
         elif content_changed:
             self.changed.emit()
 
-    def _read_conv_file(self, path: str) -> tuple[List[str], str | None, str | None] | None:
+    def _read_conv_file(self, path: str) -> tuple[list[str], str | None, str | None] | None:
         """
         Read only the fields needed for indexing from a .conv file.
 
@@ -539,7 +538,7 @@ class ConversationSidebarIndex(QObject):
         self._fork_edges = []
 
         # Find all message IDs shared by more than one file
-        shared: Dict[str, Set[str]] = {
+        shared: dict[str, set[str]] = {
             msg_id: paths
             for msg_id, paths in self._message_id_index.items()
             if len(paths) > 1
@@ -550,7 +549,7 @@ class ConversationSidebarIndex(QObject):
 
         # For each pair of files that share at least one message ID, find the
         # last shared message ID (the fork point).
-        processed_pairs: Set[frozenset] = set()
+        processed_pairs: set[frozenset] = set()
 
         for paths in shared.values():
             path_list = sorted(paths)  # Deterministic ordering

@@ -1,5 +1,5 @@
+from collections.abc import Callable
 import os
-from typing import Callable
 
 from PySide6.QtCore import Qt, Signal, QSize, QEvent, QObject
 from PySide6.QtGui import QIcon

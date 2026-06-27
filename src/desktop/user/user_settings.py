@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import json
 import os
 import logging
-from typing import Dict, List, Any
+from typing import Any
 
 from ai import AIBackendSettings
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
@@ -21,21 +21,21 @@ class UserSettings:
     """
     _logger = logging.getLogger("UserSettings")
 
-    ai_backends: Dict[str, AIBackendSettings] = field(default_factory=dict)
+    ai_backends: dict[str, AIBackendSettings] = field(default_factory=dict)
     language: LanguageCode = LanguageCode.EN
     font_size: float| None = None  # None means use the default font size
     theme: ColorTheme = ColorTheme.SYSTEM
-    custom_colors: Dict[str, Dict[str, str]] = field(default_factory=dict)
+    custom_colors: dict[str, dict[str, str]] = field(default_factory=dict)
     # Named custom colour themes the user has saved: name -> {role: {mode: hex}}.
-    saved_color_themes: Dict[str, Dict[str, Dict[str, str]]] = field(default_factory=dict)
+    saved_color_themes: dict[str, dict[str, dict[str, str]]] = field(default_factory=dict)
     # Name of the saved custom theme currently in use, or None for the live ("Manually") custom set.
     active_custom_theme_name: str | None = None
     file_sort_order: UserFileSortOrder = UserFileSortOrder.DIRECTORIES_FIRST
     font_ligatures: bool = True
     allow_external_file_access: bool = True
     check_for_updates: bool = True
-    external_file_allowlist: List[str] = field(default_factory=list)
-    external_file_denylist: List[str] = field(default_factory=list)
+    external_file_allowlist: list[str] = field(default_factory=list)
+    external_file_denylist: list[str] = field(default_factory=list)
 
     @classmethod
     def create_default(cls) -> "UserSettings":
@@ -342,12 +342,12 @@ class UserSettings:
         # Load custom color overrides
         custom_colors_raw = data.get("customColors", {})
         if isinstance(custom_colors_raw, dict):
-            validated: Dict[str, Dict[str, str]] = {}
+            validated: dict[str, dict[str, str]] = {}
             for role_key, mode_map in custom_colors_raw.items():
                 if not isinstance(role_key, str) or not isinstance(mode_map, dict):
                     continue
 
-                validated_modes: Dict[str, str] = {}
+                validated_modes: dict[str, str] = {}
                 for mode_key, color_val in mode_map.items():
                     if isinstance(mode_key, str) and isinstance(color_val, str):
                         validated_modes[mode_key] = color_val
@@ -366,12 +366,12 @@ class UserSettings:
         # Load saved (named) custom colour themes
         saved_themes_raw = data.get("savedColorThemes", {})
         if isinstance(saved_themes_raw, dict):
-            validated_themes: Dict[str, Dict[str, Dict[str, str]]] = {}
+            validated_themes: dict[str, dict[str, dict[str, str]]] = {}
             for theme_name, theme_colors in saved_themes_raw.items():
                 if not isinstance(theme_name, str) or not isinstance(theme_colors, dict):
                     continue
 
-                validated_theme: Dict[str, Dict[str, str]] = {}
+                validated_theme: dict[str, dict[str, str]] = {}
                 for role_key, mode_map in theme_colors.items():
                     if not isinstance(role_key, str) or not isinstance(mode_map, dict):
                         continue

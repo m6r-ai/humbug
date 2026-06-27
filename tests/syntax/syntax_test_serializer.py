@@ -2,12 +2,12 @@
 Serializer for syntax parser tokens and parser state for test comparison.
 """
 import json
-from typing import List, Dict, Any, Optional
+from typing import Any, Optional
 
 from syntax import Token, ParserState, ProgrammingLanguage
 
 
-def serialize_token(token: Token) -> Dict[str, Any]:
+def serialize_token(token: Token) -> dict[str, Any]:
     """
     Serialize a token to a dictionary.
 
@@ -24,7 +24,7 @@ def serialize_token(token: Token) -> Dict[str, Any]:
     }
 
 
-def serialize_parser_state(parser_state: ParserState | None) -> Dict[str, Any] | None:
+def serialize_parser_state(parser_state: ParserState | None) -> dict[str, Any] | None:
     """
     Serialize parser state to a dictionary.
 
@@ -74,11 +74,11 @@ def serialize_parser_state(parser_state: ParserState | None) -> Dict[str, Any] |
 
 
 def serialize_tokens_and_state(
-    tokens: List[Token],
+    tokens: list[Token],
     parser_state: ParserState | None,
     language: ProgrammingLanguage,
     source_file: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Serialize tokens and parser state to a dictionary.
 
@@ -100,7 +100,7 @@ def serialize_tokens_and_state(
 
 
 def save_tokens_to_json(
-    tokens: List[Token],
+    tokens: list[Token],
     parser_state: ParserState | None,
     file_path: str,
     language: ProgrammingLanguage,
@@ -121,7 +121,7 @@ def save_tokens_to_json(
         json.dump(serialized, f, indent=2)
 
 
-def load_tokens_from_json(file_path: str) -> Dict[str, Any]:
+def load_tokens_from_json(file_path: str) -> dict[str, Any]:
     """
     Load serialized tokens and state from a JSON file.
 

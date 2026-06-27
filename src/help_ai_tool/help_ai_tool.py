@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from ai_tool import (
     AITool, AIToolDefinition, AIToolParameter, AIToolOperationDefinition,
@@ -54,7 +54,7 @@ class HelpAITool(AITool):
             ]
         )
 
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """Get operation definitions for this tool."""
         return {
             "list_tools": AIToolOperationDefinition(

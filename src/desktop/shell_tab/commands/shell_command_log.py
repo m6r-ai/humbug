@@ -1,6 +1,5 @@
 """Command for opening the mindspace log."""
 
-from typing import List
 
 from syntax import Token
 
@@ -15,7 +14,7 @@ class ShellCommandLog(ShellCommand):
         """Get the name of the command."""
         return "log"
 
-    def aliases(self) -> List[str]:
+    def aliases(self) -> list[str]:
         """Get alternate names for the command."""
         return []
 
@@ -23,7 +22,7 @@ class ShellCommandLog(ShellCommand):
         """Get the help text for the command."""
         return "Opens the mindspace log"
 
-    def _execute_command(self, tokens: List[Token]) -> bool:
+    def _execute_command(self, tokens: list[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 

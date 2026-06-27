@@ -1,6 +1,5 @@
 """Dialog for configuring conversation-specific settings using the settings framework."""
 
-from typing import Dict, List, Tuple
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea, QWidget, QFrame
@@ -157,7 +156,7 @@ class ConversationSettingsDialog(QDialog):
     def _populate_model_filter_combo(self) -> None:
         strings = self._language_manager.strings()
         seen: set = set()
-        items: List[tuple] = [("All Providers", None)]
+        items: list[tuple] = [("All Providers", None)]
         for (_, provider) in AIConversationSettings.iter_models_by_backends(self._ai_backends):
             if provider not in seen:
                 seen.add(provider)
@@ -167,7 +166,7 @@ class ConversationSettingsDialog(QDialog):
 
     def _populate_model_combo(self, filter_provider: str | None) -> None:
         provider_names = get_all_backend_display_names(self._language_manager.strings())
-        grouped: Dict[str, List[Tuple[str, Tuple[str, str]]]] = {}
+        grouped: dict[str, list[tuple[str, tuple[str, str]]]] = {}
         for (model, provider) in AIConversationSettings.iter_models_by_backends(self._ai_backends):
             if filter_provider and provider != filter_provider:
                 continue

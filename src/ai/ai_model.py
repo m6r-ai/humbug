@@ -1,7 +1,6 @@
 """Enhanced AI model with tool calling capabilities."""
 
 from enum import Flag, auto
-from typing import List, Set
 
 
 class AIReasoningEffort:
@@ -23,7 +22,7 @@ class AIReasoningEffort:
     _VALUES = [NONE, MINIMAL, LOW, MEDIUM, HIGH, XHIGH, MAX]
 
     @classmethod
-    def values(cls) -> List[str]:
+    def values(cls) -> list[str]:
         """Return all valid effort level strings in ascending order."""
         return list(cls._VALUES)
 
@@ -62,8 +61,8 @@ class AIModel:
         supports_temperature: bool,
         reasoning_capabilities: AIReasoningCapability,
         tool_capabilities: ToolCapability = ToolCapability.NO_TOOLS,
-        supported_reasoning_efforts: List[str] | None = None,
-        temperature_incompatible_efforts: Set[str] | None = None,
+        supported_reasoning_efforts: list[str] | None = None,
+        temperature_incompatible_efforts: set[str] | None = None,
         adaptive_thinking_only: bool = False,
     ):
         """
@@ -94,8 +93,8 @@ class AIModel:
         self.supports_temperature = supports_temperature
         self.reasoning_capabilities = reasoning_capabilities
         self.tool_capabilities = tool_capabilities
-        self.supported_reasoning_efforts: List[str] = supported_reasoning_efforts or []
-        self.temperature_incompatible_efforts: Set[str] = temperature_incompatible_efforts or set()
+        self.supported_reasoning_efforts: list[str] = supported_reasoning_efforts or []
+        self.temperature_incompatible_efforts: set[str] = temperature_incompatible_efforts or set()
         self.adaptive_thinking_only: bool = adaptive_thinking_only
 
     def supports_tools(self) -> bool:

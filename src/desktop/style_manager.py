@@ -11,7 +11,6 @@ from enum import Enum, auto
 from pathlib import Path
 import shutil
 import sys
-from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
 from PySide6.QtGui import QTextCharFormat, QFontDatabase, QColor, QFontMetricsF, QFont, QPixmap, QGuiApplication
@@ -81,15 +80,15 @@ class StyleManager(QObject):
             self._active_palette: Palette = self._palette_for_mode(ColorTheme.SYSTEM)
             self._active_preset_name: str | None = "Default"
             # Named custom colour themes the user has saved: name -> {role: {mode: hex}}.
-            self._saved_color_themes: Dict[str, Dict[str, Dict[str, str]]] = {}
+            self._saved_color_themes: dict[str, dict[str, dict[str, str]]] = {}
             # Name of the saved custom theme in use, or None for the live ("Manually") custom set.
             self._active_custom_theme_name: str | None = None
-            self._highlights: Dict[TokenType, QTextCharFormat] = {}
-            self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
+            self._highlights: dict[TokenType, QTextCharFormat] = {}
+            self._proportional_highlights: dict[TokenType, QTextCharFormat] = {}
             self._highlights_version: int = 0
 
             # Cache SVG-rendered icons by (name, scaled_size)
-            self._scaled_icon_cache: Dict[tuple[str, int], QPixmap] = {}
+            self._scaled_icon_cache: dict[tuple[str, int], QPixmap] = {}
 
             self._code_font_families = ["JetBrains Mono", "Noto Sans Arabic"]
             self._proportional_font_families = ["Noto Sans", "Noto Sans Arabic"]
@@ -641,11 +640,11 @@ class StyleManager(QObject):
         """Record which preset is currently active (persists across color picker dialog opens)."""
         self._active_preset_name = name
 
-    def saved_color_themes(self) -> Dict[str, Dict[str, Dict[str, str]]]:
+    def saved_color_themes(self) -> dict[str, dict[str, dict[str, str]]]:
         """Return a copy of the user's saved (named) custom colour themes."""
         return {name: dict(colors) for name, colors in self._saved_color_themes.items()}
 
-    def set_saved_color_themes(self, themes: Dict[str, Dict[str, Dict[str, str]]]) -> None:
+    def set_saved_color_themes(self, themes: dict[str, dict[str, dict[str, str]]]) -> None:
         """Replace the set of saved (named) custom colour themes."""
         self._saved_color_themes = {name: dict(colors) for name, colors in themes.items()}
 
@@ -686,7 +685,7 @@ class StyleManager(QObject):
         self._initialize_proportional_highlights()
         self.style_changed.emit()
 
-    def clear_section_custom_colors(self, roles: List[ColorRole]) -> None:
+    def clear_section_custom_colors(self, roles: list[ColorRole]) -> None:
         """Remove custom overrides for the given roles and emit style_changed."""
         light_overrides = dict(self._light_custom_palette.overrides())
         dark_overrides = dict(self._dark_custom_palette.overrides())
@@ -710,15 +709,15 @@ class StyleManager(QObject):
             self._initialize_proportional_highlights()
             self.style_changed.emit()
 
-    def apply_custom_colors(self, custom: Dict[str, Dict[str, str]]) -> None:
+    def apply_custom_colors(self, custom: dict[str, dict[str, str]]) -> None:
         """
         Replace all custom color overrides from a string-keyed dict (loaded from settings).
 
         Emits style_changed only when the colours actually differ from the current state,
         so clicking Settings Apply without changing anything produces no visual update.
         """
-        new_light_overrides: Dict[ColorRole, str] = {}
-        new_dark_overrides: Dict[ColorRole, str] = {}
+        new_light_overrides: dict[ColorRole, str] = {}
+        new_dark_overrides: dict[ColorRole, str] = {}
 
         for role_name, mode_map in custom.items():
             try:
@@ -774,9 +773,9 @@ class StyleManager(QObject):
         self._initialize_proportional_highlights()
         self.style_changed.emit()
 
-    def get_custom_colors(self) -> Dict[str, Dict[str, str]]:
+    def get_custom_colors(self) -> dict[str, dict[str, str]]:
         """Serialize current custom color overrides to a string-keyed dict for persistence."""
-        result: Dict[str, Dict[str, str]] = {}
+        result: dict[str, dict[str, str]] = {}
         for role, color in self._light_custom_palette.overrides().items():
             result.setdefault(role.name, {})[ColorMode.LIGHT.name] = color
 
@@ -826,7 +825,7 @@ class StyleManager(QObject):
         font_metrics = QFontMetricsF(font)
         return font_metrics.height()
 
-    def monospace_font_families(self) -> List[str]:
+    def monospace_font_families(self) -> list[str]:
         """Get the standard monospace font family fallback sequence."""
         return self._code_font_families
 
@@ -860,7 +859,7 @@ class StyleManager(QObject):
         font.setStyleStrategy(QFont.StyleStrategy.PreferNoShaping)
         return font
 
-    def proportional_font_families(self) -> List[str]:
+    def proportional_font_families(self) -> list[str]:
         """Get the standard proportional font family fallback sequence."""
         return self._proportional_font_families
 

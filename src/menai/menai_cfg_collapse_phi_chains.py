@@ -37,7 +37,6 @@ would produce such a conflict.
 Menai is pure, so dead-code elimination is always safe (AGENTS.md).
 """
 
-from typing import Dict, List, Set, Tuple
 
 from menai.menai_cfg import (
     MenaiCFGBlock,
@@ -92,7 +91,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
         Returns True if any change was made.
         """
         # Build a map: value id → the phi instruction that defines it.
-        phi_defs: Dict[int, MenaiCFGPhiInstr] = {}
+        phi_defs: dict[int, MenaiCFGPhiInstr] = {}
         for block in func.blocks:
             for instr in block.instrs:
                 if isinstance(instr, MenaiCFGPhiInstr):
@@ -103,8 +102,8 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
 
         # Count all uses of each phi result, distinguishing phi-incoming
         # uses from all other uses.
-        total_uses: Dict[int, int] = {vid: 0 for vid in phi_defs}
-        phi_uses: Dict[int, int] = {vid: 0 for vid in phi_defs}
+        total_uses: dict[int, int] = {vid: 0 for vid in phi_defs}
+        phi_uses: dict[int, int] = {vid: 0 for vid in phi_defs}
 
         for block in func.blocks:
             for instr in block.instrs:
@@ -132,7 +131,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
 
         # Candidates: phi results whose every use is as a phi incoming value
         # (including zero uses — those are simply dead).
-        candidates: Set[int] = {
+        candidates: set[int] = {
             vid
             for vid in phi_defs
             if total_uses[vid] == phi_uses[vid]
@@ -145,7 +144,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
 
         # Phase 1: expand candidate phi references in consuming phis.
         for block in func.blocks:
-            new_instrs: List[MenaiCFGInstr] = []
+            new_instrs: list[MenaiCFGInstr] = []
             for instr in block.instrs:
                 if not isinstance(instr, MenaiCFGPhiInstr):
                     new_instrs.append(instr)
@@ -161,7 +160,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
                     if val.id not in candidates
                 }
 
-                expanded_incoming: List[Tuple[MenaiCFGValue, MenaiCFGBlock]] = []
+                expanded_incoming: list[tuple[MenaiCFGValue, MenaiCFGBlock]] = []
                 instr_changed = False
 
                 for incoming_val, pred_block in instr.incoming:
@@ -212,7 +211,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
 
         # Phase 2: remove phi instructions that are now unreferenced.
         # Recount uses after the expansions to find newly-dead phis.
-        new_phi_uses: Dict[int, int] = {vid: 0 for vid in phi_defs}
+        new_phi_uses: dict[int, int] = {vid: 0 for vid in phi_defs}
         for block in func.blocks:
             for instr in block.instrs:
                 if isinstance(instr, MenaiCFGPhiInstr):
@@ -220,7 +219,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
                         if incoming_val.id in new_phi_uses:
                             new_phi_uses[incoming_val.id] += 1
 
-        dead_phis: Set[int] = {
+        dead_phis: set[int] = {
             vid for vid in candidates if new_phi_uses[vid] == 0
         }
 

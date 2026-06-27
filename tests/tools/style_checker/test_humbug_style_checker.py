@@ -13,6 +13,7 @@ import tempfile
 from tools.style_checker.humbug_style_checker import (
     MSG_NO_PROPERTY,
     MSG_NO_OPTIONAL,
+    MSG_NO_TYPING_ALIASES,
     MSG_NO_ALIGNED_ASSIGNS,
     MSG_BLANK_BEFORE_DEDENT,
     MSG_MULTILINE_DOCSTRING,
@@ -41,7 +42,7 @@ def _run_pylint(source: str) -> list[tuple[str, int]]:
                 "python", "-m", "pylint",
                 "--load-plugins=tools.style_checker.humbug_style_checker",
                 "--disable=all",
-                f"--enable={MSG_NO_PROPERTY},{MSG_NO_OPTIONAL},{MSG_NO_ALIGNED_ASSIGNS},{MSG_BLANK_BEFORE_DEDENT},{MSG_MULTILINE_DOCSTRING}",
+                f"--enable={MSG_NO_PROPERTY},{MSG_NO_OPTIONAL},{MSG_NO_TYPING_ALIASES},{MSG_NO_ALIGNED_ASSIGNS},{MSG_BLANK_BEFORE_DEDENT},{MSG_MULTILINE_DOCSTRING}",
                 "--score=n",
                 "--output-format=json",
                 path,
@@ -129,6 +130,91 @@ def foo(x: int | None = None) -> None:
 '''
         results = _run_pylint(source)
         assert MSG_NO_OPTIONAL not in _msg_ids(results)
+
+
+# ===========================================================================
+# Typing alias tests
+# ===========================================================================
+
+class TestNoTypingAliases:
+    """Tests for the humbug-no-typing-aliases check."""
+
+    def test_dict_import_is_flagged(self):
+        """from typing import Dict should be flagged."""
+        source = '''\
+"""Module."""
+from typing import Dict
+
+
+def foo(x: Dict[str, int]) -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_TYPING_ALIASES in _msg_ids(results)
+
+    def test_list_import_is_flagged(self):
+        """from typing import List should be flagged."""
+        source = '''\
+"""Module."""
+from typing import List
+
+
+def foo(x: List[int]) -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_TYPING_ALIASES in _msg_ids(results)
+
+    def test_callable_import_is_flagged(self):
+        """from typing import Callable should be flagged."""
+        source = '''\
+"""Module."""
+from typing import Callable
+
+
+def foo(x: Callable[[], None]) -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_TYPING_ALIASES in _msg_ids(results)
+
+    def test_builtin_dict_is_ok(self):
+        """Using builtin dict should not be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: dict[str, int]) -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_TYPING_ALIASES not in _msg_ids(results)
+
+    def test_collections_abc_callable_is_ok(self):
+        """Using collections.abc.Callable should not be flagged."""
+        source = '''\
+"""Module."""
+from collections.abc import Callable
+
+
+def foo(x: Callable[[], None]) -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_TYPING_ALIASES not in _msg_ids(results)
+
+    def test_any_is_ok(self):
+        """from typing import Any should not be flagged."""
+        source = '''\
+"""Module."""
+from typing import Any
+
+
+def foo(x: Any) -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_TYPING_ALIASES not in _msg_ids(results)
 
 
 # ===========================================================================

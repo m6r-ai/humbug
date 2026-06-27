@@ -1,5 +1,5 @@
 """Anthropic backend implementation."""
-from typing import Dict, List, Any
+from typing import Any
 
 import aiohttp
 
@@ -15,7 +15,7 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 class AnthropicBackend(AIBackend):
     """Anthropic API backend implementation."""
 
-    async def fetch_models(self) -> List[str]:
+    async def fetch_models(self) -> list[str]:
         """Fetch available model IDs from the Anthropic API."""
         url = self._api_url.replace("/messages", "/models")
         headers = {
@@ -28,7 +28,7 @@ class AnthropicBackend(AIBackend):
                 data = await response.json()
                 return [m["id"] for m in data.get("data", [])]
 
-    def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
+    def _format_tool_definition(self, tool_def: AIToolDefinition) -> dict[str, Any]:
         """
         Convert tool definition to Anthropic format.
 
@@ -38,7 +38,7 @@ class AnthropicBackend(AIBackend):
         Returns:
             Tool definition in Anthropic format
         """
-        properties: Dict[str, Any] = {}
+        properties: dict[str, Any] = {}
         required = []
 
         for param in tool_def.parameters:
@@ -73,7 +73,7 @@ class AnthropicBackend(AIBackend):
             }
         }
 
-    def _build_user_message(self, content: str, tool_results: List[AIToolResult] | None = None) -> Dict[str, Any]:
+    def _build_user_message(self, content: str, tool_results: list[AIToolResult] | None = None) -> dict[str, Any]:
         """
         Build user message for Anthropic format.
 
@@ -91,7 +91,7 @@ class AnthropicBackend(AIBackend):
             for tool_result in tool_results:
                 tool_content = tool_result.content if not tool_result.error else f"Error: {tool_result.error}"
 
-                result: Dict[str, Any] = {
+                result: dict[str, Any] = {
                     "type": "tool_result",
                     "tool_use_id": tool_result.id,
                     "content": tool_content
@@ -119,9 +119,9 @@ class AnthropicBackend(AIBackend):
             reasoning: str,
             signature: str,
             content: str,
-            tool_calls: List[AIToolCall] | None = None,
+            tool_calls: list[AIToolCall] | None = None,
             redacted_reasoning: str | None = None
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
         """
         Build assistant message for Anthropic format.
 
@@ -137,7 +137,7 @@ class AnthropicBackend(AIBackend):
         """
         # For Anthropic, tool calls are structured content within the assistant message
         if tool_calls:
-            content_parts: List[Dict[str, Any]] = []
+            content_parts: list[dict[str, Any]] = []
 
             # Add reasoning content if present
             if reasoning:
@@ -175,7 +175,7 @@ class AnthropicBackend(AIBackend):
         self,
         conversation_history: AIConversationHistory,
         settings: AIConversationSettings
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Format conversation history for Anthropic's API format in a single pass.
 
@@ -186,7 +186,7 @@ class AnthropicBackend(AIBackend):
         Returns:
             List of messages formatted for Anthropic API
         """
-        result: List[Dict[str, Any]] = []
+        result: list[dict[str, Any]] = []
         last_user_message_index = -1
         current_turn_message_index = -1
         last_reasoning_message: AIMessage | None = None

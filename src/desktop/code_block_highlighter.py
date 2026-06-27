@@ -1,7 +1,7 @@
 """Editor highlighter."""
 
 import logging
-from typing import cast, List
+from typing import cast
 
 from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 
@@ -27,8 +27,8 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
         # Consistent font family fallback sequence for all code formats
         self._style_manager = StyleManager()
         self._syntax = ProgrammingLanguage.TEXT
-        self._precomputed_tokens: List[List[Token]] | None = None
-        self._precomputed_states: List[ParserState | None] | None = None
+        self._precomputed_tokens: list[list[Token]] | None = None
+        self._precomputed_states: list[ParserState | None] | None = None
         self._use_precomputed = False
         self._logger = logging.getLogger("CodeBlockHighlighter")
 
@@ -57,8 +57,8 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
 
     def set_precomputed_tokens(
         self,
-        tokens_by_line: List[List[Token]],
-        states_by_line: List[ParserState | None]
+        tokens_by_line: list[list[Token]],
+        states_by_line: list[ParserState | None]
     ) -> None:
         """
         Set pre-computed tokens to avoid re-parsing.

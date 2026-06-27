@@ -5,7 +5,7 @@ import os
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 
 from ai import (
     AIConversation, AIConversationEvent, AIConversationParent,
@@ -46,7 +46,7 @@ class DelegateAITool(AITool):
         self._mindspace = mindspace
         self._ai_manager = AIManager()
         self._logger = logging.getLogger("DelegateAITool")
-        self._context_ids: Dict[str, str] = {}
+        self._context_ids: dict[str, str] = {}
 
     def get_definition(self) -> AIToolDefinition:
         """Get the tool definition."""
@@ -130,7 +130,7 @@ class DelegateAITool(AITool):
         """Get brief one-line description for system prompt."""
         return "Delegate tasks to specialized child AI instances for parallel or focused work."
 
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """Get operation definitions for this tool."""
         return {
             "delegate": AIToolOperationDefinition(

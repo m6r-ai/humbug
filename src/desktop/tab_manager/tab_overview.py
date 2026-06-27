@@ -9,7 +9,6 @@ responsible for supplying the data and acting on the signals.
 
 from dataclasses import dataclass
 import math
-from typing import Dict, List
 
 from PySide6.QtCore import (
     QEasingCurve, QEvent, QPoint, QPropertyAnimation, QRect, QRectF, QSize, Qt, Signal
@@ -301,8 +300,8 @@ class TabOverviewWidget(QWidget):
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
         self._style_manager = StyleManager()
-        self._cards: Dict[str, TabOverviewCard] = {}
-        self._card_order: List[str] = []
+        self._cards: dict[str, TabOverviewCard] = {}
+        self._card_order: list[str] = []
         self._selected_id: str | None = None
 
         self._scroll_area = QScrollArea(self)
@@ -322,7 +321,7 @@ class TabOverviewWidget(QWidget):
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-    def set_entries(self, entries: List[TabOverviewEntry]) -> None:
+    def set_entries(self, entries: list[TabOverviewEntry]) -> None:
         """Replace the displayed cards with one card per entry."""
         for card in self._cards.values():
             card.deleteLater()

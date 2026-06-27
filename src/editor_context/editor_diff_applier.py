@@ -1,7 +1,7 @@
 """Qt-specific diff application for editor widgets."""
 
 import logging
-from typing import Any, List
+from typing import Any
 
 from PySide6.QtGui import QTextCursor, QTextDocument
 
@@ -16,7 +16,7 @@ class EditorDiffMatcher(DiffMatcher):
         document: QTextDocument,
         start_line: int,
         count: int
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get lines from Qt text document.
 
@@ -28,7 +28,7 @@ class EditorDiffMatcher(DiffMatcher):
         Returns:
             List of line contents
         """
-        lines: List[str] = []
+        lines: list[str] = []
 
         for i in range(count):
             line_num = start_line + i - 1  # Convert to 0-indexed

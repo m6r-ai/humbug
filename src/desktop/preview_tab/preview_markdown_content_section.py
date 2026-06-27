@@ -1,7 +1,7 @@
 """Widget for displaying a section of preview content."""
 
 import logging
-from typing import List, Tuple, cast
+from typing import cast
 
 from PySide6.QtWidgets import QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout, QWidget
 from PySide6.QtCore import Signal, Qt, QPoint, QObject, QEvent, QRegularExpression
@@ -304,7 +304,7 @@ class PreviewMarkdownContentSection(QFrame):
             self._rendered_width = self._text_area.viewport().width()
             self._renderer.visit(self._content_node)
 
-    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> list[tuple[int, int]]:
         """
         Find all instances of text in this section.
 
@@ -359,7 +359,7 @@ class PreviewMarkdownContentSection(QFrame):
 
         return matches
 
-    def find_element_by_id(self, element_id: str) -> Tuple[int, int] | None:
+    def find_element_by_id(self, element_id: str) -> tuple[int, int] | None:
         """
         Find an element with the given ID.
 
@@ -383,7 +383,7 @@ class PreviewMarkdownContentSection(QFrame):
 
     def highlight_matches(
         self,
-        matches: List[Tuple[int, int]],
+        matches: list[tuple[int, int]],
         current_match_index: int = -1,
         highlight_color: QColor | None = None,
         dim_highlight_color: QColor | None = None

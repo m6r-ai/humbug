@@ -3,7 +3,6 @@ Configuration management for dependency checker.
 """
 
 import os
-from typing import Dict, List, Set
 from dataclasses import dataclass, field
 
 import yaml  # type: ignore[import-untyped]
@@ -12,16 +11,16 @@ import yaml  # type: ignore[import-untyped]
 @dataclass
 class ModuleConfig:
     """Configuration for a single module."""
-    internal_dependencies: List[str] = field(default_factory=list)
-    external_dependencies: List[str] = field(default_factory=list)
+    internal_dependencies: list[str] = field(default_factory=list)
+    external_dependencies: list[str] = field(default_factory=list)
 
 
 @dataclass
 class DependencyConfig:
     """Configuration for module dependency rules."""
 
-    modules: Dict[str, ModuleConfig] = field(default_factory=dict)
-    ignore_patterns: List[str] = field(default_factory=list)
+    modules: dict[str, ModuleConfig] = field(default_factory=dict)
+    ignore_patterns: list[str] = field(default_factory=list)
     src_root: str = "src"
 
     @classmethod
@@ -86,14 +85,14 @@ class DependencyConfig:
         with open(config_path, 'w', encoding='utf-8') as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=True)
 
-    def get_allowed_dependencies(self, module: str) -> Set[str]:
+    def get_allowed_dependencies(self, module: str) -> set[str]:
         """Get the set of internal modules that the given module is allowed to depend on."""
         if module in self.modules:
             return set(self.modules[module].internal_dependencies)
 
         return set()
 
-    def get_allowed_external_dependencies(self, module: str) -> Set[str]:
+    def get_allowed_external_dependencies(self, module: str) -> set[str]:
         """Get the set of external dependencies allowed for a specific module."""
         if module in self.modules:
             return set(self.modules[module].external_dependencies)
@@ -137,11 +136,11 @@ class DependencyConfig:
         # Exact match
         return module_name == pattern
 
-    def get_all_modules(self) -> Set[str]:
+    def get_all_modules(self) -> set[str]:
         """Get all defined modules."""
         return set(self.modules.keys())
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """Validate the configuration and return any errors."""
         errors = []
 

@@ -1,7 +1,6 @@
 import io
 import zipfile
 import xml.etree.ElementTree as ET
-from typing import Dict, List
 
 from docx.docx_ast_node import (
     DocxASTAbstractNumNode,
@@ -200,7 +199,7 @@ class DocxASTParser:
         except ET.ParseError as e:
             raise DocxParseError(f"Malformed XML in {path!r}: {e}") from e
 
-    def _parse_relationships(self, root: ET.Element) -> Dict[str, str]:
+    def _parse_relationships(self, root: ET.Element) -> dict[str, str]:
         """
         Parse a .rels file and return a map from Id to Target.
 
@@ -216,7 +215,7 @@ class DocxASTParser:
             targets are normalised to paths within the ZIP; hyperlink targets
             are the raw URL.
         """
-        relationships: Dict[str, str] = {}
+        relationships: dict[str, str] = {}
 
         for rel in root:
             rel_type = rel.get("Type", "")
@@ -451,7 +450,7 @@ class DocxASTParser:
     def _parse_document_body(
         self,
         root: ET.Element,
-        relationships: Dict[str, str],
+        relationships: dict[str, str],
     ) -> DocxASTBodyNode:
         """
         Parse the document.xml root into a DocxASTBodyNode.
@@ -491,7 +490,7 @@ class DocxASTParser:
     def _parse_paragraph(
         self,
         elem: ET.Element,
-        relationships: Dict[str, str],
+        relationships: dict[str, str],
     ) -> DocxASTParagraphNode:
         """
         Parse a <w:p> element.
@@ -530,7 +529,7 @@ class DocxASTParser:
     def _parse_hyperlink(
         self,
         elem: ET.Element,
-        relationships: Dict[str, str],
+        relationships: dict[str, str],
     ) -> DocxASTHyperlinkNode:
         """
         Parse a <w:hyperlink> element.
@@ -663,7 +662,7 @@ class DocxASTParser:
     def _parse_run(
         self,
         elem: ET.Element,
-        relationships: Dict[str, str],
+        relationships: dict[str, str],
     ) -> DocxASTRunNode:
         """
         Parse a <w:r> element.
@@ -818,7 +817,7 @@ class DocxASTParser:
     def _parse_drawing(
         self,
         elem: ET.Element,
-        relationships: Dict[str, str],
+        relationships: dict[str, str],
     ) -> DocxASTDrawingNode | None:
         """
         Parse a <w:drawing> element and return a DocxASTDrawingNode.
@@ -907,7 +906,7 @@ class DocxASTParser:
     def _parse_table(
         self,
         elem: ET.Element,
-        relationships: Dict[str, str],
+        relationships: dict[str, str],
     ) -> DocxASTTableNode:
         """
         Parse a <w:tbl> element.
@@ -969,7 +968,7 @@ class DocxASTParser:
 
     def _parse_table_grid(self, elem: ET.Element) -> DocxASTTableGridNode:
         """Parse a <w:tblGrid> element."""
-        column_widths: List[int] = []
+        column_widths: list[int] = []
 
         for child in elem:
             local = child.tag.split("}")[-1]
@@ -983,7 +982,7 @@ class DocxASTParser:
     def _parse_table_row(
         self,
         elem: ET.Element,
-        relationships: Dict[str, str],
+        relationships: dict[str, str],
     ) -> DocxASTTableRowNode:
         """Parse a <w:tr> element."""
         row_node = DocxASTTableRowNode()
@@ -1032,7 +1031,7 @@ class DocxASTParser:
     def _parse_table_cell(
         self,
         elem: ET.Element,
-        relationships: Dict[str, str],
+        relationships: dict[str, str],
     ) -> DocxASTTableCellNode:
         """Parse a <w:tc> element."""
         cell_node = DocxASTTableCellNode()

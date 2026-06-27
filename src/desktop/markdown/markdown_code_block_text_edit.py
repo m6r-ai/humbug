@@ -1,7 +1,6 @@
 """Widget for displaying code blocks with syntax highlighting."""
 
 import logging
-from typing import List
 
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal
@@ -72,8 +71,8 @@ class MarkdownCodeBlockTextEdit(MinHeightPlainTextEdit):
     def set_text_with_highlighting(
         self,
         text: str,
-        tokens_by_line: List[List[Token]],
-        states_by_line: List[ParserState | None]
+        tokens_by_line: list[list[Token]],
+        states_by_line: list[ParserState | None]
     ) -> None:
         """
         Set text with pre-computed syntax highlighting tokens to avoid re-parsing.

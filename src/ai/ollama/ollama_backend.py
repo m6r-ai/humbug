@@ -1,7 +1,8 @@
 """Ollama backend implementation."""
+from collections.abc import Callable
 import json
 import socket
-from typing import Callable, Dict, List, Any
+from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 import aiohttp
@@ -46,7 +47,7 @@ class OllamaBackend(AIBackend):
             ""
         ))
 
-    async def fetch_models(self) -> List[str]:
+    async def fetch_models(self) -> list[str]:
         """Fetch installed model names from the Ollama API."""
         url = self._get_api_endpoint_url("tags")
         headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
@@ -123,7 +124,7 @@ class OllamaBackend(AIBackend):
         """
         return message.model == settings.model and message.provider == settings.provider
 
-    def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
+    def _format_tool_definition(self, tool_def: AIToolDefinition) -> dict[str, Any]:
         """
         Convert tool definition to Ollama format.
 
@@ -133,7 +134,7 @@ class OllamaBackend(AIBackend):
         Returns:
             Tool definition in Ollama format
         """
-        properties: Dict[str, Any] = {}
+        properties: dict[str, Any] = {}
         required = []
 
         for param in tool_def.parameters:
@@ -171,7 +172,7 @@ class OllamaBackend(AIBackend):
             }
         }
 
-    def _build_user_message(self, content: str, tool_results: List[AIToolResult] | None = None) -> List[Dict[str, Any]]:
+    def _build_user_message(self, content: str, tool_results: list[AIToolResult] | None = None) -> list[dict[str, Any]]:
         """
         Build user message(s) for Ollama format.
 
@@ -207,9 +208,9 @@ class OllamaBackend(AIBackend):
     def _build_assistant_message(
         self,
         content: str,
-        tool_calls: List[AIToolCall] | None = None,
+        tool_calls: list[AIToolCall] | None = None,
         reasoning_content: str = ""
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Build assistant message for Ollama format.
 
@@ -221,7 +222,7 @@ class OllamaBackend(AIBackend):
         Returns:
             Assistant message dictionary
         """
-        message: Dict[str, Any] = {
+        message: dict[str, Any] = {
             "role": "assistant",
             "content": content
         }
@@ -247,7 +248,7 @@ class OllamaBackend(AIBackend):
         self,
         conversation_history: AIConversationHistory,
         settings: AIConversationSettings
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Format conversation history for Ollama's API format in a single pass.
 
@@ -258,7 +259,7 @@ class OllamaBackend(AIBackend):
         Returns:
             List of messages formatted for Ollama API
         """
-        result: List[Dict[str, Any]] = []
+        result: list[dict[str, Any]] = []
         last_user_message_index = -1
         current_turn_message_index = -1
         last_reasoning_message: AIMessage | None = None

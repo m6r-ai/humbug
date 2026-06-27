@@ -1,7 +1,7 @@
 """AI tool operation definition."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Set
 
 
 @dataclass
@@ -10,6 +10,6 @@ class AIToolOperationDefinition:
     name: str
     handler: Callable
     extract_context: Callable | None
-    allowed_parameters: Set[str]
-    required_parameters: Set[str]
+    allowed_parameters: set[str]
+    required_parameters: set[str]
     description: str

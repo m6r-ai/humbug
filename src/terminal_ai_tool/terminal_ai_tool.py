@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import Any, Dict
+from typing import Any
 
 from ai_tool import (
     AITool,
@@ -82,7 +82,7 @@ class TerminalAITool(AITool):
         """Get brief one-line description for system prompt."""
         return "Send commands and read output from terminal tabs."
 
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """
         Get operation definitions for this tool.
 
@@ -126,7 +126,7 @@ class TerminalAITool(AITool):
             ),
         }
 
-    def _get_terminal_context(self, arguments: Dict[str, Any]) -> TerminalContext:
+    def _get_terminal_context(self, arguments: dict[str, Any]) -> TerminalContext:
         """
         Retrieve the TerminalContext for the given context_id.
 
@@ -192,7 +192,7 @@ class TerminalAITool(AITool):
 
         return input_text.replace('\\u000a', '\n').replace('\\u000d', '\r')
 
-    def write_context(self, arguments: Dict[str, Any]) -> str | None:
+    def write_context(self, arguments: dict[str, Any]) -> str | None:
         """
         Extract context for write operation.
 

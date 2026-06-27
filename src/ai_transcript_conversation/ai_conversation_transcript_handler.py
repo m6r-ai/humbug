@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import time
-from typing import Dict, Any
+from typing import Any
 
 from ai import AIConversationHistory, AIConversationParent
 from ai.ai_message import AIMessage
@@ -126,7 +126,7 @@ class AIConversationTranscriptHandler:
                 f"Failed to create transcript file: {str(e)}"
             ) from e
 
-    def _validate_transcript_data(self, data: Dict) -> None:
+    def _validate_transcript_data(self, data: dict) -> None:
         """
         Validate transcript file structure.
 

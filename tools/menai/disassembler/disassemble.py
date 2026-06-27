@@ -17,10 +17,10 @@ Usage:
 """
 
 import argparse
+from collections.abc import Iterator
 from pathlib import Path
 import sys
 import traceback
-from typing import Iterator, List, Dict
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -177,7 +177,7 @@ def format_instruction(instr: Instruction, index: int, code: CodeObject) -> str:
     return instr_str.ljust(48)
 
 
-def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None = None, color: bool = False) -> List[str]:
+def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None = None, color: bool = False) -> list[str]:
     """Recursively disassemble code object and all nested code objects."""
     indent = "  " * depth
     display_name = name or code.name or "<top-level>"
@@ -306,7 +306,7 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
     return output
 
 
-def analyze_function_flow(code: CodeObject) -> Dict[int, str]:
+def analyze_function_flow(code: CodeObject) -> dict[int, str]:
     """Track which functions are stored in which variables."""
     var_map = {}
 
@@ -330,7 +330,7 @@ def analyze_function_flow(code: CodeObject) -> Dict[int, str]:
     return var_map
 
 
-def trace_calls(code: CodeObject, var_map: Dict[int, str]) -> List[str]:
+def trace_calls(code: CodeObject, var_map: dict[int, str]) -> list[str]:
     """Trace function calls."""
     traces = []
 
@@ -350,7 +350,7 @@ def trace_calls(code: CodeObject, var_map: Dict[int, str]) -> List[str]:
     return traces
 
 
-def generate_trace(code: CodeObject, depth: int = 0, name: str | None = None) -> List[str]:
+def generate_trace(code: CodeObject, depth: int = 0, name: str | None = None) -> list[str]:
     """Generate function call trace."""
     indent = "  " * depth
     display_name = name or code.name or "<top-level>"

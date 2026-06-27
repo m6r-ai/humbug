@@ -1,7 +1,7 @@
 """Base class for all preview content types."""
 
+from collections.abc import Callable
 import logging
-from typing import List, Tuple, Callable
 
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget
 from PySide6.QtCore import Signal, QPoint
@@ -96,7 +96,7 @@ class PreviewContentWidget(QFrame):
         This method should clear any text selection in the content widget.
         """
 
-    def find_text(self, _text: str, _case_sensitive: bool = False, _regexp: bool = False) -> List[Tuple[int, int, int]]:
+    def find_text(self, _text: str, _case_sensitive: bool = False, _regexp: bool = False) -> list[tuple[int, int, int]]:
         """
         Find all instances of text in this content.
 
@@ -112,7 +112,7 @@ class PreviewContentWidget(QFrame):
         """
         return []
 
-    def find_element_by_id(self, _element_id: str) -> Tuple[int, int, int] | None:
+    def find_element_by_id(self, _element_id: str) -> tuple[int, int, int] | None:
         """
         Find an element with the given ID.
 
@@ -130,7 +130,7 @@ class PreviewContentWidget(QFrame):
 
     def highlight_matches(
         self,
-        matches: List[Tuple[int, int, int]],
+        matches: list[tuple[int, int, int]],
         current_match_index: int = -1,
         highlight_color: QColor | None = None,
         dim_highlight_color: QColor | None = None
@@ -171,7 +171,7 @@ class PreviewContentWidget(QFrame):
         """
         return QPoint(0, 0)
 
-    def get_context_menu_actions(self) -> List[Tuple[str, Callable]]:
+    def get_context_menu_actions(self) -> list[tuple[str, Callable]]:
         """
         Get context menu actions for this content.
 

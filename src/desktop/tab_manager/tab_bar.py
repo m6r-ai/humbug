@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 import math
-from typing import Dict
 
 from PySide6.QtCore import QEvent, QMimeData, QObject, QPoint, QRect, QSize, Qt, Signal
 from PySide6.QtGui import (
@@ -41,8 +40,8 @@ class _PaintResources:
     """Cached pixmaps and font used across paint calls."""
 
     font: QFont = field(default_factory=QFont)
-    icon_pixmaps: Dict[str, QPixmap] = field(default_factory=dict)
-    inactive_icon_pixmaps: Dict[str, QPixmap] = field(default_factory=dict)
+    icon_pixmaps: dict[str, QPixmap] = field(default_factory=dict)
+    inactive_icon_pixmaps: dict[str, QPixmap] = field(default_factory=dict)
     close_pixmap: QPixmap = field(default_factory=QPixmap)
     inactive_close_pixmap: QPixmap = field(default_factory=QPixmap)
 
@@ -67,7 +66,7 @@ class TabBar(QTabBar):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         self._style_manager = StyleManager()
-        self._tab_data: Dict[str, _TabData] = {}
+        self._tab_data: dict[str, _TabData] = {}
         self._resources = _PaintResources()
 
         self._current_hovered_tab = -1

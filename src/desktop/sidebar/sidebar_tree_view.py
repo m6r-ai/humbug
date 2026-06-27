@@ -1,7 +1,8 @@
 """Base tree view implementation for mindspace with drag and drop support and inline editing."""
 
+from collections.abc import Callable
 import os
-from typing import cast, Callable, Union
+from typing import Union, cast
 
 from PySide6.QtWidgets import QFrame, QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import (

@@ -1,6 +1,5 @@
 """Command for creating a new terminal tab from the shell."""
 
-from typing import List
 
 from syntax import Token, TokenType
 
@@ -14,13 +13,13 @@ class ShellCommandTerminal(ShellCommand):
     def name(self) -> str:
         return "terminal"
 
-    def aliases(self) -> List[str]:
+    def aliases(self) -> list[str]:
         return ["term"]
 
     def help_text(self) -> str:
         return "Starts a new terminal"
 
-    def _execute_command(self, tokens: List[Token]) -> bool:
+    def _execute_command(self, tokens: list[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
@@ -45,9 +44,9 @@ class ShellCommandTerminal(ShellCommand):
     def get_token_completions(
         self,
         current_token: Token,
-        _tokens: List[Token],
+        _tokens: list[Token],
         _cursor_token_index: int
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get completions for the current token based on token information.
 

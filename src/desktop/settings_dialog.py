@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import os
-from typing import Dict, List, cast
+from typing import cast
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea,
@@ -106,16 +106,16 @@ class SettingsDialog(QDialog):
         self._current_mindspace_settings: MindspaceSettings | None = None
         self._has_mindspace = False
 
-        self._ai_backend_controls: Dict[str, Dict[str, QWidget | None]] = {}
-        self._tool_switches: Dict[str, QWidget] = {}
-        self._pending_custom_colors: Dict[str, Dict[str, str]] = {}
-        self._pending_saved_color_themes: Dict[str, Dict[str, Dict[str, str]]] = {}
+        self._ai_backend_controls: dict[str, dict[str, QWidget | None]] = {}
+        self._tool_switches: dict[str, QWidget] = {}
+        self._pending_custom_colors: dict[str, dict[str, str]] = {}
+        self._pending_saved_color_themes: dict[str, dict[str, dict[str, str]]] = {}
         self._pending_active_custom_theme_name: str | None = None
         self._fetched_models_cache_path = _FETCHED_MODELS_CACHE
 
         # Map section id -> (list item, stack page widget)
-        self._section_items: Dict[str, QListWidgetItem] = {}
-        self._section_pages: Dict[str, QWidget] = {}
+        self._section_items: dict[str, QListWidgetItem] = {}
+        self._section_pages: dict[str, QWidget] = {}
 
         self._display_heading: SettingsPageHeading
         self._language_combo: SettingsCombo
@@ -914,28 +914,28 @@ class SettingsDialog(QDialog):
         effort = self._effort_combo.get_value() if AIConversationSettings.get_supported_reasoning_efforts(model, provider) else None
         self._temp_spin.set_enabled(AIConversationSettings.supports_temperature(model, provider, effort))
 
-    def _get_provider_display_names(self) -> Dict[str, str]:
+    def _get_provider_display_names(self) -> dict[str, str]:
         """Return a mapping from provider ID to a human-readable display name."""
         return get_all_backend_display_names(self._language_manager.strings())
 
-    def _populate_model_filter_combo(self, ai_backends: Dict) -> None:
+    def _populate_model_filter_combo(self, ai_backends: dict) -> None:
         """Populate the provider filter combo with all providers that have models."""
         provider_names = self._get_provider_display_names()
         providers_with_models = set(
             provider
             for (_, provider) in AIConversationSettings.iter_models_by_backends(ai_backends)
         )
-        items: List[tuple] = [("All Providers", None)]
+        items: list[tuple] = [("All Providers", None)]
         for provider_id, display in provider_names.items():
             if provider_id in providers_with_models:
                 items.append((display, provider_id))
 
         self._model_filter_combo.set_items(items)
 
-    def _populate_model_combo(self, ai_backends: Dict, filter_provider: str | None) -> None:
+    def _populate_model_combo(self, ai_backends: dict, filter_provider: str | None) -> None:
         """Populate the model combo grouped by provider, optionally filtered."""
         provider_names = self._get_provider_display_names()
-        grouped: Dict[str, List[tuple]] = {}
+        grouped: dict[str, list[tuple]] = {}
         for (model_name, provider) in AIConversationSettings.iter_models_by_backends(ai_backends):
             if filter_provider and provider != filter_provider:
                 continue
@@ -1101,7 +1101,7 @@ class SettingsDialog(QDialog):
         self._refresh_model_combo()
 
     def _register_ollama_models(
-        self, model_ids: List[str], fetch_row: SettingsActionRow, backend_id: str
+        self, model_ids: list[str], fetch_row: SettingsActionRow, backend_id: str
     ) -> None:
         """Register installed Ollama models returned by /api/tags."""
         if not model_ids:
@@ -1145,7 +1145,7 @@ class SettingsDialog(QDialog):
     def _on_color_picker_applied(
         self,
         mode: ColorTheme,
-        custom_colors: Dict[str, Dict[str, str]],
+        custom_colors: dict[str, dict[str, str]],
         active_custom_theme_name: str | None,
     ) -> None:
         """Receive theme mode + custom colors + active saved-theme name from the color picker dialog."""
@@ -1160,7 +1160,7 @@ class SettingsDialog(QDialog):
 
     def _on_saved_color_themes_changed(
         self,
-        saved_themes: Dict[str, Dict[str, Dict[str, str]]],
+        saved_themes: dict[str, dict[str, dict[str, str]]],
         theme: ColorTheme,
         active_custom_theme_name: str | None,
     ) -> None:
@@ -1456,7 +1456,7 @@ class _FetchedModelManagerDialog(QDialog):
     """Dialog for viewing and permanently removing fetched (non-built-in) models."""
 
     def __init__(
-        self, model_keys: List[tuple], backend_id: str, provider_label: str, parent: QWidget | None = None
+        self, model_keys: list[tuple], backend_id: str, provider_label: str, parent: QWidget | None = None
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(f"Fetched Models — {provider_label}")

@@ -3,10 +3,10 @@ Utility functions for the dependency checker.
 """
 
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any
 
 
-def create_dependency_graph(config_data: Dict[str, Any]) -> str:
+def create_dependency_graph(config_data: dict[str, Any]) -> str:
     """Create a DOT format dependency graph."""
     lines = []
     lines.append("digraph dependencies {")
@@ -31,12 +31,12 @@ def create_dependency_graph(config_data: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def get_project_stats(src_root: str) -> Dict[str, Any]:
+def get_project_stats(src_root: str) -> dict[str, Any]:
     """Get basic statistics about the project."""
     total_files = 0
     python_files = 0
     total_lines = 0
-    modules: List[str] = []
+    modules: list[str] = []
     largest_module: str | None = None
     largest_module_files = 0
 
@@ -51,7 +51,7 @@ def get_project_stats(src_root: str) -> Dict[str, Any]:
             'largest_module_files': largest_module_files
         }
 
-    module_file_counts: Dict[str, int] = {}
+    module_file_counts: dict[str, int] = {}
 
     for file_path in src_path.rglob("*"):
         if file_path.is_file():

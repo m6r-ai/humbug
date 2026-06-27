@@ -15,7 +15,7 @@ from ctypes import c_size_t, POINTER
 from ctypes.wintypes import HANDLE, DWORD, WORD, LPWSTR, BOOL, LPVOID, BYTE
 import msvcrt
 import os
-from typing import Tuple, cast
+from typing import cast
 
 from terminal.terminal_base import TerminalBase
 
@@ -143,7 +143,7 @@ class WindowsTerminal(TerminalBase):
             LPVOID           # lpReturnSize
         ]
 
-    async def start(self, command: str | None = None) -> Tuple[int, int]:
+    async def start(self, command: str | None = None) -> tuple[int, int]:
         """
         Start Windows terminal process using ConPTY.
 

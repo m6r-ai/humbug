@@ -1,11 +1,12 @@
 """Conversation widget implementation."""
 
 import asyncio
+from collections.abc import Callable
 import logging
 import os
 import re
 import time
-from typing import Callable, cast, Dict, List, Tuple, Any, Set
+from typing import Any, cast
 
 from PySide6.QtWidgets import (
     QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QFileDialog
@@ -108,20 +109,20 @@ class ConversationWidget(QWidget):
         self._response_reveal_timer = QTimer(self)
         self._response_reveal_timer.setInterval(24)
         self._response_reveal_timer.timeout.connect(self._advance_response_reveal)
-        self._response_reveal_targets: Dict[str, str] = {}
-        self._response_reveal_rendered: Dict[str, str] = {}
-        self._response_reveal_widgets: Dict[str, ConversationMessage] = {}
-        self._response_reveal_completed: Set[str] = set()
-        self._response_reveal_last_render: Dict[str, float] = {}
+        self._response_reveal_targets: dict[str, str] = {}
+        self._response_reveal_rendered: dict[str, str] = {}
+        self._response_reveal_widgets: dict[str, ConversationMessage] = {}
+        self._response_reveal_completed: set[str] = set()
+        self._response_reveal_last_render: dict[str, float] = {}
 
         # Widget tracking
-        self._messages: List[ConversationMessage] = []
+        self._messages: list[ConversationMessage] = []
         self._message_with_selection: ConversationMessage | None = None
         self._is_streaming = False
 
         # Batched message loading state
-        self._load_queue: List[AIMessage] = []
-        self._load_pending_metadata: Dict[str, Any] | None = None
+        self._load_queue: list[AIMessage] = []
+        self._load_pending_metadata: dict[str, Any] | None = None
         self._load_scroll_offset: int | None = None
         self._load_batch_size: int = 2
         self._load_tail_size: int = 80  # Weirdly we might get 80 message in view!
@@ -239,7 +240,7 @@ class ConversationWidget(QWidget):
         self._input.raise_()
 
         # Setup signals for search highlights
-        self._search_highlights: Dict[ConversationMessage, List[Tuple[int, int, int]]] = {}
+        self._search_highlights: dict[ConversationMessage, list[tuple[int, int, int]]] = {}
 
         # Tracking for spotlighted message
         self._spotlighted_message_index = -1
@@ -268,11 +269,11 @@ class ConversationWidget(QWidget):
         self.customContextMenuRequested.connect(self._show_conversation_context_menu)
 
         # Find functionality
-        self._matches: List[Tuple[ConversationMessage, List[Tuple[int, int, int]]]] = []
+        self._matches: list[tuple[ConversationMessage, list[tuple[int, int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search: tuple = ("", False, False)
-        self._highlighted_widgets: Set[ConversationMessage] = set()
+        self._highlighted_widgets: set[ConversationMessage] = set()
 
         try:
             conversation_history = self._ai_conversation.read()
@@ -408,7 +409,7 @@ class ConversationWidget(QWidget):
 
         self._deactivate_widget(widget)
 
-    def _create_completion_result(self) -> Dict[str, Any]:
+    def _create_completion_result(self) -> dict[str, Any]:
         """
         Create completion result for delegated conversation.
 
@@ -1910,8 +1911,8 @@ class ConversationWidget(QWidget):
             raise ConversationError(f"Failed to set conversation history: {str(e)}") from e
 
     def _load_message_history(
-        self, messages: List[AIMessage], reuse_ai_conversation: bool,
-        attachments: Dict[str, Dict] | None = None
+        self, messages: list[AIMessage], reuse_ai_conversation: bool,
+        attachments: dict[str, dict] | None = None
     ) -> None:
         """
         Load existing message history from transcript.
@@ -2664,14 +2665,14 @@ class ConversationWidget(QWidget):
         """Get the conversation history object."""
         return self._ai_conversation.get_conversation_history()
 
-    def create_state_metadata(self, temp_state: bool) -> Dict[str, Any]:
+    def create_state_metadata(self, temp_state: bool) -> dict[str, Any]:
         """
         Create metadata dictionary capturing current widget state.
 
         Returns:
             Dictionary containing conversation state metadata
         """
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
 
         # Is this a conversation or a delegated conversation?
         metadata["delegated_conversation"] = self._is_delegated_conversation
@@ -2739,7 +2740,7 @@ class ConversationWidget(QWidget):
 
         return metadata
 
-    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
         """
         Restore widget state from metadata.
 
@@ -2852,7 +2853,7 @@ class ConversationWidget(QWidget):
         # Update our status
         self.status_updated.emit()
 
-    def _set_cursor_position(self, position: Dict[str, int]) -> None:
+    def _set_cursor_position(self, position: dict[str, int]) -> None:
         """
         Set cursor position in input area.
 
@@ -2864,7 +2865,7 @@ class ConversationWidget(QWidget):
 
         self._input.set_cursor_position(position)
 
-    def _get_cursor_position(self) -> Dict[str, int]:
+    def _get_cursor_position(self) -> dict[str, int]:
         """
         Get current cursor position from input area.
 
@@ -2873,7 +2874,7 @@ class ConversationWidget(QWidget):
         """
         return self._input.get_cursor_position()
 
-    def get_token_counts(self) -> Dict[str, int] | None:
+    def get_token_counts(self) -> dict[str, int] | None:
         """
         Get the current token counts for status display.
 
@@ -2908,7 +2909,7 @@ class ConversationWidget(QWidget):
 
     def find_text(
         self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False
-    ) -> Tuple[int, int, bool]:
+    ) -> tuple[int, int, bool]:
         """
         Find all instances of text and highlight them.
 
@@ -2995,7 +2996,7 @@ class ConversationWidget(QWidget):
         message_id: str,
         case_sensitive: bool = False,
         regexp: bool = False,
-    ) -> Tuple[int, int, bool]:
+    ) -> tuple[int, int, bool]:
         """
         Highlight all matches and scroll to the first match in the message with the given ID.
 
@@ -3143,7 +3144,7 @@ class ConversationWidget(QWidget):
 
         self._highlighted_widgets.clear()
 
-    def get_match_status(self) -> Tuple[int, int, bool]:
+    def get_match_status(self) -> tuple[int, int, bool]:
         """
         Get the current match status.
 
@@ -3188,7 +3189,7 @@ class ConversationWidget(QWidget):
 
         return {"message_id": parent.message_id, "tool_call_id": parent.tool_call_id}
 
-    def get_conversation_info(self) -> Dict[str, Any]:
+    def get_conversation_info(self) -> dict[str, Any]:
         """
         Get high-level metadata about the conversation.
 
@@ -3229,9 +3230,9 @@ class ConversationWidget(QWidget):
         self,
         start_index: int | None = None,
         end_index: int | None = None,
-        message_types: List[str] | None = None,
+        message_types: list[str] | None = None,
         limit: int | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Read messages with filtering and pagination.
 
@@ -3305,7 +3306,7 @@ class ConversationWidget(QWidget):
         self,
         message_id: str | None = None,
         message_index: int | None = None
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """
         Get a specific message by ID or index.
 
@@ -3349,10 +3350,10 @@ class ConversationWidget(QWidget):
         self,
         search_text: str,
         case_sensitive: bool = False,
-        message_types: List[str] | None = None,
+        message_types: list[str] | None = None,
         max_results: int = 50,
         regexp: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search for text across all messages.
 
@@ -3476,7 +3477,7 @@ class ConversationWidget(QWidget):
         self,
         message_id: str | None = None,
         message_index: int | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Scroll to a specific message, substituting with nearest visible message if hidden.
 

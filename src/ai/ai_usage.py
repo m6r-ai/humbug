@@ -1,7 +1,6 @@
 """Base class for AI backends."""
 
 from dataclasses import dataclass, asdict
-from typing import Dict
 
 
 @dataclass
@@ -13,7 +12,7 @@ class AIUsage:
     cache_write_tokens: int = 0
     cache_read_tokens: int = 0
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert usage to dictionary."""
         return asdict(self)
 

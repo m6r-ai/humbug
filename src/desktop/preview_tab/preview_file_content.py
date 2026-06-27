@@ -1,7 +1,7 @@
 """Widget for displaying source code content in the previewer."""
 
+from collections.abc import Callable
 import logging
-from typing import List, Tuple, Callable
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QHBoxLayout, QLabel, QToolButton, QTextEdit
 from PySide6.QtCore import QPoint, Qt, QSize, QRegularExpression
@@ -211,7 +211,7 @@ class PreviewFileContent(PreviewContentWidget):
         cursor.clearSelection()
         self._text_area.setTextCursor(cursor)
 
-    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> list[tuple[int, int, int]]:
         """
         Find all instances of text in this content.
 
@@ -265,7 +265,7 @@ class PreviewFileContent(PreviewContentWidget):
 
     def highlight_matches(
         self,
-        matches: List[Tuple[int, int, int]],
+        matches: list[tuple[int, int, int]],
         current_match_index: int = -1,
         highlight_color: QColor | None = None,
         dim_highlight_color: QColor | None = None
@@ -336,7 +336,7 @@ class PreviewFileContent(PreviewContentWidget):
 
         return local_pos
 
-    def find_element_by_id(self, _element_id: str) -> Tuple[int, int, int] | None:
+    def find_element_by_id(self, _element_id: str) -> tuple[int, int, int] | None:
         """
         Find an element with the given ID (not supported for source content).
 
@@ -348,7 +348,7 @@ class PreviewFileContent(PreviewContentWidget):
         """
         return None
 
-    def get_context_menu_actions(self) -> List[Tuple[str, Callable]]:
+    def get_context_menu_actions(self) -> list[tuple[str, Callable]]:
         """
         Get context menu actions for this content.
 

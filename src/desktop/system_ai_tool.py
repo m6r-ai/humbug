@@ -4,7 +4,7 @@ import os
 import platform
 import sys
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any
 
 from ai import AIConversation, AIConversationSettings, AIManager, AIReasoningCapability
 from ai.ai_model import AIReasoningEffort
@@ -114,7 +114,7 @@ class SystemAITool(AITool):
         """Get brief one-line description for system prompt."""
         return "Create, open, close, and organize UI tabs (editor, terminal, conversation, etc.)."
 
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """
         Get operation definitions for this tool.
 
@@ -823,7 +823,7 @@ class SystemAITool(AITool):
             }
 
             ai_backends = self._ai_manager.get_backends()
-            models_by_backend: Dict[str, List[str]] = {}
+            models_by_backend: dict[str, list[str]] = {}
             for (model_name, provider) in AIConversationSettings.iter_models_by_backends(ai_backends):
                 display = AIConversationSettings.get_display_name(model_name, provider)
                 models_by_backend.setdefault(provider, []).append(display)

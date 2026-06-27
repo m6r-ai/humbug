@@ -1,7 +1,6 @@
 """Enhanced AI response with tool support."""
 
 from dataclasses import dataclass
-from typing import Dict, List
 
 from ai.ai_usage import AIUsage
 from ai_tool import AIToolCall
@@ -13,7 +12,7 @@ class AIError:
     code: str
     message: str
     retries_exhausted: bool = False
-    details: Dict | None = None
+    details: dict | None = None
 
 
 @dataclass
@@ -26,6 +25,6 @@ class AIResponse:
     error: AIError | None = None
     model: str | None = None
     temperature: float | None = None
-    tool_calls: List[AIToolCall] | None = None
+    tool_calls: list[AIToolCall] | None = None
     signature: str | None = None
     redacted_reasoning: str | None = None

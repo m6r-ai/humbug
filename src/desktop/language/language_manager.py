@@ -1,6 +1,5 @@
 """Language management singleton."""
 
-from typing import Dict
 
 from PySide6.QtCore import QObject, Signal
 
@@ -28,7 +27,7 @@ class LanguageManager(QObject):
             super().__init__()
             self._current_language = LanguageCode.EN
             self._initialized = True
-            self._language_mappings: Dict[LanguageCode, LanguageStrings] = {
+            self._language_mappings: dict[LanguageCode, LanguageStrings] = {
                 LanguageCode.EN: get_english_strings(),
                 LanguageCode.FR: get_french_strings(),
                 LanguageCode.AR: get_arabic_strings()

@@ -1,9 +1,11 @@
 """Main Menai (AI Functional Programming Language) class with enhanced error messages."""
 
+from collections.abc import Iterator
 import hashlib
 from pathlib import Path
 import os
-from typing import Union, Dict, List, Iterator
+from typing import Union
+
 from contextlib import contextmanager
 
 from menai.menai_bytecode import CodeObject
@@ -1085,9 +1087,9 @@ class Menai:
 """
 
     _prelude_code: CodeObject | None = None
-    _prelude_dict: Dict[str, MenaiValue] | None = None
+    _prelude_dict: dict[str, MenaiValue] | None = None
 
-    def __init__(self, module_path: List[str] | None = None):
+    def __init__(self, module_path: list[str] | None = None):
         """
         Initialize Menai calculator.
 
@@ -1097,9 +1099,9 @@ class Menai:
         self._module_path = module_path or ["."]
 
         # Module system state
-        self.module_cache: Dict[str, MenaiASTNode] = {}  # module_name -> dict
-        self.module_hashes: Dict[str, str] = {}  # module_name -> sha256 hex digest
-        self.loading_stack: List[str] = []  # Track currently-loading modules for circular detection
+        self.module_cache: dict[str, MenaiASTNode] = {}  # module_name -> dict
+        self.module_hashes: dict[str, str] = {}  # module_name -> sha256 hex digest
+        self.loading_stack: list[str] = []  # Track currently-loading modules for circular detection
 
         # Compiler and VM
         self.compiler = MenaiCompiler(module_loader=self)
@@ -1194,7 +1196,7 @@ class Menai:
         result = self._evaluate_raw(expression)
         return result.describe()
 
-    def _get_prelude_dict(self) -> Dict[str, MenaiValue]:
+    def _get_prelude_dict(self) -> dict[str, MenaiValue]:
         """
         Return the prelude bindings as a plain dict, executing and caching if necessary.
 
@@ -1213,7 +1215,7 @@ class Menai:
     def evaluate_raw_with_bindings(
         self,
         expression: str,
-        bindings: Dict[str, MenaiValue]
+        bindings: dict[str, MenaiValue]
     ) -> MenaiValue:
         """
         Evaluate a Menai expression with additional pre-bound name bindings.
@@ -1237,13 +1239,13 @@ class Menai:
         """
         code = self.compiler.compile(expression)
         prelude_globals = self._get_prelude_dict()
-        combined: Dict[str, MenaiValue] = {**prelude_globals, **bindings}
+        combined: dict[str, MenaiValue] = {**prelude_globals, **bindings}
         return self.vm.execute(code, combined)
 
     def evaluate_and_format_with_bindings(
         self,
         expression: str,
-        bindings: Dict[str, MenaiValue]
+        bindings: dict[str, MenaiValue]
     ) -> str:
         """
         Evaluate a Menai expression with pre-bound bindings, returning a formatted string.
@@ -1459,7 +1461,7 @@ class Menai:
         self.invalidate_module(module_name)
         return self.load_module(module_name)
 
-    def set_module_path(self, module_path: List[str]) -> None:
+    def set_module_path(self, module_path: list[str]) -> None:
         """
         Set the module search path and clear the module cache.
 
@@ -1478,7 +1480,7 @@ class Menai:
         # Also clear the loading stack to ensure clean state
         self.loading_stack.clear()
 
-    def module_path(self) -> List[str]:
+    def module_path(self) -> list[str]:
         """
         Get the current module search path.
 

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 import logging
 import os
 
@@ -515,11 +515,11 @@ class EditorTab(TabBase):
         """
         return self._editor_widget.get_text_range(start_line, end_line)
 
-    def get_cursor_info(self) -> Dict[str, Any]:
+    def get_cursor_info(self) -> dict[str, Any]:
         """Get cursor position and selection information."""
         return self._editor_widget.get_cursor_info()
 
-    def get_editor_info(self) -> Dict[str, Any]:
+    def get_editor_info(self) -> dict[str, Any]:
         """Get editor metadata and document information."""
         return self._editor_widget.get_editor_info()
 
@@ -533,7 +533,7 @@ class EditorTab(TabBase):
         """
         self._editor_widget.goto_line(line, column)
 
-    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Dict[str, Any]]:
+    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False, regexp: bool = False) -> list[dict[str, Any]]:
         """
         Find all occurrences of text in the document.
 

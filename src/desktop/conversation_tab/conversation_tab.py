@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Dict, Any
+from typing import Any
 
 from PySide6.QtWidgets import (
     QApplication, QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
@@ -319,7 +319,7 @@ class ConversationTab(TabBase):
         """Show a timed status bar notice when a rate-limit retry is in progress."""
         self.status_message.emit(StatusMessage(message, timeout=5000))
 
-    def _on_submit_finished(self, result: Dict[str, Any]) -> None:
+    def _on_submit_finished(self, result: dict[str, Any]) -> None:
         """Handle when a submitted message finishes processing."""
         usage_data = result.get("usage")
         if usage_data:
@@ -993,7 +993,7 @@ class ConversationTab(TabBase):
 
     # AI Tool Support Methods
 
-    def get_conversation_info(self) -> Dict[str, Any]:
+    def get_conversation_info(self) -> dict[str, Any]:
         """
         Get high-level metadata about the conversation.
 
@@ -1008,7 +1008,7 @@ class ConversationTab(TabBase):
         end_index: int | None = None,
         message_types: list[str] | None = None,
         limit: int | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Read messages with filtering and pagination.
 
@@ -1027,7 +1027,7 @@ class ConversationTab(TabBase):
         self,
         message_id: str | None = None,
         message_index: int | None = None
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """
         Get a specific message by ID or index.
 
@@ -1047,7 +1047,7 @@ class ConversationTab(TabBase):
         message_types: list[str] | None = None,
         max_results: int = 50,
         regexp: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Search for text across all messages."""
         return self._conversation_widget.search_messages(
             search_text, case_sensitive, message_types, max_results, regexp
@@ -1057,7 +1057,7 @@ class ConversationTab(TabBase):
         self,
         message_id: str | None = None,
         message_index: int | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Scroll to a specific message.
 

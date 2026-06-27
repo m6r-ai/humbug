@@ -8,8 +8,8 @@ This module implements a lexer for diff/patch files, supporting multiple formats
 - Git-enhanced diff
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from syntax.lexer import Lexer, LexerState, Token, TokenType
 

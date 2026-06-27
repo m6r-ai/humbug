@@ -1,7 +1,6 @@
 """Unified diff parsing."""
 
 import re
-from typing import List
 
 from diff.diff_exceptions import DiffParseError
 from diff.diff_types import DiffLine, DiffHunk
@@ -23,7 +22,7 @@ _DASH_LOOKALIKES = frozenset([
 class DiffParser:
     """Parser for unified diff format."""
 
-    def parse(self, diff_text: str) -> List[DiffHunk]:
+    def parse(self, diff_text: str) -> list[DiffHunk]:
         """
         Parse unified diff text into structured hunks.
 
@@ -40,7 +39,7 @@ class DiffParser:
             raise DiffParseError("Empty diff provided")
 
         lines = diff_text.splitlines()
-        hunks: List[DiffHunk] = []
+        hunks: list[DiffHunk] = []
 
         # Skip file headers (--- and +++ lines) if present
         start_idx = 0
@@ -73,7 +72,7 @@ class DiffParser:
 
         return hunks
 
-    def _parse_hunk(self, lines: List[str], start_idx: int) -> DiffHunk:
+    def _parse_hunk(self, lines: list[str], start_idx: int) -> DiffHunk:
         """
         Parse a single hunk starting at the given index.
 
@@ -110,7 +109,7 @@ class DiffParser:
             new_count = int(match.group(4)) if match.group(4) else 1
 
         # Parse hunk lines
-        hunk_lines: List[DiffLine] = []
+        hunk_lines: list[DiffLine] = []
         i = start_idx + 1
 
         while i < len(lines):

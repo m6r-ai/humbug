@@ -1,7 +1,8 @@
+from collections.abc import Callable
+import logging
 import math
 import os
-import logging
-from typing import Callable, Dict, List, cast
+from typing import cast
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer, QPoint
@@ -61,7 +62,7 @@ class TabManager(QWidget):
         self._open_path = open_path
 
         # Track MRU order for each column
-        self._column_mru_order: Dict[ColumnWidget, List[str]] = {}
+        self._column_mru_order: dict[ColumnWidget, list[str]] = {}
 
         # Create main layout
         main_layout = QVBoxLayout(self)
@@ -108,12 +109,12 @@ class TabManager(QWidget):
         self._column_splitter.user_resize_finished.connect(self._on_column_resize_finished)
 
         # Track whether the user has manually resized columns so we can preserve their widths.
-        self._user_column_widths: List[int] | None = None
+        self._user_column_widths: list[int] | None = None
 
         self._style_manager = StyleManager()
 
         # Create initial column
-        self._tab_columns: List[ColumnWidget] = []
+        self._tab_columns: list[ColumnWidget] = []
         self._create_column(0)
 
         # Track active column
@@ -131,10 +132,10 @@ class TabManager(QWidget):
         self._stack.setCurrentWidget(self._welcome_widget)
 
         # Track tabs
-        self._tabs: Dict[str, TabBase] = {}
+        self._tabs: dict[str, TabBase] = {}
 
-        self._tab_factories: Dict[str, TabFactory] = {}
-        self._context_factories: Dict[str, ContextFactory] = {}
+        self._tab_factories: dict[str, TabFactory] = {}
+        self._context_factories: dict[str, ContextFactory] = {}
         self._current_status_tab: TabBase | None = None
 
         # Lazily-created overlays: grid overview and carousel ("recents screens")
@@ -165,7 +166,7 @@ class TabManager(QWidget):
         """Get the number of columns currently in use."""
         return len(self._tab_columns)
 
-    def _get_tab_info(self, tab: TabBase) -> Dict[str, str | int | bool]:
+    def _get_tab_info(self, tab: TabBase) -> dict[str, str | int | bool]:
         """
         Get detailed information about a specific tab.
 
@@ -210,7 +211,7 @@ class TabManager(QWidget):
             "is_ephemeral": tab.is_ephemeral()
         }
 
-    def get_tab_info_by_id(self, tab_id: str) -> Dict[str, str | int | bool] | None:
+    def get_tab_info_by_id(self, tab_id: str) -> dict[str, str | int | bool] | None:
         """
         Get information about a specific tab or the current tab.
 
@@ -242,11 +243,11 @@ class TabManager(QWidget):
 
         return tab
 
-    def get_all_tabs(self) -> List[TabBase]:
+    def get_all_tabs(self) -> list[TabBase]:
         """Return all currently open tabs."""
         return list(self._tabs.values())
 
-    def list_all_tabs(self) -> List[Dict[str, str | int | bool]]:
+    def list_all_tabs(self) -> list[dict[str, str | int | bool]]:
         """
         Get information about all currently open tabs across all columns.
 
@@ -430,7 +431,7 @@ class TabManager(QWidget):
         elif action == close_others_action:
             self._close_tabs_in_column(column, [i for i in range(tab_count) if i != tab_index])
 
-    def _close_tabs_in_column(self, column: ColumnWidget, indexes: List[int]) -> None:
+    def _close_tabs_in_column(self, column: ColumnWidget, indexes: list[int]) -> None:
         """
         Close the tabs at the given indexes within a column.
 
@@ -992,9 +993,9 @@ class TabManager(QWidget):
         if tab_id not in self._tabs:
             self.tab_closed.emit(tab_id)
 
-    def _build_overview_entries(self) -> List[TabOverviewEntry]:
+    def _build_overview_entries(self) -> list[TabOverviewEntry]:
         """Build display records for every open tab, in column then tab order."""
-        entries: List[TabOverviewEntry] = []
+        entries: list[TabOverviewEntry] = []
         for column in self._tab_columns:
             is_active_column = column == self._active_column
             tab_bar = column.tabBar()
@@ -1707,7 +1708,7 @@ class TabManager(QWidget):
 
         return self._find_tab_by_path("editor", path)
 
-    def save_state(self) -> Dict:
+    def save_state(self) -> dict:
         """Get current state of all tabs and columns."""
         tab_columns = []
         active_column_index = self._tab_columns.index(self._active_column)
@@ -1751,7 +1752,7 @@ class TabManager(QWidget):
 
         return factory(state, self)
 
-    def _restore_column_state(self, column_index: int, tab_states: List[Dict]) -> None:
+    def _restore_column_state(self, column_index: int, tab_states: list[dict]) -> None:
         """
         Restore state for a single column of tabs.
 
@@ -1800,7 +1801,7 @@ class TabManager(QWidget):
                 self._logger.exception("Failed to restore tab manager state: %s", str(e))
                 continue
 
-    def _deferred_set_active_column(self, active_column_index: int, active_tab_ids: List[str]) -> None:
+    def _deferred_set_active_column(self, active_column_index: int, active_tab_ids: list[str]) -> None:
         """
         Set the active column and tab after UI has settled.
 
@@ -1825,7 +1826,7 @@ class TabManager(QWidget):
         # Update tab states to show correct active highlighting
         self._update_tabs()
 
-    def restore_state(self, saved_state: Dict) -> None:
+    def restore_state(self, saved_state: dict) -> None:
         """
         Restore tabs and active states from saved state.
 
@@ -1989,7 +1990,7 @@ class TabManager(QWidget):
                 return
 
         # Compute each column's preferred width. Tabs returning None use the default.
-        col_preferred: List[int] = []
+        col_preferred: list[int] = []
         for column in self._tab_columns:
             pref: int | None = None
             for i in range(column.count()):

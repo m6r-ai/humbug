@@ -1,11 +1,10 @@
 """Canonical display names for AI backend providers."""
 
-from typing import Dict, List
 
 from desktop.language.language_strings import LanguageStrings
 
 
-BACKEND_IDS: List[str] = [
+BACKEND_IDS: list[str] = [
     "anthropic",
     "deepseek",
     "google",
@@ -25,13 +24,13 @@ def get_backend_display_name(backend_id: str, strings: LanguageStrings) -> str:
     return mapping.get(backend_id, backend_id)
 
 
-def get_all_backend_display_names(strings: LanguageStrings) -> Dict[str, str]:
+def get_all_backend_display_names(strings: LanguageStrings) -> dict[str, str]:
     """Return an ordered dict mapping every known backend ID to its localised display name."""
     mapping = _build_mapping(strings)
     return {bid: mapping[bid] for bid in BACKEND_IDS}
 
 
-def _build_mapping(strings: LanguageStrings) -> Dict[str, str]:
+def _build_mapping(strings: LanguageStrings) -> dict[str, str]:
     return {
         "anthropic": strings.anthropic_backend,
         "deepseek": strings.deepseek_backend,

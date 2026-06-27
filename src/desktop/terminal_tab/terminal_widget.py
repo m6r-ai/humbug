@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import math
 import logging
 import re
-from typing import Tuple, Dict, List, cast
+from typing import cast
 
 from PySide6.QtWidgets import QWidget, QAbstractScrollArea
 from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer, QPointF, QRectF
@@ -83,7 +83,7 @@ class TerminalWidget(QAbstractScrollArea):
             self._state = TerminalState(24, fixed_width or 80, scrollback_limit, self._on_terminal_response)
 
         # Initialize highlight tracking
-        self._search_highlights: Dict[int, List[Tuple[int, int, bool]]] = {}
+        self._search_highlights: dict[int, list[tuple[int, int, bool]]] = {}
 
         # Selection state
         self._selection: TerminalSelection | None = None
@@ -138,7 +138,7 @@ class TerminalWidget(QAbstractScrollArea):
         self.customContextMenuRequested.connect(self._show_terminal_context_menu)
 
         # Find functionality attributes
-        self._matches: List[TerminalMatch] = []
+        self._matches: list[TerminalMatch] = []
         self._total_logical_matches = 0
         self._current_match = -1
         self._last_search: tuple = ("", True, False)
@@ -435,7 +435,7 @@ class TerminalWidget(QAbstractScrollArea):
                 cursor_rect = cursor_rect_f.adjusted(-1, -1, 1, 1).toRect()
                 self.viewport().update(cursor_rect)
 
-    def _pixel_pos_to_text_pos(self, pos: QPoint) -> Tuple[int, int]:
+    def _pixel_pos_to_text_pos(self, pos: QPoint) -> tuple[int, int]:
         """
         Convert pixel coordinates to text position.
 
@@ -616,7 +616,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle keypad in application mode
         if self._state.application_keypad_mode() and not modifiers:
-            keypad_map: Dict[int, bytes] = {
+            keypad_map: dict[int, bytes] = {
                 Qt.Key.Key_0: b'\x1bOp',
                 Qt.Key.Key_1: b'\x1bOq',
                 Qt.Key.Key_2: b'\x1bOr',
@@ -643,7 +643,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle Shift + Function keys
         if modifiers & Qt.KeyboardModifier.ShiftModifier:
-            shift_fn_map: Dict[int, bytes] = {
+            shift_fn_map: dict[int, bytes] = {
                 Qt.Key.Key_F1: b'\x1b[1;2P',
                 Qt.Key.Key_F2: b'\x1b[1;2Q',
                 Qt.Key.Key_F3: b'\x1b[1;2R',
@@ -664,7 +664,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle Control + Function keys
         if modifiers & Qt.KeyboardModifier.ControlModifier:
-            ctrl_fn_map: Dict[int, bytes] = {
+            ctrl_fn_map: dict[int, bytes] = {
                 Qt.Key.Key_F1: b'\x1b[1;5P',
                 Qt.Key.Key_F2: b'\x1b[1;5Q',
                 Qt.Key.Key_F3: b'\x1b[1;5R',
@@ -684,7 +684,7 @@ class TerminalWidget(QAbstractScrollArea):
                 return
 
         # Handle standard function keys
-        fn_map: Dict[int, bytes] = {
+        fn_map: dict[int, bytes] = {
             Qt.Key.Key_F1: b'\x1bOP',
             Qt.Key.Key_F2: b'\x1bOQ',
             Qt.Key.Key_F3: b'\x1bOR',
@@ -713,7 +713,7 @@ class TerminalWidget(QAbstractScrollArea):
                 return
 
             # Handle special control sequences
-            ctrl_map: Dict[int, bytes] = {
+            ctrl_map: dict[int, bytes] = {
                 Qt.Key.Key_2: b'\x00',  # Ctrl+@, Ctrl+2
                 Qt.Key.Key_3: b'\x1b',  # Ctrl+[, Ctrl+3
                 Qt.Key.Key_4: b'\x1c',  # Ctrl+\, Ctrl+4
@@ -732,7 +732,7 @@ class TerminalWidget(QAbstractScrollArea):
                 return
 
         # Handle cursor keys based on mode
-        cursor_map: Dict[int, bytes] = {}
+        cursor_map: dict[int, bytes] = {}
         if self._state.application_cursor_mode():
             cursor_map = {
                 Qt.Key.Key_Up: b'\x1bOA',
@@ -782,7 +782,7 @@ class TerminalWidget(QAbstractScrollArea):
             return
 
         # Handle other special keys
-        special_map: Dict[int, bytes] = {
+        special_map: dict[int, bytes] = {
             Qt.Key.Key_Return: b'\r',
             Qt.Key.Key_Enter: b'\r',
             Qt.Key.Key_Backspace: b'\b' if modifiers & Qt.KeyboardModifier.ControlModifier else b'\x7f',
@@ -870,7 +870,7 @@ class TerminalWidget(QAbstractScrollArea):
             current_run_start_col = start_col
             current_text = ""
             current_attrs = TerminalCharacterAttributes.NONE
-            current_colors: Tuple[int | None, int | None] = (None, None)
+            current_colors: tuple[int | None, int | None] = (None, None)
 
             for col in range(start_col, end_col):
                 char, attrs, fg_color, bg_color = line.get_character(col)
@@ -1332,7 +1332,7 @@ class TerminalWidget(QAbstractScrollArea):
         self._has_focus = False
         self.viewport().update()
 
-    def get_terminal_size(self) -> Tuple[int, int]:
+    def get_terminal_size(self) -> tuple[int, int]:
         """Get current terminal dimensions."""
         return self._state.get_terminal_size()
 
@@ -1365,11 +1365,11 @@ class TerminalWidget(QAbstractScrollArea):
         zoom = self._style_manager.zoom_factor()
         return math.ceil(self._fixed_width * self._base_char_width * zoom) + margins.left() + margins.right() + scrollbar_size
 
-    def create_state_metadata(self) -> Dict:
+    def create_state_metadata(self) -> dict:
         """Create metadata dictionary capturing widget state."""
         return self._state.create_state_metadata()
 
-    def restore_from_metadata(self, metadata: Dict) -> None:
+    def restore_from_metadata(self, metadata: dict) -> None:
         """Restore terminal state from metadata."""
         self._state.restore_from_metadata(metadata)
         self._clear_selection()
@@ -1384,7 +1384,7 @@ class TerminalWidget(QAbstractScrollArea):
         """Get current working directory if known."""
         return self._state.current_directory()
 
-    def set_search_highlights(self, row: int, highlights: List[Tuple[int, int, bool]]) -> None:
+    def set_search_highlights(self, row: int, highlights: list[tuple[int, int, bool]]) -> None:
         """
         Set search highlights for a given row.
 
@@ -1405,7 +1405,7 @@ class TerminalWidget(QAbstractScrollArea):
         self._search_highlights.clear()
         self.viewport().update()
 
-    def get_row_highlights(self, row: int) -> List[Tuple[int, int, bool]]:
+    def get_row_highlights(self, row: int) -> list[tuple[int, int, bool]]:
         """
         Get highlights for a given row.
 
@@ -1545,7 +1545,7 @@ class TerminalWidget(QAbstractScrollArea):
             return
 
         # Group matches by row
-        row_matches: Dict[int, List[Tuple[int, int, bool]]] = {}
+        row_matches: dict[int, list[tuple[int, int, bool]]] = {}
         for match in self._matches:
             if match.row not in row_matches:
                 row_matches[match.row] = []
@@ -1578,7 +1578,7 @@ class TerminalWidget(QAbstractScrollArea):
                 self.scroll_to_match(match.row)
                 break
 
-    def get_match_status(self) -> Tuple[int, int, bool]:
+    def get_match_status(self) -> tuple[int, int, bool]:
         """
         Get the current match status.
 

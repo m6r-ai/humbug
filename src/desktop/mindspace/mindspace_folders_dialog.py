@@ -1,6 +1,5 @@
 """Dialog for configuring initial mindspace folder structure."""
 
-from typing import List
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QWidget,
@@ -93,7 +92,7 @@ class MindspaceFoldersDialog(QDialog):
 
         self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
-    def get_selected_folders(self) -> List[str]:
+    def get_selected_folders(self) -> list[str]:
         """
         Get list of folder names to create.
 

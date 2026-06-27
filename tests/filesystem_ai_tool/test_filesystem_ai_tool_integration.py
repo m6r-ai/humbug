@@ -3,7 +3,6 @@ Integration and parametrized tests for the filesystem tool.
 """
 import asyncio
 from pathlib import Path
-from typing import Tuple
 from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
@@ -344,7 +343,7 @@ class TestFileSystemAIToolPathResolverIntegration:
 
     def test_path_resolver_validation_error(self, mock_access_settings, mock_authorization, make_tool_call):
         """Test that path resolver validation errors are properly propagated."""
-        def failing_resolver(path: str) -> Tuple[Path, str]:
+        def failing_resolver(path: str) -> tuple[Path, str]:
             if path == "forbidden":
                 raise ValueError("Access to this path is forbidden")
             return Path(f"/test/sandbox/{path}"), path
@@ -361,7 +360,7 @@ class TestFileSystemAIToolPathResolverIntegration:
 
     def test_path_resolver_custom_display_paths(self, mock_access_settings, mock_authorization, make_tool_call):
         """Test that custom display paths from resolver are used correctly."""
-        def custom_resolver(path: str) -> Tuple[Path, str]:
+        def custom_resolver(path: str) -> tuple[Path, str]:
             # Return custom display path that's different from input
             abs_path = Path(f"/test/sandbox/{path}")
             display_path = f"custom_prefix/{path}"
@@ -389,7 +388,7 @@ class TestFileSystemAIToolPathResolverIntegration:
 
     def test_path_resolver_absolute_vs_relative_handling(self, mock_access_settings, mock_authorization, make_tool_call):
         """Test that path resolver handles both absolute and relative paths correctly."""
-        def flexible_resolver(path: str) -> Tuple[Path, str]:
+        def flexible_resolver(path: str) -> tuple[Path, str]:
             if path.startswith('/'):
                 # Absolute path - strip leading slash for display
                 display_path = path[1:] if path != '/' else ''

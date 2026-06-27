@@ -4,8 +4,8 @@ C Lexer
 This module implements a lexer for C code, extending the functionality of the base lexer.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from syntax.lexer import Lexer, LexerState, Token, TokenType
 

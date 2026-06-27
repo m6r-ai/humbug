@@ -4,7 +4,6 @@ Dependency validation logic.
 
 import os
 from pathlib import Path
-from typing import List, Set
 from dataclasses import dataclass
 
 from .config import DependencyConfig
@@ -28,9 +27,9 @@ class Violation:
 class ValidationResult:
     """Results of dependency validation."""
 
-    violations: List[Violation]
+    violations: list[Violation]
     files_checked: int
-    modules_checked: Set[str]
+    modules_checked: set[str]
 
     def has_violations(self) -> bool:
         """Check if there are any violations in the result."""
@@ -40,11 +39,11 @@ class ValidationResult:
         """Get the total number of violations."""
         return len(self.violations)
 
-    def internal_violations(self) -> List[Violation]:
+    def internal_violations(self) -> list[Violation]:
         """Get only the internal dependency violations."""
         return [v for v in self.violations if v.violation_type == "internal"]
 
-    def external_violations(self) -> List[Violation]:
+    def external_violations(self) -> list[Violation]:
         """Get only the external dependency violations."""
         return [v for v in self.violations if v.violation_type == "external"]
 
@@ -108,9 +107,9 @@ class DependencyValidator:
         self,
         file_path: str,
         current_module: str,
-        allowed_deps: Set[str],
-        known_modules: Set[str]
-    ) -> List[Violation]:
+        allowed_deps: set[str],
+        known_modules: set[str]
+    ) -> list[Violation]:
         """Validate dependencies in a single file."""
         violations = []
         imports = self.parser.parse_file(file_path)

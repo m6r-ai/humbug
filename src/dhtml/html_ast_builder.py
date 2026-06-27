@@ -2,7 +2,6 @@ from html import unescape as _html_unescape
 import re
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Dict, List, Tuple
 
 from dhtml.html_ast_node import (
     HtmlASTCommentNode,
@@ -24,7 +23,7 @@ _VOID_ELEMENTS = frozenset({
 # When an open tag is encountered, any of the tags listed as its "closers"
 # that are currently open on the stack are implicitly closed first.
 # This covers the most common HTML5 optional-close rules.
-_IMPLIED_CLOSE: Dict[str, frozenset] = {
+_IMPLIED_CLOSE: dict[str, frozenset] = {
     "p":   frozenset({
         "p",
     }),
@@ -94,7 +93,7 @@ class _TokenType(Enum):
 class _Token:
     type: _TokenType
     tag_name: str = ""
-    attributes: Dict[str, str] = field(default_factory=dict)
+    attributes: dict[str, str] = field(default_factory=dict)
     content: str = ""
 
 
@@ -118,9 +117,9 @@ class _Lexer:
         self._pos = 0
         self._len = len(source)
 
-    def tokenise(self) -> List[_Token]:
+    def tokenise(self) -> list[_Token]:
         """Tokenise the entire source and return the token list."""
-        tokens: List[_Token] = []
+        tokens: list[_Token] = []
         while self._pos < self._len:
             if self._src[self._pos] != "<":
                 tokens.append(self._read_text())
@@ -266,9 +265,9 @@ class _Lexer:
         self._pos = m.end()
         return m.group()
 
-    def _read_attributes(self) -> Dict[str, str]:
+    def _read_attributes(self) -> dict[str, str]:
         """Read all attributes from the current position inside a tag."""
-        attrs: Dict[str, str] = {}
+        attrs: dict[str, str] = {}
         while self._pos < self._len:
             self._skip_whitespace()
             if self._pos >= self._len or self._src[self._pos] in (">", "/"):
@@ -386,7 +385,7 @@ class HtmlASTBuilder:
         document = HtmlASTDocumentNode(source_path=source_path)
         # The stack holds (element, stop_tags) pairs.  stop_tags is the set of
         # tag names that will cause this element to be implicitly closed.
-        stack: List[Tuple[HtmlASTElementNode, frozenset]] = []
+        stack: list[tuple[HtmlASTElementNode, frozenset]] = []
 
         def current_element() -> HtmlASTElementNode | None:
             return stack[-1][0] if stack else None

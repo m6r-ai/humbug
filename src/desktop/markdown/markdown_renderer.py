@@ -2,10 +2,11 @@
 Markdown AST visitor to render the AST directly to a QTextDocument.
 """
 
+from collections.abc import Callable
 import logging
 import os
 import re
-from typing import Callable, List, Tuple, cast
+from typing import cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import (
@@ -60,7 +61,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         self._cursor.movePosition(QTextCursor.MoveOperation.Start)
         self._orig_block_format = self._cursor.blockFormat()
 
-        self._lists: List[QTextList] = []
+        self._lists: list[QTextList] = []
         self._list_level = 0
 
         self._default_font_height: float = 0
@@ -70,7 +71,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         self._style_manager = StyleManager()
 
         # Fingerprints of the top-level nodes in the last stable snapshot.
-        self._stable_fingerprints: List[int] = []
+        self._stable_fingerprints: list[int] = []
 
         # Snapshot of the rendered document at the last stable point.  When all
         # current top-level nodes match the stable fingerprints, this is updated.
@@ -125,7 +126,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         return hash((type(node).__name__, node.line_start, node.line_end, language,
                      child_count, last_content))
 
-    def _first_changed_index(self, new_children: List[MarkdownASTNode]) -> int:
+    def _first_changed_index(self, new_children: list[MarkdownASTNode]) -> int:
         """
         Return the index of the first top-level child that differs from the
         stable snapshot fingerprints.
@@ -632,7 +633,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         return False
 
-    def _load_local_image(self, path: str) -> Tuple[QImage, bool, bool]:
+    def _load_local_image(self, path: str) -> tuple[QImage, bool, bool]:
         """
         Load an image from a local file path.
 

@@ -14,7 +14,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 import zoneinfo
 
 
@@ -56,7 +56,7 @@ class FilesystemTool:
 
     MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 
-    def execute(self, operation: str, arguments: Dict[str, Any]) -> str:
+    def execute(self, operation: str, arguments: dict[str, Any]) -> str:
         """
         Execute a filesystem operation.
 
@@ -91,7 +91,7 @@ class FilesystemTool:
 
         return handler(arguments)
 
-    def _resolve_path(self, key: str, arguments: Dict[str, Any]) -> Path:
+    def _resolve_path(self, key: str, arguments: dict[str, Any]) -> Path:
         """Resolve and validate a path argument."""
         path_str = arguments.get(key)
         if not isinstance(path_str, str) or not path_str:
@@ -114,7 +114,7 @@ class FilesystemTool:
 
         return dt.isoformat()[:26] + "Z" if dt.tzinfo == timezone.utc else dt.isoformat()
 
-    def _read_file(self, arguments: Dict[str, Any]) -> str:
+    def _read_file(self, arguments: dict[str, Any]) -> str:
         path = self._resolve_path("path", arguments)
 
         if not path.exists():
@@ -137,7 +137,7 @@ class FilesystemTool:
         except OSError as e:
             raise PipelineToolError(f"Failed to read file: {e}") from e
 
-    def _read_file_lines(self, arguments: Dict[str, Any]) -> str:
+    def _read_file_lines(self, arguments: dict[str, Any]) -> str:
         path = self._resolve_path("path", arguments)
 
         if not path.exists():
@@ -190,7 +190,7 @@ class FilesystemTool:
 
         return json.dumps({"range": range_value, "lines": line_dict}, indent=2)
 
-    def _write_file(self, arguments: Dict[str, Any]) -> str:
+    def _write_file(self, arguments: dict[str, Any]) -> str:
         path = self._resolve_path("path", arguments)
 
         content = arguments.get("content")
@@ -236,7 +236,7 @@ class FilesystemTool:
 
         return f"File written successfully: {path} ({content_size:,} bytes)"
 
-    def _append_to_file(self, arguments: Dict[str, Any]) -> str:
+    def _append_to_file(self, arguments: dict[str, Any]) -> str:
         path = self._resolve_path("path", arguments)
 
         if not path.exists():
@@ -264,7 +264,7 @@ class FilesystemTool:
 
         return f"Content appended successfully: {path} (+{content_size:,} bytes)"
 
-    def _delete_file(self, arguments: Dict[str, Any]) -> str:
+    def _delete_file(self, arguments: dict[str, Any]) -> str:
         path = self._resolve_path("path", arguments)
 
         if not path.exists():
@@ -284,7 +284,7 @@ class FilesystemTool:
 
         return f"File deleted successfully: {path}"
 
-    def _copy_file(self, arguments: Dict[str, Any]) -> str:
+    def _copy_file(self, arguments: dict[str, Any]) -> str:
         src = self._resolve_path("path", arguments)
         dst_str = arguments.get("destination")
         if not isinstance(dst_str, str) or not dst_str:
@@ -317,7 +317,7 @@ class FilesystemTool:
 
         return f"File copied successfully: {src} -> {dst}"
 
-    def _list_directory(self, arguments: Dict[str, Any]) -> str:
+    def _list_directory(self, arguments: dict[str, Any]) -> str:
         path = self._resolve_path("path", arguments)
 
         if not path.exists():
@@ -353,7 +353,7 @@ class FilesystemTool:
 
         return json.dumps(result, indent=2)
 
-    def _create_directory(self, arguments: Dict[str, Any]) -> str:
+    def _create_directory(self, arguments: dict[str, Any]) -> str:
         path = self._resolve_path("path", arguments)
         create_parents = arguments.get("create_parents", True)
 
@@ -374,7 +374,7 @@ class FilesystemTool:
 
         return f"Directory created successfully: {path}"
 
-    def _remove_directory(self, arguments: Dict[str, Any]) -> str:
+    def _remove_directory(self, arguments: dict[str, Any]) -> str:
         path = self._resolve_path("path", arguments)
 
         if not path.exists():
@@ -400,7 +400,7 @@ class FilesystemTool:
 
         return f"Directory removed successfully: {path}"
 
-    def _move(self, arguments: Dict[str, Any]) -> str:
+    def _move(self, arguments: dict[str, Any]) -> str:
         src = self._resolve_path("path", arguments)
         dst_str = arguments.get("destination")
         if not isinstance(dst_str, str) or not dst_str:
@@ -423,7 +423,7 @@ class FilesystemTool:
 
         return f"Moved successfully: {src} -> {dst}"
 
-    def _get_info(self, arguments: Dict[str, Any]) -> str:
+    def _get_info(self, arguments: dict[str, Any]) -> str:
         path = self._resolve_path("path", arguments)
         format_type = arguments.get("format")
 
@@ -437,7 +437,7 @@ class FilesystemTool:
             )
 
             if path.is_file():
-                result: Dict[str, Any] = {
+                result: dict[str, Any] = {
                     "path": str(path),
                     "type": "file",
                     "size_bytes": stat.st_size,
@@ -449,7 +449,7 @@ class FilesystemTool:
             elif path.is_dir():
                 try:
                     items = list(path.iterdir())
-                    items_info: Dict[str, Any] = {
+                    items_info: dict[str, Any] = {
                         "total": len(items),
                         "files": sum(1 for i in items if i.is_file()),
                         "directories": sum(1 for i in items if i.is_dir())
@@ -488,7 +488,7 @@ class ClockTool:
     included for interface parity.
     """
 
-    def execute(self, operation: str, arguments: Dict[str, Any]) -> str:
+    def execute(self, operation: str, arguments: dict[str, Any]) -> str:
         """
         Execute a clock operation.
 
@@ -561,13 +561,13 @@ class ClockTool:
             "Supported formats: ISO (2024-01-15T14:30:00), timestamp (1705339800)"
         )
 
-    def _get_time(self, arguments: Dict[str, Any]) -> str:
+    def _get_time(self, arguments: dict[str, Any]) -> str:
         fmt = arguments.get("format", "iso")
         tz = arguments.get("timezone")
         now = self._get_current_time(tz)
         return self._format_time(now, fmt)
 
-    def _sleep(self, arguments: Dict[str, Any]) -> str:
+    def _sleep(self, arguments: dict[str, Any]) -> str:
         import time as time_module
 
         duration = arguments.get("duration")
@@ -585,7 +585,7 @@ class ClockTool:
         tz = arguments.get("timezone")
         return self._format_time(self._get_current_time(tz), fmt)
 
-    def _alarm(self, arguments: Dict[str, Any]) -> str:
+    def _alarm(self, arguments: dict[str, Any]) -> str:
         import time as time_module
 
         time_str = arguments.get("time")
@@ -613,7 +613,7 @@ class ConsoleTool:
     pipeline output without requiring a filesystem write.
     """
 
-    def execute(self, operation: str, arguments: Dict[str, Any]) -> str:
+    def execute(self, operation: str, arguments: dict[str, Any]) -> str:
         """
         Execute a console operation.
 
@@ -638,7 +638,7 @@ class ConsoleTool:
 
         return handler(arguments)
 
-    def _write_stdout(self, arguments: Dict[str, Any]) -> str:
+    def _write_stdout(self, arguments: dict[str, Any]) -> str:
         content = arguments.get("content")
         if not isinstance(content, str):
             raise PipelineToolError("'content' must be a string")
@@ -646,7 +646,7 @@ class ConsoleTool:
         print(content, end="")
         return "Written to stdout"
 
-    def _write_stderr(self, arguments: Dict[str, Any]) -> str:
+    def _write_stderr(self, arguments: dict[str, Any]) -> str:
         content = arguments.get("content")
         if not isinstance(content, str):
             raise PipelineToolError("'content' must be a string")

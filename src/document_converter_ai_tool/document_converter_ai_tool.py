@@ -1,8 +1,9 @@
+from collections.abc import Callable
 import logging
-import tempfile
 import os
 from pathlib import Path
-from typing import Any, Callable, Dict, Tuple
+import tempfile
+from typing import Any
 
 from ai_tool import (
     AITool, AIToolAuthorizationCallback, AIToolAuthorizationDenied,
@@ -25,14 +26,14 @@ from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 # Map each supported format name to its canonical file extension.
-_FORMAT_EXTENSIONS: Dict[str, str] = {
+_FORMAT_EXTENSIONS: dict[str, str] = {
     "docx": ".docx",
     "html": ".html",
     "md": ".md",
 }
 
 # Map each file extension to its canonical format name.
-_EXTENSION_FORMATS: Dict[str, str] = {v: k for k, v in _FORMAT_EXTENSIONS.items()}
+_EXTENSION_FORMATS: dict[str, str] = {v: k for k, v in _FORMAT_EXTENSIONS.items()}
 
 # Also recognise the legacy .htm extension as HTML.
 _EXTENSION_FORMATS[".htm"] = "html"
@@ -105,14 +106,14 @@ def _export_docx(document_ir: DocumentIRDocumentNode) -> bytes:
 
 
 # Importers: format name → callable that reads a file and returns a DocumentIRDocumentNode.
-_IMPORTERS: Dict[str, Callable[[Path], DocumentIRDocumentNode]] = {
+_IMPORTERS: dict[str, Callable[[Path], DocumentIRDocumentNode]] = {
     "docx": _import_docx,
     "html": _import_html,
     "md": _import_md,
 }
 
 # Exporters: format name → callable that serialises a DocumentIRDocumentNode to bytes or str.
-_EXPORTERS: Dict[str, Callable[[DocumentIRDocumentNode], bytes | str]] = {
+_EXPORTERS: dict[str, Callable[[DocumentIRDocumentNode], bytes | str]] = {
     "docx": _export_docx,
     "html": _export_html,
     "md": _export_md,
@@ -143,7 +144,7 @@ class DocumentConverterAITool(AITool):
 
     def __init__(
         self,
-        resolve_path: Callable[[str], Tuple[Path, str]],
+        resolve_path: Callable[[str], tuple[Path, str]],
         mindspace: Mindspace,
     ) -> None:
         """
@@ -215,7 +216,7 @@ class DocumentConverterAITool(AITool):
         """Get brief one-line description for system prompt."""
         return "Document conversion between supported formats (mindspace only)."
 
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """Get operation definitions for this tool."""
         return {
             "convert": AIToolOperationDefinition(
@@ -233,7 +234,7 @@ class DocumentConverterAITool(AITool):
             ),
         }
 
-    def _resolve_mindspace_path(self, key: str, path_str: str) -> Tuple[Path, str]:
+    def _resolve_mindspace_path(self, key: str, path_str: str) -> tuple[Path, str]:
         """
         Resolve and validate a path, ensuring it is inside the mindspace.
 
@@ -269,7 +270,7 @@ class DocumentConverterAITool(AITool):
         output_path: Path | None,
         from_format_arg: str | None,
         to_format_arg: str | None,
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         """
         Determine the from/to format pair, raising on ambiguity or unsupported formats.
 

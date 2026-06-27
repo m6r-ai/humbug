@@ -4,7 +4,6 @@ Import statement parser for Python files.
 
 import ast
 from pathlib import Path
-from typing import List, Set
 from dataclasses import dataclass
 
 
@@ -15,7 +14,7 @@ class ImportInfo:
     module: str  # The imported module name
     line_number: int  # Line number in source file
     import_type: str  # 'import' or 'from'
-    imported_names: List[str]  # Names imported (for 'from' imports)
+    imported_names: list[str]  # Names imported (for 'from' imports)
     is_relative: bool  # Whether it's a relative import
     raw_statement: str  # Original import statement
 
@@ -27,7 +26,7 @@ class ImportParser:
         self.src_root = Path(src_root)
         self.stdlib_modules = self._get_stdlib_modules()
 
-    def _get_stdlib_modules(self) -> Set[str]:
+    def _get_stdlib_modules(self) -> set[str]:
         """Get a set of Python standard library module names."""
         # Comprehensive list of Python standard library modules
         stdlib = {
@@ -123,7 +122,7 @@ class ImportParser:
         }
         return stdlib
 
-    def parse_file(self, file_path: str) -> List[ImportInfo]:
+    def parse_file(self, file_path: str) -> list[ImportInfo]:
         """Parse a Python file and extract all import statements."""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -171,7 +170,7 @@ class ImportParser:
             print(f"Warning: Could not parse {file_path}: {e}")
             return []
 
-    def resolve_module_name(self, import_info: ImportInfo, file_path: str, known_modules: Set[str]) -> str | None:
+    def resolve_module_name(self, import_info: ImportInfo, file_path: str, known_modules: set[str]) -> str | None:
         """Resolve an import to a known internal module name."""
         module_name = import_info.module
 
@@ -234,7 +233,7 @@ class ImportParser:
         top_level = module_name.split('.')[0]
         return top_level in self.stdlib_modules
 
-    def is_third_party_import(self, module_name: str, known_internal_modules: Set[str]) -> bool:
+    def is_third_party_import(self, module_name: str, known_internal_modules: set[str]) -> bool:
         """Check if an import is from a third-party package."""
         # Not standard library and not internal module
         if self.is_standard_library_import(module_name):
@@ -257,12 +256,12 @@ class ImportParser:
         # For external modules, we typically care about the top-level package
         return import_info.module.split('.')[0]
 
-    def get_python_files(self, directory: str, ignore_patterns: List[str] | None = None) -> List[str]:
+    def get_python_files(self, directory: str, ignore_patterns: list[str] | None = None) -> list[str]:
         """Get all Python files in a directory, respecting ignore patterns."""
         if ignore_patterns is None:
             ignore_patterns = []
 
-        python_files: List[str] = []
+        python_files: list[str] = []
         directory_path = Path(directory)
 
         if not directory_path.exists():

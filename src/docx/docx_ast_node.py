@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 
 class DocxASTNode:
@@ -7,7 +7,7 @@ class DocxASTNode:
     def __init__(self) -> None:
         """Initialise a node with no parent and no children."""
         self.parent: "DocxASTNode | None" = None
-        self.children: List["DocxASTNode"] = []
+        self.children: list["DocxASTNode"] = []
 
     def add_child(self, child: "DocxASTNode") -> "DocxASTNode":
         """
@@ -64,7 +64,7 @@ class DocxASTVisitor:
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
 
-    def generic_visit(self, node: DocxASTNode) -> List[Any]:
+    def generic_visit(self, node: DocxASTNode) -> list[Any]:
         """
         Default visit method for nodes without specific handlers.
 
@@ -103,7 +103,7 @@ class DocxASTDocumentNode(DocxASTNode):
         self.source_path = source_path
         # Resolved map from relationship ID (e.g. "rId6") to target path
         # (e.g. "media/image1.png") within the ZIP.
-        self.relationships: Dict[str, str] = {}
+        self.relationships: dict[str, str] = {}
 
 
 class DocxASTBodyNode(DocxASTNode):
@@ -517,7 +517,7 @@ class DocxASTTableGridNode(DocxASTNode):
     Holds the column width definitions.
     """
 
-    def __init__(self, column_widths: List[int] | None = None) -> None:
+    def __init__(self, column_widths: list[int] | None = None) -> None:
         """
         Initialise a table grid node.
 
@@ -526,7 +526,7 @@ class DocxASTTableGridNode(DocxASTNode):
                 <w:gridCol w:w="..."/> element.
         """
         super().__init__()
-        self.column_widths: List[int] = column_widths or []
+        self.column_widths: list[int] = column_widths or []
 
 
 class DocxASTTableRowNode(DocxASTNode):

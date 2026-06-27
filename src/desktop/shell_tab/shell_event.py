@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict
 import uuid
 
 from desktop.shell_tab.shell_event_source import ShellEventSource
@@ -34,7 +33,7 @@ class ShellEvent:
             timestamp=timestamp
         )
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert message to dictionary for storage."""
         return {
             "message_id": self.message_id,
@@ -44,7 +43,7 @@ class ShellEvent:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'ShellEvent':
+    def from_dict(cls, data: dict) -> 'ShellEvent':
         """Create a ShellEvent instance from dictionary."""
         return cls(
             message_id=data["message_id"],

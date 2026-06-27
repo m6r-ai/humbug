@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List
 
 from syntax.csharp.csharp_lexer import CSharpLexer
 from syntax.lexer import Token, TokenType
@@ -318,7 +317,7 @@ class CSharpParser(Parser):
         current_token = lexer.peek_next_token(offset=token_pos)
         return current_token is not None and current_token.type == TokenType.OPERATOR and current_token.value == '('
 
-    def _get_linq_keywords(self) -> List[str]:
+    def _get_linq_keywords(self) -> list[str]:
         """
         Get the list of keywords commonly used in LINQ expressions.
 

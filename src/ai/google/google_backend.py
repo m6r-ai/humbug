@@ -1,5 +1,5 @@
 """Google Google backend implementation."""
-from typing import Dict, List, Any
+from typing import Any
 
 import aiohttp
 
@@ -15,7 +15,7 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 class GoogleBackend(AIBackend):
     """Google Gemini API backend implementation."""
 
-    async def fetch_models(self) -> List[str]:
+    async def fetch_models(self) -> list[str]:
         """Fetch available model IDs from the Google Gemini API."""
         base_url = self._api_url.split("?")[0]
         url = f"{base_url}?key={self._api_key}"
@@ -29,7 +29,7 @@ class GoogleBackend(AIBackend):
                     if "generateContent" in m.get("supportedGenerationMethods", [])
                 ]
 
-    def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
+    def _format_tool_definition(self, tool_def: AIToolDefinition) -> dict[str, Any]:
         """
         Convert tool definition to Google format.
 
@@ -39,7 +39,7 @@ class GoogleBackend(AIBackend):
         Returns:
             Tool definition in Google format
         """
-        properties: Dict[str, Any] = {}
+        properties: dict[str, Any] = {}
         required = []
 
         for param in tool_def.parameters:
@@ -83,7 +83,7 @@ class GoogleBackend(AIBackend):
             }
         }
 
-    def _build_user_message(self, content: str, tool_results: List[AIToolResult] | None = None) -> Dict[str, Any]:
+    def _build_user_message(self, content: str, tool_results: list[AIToolResult] | None = None) -> dict[str, Any]:
         """
         Build user message for Google format.
 
@@ -94,7 +94,7 @@ class GoogleBackend(AIBackend):
         Returns:
             User message dictionary with structured content
         """
-        parts: List[Dict[str, Any]] = []
+        parts: list[dict[str, Any]] = []
 
         # Add text content if present
         if content:
@@ -105,7 +105,7 @@ class GoogleBackend(AIBackend):
         # Add tool results as function response parts
         if tool_results:
             for tool_result in tool_results:
-                response: Dict[str, Any] = {
+                response: dict[str, Any] = {
                 }
 
                 if tool_result.error:
@@ -129,9 +129,9 @@ class GoogleBackend(AIBackend):
     def _build_assistant_message(
         self,
         content: str,
-        tool_calls: List[AIToolCall] | None = None,
+        tool_calls: list[AIToolCall] | None = None,
         redacted_reasoning: str | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Build assistant message for Google format.
 
@@ -143,7 +143,7 @@ class GoogleBackend(AIBackend):
         Returns:
             Assistant message dictionary with structured content
         """
-        parts: List[Dict[str, Any]] = []
+        parts: list[dict[str, Any]] = []
 
         # Add text content if present
         if content:
@@ -178,7 +178,7 @@ class GoogleBackend(AIBackend):
             "parts": parts
         }
 
-    def _build_message(self, content: str, role: str) -> Dict[str, Any]:
+    def _build_message(self, content: str, role: str) -> dict[str, Any]:
         """
         Build message for Google format.
 
@@ -196,7 +196,7 @@ class GoogleBackend(AIBackend):
             }]
         }
 
-    def _format_messages_for_provider(self, conversation_history: AIConversationHistory) -> List[Dict[str, Any]]:
+    def _format_messages_for_provider(self, conversation_history: AIConversationHistory) -> list[dict[str, Any]]:
         """
         Format conversation history for Google's API format in a single pass.
 
@@ -206,7 +206,7 @@ class GoogleBackend(AIBackend):
         Returns:
             List of messages formatted for Google API
         """
-        result: List[Dict[str, Any]] = []
+        result: list[dict[str, Any]] = []
         last_user_message_index = -1
         current_turn_message_index = -1
 
@@ -265,7 +265,7 @@ class GoogleBackend(AIBackend):
         messages = self._format_messages_for_provider(conversation_history)
 
         # Build generation config
-        generation_config: Dict[str, Any] = {
+        generation_config: dict[str, Any] = {
             "topP": 0.8,
             "topK": 10
         }

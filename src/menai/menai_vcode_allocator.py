@@ -46,7 +46,6 @@ register ids without needing an explicit mapping.
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Set, Tuple
 
 from menai.menai_vcode import (
     MenaiVCodeApply,
@@ -78,7 +77,7 @@ from menai.menai_vcode import (
 @dataclass
 class SlotMap:
     """Result of slot allocation for one MenaiVCodeFunction."""
-    slots: Dict[int, int]   # register id → slot index
+    slots: dict[int, int]   # register id → slot index
     slot_count: int         # total slots needed (= local_count in CodeObject)
     local_count: int = 0    # scratch + fixed slots before the outgoing zone
                             # (= slot_count when there are no outgoing slots)
@@ -105,21 +104,21 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
     free_var_count = len(func.free_vars)
     fixed_count = param_count + free_var_count
 
-    slots: Dict[int, int] = {}
+    slots: dict[int, int] = {}
     next_new_slot = 0
 
     # Pre-compute sets needed for Phase 3 safety checks.
     # closure_reg_ids: registers written by MAKE_CLOSURE — PATCH_CLOSURE
     # requires its closure operand within local_count.
-    closure_reg_ids: Set[int] = {
+    closure_reg_ids: set[int] = {
         instr.dst.id for instr in func.instrs
         if isinstance(instr, MenaiVCodeMakeClosure)
     }
 
     # Phase 1: scan the flat instruction list to find the last-use index for
     # every register.
-    last_use: Dict[int, int] = {}
-    def_index: Dict[int, int] = {}
+    last_use: dict[int, int] = {}
+    def_index: dict[int, int] = {}
 
     for idx, instr in enumerate(func.instrs):
         defs, uses = _defs_uses(instr)
@@ -131,13 +130,13 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
 
     # Pre-assign fixed slots for params (0..P-1) and free vars (P..P+F-1).
     # These register ids are guaranteed by the CFG builder's assignment order.
-    fixed_reg_ids: List[int] = list(range(fixed_count))
+    fixed_reg_ids: list[int] = list(range(fixed_count))
     for reg_id in fixed_reg_ids:
         slots[reg_id] = reg_id
 
     # Phase 2: linear scan allocation for all other registers.  Fixed slots
     # (params and free vars) are permanently live and never released for reuse.
-    live: Set[int] = set(fixed_reg_ids)
+    live: set[int] = set(fixed_reg_ids)
 
     def _free_slot() -> int:
         """Return the lowest slot index not currently occupied by a live register."""
@@ -338,7 +337,7 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
     return SlotMap(slots=slots, slot_count=slot_count, local_count=local_count)
 
 
-def _defs_uses(instr: MenaiVCodeInstr) -> Tuple[List[int], List[int]]:
+def _defs_uses(instr: MenaiVCodeInstr) -> tuple[list[int], list[int]]:
     """
     Return (defs, uses) — lists of register ids defined and used by instr.
 

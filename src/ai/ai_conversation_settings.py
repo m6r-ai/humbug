@@ -1,8 +1,9 @@
 """Enhanced class to handle conversation settings with tool support."""
 
+from collections.abc import Generator
 import json
 import os
-from typing import Dict, Generator, List, Any, Tuple
+from typing import Any
 
 from ai.ai_model import AIModel, AIReasoningCapability, AIReasoningEffort, ToolCapability
 
@@ -11,7 +12,7 @@ class AIConversationSettings:
     """Data class for conversation settings."""
 
     # Registry keyed by (model_name, provider) — the canonical identity of a model.
-    MODELS: Dict[Tuple[str, str], AIModel] = {
+    MODELS: dict[tuple[str, str], AIModel] = {
         # Anthropic models
         ("claude-haiku-4-5", "anthropic"): AIModel(
             name="claude-haiku-4-5",
@@ -643,7 +644,7 @@ class AIConversationSettings:
         return model
 
     @classmethod
-    def get_available_models(cls) -> List[Tuple[str, str]]:
+    def get_available_models(cls) -> list[tuple[str, str]]:
         """
         Return list of available (model, provider) keys.
 
@@ -690,7 +691,7 @@ class AIConversationSettings:
         return cls.DEFAULT_TOOL_CAPABILITY
 
     @classmethod
-    def get_model_limits(cls, model: str, provider: str) -> Dict[str, int]:
+    def get_model_limits(cls, model: str, provider: str) -> dict[str, int]:
         """
         Get the context window and max output tokens for a model.
 
@@ -732,7 +733,7 @@ class AIConversationSettings:
         return cls.DEFAULT_REASONING_CAPABILITY
 
     @classmethod
-    def get_supported_reasoning_efforts(cls, model: str, provider: str) -> List[str]:
+    def get_supported_reasoning_efforts(cls, model: str, provider: str) -> list[str]:
         """
         Get the ordered list of reasoning effort levels supported by a model.
 
@@ -752,8 +753,8 @@ class AIConversationSettings:
 
     @classmethod
     def iter_models_by_backends(
-        cls, ai_backends: Dict[str, Any]
-    ) -> Generator[Tuple[str, str], None, None]:
+        cls, ai_backends: dict[str, Any]
+    ) -> Generator[tuple[str, str], None, None]:
         """
         Generator that yields (model, provider) keys for models supported by available backends.
 
@@ -768,7 +769,7 @@ class AIConversationSettings:
                 yield key
 
     @classmethod
-    def get_default_model(cls, ai_backends: Dict[str, Any]) -> Tuple[str, str]:
+    def get_default_model(cls, ai_backends: dict[str, Any]) -> tuple[str, str]:
         """
         Get the default (model, provider) based on available backends.
 
@@ -828,7 +829,7 @@ class AIConversationSettings:
         return None
 
     # Provider-level defaults for models fetched from an API (capabilities unknown).
-    _PROVIDER_FETCH_DEFAULTS: Dict[str, Dict[str, Any]] = {
+    _PROVIDER_FETCH_DEFAULTS: dict[str, dict[str, Any]] = {
         "anthropic": {
             "context_window": 200000, "max_output_tokens": 32000,
             "supports_temperature": True,
@@ -892,12 +893,12 @@ class AIConversationSettings:
     }
 
     @classmethod
-    def _is_fetched_key(cls, key: Tuple[str, str]) -> bool:
+    def _is_fetched_key(cls, key: tuple[str, str]) -> bool:
         """Return True if key was added via register_fetched_models (not built-in or user-config)."""
         return key not in cls._BUILTIN_MODEL_KEYS and key not in cls._USER_CONFIG_MODEL_KEYS
 
     @classmethod
-    def get_fetched_models_by_provider(cls, provider: str) -> List[Tuple[str, str]]:
+    def get_fetched_models_by_provider(cls, provider: str) -> list[tuple[str, str]]:
         """Return (model, provider) keys that were fetched (not built-in) for the given provider."""
         return [
             key for key, model in cls.MODELS.items()
@@ -927,8 +928,8 @@ class AIConversationSettings:
 
     @classmethod
     def register_fetched_models(
-        cls, model_ids: List[str], provider: str
-    ) -> Tuple[List[str], List[str]]:
+        cls, model_ids: list[str], provider: str
+    ) -> tuple[list[str], list[str]]:
         """
         Register models fetched from a provider API using provider-level defaults.
 
@@ -946,8 +947,8 @@ class AIConversationSettings:
             "reasoning_capabilities": AIReasoningCapability.NO_REASONING,
             "tool_capabilities": ToolCapability.NO_TOOLS,
         })
-        newly_added: List[str] = []
-        already_present: List[str] = []
+        newly_added: list[str] = []
+        already_present: list[str] = []
         for model_id in model_ids:
             key = (model_id, provider)
             if key in cls.MODELS:
@@ -979,7 +980,7 @@ class AIConversationSettings:
         Args:
             path: Absolute path for the cache JSON file.
         """
-        cache: Dict[str, List[str]] = {}
+        cache: dict[str, list[str]] = {}
         for (model_id, provider), _ in cls.MODELS.items():
             if cls._is_fetched_key((model_id, provider)) and provider in cls._PROVIDER_FETCH_DEFAULTS:
                 cache.setdefault(provider, []).append(model_id)
@@ -1022,7 +1023,7 @@ class AIConversationSettings:
                 )
 
     @classmethod
-    def load_user_config(cls, path: str) -> List[str]:
+    def load_user_config(cls, path: str) -> list[str]:
         """
         Load user-defined AI model entries from a JSON config file and register them.
 
@@ -1067,20 +1068,20 @@ class AIConversationSettings:
             "anthropic", "deepseek", "google", "mistral",
             "ollama", "ollama-cloud", "openai", "vllm", "xai", "zai",
         }
-        reasoning_map: Dict[str, AIReasoningCapability] = {
+        reasoning_map: dict[str, AIReasoningCapability] = {
             "NO_REASONING": AIReasoningCapability.NO_REASONING,
             "HIDDEN_REASONING": AIReasoningCapability.HIDDEN_REASONING,
             "VISIBLE_REASONING": AIReasoningCapability.VISIBLE_REASONING,
         }
-        tool_map: Dict[str, ToolCapability] = {
+        tool_map: dict[str, ToolCapability] = {
             "NO_TOOLS": ToolCapability.NO_TOOLS,
             "FUNCTION_CALLING": ToolCapability.FUNCTION_CALLING,
             "PARALLEL_TOOLS": ToolCapability.PARALLEL_TOOLS,
         }
 
-        errors: List[str] = []
-        pending: List[Tuple[Tuple[str, str], AIModel]] = []
-        seen_keys: set[Tuple[str, str]] = set()
+        errors: list[str] = []
+        pending: list[tuple[tuple[str, str], AIModel]] = []
+        seen_keys: set[tuple[str, str]] = set()
 
         required_str_fields = ("display_name", "name", "provider")
         required_int_fields = ("context_window", "max_output_tokens")
@@ -1092,7 +1093,7 @@ class AIConversationSettings:
                 errors.append(f"{prefix}: each entry must be a JSON object")
                 continue
 
-            entry_errors: List[str] = []
+            entry_errors: list[str] = []
 
             for field in required_str_fields:
                 if field not in entry:
@@ -1127,7 +1128,7 @@ class AIConversationSettings:
                 )
 
             # Validate optional supported_reasoning_efforts list
-            supported_efforts: List[str] = []
+            supported_efforts: list[str] = []
             if "supported_reasoning_efforts" in entry:
                 efforts_raw = entry["supported_reasoning_efforts"]
                 if not isinstance(efforts_raw, list):
@@ -1175,7 +1176,7 @@ class AIConversationSettings:
 
             name: str = entry["name"]
             display_name: str = entry["display_name"]
-            key: Tuple[str, str] = (name, provider)
+            key: tuple[str, str] = (name, provider)
 
             if key in cls.MODELS:
                 errors.append(

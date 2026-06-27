@@ -1,4 +1,3 @@
-from typing import Dict, List, Tuple
 
 from docx.docx_ast_node import (
     DocxASTAbstractNumNode,
@@ -50,7 +49,7 @@ from document_ir import (
 
 # Style IDs / names that map to heading levels 1-6.
 # Keys are lowercased style names or IDs; values are heading levels.
-_HEADING_STYLE_NAMES: Dict[str, int] = {
+_HEADING_STYLE_NAMES: dict[str, int] = {
     "heading 1": 1, "heading1": 1, "h1": 1,
     "heading 2": 2, "heading2": 2, "h2": 2,
     "heading 3": 3, "heading3": 3, "h3": 3,
@@ -78,7 +77,7 @@ _HEADING_SIZE_THRESHOLD = 24
 
 # Mapping from approximate half-point size to heading level for the
 # direct-formatting heuristic.  Sizes are approximate — we use >=.
-_SIZE_TO_HEADING_LEVEL: List[Tuple[int, int]] = [
+_SIZE_TO_HEADING_LEVEL: list[tuple[int, int]] = [
     (40, 1),  # >= 40 half-points (20pt) → H1
     (32, 2),  # >= 32 half-points (16pt) → H2
     (28, 3),  # >= 28 half-points (14pt) → H3
@@ -154,10 +153,10 @@ class _DocxToDocumentIRMapper:
     def __init__(self, document: DocxASTDocumentNode) -> None:
         self._document = document
         # Built during map(): style_id → _ResolvedStyle
-        self._styles: Dict[str, _ResolvedStyle] = {}
+        self._styles: dict[str, _ResolvedStyle] = {}
 
         # Built during map(): (num_id, ilvl) → _NumLevel
-        self._num_levels: Dict[Tuple[str, int], _NumLevel] = {}
+        self._num_levels: dict[tuple[str, int], _NumLevel] = {}
 
     def map(self) -> DocumentIRDocumentNode:
         """Perform the full mapping and return the document_ir document."""
@@ -189,7 +188,7 @@ class _DocxToDocumentIRMapper:
         properties after applying basedOn ancestors.
         """
         # First pass: collect raw DocxASTStyleNode objects by style_id
-        raw: Dict[str, DocxASTStyleNode] = {}
+        raw: dict[str, DocxASTStyleNode] = {}
         for child in styles_node.children:
             if isinstance(child, DocxASTStyleNode):
                 raw[child.style_id] = child
@@ -202,7 +201,7 @@ class _DocxToDocumentIRMapper:
     def _resolve_style(
         self,
         style_id: str,
-        raw: Dict[str, DocxASTStyleNode],
+        raw: dict[str, DocxASTStyleNode],
         visiting: set,
     ) -> _ResolvedStyle:
         """
@@ -309,11 +308,11 @@ class _DocxToDocumentIRMapper:
     def _build_numbering_index(self, numbering_node: DocxASTNumberingNode) -> None:
         """Build a map from (num_id, ilvl) → _NumLevel."""
         # abstract_num_id → {ilvl → DocxASTNumLevelNode}
-        abstract_levels: Dict[str, Dict[int, DocxASTNumLevelNode]] = {}
+        abstract_levels: dict[str, dict[int, DocxASTNumLevelNode]] = {}
 
         for child in numbering_node.children:
             if isinstance(child, DocxASTAbstractNumNode):
-                levels: Dict[int, DocxASTNumLevelNode] = {}
+                levels: dict[int, DocxASTNumLevelNode] = {}
                 for lvl in child.children:
                     if isinstance(lvl, DocxASTNumLevelNode):
                         levels[lvl.ilvl] = lvl
@@ -321,7 +320,7 @@ class _DocxToDocumentIRMapper:
                 abstract_levels[child.abstract_num_id] = levels
 
         # num_id → abstract_num_id
-        num_to_abstract: Dict[str, str] = {}
+        num_to_abstract: dict[str, str] = {}
         for child in numbering_node.children:
             if isinstance(child, DocxASTNumNode):
                 num_to_abstract[child.num_id] = child.abstract_num_id
@@ -343,7 +342,7 @@ class _DocxToDocumentIRMapper:
 
     def _map_block_sequence(
         self,
-        nodes: List[DocxASTNode],
+        nodes: list[DocxASTNode],
         target: DocumentIRNode,
     ) -> None:
         """
@@ -364,7 +363,7 @@ class _DocxToDocumentIRMapper:
                 num_pr = self._get_num_pr(node)
                 if num_pr is not None and not self._para_is_heading(node):
                     # Start of a list — consume all consecutive list paragraphs
-                    list_paras: List[DocxASTParagraphNode] = []
+                    list_paras: list[DocxASTParagraphNode] = []
                     while i < len(nodes):
                         next_node = nodes[i]
                         if not isinstance(next_node, DocxASTParagraphNode):
@@ -385,7 +384,7 @@ class _DocxToDocumentIRMapper:
 
                 if self._para_is_code(node):
                     # Start of a code block — consume all consecutive code paragraphs
-                    code_paras: List[DocxASTParagraphNode] = []
+                    code_paras: list[DocxASTParagraphNode] = []
                     while i < len(nodes):
                         next_node = nodes[i]
                         if not isinstance(next_node, DocxASTParagraphNode):
@@ -437,7 +436,7 @@ class _DocxToDocumentIRMapper:
         return self._para_is_monospace(para, resolved)
 
     def _merge_code_paragraphs(
-        self, paras: List[DocxASTParagraphNode],
+        self, paras: list[DocxASTParagraphNode],
     ) -> DocumentIRCodeBlockNode:
         """
         Merge a sequence of code paragraphs into a single code block node.
@@ -506,8 +505,8 @@ class _DocxToDocumentIRMapper:
         return ppr.outline_level is not None
 
     def _build_list_tree(
-        self, paras: List[DocxASTParagraphNode]
-    ) -> List[DocumentIRNode]:
+        self, paras: list[DocxASTParagraphNode]
+    ) -> list[DocumentIRNode]:
         """
         Build a nested list tree from a flat sequence of list paragraphs.
 
@@ -532,11 +531,11 @@ class _DocxToDocumentIRMapper:
         # The third element is the ilvl at which this list lives, so that
         # nesting decisions are based on actual ilvl values rather than
         # assuming they are contiguous and zero-based.
-        stack: List[Tuple[DocumentIRNode, DocumentIRListItemNode, int]] = []
+        stack: list[tuple[DocumentIRNode, DocumentIRListItemNode, int]] = []
 
         # Completed root lists — normally just one, but if ilvl drops below
         # the root mid-sequence, we save the old root and start a new one.
-        roots: List[DocumentIRNode] = []
+        roots: list[DocumentIRNode] = []
 
         def _make_list(num_id: str, ilvl: int) -> DocumentIRNode:
             num_level = self._get_num_level(num_id, ilvl)
@@ -825,7 +824,7 @@ class _DocxToDocumentIRMapper:
         cells = [c for c in rows[0].children if isinstance(c, DocxASTTableCellNode)]
         cell = cells[0]
 
-        block_nodes: List[DocxASTNode] = [
+        block_nodes: list[DocxASTNode] = [
             c for c in cell.children
             if isinstance(c, (DocxASTParagraphNode, DocxASTTableNode))
         ]
@@ -839,8 +838,8 @@ class _DocxToDocumentIRMapper:
         DocumentIRTableHeaderNode; all others go into a DocumentIRTableBodyNode.
         """
         ir_table = DocumentIRTableNode()
-        header_rows: List[DocxASTTableRowNode] = []
-        body_rows: List[DocxASTTableRowNode] = []
+        header_rows: list[DocxASTTableRowNode] = []
+        body_rows: list[DocxASTTableRowNode] = []
 
         for child in table.children:
             if isinstance(child, DocxASTTableRowNode):
@@ -949,7 +948,7 @@ class _DocxToDocumentIRMapper:
 
     def _map_hyperlink(
         self, hyperlink: DocxASTHyperlinkNode,
-    ) -> List[DocumentIRNode]:
+    ) -> list[DocumentIRNode]:
         """
         Map a hyperlink to document_ir inline nodes.
 
@@ -968,14 +967,14 @@ class _DocxToDocumentIRMapper:
             return [link] if link.children else []
 
         # Internal hyperlink: emit runs as plain inline content
-        result: List[DocumentIRNode] = []
+        result: list[DocumentIRNode] = []
         for run_child in hyperlink.children:
             if isinstance(run_child, DocxASTRunNode):
                 result.extend(self._map_run(run_child))
 
         return result
 
-    def _map_run(self, run: DocxASTRunNode) -> List[DocumentIRNode]:
+    def _map_run(self, run: DocxASTRunNode) -> list[DocumentIRNode]:
         """
         Map a single run to a list of document_ir inline nodes.
 
@@ -1011,7 +1010,7 @@ class _DocxToDocumentIRMapper:
             if rpr.font_ascii.lower() in _MONOSPACE_FONTS:
                 code = True
 
-        result: List[DocumentIRNode] = []
+        result: list[DocumentIRNode] = []
 
         for child in run.children:
             if isinstance(child, DocxASTRunPropertiesNode):
@@ -1078,7 +1077,7 @@ class _DocxToDocumentIRMapper:
 
     def _extract_plain_text(self, para: DocxASTParagraphNode) -> str:
         """Extract the raw text content of a paragraph, ignoring formatting."""
-        parts: List[str] = []
+        parts: list[str] = []
         for child in para.children:
             if isinstance(child, DocxASTRunNode):
                 for item in child.children:

@@ -10,7 +10,6 @@ from pathlib import Path
 import sys
 import time
 from types import TracebackType
-from typing import List
 
 from PySide6.QtCore import QObject, QEvent
 from PySide6.QtGui import QFont, QFontDatabase, QIcon
@@ -108,7 +107,7 @@ def install_global_exception_handler() -> None:
 
 class HumbugApplication(QApplication):
     """Class for the application. Specialized to do event time reporting and focus tracking."""
-    def __init__(self, argv: List[str]) -> None:
+    def __init__(self, argv: list[str]) -> None:
         super().__init__(argv)
         self._start_time = time.monotonic()
 

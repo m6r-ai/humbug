@@ -2,7 +2,6 @@
 
 import logging
 import os
-from typing import List, Set, Tuple
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollBar, QSplitter, QLabel, QSizePolicy
 from PySide6.QtCore import Qt, QTimer, Signal
@@ -56,7 +55,7 @@ class DiffWidget(QWidget):
         self.setObjectName("DiffWidget")
         self._rows: list[DiffRow] = []
         self._syncing = False
-        self._cached_hunks: List[Tuple[int, int]] = []
+        self._cached_hunks: list[tuple[int, int]] = []
         self._current_hunk_index: int = -1
         self._hunk_scroll_target: int = -1
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -113,7 +112,7 @@ class DiffWidget(QWidget):
 
         # Find state: flat list of (pane, start, end) tuples across both panes,
         # ordered by row position so navigation feels natural.
-        self._find_matches: List[Tuple[str, int, int]] = []  # ('left'|'right', start, end)
+        self._find_matches: list[tuple[str, int, int]] = []  # ('left'|'right', start, end)
         self._find_current: int = -1
         self._find_text: str = ""
         self._find_key: tuple = ("", False, False)
@@ -299,7 +298,7 @@ class DiffWidget(QWidget):
         else:
             super().keyPressEvent(event)
 
-    def _fetch_content(self) -> tuple[List[str], List[str], str] | None:
+    def _fetch_content(self) -> tuple[list[str], list[str], str] | None:
         """
         Retrieve the HEAD content, working-tree content, and diff text.
 
@@ -337,7 +336,7 @@ class DiffWidget(QWidget):
             self._show_message(f"Could not read file: {e}")
             return None
 
-    def _parse_diff(self, diff_text: str) -> List[DiffHunk] | None:
+    def _parse_diff(self, diff_text: str) -> list[DiffHunk] | None:
         """
         Parse diff text into hunks.
 
@@ -446,7 +445,7 @@ class DiffWidget(QWidget):
 
     def find_text(
         self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False
-    ) -> Tuple[int, int, bool]:
+    ) -> tuple[int, int, bool]:
         """
         Search for *text* across both panes and navigate to the next match.
 
@@ -507,7 +506,7 @@ class DiffWidget(QWidget):
 
                 # Sort by the block number of the match start so that left and
                 # right matches on the same row appear together, left first.
-                def _sort_key(item: Tuple[str, int, int]) -> Tuple[int, int]:
+                def _sort_key(item: tuple[str, int, int]) -> tuple[int, int]:
                     pane_id, start, _end = item
                     pane = self._left_pane if pane_id == "left" else self._right_pane
                     block = pane.document().findBlock(start)
@@ -603,7 +602,7 @@ class DiffWidget(QWidget):
         if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
-    def get_match_status(self) -> Tuple[int, int, bool]:
+    def get_match_status(self) -> tuple[int, int, bool]:
         """Return (current_1based, total) for the find widget status label."""
         total = len(self._find_matches)
         if total == 0:
@@ -709,14 +708,14 @@ class DiffWidget(QWidget):
 
         return self._scrollbar.value() == self._hunk_scroll_target
 
-    def _hunks(self) -> List[Tuple[int, int]]:
+    def _hunks(self) -> list[tuple[int, int]]:
         """
         Return (start, end) row index pairs for every hunk, in document order.
 
         Both indices are inclusive.
         """
-        changed_types: Set[DiffRowType] = {DiffRowType.ADDED, DiffRowType.REMOVED, DiffRowType.CHANGED}
-        hunks: List[Tuple[int, int]] = []
+        changed_types: set[DiffRowType] = {DiffRowType.ADDED, DiffRowType.REMOVED, DiffRowType.CHANGED}
+        hunks: list[tuple[int, int]] = []
         hunk_start: int = -1
         prev_was_changed = False
         for i, row in enumerate(self._rows):

@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import json
 import logging
-from typing import Dict
 
 from ai import AIConversationSettings, AIReasoningCapability
 from ai.ai_model import AIReasoningEffort
@@ -17,7 +16,7 @@ class MindspaceSettings:
     """
     _logger = logging.getLogger("MindspaceSettings")
 
-    enabled_tools: Dict[str, bool]
+    enabled_tools: dict[str, bool]
     model: str = ""
     provider: str = ""
     temperature: float = 0.7

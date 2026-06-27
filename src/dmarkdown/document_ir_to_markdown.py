@@ -1,4 +1,4 @@
-from typing import List, Sequence
+from collections.abc import Sequence
 
 from document_ir import (
     DocumentIRBlockquoteNode,
@@ -53,7 +53,7 @@ class _DocumentIRToMarkdownSerialiser:
         Returns:
             The Markdown text.
         """
-        blocks: List[str] = []
+        blocks: list[str] = []
         for child in document.children:
             block = self._serialise_block(child, depth=0, ordered_index=None)
             if block is not None:
@@ -121,7 +121,7 @@ class _DocumentIRToMarkdownSerialiser:
 
     def _serialise_blockquote(self, node: DocumentIRBlockquoteNode) -> str | None:
         """Serialise a blockquote by prefixing each block line with '> '."""
-        inner_blocks: List[str] = []
+        inner_blocks: list[str] = []
         for child in node.children:
             block = self._serialise_block(child, depth=0, ordered_index=None)
             if block is not None:
@@ -143,7 +143,7 @@ class _DocumentIRToMarkdownSerialiser:
         self, node: DocumentIRUnorderedListNode, depth: int
     ) -> str | None:
         """Serialise an unordered list."""
-        lines: List[str] = []
+        lines: list[str] = []
         for child in node.children:
             if isinstance(child, DocumentIRListItemNode):
                 item_lines = self._serialise_list_item(child, depth=depth, ordered_index=None)
@@ -155,7 +155,7 @@ class _DocumentIRToMarkdownSerialiser:
         self, node: DocumentIROrderedListNode, depth: int
     ) -> str | None:
         """Serialise an ordered list."""
-        lines: List[str] = []
+        lines: list[str] = []
         index = node.start
         for child in node.children:
             if isinstance(child, DocumentIRListItemNode):
@@ -170,7 +170,7 @@ class _DocumentIRToMarkdownSerialiser:
         item: DocumentIRListItemNode,
         depth: int,
         ordered_index: int | None,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Serialise a list item, returning a list of output lines.
 
@@ -197,7 +197,7 @@ class _DocumentIRToMarkdownSerialiser:
         # Width of "marker + space" for continuation indent alignment
         continuation_indent = indent + " " * (len(marker) + 1)
 
-        lines: List[str] = []
+        lines: list[str] = []
         is_first_para = True
 
         for child in item.children:
@@ -237,7 +237,7 @@ class _DocumentIRToMarkdownSerialiser:
         Definition terms are rendered as bold text.  Definition descriptions
         are rendered with a leading colon and three spaces (': ' style).
         """
-        lines: List[str] = []
+        lines: list[str] = []
         for child in node.children:
             if isinstance(child, DocumentIRDefinitionTermNode):
                 text = self._serialise_inline_children(child.children)
@@ -257,8 +257,8 @@ class _DocumentIRToMarkdownSerialiser:
         row.  If there is no header, the first body row is treated as the
         header (required by GFM table syntax).
         """
-        header_rows: List[DocumentIRTableRowNode] = []
-        body_rows: List[DocumentIRTableRowNode] = []
+        header_rows: list[DocumentIRTableRowNode] = []
+        body_rows: list[DocumentIRTableRowNode] = []
 
         for child in node.children:
             if isinstance(child, DocumentIRTableHeaderNode):
@@ -311,7 +311,7 @@ class _DocumentIRToMarkdownSerialiser:
                 col_widths[c] = max(col_widths[c], len(cell))
 
         # Build separator row based on alignment
-        sep_cells: List[str] = []
+        sep_cells: list[str] = []
         for c, alignment in enumerate(alignments):
             w = col_widths[c]
             if alignment == "center":
@@ -323,7 +323,7 @@ class _DocumentIRToMarkdownSerialiser:
             else:
                 sep_cells.append("-" * w)
 
-        lines: List[str] = []
+        lines: list[str] = []
         lines.append(self._format_row(header_cells, col_widths))
         lines.append(self._format_row(sep_cells, col_widths))
         for row_cells in body_cell_rows:
@@ -331,9 +331,9 @@ class _DocumentIRToMarkdownSerialiser:
 
         return "\n".join(lines)
 
-    def _row_alignments(self, row: DocumentIRTableRowNode) -> List[str]:
+    def _row_alignments(self, row: DocumentIRTableRowNode) -> list[str]:
         """Return a list of alignment strings for each cell in a row."""
-        alignments: List[str] = []
+        alignments: list[str] = []
         for child in row.children:
             if isinstance(child, DocumentIRTableCellNode):
                 alignments.append(child.alignment or "left")
@@ -346,9 +346,9 @@ class _DocumentIRToMarkdownSerialiser:
 
     def _render_row_cells(
         self, row: DocumentIRTableRowNode, col_count: int
-    ) -> List[str]:
+    ) -> list[str]:
         """Render all cells in a row to strings, padding to col_count."""
-        cells: List[str] = []
+        cells: list[str] = []
         for child in row.children:
             if isinstance(child, DocumentIRTableCellNode):
                 cells.append(self._serialise_cell(child))
@@ -366,7 +366,7 @@ class _DocumentIRToMarkdownSerialiser:
         Inline children are serialised directly; block children (paragraphs,
         etc.) have their text extracted and joined with spaces.
         """
-        parts: List[str] = []
+        parts: list[str] = []
 
         # Inline children directly on the cell (from markdown_to_document_ir path)
         inline_types = (DocumentIRTextSpanNode, DocumentIRLinkNode, DocumentIRImageNode, DocumentIRLineBreakNode)
@@ -390,7 +390,7 @@ class _DocumentIRToMarkdownSerialiser:
         # Escape pipe characters so they don't break table structure
         return " ".join(parts).replace("|", "\\|")
 
-    def _format_row(self, cells: List[str], col_widths: List[int]) -> str:
+    def _format_row(self, cells: list[str], col_widths: list[int]) -> str:
         """Format a list of cell strings into a padded pipe-table row."""
         padded = [cell.ljust(col_widths[i]) for i, cell in enumerate(cells)]
         return "| " + " | ".join(padded) + " |"
@@ -404,7 +404,7 @@ class _DocumentIRToMarkdownSerialiser:
         **word1****word2** that arise when the source document (e.g. a DOCX) splits
         a single logical bold run across multiple physical runs.
         """
-        coalesced: List[DocumentIRNode] = []
+        coalesced: list[DocumentIRNode] = []
         for child in children:
             if (
                 coalesced

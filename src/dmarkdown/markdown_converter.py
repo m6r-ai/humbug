@@ -6,7 +6,7 @@ to HTML while preserving code blocks and handling streaming text updates.
 """
 
 import logging
-from typing import List, Tuple, cast
+from typing import cast
 
 from syntax import ProgrammingLanguage
 
@@ -41,7 +41,7 @@ class MarkdownConverter:
 
         self._source_path: str | None = None
 
-    def extract_sections(self, text: str, path: str | None) -> List[Tuple[MarkdownASTNode, ProgrammingLanguage | None]]:
+    def extract_sections(self, text: str, path: str | None) -> list[tuple[MarkdownASTNode, ProgrammingLanguage | None]]:
         """
         Process markdown text and extract content sections from it.
 
@@ -62,8 +62,8 @@ class MarkdownConverter:
         self.ast_builder.update_ast(text, self.current_text, path)
         self.current_text = text
 
-        sections: List[tuple[MarkdownASTNode, ProgrammingLanguage | None]] = []
-        current_markdown_nodes: List[MarkdownASTNode] = []
+        sections: list[tuple[MarkdownASTNode, ProgrammingLanguage | None]] = []
+        current_markdown_nodes: list[MarkdownASTNode] = []
 
         # Helper function to add accumulated markdown content as a section
         def add_markdown_section() -> None:

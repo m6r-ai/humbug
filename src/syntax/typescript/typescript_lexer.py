@@ -1,4 +1,3 @@
-from typing import Set
 
 from syntax.javascript.javascript_lexer import JavaScriptLexer
 
@@ -21,7 +20,7 @@ class TypeScriptLexer(JavaScriptLexer):
         Returns:
             True if the value is a TypeScript keyword, False otherwise
         """
-        keywords: Set[str] = {
+        keywords: set[str] = {
             'abstract', 'any', 'as', 'asserts', 'async', 'await',
             'bigint', 'boolean', 'break', 'case', 'catch', 'class',
             'const', 'continue', 'debugger', 'declare', 'default',

@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 from syntax.lexer import Lexer, LexerState, Token, TokenType
 

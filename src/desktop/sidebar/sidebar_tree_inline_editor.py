@@ -1,7 +1,7 @@
 """Simplified inline editor widget for sidebar file tree items that works with Qt's editor system."""
 
+from collections.abc import Callable
 import os
-from typing import Callable
 
 from PySide6.QtWidgets import QLineEdit, QWidget
 from PySide6.QtCore import Signal

@@ -1,6 +1,6 @@
 """OpenAI backend implementation."""
 import json
-from typing import Dict, List, Any
+from typing import Any
 
 import aiohttp
 
@@ -15,7 +15,7 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 class OpenAIBackend(AIBackend):
     """OpenAI API backend implementation with streaming support."""
 
-    async def fetch_models(self) -> List[str]:
+    async def fetch_models(self) -> list[str]:
         """Fetch available model IDs from the OpenAI API."""
         url = self._api_url.replace("/chat/completions", "/models")
         headers = {"Authorization": f"Bearer {self._api_key}"}
@@ -25,7 +25,7 @@ class OpenAIBackend(AIBackend):
                 data = await response.json()
                 return [m["id"] for m in data.get("data", [])]
 
-    def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
+    def _format_tool_definition(self, tool_def: AIToolDefinition) -> dict[str, Any]:
         """
         Convert tool definition to OpenAI format.
 
@@ -35,7 +35,7 @@ class OpenAIBackend(AIBackend):
         Returns:
             Tool definition in OpenAI format
         """
-        properties: Dict[str, Any] = {}
+        properties: dict[str, Any] = {}
         required = []
 
         for param in tool_def.parameters:
@@ -82,7 +82,7 @@ class OpenAIBackend(AIBackend):
             }
         }
 
-    def _build_user_message(self, content: str, tool_results: List[AIToolResult] | None = None) -> List[Dict[str, Any]]:
+    def _build_user_message(self, content: str, tool_results: list[AIToolResult] | None = None) -> list[dict[str, Any]]:
         """
         Build user message(s) for OpenAI format.
 
@@ -115,7 +115,7 @@ class OpenAIBackend(AIBackend):
 
         return messages
 
-    def _build_assistant_message(self, content: str, tool_calls: List[AIToolCall] | None = None) -> Dict[str, Any]:
+    def _build_assistant_message(self, content: str, tool_calls: list[AIToolCall] | None = None) -> dict[str, Any]:
         """
         Build assistant message for OpenAI format.
 
@@ -126,7 +126,7 @@ class OpenAIBackend(AIBackend):
         Returns:
             Assistant message dictionary
         """
-        message: Dict[str, Any] = {
+        message: dict[str, Any] = {
             "role": "assistant",
             "content": content if content else "...",  # Never send empty content
         }
@@ -146,7 +146,7 @@ class OpenAIBackend(AIBackend):
 
         return message
 
-    def _format_messages_for_provider(self, conversation_history: AIConversationHistory) -> List[Dict[str, Any]]:
+    def _format_messages_for_provider(self, conversation_history: AIConversationHistory) -> list[dict[str, Any]]:
         """
         Format conversation history for OpenAI's API format in a single pass.
 
@@ -156,7 +156,7 @@ class OpenAIBackend(AIBackend):
         Returns:
             List of messages formatted for OpenAI API
         """
-        result: List[Dict[str, Any]] = []
+        result: list[dict[str, Any]] = []
         last_user_message_index = -1
         current_turn_message_index = -1
 

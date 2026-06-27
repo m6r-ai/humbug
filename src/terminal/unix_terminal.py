@@ -19,7 +19,7 @@ import signal
 import struct
 import termios
 import tty
-from typing import Tuple, cast
+from typing import cast
 
 from terminal.terminal_base import TerminalBase
 
@@ -42,7 +42,7 @@ class UnixTerminal(TerminalBase):
         flags = fcntl.fcntl(fd, fcntl.F_GETFL)
         fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
-    async def start(self, command: str | None = None) -> Tuple[int, int]:
+    async def start(self, command: str | None = None) -> tuple[int, int]:
         """Start Unix terminal process with proper PTY setup."""
         main_fd, secondary_fd = pty.openpty()
 

@@ -6,7 +6,7 @@ IR-level optimizations that are safe because Menai is a pure functional language
 — every binding is immutable and every expression is side-effect-free.
 """
 
-from typing import List, Tuple, cast
+from typing import cast
 
 from menai.menai_ir import (
     MenaiIRExpr,
@@ -66,7 +66,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
 
         return new_ir, self._eliminations > 0
 
-    def _opt(self, ir: MenaiIRExpr, frame_stack: List[int]) -> MenaiIRExpr:
+    def _opt(self, ir: MenaiIRExpr, frame_stack: list[int]) -> MenaiIRExpr:
         """Recursively walk the IR tree and apply optimizations."""
         if isinstance(ir, MenaiIRLet):
             return self._opt_let(ir, frame_stack)
@@ -119,12 +119,12 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
 
         raise TypeError(f"MenaiIROptimizer: unhandled IR node type {type(ir).__name__}")
 
-    def _opt_let(self, ir: MenaiIRLet, frame_stack: List[int]) -> MenaiIRExpr:
+    def _opt_let(self, ir: MenaiIRLet, frame_stack: list[int]) -> MenaiIRExpr:
         """Drop dead let bindings (total use count == 0)."""
         current_frame = frame_stack[-1]
         counts = cast(IRUseCounts, self._counts)
 
-        live: List[Tuple[str, MenaiIRExpr]] = []
+        live: list[tuple[str, MenaiIRExpr]] = []
         for binding in ir.bindings:
             name, value_plan, *_ = binding
             if counts.total_count(current_frame, id(binding)) == 0:
@@ -144,12 +144,12 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
             in_tail_position=ir.in_tail_position,
         )
 
-    def _opt_letrec(self, ir: MenaiIRLetrec, frame_stack: List[int]) -> MenaiIRExpr:
+    def _opt_letrec(self, ir: MenaiIRLetrec, frame_stack: list[int]) -> MenaiIRExpr:
         """Drop dead letrec bindings (total use count == 0)."""
         current_frame = frame_stack[-1]
         counts = cast(IRUseCounts, self._counts)
 
-        live: List[Tuple[str, MenaiIRExpr]] = []
+        live: list[tuple[str, MenaiIRExpr]] = []
         for binding in ir.bindings:
             name, value_plan, *_ = binding
             if counts.total_count(current_frame, id(binding)) == 0:
@@ -200,7 +200,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
 
         return False
 
-    def _opt_if(self, ir: MenaiIRIf, frame_stack: List[int]) -> MenaiIRExpr:
+    def _opt_if(self, ir: MenaiIRIf, frame_stack: list[int]) -> MenaiIRExpr:
         opt_condition = self._opt(ir.condition_plan, frame_stack)
         opt_then = self._opt(ir.then_plan, frame_stack)
         opt_else = self._opt(ir.else_plan, frame_stack)
@@ -265,7 +265,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
             in_tail_position=ir.in_tail_position,
         )
 
-    def _opt_lambda(self, ir: MenaiIRLambda, frame_stack: List[int]) -> MenaiIRLambda:
+    def _opt_lambda(self, ir: MenaiIRLambda, frame_stack: list[int]) -> MenaiIRLambda:
         """Optimize the body of a lambda."""
         counts = cast(IRUseCounts, self._counts)
         lambda_frame_id = counts.lambda_frame_ids.get(id(ir))
@@ -285,7 +285,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
             source_file=ir.source_file,
         )
 
-    def _opt_call(self, ir: MenaiIRCall, frame_stack: List[int]) -> MenaiIRCall:
+    def _opt_call(self, ir: MenaiIRCall, frame_stack: list[int]) -> MenaiIRCall:
         """Optimize the function and argument plans of a call."""
         return MenaiIRCall(
             func_plan=self._opt(ir.func_plan, frame_stack),

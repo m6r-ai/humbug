@@ -1,7 +1,7 @@
 """Input widget that matches history message styling and acts as a command line."""
 
 import sys
-from typing import Dict, List, cast
+from typing import cast
 
 from PySide6.QtCore import Signal, Qt, QRect, QEvent, QObject, QTimer
 from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
@@ -28,7 +28,7 @@ class ShellInput(ShellMessage):
         super().__init__(parent, is_input=True)
 
         # Command history tracking
-        self._command_history: List[str] = []
+        self._command_history: list[str] = []
         self._history_position: int = -1
         self._current_command: str = ""
 
@@ -214,7 +214,7 @@ class ShellInput(ShellMessage):
         self._history_position = -1
         self._current_command = ""
 
-    def set_command_history(self, commands: List[str]) -> None:
+    def set_command_history(self, commands: list[str]) -> None:
         """
         Set the command history from a list of commands.
 
@@ -225,7 +225,7 @@ class ShellInput(ShellMessage):
         self._history_position = -1
         self._current_command = ""
 
-    def get_command_history(self) -> List[str]:
+    def get_command_history(self) -> list[str]:
         """
         Get the current command history.
 
@@ -338,7 +338,7 @@ class ShellInput(ShellMessage):
         """Paste text from clipboard."""
         self._text_area.paste()
 
-    def set_cursor_position(self, position: Dict[str, int]) -> None:
+    def set_cursor_position(self, position: dict[str, int]) -> None:
         """
         Set cursor position.
 
@@ -360,7 +360,7 @@ class ShellInput(ShellMessage):
 
         self._text_area.setTextCursor(cursor)
 
-    def get_cursor_position(self) -> Dict[str, int]:
+    def get_cursor_position(self) -> dict[str, int]:
         """
         Get current cursor position.
 

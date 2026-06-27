@@ -1,7 +1,7 @@
 """Shell widget implementation for displaying shell command history."""
 
 import logging
-from typing import Dict, List, Tuple, Any, Set
+from typing import Any
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy
@@ -56,7 +56,7 @@ class ShellWidget(QWidget):
         self._style_manager = StyleManager()
 
         # Widget tracking
-        self._messages: List[ShellMessage] = []
+        self._messages: list[ShellMessage] = []
         self._message_with_selection: ShellMessage | None = None
 
         # Initialize tracking variables
@@ -112,7 +112,7 @@ class ShellWidget(QWidget):
         shell_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
-        self._search_highlights: Dict[ShellMessage, List[Tuple[int, int]]] = {}
+        self._search_highlights: dict[ShellMessage, list[tuple[int, int]]] = {}
 
         # Tracking for spotlighted message
         self._spotlighted_message_index = -1
@@ -150,11 +150,11 @@ class ShellWidget(QWidget):
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
         # Find functionality
-        self._matches: List[Tuple[ShellMessage, List[Tuple[int, int]]]] = []
+        self._matches: list[tuple[ShellMessage, list[tuple[int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search: tuple[str, bool, bool] = ("", False, False)
-        self._highlighted_widgets: Set[ShellMessage] = set()
+        self._highlighted_widgets: set[ShellMessage] = set()
 
         # Load shell messages when initialized
         self.load_messages()
@@ -815,14 +815,14 @@ class ShellWidget(QWidget):
         has_text = bool(self._input.to_plain_text())
         return has_text and self._mindspace_manager.has_mindspace()
 
-    def create_state_metadata(self, _temp_state: bool) -> Dict[str, Any]:
+    def create_state_metadata(self, _temp_state: bool) -> dict[str, Any]:
         """
         Create metadata dictionary capturing current widget state.
 
         Returns:
             Dictionary containing shell state metadata
         """
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
 
         # Store current input content
         metadata["content"] = self._input.to_plain_text()
@@ -836,7 +836,7 @@ class ShellWidget(QWidget):
 
         return metadata
 
-    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
         """
         Restore widget state from metadata.
 
@@ -869,7 +869,7 @@ class ShellWidget(QWidget):
                 self._messages[self._spotlighted_message_index].set_spotlighted(True)
                 self._messages[self._spotlighted_message_index].setFocus()
 
-    def _set_cursor_position(self, position: Dict[str, int]) -> None:
+    def _set_cursor_position(self, position: dict[str, int]) -> None:
         """
         Set cursor position in input area.
 
@@ -881,7 +881,7 @@ class ShellWidget(QWidget):
 
         self._input.set_cursor_position(position)
 
-    def _get_cursor_position(self) -> Dict[str, int]:
+    def _get_cursor_position(self) -> dict[str, int]:
         """
         Get current cursor position from input area.
 
@@ -917,7 +917,7 @@ class ShellWidget(QWidget):
         forward: bool = True,
         case_sensitive: bool = False,
         regexp: bool = False,
-    ) -> Tuple[int, int, bool]:
+    ) -> tuple[int, int, bool]:
         """
         Find all instances of text and highlight them.
 
@@ -1054,7 +1054,7 @@ class ShellWidget(QWidget):
         self._current_match_index = -1
         self._last_search = ("", False, False)
 
-    def get_match_status(self) -> Tuple[int, int, bool]:
+    def get_match_status(self) -> tuple[int, int, bool]:
         """
         Get current match status.
 

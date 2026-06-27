@@ -1,7 +1,6 @@
 """Command for opening or creating files in an editor tab from the system shell."""
 
 import os
-from typing import List
 
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from syntax import Token, TokenType
@@ -17,7 +16,7 @@ class ShellCommandEdit(ShellCommand):
         """Get the name of the command."""
         return "edit"
 
-    def aliases(self) -> List[str]:
+    def aliases(self) -> list[str]:
         """Get alternate names for the command."""
         return ["open"]
 
@@ -25,7 +24,7 @@ class ShellCommandEdit(ShellCommand):
         """Get the help text for the command."""
         return "Opens a file for editing"
 
-    def _execute_command(self, tokens: List[Token]) -> bool:
+    def _execute_command(self, tokens: list[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
@@ -86,9 +85,9 @@ class ShellCommandEdit(ShellCommand):
     def get_token_completions(
         self,
         current_token: Token,
-        _tokens: List[Token],
+        _tokens: list[Token],
         _cursor_token_index: int
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get completions for the current token based on token information.
 

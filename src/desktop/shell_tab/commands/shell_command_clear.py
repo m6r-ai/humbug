@@ -1,7 +1,7 @@
 """Command for clearing the shell history."""
 
+from collections.abc import Callable
 import logging
-from typing import Callable, List
 
 from syntax import Token
 
@@ -26,7 +26,7 @@ class ShellCommandClear(ShellCommand):
         """Get the name of the command."""
         return "clear"
 
-    def aliases(self) -> List[str]:
+    def aliases(self) -> list[str]:
         """Get alternate names for the command."""
         return []
 
@@ -34,7 +34,7 @@ class ShellCommandClear(ShellCommand):
         """Get the help text for the command."""
         return "Clear the shell history"
 
-    def _execute_command(self, tokens: List[Token]) -> bool:
+    def _execute_command(self, tokens: list[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 

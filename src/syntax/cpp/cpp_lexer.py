@@ -3,7 +3,7 @@ C++ Lexer
 
 This module implements a lexer for C++ code, extending the functionality of the C lexer.
 """
-from typing import Callable
+from collections.abc import Callable
 
 from syntax.c.c_lexer import CLexer
 from syntax.lexer import Lexer, Token, TokenType

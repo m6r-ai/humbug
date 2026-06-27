@@ -5,7 +5,7 @@ This module provides functionality to incrementally convert simplified markdown
 to HTML while preserving code blocks and handling streaming text updates.
 """
 
-from typing import List, Any
+from typing import Any
 
 from syntax import ParserState, ProgrammingLanguage, Token
 
@@ -16,7 +16,7 @@ class MarkdownASTNode:
     def __init__(self) -> None:
         """Initialize an AST node with common markdown properties."""
         self.parent: MarkdownASTNode | None = None
-        self.children: List[MarkdownASTNode] = []
+        self.children: list[MarkdownASTNode] = []
 
         # Source range information to support incremental updating
         self.line_start: int | None = None
@@ -111,7 +111,7 @@ class MarkdownASTVisitor:
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
 
-    def generic_visit(self, node: MarkdownASTNode) -> List[Any]:
+    def generic_visit(self, node: MarkdownASTNode) -> list[Any]:
         """
         Default visit method for nodes without specific handlers.
 
@@ -290,8 +290,8 @@ class MarkdownASTCodeBlockNode(MarkdownASTNode):
         self,
         language_name: str,
         content: str,
-        tokens_by_line: List[List[Token]],
-        states_by_line: List[ParserState | None],
+        tokens_by_line: list[list[Token]],
+        states_by_line: list[ParserState | None],
         language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN,
         total_lines: int = 0
     ) -> None:

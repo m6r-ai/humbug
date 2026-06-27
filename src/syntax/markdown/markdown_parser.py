@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import List
 
 from syntax.lexer import TokenType, Token
 from syntax.markdown.markdown_lexer import MarkdownLexer
@@ -49,8 +48,8 @@ class MarkdownParserState(ParserState):
     fence_blockquote_depth: int = 0
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
     embedded_parser_state: ParserState | None = None
-    block_stack: List[BlockContext] = field(default_factory=list)
-    inline_formatting_stack: List[str] = field(default_factory=list)
+    block_stack: list[BlockContext] = field(default_factory=list)
+    inline_formatting_stack: list[str] = field(default_factory=list)
     in_link: bool = False
     in_image: bool = False
 
@@ -244,7 +243,7 @@ class MarkdownParser(Parser):
 
         return text[i:i+2] == '~~'
 
-    def _parse_inline_formatting_in_text(self, text_token: Token, block_type: TokenType | None) -> List[Token]:
+    def _parse_inline_formatting_in_text(self, text_token: Token, block_type: TokenType | None) -> list[Token]:
         """
         Parse a text token for inline formatting and return a list of tokens.
 
@@ -256,7 +255,7 @@ class MarkdownParser(Parser):
             List of tokens with inline formatting broken out
         """
         text = text_token.value
-        tokens: List[Token] = []
+        tokens: list[Token] = []
         i = 0
         current_text_start = 0
         base_position = text_token.start
@@ -495,7 +494,7 @@ class MarkdownParser(Parser):
         nested_fence_depth: int,
         fence_blockquote_depth: int,
         language: ProgrammingLanguage,
-        block_stack: List[BlockContext],
+        block_stack: list[BlockContext],
         embedded_parser_state: ParserState | None,
     ) -> MarkdownParserState:
         """Helper to create a MarkdownParserState from individual fields."""
@@ -532,7 +531,7 @@ class MarkdownParser(Parser):
         language = ProgrammingLanguage.UNKNOWN
         embedded_parser_state = None
         parsing_continuation = False
-        block_stack: List[BlockContext] = []
+        block_stack: list[BlockContext] = []
 
         if prev_parser_state is not None:
             assert isinstance(prev_parser_state, MarkdownParserState), \
@@ -666,7 +665,7 @@ class MarkdownParser(Parser):
             # Blockquote depth decreased — trim the stack down to the new depth,
             # discarding both the excess BLOCKQUOTE entries and any LIST_MARKER
             # entries that were nested inside them.
-            new_stack: List[BlockContext] = []
+            new_stack: list[BlockContext] = []
             remaining_bq = bq_tokens_count
             for ctx in block_stack:
                 if ctx.type == TokenType.BLOCKQUOTE:
@@ -854,7 +853,7 @@ class MarkdownParser(Parser):
                 (ctx.type for ctx in reversed(block_stack)),
                 None
             )
-            processed_tokens: List[Token] = []
+            processed_tokens: list[Token] = []
             for token in self._tokens:
                 if token.type in (TokenType.TEXT, TokenType.HEADING, TokenType.BLOCKQUOTE, TokenType.LIST_MARKER):
                     if token.type == TokenType.TEXT and innermost_type is not None:

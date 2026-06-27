@@ -3,7 +3,6 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -16,7 +15,7 @@ from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettin
 @pytest.fixture
 def real_path_resolver():
     """Path resolver that accepts real absolute paths (no sandbox restriction)."""
-    def resolver(path: str) -> Tuple[Path, str]:
+    def resolver(path: str) -> tuple[Path, str]:
         abs_path = Path(path).resolve()
         return abs_path, str(abs_path)
     return resolver

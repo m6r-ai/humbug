@@ -1,8 +1,9 @@
 """Editor context model."""
 
-import logging
+from collections.abc import Callable
 from difflib import unified_diff
-from typing import Any, Callable, Dict, List
+import logging
+from typing import Any
 
 from PySide6.QtCore import QRegularExpression
 from PySide6.QtGui import QTextCursor, QTextDocument
@@ -28,12 +29,12 @@ class EditorContext:
         self,
         context_id: str,
         document: QTextDocument,
-        get_cursor_info_cb: Callable[[], Dict[str, Any]],
+        get_cursor_info_cb: Callable[[], dict[str, Any]],
         get_selected_text_cb: Callable[[], str],
-        get_editor_info_cb: Callable[[], Dict[str, Any]],
+        get_editor_info_cb: Callable[[], dict[str, Any]],
         save_cb: Callable[[], bool],
         on_goto_line: Callable[[int, int], None] | None = None,
-        on_apply_diff: Callable[[str], Dict[str, Any]] | None = None,
+        on_apply_diff: Callable[[str], dict[str, Any]] | None = None,
     ) -> None:
         """
         Initialise the editor context.
@@ -126,7 +127,7 @@ class EditorContext:
         text = cursor.selectedText()
         return text.replace('\u2029', '\n')
 
-    def get_cursor_info(self) -> Dict[str, Any]:
+    def get_cursor_info(self) -> dict[str, Any]:
         """
         Return current cursor position and selection information.
 
@@ -139,7 +140,7 @@ class EditorContext:
         """
         return self._get_cursor_info_cb()
 
-    def get_editor_info(self) -> Dict[str, Any]:
+    def get_editor_info(self) -> dict[str, Any]:
         """
         Return editor metadata and document information.
 
@@ -157,7 +158,7 @@ class EditorContext:
         search_text: str,
         case_sensitive: bool = False,
         regexp: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Find all occurrences of text in the document.
 
@@ -176,7 +177,7 @@ class EditorContext:
         if not search_text:
             return []
 
-        matches: List[Dict[str, Any]] = []
+        matches: list[dict[str, Any]] = []
         find_flags = QTextDocument.FindFlag(0)
         if case_sensitive:
             find_flags |= QTextDocument.FindFlag.FindCaseSensitively
@@ -279,7 +280,7 @@ class EditorContext:
         )
         return ''.join(diff_lines)
 
-    def apply_diff(self, diff_text: str) -> Dict[str, Any]:
+    def apply_diff(self, diff_text: str) -> dict[str, Any]:
         """
         Apply a unified diff to the editor content.
 

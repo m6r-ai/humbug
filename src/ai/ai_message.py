@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, List
 import uuid
 
 from ai.ai_message_source import AIMessageSource
@@ -25,20 +24,20 @@ class AIMessage:
     content: str
     timestamp: datetime
     usage: AIUsage | None = None
-    error: Dict | None = None
+    error: dict | None = None
     model: str | None = None
     provider: str | None = None
     temperature: float | None = None
     reasoning_capability: AIReasoningCapability | None = None
     reasoning_effort: str | None = None
     completed: bool = True
-    tool_calls: List[AIToolCall] | None = None
+    tool_calls: list[AIToolCall] | None = None
     tool_call_context: str | None = None
-    tool_results: List[AIToolResult] | None = None
+    tool_results: list[AIToolResult] | None = None
     signature: str | None = None
     redacted_reasoning: str | None = None
     user_name: str | None = None
-    attachments: List[str] | None = None  # List of attachment GUIDs
+    attachments: list[str] | None = None  # List of attachment GUIDs
 
     # Map between AIMessageSource enum and transcript type strings
     _SOURCE_TYPE_MAP = {
@@ -69,7 +68,7 @@ class AIMessage:
         source: AIMessageSource,
         content: str,
         usage: AIUsage | None = None,
-        error: Dict | None = None,
+        error: dict | None = None,
         model: str | None = None,
         provider: str | None = None,
         temperature: float | None = None,
@@ -77,13 +76,13 @@ class AIMessage:
         reasoning_effort: str | None = None,
         completed: bool = True,
         timestamp: datetime | None = None,
-        tool_calls: List[AIToolCall] | None = None,
+        tool_calls: list[AIToolCall] | None = None,
         tool_call_context: str | None = None,
-        tool_results: List[AIToolResult] | None = None,
+        tool_results: list[AIToolResult] | None = None,
         signature: str | None = None,
         redacted_reasoning: str | None = None,
         user_name: str | None = None,
-        attachments: List[str] | None = None,
+        attachments: list[str] | None = None,
     ) -> 'AIMessage':
         """Create a new message with generated ID and current timestamp."""
         if timestamp is None:
@@ -139,7 +138,7 @@ class AIMessage:
         """Get string representation of the message source."""
         return self._SOURCE_TYPE_MAP[self.source]
 
-    def to_transcript_dict(self) -> Dict:
+    def to_transcript_dict(self) -> dict:
         """Convert message to transcript format."""
         message = {
             "id": self.id,
@@ -210,7 +209,7 @@ class AIMessage:
         return message
 
     @classmethod
-    def from_transcript_dict(cls, data: Dict) -> 'AIMessage':
+    def from_transcript_dict(cls, data: dict) -> 'AIMessage':
         """
         Create a Message instance from transcript dictionary format.
 

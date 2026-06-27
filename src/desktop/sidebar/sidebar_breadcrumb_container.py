@@ -1,8 +1,9 @@
 """Container that coordinates the breadcrumb bar and tree view geometry."""
 
-import os
+from collections.abc import Callable
 import logging
-from typing import Callable
+import os
+
 from PySide6.QtCore import QEvent, QModelIndex, QObject, QPoint, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import QFont, QResizeEvent
 from PySide6.QtWidgets import QApplication, QScrollBar, QSizePolicy, QWidget

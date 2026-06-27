@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List
 
 from syntax.lexer import Lexer, LexerState, Token
 
@@ -24,7 +23,7 @@ class Parser(ABC):
     """
     def __init__(self) -> None:
         self._lexer: Lexer | None = None
-        self._tokens: List[Token] = []
+        self._tokens: list[Token] = []
         self._next_token: int = 0
 
     @abstractmethod

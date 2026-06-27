@@ -11,7 +11,6 @@ from pathlib import Path
 from xml.sax import saxutils
 import struct
 import zipfile
-from typing import List
 
 from docx.docx_ast_node import (
     DocxASTAbstractNumNode,
@@ -413,7 +412,7 @@ class _DocxASTSerialiser:
 
     def _serialise_document(self, body_node: DocxASTBodyNode | None) -> str:
         """Produce the full document.xml string."""
-        body_parts: List[str] = []
+        body_parts: list[str] = []
         if body_node is not None:
             for child in body_node.children:
                 body_parts.append(self._serialise_block(child))
@@ -447,7 +446,7 @@ class _DocxASTSerialiser:
     def _serialise_paragraph(self, node: DocxASTParagraphNode) -> str:
         """Serialise a <w:p> element."""
         ppr_xml = ""
-        run_parts: List[str] = []
+        run_parts: list[str] = []
 
         for child in node.children:
             if isinstance(child, DocxASTParagraphPropertiesNode):
@@ -475,7 +474,7 @@ class _DocxASTSerialiser:
 
     def _serialise_ppr(self, node: DocxASTParagraphPropertiesNode) -> str:
         """Serialise a <w:pPr> element."""
-        parts: List[str] = []
+        parts: list[str] = []
 
         if node.style_id:
             parts.append(f'<w:pStyle w:val="{_esc(node.style_id)}"/>')
@@ -536,7 +535,7 @@ class _DocxASTSerialiser:
     def _serialise_run(self, node: DocxASTRunNode) -> str:
         """Serialise a <w:r> element."""
         rpr_xml = ""
-        content_parts: List[str] = []
+        content_parts: list[str] = []
 
         for child in node.children:
             if isinstance(child, DocxASTRunPropertiesNode):
@@ -569,7 +568,7 @@ class _DocxASTSerialiser:
 
     def _serialise_rpr(self, node: DocxASTRunPropertiesNode) -> str:
         """Serialise a <w:rPr> element."""
-        parts: List[str] = []
+        parts: list[str] = []
 
         if node.style_id:
             parts.append(f'<w:rStyle w:val="{_esc(node.style_id)}"/>')
@@ -725,7 +724,7 @@ class _DocxASTSerialiser:
     def _serialise_table(self, node: DocxASTTableNode) -> str:
         """Serialise a <w:tbl> element."""
         tbl_pr_xml = ""
-        row_parts: List[str] = []
+        row_parts: list[str] = []
 
         for child in node.children:
             if isinstance(child, DocxASTTablePropertiesNode):
@@ -755,7 +754,7 @@ class _DocxASTSerialiser:
 
     def _serialise_tbl_pr(self, node: DocxASTTablePropertiesNode) -> str:
         """Serialise <w:tblPr>."""
-        parts: List[str] = []
+        parts: list[str] = []
 
         if node.style_id:
             parts.append(f'<w:tblStyle w:val="{_esc(node.style_id)}"/>')
@@ -791,7 +790,7 @@ class _DocxASTSerialiser:
     def _serialise_table_row(self, node: DocxASTTableRowNode) -> str:
         """Serialise a <w:tr> element."""
         trpr_xml = ""
-        cell_parts: List[str] = []
+        cell_parts: list[str] = []
 
         for child in node.children:
             if isinstance(child, DocxASTTableRowPropertiesNode):
@@ -805,7 +804,7 @@ class _DocxASTSerialiser:
 
     def _serialise_trpr(self, node: DocxASTTableRowPropertiesNode) -> str:
         """Serialise <w:trPr>."""
-        parts: List[str] = []
+        parts: list[str] = []
 
         if node.is_header:
             parts.append("<w:tblHeader/>")
@@ -825,7 +824,7 @@ class _DocxASTSerialiser:
     def _serialise_table_cell(self, node: DocxASTTableCellNode) -> str:
         """Serialise a <w:tc> element."""
         tcpr_xml = ""
-        content_parts: List[str] = []
+        content_parts: list[str] = []
 
         # Determine available image width from the cell's explicit dxa width, if set.
         cell_width_dxa: int | None = None
@@ -870,7 +869,7 @@ class _DocxASTSerialiser:
 
     def _serialise_tcpr(self, node: DocxASTTableCellPropertiesNode) -> str:
         """Serialise <w:tcPr>."""
-        parts: List[str] = []
+        parts: list[str] = []
 
         if node.width is not None and node.width_type:
             parts.append(f'<w:tcW w:w="{node.width}" w:type="{_esc(node.width_type)}"/>')
@@ -928,7 +927,7 @@ class _DocxASTSerialiser:
 
     def _serialise_styles(self, node: DocxASTStylesNode | None) -> str:
         """Produce the styles.xml string."""
-        style_parts: List[str] = []
+        style_parts: list[str] = []
 
         if node is not None:
             # Default run properties from docDefaults
@@ -973,7 +972,7 @@ class _DocxASTSerialiser:
         if node.is_custom:
             attrs += ' w:customStyle="1"'
 
-        parts: List[str] = [f'<w:name w:val="{_esc(node.name)}"/>']
+        parts: list[str] = [f'<w:name w:val="{_esc(node.name)}"/>']
 
         if node.based_on:
             parts.append(f'<w:basedOn w:val="{_esc(node.based_on)}"/>')
@@ -991,7 +990,7 @@ class _DocxASTSerialiser:
             (c for c in node.children if isinstance(c, DocxASTParagraphPropertiesNode)),
             None,
         )
-        ppr_parts: List[str] = []
+        ppr_parts: list[str] = []
         if ppr_node:
             ppr_inner = self._serialise_ppr(ppr_node)
             # Strip outer <w:pPr>...</w:pPr> tags to get the inner content
@@ -1009,7 +1008,7 @@ class _DocxASTSerialiser:
             (c for c in node.children if isinstance(c, DocxASTRunPropertiesNode)),
             None,
         )
-        rpr_parts: List[str] = []
+        rpr_parts: list[str] = []
         if rpr_node:
             rpr_inner = self._serialise_rpr(rpr_node)
             if rpr_inner.startswith("<w:rPr>") and rpr_inner.endswith("</w:rPr>"):
@@ -1026,7 +1025,7 @@ class _DocxASTSerialiser:
 
     def _serialise_numbering(self, node: DocxASTNumberingNode) -> str:
         """Produce the numbering.xml string."""
-        parts: List[str] = []
+        parts: list[str] = []
 
         for child in node.children:
             if isinstance(child, DocxASTAbstractNumNode):
@@ -1058,7 +1057,7 @@ class _DocxASTSerialiser:
 
     def _serialise_abstract_num(self, node: DocxASTAbstractNumNode) -> str:
         """Serialise a <w:abstractNum> element."""
-        level_parts: List[str] = []
+        level_parts: list[str] = []
 
         for child in node.children:
             if isinstance(child, DocxASTNumLevelNode):
@@ -1078,7 +1077,7 @@ class _DocxASTSerialiser:
 
     def _serialise_num_level(self, node: DocxASTNumLevelNode) -> str:
         """Serialise a <w:lvl> element."""
-        parts: List[str] = [
+        parts: list[str] = [
             f'<w:start w:val="{node.start}"/>',
             f'<w:numFmt w:val="{_esc(node.num_fmt)}"/>',
             f'<w:lvlText w:val="{_esc(node.lvl_text)}"/>',

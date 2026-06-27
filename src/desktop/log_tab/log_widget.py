@@ -1,7 +1,7 @@
 """Log widget implementation for displaying mindspace message log."""
 
 import logging
-from typing import Dict, List, Tuple, Any, Set
+from typing import Any
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy
@@ -53,7 +53,7 @@ class LogWidget(QWidget):
         self._style_manager = StyleManager()
 
         # Widget tracking
-        self._messages: List[LogMessage] = []
+        self._messages: list[LogMessage] = []
         self._message_with_selection: LogMessage | None = None
 
         # Initialize tracking variables
@@ -91,7 +91,7 @@ class LogWidget(QWidget):
         log_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
-        self._search_highlights: Dict[LogMessage, List[Tuple[int, int]]] = {}
+        self._search_highlights: dict[LogMessage, list[tuple[int, int]]] = {}
 
         # Tracking for spotlighted message
         self._spotlighted_message_index = -1
@@ -130,11 +130,11 @@ class LogWidget(QWidget):
 
 
         # Find functionality
-        self._matches: List[Tuple[LogMessage, List[Tuple[int, int]]]] = []
+        self._matches: list[tuple[LogMessage, list[tuple[int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search: tuple = ("", False, False)
-        self._highlighted_widgets: Set[LogMessage] = set()
+        self._highlighted_widgets: set[LogMessage] = set()
 
         # Load messages when initialized
         if self._mindspace_manager.has_mindspace():
@@ -643,14 +643,14 @@ class LogWidget(QWidget):
         if self._message_with_selection:
             self._message_with_selection.copy_selection()
 
-    def create_state_metadata(self, _temp_state: bool) -> Dict[str, Any]:
+    def create_state_metadata(self, _temp_state: bool) -> dict[str, Any]:
         """
         Create metadata dictionary capturing current widget state.
 
         Returns:
             Dictionary containing log state metadata
         """
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
 
         # Store current scroll position
         metadata["scroll_position"] = self._scroll_area.verticalScrollBar().value()
@@ -660,7 +660,7 @@ class LogWidget(QWidget):
 
         return metadata
 
-    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
         """
         Restore widget state from metadata.
 
@@ -701,7 +701,7 @@ class LogWidget(QWidget):
 
     def find_text(
         self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False
-    ) -> Tuple[int, int, bool]:
+    ) -> tuple[int, int, bool]:
         """
         Find all instances of text and highlight them.
 
@@ -838,7 +838,7 @@ class LogWidget(QWidget):
         self._current_match_index = -1
         self._last_search = ("", False, False)
 
-    def get_match_status(self) -> Tuple[int, int, bool]:
+    def get_match_status(self) -> tuple[int, int, bool]:
         """
         Get current match status.
 
@@ -856,7 +856,7 @@ class LogWidget(QWidget):
 
         return current_global_match, total_matches, total_matches == 500
 
-    def get_log_info(self) -> Dict[str, Any]:
+    def get_log_info(self) -> dict[str, Any]:
         """
         Get high-level metadata about the log.
 
@@ -905,10 +905,10 @@ class LogWidget(QWidget):
         self,
         start_index: int | None = None,
         end_index: int | None = None,
-        levels: List[str] | None = None,
+        levels: list[str] | None = None,
         limit: int | None = None,
         include_content: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Read log messages with filtering and pagination.
 
@@ -982,7 +982,7 @@ class LogWidget(QWidget):
         self,
         message_id: str | None = None,
         message_index: int | None = None
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """
         Get a specific log message by ID or index.
 
@@ -1032,9 +1032,9 @@ class LogWidget(QWidget):
         self,
         search_text: str,
         case_sensitive: bool = False,
-        levels: List[str] | None = None,
+        levels: list[str] | None = None,
         max_results: int = 50
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search for text across all log messages.
 

@@ -1,4 +1,4 @@
-from typing import List, Sequence, Tuple
+from collections.abc import Sequence
 
 from document_ir import (
     DocumentIRBlockquoteNode,
@@ -975,7 +975,7 @@ class _DocumentIRToDocxASTMapper:
         for run in self._build_runs(children):
             para.add_child(run)
 
-    def _build_runs(self, children: Sequence[DocumentIRNode]) -> List[DocxASTNode]:
+    def _build_runs(self, children: Sequence[DocumentIRNode]) -> list[DocxASTNode]:
         """
         Convert a list of inline document_ir nodes to DocxASTRunNode instances.
 
@@ -990,7 +990,7 @@ class _DocumentIRToDocxASTMapper:
         """
         # Collect (bold, italic, strike, code, content_or_special) tuples
         # where content_or_special is either a string or a special marker
-        items: List[Tuple] = []
+        items: list[tuple] = []
         self._collect_run_items(children, items)
 
         return self._items_to_runs(items)
@@ -998,7 +998,7 @@ class _DocumentIRToDocxASTMapper:
     def _collect_run_items(
         self,
         children: Sequence[DocumentIRNode],
-        items: List[Tuple],
+        items: list[tuple],
     ) -> None:
         """
         Recursively collect run items from inline nodes.
@@ -1049,13 +1049,13 @@ class _DocumentIRToDocxASTMapper:
 
             # Other inline types are silently skipped
 
-    def _items_to_runs(self, items: List[Tuple]) -> List[DocxASTNode]:
+    def _items_to_runs(self, items: list[tuple]) -> list[DocxASTNode]:
         """
         Convert collected run items to DocxASTRunNode instances.
 
         Consecutive text items with the same formatting are merged.
         """
-        runs: List[DocxASTNode] = []
+        runs: list[DocxASTNode] = []
 
         i = 0
         while i < len(items):

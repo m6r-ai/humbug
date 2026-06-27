@@ -2,7 +2,7 @@ import colorsys
 from datetime import datetime
 import logging
 import re
-from typing import Dict, List, Tuple, Any, cast
+from typing import Any, cast
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
@@ -315,7 +315,7 @@ class ConversationMessage(QFrame):
         self._retry_button: QPushButton | None = None
 
         # Track sections
-        self._sections: List[ConversationMessageSection] = []
+        self._sections: list[ConversationMessageSection] = []
         self._section_with_selection: ConversationMessageSection | None = None
 
         # If this is an input widget then create the input section
@@ -836,7 +836,7 @@ class ConversationMessage(QFrame):
         self._pending_tool_context = None
         self._pending_tool_destructive = None
 
-    def get_tool_approval_info(self) -> Dict[str, Any] | None:
+    def get_tool_approval_info(self) -> dict[str, Any] | None:
         """
         Get information about the current tool approval request if one exists.
 
@@ -1371,7 +1371,7 @@ class ConversationMessage(QFrame):
         if self._edit_text_edit is not None:
             self._edit_text_edit.apply_style()
 
-    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> list[tuple[int, int, int]]:
         """
         Find all instances of text in this message.
 
@@ -1391,7 +1391,7 @@ class ConversationMessage(QFrame):
             return self._find_text_in_raw_content(text, case_sensitive, regexp)
 
         # Otherwise search rendered sections normally
-        all_matches: List[Tuple[int, int, int]] = []
+        all_matches: list[tuple[int, int, int]] = []
         for i, section in enumerate(self._sections):
             section_matches = section.find_text(text, case_sensitive, regexp)
             if section_matches:
@@ -1406,7 +1406,7 @@ class ConversationMessage(QFrame):
         text: str,
         case_sensitive: bool = False,
         regexp: bool = False
-    ) -> List[Tuple[int, int, int]]:
+    ) -> list[tuple[int, int, int]]:
         """
         Search in raw unrendered content (case-insensitive).
 
@@ -1453,7 +1453,7 @@ class ConversationMessage(QFrame):
 
     def highlight_matches(
         self,
-        matches: List[Tuple[int, int, int]],
+        matches: list[tuple[int, int, int]],
         current_match_index: int = -1,
         highlight_color: QColor | None = None,
         dim_highlight_color: QColor | None = None
@@ -1479,7 +1479,7 @@ class ConversationMessage(QFrame):
             return
 
         # Group matches by section
-        section_matches: Dict[ConversationMessageSection, List[Tuple[int, int, int]]] = {}
+        section_matches: dict[ConversationMessageSection, list[tuple[int, int, int]]] = {}
         for section in self._sections:
             section_matches[section] = []
 

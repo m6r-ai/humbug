@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 import os
-from typing import Dict
 
 
 @dataclass
@@ -19,7 +18,7 @@ class MindspaceDirectoryTracking:
             conversations=os.path.join(mindspace_path, "conversations")
         )
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> dict[str, str]:
         """Convert to serializable dictionary."""
         return {
             "fileDialog": self.file_dialog,
@@ -27,7 +26,7 @@ class MindspaceDirectoryTracking:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, str], mindspace_path: str) -> 'MindspaceDirectoryTracking':
+    def from_dict(cls, data: dict[str, str], mindspace_path: str) -> 'MindspaceDirectoryTracking':
         """Create from dictionary, falling back to mindspace path if stored paths invalid."""
         return cls(
             file_dialog=data.get("fileDialog", mindspace_path),

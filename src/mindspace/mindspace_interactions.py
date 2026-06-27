@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-from typing import List
 
 from mindspace.mindspace_message import MindspaceMessage
 
@@ -13,7 +12,7 @@ class MindspaceInteractions:
 
     def __init__(self) -> None:
         """Initialize empty interaction history."""
-        self._messages: List[MindspaceMessage] = []
+        self._messages: list[MindspaceMessage] = []
         self._logger = logging.getLogger("MindspaceInteractions")
 
     def add_message(self, message: MindspaceMessage) -> None:
@@ -23,7 +22,7 @@ class MindspaceInteractions:
         if len(self._messages) > self.MAX_MESSAGES:
             self._messages = self._messages[-self.MAX_MESSAGES:]
 
-    def get_messages(self) -> List[MindspaceMessage]:
+    def get_messages(self) -> list[MindspaceMessage]:
         """Get a copy of all messages in the interaction history."""
         return self._messages.copy()
 

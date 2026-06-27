@@ -1,6 +1,6 @@
 """Color picker dialog for customizing application theme colors."""
 
-from typing import Callable, List, Tuple, Dict
+from collections.abc import Callable
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
@@ -24,7 +24,7 @@ _DEFAULT_THEME = ColorTheme.SYSTEM
 # Preset themes: (name, gradient_start, gradient_end, {role_name: {mode_name: hex}})
 # gradient_start / gradient_end are purely visual hints for the preset button.
 # An empty colors dict means "clear all overrides" (the Default preset).
-_PRESETS: List[Tuple[str, str, str, Dict[str, Dict[str, str]]]] = [
+_PRESETS: list[tuple[str, str, str, dict[str, dict[str, str]]]] = [
     (
         "Default",
         "#1c1c1c", "#404040",
@@ -300,7 +300,7 @@ _PRESETS: List[Tuple[str, str, str, Dict[str, Dict[str, str]]]] = [
 ]
 
 # Sections: (section_id, display_label, [(swatch_label, ColorRole), ...])
-_SECTIONS: List[Tuple[str, str, List[Tuple[str, ColorRole]]]] = [
+_SECTIONS: list[tuple[str, str, list[tuple[str, ColorRole]]]] = [
     ("background", "Background", [
         ("Primary background", ColorRole.BACKGROUND_PRIMARY),
         ("Secondary background", ColorRole.BACKGROUND_SECONDARY),
@@ -375,7 +375,7 @@ _SECTIONS: List[Tuple[str, str, List[Tuple[str, ColorRole]]]] = [
 
 # Accessibility presets: (name, description, {role_name: {mode_name: hex}})
 # Only override the signal/status colors — other custom colors are preserved.
-_ACCESSIBILITY_PRESETS: List[Tuple[str, str, Dict[str, Dict[str, str]]]] = [
+_ACCESSIBILITY_PRESETS: list[tuple[str, str, dict[str, dict[str, str]]]] = [
     (
         "Deuteranopia",
         "Red-green colorblindness (~8% of males). Uses blue/orange contrast.",
@@ -576,7 +576,7 @@ class _SectionPage(QWidget):
 
     def __init__(
         self,
-        rows: List[Tuple[str, ColorRole]],
+        rows: list[tuple[str, ColorRole]],
         style_manager: StyleManager,
         on_color_changed: Callable[[ColorRole, str], None],
         parent: QWidget | None = None,
@@ -585,7 +585,7 @@ class _SectionPage(QWidget):
         self._style_manager = style_manager
         self._rows = rows
         self._on_color_changed = on_color_changed
-        self._swatches: Dict[ColorRole, _SwatchButton] = {}
+        self._swatches: dict[ColorRole, _SwatchButton] = {}
         self._gradient_button: _GradientButton | None = None
 
         layout = QVBoxLayout()
@@ -625,7 +625,7 @@ class _SectionPage(QWidget):
         if self._gradient_button is not None:
             self._gradient_button.refresh()
 
-    def roles(self) -> List[ColorRole]:
+    def roles(self) -> list[ColorRole]:
         """Return the color roles edited by this section."""
         return [role for _, role in self._rows]
 
@@ -643,7 +643,7 @@ class _PresetPreviewButton(QPushButton):
         name: str,
         grad_start: str,
         grad_end: str,
-        colors: Dict[str, Dict[str, str]],
+        colors: dict[str, dict[str, str]],
         style_manager: StyleManager,
         parent: QWidget | None = None,
     ) -> None:
@@ -781,12 +781,12 @@ class ThemeColorPickerDialog(QDialog):
         if initial_mode is not None and initial_mode != self._snapshot_mode:
             self._style_manager.set_color_theme(initial_mode)
 
-        self._section_pages: List[_SectionPage] = []
+        self._section_pages: list[_SectionPage] = []
         self._committed = False  # True only after Apply / OK — revert on close otherwise
         self._editing_theme_name: str | None = None  # saved theme last loaded for editing
         # Read persisted preset name so the right chip is highlighted on reopen
         self._active_preset_name: str | None = self._style_manager.active_preset()
-        self._preset_button_map: Dict[str, QPushButton] = {}
+        self._preset_button_map: dict[str, QPushButton] = {}
 
         self.setWindowTitle("Customize Colors")
         self.setMinimumWidth(980)
@@ -842,7 +842,7 @@ class ThemeColorPickerDialog(QDialog):
         mode_row.setContentsMargins(0, 0, int(6 * zoom), 0)
         mode_row.setSpacing(int(14 * zoom))
 
-        self._mode_buttons: Dict[ColorTheme, QPushButton] = {}
+        self._mode_buttons: dict[ColorTheme, QPushButton] = {}
         for mode, label in [
             (ColorTheme.LIGHT, "Light"),
             (ColorTheme.DARK, "Dark"),
@@ -1158,7 +1158,7 @@ class ThemeColorPickerDialog(QDialog):
         self._diverge_from_saved_theme()
         page.refresh_swatches()
 
-    def _on_accessibility_preset_clicked(self, colors: Dict[str, Dict[str, str]]) -> None:
+    def _on_accessibility_preset_clicked(self, colors: dict[str, dict[str, str]]) -> None:
         """Merge accessibility color overrides into the current custom palette."""
         current = self._style_manager.get_custom_colors()
         current.update(colors)
@@ -1170,7 +1170,7 @@ class ThemeColorPickerDialog(QDialog):
         self._diverge_from_saved_theme()
         self._refresh_all_swatches()
 
-    def _on_preset_clicked(self, name: str, colors: Dict[str, Dict[str, str]]) -> None:
+    def _on_preset_clicked(self, name: str, colors: dict[str, dict[str, str]]) -> None:
         """Apply a preset palette. 'Default' clears overrides; others switch to Custom mode."""
         if name != "Default" and self._style_manager.user_color_theme() != ColorTheme.CUSTOM:
             self._style_manager.set_color_theme(ColorTheme.CUSTOM)

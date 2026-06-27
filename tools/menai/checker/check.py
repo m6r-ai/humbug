@@ -4,7 +4,6 @@ import sys
 import argparse
 from pathlib import Path
 from dataclasses import dataclass
-from typing import List, Tuple
 
 from menai.menai_lexer import MenaiLexer
 from menai.menai_token import MenaiTokenType
@@ -80,8 +79,8 @@ class CloseAnnotation:
 @dataclass
 class LineInfo:
     """Information about a line in the source file."""
-    close_annotations: List[CloseAnnotation]  # Annotations for closing parens
-    paren_positions: List[ParenPosition]  # Positions of parens on this line
+    close_annotations: list[CloseAnnotation]  # Annotations for closing parens
+    paren_positions: list[ParenPosition]  # Positions of parens on this line
     line_num: int
     depth: int  # Depth at end of line
     content: str
@@ -116,19 +115,19 @@ class ParenChecker:
             filepath: Path to Menai file to check
         """
         self.filepath = Path(filepath)
-        self.lines: List[str] = []
-        self.line_info: List[LineInfo] = []
-        self.errors: List[ParenError] = []
+        self.lines: list[str] = []
+        self.line_info: list[LineInfo] = []
+        self.errors: list[ParenError] = []
         self.total_opens = 0
         self.total_closes = 0
         self.max_depth = 0
-        self.form_stack: List[FormStackFrame] = []  # Stack for tracking special forms
+        self.form_stack: list[FormStackFrame] = []  # Stack for tracking special forms
 
     def get_paren_color(self, depth: int) -> str:
         """Get color for a paren at given depth (cycles through palette)."""
         return self.PAREN_COLORS[depth % len(self.PAREN_COLORS)]
 
-    def colorize_parens(self, code: str, paren_positions: List[ParenPosition]) -> str:
+    def colorize_parens(self, code: str, paren_positions: list[ParenPosition]) -> str:
         """
         Colorize parentheses in code based on depth.
 
@@ -314,7 +313,7 @@ class ParenChecker:
 
         return len(self.errors) == 0
 
-    def get_error_context_lines(self, context_size: int = 5) -> List[int]:
+    def get_error_context_lines(self, context_size: int = 5) -> list[int]:
         """
         Get line numbers around errors for focused display.
 
@@ -337,7 +336,7 @@ class ParenChecker:
 
     def format_depth_chart(
         self,
-        line_range: Tuple[int, int] | None = None,
+        line_range: tuple[int, int] | None = None,
         show_all: bool = False,
         annotate: bool = False,
         color: bool = False
@@ -357,7 +356,7 @@ class ParenChecker:
         if not self.line_info:
             return "No line information available"
 
-        lines_to_show: List[int] = []
+        lines_to_show: list[int] = []
 
         # Determine which lines to show
         if line_range:
@@ -471,7 +470,7 @@ class ParenChecker:
 
     def print_report(
         self,
-        line_range: Tuple[int, int] | None = None,
+        line_range: tuple[int, int] | None = None,
         summary_only: bool = False,
         annotate: bool = False,
         color: bool = False
@@ -512,7 +511,7 @@ class ParenChecker:
                 print(Colors.RESET, end='')
 
 
-def parse_line_range(range_str: str) -> Tuple[int, int]:
+def parse_line_range(range_str: str) -> tuple[int, int]:
     """
     Parse line range string.
 

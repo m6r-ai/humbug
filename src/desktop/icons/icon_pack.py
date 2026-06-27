@@ -1,6 +1,6 @@
 """Shared SVG icon markup used by the Humbug UI."""
 
-from typing import Final, Dict, Tuple
+from typing import Final
 
 
 def app_icon_svg(text_color: str, bg_start: str, bg_end: str) -> str:
@@ -20,7 +20,7 @@ def update_icon_svg(update_color: str) -> str:
     return THEME_ICON_PACK["update"].format(update_color=update_color)
 
 
-def active_inactive_icon_names() -> Tuple[str, ...]:
+def active_inactive_icon_names() -> tuple[str, ...]:
     """Return the themed icons generated for active, inactive, and bright states."""
     return ACTIVE_INACTIVE_THEME_ICONS
 
@@ -41,7 +41,7 @@ APP_ICON_TEMPLATE: Final[str] = '''
 '''
 
 
-ACTIVE_INACTIVE_THEME_ICONS: Final[Tuple[str, ...]] = (
+ACTIVE_INACTIVE_THEME_ICONS: Final[tuple[str, ...]] = (
     "close",
     "conversation",
     "editor",
@@ -58,7 +58,7 @@ ACTIVE_INACTIVE_THEME_ICONS: Final[Tuple[str, ...]] = (
 )
 
 
-THEME_ICON_PACK: Final[Dict[str, str]] = {
+THEME_ICON_PACK: Final[dict[str, str]] = {
     "arrow-right": '''
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
             <path stroke="{color}" stroke-width="6" fill="none" d="M24,16 L40,32 L24,48"/>

@@ -8,7 +8,6 @@ var_type; slot allocation is handled by MenaiCFGBuilder.
 """
 
 from dataclasses import dataclass
-from typing import List, Tuple
 
 from menai.menai_value import MenaiValue, MenaiStructType
 
@@ -54,7 +53,7 @@ class MenaiIRLet:
 
     Bindings are (name, value_plan) pairs.
     """
-    bindings: List[tuple[str, 'MenaiIRExpr']]  # (name, value_plan)
+    bindings: list[tuple[str, 'MenaiIRExpr']]  # (name, value_plan)
     body_plan: 'MenaiIRExpr'
     in_tail_position: bool
 
@@ -68,7 +67,7 @@ class MenaiIRLetrec:
     is guaranteed to be a single fully-mutually-recursive group of lambdas.
     All non-recursive and non-lambda bindings have been hoisted to let forms.
     """
-    bindings: List[tuple[str, 'MenaiIRExpr']]  # (name, value_plan)
+    bindings: list[tuple[str, 'MenaiIRExpr']]  # (name, value_plan)
     body_plan: 'MenaiIRExpr'
     in_tail_position: bool
 
@@ -79,12 +78,12 @@ class MenaiIRLambda:
     Plan for compiling a lambda expression.
 
     """
-    params: List[str]
+    params: list[str]
     body_plan: 'MenaiIRExpr'
-    sibling_free_vars: List[str]       # Names captured from the immediately enclosing letrec group
-    sibling_free_var_plans: List['MenaiIRExpr']  # Plans for loading sibling captures
-    outer_free_vars: List[str]         # Names captured from outside the enclosing letrec group
-    outer_free_var_plans: List['MenaiIRExpr']    # Plans for loading outer captures
+    sibling_free_vars: list[str]       # Names captured from the immediately enclosing letrec group
+    sibling_free_var_plans: list['MenaiIRExpr']  # Plans for loading sibling captures
+    outer_free_vars: list[str]         # Names captured from outside the enclosing letrec group
+    outer_free_var_plans: list['MenaiIRExpr']    # Plans for loading outer captures
     param_count: int
     is_variadic: bool  # True if last param is a rest parameter
     binding_name: str | None = None  # Name if bound in let/letrec (for recursion detection)
@@ -96,7 +95,7 @@ class MenaiIRLambda:
 class MenaiIRCall:
     """Plan for compiling a function call."""
     func_plan: 'MenaiIRExpr'
-    arg_plans: List['MenaiIRExpr']
+    arg_plans: list['MenaiIRExpr']
     is_tail_call: bool
     is_builtin: bool
     builtin_name: str | None  # Builtin name if is_builtin=True, else None
@@ -112,7 +111,7 @@ class MenaiIRBuildList:
     The VM codegen lowers it to LOAD_EMPTY_LIST followed by N LIST_APPEND
     register ops, accumulating the result in a single register slot.
     """
-    element_plans: List['MenaiIRExpr']
+    element_plans: list['MenaiIRExpr']
 
 
 @dataclass
@@ -140,7 +139,7 @@ class MenaiIRBuildDict:
     Only emitted when every argument is a literal (list key value) form.
     Non-literal arguments fall through to the runtime prelude lambda instead.
     """
-    pair_plans: List[Tuple['MenaiIRExpr', 'MenaiIRExpr']]
+    pair_plans: list[tuple['MenaiIRExpr', 'MenaiIRExpr']]
 
 
 @dataclass
@@ -153,13 +152,13 @@ class MenaiIRBuildSet:
     result in a single register slot.  Duplicate elements are resolved at
     runtime by SET_ADD (which is a no-op for already-present members).
     """
-    element_plans: List['MenaiIRExpr']
+    element_plans: list['MenaiIRExpr']
 
 
 @dataclass
 class MenaiIRTrace:
     """Plan for compiling a trace expression."""
-    message_plans: List['MenaiIRExpr']  # Messages to emit
+    message_plans: list['MenaiIRExpr']  # Messages to emit
     value_plan: 'MenaiIRExpr'           # Expression to evaluate and return
 
 
@@ -174,7 +173,7 @@ class MenaiIRBuildStruct:
     new MenaiStruct instance.
     """
     struct_type: MenaiStructType
-    field_plans: List['MenaiIRExpr']
+    field_plans: list['MenaiIRExpr']
 
 
 # Union type for all expression plans

@@ -1,10 +1,11 @@
 """Terminal tab implementation."""
 
 import asyncio
+from collections.abc import Coroutine
 import os
 import sys
 import logging
-from typing import Any, Coroutine, Dict, Set
+from typing import Any
 
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 from PySide6.QtCore import Qt, QRegularExpression
@@ -148,7 +149,7 @@ class TerminalTab(TabBase):
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Initialize process and task tracking
-        self._tasks: Set[asyncio.Task] = set()
+        self._tasks: set[asyncio.Task] = set()
         self._prev_rows = 0
         self._prev_cols = 0
         self._win_padding_lines = 0
@@ -392,7 +393,7 @@ class TerminalTab(TabBase):
         Returns:
             TabState containing tab state
         """
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
 
         # Store command for both persistent and temporary state
         if self._command:

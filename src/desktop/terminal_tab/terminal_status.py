@@ -1,14 +1,13 @@
 """Terminal status data structures."""
 
 from dataclasses import dataclass
-from typing import Tuple
 
 
 @dataclass
 class TerminalWidgetStatusInfo:
     """Widget-level terminal status information."""
-    terminal_size: Tuple[int, int]  # (rows, cols)
-    cursor_position: Tuple[int, int]  # (row, col)
+    terminal_size: tuple[int, int]  # (rows, cols)
+    cursor_position: tuple[int, int]  # (row, col)
     cursor_visible: bool
     buffer_lines: int
 
@@ -17,8 +16,8 @@ class TerminalWidgetStatusInfo:
 class TerminalStatusInfo:
     """Complete terminal status information."""
     # Widget info
-    terminal_size: Tuple[int, int]
-    cursor_position: Tuple[int, int]
+    terminal_size: tuple[int, int]
+    cursor_position: tuple[int, int]
     cursor_visible: bool
     buffer_lines: int
 

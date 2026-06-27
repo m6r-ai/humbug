@@ -2,7 +2,6 @@
 
 from datetime import datetime, timezone
 import os
-from typing import List, Dict
 
 from ai import AIConversation, AIConversationSettings, AIReasoningCapability, AIManager
 from ai.ai_model import AIReasoningEffort
@@ -27,7 +26,7 @@ class ShellCommandConversation(ShellCommand):
         """Get the name of the command."""
         return "conversation"
 
-    def aliases(self) -> List[str]:
+    def aliases(self) -> list[str]:
         """Get alternate names for the command."""
         return ["conv", "chat"]
 
@@ -35,7 +34,7 @@ class ShellCommandConversation(ShellCommand):
         """Get the help text for the command."""
         return "Starts a new conversation"
 
-    def get_options_help(self) -> Dict[str, str]:
+    def get_options_help(self) -> dict[str, str]:
         """Get help text for supported options."""
         options = super().get_options_help()
         options["-m, --model"] = "AI model to use"
@@ -60,7 +59,7 @@ class ShellCommandConversation(ShellCommand):
 
         return 0
 
-    def _execute_command(self, tokens: List[Token]) -> bool:
+    def _execute_command(self, tokens: list[Token]) -> bool:
         """
         Execute the command with parsed tokens.
 
@@ -194,7 +193,7 @@ class ShellCommandConversation(ShellCommand):
         )
         return True
 
-    def _complete_model_names(self, partial_value: str) -> List[str]:
+    def _complete_model_names(self, partial_value: str) -> list[str]:
         """
         Complete model display names for -m/--model option.
 
@@ -213,7 +212,7 @@ class ShellCommandConversation(ShellCommand):
 
         return models
 
-    def _complete_reasoning_efforts(self, partial_value: str) -> List[str]:
+    def _complete_reasoning_efforts(self, partial_value: str) -> list[str]:
         """
         Complete reasoning effort values for -r/--reasoning-effort option.
 
@@ -228,9 +227,9 @@ class ShellCommandConversation(ShellCommand):
     def get_token_completions(
         self,
         current_token: Token,
-        tokens: List[Token],
+        tokens: list[Token],
         cursor_token_index: int
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get completions for the current token based on token information.
 

@@ -1,8 +1,8 @@
+from collections.abc import Callable
 import json
 import logging
 import os
 import shutil
-from typing import Callable, Dict, List
 
 from ai_tool import AIToolManager
 from context.context_registry import ContextRegistry
@@ -83,7 +83,7 @@ class Mindspace:
         """Return True if a mindspace exists at path."""
         return os.path.exists(os.path.join(path, self.MINDSPACE_DIR))
 
-    def create_mindspace(self, path: str, folders: List[str]) -> None:
+    def create_mindspace(self, path: str, folders: list[str]) -> None:
         """
         Create a new mindspace at path.
 
@@ -291,7 +291,7 @@ class Mindspace:
         self._on_interactions_updated()
         return message
 
-    def get_interactions(self) -> List[MindspaceMessage]:
+    def get_interactions(self) -> list[MindspaceMessage]:
         """
         Return all interaction log messages.
 
@@ -301,7 +301,7 @@ class Mindspace:
         assert self.has_mindspace(), "No mindspace is currently open"
         return self._interactions.get_messages()
 
-    def save_mindspace_state(self, state: Dict) -> None:
+    def save_mindspace_state(self, state: dict) -> None:
         """
         Persist session state (open tabs, layout) to disk.
 
@@ -335,7 +335,7 @@ class Mindspace:
         except OSError as e:
             raise MindspaceError(f"Failed to save mindspace state: {str(e)}") from e
 
-    def load_mindspace_state(self) -> Dict:
+    def load_mindspace_state(self) -> dict:
         """
         Load session state from disk.
 

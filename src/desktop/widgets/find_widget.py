@@ -1,7 +1,8 @@
 """Widget for handling find operations in editor."""
 
+from collections.abc import Callable
 import re
-from typing import Any, Callable, Dict, List
+from typing import Any
 
 from PySide6.QtWidgets import (
     QWidget, QGridLayout, QHBoxLayout, QLineEdit, QToolButton, QLabel, QPushButton
@@ -37,7 +38,7 @@ class FindWidget(QWidget):
         self._search_debounce_timer.timeout.connect(self.search_changed)
 
         # Search history for this widget instance
-        self._history: List[str] = []
+        self._history: list[str] = []
         self._history_index: int = -1   # -1 means "not browsing"
         self._pending_text: str = ""    # text being typed before history browse started
 
@@ -554,7 +555,7 @@ class FindWidget(QWidget):
 
         return text, case_sensitive, regexp
 
-    def create_state_metadata(self) -> Dict[str, Any]:
+    def create_state_metadata(self) -> dict[str, Any]:
         """
         Create state metadata for persistence during tab moves.
 
@@ -571,7 +572,7 @@ class FindWidget(QWidget):
             'replace_expanded': self._replace_row_expanded,
         }
 
-    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
         """
         Restore state from metadata after tab moves.
 

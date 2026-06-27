@@ -1,8 +1,9 @@
 """Terminal state management."""
 
-import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Dict, Tuple, Any, Callable
+import logging
+from typing import Any
 
 from terminal.terminal_buffer import TerminalBuffer, TerminalCharacterAttributes
 
@@ -102,7 +103,7 @@ class TerminalState:
         self._default_fg = fg
         self._default_bg = bg
 
-    def set_ansi_colors(self, color_map: Dict[int, int]) -> None:
+    def set_ansi_colors(self, color_map: dict[int, int]) -> None:
         """Set ANSI color mapping."""
         self._ansi_colors = color_map
 
@@ -704,14 +705,14 @@ class TerminalState:
 
             i += 1
 
-    def create_state_metadata(self) -> Dict[str, Any]:
+    def create_state_metadata(self) -> dict[str, Any]:
         """
         Create metadata dictionary capturing current state.
 
         Returns:
             Dictionary containing terminal state metadata
         """
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
 
         # Get state from main buffer
         metadata['main_buffer'] = self._main_buffer.get_state()
@@ -735,7 +736,7 @@ class TerminalState:
 
         return metadata
 
-    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
         """
         Restore terminal state from metadata.
 
@@ -775,7 +776,7 @@ class TerminalState:
         """Get current working directory."""
         return self._current_directory
 
-    def get_terminal_size(self) -> Tuple[int, int]:
+    def get_terminal_size(self) -> tuple[int, int]:
         """
         Get current terminal dimensions.
 

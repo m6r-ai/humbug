@@ -1,7 +1,7 @@
 """AI tool call representation."""
 
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any
 
 
 @dataclass
@@ -9,9 +9,9 @@ class AIToolCall:
     """Represents a tool call request from the AI."""
     id: str                     # Unique identifier for this tool call
     name: str                   # Name of the tool being called
-    arguments: Dict[str, Any]   # Arguments for the tool call, as a dictionary
+    arguments: dict[str, Any]   # Arguments for the tool call, as a dictionary
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert the tool call to a dictionary.
 
@@ -25,7 +25,7 @@ class AIToolCall:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'AIToolCall':
+    def from_dict(cls, data: dict[str, Any]) -> 'AIToolCall':
         """
         Create an AIToolCall from a dictionary.
 

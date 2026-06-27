@@ -1,7 +1,6 @@
 """Custom message box dialog with consistent styling and scrollable content."""
 
 from enum import Enum, auto
-from typing import List
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget
@@ -41,7 +40,7 @@ class MessageBox(QDialog):
         msg_type: MessageBoxType,
         title: str,
         text: str,
-        buttons: List[MessageBoxButton],
+        buttons: list[MessageBoxButton],
         parent: QWidget | None = None,
         destructive: bool = False
     ) -> None:
@@ -233,7 +232,7 @@ class MessageBox(QDialog):
         msg_type: MessageBoxType,
         title: str,
         text: str,
-        buttons: List[MessageBoxButton] | None = None,
+        buttons: list[MessageBoxButton] | None = None,
         destructive: bool = False
     ) -> MessageBoxButton:
         """

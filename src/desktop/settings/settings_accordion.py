@@ -1,6 +1,5 @@
 """Collapsible settings section built on the shared Accordion widget."""
 
-from typing import List
 
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
@@ -21,7 +20,7 @@ class SettingsAccordion(SettingsItem):
     def __init__(self, title: str, expanded: bool = False, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self._content_items: List[SettingsItem] = []
+        self._content_items: list[SettingsItem] = []
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 5, 0, 5)

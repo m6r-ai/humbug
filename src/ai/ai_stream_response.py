@@ -2,7 +2,6 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List
 
 from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
@@ -23,13 +22,13 @@ class AIStreamResponse(ABC):
         self.content = ""
         self.usage: AIUsage | None = None
         self.error: AIError | None = None
-        self.tool_calls: List[AIToolCall] = []
+        self.tool_calls: list[AIToolCall] = []
         self.signature = ""
         self.redacted_reasoning = ""
         self._logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
-    def update_from_chunk(self, chunk: Dict) -> None:
+    def update_from_chunk(self, chunk: dict) -> None:
         """
         Update internal state from a response chunk.
 
@@ -43,7 +42,7 @@ class AIStreamResponse(ABC):
             NotImplementedError: If not implemented by subclass
         """
 
-    def _handle_error(self, error_data: Dict, error_code: str = "stream_error") -> None:
+    def _handle_error(self, error_data: dict, error_code: str = "stream_error") -> None:
         """
         Handle error data from API response.
 

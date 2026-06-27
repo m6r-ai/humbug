@@ -2,7 +2,6 @@
 Reporting and output formatting for dependency validation results.
 """
 
-from typing import List, Dict
 from pathlib import Path
 
 from .validator import ValidationResult, Violation
@@ -94,10 +93,10 @@ class DependencyReporter:
 
         return "\n".join(lines)
 
-    def _add_violation_details(self, lines: List[str], violations: List[Violation]) -> None:
+    def _add_violation_details(self, lines: list[str], violations: list[Violation]) -> None:
         """Add violation details to the output lines."""
         # Group violations by file
-        violations_by_file: Dict[str, List[Violation]] = {}
+        violations_by_file: dict[str, list[Violation]] = {}
         for violation in violations:
             if violation.file_path not in violations_by_file:
                 violations_by_file[violation.file_path] = []

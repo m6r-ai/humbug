@@ -1,7 +1,7 @@
 """Widget for displaying a markdown content block in the preview."""
 
+from collections.abc import Callable
 import logging
-from typing import Dict, List, Tuple, Callable
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import QPoint
@@ -43,7 +43,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
         self._layout.addWidget(self._sections_container)
 
         # Track sections
-        self._sections: List[PreviewMarkdownContentSection] = []
+        self._sections: list[PreviewMarkdownContentSection] = []
         self._section_with_selection: PreviewMarkdownContentSection | None = None
 
         # Initialize markdown converter
@@ -161,7 +161,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
         for section in self._sections:
             section.apply_style()
 
-    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> list[tuple[int, int, int]]:
         """
         Find all instances of text in this content.
 
@@ -173,7 +173,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
         Returns:
             List of (section, start_position, end_position) tuples for each match
         """
-        all_matches: List[Tuple[int, int, int]] = []
+        all_matches: list[tuple[int, int, int]] = []
         for i, section in enumerate(self._sections):
             section_matches = section.find_text(text, case_sensitive, regexp)
             if section_matches:
@@ -183,7 +183,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
 
         return all_matches
 
-    def find_element_by_id(self, element_id: str) -> Tuple[int, int, int] | None:
+    def find_element_by_id(self, element_id: str) -> tuple[int, int, int] | None:
         """
         Find an element with the given ID.
 
@@ -202,7 +202,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
 
     def highlight_matches(
         self,
-        matches: List[Tuple[int, int, int]],
+        matches: list[tuple[int, int, int]],
         current_match_index: int = -1,
         highlight_color: QColor | None = None,
         dim_highlight_color: QColor | None = None
@@ -223,7 +223,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
             return
 
         # Group matches by section
-        section_matches: Dict[PreviewMarkdownContentSection, List[Tuple[int, int, int]]] = {}
+        section_matches: dict[PreviewMarkdownContentSection, list[tuple[int, int, int]]] = {}
         for section in self._sections:
             section_matches[section] = []
 
@@ -283,7 +283,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
 
         return QPoint(0, 0)
 
-    def get_context_menu_actions(self) -> List[Tuple[str, Callable]]:
+    def get_context_menu_actions(self) -> list[tuple[str, Callable]]:
         """
         Get context menu actions for this content.
 

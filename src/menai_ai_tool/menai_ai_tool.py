@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from menai import Menai, MenaiError, MenaiCancelledException
 from menai import MenaiTokenError, MenaiASTBuildError, MenaiCodegenError
@@ -30,7 +30,7 @@ class MenaiAITool(AITool):
         """
         self._tool = Menai()
         self._logger = logging.getLogger("MenaiAITool")
-        self._module_path: List[str] = []
+        self._module_path: list[str] = []
         self._mindspace: Mindspace | None = None
 
     def get_definition(self) -> AIToolDefinition:
@@ -58,7 +58,7 @@ class MenaiAITool(AITool):
             ]
         )
 
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """
         Get operation definitions for this tool.
 
@@ -110,7 +110,7 @@ class MenaiAITool(AITool):
         # Update our own reference
         self._module_path = module_path
 
-    def module_path(self) -> List[str]:
+    def module_path(self) -> list[str]:
         """
         Get the current module search path.
 
@@ -131,7 +131,7 @@ class MenaiAITool(AITool):
         """
         self._tool.vm.cancel()
 
-    def _evaluate_expression_sync(self, expression: str) -> tuple[str, List[str], bool]:
+    def _evaluate_expression_sync(self, expression: str) -> tuple[str, list[str], bool]:
         """
         Synchronous helper for expression evaluation.
 
@@ -545,7 +545,7 @@ Syntax: (operator arg1 arg2 ...)
 
 """
 
-    def _extract_evaluate_context(self, arguments: Dict[str, Any]) -> str | None:
+    def _extract_evaluate_context(self, arguments: dict[str, Any]) -> str | None:
         """
         Extract context for evaluate operation.
 

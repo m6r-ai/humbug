@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 
 class HtmlASTNode:
@@ -7,7 +7,7 @@ class HtmlASTNode:
     def __init__(self) -> None:
         """Initialise a node with no parent and no children."""
         self.parent: "HtmlASTNode | None" = None
-        self.children: List["HtmlASTNode"] = []
+        self.children: list["HtmlASTNode"] = []
 
     def add_child(self, child: "HtmlASTNode") -> "HtmlASTNode":
         """
@@ -64,7 +64,7 @@ class HtmlASTVisitor:
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
 
-    def generic_visit(self, node: HtmlASTNode) -> List[Any]:
+    def generic_visit(self, node: HtmlASTNode) -> list[Any]:
         """
         Default visit method for nodes without specific handlers.
 
@@ -105,7 +105,7 @@ class HtmlASTElementNode(HtmlASTNode):
     or HtmlASTTextNode instances.
     """
 
-    def __init__(self, tag_name: str, attributes: Dict[str, str] | None = None) -> None:
+    def __init__(self, tag_name: str, attributes: dict[str, str] | None = None) -> None:
         """
         Initialise an element node.
 
@@ -115,7 +115,7 @@ class HtmlASTElementNode(HtmlASTNode):
         """
         super().__init__()
         self.tag_name = tag_name
-        self.attributes: Dict[str, str] = attributes if attributes is not None else {}
+        self.attributes: dict[str, str] = attributes if attributes is not None else {}
 
 
 class HtmlASTTextNode(HtmlASTNode):

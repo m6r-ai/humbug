@@ -4,7 +4,7 @@ Parser to construct an AST from Markdown.
 
 import logging
 import re
-from typing import Dict, List, Tuple, Any, cast
+from typing import Any, cast
 
 from syntax import ParserRegistry, ProgrammingLanguage, ProgrammingLanguageUtils, Token
 
@@ -26,16 +26,16 @@ class TableBufferState:
     def __init__(self) -> None:
         """Initialize the table buffer state."""
         # Buffer for table rows before commitment
-        self.header_row: List[str] = []
+        self.header_row: list[str] = []
         self.header_line: str = ""
-        self.separator_row: List[str] = []
+        self.separator_row: list[str] = []
         self.separator_line: str = ""
-        self.body_rows: List[List[str]] = []
+        self.body_rows: list[list[str]] = []
 
         # Table state
         self.is_in_potential_table: bool = False
         self.is_confirmed_table: bool = False
-        self.alignments: List[str] = []
+        self.alignments: list[str] = []
 
         # Line tracking for AST nodes
         self.start_line: int = -1
@@ -134,14 +134,14 @@ class MarkdownASTBuilder:
         self._document = MarkdownASTDocumentNode()
 
         # Mapping from line numbers to nodes for incremental updates
-        self._line_to_node_map: Dict[int, List[MarkdownASTNode]] = {}
+        self._line_to_node_map: dict[int, list[MarkdownASTNode]] = {}
 
         # Track header IDs to allow us to create unique link anchors for headings with the same text
-        self._used_header_ids: Dict[str, int] = {}
+        self._used_header_ids: dict[str, int] = {}
 
         # Container stack for tracking nesting context
         # Initialize with document as root container
-        self._container_stack: List[ContainerContext] = []
+        self._container_stack: list[ContainerContext] = []
 
         # Text continuation tracking
         self._last_paragraph: MarkdownASTParagraphNode | None = None
@@ -151,15 +151,15 @@ class MarkdownASTBuilder:
         # Code block state tracking
         self._in_code_block = False
         self._code_block_language_name = ""
-        self._code_block_content: List[str] = []
+        self._code_block_content: list[str] = []
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0
-        self._code_block_indents: List[int] = []
+        self._code_block_indents: list[int] = []
         self._code_block_blockquote_depth: int = 0
         self._embedded_parser_state: Any = None
         self._embedded_language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
-        self._tokens_by_line: List[List[Token]] = []
-        self._states_by_line: List[Any] = []
+        self._tokens_by_line: list[list[Token]] = []
+        self._states_by_line: list[Any] = []
 
         # Table state tracking using the new buffer approach
         self._table_buffer = TableBufferState()
@@ -250,7 +250,7 @@ class MarkdownASTBuilder:
         # Return whether we're in a continuation
         return new_state is not None and new_state.parsing_continuation
 
-    def _identify_line_type(self, line: str) -> Tuple[str, List[int], Dict[str, Any]]:
+    def _identify_line_type(self, line: str) -> tuple[str, list[int], dict[str, Any]]:
         """
         Identify the type of a markdown line (stateless).
 
@@ -411,7 +411,7 @@ class MarkdownASTBuilder:
 
         return -1
 
-    def _parse_url_and_title(self, url_title: str) -> Tuple[str, str | None]:
+    def _parse_url_and_title(self, url_title: str) -> tuple[str, str | None]:
         """
         Parse a URL string that may contain a title in quotes.
 
@@ -430,7 +430,7 @@ class MarkdownASTBuilder:
 
         return url_title.strip(), None
 
-    def _parse_inline_formatting(self, text: str) -> List[MarkdownASTNode]:
+    def _parse_inline_formatting(self, text: str) -> list[MarkdownASTNode]:
         """
         Parse inline formatting (bold, italic, inline code) in text and create appropriate AST nodes.
 
@@ -447,7 +447,7 @@ class MarkdownASTBuilder:
 
         # Simple state machine for inline formatting
         i = 0
-        nodes: List[MarkdownASTNode] = []
+        nodes: list[MarkdownASTNode] = []
         current_text = ""
 
         while i < len(text):
@@ -1130,7 +1130,7 @@ class MarkdownASTBuilder:
 
         return remaining
 
-    def _adjust_blockquote_contexts(self, blockquote_indents: List[int], line_num: int) -> None:
+    def _adjust_blockquote_contexts(self, blockquote_indents: list[int], line_num: int) -> None:
         """
         Adjust the container stack to match the required blockquote nesting.
 
@@ -1184,7 +1184,7 @@ class MarkdownASTBuilder:
 
             self._enter_blockquote(blockquote_indents[i], line_num)
 
-    def _parse_table_separator(self, separator_line: str) -> List[str]:
+    def _parse_table_separator(self, separator_line: str) -> list[str]:
         """
         Parse a table separator line to determine column alignments.
 
@@ -1550,7 +1550,7 @@ class MarkdownASTBuilder:
     def _adjust_containers_for_line(
         self,
         line_type: str,
-        blockquote_indents: List[int],
+        blockquote_indents: list[int],
         effective_indent: int,
         line_num: int
     ) -> None:

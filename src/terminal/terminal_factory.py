@@ -1,13 +1,12 @@
 """Factory for creating platform-specific terminal instances."""
 
 import os
-from typing import Type
 
 from terminal.terminal_base import TerminalBase
 
 # Lazy imports to avoid loading unnecessary platform code
-_unix_terminal: Type[TerminalBase] | None = None  # pylint: disable=invalid-name
-_windows_terminal: Type[TerminalBase] | None = None  # pylint: disable=invalid-name
+_unix_terminal: type[TerminalBase] | None = None  # pylint: disable=invalid-name
+_windows_terminal: type[TerminalBase] | None = None  # pylint: disable=invalid-name
 
 
 def create_terminal(working_directory: str) -> TerminalBase:

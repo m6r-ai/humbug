@@ -1,7 +1,6 @@
 """Shared fixtures for document converter AI tool tests."""
 
 from pathlib import Path
-from typing import Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -20,7 +19,7 @@ def mock_mindspace():
 @pytest.fixture
 def mock_path_resolver():
     """Path resolver that maps paths into a fake /test/mindspace/ sandbox."""
-    def resolver(path: str) -> Tuple[Path, str]:
+    def resolver(path: str) -> tuple[Path, str]:
         if not path:
             raise ValueError("Path cannot be empty")
 

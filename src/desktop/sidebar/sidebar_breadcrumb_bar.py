@@ -1,7 +1,8 @@
 """Spine tree widget showing the ancestor folder chain of the topmost visible tree item."""
 
+from collections.abc import Callable
 import os
-from typing import Callable, Union
+from typing import Union
 
 from PySide6.QtCore import Qt, QMimeData, QModelIndex, QPersistentModelIndex, QPoint, QRect, QSize
 from PySide6.QtGui import (

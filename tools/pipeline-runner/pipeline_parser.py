@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from pipeline_step import MenaiStep, Pipeline, PipelineStep, ToolStep
 
@@ -11,7 +11,7 @@ class PipelineParseError(Exception):
     """Raised when a pipeline definition cannot be parsed or is invalid."""
 
 
-def _parse_tool_step(step_id: str, data: Dict[str, Any], all_step_ids: List[str]) -> ToolStep:
+def _parse_tool_step(step_id: str, data: dict[str, Any], all_step_ids: list[str]) -> ToolStep:
     """
     Parse a tool step from its JSON representation.
 
@@ -34,7 +34,7 @@ def _parse_tool_step(step_id: str, data: Dict[str, Any], all_step_ids: List[str]
     if not isinstance(operation, str) or not operation:
         raise PipelineParseError(f"Step '{step_id}': 'operation' must be a non-empty string")
 
-    arguments: Dict[str, Any] = {}
+    arguments: dict[str, Any] = {}
     known_keys = {"id", "tool", "operation", "value_from"}
     for key, value in data.items():
         if key not in known_keys:
@@ -66,7 +66,7 @@ def _parse_tool_step(step_id: str, data: Dict[str, Any], all_step_ids: List[str]
     )
 
 
-def _parse_menai_step(step_id: str, data: Dict[str, Any], all_step_ids: List[str]) -> MenaiStep:
+def _parse_menai_step(step_id: str, data: dict[str, Any], all_step_ids: list[str]) -> MenaiStep:
     """
     Parse a Menai step from its JSON representation.
 
@@ -104,7 +104,7 @@ def _parse_menai_step(step_id: str, data: Dict[str, Any], all_step_ids: List[str
     if not isinstance(inputs_raw, dict):
         raise PipelineParseError(f"Step '{step_id}': 'inputs' must be a dict")
 
-    inputs: Dict[str, str] = {}
+    inputs: dict[str, str] = {}
     for input_name, source_step_id in inputs_raw.items():
         if not isinstance(input_name, str) or not input_name:
             raise PipelineParseError(f"Step '{step_id}': input key must be a non-empty string")
@@ -125,7 +125,7 @@ def _parse_menai_step(step_id: str, data: Dict[str, Any], all_step_ids: List[str
     if not isinstance(outputs_raw, dict):
         raise PipelineParseError(f"Step '{step_id}': 'outputs' must be a dict")
 
-    outputs: Dict[str, str] = {}
+    outputs: dict[str, str] = {}
     for output_key, target_step_id in outputs_raw.items():
         if not isinstance(output_key, str) or not output_key:
             raise PipelineParseError(f"Step '{step_id}': output key must be a non-empty string")
@@ -146,7 +146,7 @@ def _parse_menai_step(step_id: str, data: Dict[str, Any], all_step_ids: List[str
     )
 
 
-def _parse_step(data: Any, index: int, all_step_ids: List[str]) -> PipelineStep:
+def _parse_step(data: Any, index: int, all_step_ids: list[str]) -> PipelineStep:
     """
     Parse a single pipeline step.
 
@@ -178,7 +178,7 @@ def _parse_step(data: Any, index: int, all_step_ids: List[str]) -> PipelineStep:
     return _parse_tool_step(step_id, data, all_step_ids)
 
 
-def parse_pipeline(data: Dict[str, Any]) -> Pipeline:
+def parse_pipeline(data: dict[str, Any]) -> Pipeline:
     """
     Parse and validate a pipeline from its JSON representation.
 
@@ -201,8 +201,8 @@ def parse_pipeline(data: Dict[str, Any]) -> Pipeline:
     if not steps_raw:
         raise PipelineParseError("Pipeline must have at least one step")
 
-    steps: List[PipelineStep] = []
-    seen_ids: List[str] = []
+    steps: list[PipelineStep] = []
+    seen_ids: list[str] = []
 
     for index, step_data in enumerate(steps_raw):
         step = _parse_step(step_data, index, seen_ids)

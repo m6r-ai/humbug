@@ -5,7 +5,6 @@ This module defines the SettingsContainer class which serves as the main widget 
 all settings items with proper spacing, scrolling, and organization.
 """
 
-from typing import List
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import Signal
@@ -24,7 +23,7 @@ class SettingsContainer(QWidget):
     Attributes:
         value_changed (Signal): Emitted when any contained setting changes
         _style_manager (StyleManager): Reference to the style manager singleton
-        _settings (List[SettingsItem]): List of all settings in this container
+        _settings (list[SettingsItem]): List of all settings in this container
         _layout (QVBoxLayout): Main layout for the container
     """
 
@@ -35,7 +34,7 @@ class SettingsContainer(QWidget):
         super().__init__(parent)
 
         self._style_manager = StyleManager()
-        self._settings: List[SettingsItem] = []
+        self._settings: list[SettingsItem] = []
 
         # Create main layout with proper spacing
         self._layout = QVBoxLayout()

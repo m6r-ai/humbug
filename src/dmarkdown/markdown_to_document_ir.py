@@ -1,4 +1,3 @@
-from typing import List
 
 from dmarkdown.markdown_ast_node import (
     MarkdownASTBlockquoteNode,
@@ -278,8 +277,8 @@ class _MarkdownToDocumentIRMapper:
 
         # Separate inline children from nested block children (sub-lists,
         # paragraphs, blockquotes, etc.)
-        inline_nodes: List[MarkdownASTNode] = []
-        block_nodes: List[MarkdownASTNode] = []
+        inline_nodes: list[MarkdownASTNode] = []
+        block_nodes: list[MarkdownASTNode] = []
 
         for child in node.children:
             if isinstance(
@@ -400,7 +399,7 @@ class _MarkdownToDocumentIRMapper:
         italic: bool,
         strikethrough: bool,
         code: bool,
-    ) -> List[DocumentIRNode]:
+    ) -> list[DocumentIRNode]:
         """
         Recursively collect inline document_ir nodes from a markdown AST node.
 
@@ -434,7 +433,7 @@ class _MarkdownToDocumentIRMapper:
             )]
 
         if isinstance(node, MarkdownASTBoldNode):
-            result: List[DocumentIRNode] = []
+            result: list[DocumentIRNode] = []
             for child in node.children:
                 result.extend(self._collect_inline(child, bold=True, italic=italic, strikethrough=strikethrough, code=code))
 
@@ -498,6 +497,6 @@ class _MarkdownToDocumentIRMapper:
         italic: bool,
         strikethrough: bool,
         code: bool,
-    ) -> List[DocumentIRNode]:
+    ) -> list[DocumentIRNode]:
         """Alias for _collect_inline used in list item mapping for clarity."""
         return self._collect_inline(node, bold=bold, italic=italic, strikethrough=strikethrough, code=code)

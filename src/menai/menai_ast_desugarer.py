@@ -13,7 +13,7 @@ into a core AST containing only:
 This simplifies the compiler and enables better optimization.
 """
 
-from typing import List, Set, Tuple, Any, cast
+from typing import Any, cast
 
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTInteger,
@@ -50,7 +50,7 @@ class MenaiASTDesugarer:
             source_file=source_node.source_file
         )
 
-    def _make_and(self, exprs: List[MenaiASTNode], source_node: MenaiASTNode) -> MenaiASTNode:
+    def _make_and(self, exprs: list[MenaiASTNode], source_node: MenaiASTNode) -> MenaiASTNode:
         """
         Construct (and exprs...) as a lowered if-chain without going through desugar().
 
@@ -84,7 +84,7 @@ class MenaiASTDesugarer:
             ),
         ), source_node)
 
-    def _make_or(self, exprs: List[MenaiASTNode], source_node: MenaiASTNode) -> MenaiASTNode:
+    def _make_or(self, exprs: list[MenaiASTNode], source_node: MenaiASTNode) -> MenaiASTNode:
         """
         Construct (or exprs...) as a lowered if-chain without going through desugar().
 
@@ -452,7 +452,7 @@ class MenaiASTDesugarer:
 
         # Extract raw (name, value_expr) pairs for dependency analysis.
         # The analyzer only inspects symbol names, so raw (pre-desugared) AST is correct here.
-        raw_pairs: List[Tuple[str, MenaiASTNode]] = []
+        raw_pairs: list[tuple[str, MenaiASTNode]] = []
         for binding in bindings_list.elements:
             assert isinstance(binding, MenaiASTList) and len(binding.elements) == 2
             name_expr, value_expr = binding.elements
@@ -490,9 +490,9 @@ class MenaiASTDesugarer:
         # into the current batch as long as none of them reference a name already
         # in the batch.  When a dependency on a batch-sibling is detected, close
         # the current batch and start a new one.  Each batch becomes one let.
-        runs: List[tuple] = []
-        current_batch: List = []
-        current_batch_names: Set[str] = set()
+        runs: list[tuple] = []
+        current_batch: list = []
+        current_batch_names: set[str] = set()
 
         for group in binding_groups:
             if group.is_recursive:
@@ -522,7 +522,7 @@ class MenaiASTDesugarer:
             runs.append(('let', current_batch))
 
         for kind, run_groups in reversed(runs):
-            combined_bindings: List[MenaiASTNode] = []
+            combined_bindings: list[MenaiASTNode] = []
             for group in run_groups:
                 for name in group.names:
                     name_sym = self._make_symbol(name, expr)
@@ -624,7 +624,7 @@ class MenaiASTDesugarer:
             )
 
         # Desugar all subexpressions
-        desugared_elements: List[MenaiASTNode] = [self._make_symbol('trace', expr)]
+        desugared_elements: list[MenaiASTNode] = [self._make_symbol('trace', expr)]
         for elem in expr.elements[1:]:  # Skip 'trace' symbol
             desugared_elements.append(self.desugar(elem))
 
@@ -819,7 +819,7 @@ class MenaiASTDesugarer:
         temps = [self._gen_temp() for _ in args]
 
         # Build pairwise comparisons
-        pairs: List[MenaiASTNode] = [
+        pairs: list[MenaiASTNode] = [
             self._make_list((self._make_symbol('$' + op_name, expr),
                              self._make_symbol(temps[i], expr),
                              self._make_symbol(temps[i + 1], expr)), expr)
@@ -879,7 +879,7 @@ class MenaiASTDesugarer:
             temps = [self._gen_temp() for _ in args]
 
             # Build pairwise binary calls directly: (op ti ti+1)
-            pairs: List[MenaiASTNode] = [
+            pairs: list[MenaiASTNode] = [
                 self._make_list((self._make_symbol('$' + op_name, expr),
                                  self._make_symbol(temps[i], expr),
                                  self._make_symbol(temps[i + 1], expr)), expr)
@@ -952,7 +952,7 @@ class MenaiASTDesugarer:
         ))
         return self.desugar(result)
 
-    def _build_match_clauses(self, temp_var: str, clauses: List[MenaiASTNode]) -> MenaiASTNode:
+    def _build_match_clauses(self, temp_var: str, clauses: list[MenaiASTNode]) -> MenaiASTNode:
         """
         Build nested if/let structure for match clauses.
 
@@ -980,7 +980,7 @@ class MenaiASTDesugarer:
 
         # Partition into groups: list of (group_type, [clause, ...])
         # group_type is the Python AST class for literal groups, or None for singles.
-        groups: List[Tuple[Any, List[MenaiASTNode]]] = []
+        groups: list[tuple[Any, list[MenaiASTNode]]] = []
         i = 0
         while i < len(clauses):
             clause = clauses[i]
@@ -990,7 +990,7 @@ class MenaiASTDesugarer:
 
             if lit_type is not None:
                 # Start or extend a literal group of this type
-                group: List[MenaiASTNode] = [clause]
+                group: list[MenaiASTNode] = [clause]
                 j = i + 1
                 while j < len(clauses):
                     next_clause = clauses[j]
@@ -1050,7 +1050,7 @@ class MenaiASTDesugarer:
         self,
         temp_var: str,
         lit_type: type,
-        clauses: List[MenaiASTNode],
+        clauses: list[MenaiASTNode],
         else_expr: MenaiASTNode,
     ) -> MenaiASTNode:
         """
@@ -1068,7 +1068,7 @@ class MenaiASTDesugarer:
         check, with no per-arm type predicate.
         """
         # Map AST literal class → (type-predicate name, equality-op name)
-        _type_info: dict[type, Tuple[str, str]] = {
+        _type_info: dict[type, tuple[str, str]] = {
             MenaiASTBoolean: ('boolean?', 'boolean=?'),
             MenaiASTInteger: ('integer?', 'integer=?'),
             MenaiASTFloat:   ('float?',   'float=?'),
@@ -1094,7 +1094,7 @@ class MenaiASTDesugarer:
     def _build_clause_with_bindings(
         self,
         test_expr: MenaiASTNode,
-        bindings: List[Tuple[str, Any]],  # Pattern variable bindings or special markers
+        bindings: list[tuple[str, Any]],  # Pattern variable bindings or special markers
         result_expr: MenaiASTNode,
         else_expr: MenaiASTNode
     ) -> MenaiASTNode:
@@ -1173,7 +1173,7 @@ class MenaiASTDesugarer:
         self,
         pattern: MenaiASTNode,
         temp_var: str
-    ) -> Tuple[MenaiASTNode, List[Tuple[str, MenaiASTNode]]]:
+    ) -> tuple[MenaiASTNode, list[tuple[str, MenaiASTNode]]]:
         """
         Desugar a pattern into (test_expr, bindings).
 
@@ -1274,7 +1274,7 @@ class MenaiASTDesugarer:
         self,
         pattern: MenaiASTList,
         temp_var: str
-    ) -> Tuple[MenaiASTNode, List[Tuple[str, MenaiASTNode]]]:
+    ) -> tuple[MenaiASTNode, list[tuple[str, MenaiASTNode]]]:
         """
         Desugar a list pattern.
 
@@ -1323,7 +1323,7 @@ class MenaiASTDesugarer:
             ))
 
             # Binding: bind the variable to temp_var (unless wildcard)
-            bindings: List[Tuple[str, MenaiASTNode]] = []
+            bindings: list[tuple[str, MenaiASTNode]] = []
             if var_pattern.name != '_':
                 bindings.append((var_pattern.name, MenaiASTSymbol(temp_var)))
 
@@ -1350,7 +1350,7 @@ class MenaiASTDesugarer:
         self,
         pattern: MenaiASTList,
         temp_var: str
-    ) -> Tuple[MenaiASTNode, List[Tuple[str, Any]]]:
+    ) -> tuple[MenaiASTNode, list[tuple[str, Any]]]:
         """
         Desugar a fixed-length list pattern like (a b c).
 
@@ -1399,7 +1399,7 @@ class MenaiASTDesugarer:
         # a different building strategy.
 
         # Collect element pattern info
-        element_info: List[Tuple[MenaiASTNode, str, MenaiASTNode]] = []  # List of (pattern, temp_var, extraction_expr)
+        element_info: list[tuple[MenaiASTNode, str, MenaiASTNode]] = []  # List of (pattern, temp_var, extraction_expr)
 
         for i, elem_pattern in enumerate(pattern.elements):
             # Generate temp var for this element
@@ -1424,9 +1424,9 @@ class MenaiASTDesugarer:
         self,
         pattern: MenaiASTNode,
         temp_var: str,
-        extraction_bindings: List[Tuple[str, MenaiASTNode]],
-        element_tests: List[MenaiASTNode],
-        pattern_bindings: List[Tuple[str, MenaiASTNode]]
+        extraction_bindings: list[tuple[str, MenaiASTNode]],
+        element_tests: list[MenaiASTNode],
+        pattern_bindings: list[tuple[str, MenaiASTNode]]
     ) -> None:
         """
         Recursively flatten a nested pattern into the given lists.
@@ -1447,7 +1447,7 @@ class MenaiASTDesugarer:
              bindings[0][0].startswith('__CONS_PATTERN_'))):
             # This is a nested list/cons pattern - flatten it
             # Cast to the expected type for element_info
-            nested_element_info = cast(List[Tuple[MenaiASTNode, str, MenaiASTNode]], bindings[0][1])
+            nested_element_info = cast(list[tuple[MenaiASTNode, str, MenaiASTNode]], bindings[0][1])
 
             # Add the length/type test
             if not (isinstance(test, MenaiASTBoolean) and test.value):
@@ -1477,7 +1477,7 @@ class MenaiASTDesugarer:
     def _build_list_pattern_clause(
         self,
         length_test: MenaiASTNode,
-        element_info: List,
+        element_info: list,
         result_expr: MenaiASTNode,
         else_expr: MenaiASTNode
     ) -> MenaiASTNode:
@@ -1502,9 +1502,9 @@ class MenaiASTDesugarer:
         #          else)
 
         # Extract elements
-        extraction_bindings: List[Tuple[str, MenaiASTNode]] = []
-        element_tests: List[MenaiASTNode] = []
-        pattern_bindings: List[Tuple[str, MenaiASTNode]] = []
+        extraction_bindings: list[tuple[str, MenaiASTNode]] = []
+        element_tests: list[MenaiASTNode] = []
+        pattern_bindings: list[tuple[str, MenaiASTNode]] = []
 
         for elem_pattern, elem_temp, elem_value in element_info:
             # Add extraction binding
@@ -1594,7 +1594,7 @@ class MenaiASTDesugarer:
         pattern: MenaiASTList,
         temp_var: str,
         dot_position: int
-    ) -> Tuple[MenaiASTNode, List[Tuple[str, Any]]]:
+    ) -> tuple[MenaiASTNode, list[tuple[str, Any]]]:
         """
         Desugar a cons pattern like (head . tail) or (a b . rest).
 
@@ -1629,7 +1629,7 @@ class MenaiASTDesugarer:
         combined_test = self._make_and([list_test, length_test], MenaiASTList(()))
 
         # Collect head element info
-        head_elements: List[Tuple[MenaiASTNode, str, MenaiASTNode]] = []
+        head_elements: list[tuple[MenaiASTNode, str, MenaiASTNode]] = []
 
         for i in range(dot_position):
             elem_pattern = pattern.elements[i]
@@ -1712,7 +1712,7 @@ class MenaiASTDesugarer:
         pattern: MenaiASTList,
         temp_var: str,
         struct_node: MenaiASTStruct
-    ) -> Tuple[MenaiASTNode, List[Tuple[str, Any]]]:
+    ) -> tuple[MenaiASTNode, list[tuple[str, Any]]]:
         """
         Desugar a struct destructuring pattern (TypeName field1 field2 ...).
 
@@ -1736,7 +1736,7 @@ class MenaiASTDesugarer:
         ))
 
         field_patterns = list(pattern.elements[1:])
-        element_info: List[Tuple[MenaiASTNode, str, MenaiASTNode]] = []
+        element_info: list[tuple[MenaiASTNode, str, MenaiASTNode]] = []
 
         for i, field_pattern in enumerate(field_patterns):
             elem_temp = self._gen_temp()

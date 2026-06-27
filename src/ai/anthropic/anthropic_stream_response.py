@@ -1,7 +1,6 @@
 """Enhanced Anthropic streaming response handler with tool support."""
 
 import json
-from typing import Dict
 
 from ai.ai_stream_response import AIStreamResponse
 from ai_tool import AIToolCall
@@ -21,10 +20,10 @@ class AnthropicStreamResponse(AIStreamResponse):
         self._output_tokens = 0
 
         # Tool call tracking
-        self._current_tool_call: Dict | None = None
+        self._current_tool_call: dict | None = None
         self._current_tool_arguments: str = ""
 
-    def update_from_chunk(self, chunk: Dict) -> None:
+    def update_from_chunk(self, chunk: dict) -> None:
         """
         Update from a response chunk and return new content if any.
 

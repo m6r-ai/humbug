@@ -6,8 +6,8 @@ This module defines the SSA-form CFG IR that sits between the IR tree
 consume this representation.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import List, Tuple, Callable
 
 from menai.menai_value import MenaiValue, MenaiStructType
 
@@ -110,7 +110,7 @@ class MenaiCFGBuiltinInstr:
     """
     result: MenaiCFGValue
     op: str
-    args: List[MenaiCFGValue]
+    args: list[MenaiCFGValue]
 
 
 @dataclass
@@ -122,7 +122,7 @@ class MenaiCFGCallInstr:
     """
     result: MenaiCFGValue
     func: MenaiCFGValue
-    args: List[MenaiCFGValue]
+    args: list[MenaiCFGValue]
 
 
 @dataclass
@@ -152,7 +152,7 @@ class MenaiCFGMakeClosureInstr:
     """
     result: MenaiCFGValue
     function: 'MenaiCFGFunction'
-    captures: List[MenaiCFGValue]
+    captures: list[MenaiCFGValue]
     needs_patching: bool = False
     # When True, the VM must create a mutable closure object (MAKE_CLOSURE)
     # even if `captures` is empty, because PATCH_CLOSURE instructions will
@@ -173,7 +173,7 @@ class MenaiCFGMakeStructInstr:
     """
     result: MenaiCFGValue
     struct_type: MenaiStructType
-    args: List[MenaiCFGValue]
+    args: list[MenaiCFGValue]
 
 
 @dataclass
@@ -187,7 +187,7 @@ class MenaiCFGMakeListInstr:
     a single call.
     """
     result: MenaiCFGValue
-    args: List[MenaiCFGValue]
+    args: list[MenaiCFGValue]
 
 
 @dataclass
@@ -200,7 +200,7 @@ class MenaiCFGMakeSetInstr:
     zone and allocating the set in a single call.
     """
     result: MenaiCFGValue
-    args: List[MenaiCFGValue]
+    args: list[MenaiCFGValue]
 
 
 @dataclass
@@ -213,7 +213,7 @@ class MenaiCFGMakeDictInstr:
     (k0, v0, k1, v1, ...) and allocating the dict in a single call.
     """
     result: MenaiCFGValue
-    pairs: List[Tuple[MenaiCFGValue, MenaiCFGValue]]
+    pairs: list[tuple[MenaiCFGValue, MenaiCFGValue]]
 
 
 @dataclass
@@ -251,7 +251,7 @@ class MenaiCFGPhiInstr:
     Native codegen: maps directly to an LLVM phi instruction.
     """
     result: MenaiCFGValue
-    incoming: List[Tuple[MenaiCFGValue, 'MenaiCFGBlock']]
+    incoming: list[tuple[MenaiCFGValue, 'MenaiCFGBlock']]
 
 
 @dataclass
@@ -264,7 +264,7 @@ class MenaiCFGTraceInstr:
     `value` on the stack.
     """
     result: MenaiCFGValue
-    messages: List[MenaiCFGValue]
+    messages: list[MenaiCFGValue]
     value: MenaiCFGValue
 
 
@@ -323,7 +323,7 @@ class MenaiCFGTailCallTerm:
     Lowered to TAIL_CALL by the VM codegen.
     """
     func: MenaiCFGValue
-    args: List[MenaiCFGValue]
+    args: list[MenaiCFGValue]
 
 
 @dataclass
@@ -346,7 +346,7 @@ class MenaiCFGSelfLoopTerm:
     argument values, in parameter order.  The VM codegen lowers this to
     JUMP 0 (after storing args into the parameter slots).
     """
-    args: List[MenaiCFGValue]
+    args: list[MenaiCFGValue]
 
 
 @dataclass
@@ -390,10 +390,10 @@ class MenaiCFGBlock:
     """
     id: int
     label: str
-    instrs: List[MenaiCFGInstr] = field(default_factory=list)
-    patch_instrs: List[MenaiCFGPatchClosureInstr] = field(default_factory=list)
+    instrs: list[MenaiCFGInstr] = field(default_factory=list)
+    patch_instrs: list[MenaiCFGPatchClosureInstr] = field(default_factory=list)
     terminator: MenaiCFGTerminator | None = None
-    predecessors: List['MenaiCFGBlock'] = field(default_factory=list)
+    predecessors: list['MenaiCFGBlock'] = field(default_factory=list)
 
     def __repr__(self) -> str:
         lines = [f"block {self.id} ({self.label}):"]
@@ -429,9 +429,9 @@ class MenaiCFGFunction:
     source_line  : source line where the lambda is defined
     source_file  : source file where the lambda is defined
     """
-    blocks: List[MenaiCFGBlock] = field(default_factory=list)
-    params: List[str] = field(default_factory=list)
-    free_vars: List[str] = field(default_factory=list)
+    blocks: list[MenaiCFGBlock] = field(default_factory=list)
+    params: list[str] = field(default_factory=list)
+    free_vars: list[str] = field(default_factory=list)
     is_variadic: bool = False
     binding_name: str | None = None
     source_line: int = 0
@@ -457,7 +457,7 @@ class MenaiCFGFunction:
         return "\n".join(lines)
 
 
-def _fmt_values(vs: List[MenaiCFGValue]) -> str:
+def _fmt_values(vs: list[MenaiCFGValue]) -> str:
     return "[" + ", ".join(str(v) for v in vs) + "]"
 
 
@@ -597,7 +597,7 @@ def remap_term(
     return term
 
 
-def value_ids_in_instr(instr: 'MenaiCFGInstr') -> List[int]:
+def value_ids_in_instr(instr: 'MenaiCFGInstr') -> list[int]:
     """Return all input value ids referenced by a non-phi instruction."""
     if isinstance(instr, MenaiCFGBuiltinInstr):
         return [a.id for a in instr.args]
@@ -634,7 +634,7 @@ def value_ids_in_instr(instr: 'MenaiCFGInstr') -> List[int]:
     return []
 
 
-def value_ids_in_term(term: 'MenaiCFGTerminator') -> List[int]:
+def value_ids_in_term(term: 'MenaiCFGTerminator') -> list[int]:
     """Return all input value ids referenced by a terminator."""
     if isinstance(term, MenaiCFGReturnTerm):
         return [term.value.id]

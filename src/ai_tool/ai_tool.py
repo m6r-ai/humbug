@@ -1,8 +1,9 @@
 """Abstract base class for AI tools."""
 
-import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Callable, Awaitable, final
+from collections.abc import Awaitable, Callable
+import logging
+from typing import Any, final
 
 from ai_tool.ai_tool_call import AIToolCall
 from ai_tool.ai_tool_definition import AIToolDefinition
@@ -13,7 +14,7 @@ from ai_tool.ai_tool_result import AIToolResult
 
 
 # Type alias for the authorization callback
-AIToolAuthorizationCallback = Callable[[str, Dict[str, Any], str, str | None, bool], Awaitable[bool]]
+AIToolAuthorizationCallback = Callable[[str, dict[str, Any], str, str | None, bool], Awaitable[bool]]
 
 
 class AITool(ABC):
@@ -29,7 +30,7 @@ class AITool(ABC):
         """
 
     @abstractmethod
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """
         Get operation definitions for this tool.
 
@@ -198,7 +199,7 @@ class AITool(ABC):
         self,
         name: str,
         description_prefix: str,
-        additional_parameters: List[AIToolParameter] | None = None
+        additional_parameters: list[AIToolParameter] | None = None
     ) -> AIToolDefinition:
         """
         Build tool definition from operation definitions.
@@ -244,7 +245,7 @@ class AITool(ABC):
             parameters=parameters
         )
 
-    def _get_required_str_value(self, key: str, arguments: Dict[str, Any]) -> str:
+    def _get_required_str_value(self, key: str, arguments: dict[str, Any]) -> str:
         """
         Extract required string value from arguments dictionary.
 
@@ -295,7 +296,7 @@ class AITool(ABC):
         # Return first sentence with period
         return first_sentence.strip() + '.' if not first_sentence.endswith('.') else first_sentence.strip()
 
-    def get_operation_summary(self) -> Dict[str, str]:
+    def get_operation_summary(self) -> dict[str, str]:
         """
         Get brief summary of each operation.
 
@@ -493,7 +494,7 @@ class AITool(ABC):
     def _get_optional_str_value(
         self,
         key: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         default: str | None = None
     ) -> str | None:
         """
@@ -527,7 +528,7 @@ class AITool(ABC):
     def _get_optional_int_value(
         self,
         key: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         default: int | None = None
     ) -> int | None:
         """
@@ -561,7 +562,7 @@ class AITool(ABC):
     def _get_optional_bool_value(
         self,
         key: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         default: bool = False
     ) -> bool:
         """
@@ -592,7 +593,7 @@ class AITool(ABC):
     def _get_optional_list_value(
         self,
         key: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         default: list | None = None
     ) -> list | None:
         """

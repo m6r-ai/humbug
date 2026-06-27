@@ -1,7 +1,6 @@
 """Singleton manager for AI tools."""
 
 import logging
-from typing import Dict, List
 
 from ai_tool.ai_tool import AITool
 from ai_tool.ai_tool_config import AIToolConfig
@@ -22,12 +21,12 @@ class AIToolManager:
 
     def __init__(self) -> None:
         if not hasattr(self, '_initialized'):
-            self._registered_tools: Dict[str, AIToolRegistered] = {}
-            self._enabled_tools: Dict[str, bool] = {}
+            self._registered_tools: dict[str, AIToolRegistered] = {}
+            self._enabled_tools: dict[str, bool] = {}
             self._logger = logging.getLogger("AIToolManager")
             self._initialized = True
 
-    def get_all_tool_configs(self) -> List[AIToolConfig]:
+    def get_all_tool_configs(self) -> list[AIToolConfig]:
         """
         Get all available tool configurations from registered tools.
 
@@ -144,7 +143,7 @@ class AIToolManager:
         """
         return self._enabled_tools.get(tool_name, True)
 
-    def set_tool_enabled_states(self, enabled_states: Dict[str, bool]) -> None:
+    def set_tool_enabled_states(self, enabled_states: dict[str, bool]) -> None:
         """
         Set enabled states for multiple tools.
 
@@ -154,7 +153,7 @@ class AIToolManager:
         for tool_name, enabled in enabled_states.items():
             self.set_tool_enabled(tool_name, enabled)
 
-    def get_tool_enabled_states(self) -> Dict[str, bool]:
+    def get_tool_enabled_states(self) -> dict[str, bool]:
         """
         Get enabled states for all tools.
 
@@ -163,7 +162,7 @@ class AIToolManager:
         """
         return self._enabled_tools.copy()
 
-    def get_default_enabled_tools(self) -> Dict[str, bool]:
+    def get_default_enabled_tools(self) -> dict[str, bool]:
         """
         Get default enabled state for all registered tools.
 
@@ -175,7 +174,7 @@ class AIToolManager:
             for tool_name, registered_tool in self._registered_tools.items()
         }
 
-    def get_tool_definitions(self) -> List[AIToolDefinition]:
+    def get_tool_definitions(self) -> list[AIToolDefinition]:
         """
         Get definitions for all registered and enabled tools.
 
@@ -201,11 +200,11 @@ class AIToolManager:
         registered_tool = self._registered_tools.get(name)
         return registered_tool.tool if registered_tool else None
 
-    def get_tool_names(self) -> List[str]:
+    def get_tool_names(self) -> list[str]:
         """Get names of all registered tools."""
         return list(self._registered_tools.keys())
 
-    def get_enabled_tool_names(self) -> List[str]:
+    def get_enabled_tool_names(self) -> list[str]:
         """Get names of all enabled tools."""
         return [
             tool_name for tool_name in self._registered_tools

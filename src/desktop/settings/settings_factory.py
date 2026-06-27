@@ -5,7 +5,7 @@ This module defines the SettingsFactory class which provides helper methods to c
 various types of settings items with default styling and behavior.
 """
 
-from typing import List, Any, Tuple
+from typing import Any
 from PySide6.QtWidgets import QWidget
 
 from desktop.settings.settings_combo import SettingsCombo
@@ -57,7 +57,7 @@ class SettingsFactory:
     @staticmethod
     def create_combo(
         label_text: str,
-        items: List[Tuple[str, Any]] | None = None,
+        items: list[tuple[str, Any]] | None = None,
         parent: QWidget | None = None
     ) -> SettingsCombo:
         """Create a combo box setting."""

@@ -1,6 +1,5 @@
 """Converts full file content and parsed diff hunks into side-by-side row descriptors."""
 
-from typing import List
 
 from diff.diff_types import DiffHunk
 
@@ -32,7 +31,7 @@ class DiffViewBuilder:
     text on right).
     """
 
-    def build(self, old_lines: List[str], new_lines: List[str], hunks: List[DiffHunk]) -> List[DiffRow]:
+    def build(self, old_lines: list[str], new_lines: list[str], hunks: list[DiffHunk]) -> list[DiffRow]:
         """
         Build the flat row list for a complete side-by-side diff.
 
@@ -44,7 +43,7 @@ class DiffViewBuilder:
         Returns:
             Ordered list of DiffRow objects ready for rendering.
         """
-        rows: List[DiffRow] = []
+        rows: list[DiffRow] = []
 
         # Cursors into each line list (0-indexed internally; hunk numbers are 1-indexed).
         old_pos = 0
@@ -67,8 +66,8 @@ class DiffViewBuilder:
                 new_pos += 1
 
             # Collect removed and added runs within this hunk.
-            removed: List[str] = []
-            added: List[str] = []
+            removed: list[str] = []
+            added: list[str] = []
 
             for diff_line in hunk.lines:
                 if diff_line.type == ' ':
@@ -114,9 +113,9 @@ class DiffViewBuilder:
 
     def _flush_run(
         self,
-        rows: List[DiffRow],
-        removed: List[str],
-        added: List[str],
+        rows: list[DiffRow],
+        removed: list[str],
+        added: list[str],
         old_start: int,
         new_start: int,
     ) -> None:

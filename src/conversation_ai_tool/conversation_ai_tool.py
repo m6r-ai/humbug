@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Dict, cast
+from typing import Any, cast
 from ai import AIMessage
 
 from ai_tool import (
@@ -129,7 +129,7 @@ class ConversationAITool(AITool):
         """Get brief one-line description for system prompt."""
         return "Browse, search, and navigate conversation history in conversation tabs."
 
-    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+    def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """
         Get operation definitions for this tool.
 
@@ -187,7 +187,7 @@ class ConversationAITool(AITool):
             ),
         }
 
-    def _get_conversation_context(self, arguments: Dict[str, Any]) -> ConversationContext:
+    def _get_conversation_context(self, arguments: dict[str, Any]) -> ConversationContext:
         """
         Get a ConversationContext by context_id from the mindspace.
 

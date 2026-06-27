@@ -1,6 +1,6 @@
 """AST builder for Menai expressions with detailed error messages."""
 
-from typing import List, cast
+from typing import cast
 from dataclasses import dataclass
 from menai.menai_error import MenaiASTBuildError
 from menai.menai_token import MenaiToken, MenaiTokenType
@@ -51,14 +51,14 @@ class MenaiASTBuilder:
             tokens: List of tokens to parse
             expression: Original expression string for error context
         """
-        self.tokens: List[MenaiToken] | None = None
+        self.tokens: list[MenaiToken] | None = None
         self.pos = 0
         self.current_token: MenaiToken | None = None
         self.expression = ""
         self.source_file = ""
 
         # Paren stack for tracking unclosed expressions
-        self.paren_stack: List[ParenStackFrame] = []
+        self.paren_stack: list[ParenStackFrame] = []
 
         # Track the most recently closed frame and where it was closed.
         # Used to report premature-close errors pointing at the culprit ')'.
@@ -70,7 +70,7 @@ class MenaiASTBuilder:
         self.last_token_end_line: int = 1
         self.last_token_end_column: int = 1
 
-    def build(self, tokens: List[MenaiToken], expression: str = "", source_file: str = "") -> MenaiASTNode:
+    def build(self, tokens: list[MenaiToken], expression: str = "", source_file: str = "") -> MenaiASTNode:
         """
         Parse tokens into AST with detailed error reporting.
 
@@ -459,7 +459,7 @@ class MenaiASTBuilder:
 
         self._advance()  # consume '('
 
-        elements: List[MenaiASTNode] = []
+        elements: list[MenaiASTNode] = []
 
         # Check if this is a 'let' form to enable special tracking
         if (
@@ -491,7 +491,7 @@ class MenaiASTBuilder:
         start_line: int,
         start_col: int,
         _frame: ParenStackFrame,
-        elements: List[MenaiASTNode]
+        elements: list[MenaiASTNode]
     ) -> MenaiASTList:
         """
         Parse a 'let' form with special tracking for binding-level errors.
@@ -570,7 +570,7 @@ class MenaiASTBuilder:
 
         self._advance()  # consume '('
 
-        bindings: List[MenaiASTNode] = []
+        bindings: list[MenaiASTNode] = []
         binding_index = 0
 
         while self.current_token is not None and self.current_token.type != MenaiTokenType.RPAREN:
@@ -661,7 +661,7 @@ class MenaiASTBuilder:
 
     def _create_incomplete_bindings_error(
         self,
-        parsed_bindings: List[MenaiASTNode],
+        parsed_bindings: list[MenaiASTNode],
         bindings_start_line: int,
         bindings_start_col: int
     ) -> MenaiASTBuildError:
@@ -791,7 +791,7 @@ class MenaiASTBuilder:
         self.last_token_end_column = self.current_token.column + self.current_token.length
 
         self.pos += 1
-        tokens = cast(List[MenaiToken], self.tokens)
+        tokens = cast(list[MenaiToken], self.tokens)
         if self.pos < len(tokens):
             self.current_token = tokens[self.pos]
 

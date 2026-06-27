@@ -1,7 +1,6 @@
 """Handles streaming response from Deepseek API."""
 
 import json
-from typing import Dict
 
 from ai.ai_stream_response import AIStreamResponse
 from ai_tool import AIToolCall
@@ -15,9 +14,9 @@ class DeepseekStreamResponse(AIStreamResponse):
         super().__init__()
 
         # Track streaming tool calls
-        self._current_tool_calls: Dict[str, Dict] = {}
+        self._current_tool_calls: dict[str, dict] = {}
 
-    def _handle_choices(self, choices: Dict) -> None:
+    def _handle_choices(self, choices: dict) -> None:
         """
         Handle choices from the Deepseek API response.
 
@@ -67,7 +66,7 @@ class DeepseekStreamResponse(AIStreamResponse):
                 if "arguments" in function:
                     current_call["arguments"] += function["arguments"]
 
-    def _handle_usage(self, usage: Dict) -> None:
+    def _handle_usage(self, usage: dict) -> None:
         """
         Handle usage data from the Deepseek API response.
 
@@ -104,7 +103,7 @@ class DeepseekStreamResponse(AIStreamResponse):
             # Add to our tool calls list
             self._add_tool_call(tool_call)
 
-    def update_from_chunk(self, chunk: Dict) -> None:
+    def update_from_chunk(self, chunk: dict) -> None:
         """
         Update from a response chunk and return new content if any.
 

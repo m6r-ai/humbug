@@ -5,7 +5,7 @@ This module provides standard trace watcher implementations for debugging
 and profiling Menai programs.
 """
 
-from typing import List, Any
+from typing import Any
 
 
 class MenaiStdoutTraceWatcher:
@@ -80,7 +80,7 @@ class MenaiBufferingTraceWatcher:
             max_traces: Maximum number of traces to buffer (default: 10000).
                        When limit is reached, oldest traces are discarded.
         """
-        self.traces: List[str] = []
+        self.traces: list[str] = []
         self.max_traces = max_traces
         self.total_traces = 0  # Total number of traces received (including discarded)
         self.clipped = False  # Whether traces have been clipped
@@ -102,7 +102,7 @@ class MenaiBufferingTraceWatcher:
 
         self.traces.append(message)
 
-    def get_traces(self) -> List[str]:
+    def get_traces(self) -> list[str]:
         """
         Get all buffered traces.
 

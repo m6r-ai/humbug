@@ -8,7 +8,6 @@ while preserving runtime semantics.
 
 import cmath
 import math
-from typing import List
 
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
@@ -308,7 +307,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         # Optimize binding values
         opt_bindings_list: MenaiASTNode
         assert isinstance(bindings_list, MenaiASTList)
-        opt_bindings: List[MenaiASTNode] = []
+        opt_bindings: list[MenaiASTNode] = []
         for binding in bindings_list.elements:
             assert isinstance(binding, MenaiASTList) and len(binding.elements) == 2
             var, val = binding.elements
@@ -361,7 +360,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return True
 
-    def _try_fold_list(self, args: List[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
+    def _try_fold_list(self, args: list[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
         """
         Try to fold (list k1 ... kn) into a single MenaiASTListLiteral node.
 
@@ -383,7 +382,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
             line=source_expr.line, column=source_expr.column, source_file=source_expr.source_file,
         )
 
-    def _try_fold_dict(self, args: List[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
+    def _try_fold_dict(self, args: list[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
         """
         Try to fold (dict k1 v1 ... kn vn) into a single MenaiASTDict node.
 
@@ -407,7 +406,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
             line=source_expr.line, column=source_expr.column, source_file=source_expr.source_file,
         )
 
-    def _try_fold_set(self, args: List[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
+    def _try_fold_set(self, args: list[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
         """
         Try to fold (set e1 ... en) into a single MenaiASTSet node.
 
@@ -427,7 +426,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
             line=source_expr.line, column=source_expr.column, source_file=source_expr.source_file,
         )
 
-    def _try_fold_builtin(self, op_name: str, args: List[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
+    def _try_fold_builtin(self, op_name: str, args: list[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
         """
         Try to fold a builtin operation.
 
@@ -478,7 +477,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
             line=source_expr.line, column=source_expr.column, source_file=source_expr.source_file,
         )
 
-    def _fold_boolean_eq(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_boolean_eq(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold boolean=?: all args must be booleans."""
         # Check all are booleans - if not, can't fold (will error at runtime)
         if not all(isinstance(arg, MenaiASTBoolean) for arg in args):
@@ -487,7 +486,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         first = args[0]
         return MenaiASTBoolean(all(first == arg for arg in args[1:]))
 
-    def _fold_boolean_neq(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_boolean_neq(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """
         Fold inequality: (boolean!= a b c ...) → boolean
 
@@ -500,14 +499,14 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         first = args[0]
         return MenaiASTBoolean(not all(first == arg for arg in args[1:]))
 
-    def _fold_not(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_not(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold not: (not a) → boolean"""
         if not isinstance(args[0], MenaiASTBoolean):
             return None
 
         return MenaiASTBoolean(not args[0].value)
 
-    def _fold_integer_eq(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_eq(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer=?: all args must be integers."""
         # Check all are integers - if not, can't fold (will error at runtime)
         if not all(isinstance(arg, MenaiASTInteger) for arg in args):
@@ -516,7 +515,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         first = args[0]
         return MenaiASTBoolean(all(first == arg for arg in args[1:]))
 
-    def _fold_integer_neq(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_neq(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """
         Fold inequality: (integer!= a b c ...) → boolean
 
@@ -529,14 +528,14 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         first = args[0]
         return MenaiASTBoolean(not all(first == arg for arg in args[1:]))
 
-    def _fold_integer_abs(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_abs(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer-abs: arg must be integer, returns integer."""
         if not isinstance(args[0], MenaiASTInteger):
             return None
 
         return MenaiASTInteger(abs(args[0].value))
 
-    def _fold_integer_add(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_add(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer+: all args must be integers, returns integer."""
         result = 0
         for a in args:
@@ -547,7 +546,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTInteger(result)
 
-    def _fold_integer_sub(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_sub(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer-: all args must be integers, returns integer."""
         if not isinstance(args[0], MenaiASTInteger):
             return None
@@ -563,7 +562,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTInteger(result)
 
-    def _fold_integer_mul(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_mul(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer*: all args must be integers, returns integer."""
         result = 1
         for a in args:
@@ -574,7 +573,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTInteger(result)
 
-    def _fold_integer_div(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_div(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer/: all args must be integers, floor division, returns integer."""
         if not isinstance(args[0], MenaiASTInteger):
             return None
@@ -592,7 +591,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTInteger(result)
 
-    def _fold_integer_mod(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_mod(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer%: all args must be integers, modulo, returns integer."""
         if not isinstance(args[0], MenaiASTInteger):
             return None
@@ -610,14 +609,14 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTInteger(result)
 
-    def _fold_integer_neg(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_neg(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer-neg: arg must be integer, returns integer."""
         if not isinstance(args[0], MenaiASTInteger):
             return None
 
         return MenaiASTInteger(-args[0].value)
 
-    def _fold_integer_expn(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_expn(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer-expn: both args must be integers, returns integer."""
         if not isinstance(args[0], MenaiASTInteger) or not isinstance(args[1], MenaiASTInteger):
             return None
@@ -629,7 +628,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         result = args[0].value ** arg1
         return MenaiASTInteger(result)
 
-    def _fold_integer_bit_or(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_bit_or(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold bit-or: (bit-or a b ...) → bitwise OR"""
         first_arg = args[0]
         if not isinstance(first_arg, MenaiASTInteger):
@@ -644,7 +643,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTInteger(result)
 
-    def _fold_integer_bit_and(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_bit_and(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold bit-and: (bit-and a b ...) → bitwise AND"""
         first_arg = args[0]
         if not isinstance(first_arg, MenaiASTInteger):
@@ -659,7 +658,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTInteger(result)
 
-    def _fold_integer_bit_xor(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_bit_xor(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold bit-xor: (bit-xor a b ...) → bitwise XOR"""
         first_arg = args[0]
         if not isinstance(first_arg, MenaiASTInteger):
@@ -674,7 +673,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTInteger(result)
 
-    def _fold_integer_bit_not(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_bit_not(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold bit-not: (bit-not a) → bitwise NOT"""
         arg = args[0]
         if not isinstance(arg, MenaiASTInteger):
@@ -683,7 +682,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         result = ~arg.value
         return MenaiASTInteger(result)
 
-    def _fold_integer_bit_shift_left(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_bit_shift_left(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold bit-shift-left: (bit-shift-left a b) → a << b"""
         arg0 = args[0]
         if not isinstance(arg0, MenaiASTInteger):
@@ -696,7 +695,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         result = arg0.value << arg1.value
         return MenaiASTInteger(result)
 
-    def _fold_integer_bit_shift_right(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_bit_shift_right(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold bit-shift-right: (bit-shift-right a b) → a >> b"""
         arg0 = args[0]
         if not isinstance(arg0, MenaiASTInteger):
@@ -709,21 +708,21 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         result = arg0.value >> arg1.value
         return MenaiASTInteger(result)
 
-    def _fold_integer_min(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_min(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer-min: (integer-min a b) → smaller integer"""
         if not isinstance(args[0], MenaiASTInteger) or not isinstance(args[1], MenaiASTInteger):
             return None
 
         return MenaiASTInteger(args[0].value if args[0].value <= args[1].value else args[1].value)
 
-    def _fold_integer_max(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_max(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer-max: (integer-max a b) → larger integer"""
         if not isinstance(args[0], MenaiASTInteger) or not isinstance(args[1], MenaiASTInteger):
             return None
 
         return MenaiASTInteger(args[0].value if args[0].value >= args[1].value else args[1].value)
 
-    def _fold_integer_to_complex(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_to_complex(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer->complex: (integer->complex real [imag]) → complex number"""
         if not isinstance(args[0], MenaiASTInteger):
             return None
@@ -742,7 +741,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         result = complex(real, imag)
         return MenaiASTComplex(result)
 
-    def _fold_float_eq(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_eq(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float=?: all args must be floats."""
         if not all(isinstance(arg, MenaiASTFloat) for arg in args):
             return None
@@ -750,7 +749,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         first = args[0]
         return MenaiASTBoolean(all(first == arg for arg in args[1:]))
 
-    def _fold_float_neq(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_neq(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """
         Fold inequality: (float!= a b c ...) → boolean
 
@@ -763,14 +762,14 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         first = args[0]
         return MenaiASTBoolean(not all(first == arg for arg in args[1:]))
 
-    def _fold_float_abs(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_abs(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-abs: arg must be float, returns float."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
 
         return MenaiASTFloat(abs(args[0].value))
 
-    def _fold_float_add(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_add(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float+: all args must be floats, returns float."""
         result = 0.0
         for a in args:
@@ -781,7 +780,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(result)
 
-    def _fold_float_sub(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_sub(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-: all args must be floats, returns float."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
@@ -795,7 +794,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(result)
 
-    def _fold_float_mul(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_mul(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float*: all args must be floats, returns float."""
         result = 1.0
         for a in args:
@@ -806,7 +805,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(result)
 
-    def _fold_float_div(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_div(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float/: all args must be floats, true division, returns float."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
@@ -824,21 +823,21 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(result)
 
-    def _fold_float_neg(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_neg(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-neg: arg must be float, returns float."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
 
         return MenaiASTFloat(-args[0].value)
 
-    def _fold_float_exp(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_exp(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-exp: arg must be float, returns float."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
 
         return MenaiASTFloat(math.exp(args[0].value))
 
-    def _fold_float_expn(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_expn(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-expn: all args must be floats, left-associative reduction, returns float."""
         if len(args) < 2:
             return None
@@ -855,7 +854,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(result)
 
-    def _fold_float_log(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_log(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-log: arg must be float, returns float. Zero → -inf, negative → don't fold."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
@@ -869,7 +868,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(math.log(val))
 
-    def _fold_float_log10(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_log10(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-log10: arg must be float, returns float. Zero → -inf, negative → don't fold."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
@@ -883,7 +882,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(math.log10(val))
 
-    def _fold_float_log2(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_log2(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-log2: arg must be float, returns float. Zero → -inf, negative → don't fold."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
@@ -897,7 +896,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(math.log2(val))
 
-    def _fold_float_logn(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_logn(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-logn: (float-logn x base) → float. Zero x → -inf, invalid base → don't fold."""
         if not isinstance(args[0], MenaiASTFloat) or not isinstance(args[1], MenaiASTFloat):
             return None
@@ -916,28 +915,28 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(math.log(val, base))
 
-    def _fold_float_sin(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_sin(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-sin: arg must be float, returns float."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
 
         return MenaiASTFloat(math.sin(args[0].value))
 
-    def _fold_float_cos(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_cos(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-cos: arg must be float, returns float."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
 
         return MenaiASTFloat(math.cos(args[0].value))
 
-    def _fold_float_tan(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_tan(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-tan: arg must be float, returns float."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
 
         return MenaiASTFloat(math.tan(args[0].value))
 
-    def _fold_float_sqrt(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_sqrt(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-sqrt: arg must be non-negative float, returns float."""
         if not isinstance(args[0], MenaiASTFloat):
             return None
@@ -948,7 +947,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(math.sqrt(val))
 
-    def _fold_float_to_complex(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_to_complex(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float->complex: (float->complex real [imag]) → complex number"""
         if not isinstance(args[0], MenaiASTFloat):
             return None
@@ -967,7 +966,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         result = complex(real, imag)
         return MenaiASTComplex(result)
 
-    def _fold_complex_eq(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_eq(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex=?: all args must be complex."""
         # Check all are complex - if not, can't fold (will error at runtime)
         if not all(isinstance(arg, MenaiASTComplex) for arg in args):
@@ -976,7 +975,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         first = args[0]
         return MenaiASTBoolean(all(first == arg for arg in args[1:]))
 
-    def _fold_complex_neq(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_neq(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """
         Fold inequality: (complex!= a b c ...) → boolean
 
@@ -989,7 +988,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         first = args[0]
         return MenaiASTBoolean(not all(first == arg for arg in args[1:]))
 
-    def _fold_complex_real(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_real(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-real: (complex-real a) → real part"""
         if not isinstance(args[0], MenaiASTComplex):
             return None
@@ -997,7 +996,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         val = args[0].value
         return MenaiASTFloat(val.real)
 
-    def _fold_complex_imag(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_imag(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-imag: (complex-imag a) → imaginary part"""
         if not isinstance(args[0], MenaiASTComplex):
             return None
@@ -1005,14 +1004,14 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         val = args[0].value
         return MenaiASTFloat(val.imag)
 
-    def _fold_complex_abs(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_abs(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-abs: arg must be complex, returns float (magnitude)."""
         if not isinstance(args[0], MenaiASTComplex):
             return None
 
         return MenaiASTFloat(abs(args[0].value))
 
-    def _fold_complex_add(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_add(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex+: all args must be complex, returns complex."""
         result = complex(0, 0)
         for a in args:
@@ -1023,7 +1022,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTComplex(result)
 
-    def _fold_complex_sub(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_sub(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-: all args must be complex, returns complex."""
         if not isinstance(args[0], MenaiASTComplex):
             return None
@@ -1037,7 +1036,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTComplex(result)
 
-    def _fold_complex_mul(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_mul(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex*: all args must be complex, returns complex."""
         result = complex(1, 0)
         for a in args:
@@ -1048,7 +1047,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTComplex(result)
 
-    def _fold_complex_div(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_div(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex/: all args must be complex, returns complex."""
         if not isinstance(args[0], MenaiASTComplex):
             return None
@@ -1066,21 +1065,21 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTComplex(result)
 
-    def _fold_complex_neg(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_neg(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-neg: arg must be complex, returns complex."""
         if not isinstance(args[0], MenaiASTComplex):
             return None
 
         return MenaiASTComplex(-args[0].value)
 
-    def _fold_complex_exp(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_exp(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-exp: arg must be complex, returns complex."""
         if not isinstance(args[0], MenaiASTComplex):
             return None
 
         return MenaiASTComplex(cmath.exp(args[0].value))
 
-    def _fold_complex_expn(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_expn(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-expn: all args must be complex, left-associative reduction, returns complex."""
         if len(args) < 2:
             return None
@@ -1097,21 +1096,21 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTComplex(result)
 
-    def _fold_complex_log(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_log(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-log: arg must be complex, returns complex."""
         if not isinstance(args[0], MenaiASTComplex):
             return None
 
         return MenaiASTComplex(cmath.log(args[0].value))
 
-    def _fold_complex_log10(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_log10(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-log10: arg must be complex, returns complex."""
         if not isinstance(args[0], MenaiASTComplex):
             return None
 
         return MenaiASTComplex(cmath.log10(args[0].value))
 
-    def _fold_complex_logn(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_logn(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-logn: (complex-logn x base) → complex. Zero base → don't fold."""
         if not isinstance(args[0], MenaiASTComplex) or not isinstance(args[1], MenaiASTComplex):
             return None
@@ -1122,35 +1121,35 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTComplex(cmath.log(args[0].value, base))
 
-    def _fold_complex_sin(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_sin(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-sin: arg must be complex, returns complex."""
         if not isinstance(args[0], MenaiASTComplex):
             return None
 
         return MenaiASTComplex(cmath.sin(args[0].value))
 
-    def _fold_complex_cos(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_cos(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-cos: arg must be complex, returns complex."""
         if not isinstance(args[0], MenaiASTComplex):
             return None
 
         return MenaiASTComplex(cmath.cos(args[0].value))
 
-    def _fold_complex_tan(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_tan(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-tan: arg must be complex, returns complex."""
         if not isinstance(args[0], MenaiASTComplex):
             return None
 
         return MenaiASTComplex(cmath.tan(args[0].value))
 
-    def _fold_complex_sqrt(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_complex_sqrt(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold complex-sqrt: arg must be complex, returns complex."""
         if not isinstance(args[0], MenaiASTComplex):
             return None
 
         return MenaiASTComplex(cmath.sqrt(args[0].value))
 
-    def _fold_string_eq(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_string_eq(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold string=?: all args must be strings."""
         # Check all are strings - if not, can't fold (will error at runtime)
         if not all(isinstance(arg, MenaiASTString) for arg in args):
@@ -1159,7 +1158,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         first = args[0]
         return MenaiASTBoolean(all(first == arg for arg in args[1:]))
 
-    def _fold_string_neq(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_string_neq(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """
         Fold inequality: (string!= a b c ...) → boolean
 
@@ -1172,7 +1171,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         first = args[0]
         return MenaiASTBoolean(not all(first == arg for arg in args[1:]))
 
-    def _fold_string_to_integer_codepoint(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_string_to_integer_codepoint(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold string->integer-codepoint: arg must be a single-character string, returns integer."""
         if not isinstance(args[0], MenaiASTString):
             return None
@@ -1183,7 +1182,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTInteger(ord(s))
 
-    def _fold_integer_codepoint_to_string(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_integer_codepoint_to_string(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold integer-codepoint->string: arg must be a valid Unicode scalar value, returns string."""
         if not isinstance(args[0], MenaiASTInteger):
             return None
@@ -1194,7 +1193,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTString(chr(cp))
 
-    def _fold_float_floor_div(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_floor_div(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float// floor division: (float// a b) → float floor quotient"""
         if not isinstance(args[0], MenaiASTFloat) or not isinstance(args[1], MenaiASTFloat):
             return None
@@ -1205,7 +1204,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(float(a // b))
 
-    def _fold_float_mod(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_mod(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float% modulo: (float% a b) → float remainder"""
         if not isinstance(args[0], MenaiASTFloat) or not isinstance(args[1], MenaiASTFloat):
             return None
@@ -1216,35 +1215,35 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         return MenaiASTFloat(a % b)
 
-    def _fold_float_floor(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_floor(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-floor: (float-floor a) → float floor"""
         if not isinstance(args[0], MenaiASTFloat):
             return None
 
         return MenaiASTFloat(float(math.floor(args[0].value)))
 
-    def _fold_float_ceil(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_ceil(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-ceil: (float-ceil a) → float ceiling"""
         if not isinstance(args[0], MenaiASTFloat):
             return None
 
         return MenaiASTFloat(float(math.ceil(args[0].value)))
 
-    def _fold_float_round(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_round(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-round: (float-round a) → float rounded"""
         if not isinstance(args[0], MenaiASTFloat):
             return None
 
         return MenaiASTFloat(float(round(args[0].value)))
 
-    def _fold_float_min(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_min(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-min: (float-min a b) → smaller float"""
         if not isinstance(args[0], MenaiASTFloat) or not isinstance(args[1], MenaiASTFloat):
             return None
 
         return MenaiASTFloat(args[0].value if args[0].value <= args[1].value else args[1].value)
 
-    def _fold_float_max(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+    def _fold_float_max(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float-max: (float-max a b) → larger float"""
         if not isinstance(args[0], MenaiASTFloat) or not isinstance(args[1], MenaiASTFloat):
             return None

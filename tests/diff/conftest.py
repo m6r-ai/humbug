@@ -1,7 +1,7 @@
 """Shared fixtures and utilities for diff tests."""
 
 import pytest
-from typing import Any, List
+from typing import Any
 
 from diff.diff_matcher import DiffMatcher
 from diff.diff_applier import DiffApplier
@@ -16,7 +16,7 @@ class SimpleDiffMatcher(DiffMatcher):
         document: Any,
         start_line: int,
         count: int
-    ) -> List[str]:
+    ) -> list[str]:
         """Get lines from a string document."""
         if isinstance(document, str):
             lines = document.splitlines()
@@ -116,17 +116,17 @@ class DiffTestHelpers:
     """Helper utilities for diff testing."""
 
     @staticmethod
-    def create_simple_document(lines: List[str]) -> List[str]:
+    def create_simple_document(lines: list[str]) -> list[str]:
         """Create a simple document from lines."""
         return lines.copy()
 
     @staticmethod
-    def document_to_string(document: List[str]) -> str:
+    def document_to_string(document: list[str]) -> str:
         """Convert document to string."""
         return '\n'.join(document)
 
     @staticmethod
-    def string_to_document(text: str) -> List[str]:
+    def string_to_document(text: str) -> list[str]:
         """Convert string to document."""
         return text.splitlines()
 

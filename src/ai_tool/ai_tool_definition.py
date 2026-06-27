@@ -1,7 +1,6 @@
 """AI tool definition."""
 
 from dataclasses import dataclass
-from typing import List
 
 from ai_tool.ai_tool_parameter import AIToolParameter
 
@@ -11,4 +10,4 @@ class AIToolDefinition:
     """Definition of an available tool."""
     name: str
     description: str
-    parameters: List[AIToolParameter]
+    parameters: list[AIToolParameter]

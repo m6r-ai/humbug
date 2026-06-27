@@ -1,7 +1,7 @@
 """
 Visitor class to print markdown AST structures for debugging
 """
-from typing import List, Any
+from typing import Any
 
 from dmarkdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownASTTextNode, MarkdownASTHeadingNode, MarkdownASTInlineCodeNode,
@@ -28,7 +28,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         """
         return "  " * self.indent_level
 
-    def generic_visit(self, node: MarkdownASTNode) -> List[Any]:
+    def generic_visit(self, node: MarkdownASTNode) -> list[Any]:
         """
         Default visit method that prints the node type.
 
@@ -67,7 +67,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         print(f"{self._indent()}Text{line_range}: '{node.content}'")
         return node.content
 
-    def visit_MarkdownASTHeadingNode(self, node: MarkdownASTHeadingNode) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTHeadingNode(self, node: MarkdownASTHeadingNode) -> list[Any]:  # pylint: disable=invalid-name
         """
         Visit a heading node and print its level.
 
@@ -104,7 +104,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         print(f"{self._indent()}InlineCode{line_range}: '{node.content}'")
         return node.content
 
-    def visit_MarkdownASTUnorderedListNode(self, node: MarkdownASTUnorderedListNode) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTUnorderedListNode(self, node: MarkdownASTUnorderedListNode) -> list[Any]:  # pylint: disable=invalid-name
         """
         Visit an unordered list node and print its attributes.
 
@@ -125,7 +125,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return results
 
-    def visit_MarkdownASTOrderedListNode(self, node: MarkdownASTOrderedListNode) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTOrderedListNode(self, node: MarkdownASTOrderedListNode) -> list[Any]:  # pylint: disable=invalid-name
         """
         Visit an ordered list node and print its attributes.
 
@@ -146,7 +146,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return results
 
-    def visit_MarkdownASTListItemNode(self, node: MarkdownASTListItemNode) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTListItemNode(self, node: MarkdownASTListItemNode) -> list[Any]:  # pylint: disable=invalid-name
         """
         Visit a list item node and print its attributes.
 
@@ -166,7 +166,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return results
 
-    def visit_MarkdownASTLinkNode(self, node: MarkdownASTLinkNode) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTLinkNode(self, node: MarkdownASTLinkNode) -> list[Any]:  # pylint: disable=invalid-name
         """
         Visit a link node and print its URL and title.
 
@@ -240,7 +240,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return node.content
 
-    def visit_MarkdownASTTableNode(self, node: MarkdownASTTableNode) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTTableNode(self, node: MarkdownASTTableNode) -> list[Any]:  # pylint: disable=invalid-name
         """
         Visit a table node and print its structure.
 
@@ -260,7 +260,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return results
 
-    def visit_MarkdownASTTableHeaderNode(self, node: MarkdownASTTableHeaderNode) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTTableHeaderNode(self, node: MarkdownASTTableHeaderNode) -> list[Any]:  # pylint: disable=invalid-name
         """
         Visit a table header node and print its info.
 
@@ -276,7 +276,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return results
 
-    def visit_MarkdownASTTableBodyNode(self, node: MarkdownASTTableBodyNode) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTTableBodyNode(self, node: MarkdownASTTableBodyNode) -> list[Any]:  # pylint: disable=invalid-name
         """
         Visit a table body node and print its info.
 
@@ -292,7 +292,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return results
 
-    def visit_MarkdownASTTableRowNode(self, node: MarkdownASTTableRowNode) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTTableRowNode(self, node: MarkdownASTTableRowNode) -> list[Any]:  # pylint: disable=invalid-name
         """
         Visit a table row node and print its info.
 
@@ -312,7 +312,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         self.indent_level -= 1
         return results
 
-    def visit_MarkdownASTTableCellNode(self, node: MarkdownASTTableCellNode) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTTableCellNode(self, node: MarkdownASTTableCellNode) -> list[Any]:  # pylint: disable=invalid-name
         """
         Visit a table cell node and print its properties.
 
@@ -346,7 +346,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         print(f"{self._indent()}HorizontalRule{line_range}")
 
 
-    def visit_MarkdownASTBlockquoteNode(self, node: MarkdownASTBlockquoteNode) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTBlockquoteNode(self, node: MarkdownASTBlockquoteNode) -> list[Any]:  # pylint: disable=invalid-name
         """
         Visit a blockquote node and print its structure.
 

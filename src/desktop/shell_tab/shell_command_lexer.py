@@ -4,7 +4,7 @@ Command line lexer for tokenizing system command input.
 This lexer handles command syntax including command names, options, and arguments.
 """
 
-from typing import Callable, Set
+from collections.abc import Callable
 
 from syntax import Lexer, LexerState, Token, TokenType
 
@@ -19,7 +19,7 @@ class ShellCommandLexer(Lexer):
     """
 
     # Option prefix characters
-    _OPTION_PREFIX_CHARS: Set[str] = {'-'}
+    _OPTION_PREFIX_CHARS: set[str] = {'-'}
 
     def __init__(self) -> None:
         super().__init__()

@@ -1,7 +1,7 @@
 """Widget for displaying markdown preview content in the preview."""
 
+from collections.abc import Callable
 import logging
-from typing import List, Tuple, Callable
 
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QPoint
@@ -81,7 +81,7 @@ class PreviewMarkdownPreviewContent(PreviewContentWidget):
         """Clear any text selection in this content."""
         self._markdown_content.clear_selection()
 
-    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> list[tuple[int, int, int]]:
         """
         Find all instances of text in this content.
 
@@ -95,7 +95,7 @@ class PreviewMarkdownPreviewContent(PreviewContentWidget):
         """
         return self._markdown_content.find_text(text, case_sensitive, regexp)
 
-    def find_element_by_id(self, element_id: str) -> Tuple[int, int, int] | None:
+    def find_element_by_id(self, element_id: str) -> tuple[int, int, int] | None:
         """
         Find an element with the given ID.
 
@@ -109,7 +109,7 @@ class PreviewMarkdownPreviewContent(PreviewContentWidget):
 
     def highlight_matches(
         self,
-        matches: List[Tuple[int, int, int]],
+        matches: list[tuple[int, int, int]],
         current_match_index: int = -1,
         highlight_color: QColor | None = None,
         dim_highlight_color: QColor | None = None
@@ -145,7 +145,7 @@ class PreviewMarkdownPreviewContent(PreviewContentWidget):
         point = self._markdown_content.select_and_scroll_to_position(section_num, position)
         return self._markdown_content.mapTo(self, point)
 
-    def get_context_menu_actions(self) -> List[Tuple[str, Callable]]:
+    def get_context_menu_actions(self) -> list[tuple[str, Callable]]:
         """
         Get context menu actions for this content.
 

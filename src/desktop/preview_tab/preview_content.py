@@ -5,7 +5,6 @@ import logging
 import os
 import stat
 from datetime import datetime
-from typing import List, Tuple, Set
 
 from mindspace.mindspace import Mindspace
 from desktop.preview_tab.preview_error import PreviewIOError
@@ -37,7 +36,7 @@ class PreviewContent:
         self._logger = logging.getLogger("PreviewContent")
         self._mindspace = mindspace
 
-    def get_preview_content(self, path: str) -> Tuple[List[Tuple[PreviewContentType, str]], Set[str]]:
+    def get_preview_content(self, path: str) -> tuple[list[tuple[PreviewContentType, str]], set[str]]:
         """
         Get preview content for a path, generating it dynamically based on file type.
 
@@ -51,7 +50,7 @@ class PreviewContent:
             PreviewIOError: If the path cannot be read or does not exist
         """
         # Track dependencies - always include the main path
-        dependencies: Set[str] = {os.path.abspath(path)}
+        dependencies: set[str] = {os.path.abspath(path)}
 
         # Get file info
         if not os.path.exists(path):
@@ -96,7 +95,7 @@ class PreviewContent:
         companion_path = file_path + ".md"
         return companion_path if os.path.exists(companion_path) else None
 
-    def _read_markdown_file(self, md_path: str) -> List[Tuple[PreviewContentType, str]]:
+    def _read_markdown_file(self, md_path: str) -> list[tuple[PreviewContentType, str]]:
         """
         Read and prepare markdown file content for rendering.
 
@@ -212,7 +211,7 @@ class PreviewContent:
 
         return permissions
 
-    def _calculate_max_size_width(self, directory_path: str, entries: List[str]) -> int:
+    def _calculate_max_size_width(self, directory_path: str, entries: list[str]) -> int:
         """
         Calculate the maximum width needed for displaying file sizes in bytes.
 
@@ -246,7 +245,7 @@ class PreviewContent:
 
         return max_width
 
-    def _generate_directory_content(self, directory_path: str) -> Tuple[List[Tuple[PreviewContentType, str]], Set[str]]:
+    def _generate_directory_content(self, directory_path: str) -> tuple[list[tuple[PreviewContentType, str]], set[str]]:
         """
         Generate preview content for a directory.
 
@@ -259,11 +258,11 @@ class PreviewContent:
         try:
             # Track dependencies - the directory itself is sufficient; the file watcher
             # already monitors dir_contents to detect entries being added or removed.
-            dependencies: Set[str] = {os.path.abspath(directory_path)}
+            dependencies: set[str] = {os.path.abspath(directory_path)}
 
             entries = os.listdir(directory_path)
 
-            contents: List[Tuple[PreviewContentType, str]] = []
+            contents: list[tuple[PreviewContentType, str]] = []
 
             files = ["."]
 
@@ -358,7 +357,7 @@ class PreviewContent:
 
         return 'other'
 
-    def _generate_file_content(self, file_path: str) -> Tuple[List[Tuple[PreviewContentType, str]], Set[str]]:
+    def _generate_file_content(self, file_path: str) -> tuple[list[tuple[PreviewContentType, str]], set[str]]:
         """
         Generate preview content for a file.
 
@@ -370,11 +369,11 @@ class PreviewContent:
         """
         try:
             # Track dependencies - just the file itself for regular files
-            dependencies: Set[str] = {os.path.abspath(file_path)}
+            dependencies: set[str] = {os.path.abspath(file_path)}
 
             file_name = os.path.basename(file_path)
 
-            contents: List[Tuple[PreviewContentType, str]] = []
+            contents: list[tuple[PreviewContentType, str]] = []
 
             # Check for companion .md file and render it if found
             companion_md_path = self._check_for_companion_md(file_path)

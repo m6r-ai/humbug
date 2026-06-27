@@ -1,7 +1,6 @@
 """Shared dataclasses for diff operations."""
 
 from dataclasses import dataclass
-from typing import List
 
 
 @dataclass
@@ -20,7 +19,7 @@ class DiffHunk:
     old_count: int  # Number of lines in original file
     new_start: int  # Starting line number in new file (1-indexed)
     new_count: int  # Number of lines in new file
-    lines: List[DiffLine]  # The actual diff lines
+    lines: list[DiffLine]  # The actual diff lines
 
 
 @dataclass
@@ -30,9 +29,9 @@ class MatchResult:
     success: bool
     location: int  # Line number where hunk should be applied (1-indexed)
     confidence: float  # 0.0 to 1.0
-    actual_lines: List[str]  # The actual lines found at this location
+    actual_lines: list[str]  # The actual lines found at this location
     out_of_range_location: int | None = None  # Exact match found outside the search window
-    ambiguous_locations: List[int] | None = None  # All exact-match locations when ambiguous
+    ambiguous_locations: list[int] | None = None  # All exact-match locations when ambiguous
 
 
 @dataclass

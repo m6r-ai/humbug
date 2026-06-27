@@ -2,7 +2,6 @@
 
 import logging
 import os
-from typing import List
 
 from syntax import TokenType, Token
 
@@ -28,14 +27,14 @@ class ShellCommandProcessor:
         self._command_registry = ShellCommandRegistry()
 
         # Tab completion state tracking
-        self._tab_completions: List[str] = []
+        self._tab_completions: list[str] = []
         self._current_completion_index: int = -1
         self._completion_start_pos: int = 0
         self._current_completion_text: str = ""
         self._tab_completion_active: bool = False
 
         # Token tracking for current command
-        self._current_tokens: List[Token] = []
+        self._current_tokens: list[Token] = []
 
     def _escape_text(self, text: str) -> str:
         """
@@ -152,7 +151,7 @@ class ShellCommandProcessor:
             self._current_tokens.append(token)
             token = parser.get_next_token()
 
-    def _get_command_name(self, tokens: List[Token]) -> str | None:
+    def _get_command_name(self, tokens: list[Token]) -> str | None:
         """
         Get the command name from the tokens.
 

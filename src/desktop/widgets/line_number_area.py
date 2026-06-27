@@ -1,6 +1,6 @@
 """Shared line number gutter widget for QPlainTextEdit-based views."""
 
-from typing import Callable
+from collections.abc import Callable
 
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QSize

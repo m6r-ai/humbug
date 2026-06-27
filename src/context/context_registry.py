@@ -1,7 +1,8 @@
-import uuid
-import logging
+from collections.abc import Callable
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Set, TypeVar, Type
+import logging
+from typing import Any, TypeVar
+import uuid
 
 from context.context_info import ContextInfo
 
@@ -27,9 +28,9 @@ class ContextRegistry:
 
     def __init__(self) -> None:
         """Initialise an empty registry."""
-        self._contexts: Dict[str, ContextInfo] = {}
-        self._models: Dict[str, Any] = {}
-        self._callbacks: Dict[ContextEvent, Set[Callable]] = {
+        self._contexts: dict[str, ContextInfo] = {}
+        self._models: dict[str, Any] = {}
+        self._callbacks: dict[ContextEvent, set[Callable]] = {
             event: set() for event in ContextEvent
         }
         self._logger = logging.getLogger("ContextRegistry")
@@ -201,7 +202,7 @@ class ContextRegistry:
 
         return None
 
-    def list_all(self) -> List[ContextInfo]:
+    def list_all(self) -> list[ContextInfo]:
         """
         Return a snapshot list of all open contexts in registration order.
 
@@ -226,7 +227,7 @@ class ContextRegistry:
         """
         self._models[context_id] = model
 
-    def get_model(self, context_id: str, model_type: 'Type[T]') -> 'T | None':
+    def get_model(self, context_id: str, model_type: 'type[T]') -> 'T | None':
         """
         Retrieve the context model for a context_id, type-checked.
 

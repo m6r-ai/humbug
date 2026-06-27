@@ -3,7 +3,6 @@
 import json
 import logging
 import os
-from typing import List
 
 from desktop.shell_tab.shell_event import ShellEvent
 from desktop.shell_tab.shell_event_source import ShellEventSource
@@ -19,7 +18,7 @@ class ShellHistory:
         Args:
             max_messages: Maximum number of messages to keep in history
         """
-        self._messages: List[ShellEvent] = []
+        self._messages: list[ShellEvent] = []
         self._max_messages = max_messages
         self._logger = logging.getLogger("ShellHistory")
 
@@ -36,7 +35,7 @@ class ShellHistory:
         if len(self._messages) > self._max_messages:
             self._messages = self._messages[-self._max_messages:]
 
-    def get_messages(self) -> List[ShellEvent]:
+    def get_messages(self) -> list[ShellEvent]:
         """
         Get all messages in chronological order.
 
@@ -121,7 +120,7 @@ class ShellHistory:
             self._logger.error("Failed to load shell history from %s: %s", file_path, str(e))
             raise
 
-    def get_user_commands(self) -> List[str]:
+    def get_user_commands(self) -> list[str]:
         """
         Get list of user commands from history (newest first).
 

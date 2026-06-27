@@ -5,7 +5,6 @@ This is the main entry point for compiling Menai source code to bytecode.
 It chains together all compilation passes in the correct order.
 """
 
-from typing import List
 
 from menai.menai_ast import MenaiASTNode
 from menai.menai_ast_builder import MenaiASTBuilder
@@ -50,15 +49,15 @@ class MenaiCompiler:
         self.ast_semantic_analyzer = MenaiASTSemanticAnalyzer()
         self.ast_module_resolver = MenaiASTModuleResolver(module_loader)
         self.ast_desugarer = MenaiASTDesugarer()
-        self.ast_passes: List[MenaiASTOptimizationPass] = [
+        self.ast_passes: list[MenaiASTOptimizationPass] = [
             MenaiASTConstantFolder(),
         ]
         self.ir_builder = MenaiIRBuilder()
-        self.ir_passes: List[MenaiIROptimizationPass] = [
+        self.ir_passes: list[MenaiIROptimizationPass] = [
             MenaiIROptimizer(),
         ]
         self.cfg_builder = MenaiCFGBuilder()
-        self.cfg_passes: List[MenaiCFGOptimizationPass] = [
+        self.cfg_passes: list[MenaiCFGOptimizationPass] = [
             MenaiCFGCollapsePhiChains(),
             MenaiCFGBranchConstProp(),
             MenaiCFGSimplifyBlocks(),
