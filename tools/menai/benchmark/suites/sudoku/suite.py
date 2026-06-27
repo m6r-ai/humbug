@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from typing import cast
 
 from tools.menai.benchmark import BenchmarkCase, BenchmarkSuite, Implementation
 from menai import Menai
@@ -70,11 +69,13 @@ def _board_to_menai(flat: list[int]) -> str:
     for r in range(9):
         cells = " ".join(str(flat[r * 9 + c]) for c in range(9))
         rows.append(f"(list {cells})")
+
     return "(list\n  " + "\n  ".join(rows) + ")"
 
 
 def _is_valid_board(board: Any) -> bool:
-    """Return True if *board* is a fully solved, valid 9×9 sudoku grid.
+    """
+    Return True if *board* is a fully solved, valid 9×9 sudoku grid.
 
     Checks that every row, column, and 3×3 box contains exactly the digits 1–9.
     """
@@ -82,6 +83,7 @@ def _is_valid_board(board: Any) -> bool:
 
     if not isinstance(board, (list, tuple)) or len(board) != 9:
         return False
+
     for row in board:
         if not isinstance(row, (list, tuple)) or len(row) != 9:
             return False
@@ -108,7 +110,8 @@ def _is_valid_board(board: Any) -> bool:
 
 
 def _solve_python_idiomatic(flat: list[int]) -> list[list[int]]:
-    """Solve a sudoku puzzle using mutable backtracking on a flat list.
+    """
+    Solve a sudoku puzzle using mutable backtracking on a flat list.
 
     Returns the solved board as a 9×9 list-of-lists.
     """
@@ -130,8 +133,10 @@ def _solve_python_idiomatic(flat: list[int]) -> list[list[int]]:
         """Recursively fill the next empty cell; return True on success."""
         try:
             idx = board.index(0)
+
         except ValueError:
             return True
+
         r, c = divmod(idx, 9)
         b = (r // 3) * 3 + (c // 3)
         for digit in range(1, 10):
@@ -142,10 +147,12 @@ def _solve_python_idiomatic(flat: list[int]) -> list[list[int]]:
                 boxes[b].add(digit)
                 if backtrack():
                     return True
+
                 board[idx] = 0
                 rows[r].discard(digit)
                 cols[c].discard(digit)
                 boxes[b].discard(digit)
+
         return False
 
     backtrack()
@@ -153,7 +160,8 @@ def _solve_python_idiomatic(flat: list[int]) -> list[list[int]]:
 
 
 def _solve_python_functional(flat: list[int]) -> list[list[int]]:
-    """Solve a sudoku puzzle using pure-functional backtracking on immutable tuples.
+    """
+    Solve a sudoku puzzle using pure-functional backtracking on immutable tuples.
 
     Returns the solved board as a 9×9 list-of-lists.
     """
@@ -179,6 +187,7 @@ def _solve_python_functional(flat: list[int]) -> list[list[int]]:
             for c in range(9):
                 if board[r][c] == 0:
                     return r, c
+
         return None
 
     def place(
@@ -195,16 +204,19 @@ def _solve_python_functional(flat: list[int]) -> list[list[int]]:
         cell = next_empty(board)
         if cell is None:
             return board
+
         r, c = cell
         for digit in candidates(board, r, c):
             result = search(place(board, r, c, digit))
             if result is not None:
                 return result
+
         return None
 
     solved = search(initial)
     if solved is None:
         raise ValueError("No solution found")
+
     return [list(row) for row in solved]
 
 

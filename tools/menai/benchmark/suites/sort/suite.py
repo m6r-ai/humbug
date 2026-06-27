@@ -21,6 +21,7 @@ def _merge_sort(lst: list[int]) -> list[int]:
     """Return a new sorted list using a pure-functional recursive merge sort."""
     if len(lst) <= 1:
         return lst
+
     mid = len(lst) // 2
     left = _merge_sort(lst[:mid])
     right = _merge_sort(lst[mid:])
@@ -35,9 +36,11 @@ def _merge(left: list[int], right: list[int]) -> list[int]:
         if left[i] <= right[j]:
             result.append(left[i])
             i += 1
+
         else:
             result.append(right[j])
             j += 1
+
     result.extend(left[i:])
     result.extend(right[j:])
     return result
