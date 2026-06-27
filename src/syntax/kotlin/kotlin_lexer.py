@@ -256,6 +256,7 @@ class KotlinLexer(Lexer):
                             self._input[self._position + 2] == '"'):
                         self._position += 3
                         break
+
                 else:
                     self._position += 1
                     break
@@ -279,6 +280,7 @@ class KotlinLexer(Lexer):
             if self._input[self._position] == '`':
                 self._position += 1
                 break
+
             self._position += 1
 
         self._tokens.append(Token(
@@ -334,7 +336,9 @@ class KotlinLexer(Lexer):
                     ch = self._input[self._position]
                     if not (self._is_hex_digit(ch) or ch == '_'):
                         break
+
                     self._position += 1
+
             elif next_char == 'b':  # Binary
                 self._position += 2
                 while self._position < self._input_len:
@@ -342,8 +346,10 @@ class KotlinLexer(Lexer):
                     if not (self._is_binary_digit(ch) or ch == '_'):
                         break
                     self._position += 1
+
             else:
                 self._read_decimal_number()
+
         else:
             self._read_decimal_number()
 
@@ -370,6 +376,7 @@ class KotlinLexer(Lexer):
             ch = self._input[self._position]
             if not (self._is_digit(ch) or ch == '_'):
                 break
+
             self._position += 1
 
         if (self._position < self._input_len and
@@ -379,6 +386,7 @@ class KotlinLexer(Lexer):
                 ch = self._input[self._position]
                 if not (self._is_digit(ch) or ch == '_'):
                     break
+
                 self._position += 1
 
         if (self._position < self._input_len and
@@ -391,6 +399,7 @@ class KotlinLexer(Lexer):
                 ch = self._input[self._position]
                 if not (self._is_digit(ch) or ch == '_'):
                     break
+
                 self._position += 1
 
     def _read_comment(self) -> None:

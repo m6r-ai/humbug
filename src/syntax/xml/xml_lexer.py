@@ -184,10 +184,13 @@ class XMLLexer(Lexer):
             ch = self._input[self._position]
             if ch == '[':
                 bracket_depth += 1
+
             elif ch == ']':
                 bracket_depth -= 1
+
             elif ch == '>' and bracket_depth == 1:
                 break
+
             self._position += 1
 
         if self._position < self._input_len:
@@ -214,6 +217,7 @@ class XMLLexer(Lexer):
                 self._in_comment = False
                 self._position += 3
                 break
+
             self._position += 1
 
         # If we're still in a comment, we've reached the end of the line

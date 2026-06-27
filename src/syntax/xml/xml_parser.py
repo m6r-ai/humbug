@@ -45,8 +45,10 @@ class XMLParser(Parser):
         continuation_state = 0
         if lexer_state.in_comment:
             continuation_state = 1
+
         elif lexer_state.in_cdata:
             continuation_state = 2
+
         elif lexer_state.in_processing_instruction:
             continuation_state = 3
 
