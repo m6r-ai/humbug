@@ -2,7 +2,8 @@
 Pylint plugin implementing Humbug-specific style checks.
 
 The plugin is loaded automatically by pylint via ``load-plugins`` in
-``pyproject.toml``.  Each checker class registers one or more message IDs.
+``pyproject.toml``.  A single checker class registers all message IDs.
+Messages are emitted in line-number order within each file.
 
 Checks implemented:
 
@@ -19,7 +20,7 @@ Checks implemented:
 from __future__ import annotations
 
 from astroid import nodes
-from pylint.checkers import BaseChecker, BaseRawFileChecker
+from pylint.checkers import BaseRawFileChecker
 from pylint.typing import MessageDefinitionTuple
 
 
@@ -37,13 +38,18 @@ _SCOPE_NODE_TYPES = (nodes.Module, nodes.ClassDef, nodes.FunctionDef, nodes.Asyn
 
 
 # ===========================================================================
-# Checker 1: AST-based name conventions (@property and Optional)
+# Single checker: all Humbug style checks
+#
+# All checks run from one BaseRawFileChecker so the file is read and decoded
+# once and the AST is walked once per check.  Messages are buffered and emitted
+# in line-number order so that violations appear top-to-bottom regardless of
+# which check detects them first.
 # ===========================================================================
 
-class HumbugNameChecker(BaseChecker):
-    """Flag ``@property`` decorators and ``Optional[...]`` subscripts."""
+class HumbugStyleChecker(BaseRawFileChecker):
+    """Enforce Humbug-specific style conventions across all checks."""
 
-    name = "humbug-names"
+    name = "humbug-style"
 
     msgs: dict[str, MessageDefinitionTuple] = {
         "C6401": (
@@ -56,35 +62,6 @@ class HumbugNameChecker(BaseChecker):
             MSG_NO_OPTIONAL,
             "Used when Optional[...] appears.  Humbug uses the modern X | None syntax.",
         ),
-    }
-
-    def visit_decorators(self, node: nodes.Decorators) -> None:
-        """Flag any decorator whose name resolves to ``property``."""
-        for decorator in node.nodes:
-            expr = decorator.func if hasattr(decorator, "func") else decorator
-            if _dotted_name(expr) == "property":
-                self.add_message(MSG_NO_PROPERTY, node=decorator)
-
-    def visit_subscript(self, node: nodes.Subscript) -> None:
-        """Flag ``Optional[...]`` subscript expressions."""
-        if _dotted_name(node.value) == "Optional":
-            self.add_message(MSG_NO_OPTIONAL, node=node)
-
-
-# ===========================================================================
-# Checker 2: Raw-source checks (assignments, else/elif, docstrings)
-#
-# All checks that need the raw source are combined into a single
-# BaseRawFileChecker so the file is read and decoded once and the AST is
-# walked once.
-# ===========================================================================
-
-class HumbugRawChecker(BaseRawFileChecker):
-    """Enforce assignment, else/elif, and docstring formatting conventions."""
-
-    name = "humbug-style"
-
-    msgs: dict[str, MessageDefinitionTuple] = {
         "C6411": (
             "Consecutive assignments must not have their = signs aligned",
             MSG_NO_ALIGNED_ASSIGNS,
@@ -106,14 +83,45 @@ class HumbugRawChecker(BaseRawFileChecker):
     }
 
     def process_module(self, node: nodes.Module) -> None:
-        """Run all raw-source checks over a single decode of the file."""
+        """Run all checks over a single decode and AST walk of the file."""
         lines = node.stream().read().decode("utf-8").splitlines()
 
-        self._check_aligned_assignments(node, lines)
-        self._check_blank_before_else(node, lines)
-        self._check_docstrings(node, lines)
+        pending: list[tuple[int, str, tuple[str, ...]]] = []
 
-    def _check_aligned_assignments(self, node: nodes.Module, lines: list[str]) -> None:
+        self._check_property(node, pending)
+        self._check_optional(node, pending)
+        self._check_aligned_assignments(node, lines, pending)
+        self._check_blank_before_else(node, lines, pending)
+        self._check_docstrings(node, lines, pending)
+
+        for line, msg_id, args in sorted(pending, key=lambda m: m[0]):
+            if args:
+                self.add_message(msg_id, line=line, args=args)
+
+            else:
+                self.add_message(msg_id, line=line)
+
+    def _check_property(
+        self, node: nodes.Module, pending: list[tuple[int, str, tuple[str, ...]]]
+    ) -> None:
+        """Flag any decorator whose name resolves to ``property``."""
+        for dec_node in node.nodes_of_class(nodes.Decorators):
+            for decorator in dec_node.nodes:
+                expr = decorator.func if hasattr(decorator, "func") else decorator
+                if _dotted_name(expr) == "property":
+                    pending.append((decorator.lineno, MSG_NO_PROPERTY, ()))
+
+    def _check_optional(
+        self, node: nodes.Module, pending: list[tuple[int, str, tuple[str, ...]]]
+    ) -> None:
+        """Flag ``Optional[...]`` subscript expressions."""
+        for sub_node in node.nodes_of_class(nodes.Subscript):
+            if _dotted_name(sub_node.value) == "Optional":
+                pending.append((sub_node.lineno, MSG_NO_OPTIONAL, ()))
+
+    def _check_aligned_assignments(
+        self, node: nodes.Module, lines: list[str], pending: list[tuple[int, str, tuple[str, ...]]]
+    ) -> None:
         """
         Find padded-alignment ``=`` runs among assignment statements.
 
@@ -159,9 +167,11 @@ class HumbugRawChecker(BaseRawFileChecker):
                 target_lengths = {assign_info[ln][1] for ln in linenos}
                 if len(target_lengths) >= 2:
                     for lineno in linenos:
-                        self.add_message(MSG_NO_ALIGNED_ASSIGNS, line=lineno)
+                        pending.append((lineno, MSG_NO_ALIGNED_ASSIGNS, ()))
 
-    def _check_blank_before_else(self, node: nodes.Module, lines: list[str]) -> None:
+    def _check_blank_before_else(
+        self, node: nodes.Module, lines: list[str], pending: list[tuple[int, str, tuple[str, ...]]]
+    ) -> None:
         """
         Flag block-level ``elif`` / ``else`` keywords not preceded by a blank line.
 
@@ -179,18 +189,22 @@ class HumbugRawChecker(BaseRawFileChecker):
             # We only flag when actual code runs directly into the else/elif.
             prev = lines[keyword_line - 2].strip()
             if prev != "" and not prev.startswith("#"):
-                self.add_message(MSG_BLANK_BEFORE_ELSE, line=keyword_line, args=(keyword,))
+                pending.append((keyword_line, MSG_BLANK_BEFORE_ELSE, (keyword,)))
 
-    def _check_docstrings(self, node: nodes.Module, lines: list[str]) -> None:
+    def _check_docstrings(
+        self, node: nodes.Module, lines: list[str], pending: list[tuple[int, str, tuple[str, ...]]]
+    ) -> None:
         """Validate docstring layout for the module and all its nested definitions."""
         for child in node.nodes_of_class(_SCOPE_NODE_TYPES):
             doc_node = getattr(child, "doc_node", None)
             if doc_node is None or not isinstance(doc_node, nodes.Const):
                 continue
 
-            self._check_single_docstring(doc_node, lines)
+            self._check_single_docstring(doc_node, lines, pending)
 
-    def _check_single_docstring(self, doc_node: nodes.Const, lines: list[str]) -> None:
+    def _check_single_docstring(
+        self, doc_node: nodes.Const, lines: list[str], pending: list[tuple[int, str, tuple[str, ...]]]
+    ) -> None:
         """Validate that a multi-line docstring has its delimiters on own lines."""
         start_line = doc_node.lineno
         end_line = doc_node.end_lineno
@@ -202,10 +216,10 @@ class HumbugRawChecker(BaseRawFileChecker):
             return  # single-line docstring -- always fine
 
         if lines[start_line - 1].strip() != '"""':
-            self.add_message(MSG_MULTILINE_DOCSTRING, line=start_line)
+            pending.append((start_line, MSG_MULTILINE_DOCSTRING, ()))
 
         if lines[end_line - 1].strip() != '"""':
-            self.add_message(MSG_MULTILINE_DOCSTRING, line=end_line)
+            pending.append((end_line, MSG_MULTILINE_DOCSTRING, ()))
 
 
 # ===========================================================================
@@ -373,6 +387,5 @@ def _consecutive_groups(line_map: dict[int, object]) -> list[list[int]]:
 # ===========================================================================
 
 def register(linter: object) -> None:
-    """Register the plugin's checkers with pylint."""
-    linter.register_checker(HumbugNameChecker(linter))
-    linter.register_checker(HumbugRawChecker(linter))
+    """Register the plugin's checker with pylint."""
+    linter.register_checker(HumbugStyleChecker(linter))

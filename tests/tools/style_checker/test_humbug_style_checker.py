@@ -396,3 +396,38 @@ def foo() -> None:
 '''
         results = _run_pylint(source)
         assert MSG_MULTILINE_DOCSTRING in _msg_ids(results)
+
+
+# ===========================================================================
+# Output ordering tests
+# ===========================================================================
+
+class TestOutputOrdering:
+    """Tests that messages are emitted in line-number order."""
+
+    def test_messages_are_in_line_order(self):
+        """Messages from different checks should appear in line-number order."""
+        source = '''\
+"""Module docstring on one line."""
+
+
+class Foo:
+    """Class docstring."""
+
+    @property
+    def bar(self) -> int:
+        """Bad docstring opening.
+        More text.
+        """
+        return 1
+
+    def baz(self) -> None:
+        """Do something."""
+        if True:
+            pass
+        else:
+            pass
+'''
+        results = _run_pylint(source)
+        lines = [line for _, line in results]
+        assert lines == sorted(lines)
