@@ -111,10 +111,12 @@ class SwiftParser(Parser):
                     ):
                         in_closure = True
                         closure_brace_count += 1
+
                 elif token.value == '}' and in_closure:
                     closure_brace_count -= 1
                     if closure_brace_count == 0:
                         in_closure = False
+
                 elif token.value == '<' and not in_closure:
                     # Could be start of generic parameters or less-than operator
                     next_token = lexer.peek_next_token()
@@ -124,6 +126,7 @@ class SwiftParser(Parser):
                     ):
                         in_generic = True
                         generic_angle_count += 1
+
                 elif token.value == '>' and in_generic:
                     generic_angle_count -= 1
                     if generic_angle_count == 0:

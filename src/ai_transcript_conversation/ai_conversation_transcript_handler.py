@@ -49,7 +49,8 @@ class AIConversationTranscriptHandler:
             self._initialize_file()
 
     def get_path(self) -> str:
-        """Get the transcript file path.
+        """
+        Get the transcript file path.
 
         Returns:
             str: Full path to the transcript file
@@ -93,7 +94,8 @@ class AIConversationTranscriptHandler:
                 raise e
 
     def set_path(self, new_path: str) -> None:
-        """Set the transcript file path.
+        """
+        Set the transcript file path.
 
         Args:
             new_path: New path for the transcript file

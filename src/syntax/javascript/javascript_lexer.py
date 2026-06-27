@@ -65,6 +65,7 @@ class JavaScriptLexer(Lexer):
 
         if self._in_block_comment:
             self._read_block_comment(0)
+
         elif self._in_template_literal:
             self._read_template_literal_continuation()
 
@@ -186,18 +187,22 @@ class JavaScriptLexer(Lexer):
                 while (self._position < self._input_len and
                        self._is_hex_digit(self._input[self._position])):
                     self._position += 1
+
             elif next_char == 'b':  # Binary
                 self._position += 2
                 while (self._position < self._input_len and
                        self._is_binary_digit(self._input[self._position])):
                     self._position += 1
+
             elif next_char == 'o':  # Octal
                 self._position += 2
                 while (self._position < self._input_len and
                        self._is_octal_digit(self._input[self._position])):
                     self._position += 1
+
             else:  # Decimal or floating-point
                 self._read_decimal_number()
+
         else:
             self._read_decimal_number()
 

@@ -259,6 +259,7 @@ class SwiftLexer(Lexer):
                     if not (self._is_hex_digit(ch) or ch == '_'):
                         break
                     self._position += 1
+
             elif next_char == 'o':  # Octal
                 self._position += 2
                 while self._position < self._input_len:
@@ -266,6 +267,7 @@ class SwiftLexer(Lexer):
                     if not (self._is_octal_digit(ch) or ch == '_'):
                         break
                     self._position += 1
+
             elif next_char == 'b':  # Binary
                 self._position += 2
                 while self._position < self._input_len:
@@ -273,8 +275,10 @@ class SwiftLexer(Lexer):
                     if not (self._is_binary_digit(ch) or ch == '_'):
                         break
                     self._position += 1
+
             else:
                 self._read_decimal_number()
+
         else:
             self._read_decimal_number()
 

@@ -264,8 +264,10 @@ class SolidityLexer(Lexer):
                 while (self._position < self._input_len and
                        self._is_hex_digit(self._input[self._position])):
                     self._position += 1
+
             else:  # Decimal or floating-point
                 self._read_decimal_number()
+
         else:
             self._read_decimal_number()
 

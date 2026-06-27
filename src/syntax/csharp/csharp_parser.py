@@ -120,6 +120,7 @@ class CSharpParser(Parser):
                     else:
                         # This is a less-than operator
                         self._tokens.append(token)
+
                     continue
 
                 if operator_value == '>':
@@ -131,9 +132,11 @@ class CSharpParser(Parser):
 
                         token.type = TokenType.GENERIC_END
                         self._tokens.append(token)
+
                     else:
                         # This is a greater-than operator
                         self._tokens.append(token)
+
                     continue
 
                 if operator_value == '.':
@@ -304,6 +307,7 @@ class CSharpParser(Parser):
             if current_token.type == TokenType.OPERATOR:
                 if current_token.value == '<':
                     generic_depth += 1
+
                 elif current_token.value == '>':
                     generic_depth -= 1
                     if generic_depth == 0:

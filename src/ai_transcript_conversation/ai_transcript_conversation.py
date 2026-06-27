@@ -46,6 +46,7 @@ class AITranscriptConversation:
 
         if ai_conversation is not None:
             self._conversation = ai_conversation
+
         else:
             self._conversation = AIConversation()
 

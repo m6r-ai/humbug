@@ -268,6 +268,7 @@ class CSharpLexer(Lexer):
         if self._position < self._input_len:
             if self._input[self._position] == '\\':
                 self._position += 2  # Skip escape sequence
+
             else:
                 self._position += 1  # Regular character
 
@@ -339,6 +340,7 @@ class CSharpLexer(Lexer):
                 value=self._input[start:self._position],
                 start=start
             ))
+
         else:
             # Just a bracket operator
             self._tokens.append(Token(
@@ -531,6 +533,7 @@ class CSharpLexer(Lexer):
             if (self._position + 2 < self._input_len and
                 self._input[self._position + 2] == '/'):
                 self._read_xml_doc_comment()
+
             else:
                 self._read_line_comment()
 
@@ -630,6 +633,7 @@ class CSharpLexer(Lexer):
                 value=value,
                 start=start
             ))
+
         else:
             self._tokens.append(Token(
                 type=TokenType.IDENTIFIER,
