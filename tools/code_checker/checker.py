@@ -45,12 +45,15 @@ def _print_summary(results: list[CheckResult]) -> None:
     for result in results:
         status = "✓ passed" if result.exit_code == 0 else "✗ FAILED"
         print(f"  {result.label:<{label_width}}  {status}")
+
     print("─" * width)
 
     if failures == 0:
         print("All checks passed.")
+
     elif failures == 1:
         print("1 check failed.")
+
     else:
         print(f"{failures} of {len(results)} checks failed.")
 

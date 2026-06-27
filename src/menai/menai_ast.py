@@ -175,8 +175,8 @@ class MenaiASTString(MenaiASTNode):
                 result.append(f'\\u{ord(char):04x}')
 
             else:
-
                 result.append(char)  # Keep Unicode as-is
+
         return ''.join(result)
 
     def describe(self) -> str:
@@ -329,6 +329,7 @@ class MenaiASTDict(MenaiASTNode):
     def describe(self) -> str:
         if not self.pairs:
             return "{}"
+
         parts = " ".join(f"({k.describe()} {v.describe()})" for k, v in self.pairs)
         return "{" + parts + "}"
 

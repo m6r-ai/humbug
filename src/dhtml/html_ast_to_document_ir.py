@@ -99,6 +99,7 @@ def _convert_node(
         text = node.content
         if text.strip():
             ir_parent.add_child(DocumentIRTextSpanNode(content=text))
+
         return
 
     if not isinstance(node, HtmlASTElementNode):
@@ -256,11 +257,12 @@ def _convert_list(
     if ordered:
         try:
             start = int(node.attributes.get("start", "1"))
-        except ValueError:
 
+        except ValueError:
             start = 1
 
         ir_list: DocumentIRNode = DocumentIROrderedListNode(start=start)
+
     else:
         ir_list = DocumentIRUnorderedListNode()
 

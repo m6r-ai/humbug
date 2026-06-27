@@ -5,11 +5,11 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent, QPainter, QPaintEvent, QPixmap
 
 from desktop.color_role import ColorRole
-from desktop.gradient_label import GradientBorderLabel, GradientLabel
 from desktop.style_manager import StyleManager
 from desktop.language.language_manager import LanguageManager
 from desktop.user.user_settings import UserSettings
 from desktop.version import CURRENT_VERSION
+from desktop.widgets.gradient_label import GradientBorderLabel, GradientLabel
 
 
 class WelcomeWidget(QFrame):

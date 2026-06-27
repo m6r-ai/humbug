@@ -25,9 +25,9 @@ class MindspaceManager(QObject):
     observer machinery and the UI-specific state.
     """
 
-    settings_changed     = Signal()
+    settings_changed = Signal()
     interactions_updated = Signal()
-    usage_updated        = Signal()
+    usage_updated = Signal()
 
     MINDSPACE_DIR = Mindspace.MINDSPACE_DIR
 

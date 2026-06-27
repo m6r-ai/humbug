@@ -5,10 +5,10 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from desktop.color_role import ColorRole
-from desktop.gradient_label import GradientBorderLabel
 from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
 from desktop.url_opener import open_url
+from desktop.widgets.gradient_label import GradientBorderLabel
 
 
 class UpdateDialog(QDialog):

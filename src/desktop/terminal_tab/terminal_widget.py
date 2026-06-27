@@ -504,8 +504,8 @@ class TerminalWidget(QAbstractScrollArea):
 
             # Construct mouse report based on mode
             if self._state.mouse_tracking().sgr_mode:
-
                 report = self._make_sgr_mouse_report(row, col, button, True)
+
             else:
                 report = self._make_normal_mouse_report(row, col, button)
 
@@ -1116,8 +1116,8 @@ class TerminalWidget(QAbstractScrollArea):
                     # Start a new batch
                     current_batch_start = i
                     current_batch_len = 1
-
                     current_highlight_bg = char_bg
+
             else:
                 # Continue the current batch
                 current_batch_len += 1
@@ -1272,8 +1272,8 @@ class TerminalWidget(QAbstractScrollArea):
             if self._state.bracketed_paste_mode():
                 self.data_ready.emit(b'\x1b[200~')  # Start bracketed paste
                 self.data_ready.emit(text.encode())
-
                 self.data_ready.emit(b'\x1b[201~')  # End bracketed paste
+
             else:
                 self.data_ready.emit(text.encode())
 
@@ -1489,6 +1489,7 @@ class TerminalWidget(QAbstractScrollArea):
                     for start_off, end_off in raw_matches:
                         if logical_match_count >= max_matches:
                             break
+
                         match_idx = logical_match_count
                         logical_match_count += 1
                         # Split the match across physical rows as needed.

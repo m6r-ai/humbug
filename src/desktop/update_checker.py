@@ -56,9 +56,9 @@ class UpdateChecker(QObject):
                     update_available when a newer version is found.
         """
         if self._check_done and not manual:
-
             if self._cached_latest is not None:
                 self.update_available.emit(self._cached_latest, self._cached_url or "")
+
             return
 
         latest_tag, release_url = await self._fetch_latest()
@@ -115,10 +115,10 @@ class UpdateChecker(QObject):
 
         Args:
             tag: GitHub release tag, e.g. "v47" or "47".
-
         """
         try:
             version_str = tag.lstrip("vV")
             return int(version_str) > CURRENT_VERSION
+
         except ValueError:
             return False

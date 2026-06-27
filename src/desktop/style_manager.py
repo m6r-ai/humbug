@@ -693,9 +693,9 @@ class StyleManager(QObject):
         changed = False
         for role in roles:
             if role in light_overrides:
-
                 del light_overrides[role]
                 changed = True
+
             if role in dark_overrides:
                 del dark_overrides[role]
                 changed = True
@@ -723,6 +723,7 @@ class StyleManager(QObject):
         for role_name, mode_map in custom.items():
             try:
                 role = ColorRole[role_name]
+
             except KeyError:
                 continue
 

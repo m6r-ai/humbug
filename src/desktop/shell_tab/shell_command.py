@@ -199,8 +199,8 @@ class ShellCommand:
         """
         for token in tokens:
             if token.type == TokenType.COMMAND:
-
                 return token
+
         return None
 
     def _execute_command(self, tokens: List[Token]) -> bool:

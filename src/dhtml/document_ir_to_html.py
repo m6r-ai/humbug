@@ -212,9 +212,9 @@ class _HtmlSerialiser(DocumentIRVisitor):
     def visit_DocumentIRListItemNode(self, node: DocumentIRListItemNode) -> None:  # pylint: disable=invalid-name
         """Serialise a list item."""
         inner = self._emit_inline(node)
-
         if inner:
             self._emit(f"<li>{inner}</li>")
+
         else:
             self._emit("<li>")
             self._indent += 1

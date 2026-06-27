@@ -605,6 +605,7 @@ class FindWidget(QWidget):
 
             if metadata.get('is_visible', False):
                 self.show()
+
             else:
                 self.hide()
 

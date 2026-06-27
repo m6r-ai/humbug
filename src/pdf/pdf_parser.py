@@ -74,14 +74,14 @@ def _load_xref(tokenizer: PDFTokenizer, doc: PDFDocument, offset: int) -> None:
         token = tokenizer.next_token()
 
         if token.type == TokenType.KEYWORD and token.value == "xref":
-
             _parse_xref_table(tokenizer, doc)
             trailer = _parse_trailer_dict(tokenizer)
+
         elif token.type == TokenType.INTEGER:
             # Could be an xref stream object: "N G obj"
-
             tokenizer.pos = saved_pos
             trailer = _parse_xref_stream(tokenizer, doc)
+
         else:
             raise PDFParseError(f"Unexpected token at xref offset {offset}: {token}")
 
@@ -91,9 +91,9 @@ def _load_xref(tokenizer: PDFTokenizer, doc: PDFDocument, offset: int) -> None:
                 doc.trailer[key] = value
 
         prev = trailer.get("Prev")
-
         if isinstance(prev, int):
             offset = prev
+
         else:
             break
 
@@ -181,9 +181,9 @@ def _parse_xref_stream(tokenizer: PDFTokenizer, doc: PDFDocument) -> dict[str, A
         raise PDFUnsupportedError("Xref stream W entry must be a 3-element array")
 
     w = [int(x) for x in w_entry]
-
     if index_entry is None:
         index_pairs = [(0, int(size))]
+
     else:
         pairs_flat = [int(x) for x in index_entry]
         index_pairs = [(pairs_flat[i], pairs_flat[i + 1]) for i in range(0, len(pairs_flat), 2)]
@@ -199,14 +199,15 @@ def _parse_xref_stream(tokenizer: PDFTokenizer, doc: PDFDocument) -> dict[str, A
 
             fields = []
             for width in w:
-
                 if width == 0:
                     fields.append(0)
+
                 else:
                     val = 0
 
                     for byte in data[pos:pos + width]:
                         val = (val << 8) | byte
+
                     fields.append(val)
                     pos += width
 
@@ -221,6 +222,7 @@ def _parse_xref_stream(tokenizer: PDFTokenizer, doc: PDFDocument) -> dict[str, A
 
             elif entry_type == 1:
                 doc.xref[obj_num] = PDFXRefEntry(offset=fields[1], gen_num=fields[2], in_use=True)
+
             elif entry_type == 2:
                 # Compressed object: field1=stream obj num, field2=index within stream
                 # Store as negative offset to distinguish from regular offsets
@@ -240,12 +242,12 @@ def _load_objects(tokenizer: PDFTokenizer, doc: PDFDocument) -> None:
             continue
 
         try:
-
             tokenizer.pos = entry.offset
             _parse_indirect_object(tokenizer, doc, obj_num)
 
         except (PDFParseError, PDFUnsupportedError):
             pass  # Skip unreadable objects; partial extraction is better than none
+
         except Exception:  # pylint: disable=broad-except
             pass
 
@@ -408,9 +410,9 @@ def _parse_value(tokenizer: PDFTokenizer) -> Any:
         gen_token = tokenizer.next_token()
         if gen_token.type == TokenType.INTEGER:
             ref_token = tokenizer.next_token()
-
             if ref_token.type == TokenType.REF_KW:
                 return PDFObjectRef(obj_num=_int_value(token.value), gen_num=_int_value(gen_token.value))
+
             tokenizer.pos = saved
 
         else:

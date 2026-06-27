@@ -2066,6 +2066,7 @@ class FileSystemAITool(AITool):
             with open(path, encoding=encoding) as f:
 
                 original_content = f.read()
+
         except OSError as e:
             raise AIToolExecutionError(f"Cannot read file: {e}") from e
 
@@ -2082,12 +2083,14 @@ class FileSystemAITool(AITool):
             traces = watcher.get_traces()
 
             was_clipped = watcher.is_clipped()
+
         finally:
             self._menai.set_trace_watcher(None)
 
         if isinstance(raw_result, MenaiString):
 
             new_content = raw_result.value
+
         elif isinstance(raw_result, MenaiList):
             if not all(isinstance(e, MenaiString) for e in raw_result.elements):
                 raise AIToolExecutionError(
@@ -2096,6 +2099,7 @@ class FileSystemAITool(AITool):
                 )
 
             new_content = '\n'.join(cast(MenaiString, e).value for e in raw_result.elements)
+
         else:
             raise AIToolExecutionError(
                 f"Transform program must return a string or list of strings, "
@@ -2141,19 +2145,20 @@ class FileSystemAITool(AITool):
                     task, timeout=30.0
 
                 )
+
             except asyncio.TimeoutError:
                 self._logger.warning("Menai transform timed out for '%s'", display_path)
                 self._menai.vm.cancel()
                 if not task.done():
                     try:
-
                         await asyncio.wait_for(task, timeout=1.0)
+
                     except (asyncio.TimeoutError, asyncio.CancelledError, MenaiCancelledException):
-
                         pass
-                    except Exception as e:
 
+                    except Exception as e:
                         self._logger.debug("Exception during transform cancellation: %s", e)
+
                 raise AIToolTimeoutError("Menai transform timed out", 30.0)  # pylint: disable=raise-missing-from
 
         except AIToolTimeoutError:
@@ -2212,16 +2217,17 @@ class FileSystemAITool(AITool):
                 suffix='.tmp'
             ) as tmp_file:
                 tmp_file.write(new_content)
-
                 tmp_path = Path(tmp_file.name)
+
             tmp_path.replace(path)
             umask = os.umask(0)
             os.umask(umask)
 
             path.chmod(0o666 & ~umask)
-        except PermissionError as e:
 
+        except PermissionError as e:
             raise AIToolExecutionError(f"Permission denied writing file: {str(e)}") from e
+
         except OSError as e:
             raise AIToolExecutionError(f"Failed to write file: {str(e)}") from e
 

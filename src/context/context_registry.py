@@ -8,8 +8,8 @@ from context.context_info import ContextInfo
 
 class ContextEvent(Enum):
     """Events emitted by the ContextRegistry."""
-    OPENED  = auto()   # args: (context_info: ContextInfo, is_ephemeral: bool)
-    CLOSED  = auto()   # args: (context_id: str)
+    OPENED = auto()    # args: (context_info: ContextInfo, is_ephemeral: bool)
+    CLOSED = auto()    # args: (context_id: str)
     UPDATED = auto()   # args: (context_info: ContextInfo)
     FOCUSED = auto()   # args: (context_id: str)
 

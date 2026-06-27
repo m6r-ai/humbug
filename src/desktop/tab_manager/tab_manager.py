@@ -725,6 +725,7 @@ class TabManager(QWidget):
                 self._move_tab_between_columns(existing, source_column, new_column)
 
             self._update_tabs()
+
         else:
             context_id = self._open_path(source_type, path)
             if context_id is not None:
@@ -835,9 +836,9 @@ class TabManager(QWidget):
         if source_column == target_column:
             # Simple reorder within the same column — no teardown needed
             adjusted_index = target_index if source_index > target_index else target_index - 1
-
             if adjusted_index != source_index:
                 target_column.tabBar().moveTab(source_index, adjusted_index)
+
         else:
             self._move_tab_between_columns(tab, source_column, target_column)
             new_tab = self._tabs.get(tab_id)

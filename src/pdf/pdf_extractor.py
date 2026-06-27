@@ -114,8 +114,8 @@ def _resolve_resources(doc: PDFDocument, page: dict[str, Any]) -> dict[str, Any]
     """Resolve the Resources dictionary for a page, following indirect refs."""
     resources = page.get("Resources")
     if isinstance(resources, PDFObjectRef):
-
         resources = doc.get_object(resources)
+
     return resources if isinstance(resources, dict) else {}
 
 
@@ -386,9 +386,9 @@ def _emit_text(
 def _resolve_font(doc: PDFDocument, resources: dict[str, Any], font_name: str) -> dict[str, Any]:
     """Resolve a font resource dictionary by name."""
     font_dict = resources.get("Font", {})
-
     if isinstance(font_dict, PDFObjectRef):
         font_dict = doc.get_object(font_dict)
+
     if not isinstance(font_dict, dict):
         return {}
 
@@ -518,12 +518,13 @@ def _hex_to_unicode_str(hex_str: str) -> str:
     raw = bytes.fromhex(hex_str)
     if len(raw) % 2 != 0:
         raise ValueError(f"Odd-length hex sequence in CMap: {hex_str}")
-    result = []
 
+    result = []
     for i in range(0, len(raw), 2):
         cp = (raw[i] << 8) | raw[i + 1]
         ch = chr(cp)
         result.append(_LIGATURE_MAP.get(ch, ch))
+
     return "".join(result)
 
 

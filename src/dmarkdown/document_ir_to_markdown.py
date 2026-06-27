@@ -190,6 +190,7 @@ class _DocumentIRToMarkdownSerialiser:
         indent = "    " * depth
         if ordered_index is not None:
             marker = f"{ordered_index}."
+
         else:
             marker = "-"
 
@@ -201,11 +202,11 @@ class _DocumentIRToMarkdownSerialiser:
 
         for child in item.children:
             if isinstance(child, DocumentIRParagraphNode):
-
                 text = self._serialise_inline_children(child.children)
                 if is_first_para:
                     lines.append(f"{indent}{marker} {text}")
                     is_first_para = False
+
                 else:
                     lines.append(f"{continuation_indent}{text}")
 
@@ -271,13 +272,13 @@ class _DocumentIRToMarkdownSerialiser:
                         body_rows.append(row)
 
         if not header_rows and not body_rows:
-
             return None
 
         # Determine the effective header and data rows
         if header_rows:
             effective_header = header_rows[0]
             effective_body = header_rows[1:] + body_rows
+
         else:
             effective_header = body_rows[0]
             effective_body = body_rows[1:]
@@ -311,13 +312,14 @@ class _DocumentIRToMarkdownSerialiser:
 
         # Build separator row based on alignment
         sep_cells: List[str] = []
-
         for c, alignment in enumerate(alignments):
             w = col_widths[c]
             if alignment == "center":
                 sep_cells.append(":" + "-" * (w - 2) + ":")
+
             elif alignment == "right":
                 sep_cells.append("-" * (w - 1) + ":")
+
             else:
                 sep_cells.append("-" * w)
 
@@ -335,6 +337,7 @@ class _DocumentIRToMarkdownSerialiser:
         for child in row.children:
             if isinstance(child, DocumentIRTableCellNode):
                 alignments.append(child.alignment or "left")
+
         return alignments
 
     def _row_cell_count(self, row: DocumentIRTableRowNode) -> int:

@@ -200,6 +200,7 @@ class TabBase(QFrame):
         Args:
             registry: The ContextRegistry for the active mindspace.
         """
+
     def set_path(self, path: str) -> None:
         """
         Set the path associated with this tab.

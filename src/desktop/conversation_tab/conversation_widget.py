@@ -2631,9 +2631,9 @@ class ConversationWidget(QWidget):
         strings = self._language_manager.strings()
         filename = os.path.basename(path)
         try:
-
             with open(path, "rb") as f:
                 data = f.read()
+
             return extract_docx_text(data)
 
         except DocxUnsupportedError as e:
@@ -3016,12 +3016,13 @@ class ConversationWidget(QWidget):
 
         for widget_index, (widget, widget_matches) in enumerate(self._matches):
             if isinstance(widget, ConversationMessage) and widget.message_id() == message_id:
-
                 if self._current_widget_index == widget_index:
                     self._current_match_index = (self._current_match_index + 1) % len(widget_matches)
+
                 else:
                     self._current_widget_index = widget_index
                     self._current_match_index = 0
+
                 self._highlight_matches()
                 self._scroll_to_current_match()
                 return self.get_match_status()
@@ -3332,6 +3333,7 @@ class ConversationWidget(QWidget):
                 msg_dict = msg.to_transcript_dict()
                 msg_dict['index'] = message_index
                 return msg_dict
+
             return None
 
         # Find by ID

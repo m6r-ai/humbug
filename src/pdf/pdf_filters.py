@@ -51,9 +51,9 @@ def decode_stream_filters(
 
 
 def _decode_flate(data: bytes, decode_parms: dict[str, Any] | None) -> bytes:
-
     try:
         decompressed = zlib.decompress(data)
+
     except zlib.error as e:
         raise PDFParseError(f"FlateDecode decompression failed: {e}") from e
 
@@ -142,6 +142,7 @@ def _paeth(a: int, b: int, c: int) -> int:
 
     if pb <= pc:
         return b
+
     return c
 
 
@@ -152,13 +153,14 @@ def _decode_ascii_hex(data: bytes) -> bytes:
 
         hex_str = hex_str.replace(b" ", b"").replace(b"\n", b"").replace(b"\r", b"").replace(b"\t", b"")
         return bytes.fromhex(hex_str.decode("ascii"))
+
     except (ValueError, UnicodeDecodeError) as e:
         raise PDFParseError(f"ASCIIHexDecode failed: {e}") from e
 
 
 def _decode_ascii85(data: bytes) -> bytes:
-
     try:
         return base64.a85decode(data, adobe=True, ignorechars=b" \t\n\r")
+
     except ValueError as e:
         raise PDFParseError(f"ASCII85Decode failed: {e}") from e

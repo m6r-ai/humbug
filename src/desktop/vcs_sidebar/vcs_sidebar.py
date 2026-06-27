@@ -329,9 +329,9 @@ class VCSSidebar(SidebarBase):
             Relative path string, or the basename if conversion fails.
         """
         if self._mindspace_path:
-
             try:
                 return os.path.relpath(abs_path, self._mindspace_path)
+
             except ValueError:
                 pass
 

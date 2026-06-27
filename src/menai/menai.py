@@ -1204,10 +1204,10 @@ class Menai:
         if Menai._prelude_dict is None:
             result = self.vm.execute(self._prelude, None)
             if not isinstance(result, MenaiDict):
-
                 raise RuntimeError("Prelude must evaluate to a dict")
 
             Menai._prelude_dict = {k.to_python(): v for k, v in result.pairs}
+
         return Menai._prelude_dict
 
     def evaluate_raw_with_bindings(

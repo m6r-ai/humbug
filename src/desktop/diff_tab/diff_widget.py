@@ -468,8 +468,8 @@ class DiffWidget(QWidget):
         """
         if (text, case_sensitive, regexp) != self._find_key:
             # New search term — rebuild the match list from scratch.
-
             self._run_find(text, forward=forward, reset=True, case_sensitive=case_sensitive, regexp=regexp)
+
         else:
             self._run_find(text, forward=forward, reset=False, case_sensitive=case_sensitive, regexp=regexp)
 
@@ -548,8 +548,8 @@ class DiffWidget(QWidget):
         left_current_local = -1
         right_current_local = -1
         if pane_id == "left":
-
             left_current_local = sum(1 for p, s, e in self._find_matches[:self._find_current] if p == "left")
+
         elif pane_id == "right":
             right_current_local = sum(1 for p, s, e in self._find_matches[:self._find_current] if p == "right")
 

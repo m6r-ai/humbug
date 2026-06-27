@@ -2,7 +2,6 @@
 Manages Humbug application user settings, primarily API keys.
 """
 
-import json
 import logging
 import os
 from typing import cast

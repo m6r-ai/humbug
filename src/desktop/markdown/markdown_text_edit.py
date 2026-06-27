@@ -442,7 +442,6 @@ class MarkdownTextEdit(MinHeightTextEdit):
                         self._indent_single_line_soft_tabs(cursor, settings.tab_size)
 
                     else:
-
                         self._indent_single_line_hard_tabs(cursor)
 
                 else:
@@ -451,6 +450,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
                     else:
                         self._indent_block_hard_tabs(cursor)
+
             finally:
                 cursor.endEditBlock()
                 self.setTextCursor(cursor)

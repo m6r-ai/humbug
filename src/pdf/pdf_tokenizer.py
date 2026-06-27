@@ -177,8 +177,8 @@ class PDFTokenizer:
             if b == ord("\\"):
                 self.pos += 1
                 if self.pos >= length:
-
                     break
+
                 esc = data[self.pos]
                 self.pos += 1
                 if esc == ord("n"):
@@ -228,8 +228,8 @@ class PDFTokenizer:
             elif b == ord(")"):
                 depth -= 1
                 if depth > 0:
-
                     result.append(b)
+
                 self.pos += 1
 
             else:

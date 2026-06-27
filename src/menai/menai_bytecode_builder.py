@@ -75,7 +75,7 @@ from menai.menai_bytecode import (
 )
 
 
-UNARY_OPS  = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 1}
+UNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 1}
 BINARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 2}
 TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 3}
 
@@ -100,9 +100,9 @@ _MASKS = {
 def _patch_instruction(instructions: 'array.array[int]', idx: int, field_name: str, value: int) -> None:
     """Patch a single field in a packed instruction word in-place."""
     shift = _SHIFTS[field_name]
-    mask  = _MASKS[field_name]
-    word  = instructions[idx]
-    word  = (word & ~(mask << shift)) | ((value & mask) << shift)
+    mask = _MASKS[field_name]
+    word = instructions[idx]
+    word = (word & ~(mask << shift)) | ((value & mask) << shift)
     instructions[idx] = word
 
 

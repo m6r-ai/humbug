@@ -23,14 +23,14 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 
 ## Code generation
 
-- When you help write code, do not write lengthy file-level docstrings.  These go stale very fast as the code evolves.
+- Do not write lengthy file-level docstrings.  These go stale very fast as the code evolves.
 - Do not add comments marking blocks of functionality within files.  Functions, classes, etc., have docstrings so we have
   everything we need anyway and these sorts of delimeter comments simply add clutter to the code.
 - If you are writing tests, the tests must reflect the correct and desired behaviour.  NEVER write or patch a test to
   mask broken implementation logic.  If the logic is wrong then a test must fail.
 - Test docstrings must describe the expected correct behaviour only.  They must not reference previously broken
   behaviour, historical bugs, or implementation details of past fixes.  A test is a specification, not a changelog.
-- Never write block comments using lines of dashes.  E.g never do this:
+- Do not write block comments using lines of dashes.  E.g. never do this:
   ```python
   # -----------------------------------------------------------
   # This is a block level comment because I like wasting tokens
@@ -41,7 +41,7 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 - Do not use `@property`.  Simple getter methods (e.g. `def foo(self) -> T:`) are used instead.
 - Do not pad-align `=` signs in consecutive assignment statements.  Each assignment should have a single space before
   the `=`, regardless of surrounding assignments.
-- Put a blank line before any block-level `elif` or `else`.
+- Put a blank line after any code block.  If the code dedents then there should be a blank line before it.
 - Multi-line docstrings must have the opening `"""` and closing `"""` on their own lines, with no other text.
 - These and other style rules are enforced by the style checker pylint plugin (`tools/style_checker/`), which runs
   automatically as part of `python -m tools.code_checker`.

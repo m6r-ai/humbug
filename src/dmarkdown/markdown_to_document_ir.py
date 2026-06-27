@@ -451,6 +451,7 @@ class _MarkdownToDocumentIRMapper:
             result = []
             for child in node.children:
                 result.extend(self._collect_inline(child, bold=bold, italic=italic, strikethrough=True, code=code))
+
             return result
 
         if isinstance(node, MarkdownASTInlineCodeNode):

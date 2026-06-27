@@ -128,7 +128,7 @@ class GradientBorderLabel(QLabel):
         rad = math.radians(self._angle)
         cos_a, sin_a = math.cos(rad), math.sin(rad)
         g_start = QPointF(cx - diag * cos_a, cy - diag * sin_a)
-        g_end   = QPointF(cx + diag * cos_a, cy + diag * sin_a)
+        g_end = QPointF(cx + diag * cos_a, cy + diag * sin_a)
 
         gradient = QLinearGradient(g_start, g_end)
         gradient.setColorAt(0.0, self._start)

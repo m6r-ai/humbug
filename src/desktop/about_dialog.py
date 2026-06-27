@@ -5,11 +5,11 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 
 from desktop.color_role import ColorRole
-from desktop.gradient_label import GradientBorderLabel, GradientLabel
 from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
 from desktop.url_opener import open_url
 from desktop.version import CURRENT_VERSION
+from desktop.widgets.gradient_label import GradientBorderLabel, GradientLabel
 
 
 class AboutDialog(QDialog):

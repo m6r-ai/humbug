@@ -23,11 +23,11 @@ class Mindspace:
     Has no Qt dependency — notifies observers via plain callbacks.
     """
 
-    MINDSPACE_DIR     = ".humbug"
-    SETTINGS_FILE     = "settings.json"
-    SESSION_FILE      = "session.json"
+    MINDSPACE_DIR = ".humbug"
+    SETTINGS_FILE = "settings.json"
+    SESSION_FILE = "session.json"
     INTERACTIONS_FILE = "system.json"
-    USAGE_FILE        = "usage.json"
+    USAGE_FILE = "usage.json"
 
     def __init__(
         self,
@@ -44,9 +44,9 @@ class Mindspace:
             on_interactions_updated: Called whenever a new interaction is added.
             on_usage_updated: Called whenever usage stats are updated.
         """
-        self._on_settings_changed     = on_settings_changed
+        self._on_settings_changed = on_settings_changed
         self._on_interactions_updated = on_interactions_updated
-        self._on_usage_updated        = on_usage_updated
+        self._on_usage_updated = on_usage_updated
         self._path: str = ""
         self._settings: MindspaceSettings | None = None
         self._interactions = MindspaceInteractions()

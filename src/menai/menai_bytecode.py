@@ -480,11 +480,11 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
 # ample room for future expansion.
 
 _OPCODE_SHIFT = 48
-_DEST_SHIFT   = 36
-_SRC0_SHIFT   = 24
-_SRC1_SHIFT   = 12
-_FIELD_MASK   = 0xFFF
-_OPCODE_MASK  = 0xFFFF
+_DEST_SHIFT = 36
+_SRC0_SHIFT = 24
+_SRC1_SHIFT = 12
+_FIELD_MASK = 0xFFF
+_OPCODE_MASK = 0xFFFF
 
 
 def pack_instruction(opcode: int, dest: int, src0: int, src1: int, src2: int) -> int:
@@ -710,9 +710,8 @@ class CodeObject:
         if isinstance(self.instructions, list):
             packed = make_instructions_array()
             for instr in self.instructions:
-                packed.append(
-                    pack_instruction(instr.opcode, instr.dest, instr.src0, instr.src1, instr.src2)
-                )
+                packed.append(pack_instruction(instr.opcode, instr.dest, instr.src0, instr.src1, instr.src2))
+
             self.instructions = packed
 
     def __repr__(self) -> str:
