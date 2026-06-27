@@ -92,6 +92,7 @@ def find_repo_root(path: str) -> str:
             raise GitNotRepositoryError(
                 f"'{path}' is not within a git repository"
             ) from e
+
         raise
 
 

@@ -99,6 +99,7 @@ class KotlinParser(Parser):
                         ):
                             in_lambda = True
                             lambda_brace_count = 1
+
                 elif token_value == '}':
                     if in_lambda:
                         lambda_brace_count -= 1

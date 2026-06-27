@@ -91,6 +91,7 @@ def get_status(repo_root: str, subtree_path: str) -> list[VCSFileStatus]:
             ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
             cwd=repo_root
         )
+
     except GitCommandError as e:
         raise e
 

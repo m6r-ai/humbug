@@ -340,6 +340,7 @@ class _DocxASTSerialiser:
             zf.writestr(_STYLES_PATH, styles_xml)
             if numbering_xml is not None:
                 zf.writestr(_NUMBERING_PATH, numbering_xml)
+
             zf.writestr(_SETTINGS_PATH, settings_xml)
             for _rid, (zip_path, img_bytes) in self._image_rels.items():
                 zf.writestr(zip_path, img_bytes)
@@ -1039,6 +1040,7 @@ class _DocxASTSerialiser:
                         f'<w:startOverride w:val="{child.start_override}"/>'
                         f'</w:lvlOverride>'
                     )
+
                 parts.append(
                     f'<w:num w:numId="{_esc(child.num_id)}">'
                     f'<w:abstractNumId w:val="{_esc(child.abstract_num_id)}"/>'

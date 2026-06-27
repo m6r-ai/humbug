@@ -150,6 +150,7 @@ class _DocumentIRToDocxASTMapper:
         body = DocxASTBodyNode()
         for child in document.children:
             self._map_block(child, body)
+
         docx_doc.add_child(body)
 
         return docx_doc
@@ -471,6 +472,7 @@ class _DocumentIRToDocxASTMapper:
         # Remove trailing empty line that split() often produces
         if lines and lines[-1] == "":
             lines = lines[:-1]
+
         if not lines:
             lines = [""]
 
@@ -483,6 +485,7 @@ class _DocumentIRToDocxASTMapper:
                 run = DocxASTRunNode()
                 run.add_child(DocxASTTextNode(content=line, preserve_space=True))
                 para.add_child(run)
+
             cell_body.add_child(para)
 
         table = DocxASTTableNode()
@@ -599,6 +602,7 @@ class _DocumentIRToDocxASTMapper:
                         shading=shading,
                         spacing_after=0 if tight else None,
                     )
+
                 para.add_child(ppr)
                 for run in runs:
                     para.add_child(run)
@@ -765,6 +769,7 @@ class _DocumentIRToDocxASTMapper:
             para.add_child(ppr)
             for run in self._build_runs(inline_children):
                 para.add_child(run)
+
             cell.add_child(para)
 
         # Map block-level cell content
@@ -905,6 +910,7 @@ class _DocumentIRToDocxASTMapper:
         """Return True if node is a zero-height spacer paragraph."""
         if not isinstance(node, DocxASTParagraphNode):
             return False
+
         ppr = next((c for c in node.children if isinstance(c, DocxASTParagraphPropertiesNode)), None)
         return (ppr is not None
                 and ppr.spacing_before == 0

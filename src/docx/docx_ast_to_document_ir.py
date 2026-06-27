@@ -303,6 +303,7 @@ class _DocxToDocumentIRMapper:
         """Look up a resolved style by ID, returning None if not found."""
         if not style_id:
             return None
+
         return self._styles.get(style_id)
 
     def _build_numbering_index(self, numbering_node: DocxASTNumberingNode) -> None:
@@ -688,6 +689,7 @@ class _DocxToDocumentIRMapper:
             self._append_inline_content(para, inner)
             if inner.children:
                 bq.add_child(inner)
+
             return bq if bq.children else None
 
         # Heuristic: monospace font → code
@@ -769,6 +771,7 @@ class _DocxToDocumentIRMapper:
                 # No explicit properties — check if style provides bold
                 if resolved and not resolved.bold:
                     all_bold = False
+
                 continue
 
             if not rpr.bold:
@@ -961,6 +964,7 @@ class _DocxToDocumentIRMapper:
                 if isinstance(run_child, DocxASTRunNode):
                     for ir_node in self._map_run(run_child):
                         link.add_child(ir_node)
+
             return [link] if link.children else []
 
         # Internal hyperlink: emit runs as plain inline content
@@ -968,6 +972,7 @@ class _DocxToDocumentIRMapper:
         for run_child in hyperlink.children:
             if isinstance(run_child, DocxASTRunNode):
                 result.extend(self._map_run(run_child))
+
         return result
 
     def _map_run(self, run: DocxASTRunNode) -> List[DocumentIRNode]:

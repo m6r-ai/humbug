@@ -130,6 +130,7 @@ class DocxASTParser:
         """
         try:
             zf = zipfile.ZipFile(io.BytesIO(data))
+
         except zipfile.BadZipFile as e:
             raise DocxParseError(f"Not a valid DOCX file (ZIP open failed): {e}") from e
 
@@ -189,11 +190,13 @@ class DocxASTParser:
         """
         try:
             xml_bytes = zf.read(path)
+
         except KeyError as e:
             raise DocxParseError(f"Could not read {path!r} from ZIP: {e}") from e
 
         try:
             return ET.fromstring(xml_bytes)
+
         except ET.ParseError as e:
             raise DocxParseError(f"Malformed XML in {path!r}: {e}") from e
 
