@@ -76,6 +76,6 @@ CHECKS: list[Check] = [
     ),
     Check(
         label="pylint",
-        argv=[sys.executable, "-m", "pylint", "src"],
+        argv=[sys.executable, "-m", "pylint", "src", "tools"],
     ),
 ]
