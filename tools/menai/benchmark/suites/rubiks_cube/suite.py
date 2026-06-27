@@ -1,3 +1,5 @@
+# pylint: disable=invalid-name
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -207,8 +209,7 @@ def _ida_star_idiomatic(
             if isinstance(result, list):
                 return result
 
-            if result < minimum:
-                minimum = result
+            minimum = min(minimum, result)
 
         return minimum
 
@@ -395,8 +396,7 @@ def _ida_star_functional(
             if isinstance(result, list):
                 return result
 
-            if result < minimum:
-                minimum = result
+            minimum = min(minimum, result)
 
         return minimum
 

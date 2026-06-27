@@ -232,10 +232,10 @@ reporter = DependencyReporter()
 reporter.print_results(result)
 
 # Check for violations
-if result.has_violations:
-    print(f"Found {result.violation_count} violations")
-    print(f"Internal: {len(result.internal_violations)}")
-    print(f"External: {len(result.external_violations)}")
+if result.has_violations():
+    print(f"Found {result.violation_count()} violations")
+    print(f"Internal: {len(result.internal_violations())}")
+    print(f"External: {len(result.external_violations())}")
 
 # Test specific external dependency
 allowed = config.is_external_dependency_allowed("ai", "requests")

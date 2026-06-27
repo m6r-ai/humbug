@@ -288,8 +288,7 @@ class ParenChecker:
                 self.line_info[line_idx].depth = current_depth
 
             # Track max depth
-            if current_depth > self.max_depth:
-                self.max_depth = current_depth
+            self.max_depth = max(self.max_depth, current_depth)
 
         # Check final depth
         if current_depth > 0:
@@ -454,22 +453,21 @@ class ParenChecker:
                 f"  Maximum depth: {self.max_depth}"
             )
 
+        imbalance = self.total_opens - self.total_closes
+        if imbalance > 0:
+            detail = f"Missing {imbalance} closing parenthes{'is' if imbalance == 1 else 'es'}"
+
+        elif imbalance < 0:
+            detail = f"Extra {-imbalance} closing parenthes{'is' if imbalance == -1 else 'es'}"
+
         else:
-            imbalance = self.total_opens - self.total_closes
-            if imbalance > 0:
-                detail = f"Missing {imbalance} closing parenthes{'is' if imbalance == 1 else 'es'}"
+            detail = "Depth errors (parens in wrong order)"
 
-            elif imbalance < 0:
-                detail = f"Extra {-imbalance} closing parenthes{'is' if imbalance == -1 else 'es'}"
-
-            else:
-                detail = "Depth errors (parens in wrong order)"
-
-            return (
-                f"✗ Parentheses UNBALANCED in {self.filepath.name}\n"
-                f"  Total: {self.total_opens} opens, {self.total_closes} closes\n"
-                f"  {detail}"
-            )
+        return (
+            f"✗ Parentheses UNBALANCED in {self.filepath.name}\n"
+            f"  Total: {self.total_opens} opens, {self.total_closes} closes\n"
+            f"  {detail}"
+        )
 
     def print_report(
         self,

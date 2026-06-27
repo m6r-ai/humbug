@@ -61,8 +61,8 @@ def _parse_string(s: str, pos: int) -> tuple[str, int]:
                     try:
                         unescaped = chr(int(hex_str, 16))
 
-                    except ValueError:
-                        raise ValueError(f"Invalid \\uXXXX escape: {hex_str!r}")
+                    except ValueError as exc:
+                        raise ValueError(f"Invalid \\uXXXX escape: {hex_str!r}") from exc
 
                     chars.append(unescaped)
                     pos += 6
@@ -96,8 +96,8 @@ def _parse_number(s: str, pos: int) -> tuple[int | float, int]:
 
         return int(num_str), end
 
-    except ValueError:
-        raise ValueError(f"Invalid number literal: {num_str!r}")
+    except ValueError as exc:
+        raise ValueError(f"Invalid number literal: {num_str!r}") from exc
 
 
 def _parse_keyword(s: str, pos: int, kw: str, val: object) -> tuple[object, int]:
@@ -248,7 +248,8 @@ if __name__ == '__main__':
     import json
 
     tests = [
-        '{"name": "Alice", "age": 30, "active": true, "score": 9.5, "tags": ["admin", "user"], "address": {"city": "Wonderland", "zip": null}}',
+        '{"name": "Alice", "age": 30, "active": true, "score": 9.5, "tags": ["admin", "user"], '
+        '"address": {"city": "Wonderland", "zip": null}}',
         '42',
         '-3.14',
         'true',

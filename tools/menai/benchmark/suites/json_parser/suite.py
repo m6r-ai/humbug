@@ -11,7 +11,8 @@ _LONG_STRING = '"' + ("abcdefghij" * 200) + '"'
 _DEEP_ARRAY = ("[" * 500) + "0" + ("]" * 500)
 
 _CASES: list[tuple[str, str, int]] = [
-    ("object",       '{"name": "Alice", "age": 30, "active": true, "score": 9.5, "tags": ["admin", "user"], "address": {"city": "Wonderland", "zip": null}}', 10),
+    ("object",       '{"name": "Alice", "age": 30, "active": true, "score": 9.5, "tags": ["admin", "user"], '
+                     '"address": {"city": "Wonderland", "zip": null}}', 10),
     ("integer",      "42",                    10),
     ("float",        "-3.14",                 10),
     ("true",         "true",                  10),

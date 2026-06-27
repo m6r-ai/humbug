@@ -57,8 +57,8 @@ class DependencyReporter:
             lines.append("")
 
             # Group violations by type
-            internal_violations = result.internal_violations
-            external_violations = result.external_violations
+            internal_violations = result.internal_violations()
+            external_violations = result.external_violations()
 
             if internal_violations:
                 lines.append("Internal Module Violations:")
@@ -78,16 +78,16 @@ class DependencyReporter:
         lines.append("Summary:")
         lines.append(f"  Files checked: {result.files_checked}")
         lines.append(f"  Modules checked: {len(result.modules_checked)}")
-        lines.append(f"  Total violations: {result.violation_count}")
+        lines.append(f"  Total violations: {result.violation_count()}")
 
-        if result.internal_violations:
-            lines.append(f"  Internal violations: {len(result.internal_violations)}")
+        if result.internal_violations():
+            lines.append(f"  Internal violations: {len(result.internal_violations())}")
 
-        if result.external_violations:
-            lines.append(f"  External violations: {len(result.external_violations)}")
+        if result.external_violations():
+            lines.append(f"  External violations: {len(result.external_violations())}")
 
-        if result.has_violations:
-            lines.append(f"  Status: ✗ FAILED - {result.violation_count} violation(s)")
+        if result.has_violations():
+            lines.append(f"  Status: ✗ FAILED - {result.violation_count()} violation(s)")
 
         else:
             lines.append("  Status: ✓ PASSED - No violations found")
@@ -134,4 +134,4 @@ class DependencyReporter:
 
     def get_exit_code(self, result: ValidationResult) -> int:
         """Get appropriate exit code for CI/CD integration."""
-        return 1 if result.has_violations else 0
+        return 1 if result.has_violations() else 0

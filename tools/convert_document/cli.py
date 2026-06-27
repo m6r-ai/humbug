@@ -175,9 +175,6 @@ Examples:
 
         content = _EXPORTERS[to_format](doc_ir)  # type: ignore[operator]
 
-    except SystemExit:
-        raise
-
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"Error during conversion: {e}", file=sys.stderr)
         return 1
