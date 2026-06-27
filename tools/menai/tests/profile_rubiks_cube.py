@@ -30,10 +30,10 @@ from menai import Menai
 
 def profile_rubiks_cube(
     test_file: Path = _DEFAULT_TEST_FILE,
-    output_file: str = None,
+    output_file: str | None = None,
     top_n: int = 80,
     sort_by: str = "cumulative"
-):
+) -> None:
     """
     Profile the Rubik's cube test.
 
@@ -130,7 +130,7 @@ def profile_rubiks_cube(
     print(f"  4. Use snakeviz for visualization: pip install snakeviz && snakeviz rubiks.prof")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(
         description="Profile Menai Rubik's Cube Test",

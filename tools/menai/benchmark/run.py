@@ -2,19 +2,19 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
+import importlib
 import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
+sys.path.insert(0, str(_REPO_ROOT))
 
 _BENCHMARK_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(_BENCHMARK_DIR))
 
 from menai import Menai  # noqa: E402  pylint: disable=wrong-import-position
 
-from benchmark import (  # noqa: E402  pylint: disable=wrong-import-position
+from tools.menai.benchmark import (  # noqa: E402  pylint: disable=wrong-import-position
     BenchmarkReporter,
     BenchmarkRunner,
     BenchmarkSuite,
@@ -36,24 +36,14 @@ def discover_suites() -> list[tuple[Path, type[BenchmarkSuite]]]:
     """
     found: list[tuple[Path, type[BenchmarkSuite]]] = []
 
-    for suite_file in sorted(_SUITES_DIR.glob("*/suite.py")):
-        suite_dir = suite_file.parent
-        module_name = f"suite_{suite_dir.name}"
+    for suite_dir in sorted(d for d in _SUITES_DIR.iterdir() if d.is_dir() and (d / "suite.py").exists()):
+        module_name = f"tools.menai.benchmark.suites.{suite_dir.name}.suite"
 
-        spec = importlib.util.spec_from_file_location(module_name, suite_file)
-        if spec is None or spec.loader is None:
-            print(
-                f"Warning: could not load spec for {suite_file}, skipping.",
-                file=sys.stderr,
-            )
-            continue
-
-        module = importlib.util.module_from_spec(spec)
         try:
-            spec.loader.exec_module(module)  # type: ignore[union-attr]
+            module = importlib.import_module(module_name)
         except Exception as exc:
             print(
-                f"Warning: error importing {suite_file}: {exc}, skipping.",
+                f"Warning: error importing {module_name}: {exc}, skipping.",
                 file=sys.stderr,
             )
             continue
@@ -61,7 +51,7 @@ def discover_suites() -> list[tuple[Path, type[BenchmarkSuite]]]:
         suite_class = getattr(module, "Suite", None)
         if suite_class is None:
             print(
-                f"Warning: {suite_file} has no 'Suite' class, skipping.",
+                f"Warning: {module_name} has no 'Suite' class, skipping.",
                 file=sys.stderr,
             )
             continue

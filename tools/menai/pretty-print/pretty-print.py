@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 from menai.menai_pretty_printer import MenaiPrettyPrinter, FormatOptions
 
 
-def main():
+def main() -> None:
     """Main entry point for the Menai pretty-printer CLI."""
     parser = argparse.ArgumentParser(
         description='Pretty-print Menai source code',

@@ -1,18 +1,14 @@
 from __future__ import annotations
 
 import json
-import sys
-from pathlib import Path
 from typing import Any
 from typing import cast
 
-from benchmark import BenchmarkCase, BenchmarkSuite, Implementation
+from tools.menai.benchmark import BenchmarkCase, BenchmarkSuite, Implementation
 from menai import Menai
 
-_SUITE_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(_SUITE_DIR))
 
-from json_parser import parse as _parse_functional  # noqa: E402
+from tools.menai.benchmark.suites.json_parser.json_parser import parse as _parse_functional  # noqa: E402
 
 _LONG_STRING = '"' + ("abcdefghij" * 200) + '"'
 _DEEP_ARRAY = ("[" * 500) + "0" + ("]" * 500)

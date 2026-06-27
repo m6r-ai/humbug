@@ -202,6 +202,8 @@ def _dispatch(s: str, pos: int, stack: list) -> tuple[object, int]:
 
     ch = s[pos]
 
+    val: object
+
     if ch == '{':
         pos = _skip_ws(s, pos + 1)
         if pos >= len(s):

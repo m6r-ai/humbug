@@ -4,7 +4,7 @@ import random
 from pathlib import Path
 from typing import Any
 
-from benchmark import BenchmarkCase, BenchmarkSuite, Implementation
+from tools.menai.benchmark import BenchmarkCase, BenchmarkSuite, Implementation
 from menai import Menai
 
 _SIZES = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000]

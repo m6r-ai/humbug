@@ -80,6 +80,9 @@ def run_benchmarks(sort_src: str, sizes: list[int], iterations: int) -> list[tup
                 result = menai.evaluate(expr)
                 elapsed = time.perf_counter() - start
 
+                if not isinstance(result, list):
+                    raise TypeError(f"Expected list result, got {type(result).__name__}")
+
                 sorted_ok = all(
                     result[i] <= result[i + 1]
                     for i in range(len(result) - 1)
@@ -155,7 +158,7 @@ def run_profile(
         print(f"  Or: snakeviz {output_file}")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Profile Menai sort-list performance",
         formatter_class=argparse.RawDescriptionHelpFormatter,

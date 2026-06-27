@@ -71,7 +71,7 @@ def _menai_value_to_python(value: MenaiValue) -> Any:
         return value.value
 
     if isinstance(value, MenaiList):
-        return [_menai_value_to_python(item) for item in value.items]
+        return [_menai_value_to_python(item) for item in value.elements]
 
     if isinstance(value, MenaiDict):
         return {

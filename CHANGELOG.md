@@ -12,6 +12,11 @@ Bug fixes:
 - Resolved a performance issue with scrolling Markdown documents that contain images.
 - Resolved a problem with column splitters not moving correctly.
 
+Internal structure changes:
+
+- Added `style_checker` to augment `pylint` with Humbug style checking.  Modified all code in `src` to be compliant.
+- Extended `mypy` checking to the `tools` directory.
+
 ## v50 (2026-06-24)
 
 New features:

@@ -6,7 +6,7 @@ import os
 from typing import Dict, List, Set
 from dataclasses import dataclass, field
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 
 @dataclass

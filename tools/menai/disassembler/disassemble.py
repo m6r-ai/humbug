@@ -436,8 +436,11 @@ def main() -> int:
     #      resolve correctly when the tool is run from the root)
     file_dir = str(source_path.parent.absolute())
     cwd = str(Path.cwd())
-    seen = set()
-    module_path = [d for d in [file_dir, cwd] if not (d in seen or seen.add(d))]
+    module_path: list[str] = []
+    for d in [file_dir, cwd]:
+        if d not in module_path:
+            module_path.append(d)
+
     menai = Menai(module_path=module_path)
 
     try:

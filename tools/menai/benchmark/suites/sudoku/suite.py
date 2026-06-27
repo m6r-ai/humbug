@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 from typing import cast
 
-from benchmark import BenchmarkCase, BenchmarkSuite, Implementation
+from tools.menai.benchmark import BenchmarkCase, BenchmarkSuite, Implementation
 from menai import Menai
 
 _SUITE_DIR = Path(__file__).resolve().parent

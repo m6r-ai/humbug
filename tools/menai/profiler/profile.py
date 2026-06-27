@@ -39,8 +39,11 @@ def build_module_path(source_path: Path) -> list[str]:
     """
     file_dir = str(source_path.parent.absolute())
     cwd = str(Path.cwd())
-    seen: set[str] = set()
-    return [d for d in [file_dir, cwd] if not (d in seen or seen.add(d))]  # type: ignore[func-returns-value]
+    module_path: list[str] = []
+    for d in [file_dir, cwd]:
+        if d not in module_path:
+            module_path.append(d)
+    return module_path
 
 
 def compile_source(source_path: Path) -> object:
@@ -116,7 +119,7 @@ def run_profile(
     result = None
     exec_error = None
     try:
-        result = menai.vm.execute(code, Menai.CONSTANTS, menai._prelude)
+        result = menai.vm.execute(code, menai._prelude)
 
     except Exception as exc:
         exec_error = exc
