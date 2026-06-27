@@ -101,6 +101,7 @@ class DependencyReporter:
         for violation in violations:
             if violation.file_path not in violations_by_file:
                 violations_by_file[violation.file_path] = []
+
             violations_by_file[violation.file_path].append(violation)
 
         for file_path in sorted(violations_by_file.keys()):

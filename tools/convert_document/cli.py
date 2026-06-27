@@ -1,5 +1,4 @@
 import argparse
-import os
 import sys
 from pathlib import Path
 
@@ -8,11 +7,11 @@ from dmarkdown.document_ir_to_markdown import document_ir_to_markdown
 from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
 from dmarkdown.markdown_to_document_ir import markdown_ast_to_document_ir
 from document_ir.image_sidecar import extract_images_to_sidecar
+from document_ir.document_ir_node import DocumentIRDocumentNode
 from docx import (
     DocxError, DocxUnsupportedError,
     docx_ast_to_document_ir, document_ir_to_docx_ast, parse_docx, serialise_docx
 )
-from document_ir.document_ir_node import DocumentIRDocumentNode
 
 # pylint: disable=unused-import
 import syntax.parser_imports
@@ -49,6 +48,7 @@ def _infer_format(path: Path, label: str) -> str:
 def _import_md(path: Path) -> DocumentIRDocumentNode:
     try:
         md_text = path.read_text(encoding="utf-8")
+
     except OSError as e:
         print(f"Error reading '{path}': {e}", file=sys.stderr)
         sys.exit(1)
@@ -61,12 +61,14 @@ def _import_md(path: Path) -> DocumentIRDocumentNode:
 def _import_html(path: Path) -> DocumentIRDocumentNode:
     try:
         source = path.read_text(encoding="utf-8")
+
     except OSError as e:
         print(f"Error reading '{path}': {e}", file=sys.stderr)
         sys.exit(1)
 
     try:
         return html_ast_to_document_ir(parse_html(source, source_path=str(path)))
+
     except (HtmlParseError, HtmlError) as e:
         print(f"Error parsing HTML '{path}': {e}", file=sys.stderr)
         sys.exit(1)
@@ -75,15 +77,18 @@ def _import_html(path: Path) -> DocumentIRDocumentNode:
 def _import_docx(path: Path) -> DocumentIRDocumentNode:
     try:
         data = path.read_bytes()
+
     except OSError as e:
         print(f"Error reading '{path}': {e}", file=sys.stderr)
         sys.exit(1)
 
     try:
         return docx_ast_to_document_ir(parse_docx(data))
+
     except DocxUnsupportedError as e:
         print(f"Unsupported DOCX '{path}': {e}", file=sys.stderr)
         sys.exit(2)
+
     except DocxError as e:
         print(f"Error parsing DOCX '{path}': {e}", file=sys.stderr)
         sys.exit(1)
@@ -138,9 +143,11 @@ Examples:
     if args.output:
         output_path = Path(args.output)
         to_format: str = args.to_format or _infer_format(output_path, "output")
+
     elif args.to_format:
         to_format = args.to_format
         output_path = input_path.with_suffix(_FORMAT_EXTENSIONS[to_format])
+
     else:
         print(
             "Error: cannot determine output format. "
@@ -167,8 +174,10 @@ Examples:
             )
 
         content = _EXPORTERS[to_format](doc_ir)  # type: ignore[operator]
+
     except SystemExit:
         raise
+
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"Error during conversion: {e}", file=sys.stderr)
         return 1
@@ -176,8 +185,10 @@ Examples:
     try:
         if isinstance(content, bytes):
             output_path.write_bytes(content)
+
         else:
             output_path.write_text(content, encoding="utf-8")
+
     except OSError as e:
         print(f"Error writing '{output_path}': {e}", file=sys.stderr)
         return 1

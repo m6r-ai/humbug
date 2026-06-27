@@ -3,7 +3,7 @@ Utility functions for the dependency checker.
 """
 
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 
 def create_dependency_graph(config_data: Dict[str, Any]) -> str:
@@ -37,7 +37,7 @@ def get_project_stats(src_root: str) -> Dict[str, Any]:
     python_files = 0
     total_lines = 0
     modules: List[str] = []
-    largest_module: Optional[str] = None
+    largest_module: str | None = None
     largest_module_files = 0
 
     src_path = Path(src_root)

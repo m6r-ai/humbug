@@ -4,7 +4,7 @@ Import statement parser for Python files.
 
 import ast
 from pathlib import Path
-from typing import List, Set, Optional
+from typing import List, Set
 from dataclasses import dataclass
 
 
@@ -171,7 +171,7 @@ class ImportParser:
             print(f"Warning: Could not parse {file_path}: {e}")
             return []
 
-    def resolve_module_name(self, import_info: ImportInfo, file_path: str, known_modules: Set[str]) -> Optional[str]:
+    def resolve_module_name(self, import_info: ImportInfo, file_path: str, known_modules: Set[str]) -> str | None:
         """Resolve an import to a known internal module name."""
         module_name = import_info.module
 
@@ -215,7 +215,7 @@ class ImportParser:
 
         return None
 
-    def _get_module_from_path(self, file_path: Path) -> Optional[str]:
+    def _get_module_from_path(self, file_path: Path) -> str | None:
         """Get the module name from a file path."""
         try:
             rel_path = file_path.relative_to(self.src_root)
@@ -257,7 +257,7 @@ class ImportParser:
         # For external modules, we typically care about the top-level package
         return import_info.module.split('.')[0]
 
-    def get_python_files(self, directory: str, ignore_patterns: Optional[List[str]] = None) -> List[str]:
+    def get_python_files(self, directory: str, ignore_patterns: List[str] | None = None) -> List[str]:
         """Get all Python files in a directory, respecting ignore patterns."""
         if ignore_patterns is None:
             ignore_patterns = []

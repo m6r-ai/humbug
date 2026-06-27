@@ -1,4 +1,5 @@
-"""Pure Python JSON parser using an explicit stack — mirrors the Menai implementation.
+"""
+Pure Python JSON parser using an explicit stack — mirrors the Menai implementation.
 
 Parses a JSON string into Python native types:
   JSON object  -> dict
@@ -24,20 +25,12 @@ def parse(s: str) -> object:
     return value
 
 
-# ---------------------------------------------------------------------------
-# Whitespace
-# ---------------------------------------------------------------------------
-
 def _skip_ws(s: str, pos: int) -> int:
     while pos < len(s) and s[pos] in ' \t\n\r':
         pos += 1
 
     return pos
 
-
-# ---------------------------------------------------------------------------
-# Scalars
-# ---------------------------------------------------------------------------
 
 def _parse_string(s: str, pos: int) -> tuple[str, int]:
     """Parse a JSON string starting just after the opening quote."""
@@ -67,6 +60,7 @@ def _parse_string(s: str, pos: int) -> tuple[str, int]:
                     hex_str = s[pos + 2:pos + 6]
                     try:
                         unescaped = chr(int(hex_str, 16))
+
                     except ValueError:
                         raise ValueError(f"Invalid \\uXXXX escape: {hex_str!r}")
 
@@ -118,13 +112,11 @@ def _parse_keyword(s: str, pos: int, kw: str, val: object) -> tuple[object, int]
     return val, end
 
 
-# ---------------------------------------------------------------------------
 # Explicit-stack trampoline
-# ---------------------------------------------------------------------------
+#
 # Each stack frame is a tuple describing what to do when a sub-value completes:
 #   ("array",  s, acc)       - resume building an array
 #   ("object", s, d, key)    - resume building an object
-
 def _resume(val: object, pos: int, stack: list) -> tuple[object, int]:
     """Apply the top stack frame with the completed value, or return if stack empty."""
     while stack:
@@ -151,26 +143,26 @@ def _resume(val: object, pos: int, stack: list) -> tuple[object, int]:
 
             raise ValueError(f"Expected ',' or ']' in array, got {ch!r} at position {pos}")
 
-        else:  # "object"
-            _, s, d, key = frame
-            d[key] = val
-            pos = _skip_ws(s, pos)
+        # "object"
+        _, s, d, key = frame
+        d[key] = val
+        pos = _skip_ws(s, pos)
 
-            if pos >= len(s):
-                raise ValueError("Unterminated object")
+        if pos >= len(s):
+            raise ValueError("Unterminated object")
 
-            ch = s[pos]
-            if ch == '}':
-                stack.pop()
-                val = d
-                pos += 1
-                continue
+        ch = s[pos]
+        if ch == '}':
+            stack.pop()
+            val = d
+            pos += 1
+            continue
 
-            if ch == ',':
-                stack.pop()
-                return _parse_object_key(s, _skip_ws(s, pos + 1), d, stack)
+        if ch == ',':
+            stack.pop()
+            return _parse_object_key(s, _skip_ws(s, pos + 1), d, stack)
 
-            raise ValueError(f"Expected ',' or '}}' in object, got {ch!r} at position {pos}")
+        raise ValueError(f"Expected ',' or '}}' in object, got {ch!r} at position {pos}")
 
     return val, pos
 
@@ -284,6 +276,7 @@ if __name__ == '__main__':
                 print(f"{status}: {t[:60]!r}")
                 print(f"  ours:   {ours!r}")
                 print(f"  theirs: {theirs!r}")
+
             else:
                 print(f"{status}: {t[:60]!r}")
 

@@ -25,7 +25,8 @@ _MENAI_MODULES_DIR = _REPO_ROOT / "menai_modules"
 
 
 def discover_suites() -> list[tuple[Path, type[BenchmarkSuite]]]:
-    """Discover all suite classes by scanning suites/*/suite.py.
+    """
+    Discover all suite classes by scanning suites/*/suite.py.
 
     Each suite module must contain a class named ``Suite`` that subclasses
     ``BenchmarkSuite``.  Suites are returned in alphabetical order by
@@ -41,6 +42,7 @@ def discover_suites() -> list[tuple[Path, type[BenchmarkSuite]]]:
 
         try:
             module = importlib.import_module(module_name)
+
         except Exception as exc:
             print(
                 f"Warning: error importing {module_name}: {exc}, skipping.",
@@ -65,7 +67,8 @@ def filter_suites(
     all_suites: list[tuple[Path, type[BenchmarkSuite]]],
     names: list[str],
 ) -> list[tuple[Path, type[BenchmarkSuite]]]:
-    """Return only the suites whose name contains any of the given substrings.
+    """
+    Return only the suites whose name contains any of the given substrings.
 
     Matching is case-insensitive.  A suite's name is taken from its
     ``BenchmarkSuite.name`` class attribute.
@@ -135,7 +138,8 @@ def run_suite(
     iterations: int | None,
     no_validate: bool,
 ) -> None:
-    """Instantiate, run, and report a single benchmark suite.
+    """
+    Instantiate, run, and report a single benchmark suite.
 
     Args:
         suite_dir:    Directory containing the suite's ``suite.py`` (and any
@@ -188,6 +192,7 @@ def main() -> None:
                 file=sys.stderr,
             )
             sys.exit(1)
+
     else:
         selected = all_suites
 

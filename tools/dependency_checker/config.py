@@ -90,12 +90,14 @@ class DependencyConfig:
         """Get the set of internal modules that the given module is allowed to depend on."""
         if module in self.modules:
             return set(self.modules[module].internal_dependencies)
+
         return set()
 
     def get_allowed_external_dependencies(self, module: str) -> Set[str]:
         """Get the set of external dependencies allowed for a specific module."""
         if module in self.modules:
             return set(self.modules[module].external_dependencies)
+
         return set()
 
     def is_external_dependency_allowed(self, module: str, external_module: str) -> bool:

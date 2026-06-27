@@ -112,6 +112,7 @@ def handle_check(args: Any) -> int:
         print("Configuration errors found:")
         for error in config_errors:
             print(f"  - {error}")
+
         return 1
 
     validator = DependencyValidator(config)
@@ -122,6 +123,7 @@ def handle_check(args: Any) -> int:
         if args.module not in config.get_all_modules():
             print(f"Module '{args.module}' not found in configuration.")
             return 1
+
         result = validator.validate_module(args.module)
 
     else:

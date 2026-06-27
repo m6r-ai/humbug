@@ -170,6 +170,7 @@ class DependencyValidator:
         try:
             rel_path = file_path_obj.relative_to(self.config.src_root)
             module_name = rel_path.parts[0]  # First directory is the module
+
         except (ValueError, IndexError):
             # File is not in src directory or path structure is unexpected
             return ValidationResult(violations=[], files_checked=0, modules_checked=set())

@@ -8,10 +8,10 @@ from typing import Any, Callable
 
 import sys
 
+from menai import Menai
+
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
-
-from menai import Menai
 
 
 @dataclass
@@ -25,7 +25,8 @@ class BenchmarkCase:
 
 @dataclass
 class Implementation:
-    """A named callable that can be timed against a BenchmarkCase.
+    """
+    A named callable that can be timed against a BenchmarkCase.
 
     When *prepare* is provided it is called once **outside** the timed loop
     with the case input.  Its return value is passed to *run* on every
@@ -54,7 +55,8 @@ class CaseResult:
 
 
 class BenchmarkSuite(ABC):
-    """Abstract base class for a family of related benchmarks.
+    """
+    Abstract base class for a family of related benchmarks.
 
     Subclasses declare the cases to run, the implementations to compare, and
     the equality predicate used to validate results against the reference
@@ -70,7 +72,8 @@ class BenchmarkSuite(ABC):
 
     @abstractmethod
     def implementations(self, menai: Menai) -> list[Implementation]:
-        """Return the ordered list of implementations to benchmark.
+        """
+        Return the ordered list of implementations to benchmark.
 
         The first entry is treated as the reference; all others are validated
         against it.  The supplied *menai* instance is already warmed up.
@@ -82,7 +85,8 @@ class BenchmarkSuite(ABC):
 
 
 class BenchmarkRunner:
-    """Runs a BenchmarkSuite and collects CaseResult objects.
+    """
+    Runs a BenchmarkSuite and collects CaseResult objects.
 
     The caller is responsible for warming up the Menai instance before
     passing it in.  No additional warmup is performed here.
@@ -111,6 +115,7 @@ class BenchmarkRunner:
                 # Pre-timing setup: build strings, compile, etc.
                 if impl.prepare is not None:
                     prepared = impl.prepare(case.input)
+
                 else:
                     prepared = case.input
 
@@ -124,6 +129,7 @@ class BenchmarkRunner:
                     # Convert MenaiValue → Python outside the timed loop.
                     if hasattr(raw, 'to_python'):
                         result = raw.to_python()
+
                     else:
                         result = raw
 
@@ -134,6 +140,7 @@ class BenchmarkRunner:
                     mean_s = 0.0
                     min_s = 0.0
                     valid = False
+
                 else:
                     mean_s = sum(times) / len(times)
                     min_s = min(times)
@@ -141,6 +148,7 @@ class BenchmarkRunner:
                         reference_result = result
                         reference_set = True
                         valid = True
+
                     else:
                         valid = reference_set and suite.results_equal(reference_result, result)
 
@@ -174,7 +182,8 @@ class BenchmarkReporter:
         results: list[CaseResult],
         implementations: list[Implementation],
     ) -> None:
-        """Print a formatted comparison table to stdout.
+        """
+        Print a formatted comparison table to stdout.
 
         The first implementation is the reference.  Subsequent implementations
         show a "vs ref" speedup/slowdown ratio and a validity marker.
@@ -233,12 +242,14 @@ class BenchmarkReporter:
                     cell = f"{'N/A':>{self._COL_MEAN}}  {'N/A':<{self._COL_MIN}}"
                     if idx > 0:
                         cell += f"  {'':>{self._COL_VS}}"
+
                     row_parts.append(cell)
                     continue
 
                 if r.error is not None:
                     mean_str = "ERROR"
                     min_str = ""
+
                 else:
                     mean_str = f"{r.mean_s * self._MS:.3f}"
                     min_str = f"{r.min_s * self._MS:.3f}"
@@ -250,6 +261,7 @@ class BenchmarkReporter:
 
                 if idx == 0:
                     cell += f" {validity}"
+
                 else:
                     vs_str = self._vs_ref(ref_mean, r.mean_s if not r.error else None)
                     cell += f"  {vs_str:>{self._COL_VS - 2}} {validity}"
@@ -266,23 +278,27 @@ class BenchmarkReporter:
             total = len(cases)
             marker = "✓" if count == total else "✗"
             summary_parts.append(f"{name} {count}/{total} {marker}")
+
         print("Validation: " + "  |  ".join(summary_parts))
         print()
 
     def _vs_ref(self, ref_mean_s: float | None, impl_mean_s: float | None) -> str:
-        """Return a human-readable speedup/slowdown string relative to the reference.
+        """
+        Return a human-readable speedup/slowdown string relative to the reference.
 
         Returns an empty string when either value is unavailable.
         """
         if ref_mean_s is None or impl_mean_s is None or impl_mean_s == 0.0:
             return ""
+
         if ref_mean_s == 0.0:
             return ""
+
         ratio = ref_mean_s / impl_mean_s
         if ratio >= 1.0:
             fmt = ".1f" if ratio < 10 else ".0f"
             return f"{ratio:{fmt}}x faster"
-        else:
-            inv = 1.0 / ratio
-            fmt = ".1f" if inv < 10 else ".0f"
-            return f"{inv:{fmt}}x slower"
+
+        inv = 1.0 / ratio
+        fmt = ".1f" if inv < 10 else ".0f"
+        return f"{inv:{fmt}}x slower"

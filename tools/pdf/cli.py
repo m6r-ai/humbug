@@ -21,21 +21,25 @@ def main() -> int:
     try:
         with open(args.file, "rb") as f:
             data = f.read()
+
     except OSError as e:
         print(f"Error reading file: {e}", file=sys.stderr)
         return 1
 
     try:
         doc = parse(data)
+
     except PDFUnsupportedError as e:
         print(f"Unsupported PDF: {e}", file=sys.stderr)
         return 2
+
     except PDFError as e:
         print(f"Failed to parse PDF: {e}", file=sys.stderr)
         return 1
 
     try:
         text = extract_text(doc)
+
     except PDFError as e:
         print(f"Failed to extract text: {e}", file=sys.stderr)
         return 1
@@ -46,6 +50,7 @@ def main() -> int:
             print(f"--- Page {i} ---")
             print(page)
             print()
+
     else:
         print(text.replace("\f", "\n\n"))
 

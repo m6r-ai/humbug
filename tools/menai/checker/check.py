@@ -4,7 +4,7 @@ import sys
 import argparse
 from pathlib import Path
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 from menai.menai_lexer import MenaiLexer
 from menai.menai_token import MenaiTokenType
@@ -58,7 +58,7 @@ class FormStackFrame:
     open_line: int
     depth_when_opened: int  # Depth after the opening paren
     form_type: str  # 'lambda', 'let', 'letrec', 'if', 'match'
-    name: Optional[str] = None  # Optional identifier (e.g., function name)
+    name: str | None = None  # Optional identifier (e.g., function name)
 
 
 @dataclass
@@ -222,6 +222,7 @@ class ParenChecker:
             if token.line != last_line:
                 if line_idx < len(self.line_info):
                     self.line_info[line_idx].start_depth = current_depth
+
                 last_line = token.line
 
             if token.type == MenaiTokenType.LPAREN:
@@ -261,6 +262,7 @@ class ParenChecker:
                     if line_idx < len(self.line_info):
                         if self.line_info[line_idx].close_annotations is None:
                             self.line_info[line_idx].close_annotations = []
+
                         self.line_info[line_idx].close_annotations.append(CloseAnnotation(
                             form_type=frame.form_type,
                             depth=current_depth  # Depth after closing (which was the depth when opened - 1)
@@ -336,7 +338,7 @@ class ParenChecker:
 
     def format_depth_chart(
         self,
-        line_range: Optional[Tuple[int, int]] = None,
+        line_range: Tuple[int, int] | None = None,
         show_all: bool = False,
         annotate: bool = False,
         color: bool = False
@@ -411,6 +413,7 @@ class ParenChecker:
                         # Use the color of the paren being closed (based on its depth)
                         paren_color = self.get_paren_color(ann.depth)
                         colored_annotations.append(Colors.colorize(ann_text, paren_color))
+
                     annotation = "  " + Colors.colorize("<--", Colors.DIM) + " " + ", ".join(colored_annotations)
 
                 else:
@@ -426,6 +429,7 @@ class ParenChecker:
 
                 else:
                     line_color = Colors.DIM
+
                 line_num_str = Colors.colorize(f"{line_num:4d}", line_color)
 
             else:
@@ -469,7 +473,7 @@ class ParenChecker:
 
     def print_report(
         self,
-        line_range: Optional[Tuple[int, int]] = None,
+        line_range: Tuple[int, int] | None = None,
         summary_only: bool = False,
         annotate: bool = False,
         color: bool = False
@@ -500,6 +504,7 @@ class ParenChecker:
                 for error in self.errors:
                     if error.error_type == "negative_depth":
                         print(f"Unmatched closing parenthesis at line {error.line_num}")
+
                     elif error.error_type == "unclosed":
                         print("Unclosed expressions at end of file")
 

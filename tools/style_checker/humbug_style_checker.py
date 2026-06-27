@@ -90,7 +90,7 @@ class HumbugStyleChecker(BaseRawFileChecker):
         self._check_property(node, pending)
         self._check_optional(node, pending)
         self._check_aligned_assignments(node, lines, pending)
-        self._check_blank_before_dedent(node, lines, pending)
+        self._check_blank_before_dedent(lines, pending)
         self._check_docstrings(node, lines, pending)
 
         for line, msg_id, args in sorted(pending, key=lambda m: m[0]):
@@ -169,7 +169,7 @@ class HumbugStyleChecker(BaseRawFileChecker):
                         pending.append((lineno, MSG_NO_ALIGNED_ASSIGNS, ()))
 
     def _check_blank_before_dedent(
-        self, node: nodes.Module, lines: list[str], pending: list[tuple[int, str, tuple[str, ...]]]
+        self, lines: list[str], pending: list[tuple[int, str, tuple[str, ...]]]
     ) -> None:
         """
         Flag any dedent line not preceded by a blank line.
@@ -382,6 +382,7 @@ def _dotted_name(node: nodes.NodeNG) -> str | None:
     """Return the dotted name of a Name/Attribute node, or None."""
     try:
         return node.as_string()
+
     except Exception:  # pylint: disable=broad-exception-caught
         return None
 

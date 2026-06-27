@@ -39,7 +39,8 @@ def _face_of(move: str) -> str:
 
 
 def _solved_cube_idiomatic() -> dict[str, list[int]]:
-    """Return a solved cube in the idiomatic dict representation.
+    """
+    Return a solved cube in the idiomatic dict representation.
 
     Each face is a 9-element list of sticker colour indices:
     U=0, D=1, F=2, B=3, L=4, R=5.
@@ -141,11 +142,12 @@ def _apply_move_idiomatic(
     if move.endswith("2"):
         fn = _BASE_MOVES[move[:-1]]
         return fn(fn(cube))
-    elif move.endswith("'"):
+
+    if move.endswith("'"):
         fn = _BASE_MOVES[move[:-1]]
         return fn(fn(fn(cube)))
-    else:
-        return _BASE_MOVES[move](cube)
+
+    return _BASE_MOVES[move](cube)
 
 
 def _apply_moves_idiomatic(
@@ -154,6 +156,7 @@ def _apply_moves_idiomatic(
     """Apply a sequence of moves to a cube and return the resulting cube."""
     for move in moves:
         cube = _apply_move_idiomatic(cube, move)
+
     return cube
 
 
@@ -164,9 +167,7 @@ def _cube_solved_idiomatic(cube: dict[str, list[int]]) -> bool:
 
 def _heuristic_idiomatic(cube: dict[str, list[int]]) -> int:
     """Return a lower-bound estimate of moves needed to solve the cube."""
-    return sum(
-        1 for face in _FACE_ORDER for i in range(9) if cube[face][i] != cube[face][4]
-    ) // 8
+    return sum(1 for face in _FACE_ORDER for i in range(9) if cube[face][i] != cube[face][4]) // 8
 
 
 def _ida_star_idiomatic(
@@ -186,23 +187,29 @@ def _ida_star_idiomatic(
         f = g + h
         if f > bound:
             return f
+
         if _cube_solved_idiomatic(state):
             return path[:]
+
         minimum = 10 ** 9
         for move in _ALL_MOVES:
             if last_move is not None:
                 if _face_of(move) == _face_of(last_move):
                     continue
+
                 if move == _INVERSE.get(last_move):
                     continue
+
             new_state = _apply_move_idiomatic(state, move)
             path.append(move)
             result = search(new_state, g + 1, bound, path, move)
             path.pop()
             if isinstance(result, list):
                 return result
+
             if result < minimum:
                 minimum = result
+
         return minimum
 
     bound = _heuristic_idiomatic(cube)
@@ -211,14 +218,18 @@ def _ida_star_idiomatic(
         result = search(cube, 0, bound, path, None)
         if isinstance(result, list):
             return result
+
         if result == 10 ** 9:
             return None
+
         bound = result
+
     return None
 
 
 def _solved_cube_functional() -> tuple[tuple[int, ...], ...]:
-    """Return a solved cube in the functional tuple representation.
+    """
+    Return a solved cube in the functional tuple representation.
 
     Six face-tuples in order (U, D, F, B, L, R), each a 9-tuple of colour indices.
     """
@@ -319,11 +330,12 @@ def _apply_move_functional(
     if move.endswith("2"):
         fn = _BASE_MOVES_F[move[:-1]]
         return fn(fn(cube))
-    elif move.endswith("'"):
+
+    if move.endswith("'"):
         fn = _BASE_MOVES_F[move[:-1]]
         return fn(fn(fn(cube)))
-    else:
-        return _BASE_MOVES_F[move](cube)
+
+    return _BASE_MOVES_F[move](cube)
 
 
 def _apply_moves_functional(
@@ -332,6 +344,7 @@ def _apply_moves_functional(
     """Apply a sequence of moves to a functional cube and return the result."""
     for move in moves:
         cube = _apply_move_functional(cube, move)
+
     return cube
 
 
@@ -342,9 +355,7 @@ def _cube_solved_functional(cube: tuple[tuple[int, ...], ...]) -> bool:
 
 def _heuristic_functional(cube: tuple[tuple[int, ...], ...]) -> int:
     """Return a lower-bound estimate of moves needed to solve the functional cube."""
-    return sum(
-        1 for fi in range(6) for i in range(9) if cube[fi][i] != cube[fi][4]
-    ) // 8
+    return sum(1 for fi in range(6) for i in range(9) if cube[fi][i] != cube[fi][4]) // 8
 
 
 def _ida_star_functional(
@@ -364,23 +375,29 @@ def _ida_star_functional(
         f = g + h
         if f > bound:
             return f
+
         if _cube_solved_functional(state):
             return path[:]
+
         minimum = 10 ** 9
         for move in _ALL_MOVES:
             if last_move is not None:
                 if _face_of(move) == _face_of(last_move):
                     continue
+
                 if move == _INVERSE.get(last_move):
                     continue
+
             new_state = _apply_move_functional(state, move)
             path.append(move)
             result = search(new_state, g + 1, bound, path, move)
             path.pop()
             if isinstance(result, list):
                 return result
+
             if result < minimum:
                 minimum = result
+
         return minimum
 
     bound = _heuristic_functional(cube)
@@ -389,9 +406,12 @@ def _ida_star_functional(
         result = search(cube, 0, bound, path, None)
         if isinstance(result, list):
             return result
+
         if result == 10 ** 9:
             return None
+
         bound = result
+
     return None
 
 
@@ -424,10 +444,12 @@ class Suite(BenchmarkSuite):
             raw = menai.evaluate(expr)
             if not isinstance(raw, dict):
                 raise ValueError(f"Unexpected Menai result type: {type(raw)}")
+
             found = raw.get("found", False)
             value = raw.get("value")
             if not found or not isinstance(value, (list, tuple)):
                 raise ValueError(f"Menai solver found no solution for {scramble_moves}")
+
             return (scramble_moves, list(value))
 
         def run_python_idiomatic(scramble_moves: list[str]) -> tuple[list[str], list[str]]:
@@ -436,6 +458,7 @@ class Suite(BenchmarkSuite):
             solution = _ida_star_idiomatic(scrambled, 20)
             if solution is None:
                 raise ValueError(f"Idiomatic solver found no solution for {scramble_moves}")
+
             return (scramble_moves, solution)
 
         def run_python_functional(scramble_moves: list[str]) -> tuple[list[str], list[str]]:
@@ -444,6 +467,7 @@ class Suite(BenchmarkSuite):
             solution = _ida_star_functional(scrambled, 20)
             if solution is None:
                 raise ValueError(f"Functional solver found no solution for {scramble_moves}")
+
             return (scramble_moves, solution)
 
         return [
@@ -453,7 +477,8 @@ class Suite(BenchmarkSuite):
         ]
 
     def results_equal(self, a: Any, b: Any) -> bool:
-        """Return True if both results solve the same scramble.
+        """
+        Return True if both results solve the same scramble.
 
         Each result is a ``(scramble_moves, solution_moves)`` tuple.  The
         scramble is applied to a solved cube and then the solution from each
