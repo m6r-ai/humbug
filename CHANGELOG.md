@@ -2,6 +2,12 @@
 
 ## v52 (2026-06-xx)
 
+New features:
+
+- AI messages that contain no content (previously displayed as "...") are now suppressed.
+
+Bug fixes:
+
 ## v51 (2026-06-28)
 
 New features:

@@ -985,6 +985,10 @@ class ConversationMessage(QFrame):
         """Get the source of the message."""
         return self._message_source
 
+    def message_content(self) -> str:
+        """Get the message content text."""
+        return self._message_content
+
     def _copy_message(self) -> None:
         """Copy the entire message content to clipboard."""
         content = self._message_content

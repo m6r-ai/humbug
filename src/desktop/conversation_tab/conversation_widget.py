@@ -1055,6 +1055,34 @@ class ConversationWidget(QWidget):
         if self._is_animating:
             self._update_animated_message()
 
+    @staticmethod
+    def _is_placeholder_ai_content(source: AIMessageSource | None, content: str) -> bool:
+        """
+        Check whether a message is an AI response with no meaningful content.
+
+        Some AI backends substitute "..." for empty content when sending
+        assistant messages back to the API.  Models may echo this placeholder
+        in their next response.  Such messages add no value to the user and
+        should be hidden from the conversation view.
+
+        Args:
+            source: The message source to check.
+            content: The message content to check.
+
+        Returns:
+            True if the source is AI/REASONING and the content is empty or
+            exactly the "..." placeholder.
+        """
+        if source not in (AIMessageSource.AI, AIMessageSource.REASONING):
+            return False
+
+        return not content or content == "..."
+
+    @staticmethod
+    def _is_placeholder_ai_message(message: AIMessage) -> bool:
+        """Check whether an AIMessage is a placeholder AI response."""
+        return ConversationWidget._is_placeholder_ai_content(message.source, message.content)
+
     async def _on_message_added(self, message: AIMessage) -> None:
         """
         Handle a new message being added to the conversation.
@@ -1064,8 +1092,14 @@ class ConversationWidget(QWidget):
         """
         self._current_unfinished_message = message
 
+        is_placeholder = self._is_placeholder_ai_message(message)
+
         display_message = message
-        should_reveal_from_empty = message.source in (AIMessageSource.AI, AIMessageSource.REASONING) and bool(message.content)
+        should_reveal_from_empty = (
+            message.source in (AIMessageSource.AI, AIMessageSource.REASONING)
+            and bool(message.content)
+            and not is_placeholder
+        )
         if should_reveal_from_empty:
             display_message = message.copy()
             display_message.content = ""
@@ -1074,6 +1108,9 @@ class ConversationWidget(QWidget):
 
         if should_reveal_from_empty:
             self._update_last_message(message)
+
+        elif is_placeholder and self._messages:
+            self._messages[-1].set_rendered(False)
 
         # Start animation if not already animating
         if not self._is_animating:
@@ -1095,6 +1132,9 @@ class ConversationWidget(QWidget):
             return
 
         if message.source not in (AIMessageSource.AI, AIMessageSource.REASONING):
+            return
+
+        if self._is_placeholder_ai_message(message):
             return
 
         for i in range(len(self._messages) - 1, -1, -1):
@@ -1957,7 +1997,10 @@ class ConversationWidget(QWidget):
         head = messages[:-self._load_tail_size]
 
         for message in tail:
-            skip_style = message.source in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED)
+            skip_style = (
+                message.source in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED)
+                or self._is_placeholder_ai_message(message)
+            )
             message_widget = self._add_message_core(message, apply_style=not skip_style)
             if skip_style:
                 message_widget.set_rendered(False)
@@ -1992,7 +2035,10 @@ class ConversationWidget(QWidget):
                 break
 
             message = self._load_queue.pop(0)
-            skip_style = message.source in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED)
+            skip_style = (
+                message.source in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED)
+                or self._is_placeholder_ai_message(message)
+            )
             message_widget = self._add_message_core(message, self._load_head_insert_pos, apply_style=not skip_style)
             message_widget.set_rendered(False)
 
@@ -2014,8 +2060,14 @@ class ConversationWidget(QWidget):
         """Finalise a completed batch load."""
         # Run through all the messages and ensure any that should be visible are now visible.
         for message in self._messages:
-            if message.message_source() not in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
-                message.set_rendered(True)
+            source = message.message_source()
+            if source in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
+                continue
+
+            if self._is_placeholder_ai_content(source, message.message_content()):
+                continue
+
+            message.set_rendered(True)
 
         # If the last visible message is a SYSTEM error, restore the retry button.
         if self._messages:
