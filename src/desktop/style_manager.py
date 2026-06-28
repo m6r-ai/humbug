@@ -105,6 +105,7 @@ class StyleManager(QObject):
         return self._highlights_version
 
     def _initialize_highlights(self) -> None:
+        """Rebuild the monospace syntax highlight table from the current color roles."""
         self._highlights_version += 1
         # Mapping from token type to colour
         colour_mapping = {
@@ -198,6 +199,7 @@ class StyleManager(QObject):
         self._error_highlight = self._create_highlight(ColorRole.SYNTAX_ERROR)
 
     def _create_highlight(self, role: ColorRole) -> QTextCharFormat:
+        """Create a QTextCharFormat for a syntax token type from the given color role."""
         text_highlight = QTextCharFormat()
         text_highlight.setFontFamilies(self._code_font_families)
         if not self._font_ligatures:
@@ -209,6 +211,7 @@ class StyleManager(QObject):
         return text_highlight
 
     def _initialize_proportional_highlights(self) -> None:
+        """Rebuild the proportional (non-code) syntax highlight table from the current color roles."""
         # Mapping from token type to colour
         colour_mapping = {
             TokenType.BOLD: ColorRole.SYNTAX_21,
@@ -248,17 +251,20 @@ class StyleManager(QObject):
         self._error_proportional_highlight = self._create_proportional_highlight(ColorRole.SYNTAX_ERROR)
 
     def _create_proportional_highlight(self, role: ColorRole) -> QTextCharFormat:
+        """Create a proportional QTextCharFormat for a syntax token type from the given color role."""
         text_highlight = QTextCharFormat()
         text_highlight.setForeground(QColor(self._resolve_color_value(role)))
 
         return text_highlight
 
     def _write_icon(self, name: str, svg_data: str) -> None:
+        """Write an SVG icon file to the user's .humbug/icons directory."""
         icon_dir = os.path.expanduser("~/.humbug/icons")
         with open(os.path.join(icon_dir, name), 'w', encoding='utf-8') as f:
             f.write(svg_data)
 
     def _create_active_inactive_theme_icons(self, active: bool, suffix: str, color: str, prefix: str | None = None) -> None:
+        """Generate active and inactive theme-colored icon variants."""
         if prefix is None:
             prefix = "" if active else "inactive-"
 

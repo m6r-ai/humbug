@@ -330,6 +330,7 @@ class SearchSidebar(SidebarBase):
         self.apply_style()
 
     def _describe_match(self, match: MindspaceSearchMatch) -> str:
+        """Return a human-readable description for a search match."""
         if match.is_path_match:
             return self._language_manager.strings().mindspace_search_path_match
 
@@ -356,6 +357,7 @@ class SearchSidebar(SidebarBase):
         return unique_matches
 
     def _highlight_ranges_for_match(self, match: MindspaceSearchMatch, display_text: str) -> list[tuple[int, int]]:
+        """Compute highlight ranges for a match relative to its display text."""
         if match.is_path_match:
             return []
 
@@ -367,6 +369,7 @@ class SearchSidebar(SidebarBase):
         return [(start + len(prefix), length) for start, length in ranges]
 
     def _highlight_ranges_for_text(self, text: str) -> list[tuple[int, int]]:
+        """Find all query match ranges in a text string."""
         query, case_sensitive, regexp = self.current_find_request()
         if not query:
             return []
@@ -400,10 +403,12 @@ class SearchSidebar(SidebarBase):
         return "files"
 
     def _icon_for_panel_id(self, panel_id: str) -> QIcon:
+        """Return the icon for a panel ID (conversations or files)."""
         icon_name = "conversation" if panel_id == "conversations" else "files"
         return QIcon(self._style_manager.scale_icon(icon_name, 16))
 
     def _open_item(self, item: QTreeWidgetItem, ephemeral: bool) -> None:
+        """Open a search result item, emitting the appropriate activation signal."""
         path = item.data(0, Qt.ItemDataRole.UserRole)
         panel_id = item.data(0, Qt.ItemDataRole.UserRole + 1)
         if not isinstance(path, str) or not isinstance(panel_id, str):
@@ -429,6 +434,7 @@ class SearchSidebar(SidebarBase):
         return query, case_sensitive, regexp_enabled
 
     def _on_language_changed(self) -> None:
+        """Update all UI labels when the language changes."""
         strings = self._language_manager.strings()
         self._header.set_title(strings.mindspace_search)
         self._search_input.setPlaceholderText(strings.mindspace_search_placeholder)

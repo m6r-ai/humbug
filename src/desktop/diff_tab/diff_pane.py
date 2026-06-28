@@ -360,9 +360,11 @@ class DiffPane(QPlainTextEdit):
                 return None
 
     def _update_gutter_width(self) -> None:
+        """Set viewport margins to accommodate the gutter width."""
         self.setViewportMargins(self._gutter_width(), 0, 0, 0)
 
     def _update_gutter(self, rect: QRect, dy: int) -> None:
+        """Scroll or repaint the gutter in sync with the viewport."""
         if dy:
             self._gutter.scroll(0, dy)
 

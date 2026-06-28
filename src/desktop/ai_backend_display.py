@@ -31,6 +31,7 @@ def get_all_backend_display_names(strings: LanguageStrings) -> dict[str, str]:
 
 
 def _build_mapping(strings: LanguageStrings) -> dict[str, str]:
+    """Build a dict mapping backend IDs to their localised display names."""
     return {
         "anthropic": strings.anthropic_backend,
         "deepseek": strings.deepseek_backend,

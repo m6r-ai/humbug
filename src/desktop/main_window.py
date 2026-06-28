@@ -1218,6 +1218,7 @@ class MainWindow(QMainWindow):
         self._open_mindspace_path(dir_path)
 
     def _open_mindspace_path(self, path: str) -> None:
+        """Open a mindspace at the given path, validating and restoring state."""
         # Before we do anything, check if the new location is a mindspace
         if not self._mindspace_manager.check_mindspace(path):
             strings = self._language_manager.strings()
@@ -1256,6 +1257,7 @@ class MainWindow(QMainWindow):
         self._restore_mindspace_state()
 
     def _on_close_mindspace(self) -> None:
+        """Save state, close all tabs, and clear the current mindspace."""
         if not self._mindspace_manager.has_mindspace():
             self._logger.error("No mindspace active, cannot close")
             return
@@ -1315,44 +1317,53 @@ class MainWindow(QMainWindow):
         self._menai_tool.set_module_path([mindspace_path])
 
     def _close_all_tabs(self) -> bool:
+        """Close all open tabs, returning True if all were closed."""
         return self._tab_manager.close_all_tabs()
 
     def _undo(self) -> None:
+        """Trigger undo on the current tab."""
         tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.undo()
 
     def _redo(self) -> None:
+        """Trigger redo on the current tab."""
         tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.redo()
 
     def _cut(self) -> None:
+        """Trigger cut on the current tab."""
         tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.cut()
 
     def _copy(self) -> None:
+        """Trigger copy on the current tab."""
         tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.copy()
 
     def _paste(self) -> None:
+        """Trigger paste on the current tab."""
         tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.paste()
 
     def _find(self) -> None:
+        """Open the find bar on the current tab."""
         tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.show_find()
 
     def _find_replace(self) -> None:
+        """Open the find-and-replace bar on the current tab."""
         tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.show_find_replace()
 
     def _goto_line(self) -> None:
+        """Open the goto-line dialog on the current tab."""
         tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.show_goto_line()
@@ -2030,6 +2041,7 @@ class MainWindow(QMainWindow):
         return self._mindspace_manager.get_relative_path(path)
 
     def _resolve_mindspace_path(self, path: str) -> tuple[Path, str]:
+        """Resolve a path to an absolute filesystem path and a mindspace-relative path."""
         if not self._mindspace_manager.has_mindspace():
             raise ValueError("No mindspace open")
 

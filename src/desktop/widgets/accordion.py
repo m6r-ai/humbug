@@ -220,6 +220,7 @@ class Accordion(QFrame):
         self.toggled.emit(expanded)
 
     def _on_animation_finished(self, group: QParallelAnimationGroup, expanded: bool) -> None:
+        """Clean up after an expand/collapse animation and finalize content visibility."""
         if group is not self._animation:
             return
 
@@ -229,6 +230,7 @@ class Accordion(QFrame):
         self._on_style_changed()
 
     def _on_style_changed(self) -> None:
+        """Rebuild the accordion's stylesheet from current style manager colors."""
         sm = self._style_manager
         radius = max(6, int(8 * sm.zoom_factor()))
 

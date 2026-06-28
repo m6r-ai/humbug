@@ -270,6 +270,7 @@ class _SettingsComboPopup(QFrame):
         return self._just_closed
 
     def _clear_just_closed(self) -> None:
+        """Reset the just-closed flag on the combo popup."""
         self._just_closed = False
 
     def close_popup(self) -> None:
@@ -278,12 +279,14 @@ class _SettingsComboPopup(QFrame):
         self.hide()
 
     def _item_size_hint(self, enabled: bool) -> QSize:
+        """Return the size hint for a popup list item, scaled by zoom."""
         zoom = self._owner.style_manager().zoom_factor()
         base_height = 34 if enabled else 28
         height = max(int(base_height * zoom), self.fontMetrics().height() + int(10 * zoom))
         return QSize(1, height)
 
     def _resize_to_contents(self) -> None:
+        """Resize the popup to fit visible items, capping at a maximum row count."""
         visible_count = 0
         content_height = 0
         max_visible_rows = 12
@@ -314,6 +317,7 @@ class _SettingsComboPopup(QFrame):
         )
 
     def _filter_items(self, text: str) -> None:
+        """Filter popup list items by the search query, preserving group headers."""
         query = text.casefold()
         group_rows: list[int] = []
         group_has_match = False
@@ -344,6 +348,7 @@ class _SettingsComboPopup(QFrame):
             self._resize_to_contents()
 
     def _select_first_visible_enabled_item(self) -> None:
+        """Select the first visible and enabled item in the popup list."""
         for row in range(self._list.count()):
             item = self._list.item(row)
             if not item.isHidden() and item.data(Qt.ItemDataRole.UserRole + 1):
@@ -353,11 +358,13 @@ class _SettingsComboPopup(QFrame):
         self._list.setCurrentRow(-1)
 
     def _activate_current_item(self) -> None:
+        """Activate (select and hide popup) the currently highlighted popup item."""
         item = self._list.currentItem()
         if item:
             self._on_item_clicked(item)
 
     def _on_item_clicked(self, item: QListWidgetItem) -> None:
+        """Set the combo value from a clicked popup item and close the popup."""
         if not item.data(Qt.ItemDataRole.UserRole + 1):
             return
 
@@ -423,6 +430,7 @@ class SettingsCombo(SettingsField):
         return self._button.mapToGlobal(QPoint(0, 0)).y()
 
     def _toggle_popup(self) -> None:
+        """Toggle the combo popup open or closed."""
         if not self._items:
             return
 
@@ -444,6 +452,7 @@ class SettingsCombo(SettingsField):
         self._button.set_dropdown_icon(self._style_manager.get_icon_path("arrow-down"))
 
     def _emit_if_changed(self, previous_index: int) -> None:
+        """Emit value_changed if the current index differs from the previous one."""
         if self._current_index != previous_index:
             self.value_changed.emit()
 
@@ -512,9 +521,7 @@ class SettingsCombo(SettingsField):
         self._initial_index = self._current_index
 
     def set_searchable(self, enabled: bool = True) -> None:
-        """
-        Enable or disable popup search.
-        """
+        """Enable or disable popup search."""
         self._searchable = enabled
         self._button.set_dropdown_icon_visible(not enabled)
         self._popup.set_searchable(enabled)
@@ -528,6 +535,7 @@ class SettingsCombo(SettingsField):
             self._apply_button_style()
 
     def _restore_selection(self, current_data: Any) -> None:
+        """Restore the combo selection by matching data value after items change."""
         self._current_index = -1
         for index, (_text, data_value, enabled) in enumerate(self._items):
             if enabled and data_value == current_data:
@@ -544,6 +552,7 @@ class SettingsCombo(SettingsField):
         self._popup.set_items(self._items)
 
     def _sync_button_text(self) -> None:
+        """Update the combo button text to match the current selection."""
         self._button.setText(self.get_text())
 
     def _on_style_changed(self) -> None:

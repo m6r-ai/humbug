@@ -51,6 +51,7 @@ def decode_stream_filters(
 
 
 def _decode_flate(data: bytes, decode_parms: dict[str, Any] | None) -> bytes:
+    """Decompress FlateDecode data, applying PNG predictor if specified."""
     try:
         decompressed = zlib.decompress(data)
 
@@ -147,6 +148,7 @@ def _paeth(a: int, b: int, c: int) -> int:
 
 
 def _decode_ascii_hex(data: bytes) -> bytes:
+    """Decode an ASCII hex-encoded PDF stream into raw bytes."""
     try:
         # Strip whitespace, stop at '>'
         hex_str = data.split(b">")[0]
@@ -159,6 +161,7 @@ def _decode_ascii_hex(data: bytes) -> bytes:
 
 
 def _decode_ascii85(data: bytes) -> bytes:
+    """Decode an ASCII85-encoded PDF stream into raw bytes."""
     try:
         return base64.a85decode(data, adobe=True, ignorechars=b" \t\n\r")
 

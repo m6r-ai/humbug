@@ -26,6 +26,7 @@ def parse(s: str) -> object:
 
 
 def _skip_ws(s: str, pos: int) -> int:
+    """Skip whitespace characters and return the new position."""
     while pos < len(s) and s[pos] in ' \t\n\r':
         pos += 1
 

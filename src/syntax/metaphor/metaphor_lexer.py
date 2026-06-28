@@ -85,6 +85,7 @@ class MetaphorLexer(Lexer):
         ))
 
     def _read_backtick(self) -> None:
+        """Read a backtick or triple-backtick code fence, emitting the appropriate token."""
         start: int = self._position
 
         # Do we have 3 backticks?  If yes, we have code fence and the next word after that

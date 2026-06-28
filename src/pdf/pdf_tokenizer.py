@@ -152,6 +152,7 @@ class PDFTokenizer:
         return idx
 
     def _scan_name(self) -> Token:
+        """Scan a PDF name token starting from the current position."""
         self.pos += 1  # skip '/'
         start = self.pos
         data = self._data
@@ -165,6 +166,7 @@ class PDFTokenizer:
         return Token(TokenType.NAME, name)
 
     def _scan_literal_string(self) -> Token:
+        """Scan a PDF literal string, handling escape sequences and nested parentheses."""
         self.pos += 1  # skip '('
         data = self._data
         length = len(data)
@@ -239,6 +241,7 @@ class PDFTokenizer:
         return Token(TokenType.STRING, bytes(result))
 
     def _scan_hex_string(self) -> Token:
+        """Scan a PDF hex string enclosed in angle brackets."""
         self.pos += 1  # skip '<'
         data = self._data
         length = len(data)
@@ -267,6 +270,7 @@ class PDFTokenizer:
         return Token(TokenType.HEX_STRING, value)
 
     def _scan_number(self) -> Token:
+        """Scan a PDF number (integer or real) or fall back to a keyword."""
         data = self._data
         length = len(data)
         start = self.pos
@@ -295,6 +299,7 @@ class PDFTokenizer:
             return Token(TokenType.KEYWORD, raw)
 
     def _scan_keyword(self) -> Token:
+        """Scan a PDF keyword, boolean, or null value."""
         data = self._data
         length = len(data)
         start = self.pos

@@ -210,6 +210,7 @@ class FindWidget(QWidget):
         self.replace_all.emit(self._replace_input.text())
 
     def _on_language_changed(self) -> None:
+        """Update all find/replace UI labels when the language changes."""
         strings = self._language_manager.strings()
         self._search_input.setPlaceholderText(strings.find_placeholder)
         self._match_case_button.setToolTip(strings.find_match_case)

@@ -80,6 +80,7 @@ _RAW_TEXT_ELEMENTS = frozenset({"script", "style"})
 
 
 class _TokenType(Enum):
+    """Enumeration of HTML token types produced by the lexer."""
     DOCTYPE = auto()
     OPEN_TAG = auto()          # <tag attrs>
     CLOSE_TAG = auto()         # </tag>
@@ -91,6 +92,7 @@ class _TokenType(Enum):
 
 @dataclass
 class _Token:
+    """A single token produced by the HTML lexer."""
     type: _TokenType
     tag_name: str = ""
     attributes: dict[str, str] = field(default_factory=dict)

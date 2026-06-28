@@ -1515,6 +1515,7 @@ class _FetchedModelManagerDialog(QDialog):
         self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
     def _add_model_row(self, model_id: str) -> None:
+        """Add a row for a fetched model with a remove button to the model list."""
         row = QWidget()
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(0, 2, 0, 2)
@@ -1536,6 +1537,7 @@ class _FetchedModelManagerDialog(QDialog):
         self._rows[model_id] = row
 
     def _remove_model(self, model_id: str, provider: str) -> None:
+        """Remove a fetched model from settings and delete its row from the list."""
         AIConversationSettings.remove_fetched_model(model_id, provider)
         row = self._rows.pop(model_id, None)
         if row:
@@ -1545,4 +1547,5 @@ class _FetchedModelManagerDialog(QDialog):
         self._update_empty_label()
 
     def _update_empty_label(self) -> None:
+        """Show or hide the empty-state label based on whether any model rows exist."""
         self._empty_label.setVisible(not self._rows)

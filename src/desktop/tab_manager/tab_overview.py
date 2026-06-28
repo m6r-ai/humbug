@@ -117,6 +117,7 @@ class TabOverviewCard(QWidget):
         self._animate_to(self._home_pos)
 
     def _header_height(self) -> int:
+        """Return the scaled header height for an overview card."""
         return self._style_manager.scale(28)
 
     def enterEvent(self, event: QEnterEvent) -> None:
@@ -198,9 +199,11 @@ class TabOverviewCard(QWidget):
             self._animate_to(self._home_pos)
 
     def _emit_close(self) -> None:
+        """Emit the close_requested signal for this card's tab."""
         self.close_requested.emit(self._entry.tab_id)
 
     def _animate_to(self, target: QPoint, on_done: object = None) -> None:
+        """Animate the card to a target position, optionally calling on_done when finished."""
         animation = QPropertyAnimation(self, b"pos", self)
         animation.setDuration(150)
         animation.setEasingCurve(QEasingCurve.Type.OutCubic)
@@ -382,6 +385,7 @@ class TabOverviewWidget(QWidget):
         return self._selected_id
 
     def _apply_selection(self) -> None:
+        """Set the selected state on each card based on the current selection."""
         for tab_id, card in self._cards.items():
             card.set_selected(tab_id == self._selected_id)
 
@@ -396,6 +400,7 @@ class TabOverviewWidget(QWidget):
         return len(self._cards)
 
     def _card_size(self) -> QSize:
+        """Return the fixed card size for overview cards, scaled by the style manager."""
         sm = self._style_manager
         return QSize(sm.scale(340), sm.scale(250))
 

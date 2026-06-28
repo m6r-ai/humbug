@@ -154,6 +154,7 @@ class ConversationSettingsDialog(QDialog):
         self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
     def _populate_model_filter_combo(self) -> None:
+        """Populate the model filter combo with available providers."""
         strings = self._language_manager.strings()
         seen: set = set()
         items: list[tuple] = [("All Providers", None)]
@@ -165,6 +166,7 @@ class ConversationSettingsDialog(QDialog):
         self._model_filter_combo.set_items(items)
 
     def _populate_model_combo(self, filter_provider: str | None) -> None:
+        """Populate the model combo, optionally filtered by provider."""
         provider_names = get_all_backend_display_names(self._language_manager.strings())
         grouped: dict[str, list[tuple[str, tuple[str, str]]]] = {}
         for (model, provider) in AIConversationSettings.iter_models_by_backends(self._ai_backends):
@@ -186,6 +188,7 @@ class ConversationSettingsDialog(QDialog):
             self._model_combo.set_grouped_items(groups)
 
     def _on_model_filter_changed(self) -> None:
+        """Repopulate the model combo when the filter changes."""
         self._populate_model_combo(self._model_filter_combo.get_value())
 
     def _on_model_value_changed(self) -> None:

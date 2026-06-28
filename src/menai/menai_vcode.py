@@ -323,6 +323,7 @@ class MenaiVCodeFunction:
 
 
 def _fmt_regs(regs: list[MenaiVCodeReg]) -> str:
+    """Format a list of VCode registers as a bracketed comma-separated string."""
     return "[" + ", ".join(str(r) for r in regs) + "]"
 
 

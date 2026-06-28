@@ -494,6 +494,7 @@ class MenaiBytecodeBuilder:
             ctx.patch(instr_idx, field_name, label_index[label])
 
     def _emit_builtin(self, instr: MenaiVCodeBuiltin, ctx: _EmitContext) -> None:
+        """Emit bytecode for a builtin operation, dispatching by arity."""
         op = instr.op
         args = instr.args
         dest = ctx.slot_of(instr.dst)
@@ -521,6 +522,7 @@ class MenaiBytecodeBuilder:
             raise ValueError(f"MenaiBytecodeBuilder: unhandled builtin op {op!r}")
 
     def _emit_make_closure(self, instr: MenaiVCodeMakeClosure, ctx: _EmitContext) -> None:
+        """Emit bytecode for creating a closure from a lambda."""
         child_code = self._emit_lambda(instr.function)
         code_idx = ctx.add_code_object(child_code)
 

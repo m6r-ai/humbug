@@ -110,15 +110,18 @@ class TabCarouselWidget(QWidget):
         animation.start()
 
     def _stop_animation(self) -> None:
+        """Stop the active scroll animation if one is running."""
         if self._animation is not None:
             self._animation.stop()
             self._animation = None
 
     def _on_animation_value(self, value: object) -> None:
+        """Update scroll position from an animation value and trigger repaint."""
         self._scroll_pos = float(value)  # type: ignore[arg-type]
         self.update()
 
     def _header_height(self) -> int:
+        """Return the scaled header height for a carousel card."""
         return self._style_manager.scale(28)
 
     def _card_spacing(self) -> int:
@@ -177,6 +180,7 @@ class TabCarouselWidget(QWidget):
         return QRect(center_x - width // 2, center_y - height // 2, width, height)
 
     def _close_rect(self, card_rect: QRect) -> QRect:
+        """Return the close-button hit rect for a card at the given rect."""
         sm = self._style_manager
         icon_size = sm.tab_icon_size()
         spacing = sm.tab_spacing()
@@ -208,6 +212,7 @@ class TabCarouselWidget(QWidget):
             self._paint_card(painter, index)
 
     def _paint_card(self, painter: QPainter, index: int) -> None:
+        """Paint a single carousel card with header, thumbnail, and focus effects."""
         sm = self._style_manager
         entry = self._entries[index]
         offset = index - self._scroll_pos
@@ -477,17 +482,20 @@ class TabCarouselWidget(QWidget):
             self._animate_swipe(0.0, on_done=self._reset_swipe)
 
     def _complete_swipe_close(self, tab_id: str) -> None:
+        """Reset swipe state and emit the close request for a swiped tab."""
         # Reset before emitting: the close may remove the entry (re-indexing the
         # list), or be vetoed, in which case the card simply springs back
         self._reset_swipe()
         self.tab_close_requested.emit(tab_id)
 
     def _reset_swipe(self) -> None:
+        """Clear all swipe tracking state and trigger a repaint."""
         self._swipe_index = None
         self._swipe_offset_y = 0.0
         self.update()
 
     def _animate_swipe(self, target: float, on_done: object = None) -> None:
+        """Animate the swipe gesture to a target offset, calling on_done when finished."""
         self._stop_swipe_animation()
         animation = QVariantAnimation(self)
         animation.setDuration(160)
@@ -502,11 +510,13 @@ class TabCarouselWidget(QWidget):
         animation.start()
 
     def _stop_swipe_animation(self) -> None:
+        """Stop the active swipe animation if one is running."""
         if self._swipe_animation is not None:
             self._swipe_animation.stop()
             self._swipe_animation = None
 
     def _on_swipe_animation_value(self, value: object) -> None:
+        """Update swipe offset from an animation value and trigger repaint."""
         self._swipe_offset_y = float(value)  # type: ignore[arg-type]
         self.update()
 

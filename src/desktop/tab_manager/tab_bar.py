@@ -403,6 +403,7 @@ class TabBar(QTabBar):
         return super().eventFilter(watched, event)
 
     def _rebuild_resources(self) -> None:
+        """Rebuild cached fonts and icon pixmaps from the current style."""
         sm = self._style_manager
 
         font = QFont()
@@ -478,6 +479,7 @@ class TabBar(QTabBar):
         is_active_column: bool,
         is_hovered: bool,
     ) -> None:
+        """Paint a single tab's icon, text, and close button."""
         geom = self._tab_geometry(tab_rect, index)
         show_active = is_current and is_active_column
         visible = is_current or is_hovered
@@ -608,6 +610,7 @@ class TabBar(QTabBar):
         is_updated: bool,
         is_hovered: bool,
     ) -> ColorRole:
+        """Determine the background color role for a tab based on its state."""
         if is_hovered and (not is_current or not is_active_column):
             return ColorRole.TAB_BACKGROUND_HOVER
 

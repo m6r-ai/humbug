@@ -92,6 +92,10 @@ max-attributes = 12
 # Message control
 output-format = "colorized"
 
+# Ensure we have docstrings for private methods as well as public ones
+[tool.pylint.basic]
+no-docstring-rgx = "^__.*__$"
+
 [tool.pylint.main]
 load-plugins = "tools.style_checker.humbug_style_checker"
 

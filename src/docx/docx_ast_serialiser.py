@@ -347,6 +347,7 @@ class _DocxASTSerialiser:
         return buf.getvalue()
 
     def _content_types_xml(self, include_numbering: bool, include_images: bool) -> str:
+        """Generate the [Content_Types].xml manifest for the DOCX package."""
         numbering_override = (
             f'\n  <Override PartName="/{_NUMBERING_PATH}" ContentType="{_CT_NUMBERING}"/>'
             if include_numbering
@@ -376,6 +377,7 @@ class _DocxASTSerialiser:
         )
 
     def _root_rels_xml(self) -> str:
+        """Generate the root .rels XML for the DOCX package."""
         return (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
@@ -384,6 +386,7 @@ class _DocxASTSerialiser:
         )
 
     def _document_rels_xml(self, include_numbering: bool) -> str:
+        """Generate the word/_rels/document.xml.rels content for the DOCX package."""
         numbering_rel = (
             f'\n  <Relationship Id="rId2" Type="{_REL_NUMBERING}" Target="numbering.xml"/>'
             if include_numbering

@@ -104,6 +104,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
         self._rebuild()
 
     def _alloc_key(self) -> int:
+        """Allocate and return the next unique key for a DAG node."""
         key = self._next_key
         self._next_key += 1
         return key

@@ -104,6 +104,7 @@ class _HtmlSerialiser(DocumentIRVisitor):
         self._indent = 0
 
     def _emit(self, text: str) -> None:
+        """Append an indented line of HTML to the output list."""
         self._lines.append("  " * self._indent + text)
 
     def _emit_inline(self, node: DocumentIRNode) -> str:

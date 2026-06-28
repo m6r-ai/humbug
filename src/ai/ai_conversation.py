@@ -930,6 +930,7 @@ class AIConversation:
         tool_calls: list[AIToolCall] | None,
         redacted_reasoning: str | None = None
     ) -> None:
+        """Finalize the AI response, handle tool calls, and emit completion events."""
         self._logger.debug("Finished AI response streaming")
 
         self._is_streaming = False
@@ -962,6 +963,7 @@ class AIConversation:
         await self._trigger_event(AIConversationEvent.COMPLETED)
 
     async def _handle_pending_user_messages(self) -> None:
+        """Process any user messages queued during AI response streaming."""
         # Check if we have any queued messages to process.
         if not self._pending_user_messages:
             return

@@ -1088,6 +1088,7 @@ class ConversationWidget(QWidget):
             self.update_label.emit()
 
     def _update_last_message(self, message: AIMessage) -> None:
+        """Update the last AI or reasoning message in the message list."""
         # Update the last message
         if not self._messages:
             self._logger.warning("No messages to update with the last message.")

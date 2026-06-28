@@ -70,6 +70,7 @@ class GradientBorderLabel(QLabel):
         self._timer.start(16)
 
     def _tick(self) -> None:
+        """Advance the gradient rotation angle and trigger a repaint."""
         self._angle = (self._angle + 1.5) % 360.0
         self.update()
 

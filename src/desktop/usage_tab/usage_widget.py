@@ -26,6 +26,7 @@ from mindspace.mindspace_usage import ModelUsageEntry
 
 
 def _fmt(n: int) -> str:
+    """Format an integer count with K/M suffixes for compact display."""
     if n >= 1_000_000:
         return f"{n / 1_000_000:.2f}M"
 
@@ -36,6 +37,7 @@ def _fmt(n: int) -> str:
 
 
 def _count_label(count: int, singular: str, plural: str) -> str:
+    """Return a count with the singular or plural noun as appropriate."""
     word = singular if count == 1 else plural
     return f"{count} {word}"
 
@@ -210,6 +212,7 @@ class UsageWidget(QWidget):
         return max(300, int(330 * zoom))
 
     def _section_label(self, text: str) -> QLabel:
+        """Create an uppercased styled section label widget."""
         lbl = QLabel(text.upper())
         lbl.setObjectName("UsageSectionLabel")
         lbl.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
@@ -260,6 +263,7 @@ class UsageWidget(QWidget):
         return card
 
     def _stat_card(self, label: str, value: str, note: str) -> QFrame:
+        """Create a stat card widget showing a label, value, and note."""
         card = QFrame()
         card.setObjectName("UsageCard")
         card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -288,6 +292,7 @@ class UsageWidget(QWidget):
         self,
         by_provider: dict[str, list[ModelUsageEntry]],
     ) -> list[tuple[str, list[ModelUsageEntry]]]:
+        """Return provider entries sorted by total token usage, descending."""
         return sorted(
             by_provider.items(),
             key=lambda item: sum(e.input_tokens + e.output_tokens for e in item[1]),
@@ -301,6 +306,7 @@ class UsageWidget(QWidget):
         model_colors: list[str],
         total_tokens: int,
     ) -> QWidget:
+        """Build the per-provider details section with accordion cards."""
         container = QWidget()
         container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         cl = QVBoxLayout(container)
@@ -329,6 +335,7 @@ class UsageWidget(QWidget):
         model_colors: list[str],
         total_tokens: int,
     ) -> QFrame:
+        """Create an accordion card showing per-model usage for one provider."""
         s = int(self._style_manager.message_bubble_spacing())
         zoom = self._style_manager.zoom_factor()
 
@@ -378,6 +385,7 @@ class UsageWidget(QWidget):
         return accordion
 
     def _on_provider_toggled(self, provider: str, expanded: bool) -> None:
+        """Track which provider accordions are expanded across refreshes."""
         if expanded:
             self._expanded_providers.add(provider)
 
@@ -385,6 +393,7 @@ class UsageWidget(QWidget):
             self._expanded_providers.discard(provider)
 
     def _model_row(self, entry: ModelUsageEntry, color: str, total_tokens: int) -> QWidget:
+        """Create a widget showing a single model's token usage with a share bar."""
         row = QWidget()
         row.setObjectName("UsageModelRow")
         row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
@@ -446,6 +455,7 @@ class UsageWidget(QWidget):
         return row
 
     def _row_separator(self, indent: int = 0) -> QFrame:
+        """Create a thin horizontal separator frame with optional indent."""
         line = QFrame()
         line.setObjectName("UsageRowSep")
         line.setFrameShape(QFrame.Shape.HLine)
@@ -456,6 +466,7 @@ class UsageWidget(QWidget):
         return line
 
     def _empty_state(self, title: str, message: str) -> QFrame:
+        """Create an empty-state card with a title and message."""
         card = QFrame()
         card.setObjectName("UsageEmptyCard")
         card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -477,6 +488,7 @@ class UsageWidget(QWidget):
         return card
 
     def _clear(self, layout: QLayout) -> None:
+        """Remove and delete all widgets from a layout."""
         while layout.count():
             item = layout.takeAt(0)
             if item:
@@ -485,5 +497,6 @@ class UsageWidget(QWidget):
                     widget.deleteLater()
 
     def _on_reset(self) -> None:
+        """Reset usage data for the current mindspace."""
         if self._mindspace_manager.has_mindspace():
             self._mindspace_manager.mindspace().reset_usage()

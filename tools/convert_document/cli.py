@@ -33,6 +33,7 @@ _SIDECAR_FORMATS = frozenset({"html", "md"})
 
 
 def _infer_format(path: Path, label: str) -> str:
+    """Infer the document format from the file extension, exiting on failure."""
     fmt = _EXTENSION_FORMATS.get(path.suffix.lower())
     if fmt is None:
         print(
@@ -46,6 +47,7 @@ def _infer_format(path: Path, label: str) -> str:
 
 
 def _import_md(path: Path) -> DocumentIRDocumentNode:
+    """Read and parse a Markdown file into a document IR."""
     try:
         md_text = path.read_text(encoding="utf-8")
 
@@ -59,6 +61,7 @@ def _import_md(path: Path) -> DocumentIRDocumentNode:
 
 
 def _import_html(path: Path) -> DocumentIRDocumentNode:
+    """Read and parse an HTML file into a document IR."""
     try:
         source = path.read_text(encoding="utf-8")
 
@@ -75,6 +78,7 @@ def _import_html(path: Path) -> DocumentIRDocumentNode:
 
 
 def _import_docx(path: Path) -> DocumentIRDocumentNode:
+    """Read and parse a DOCX file into a document IR."""
     try:
         data = path.read_bytes()
 

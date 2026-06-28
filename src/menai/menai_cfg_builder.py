@@ -251,6 +251,7 @@ class MenaiCFGBuilder:
     def _build_constant(
         self, ir: MenaiIRConstant, block: MenaiCFGBlock, state: _FunctionState
     ) -> tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """Build a CFG constant instruction from an IR constant."""
         result = state.new_value("const")
         block.instrs.append(MenaiCFGConstInstr(result=result, value=ir.value))
         return result, block
@@ -258,6 +259,7 @@ class MenaiCFGBuilder:
     def _build_empty_list(
         self, block: MenaiCFGBlock, state: _FunctionState
     ) -> tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """Build a CFG constant instruction for an empty list literal."""
         result = state.new_value("empty_list")
         block.instrs.append(MenaiCFGConstInstr(result=result, value=MenaiList()))
         return result, block
@@ -265,6 +267,7 @@ class MenaiCFGBuilder:
     def _build_quote(
         self, ir: MenaiIRQuote, block: MenaiCFGBlock, state: _FunctionState
     ) -> tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """Build a CFG constant instruction from a quoted value."""
         result = state.new_value("quoted")
         block.instrs.append(MenaiCFGConstInstr(result=result, value=ir.quoted_value))
         return result, block
@@ -272,6 +275,7 @@ class MenaiCFGBuilder:
     def _build_variable(
         self, ir: MenaiIRVariable, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState
     ) -> tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """Resolve a variable reference (global or local) to a CFG value."""
         if ir.var_type == 'global':
             result = state.new_value(ir.name)
             block.instrs.append(MenaiCFGGlobalInstr(result=result, name=ir.name))
@@ -287,6 +291,7 @@ class MenaiCFGBuilder:
     def _build_error(
         self, ir: MenaiIRError, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState
     ) -> tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """Evaluate the error message and terminate the block with a raise."""
         # Evaluate the message expression, then terminate the block.
         # The returned placeholder value is never used (the block has no successors).
         msg_val, block = self._build_expr(ir.message, block, scope, state, tail=False)
@@ -297,6 +302,7 @@ class MenaiCFGBuilder:
     def _build_if(
         self, ir: MenaiIRIf, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState, tail: bool
     ) -> tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """Build conditional branching CFG from an if expression."""
         # If the condition is (boolean-not <inner>), emit <inner> as the branch
         # condition and swap then/else.  This avoids a BOOLEAN_NOT instruction
         # followed by a conditional jump in the opposite direction.
@@ -375,6 +381,7 @@ class MenaiCFGBuilder:
     def _build_let(
         self, ir: MenaiIRLet, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState, tail: bool
     ) -> tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """Build a let-binding scope, evaluating bindings then the body in a child scope."""
         # Binding values are evaluated in the outer scope (parallel let).
         binding_vals: list[tuple[str, MenaiCFGValue]] = []
         for name, value_plan in ir.bindings:
@@ -652,6 +659,7 @@ class MenaiCFGBuilder:
     def _build_call(
         self, ir: MenaiIRCall, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState, tail: bool
     ) -> tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """Build a function call, delegating to builtin or user-call builders."""
         if ir.is_builtin:
             return self._build_builtin_call(ir, block, scope, state, tail)
 
@@ -834,6 +842,7 @@ class MenaiCFGBuilder:
     def _build_trace(
         self, ir: MenaiIRTrace, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState,
     ) -> tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """Build a trace instruction wrapping a value with debug messages."""
         msg_vals: list[MenaiCFGValue] = []
         for msg_plan in ir.message_plans:
             msg_val, block = self._build_expr(msg_plan, block, scope, state, tail=False)

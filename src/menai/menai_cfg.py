@@ -458,6 +458,7 @@ class MenaiCFGFunction:
 
 
 def _fmt_values(vs: list[MenaiCFGValue]) -> str:
+    """Format a list of CFG values as a bracketed comma-separated string."""
     return "[" + ", ".join(str(v) for v in vs) + "]"
 
 
@@ -563,6 +564,7 @@ def _safe_add_pred(
     pred: MenaiCFGBlock,
     func: MenaiCFGFunction,
 ) -> None:
+    """Append a predecessor to a block only if the block still exists in the function."""
     if any(b.id == target.id for b in func.blocks):
         target.predecessors.append(pred)
 

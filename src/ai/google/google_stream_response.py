@@ -15,7 +15,7 @@ class GoogleStreamResponse(AIStreamResponse):
         self._current_tool_calls: dict[str, dict] = {}
 
     def _handle_candidates(self, chunk: dict) -> None:
-        # Extract text content and function calls
+        """Extract text content and function calls from a Google API streaming chunk."""
         candidate = chunk["candidates"][0]
         if "content" in candidate and "parts" in candidate["content"]:
             for part in candidate["content"]["parts"]:

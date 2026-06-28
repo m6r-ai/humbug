@@ -201,6 +201,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         return False
 
     def _opt_if(self, ir: MenaiIRIf, frame_stack: list[int]) -> MenaiIRExpr:
+        """Optimize an if-expression, folding constant conditions and simplifying branches."""
         opt_condition = self._opt(ir.condition_plan, frame_stack)
         opt_then = self._opt(ir.then_plan, frame_stack)
         opt_else = self._opt(ir.else_plan, frame_stack)

@@ -41,7 +41,7 @@ class MenaiTraceWatcher(Protocol):
 # signal that the active frame has changed and the loop should re-sync from
 # self._frames[self.frame_depth].  Using a module-level singleton avoids per-call allocation.
 class _FrameChange:
-    pass
+    """Sentinel returned by call/apply/return ops to signal that the active frame has changed."""
 
 _FRAME_CHANGE = _FrameChange()
 
