@@ -466,6 +466,7 @@ class _SwatchButton(QPushButton):
         style_manager: StyleManager,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the swatch button for the given color role."""
         super().__init__(parent)
         self._role = role
         self._style_manager = style_manager
@@ -483,6 +484,7 @@ class _SwatchButton(QPushButton):
         self._apply_color(self._current_color)
 
     def _apply_color(self, hex_color: str) -> None:
+        """Apply the given hex color to the swatch via a stylesheet update."""
         zoom = self._style_manager.zoom_factor()
         radius = int(4 * zoom)
         self.setStyleSheet(f"""
@@ -497,6 +499,7 @@ class _SwatchButton(QPushButton):
         """)
 
     def _on_click(self) -> None:
+        """Open the color picker dialog and emit the chosen color if valid."""
         initial = QColor(self._current_color)
         color = QColorDialog.getColor(initial, self, "Choose Color")
         if color.isValid():
@@ -511,6 +514,7 @@ class _GradientButton(QPushButton):
     gradient_chosen = Signal(str, str)
 
     def __init__(self, style_manager: StyleManager, parent: QWidget | None = None) -> None:
+        """Initialize the gradient picker button."""
         super().__init__("Choose gradient", parent)
         self._style_manager = style_manager
         self.clicked.connect(self._on_click)
@@ -539,6 +543,7 @@ class _GradientButton(QPushButton):
         """)
 
     def _on_click(self) -> None:
+        """Open two color pickers for the gradient start and end colors."""
         start_initial = QColor(self._style_manager.get_color_str(ColorRole.BACKGROUND_GRADIENT_START))
         start = QColorDialog.getColor(start_initial, self, "Choose Gradient Start")
         if not start.isValid():
@@ -557,6 +562,7 @@ class _NavItemDelegate(QStyledItemDelegate):
     """Controls row height for the section nav list."""
 
     def __init__(self, style_manager: StyleManager, parent: QWidget | None = None) -> None:
+        """Initialize the nav item delegate with a style manager for zoom-aware sizing."""
         super().__init__(parent)
         self._style_manager = style_manager
 
@@ -565,6 +571,7 @@ class _NavItemDelegate(QStyledItemDelegate):
         option: QStyleOptionViewItem,
         index: QModelIndex | QPersistentModelIndex,
     ) -> QSize:
+        """Return a row height scaled to the current zoom factor."""
         zoom = self._style_manager.zoom_factor()
         fm = option.fontMetrics  # type: ignore
         row_height = fm.height() + round(12 * zoom)
@@ -581,6 +588,7 @@ class _SectionPage(QWidget):
         on_color_changed: Callable[[ColorRole, str], None],
         parent: QWidget | None = None,
     ) -> None:
+        """Build the section page with a swatch row for each color role."""
         super().__init__(parent)
         self._style_manager = style_manager
         self._rows = rows
@@ -648,6 +656,7 @@ class _PresetPreviewButton(QPushButton):
         style_manager: StyleManager,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the preset preview button with its palette and gradient colors."""
         super().__init__(parent)
         self._name = name
         self._grad_start = grad_start
@@ -660,10 +669,12 @@ class _PresetPreviewButton(QPushButton):
         self.setStyleSheet("border: none; background: transparent;")
 
     def _role_color(self, role: ColorRole, fallback: str) -> QColor:
+        """Resolve a color for the given role from the preset, falling back to the provided default."""
         role_colors = self._colors.get(role.name, {})
         return QColor(role_colors.get("CUSTOM") or role_colors.get("DARK") or role_colors.get("LIGHT") or fallback)
 
     def paintEvent(self, event: QEvent) -> None:
+        """Paint a compact preview of the theme: sidebar, tabs, message bubble, and input box."""
         del event
 
         zoom = self._style_manager.zoom_factor()
@@ -769,6 +780,7 @@ class ThemeColorPickerDialog(QDialog):
     saved_color_themes_changed = Signal(dict, object, object)
 
     def __init__(self, initial_mode: ColorTheme | None = None, parent: QWidget | None = None) -> None:
+        """Initialize the dialog, snapshot current settings for cancel-revert, and build the UI."""
         super().__init__(parent)
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
@@ -800,6 +812,7 @@ class ThemeColorPickerDialog(QDialog):
         self._on_style_changed()
 
     def _build_ui(self) -> None:
+        """Construct the full dialog layout: mode panel, saved themes, presets, section pages, and footer."""
         zoom = self._style_manager.zoom_factor()
         main_layout = QVBoxLayout()
         main_layout.setSpacing(0)
@@ -1121,6 +1134,7 @@ class ThemeColorPickerDialog(QDialog):
         self.setLayout(main_layout)
 
     def _on_mode_selected(self, mode: ColorTheme) -> None:
+        """Switch the active color theme mode and refresh the UI accordingly."""
         self._style_manager.set_color_theme(mode)
         self._update_mode_buttons(mode)
         self._update_sections_visibility(mode)
@@ -1130,6 +1144,7 @@ class ThemeColorPickerDialog(QDialog):
         self._rebuild_saved_themes_list()
 
     def _on_nav_changed(self, current: QListWidgetItem | None, _prev: QListWidgetItem | None) -> None:
+        """Switch the stacked page to match the selected nav item."""
         if current is None:
             return
 
@@ -1137,6 +1152,7 @@ class ThemeColorPickerDialog(QDialog):
         self._stack.setCurrentIndex(idx)
 
     def _on_swatch_color_changed(self, role: ColorRole, hex_color: str) -> None:
+        """Apply a swatch color change, diverge from any saved theme, and clear the preset highlight."""
         self._style_manager.set_custom_color(role, hex_color)
         # Hand-editing diverges from any selected saved theme: switch back to "Manually"
         # so the edited colours are applied and persisted as the live custom set.
@@ -1151,6 +1167,7 @@ class ThemeColorPickerDialog(QDialog):
             self._rebuild_saved_themes_list()
 
     def _on_reset_section(self, page: _SectionPage) -> None:
+        """Clear custom colors for the section's roles and refresh its swatches."""
         self._style_manager.clear_section_custom_colors(page.roles())
         self._diverge_from_saved_theme()
         page.refresh_swatches()
@@ -1181,6 +1198,7 @@ class ThemeColorPickerDialog(QDialog):
         self._refresh_all_swatches()
 
     def _on_reset_all(self) -> None:
+        """Clear all custom color overrides and reset to the Default preset."""
         self._style_manager.apply_custom_colors({})
         self._diverge_from_saved_theme()
         self._update_preset_highlight("Default")
@@ -1438,11 +1456,13 @@ class ThemeColorPickerDialog(QDialog):
         QTimer.singleShot(3000, self._restore_from_preview)
 
     def _restore_from_preview(self) -> None:
+        """Restore full dialog opacity and reset the preview button after a preview."""
         self.setWindowOpacity(1.0)
         self._preview_btn.setText("Preview")
         self._preview_btn.setEnabled(True)
 
     def _on_apply(self) -> None:
+        """Mark changes as committed and emit the current theme settings."""
         self._committed = True
         mode = self._style_manager.user_color_theme()
         colors = self._style_manager.get_custom_colors()
@@ -1450,10 +1470,12 @@ class ThemeColorPickerDialog(QDialog):
         self.theme_settings_changed.emit(mode, colors, active_name)
 
     def _on_ok(self) -> None:
+        """Apply changes and close the dialog."""
         self._on_apply()
         self.accept()
 
     def _on_cancel(self) -> None:
+        """Reject the dialog, reverting any uncommitted changes."""
         self.reject()
 
     def reject(self) -> None:
@@ -1477,19 +1499,23 @@ class ThemeColorPickerDialog(QDialog):
             btn.update()
 
     def _update_mode_buttons(self, active_mode: ColorTheme) -> None:
+        """Check the mode button matching the active theme; uncheck all others."""
         for mode, btn in self._mode_buttons.items():
             btn.setChecked(mode == active_mode)
 
     def _update_sections_visibility(self, mode: ColorTheme) -> None:
+        """Show the color section pages only in Custom mode; otherwise show the placeholder."""
         is_custom = mode == ColorTheme.CUSTOM
         self._splitter.setVisible(is_custom)
         self._placeholder.setVisible(not is_custom)
 
     def _refresh_all_swatches(self) -> None:
+        """Refresh every section page's swatches to reflect current StyleManager colors."""
         for page in self._section_pages:
             page.refresh_swatches()
 
     def _on_style_changed(self) -> None:
+        """Rebuild the dialog stylesheet from current StyleManager colors and refresh swatches."""
         zoom = self._style_manager.zoom_factor()
         base_fs = self._style_manager.base_font_size()
         font_pt = base_fs * zoom
