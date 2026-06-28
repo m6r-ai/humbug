@@ -295,10 +295,14 @@ class _DedentScanner:
             lineno = idx + 1
 
             # If we are inside a multi-line string, consume the line and check
-            # whether the string ends here.  Indentation of string-body lines
-            # is irrelevant.
+            # whether the string ends here.  When the string closes mid-line,
+            # the remainder must still be scanned for brackets so that e.g. a
+            # closing ``)`` on the same line as ``"""`` is properly counted.
+            # Indentation of string-body lines is irrelevant either way.
             if in_triple is not None:
-                in_triple = _update_triple_state(raw, in_triple)
+                bracket_depth, in_triple = _scan_line_brackets_and_strings(
+                    raw, bracket_depth, in_triple
+                )
                 continue
 
             stripped = raw.strip()
@@ -398,24 +402,6 @@ def _scan_line_brackets_and_strings(
         i += 1
 
     return bracket_depth, in_triple
-
-
-def _update_triple_state(line: str, in_triple: str) -> str | None:
-    """
-    Check whether *line* closes the current triple-quoted string.
-
-    Returns None if the string is closed on this line, or *in_triple*
-    unchanged if still open.
-    """
-    for i in range(len(line) - 2):
-        if _is_triple_at(line, i, in_triple):
-            # Check there isn't a second closing triple later (rare, but
-            # e.g. """text""" all on one line).  For simplicity, return None
-            # — the next call to _scan_line_brackets_and_strings from the
-            # caller will handle any further triples on the same line.
-            return None
-
-    return in_triple
 
 
 def _is_triple_at(line: str, i: int, quote_ch: str) -> bool:

@@ -65,10 +65,6 @@ def _msg_ids(results: list[tuple[str, int]]) -> set[str]:
     return {msg_id for msg_id, _ in results}
 
 
-# ===========================================================================
-# @property tests
-# ===========================================================================
-
 class TestNoProperty:
     """Tests for the humbug-no-property check."""
 
@@ -100,10 +96,6 @@ class Foo:
         assert MSG_NO_PROPERTY not in _msg_ids(results)
 
 
-# ===========================================================================
-# Optional tests
-# ===========================================================================
-
 class TestNoOptional:
     """Tests for the humbug-no-optional check."""
 
@@ -131,10 +123,6 @@ def foo(x: int | None = None) -> None:
 '''
         results = _run_pylint(source)
         assert MSG_NO_OPTIONAL not in _msg_ids(results)
-
-# ===========================================================================
-# Union tests
-# ===========================================================================
 
 class TestNoUnion:
     """Tests for the humbug-no-union check."""
@@ -176,10 +164,6 @@ def foo(x: list[Union[int, str]]) -> None:
 '''
         results = _run_pylint(source)
         assert MSG_NO_UNION in _msg_ids(results)
-
-# ===========================================================================
-# Typing alias tests
-# ===========================================================================
 
 class TestNoTypingAliases:
     """Tests for the humbug-no-typing-aliases check."""
@@ -262,10 +246,6 @@ def foo(x: Any) -> None:
         assert MSG_NO_TYPING_ALIASES not in _msg_ids(results)
 
 
-# ===========================================================================
-# Aligned assignment tests
-# ===========================================================================
-
 class TestNoAlignedAssigns:
     """Tests for the humbug-no-aligned-assigns check."""
 
@@ -325,10 +305,6 @@ def foo() -> None:
         results = _run_pylint(source)
         assert MSG_NO_ALIGNED_ASSIGNS not in _msg_ids(results)
 
-
-# ===========================================================================
-# Blank line before dedent tests
-# ===========================================================================
 
 class TestBlankBeforeDedent:
     """Tests for the humbug-blank-before-dedent check."""
@@ -548,6 +524,37 @@ def foo() -> None:
         results = _run_pylint(source)
         assert MSG_BLANK_BEFORE_DEDENT not in _msg_ids(results)
 
+    def test_triple_string_closing_mid_line_preserves_bracket_tracking(self):
+        """A triple-quoted string closing mid-line must not corrupt bracket tracking.
+
+        When a triple-quoted string closes on a line that also contains a
+        closing bracket (e.g. closing paren after the triple-quote), the
+        bracket must be counted so that bracket depth returns to zero and
+        subsequent dedents are detected.
+        """
+        source = (
+            '"""Module."""\n'
+            "\n"
+            "\n"
+            "class Foo:\n"
+            '    """Test class."""\n'
+            "\n"
+            "    def method_a(self) -> None:\n"
+            '        self.setStyleSheet(f"""\n'
+            "            QPushButton {{\n"
+            "                background: red;\n"
+            "            }}\n"
+            '        """)\n'
+            "        x = 1\n"
+            "        if x > 0:\n"
+            "            x = 2\n"
+            "            x = 3\n"
+            "        x = 4\n"
+        )
+        results = _run_pylint(source)
+        dedent_lines = [line for msg_id, line in results if msg_id == MSG_BLANK_BEFORE_DEDENT]
+        assert 17 in dedent_lines
+
     def test_bracket_continuation_not_flagged(self):
         """Continuation lines inside brackets should not trigger dedent checks."""
         source = '''\
@@ -566,10 +573,6 @@ def foo() -> None:
         results = _run_pylint(source)
         assert MSG_BLANK_BEFORE_DEDENT not in _msg_ids(results)
 
-
-# ===========================================================================
-# Multiline docstring tests
-# ===========================================================================
 
 class TestMultilineDocstring:
     """Tests for the humbug-multiline-docstring check."""
@@ -630,10 +633,6 @@ def foo() -> None:
         results = _run_pylint(source)
         assert MSG_MULTILINE_DOCSTRING in _msg_ids(results)
 
-
-# ===========================================================================
-# Output ordering tests
-# ===========================================================================
 
 class TestOutputOrdering:
     """Tests that messages are emitted in line-number order."""
