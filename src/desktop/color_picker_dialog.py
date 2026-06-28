@@ -622,6 +622,7 @@ class _SectionPage(QWidget):
         """Refresh all swatches to reflect current StyleManager colors."""
         for swatch in self._swatches.values():
             swatch.refresh()
+
         if self._gradient_button is not None:
             self._gradient_button.refresh()
 
@@ -708,6 +709,7 @@ class _PresetPreviewButton(QPushButton):
             tab_rect = QRectF(folder_rect.left(), y, folder_rect.width() * 0.45, 3)
             painter.drawRoundedRect(tab_rect, 1.5, 1.5)
             painter.drawRoundedRect(folder_rect, 2, 2)
+
         painter.setBrush(muted)
         painter.drawRoundedRect(QRectF(rail.left() + 6, rail.bottom() - 13, rail.width() - 12, 4), 2, 2)
 
@@ -1017,6 +1019,7 @@ class ThemeColorPickerDialog(QDialog):
                         lambda _, c=a11y_colors: self._on_accessibility_preset_clicked(c)
                     )
                     a11y_row.addWidget(a11y_btn)
+
                 a11y_row.addStretch()
                 inner_layout.addLayout(a11y_row)
                 inner_layout.addSpacing(int(8 * zoom))
@@ -1111,6 +1114,7 @@ class ThemeColorPickerDialog(QDialog):
         footer_layout.addStretch()
         for btn in [self._preview_btn, self._apply_btn, self._cancel_btn, self._ok_btn]:
             footer_layout.addWidget(btn)
+
         footer.setLayout(footer_layout)
         main_layout.addWidget(footer)
 
@@ -1128,6 +1132,7 @@ class ThemeColorPickerDialog(QDialog):
     def _on_nav_changed(self, current: QListWidgetItem | None, _prev: QListWidgetItem | None) -> None:
         if current is None:
             return
+
         idx = self._nav_list.row(current)
         self._stack.setCurrentIndex(idx)
 
@@ -1158,6 +1163,7 @@ class ThemeColorPickerDialog(QDialog):
             self._style_manager.set_color_theme(ColorTheme.CUSTOM)
             self._update_mode_buttons(ColorTheme.CUSTOM)
             self._update_sections_visibility(ColorTheme.CUSTOM)
+
         self._style_manager.apply_custom_colors(current)
         self._diverge_from_saved_theme()
         self._refresh_all_swatches()
@@ -1168,6 +1174,7 @@ class ThemeColorPickerDialog(QDialog):
             self._style_manager.set_color_theme(ColorTheme.CUSTOM)
             self._update_mode_buttons(ColorTheme.CUSTOM)
             self._update_sections_visibility(ColorTheme.CUSTOM)
+
         self._style_manager.apply_custom_colors(colors)
         self._diverge_from_saved_theme()
         self._update_preset_highlight(name)
@@ -1457,11 +1464,8 @@ class ThemeColorPickerDialog(QDialog):
             self._style_manager.apply_custom_colors(self._snapshot_colors)
             self._style_manager.set_active_preset(self._snapshot_preset)
             self._style_manager.set_active_custom_theme_name(self._snapshot_active_custom)
-        super().reject()
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
+        super().reject()
 
     def _update_preset_highlight(self, name: str | None) -> None:
         """Highlight the named preset button; deselect all others. Persists to StyleManager."""

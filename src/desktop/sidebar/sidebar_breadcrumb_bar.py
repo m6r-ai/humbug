@@ -288,6 +288,7 @@ class SidebarBreadcrumbBar(QTreeView):
             parent = os.path.dirname(current)
             if parent == current:
                 break
+
             current = parent
 
         chain.reverse()
@@ -339,6 +340,7 @@ class SidebarBreadcrumbBar(QTreeView):
                     child_path = child.data(_PATH_ROLE)
                     if child_path and os.path.normpath(child_path) == os.path.normpath(self._root_path):
                         continue
+
                     placeholder = QStandardItem()
                     placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
                     child.appendRow(placeholder)
@@ -479,6 +481,7 @@ class SidebarBreadcrumbBar(QTreeView):
         if target_path and self._is_valid_drop(dragged_path, target_path):
             self._set_drop_target(index)
             event.acceptProposedAction()
+
         else:
             self._clear_drop_target()
             event.ignore()
@@ -545,6 +548,7 @@ class SidebarBreadcrumbBar(QTreeView):
                 path = self._path_for_index(index)
                 if path and self._collapse_handler:
                     self._collapse_handler(path)
+
                 return
 
         super().mousePressEvent(event)

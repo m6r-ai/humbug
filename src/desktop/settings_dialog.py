@@ -1541,6 +1541,7 @@ class _FetchedModelManagerDialog(QDialog):
         if row:
             self._list_layout.removeWidget(row)
             row.deleteLater()
+
         self._update_empty_label()
 
     def _update_empty_label(self) -> None:
