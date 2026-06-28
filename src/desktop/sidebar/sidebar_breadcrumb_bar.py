@@ -2,7 +2,6 @@
 
 from collections.abc import Callable
 import os
-from typing import Union
 
 from PySide6.QtCore import Qt, QMimeData, QModelIndex, QPersistentModelIndex, QPoint, QRect, QSize
 from PySide6.QtGui import (
@@ -196,7 +195,7 @@ class SidebarBreadcrumbBar(QTreeView):
         self,
         painter: QPainter,
         option: QStyleOptionViewItem,
-        index: Union[QModelIndex, QPersistentModelIndex],
+        index: QModelIndex | QPersistentModelIndex,
     ) -> None:
         """Draw the row, adding drop target highlighting when applicable."""
         super().drawRow(painter, option, index)
@@ -514,7 +513,7 @@ class SidebarBreadcrumbBar(QTreeView):
         self,
         painter: QPainter,
         rect: QRect,
-        index: Union[QModelIndex, QPersistentModelIndex],
+        index: QModelIndex | QPersistentModelIndex,
     ) -> None:
         """Suppress branch indicator for the '.' row; draw normally for all others."""
         path = index.data(_PATH_ROLE)

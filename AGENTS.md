@@ -38,6 +38,7 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
   ```
   Functions/methods have doc strings and we don't need comments about grouping of things because they go stale.
 - We use modern Python, so never use `Optional`, always use `type | None`.
+- Never use `Union[X, Y]`; always use the modern `X | Y` syntax.
 - Never import legacy typing aliases.  Use builtins (`dict`, `list`, `set`, `tuple`, `type`,
   `frozenset`) or `collections.abc` (`Callable`, `Awaitable`, `AsyncGenerator`, `Generator`,
   `Iterator`, `Sequence`, `Coroutine`) instead of `typing.Dict`, `typing.List`, etc.

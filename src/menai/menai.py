@@ -4,7 +4,6 @@ from collections.abc import Iterator
 import hashlib
 from pathlib import Path
 import os
-from typing import Union
 
 from contextlib import contextmanager
 
@@ -1160,7 +1159,7 @@ class Menai:
         result = self.vm.execute(code, self._prelude)
         return result
 
-    def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, MenaiFunction]:
+    def evaluate(self, expression: str) -> int | float | complex | str | bool | list | MenaiFunction:
         """
         Evaluate an Menai expression with comprehensive enhanced error reporting.
 

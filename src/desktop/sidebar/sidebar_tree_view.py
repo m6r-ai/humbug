@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 import os
-from typing import Union, cast
+from typing import cast
 
 from PySide6.QtWidgets import QFrame, QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import (
@@ -135,7 +135,7 @@ class SidebarTreeView(QTreeView):
             self._current_drop_target = index
             self.drop_target_changed.emit()
 
-    def _get_path_from_any_index(self, index: Union[QModelIndex, QPersistentModelIndex]) -> str | None:
+    def _get_path_from_any_index(self, index: QModelIndex | QPersistentModelIndex) -> str | None:
         """
         Get the file system path from either a QModelIndex or QPersistentModelIndex.
 

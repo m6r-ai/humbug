@@ -1,7 +1,6 @@
 """Tokenizer for Menai expressions with detailed error messages."""
 
 from collections.abc import Callable
-from typing import Union
 
 from menai.menai_error import MenaiTokenError
 from menai.menai_token import MenaiToken, MenaiTokenType
@@ -684,7 +683,7 @@ class MenaiLexer:
         start: int,
         start_line: int,
         start_col: int
-    ) -> tuple[Union[int, float, complex], int, MenaiTokenType]:
+    ) -> tuple[int | float | complex, int, MenaiTokenType]:
         """
         Read a number literal (including complex) from the expression.
 

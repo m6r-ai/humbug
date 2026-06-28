@@ -25,7 +25,7 @@ def main() -> int:
             "--load-plugins=tools.style_checker.humbug_style_checker",
             "--disable=all",
             "--enable=humbug-no-property,humbug-no-optional,humbug-no-aligned-assigns,"
-            "humbug-blank-before-dedent,humbug-multiline-docstring",
+            "humbug-no-union,humbug-blank-before-dedent,humbug-multiline-docstring",
             "src",
         ],
         check=False,

@@ -1,6 +1,5 @@
 """Multi-pass Menai pretty printer with clean separation of concerns."""
 
-from typing import Union
 from dataclasses import dataclass
 from enum import Enum
 
@@ -60,9 +59,9 @@ class ASTComment(ASTNode):
 @dataclass
 class ASTList(ASTNode):
     """A list with elements and associated comments."""
-    elements: list[Union[ASTNode, 'ASTComment']]  # Mix of nodes and comments
+    elements: list[ASTNode | 'ASTComment']  # Mix of nodes and comments
 
-    def __init__(self, elements: list[Union[ASTNode, 'ASTComment']], start_line: int):
+    def __init__(self, elements: list[ASTNode | 'ASTComment'], start_line: int):
         self.elements = elements
         self.start_line = start_line
         self.end_line = start_line  # Will be updated when we know the closing paren line
@@ -192,7 +191,7 @@ class TreeBuilder:
         self.pos += 1  # consume '('
         end_line = start_line  # Track where the list ends
 
-        elements: list[Union[ASTNode, ASTComment]] = []
+        elements: list[ASTNode | ASTComment] = []
         last_code_line = start_line
 
         while self.pos < len(self.tokens) and self.tokens[self.pos].type != MenaiTokenType.RPAREN:

@@ -9,6 +9,7 @@ Checks implemented:
 
 * ``humbug-no-property``         -- ``@property`` is banned; use a getter method.
 * ``humbug-no-optional``         -- ``Optional[X]`` is banned; use ``X | None``.
+* ``humbug-no-union``            -- ``Union[X, Y]`` is banned; use ``X | Y``.
 * ``humbug-no-typing-aliases``   -- legacy ``typing.Dict``, ``typing.List``, etc. are
                                     banned; use builtins or ``collections.abc``.
 * ``humbug-no-aligned-assigns``  -- consecutive assignments must not have their
@@ -30,6 +31,7 @@ from pylint.typing import MessageDefinitionTuple
 # Public message-ID constants (shared with tests)
 MSG_NO_PROPERTY = "humbug-no-property"
 MSG_NO_OPTIONAL = "humbug-no-optional"
+MSG_NO_UNION = "humbug-no-union"
 MSG_NO_TYPING_ALIASES = "humbug-no-typing-aliases"
 MSG_NO_ALIGNED_ASSIGNS = "humbug-no-aligned-assigns"
 MSG_BLANK_BEFORE_DEDENT = "humbug-blank-before-dedent"
@@ -60,6 +62,11 @@ class HumbugStyleChecker(BaseRawFileChecker):
             "Optional[X] is banned; use X | None",
             MSG_NO_OPTIONAL,
             "Used when Optional[...] appears.  Humbug uses the modern X | None syntax.",
+        ),
+        "C6404": (
+            "Union[X, Y] is banned; use X | Y",
+            MSG_NO_UNION,
+            "Used when Union[...] appears.  Humbug uses the modern X | Y syntax.",
         ),
         "C6403": (
             "Legacy typing alias %s is banned; use the builtin or collections.abc equivalent",
@@ -97,6 +104,7 @@ class HumbugStyleChecker(BaseRawFileChecker):
 
         self._check_property(node, pending)
         self._check_optional(node, pending)
+        self._check_union(node, pending)
         self._check_typing_aliases(node, pending)
         self._check_aligned_assignments(node, lines, pending)
         self._check_blank_before_dedent(lines, pending)
@@ -126,6 +134,14 @@ class HumbugStyleChecker(BaseRawFileChecker):
         for sub_node in node.nodes_of_class(nodes.Subscript):
             if _dotted_name(sub_node.value) == "Optional":
                 pending.append((sub_node.lineno, MSG_NO_OPTIONAL, ()))
+
+    def _check_union(
+        self, node: nodes.Module, pending: list[tuple[int, str, tuple[str, ...]]]
+    ) -> None:
+        """Flag ``Union[...]`` subscript expressions."""
+        for sub_node in node.nodes_of_class(nodes.Subscript):
+            if _dotted_name(sub_node.value) == "Union":
+                pending.append((sub_node.lineno, MSG_NO_UNION, ()))
 
     def _check_typing_aliases(
         self, node: nodes.Module, pending: list[tuple[int, str, tuple[str, ...]]]

@@ -13,6 +13,7 @@ import tempfile
 from tools.style_checker.humbug_style_checker import (
     MSG_NO_PROPERTY,
     MSG_NO_OPTIONAL,
+    MSG_NO_UNION,
     MSG_NO_TYPING_ALIASES,
     MSG_NO_ALIGNED_ASSIGNS,
     MSG_BLANK_BEFORE_DEDENT,
@@ -42,7 +43,7 @@ def _run_pylint(source: str) -> list[tuple[str, int]]:
                 "python", "-m", "pylint",
                 "--load-plugins=tools.style_checker.humbug_style_checker",
                 "--disable=all",
-                f"--enable={MSG_NO_PROPERTY},{MSG_NO_OPTIONAL},{MSG_NO_TYPING_ALIASES},{MSG_NO_ALIGNED_ASSIGNS},{MSG_BLANK_BEFORE_DEDENT},{MSG_MULTILINE_DOCSTRING}",
+                f"--enable={MSG_NO_PROPERTY},{MSG_NO_OPTIONAL},{MSG_NO_UNION},{MSG_NO_TYPING_ALIASES},{MSG_NO_ALIGNED_ASSIGNS},{MSG_BLANK_BEFORE_DEDENT},{MSG_MULTILINE_DOCSTRING}",
                 "--score=n",
                 "--output-format=json",
                 path,
@@ -131,6 +132,50 @@ def foo(x: int | None = None) -> None:
         results = _run_pylint(source)
         assert MSG_NO_OPTIONAL not in _msg_ids(results)
 
+# ===========================================================================
+# Union tests
+# ===========================================================================
+
+class TestNoUnion:
+    """Tests for the humbug-no-union check."""
+
+    def test_union_is_flagged(self):
+        """Union[X, Y] should be flagged."""
+        source = '''\
+"""Module."""
+from typing import Union
+
+
+def foo(x: Union[int, str]) -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_UNION in _msg_ids(results)
+
+    def test_pipe_syntax_is_ok(self):
+        """X | Y should not be flagged."""
+        source = '''\
+"""Module."""
+
+
+def foo(x: int | str) -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_UNION not in _msg_ids(results)
+
+    def test_union_in_nested_subscript_is_flagged(self):
+        """Union inside a generic should be flagged."""
+        source = '''\
+"""Module."""
+from typing import Union
+
+
+def foo(x: list[Union[int, str]]) -> None:
+    """Do something."""
+'''
+        results = _run_pylint(source)
+        assert MSG_NO_UNION in _msg_ids(results)
 
 # ===========================================================================
 # Typing alias tests
