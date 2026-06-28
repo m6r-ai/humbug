@@ -176,6 +176,11 @@ AI tool implementation for file operations.
 ### `src/git/`
 Lightweight, GUI-free tools for git operations.
 
+### `src/http_client/`
+Async HTTP client built on the Python standard library (`asyncio` streams + `ssl`).
+No external dependencies.  Provides `HttpClient` and `HttpResponse` with GET/POST,
+TLS, streaming, timeouts, redirect following, and a structured exception hierarchy.
+
 ### `src/help_ai_tool/`
 AI tool implementation for tool documentation.
 
@@ -231,6 +236,7 @@ Test structure mirrors `src/` organization:
 - `dmarkdown/` - Markdown parser tests
 - `editor_ai_tool/` - Editor AI tool tests
 - `filesystem_ai_tool/` - Filesystem AI tool tests
+- `http_client/` - HTTP client tests
 - `menai/` - Menai language tests
 - `menai_ai_tool/` - Menai AI tool tests
 - `pdf/` - PDF extraction tests

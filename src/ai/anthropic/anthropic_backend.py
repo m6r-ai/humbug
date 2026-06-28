@@ -1,7 +1,6 @@
 """Anthropic backend implementation."""
 from typing import Any
 
-import aiohttp
 
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
@@ -9,6 +8,7 @@ from ai.ai_conversation_history import AIConversationHistory
 from ai.ai_message import AIMessage, AIMessageSource
 from ai.ai_model import AIReasoningEffort
 from ai.anthropic.anthropic_stream_response import AnthropicStreamResponse
+from http_client import HttpClient
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
 
@@ -22,11 +22,11 @@ class AnthropicBackend(AIBackend):
             "x-api-key": self._api_key,
             "anthropic-version": "2023-06-01",
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, ssl=self._ssl_context) as response:
-                response.raise_for_status()
-                data = await response.json()
-                return [m["id"] for m in data.get("data", [])]
+        async with HttpClient(ssl_context=self._ssl_context) as client:
+            response = await client.get(url, headers=headers)
+            response.raise_for_status()
+            data = await response.json()
+            return [m["id"] for m in data.get("data", [])]
 
     def _format_tool_definition(self, tool_def: AIToolDefinition) -> dict[str, Any]:
         """

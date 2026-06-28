@@ -85,8 +85,7 @@ pip install -e ".[dev]"
 ```
 
 This installs Humbug along with all its dependencies. Humbug has very few external dependencies
-by design: the GUI framework (PySide6), async support (qasync), HTTP networking (aiohttp), and
-SSL certificates (certifi).
+by design: the GUI framework (PySide6), async support (qasync), and SSL certificates (certifi).
 
 ### 4. Build the Menai engine (optional but recommended)
 

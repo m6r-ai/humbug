@@ -2,14 +2,14 @@
 
 import logging
 
-import aiohttp
 from PySide6.QtCore import QObject, Signal
 
+from http_client import HttpClient
 from desktop.version import CURRENT_VERSION
 
 
 _GITHUB_API_URL = "https://api.github.com/repos/m6r-ai/humbug/releases/latest"
-_REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=10)
+_REQUEST_TIMEOUT = 10.0
 
 
 class UpdateChecker(QObject):
@@ -86,24 +86,27 @@ class UpdateChecker(QObject):
             A (tag_name, html_url) tuple, or (None, None) on any failure.
         """
         try:
-            async with aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session:
-                async with session.get(
+            async with HttpClient(
+                connect_timeout=_REQUEST_TIMEOUT,
+                read_timeout=_REQUEST_TIMEOUT,
+            ) as client:
+                response = await client.get(
                     _GITHUB_API_URL,
                     headers={"Accept": "application/vnd.github+json"},
-                ) as response:
-                    if response.status != 200:
-                        self._logger.debug(
-                            "Update check returned HTTP %d", response.status
-                        )
-                        return None, None
+                )
+                if response.status() != 200:
+                    self._logger.debug(
+                        "Update check returned HTTP %d", response.status()
+                    )
+                    return None, None
 
-                    data = await response.json()
-                    tag = data.get("tag_name")
-                    url = data.get("html_url")
-                    if not isinstance(tag, str) or not isinstance(url, str):
-                        return None, None
+                data = await response.json()
+                tag = data.get("tag_name")
+                url = data.get("html_url")
+                if not isinstance(tag, str) or not isinstance(url, str):
+                    return None, None
 
-                    return tag, url
+                return tag, url
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
             self._logger.debug("Update check failed: %s", exc)

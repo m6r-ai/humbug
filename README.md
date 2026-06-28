@@ -125,7 +125,7 @@ You don't need to worry about being locked into a vendor tool and can add new fe
 
 Humbug follows the pattern of most operating system kernels.
 It aims to be simple and largely self-contained.
-The code has only 4 external runtime package dependencies other than the standard Python library, so both you and your LLMs can understand almost every part from the one git repo.
+The code has only 3 external runtime package dependencies other than the standard Python library, so both you and your LLMs can understand almost every part from the one git repo.
 
 The minimal dependency principle serves several purposes:
 
@@ -192,7 +192,6 @@ Humbug is open source and the project welcomes contributions. If you're interest
 Runtime dependencies (installed automatically):
 - PySide6 (the GUI framework)
 - qasync (allows the GUI framework to work nicely with async Python code)
-- aiohttp (async HTTP client)
 - certifi (SSL/TLS root certificates to allow TLS network connections without any other system changes)
 
 Developer dependencies (installed automatically with `.[dev]`):

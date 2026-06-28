@@ -1,7 +1,6 @@
 """Google Google backend implementation."""
 from typing import Any
 
-import aiohttp
 
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
@@ -9,6 +8,7 @@ from ai.ai_model import AIReasoningCapability, AIReasoningEffort
 from ai.ai_message import AIMessageSource
 from ai.ai_conversation_history import AIConversationHistory
 from ai.google.google_stream_response import GoogleStreamResponse
+from http_client import HttpClient
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
 
@@ -19,15 +19,15 @@ class GoogleBackend(AIBackend):
         """Fetch available model IDs from the Google Gemini API."""
         base_url = self._api_url.split("?")[0]
         url = f"{base_url}?key={self._api_key}"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, ssl=self._ssl_context) as response:
-                response.raise_for_status()
-                data = await response.json()
-                return [
-                    m["name"].removeprefix("models/")
-                    for m in data.get("models", [])
-                    if "generateContent" in m.get("supportedGenerationMethods", [])
-                ]
+        async with HttpClient(ssl_context=self._ssl_context) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            data = await response.json()
+            return [
+                m["name"].removeprefix("models/")
+                for m in data.get("models", [])
+                if "generateContent" in m.get("supportedGenerationMethods", [])
+            ]
 
     def _format_tool_definition(self, tool_def: AIToolDefinition) -> dict[str, Any]:
         """

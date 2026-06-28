@@ -11,10 +11,9 @@ import ssl
 import sys
 from typing import Any
 
-import aiohttp
-from aiohttp import ClientConnectorError, ClientError
 import certifi
 
+from http_client import ClientConnectorError, HttpClientError, HttpClient
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessage
 from ai.ai_conversation_history import AIConversationHistory
@@ -167,143 +166,142 @@ class AIBackend(ABC):
         self._logger.debug(config.data)
 
         attempt = 0
-        post_timeout = aiohttp.ClientTimeout(
-            total=None,
-            sock_connect=20,
-            sock_read=300
-        )
 
         # Use explicit IPv4 for local connections as localhost can cause SSL issues!
         url = config.url.replace("localhost", "127.0.0.1")
 
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self._ssl_context)) as session:
+        async with HttpClient(
+            ssl_context=self._ssl_context,
+            connect_timeout=20,
+            read_timeout=300,
+        ) as client:
             while attempt < self._max_retries:
                 try:
-                    async with session.post(
+                    response = await client.post(
                         url,
                         headers=config.headers,
                         json=config.data,
-                        timeout=post_timeout
-                    ) as response:
-                        # Did we get an error response?  If yes, then deal with it.
-                        if response.status != 200:
-                            response_message = await response.text()
+                    )
 
-                            try:
-                                error_data = json.loads(response_message)
+                    # Did we get an error response?  If yes, then deal with it.
+                    if response.status() != 200:
+                        response_message = await response.text()
 
-                            except json.JSONDecodeError as e:
-                                self._logger.warning("Unable to parse: %s (%s)", response_message, str(e))
-                                error_data = {}
+                        try:
+                            error_data = json.loads(response_message)
 
-                            self._logger.debug("API error: %d: %s", response.status, error_data)
+                        except json.JSONDecodeError as e:
+                            self._logger.warning("Unable to parse: %s (%s)", response_message, str(e))
+                            error_data = {}
 
-                            # If we get a 429 error, this is a rate limit error and we should retry
-                            if response.status == 429:
-                                if attempt < self._max_retries - 1:
-                                    delay = self._base_delay * (2 ** attempt)
-                                    yield AIResponse(
-                                        reasoning="",
-                                        content="",
-                                        error=AIError(
-                                            code="rate_limit",
-                                            message=f"Rate limit exceeded.  Retrying in {delay} seconds...",
-                                            retries_exhausted=False,
-                                            details=error_data
-                                        )
+                        self._logger.debug("API error: %d: %s", response.status(), error_data)
+
+                        # If we get a 429 error, this is a rate limit error and we should retry
+                        if response.status() == 429:
+                            if attempt < self._max_retries - 1:
+                                delay = self._base_delay * (2 ** attempt)
+                                yield AIResponse(
+                                    reasoning="",
+                                    content="",
+                                    error=AIError(
+                                        code="rate_limit",
+                                        message=f"Rate limit exceeded.  Retrying in {delay} seconds...",
+                                        retries_exhausted=False,
+                                        details=error_data
                                     )
-                                    await asyncio.sleep(delay)
-                                    attempt += 1
-                                    continue
-
-                            # If we get one of many types of 500 series error, something went wrong on the server.  Some of these
-                            # are non-standard errors, but are seen with some LLMs.
-                            if response.status in {500, 501, 502, 503, 504, 508, 509, 529}:
-                                if attempt < self._max_retries - 1:
-                                    delay = self._base_delay * (2 ** attempt)
-                                    yield AIResponse(
-                                        reasoning="",
-                                        content="",
-                                        error=AIError(
-                                            code="server_error",
-                                            message=f"Server error: {response.status}.  Retrying in {delay} seconds...",
-                                            retries_exhausted=False,
-                                            details=error_data
-                                        )
-                                    )
-                                    await asyncio.sleep(delay)
-                                    attempt += 1
-                                    continue
-
-                            yield AIResponse(
-                                reasoning="",
-                                content="",
-                                error=AIError(
-                                    code=str(response.status),
-                                    message=f"API error {response.status}: {error_data}",
-                                    retries_exhausted=True,
-                                    details=error_data
                                 )
-                            )
-                            return
+                                await asyncio.sleep(delay)
+                                attempt += 1
+                                continue
 
-                        # Signal that AI is connected
+                        # If we get one of many types of 500 series error, something went wrong on the server.  Some of these
+                        # are non-standard errors, but are seen with some LLMs.
+                        if response.status() in {500, 501, 502, 503, 504, 508, 509, 529}:
+                            if attempt < self._max_retries - 1:
+                                delay = self._base_delay * (2 ** attempt)
+                                yield AIResponse(
+                                    reasoning="",
+                                    content="",
+                                    error=AIError(
+                                        code="server_error",
+                                        message=f"Server error: {response.status()}.  Retrying in {delay} seconds...",
+                                        retries_exhausted=False,
+                                        details=error_data
+                                    )
+                                )
+                                await asyncio.sleep(delay)
+                                attempt += 1
+                                continue
+
                         yield AIResponse(
                             reasoning="",
                             content="",
-                            connected=True
+                            error=AIError(
+                                code=str(response.status()),
+                                message=f"API error {response.status()}: {error_data}",
+                                retries_exhausted=True,
+                                details=error_data
+                            )
                         )
+                        return
 
-                        # We got a success code.  Create a response handler and start generating AIResponse
-                        # updates for each server-sent event we see.
-                        response_handler = self._create_stream_response_handler()
-                        async for line in response.content:
-                            try:
-                                decoded_line = line.decode('utf-8').strip()
-                                if not decoded_line:
+                    # Signal that AI is connected
+                    yield AIResponse(
+                        reasoning="",
+                        content="",
+                        connected=True
+                    )
+
+                    # We got a success code.  Create a response handler and start generating AIResponse
+                    # updates for each server-sent event we see.
+                    response_handler = self._create_stream_response_handler()
+                    async for line in response.content_lines():
+                        try:
+                            decoded_line = line.decode('utf-8').strip()
+                            if not decoded_line:
+                                continue
+
+                            if self._uses_data:
+                                if not decoded_line.startswith("data: "):
                                     continue
 
-                                if self._uses_data:
-                                    if not decoded_line.startswith("data: "):
-                                        continue
+                                decoded_line = decoded_line[6:]
 
-                                    decoded_line = decoded_line[6:]
+                                if decoded_line == "[DONE]":
+                                    break
 
-                                    if decoded_line == "[DONE]":
-                                        break
+                            chunk = json.loads(decoded_line)
+                            response_handler.update_from_chunk(chunk)
 
-                                chunk = json.loads(decoded_line)
-                                response_handler.update_from_chunk(chunk)
-
-                                if response_handler.error:
-                                    yield AIResponse(
-                                        reasoning="",
-                                        content="",
-                                        error=response_handler.error
-                                    )
-                                    return
-
+                            if response_handler.error:
                                 yield AIResponse(
-                                    reasoning=response_handler.reasoning,
-                                    content=response_handler.content,
-                                    usage=response_handler.usage,
-                                    tool_calls=response_handler.tool_calls,
-                                    signature=response_handler.signature,
-                                    redacted_reasoning=response_handler.redacted_reasoning
+                                    reasoning="",
+                                    content="",
+                                    error=response_handler.error
                                 )
+                                return
 
-                            except json.JSONDecodeError as e:
-                                self._logger.exception("JSON exception: %s", e)
-                                break
+                            yield AIResponse(
+                                reasoning=response_handler.reasoning,
+                                content=response_handler.content,
+                                usage=response_handler.usage,
+                                tool_calls=response_handler.tool_calls,
+                                signature=response_handler.signature,
+                                redacted_reasoning=response_handler.redacted_reasoning
+                            )
 
-                            except Exception as e:
-                                self._logger.exception("Unexpected exception: %s", e)
-                                break
+                        except json.JSONDecodeError as e:
+                            self._logger.exception("JSON exception: %s", e)
+                            break
 
-                        # Successfully processed response, exit retry loop
-                        break
+                        except Exception as e:
+                            self._logger.exception("Unexpected exception: %s", e)
+                            break
 
-                except (ClientConnectorError, ClientError, asyncio.TimeoutError, OSError) as e:
+                    # Successfully processed response, exit retry loop
+                    break
+
+                except (ClientConnectorError, HttpClientError, asyncio.TimeoutError, OSError) as e:
                     # Handle network-related errors that should be retried
                     self._logger.warning("Network error (attempt %d/%d): %s", attempt + 1, self._max_retries, str(e))
                     delay = self._base_delay * (2 ** attempt)

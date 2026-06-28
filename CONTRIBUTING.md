@@ -33,8 +33,8 @@ entirely with the contributor.
 
 ## Dependency rules
 
-Humbug has only 4 external runtime dependencies beyond the Python standard library
-(PySide6, qasync, aiohttp, certifi). This is a core design principle and the bar for
+Humbug has only 3 external runtime dependencies beyond the Python standard library
+(PySide6, qasync, certifi). This is a core design principle and the bar for
 adding a new one is extremely high. If you think a new external dependency is genuinely
 necessary, raise it for discussion on Discord before writing any code that relies on it.
 Do not add new external dependencies without explicit agreement.

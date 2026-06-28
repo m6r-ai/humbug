@@ -2,6 +2,9 @@
 
 ## v51 (2026-06-xx)
 
+New features:
+
+
 Bug fixes:
 
 - Resolved a problem with image previews on Windows.
@@ -14,8 +17,12 @@ Bug fixes:
 
 Internal structure changes:
 
+- Removed aiohttp and replaced it with a new built-in HTTP client.
 - Added `style_checker` to augment `pylint` with Humbug style checking.
 - Extended `mypy` and `pylint` checking to the `tools` directory.
+- Updated code to use modern type hinting for Python (e.g. `list`, not `List`, `tuple` not `Tuple`, and `type1 | type2` not
+  `Union[type1, type2]`.
+- Reduced logging level for `qasync` to info, from debug to reduce noise in log files.
 
 ## v50 (2026-06-24)
 

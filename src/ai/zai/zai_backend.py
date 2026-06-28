@@ -3,7 +3,6 @@
 import json
 from typing import Any
 
-import aiohttp
 
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
@@ -11,6 +10,7 @@ from ai.ai_message import AIMessage, AIMessageSource
 from ai.ai_model import AIReasoningEffort
 from ai.ai_conversation_history import AIConversationHistory
 from ai.zai.zai_stream_response import ZaiStreamResponse
+from http_client import HttpClient
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
 
@@ -21,11 +21,11 @@ class ZaiBackend(AIBackend):
         """Fetch available model IDs from the Z.ai API."""
         url = self._api_url.replace("/chat/completions", "/models")
         headers = {"Authorization": f"Bearer {self._api_key}"}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, ssl=self._ssl_context) as response:
-                response.raise_for_status()
-                data = await response.json()
-                return [m["id"] for m in data.get("data", [])]
+        async with HttpClient(ssl_context=self._ssl_context) as client:
+            response = await client.get(url, headers=headers)
+            response.raise_for_status()
+            data = await response.json()
+            return [m["id"] for m in data.get("data", [])]
 
     def _format_tool_definition(self, tool_def: AIToolDefinition) -> dict[str, Any]:
         """

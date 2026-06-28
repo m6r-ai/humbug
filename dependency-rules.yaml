@@ -5,10 +5,10 @@ modules:
   ai:
     internal_dependencies:
       - ai_tool
+      - http_client
       - syntax
     external_dependencies:
       - "standard_library"
-      - "aiohttp"
       - "certifi"
 
   ai_transcript_conversation:
@@ -78,6 +78,7 @@ modules:
       - filesystem_ai_tool
       - git
       - help_ai_tool
+      - http_client
       - menai_ai_tool
       - mindspace
       - pdf
@@ -90,7 +91,6 @@ modules:
       - terminal_context
     external_dependencies:
       - "standard_library"
-      - "aiohttp"
       - "PySide6"
       - "qasync"
 
@@ -173,6 +173,11 @@ modules:
   help_ai_tool:
     internal_dependencies:
       - ai_tool
+    external_dependencies:
+      - "standard_library"
+
+  http_client:
+    internal_dependencies: []
     external_dependencies:
       - "standard_library"
 

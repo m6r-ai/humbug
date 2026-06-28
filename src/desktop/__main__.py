@@ -58,6 +58,9 @@ def setup_logging() -> None:
         handlers=[handler]
     )
 
+    # Quiet the excessively verbose qasync debug logging
+    logging.getLogger("qasync").setLevel(logging.INFO)
+
     # Clean up old logs if we have too many
     cleanup_old_logs(log_dir, max_logs=50)
 

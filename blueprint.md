@@ -53,7 +53,7 @@ traceable, and consistent with stated intent.
 ### Minimal dependencies, maximum understandability
 Humbug follows the pattern of an OS kernel: simple, largely self-contained, and
 comprehensible from a single repository.
-Only 4 external runtime dependencies exist beyond the Python standard library.
+Only 3 external runtime dependencies exist beyond the Python standard library.
 Both humans and AIs should be able to understand almost every part of the system.
 
 ### Vendor independence

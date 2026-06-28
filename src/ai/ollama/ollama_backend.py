@@ -5,7 +5,6 @@ import socket
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
-import aiohttp
 
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
@@ -13,6 +12,7 @@ from ai.ai_message import AIMessage, AIMessageSource
 from ai.ai_model import AIReasoningEffort
 from ai.ai_conversation_history import AIConversationHistory
 from ai.ollama.ollama_stream_response import OllamaStreamResponse
+from http_client import HttpClient
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
 
@@ -53,12 +53,11 @@ class OllamaBackend(AIBackend):
         headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
         # Force IPv4 — on macOS 'localhost' resolves to ::1 (IPv6) but Ollama
         # listens only on 127.0.0.1, causing EINVAL with the default connector.
-        connector = aiohttp.TCPConnector(family=socket.AF_INET)
-        async with aiohttp.ClientSession(connector=connector) as session:
-            async with session.get(url, headers=headers, ssl=False) as response:
-                response.raise_for_status()
-                data = await response.json()
-                return [m["name"] for m in data.get("models", [])]
+        async with HttpClient(family=socket.AF_INET) as client:
+            response = await client.get(url, headers=headers)
+            response.raise_for_status()
+            data = await response.json()
+            return [m["name"] for m in data.get("models", [])]
 
     async def pull_model(
         self, model_name: str, on_progress: Callable[[str], None]
@@ -68,38 +67,37 @@ class OllamaBackend(AIBackend):
 
         Streams NDJSON progress lines and calls on_progress with each status
         string.  Raises ValueError if the model name is not found, or
-        aiohttp errors for network/server problems.
+        HTTP client errors for network/server problems.
 
         Args:
             model_name: Name of the model to pull (e.g. "llama3.2").
             on_progress: Callback invoked with each status string from Ollama.
         """
         url = self._get_api_endpoint_url("pull")
-        data = json.dumps({"name": model_name, "stream": True}).encode()
+        body = json.dumps({"name": model_name, "stream": True}).encode()
         headers = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
 
-        connector = aiohttp.TCPConnector(family=socket.AF_INET)
-        async with aiohttp.ClientSession(connector=connector) as session:
-            async with session.post(url, data=data, headers=headers, ssl=False) as response:
-                response.raise_for_status()
-                async for raw_line in response.content:
-                    line = raw_line.decode().strip()
-                    if not line:
-                        continue
+        async with HttpClient(family=socket.AF_INET) as client:
+            response = await client.post(url, data=body, headers=headers)
+            response.raise_for_status()
+            async for raw_line in response.content_lines():
+                line = raw_line.decode().strip()
+                if not line:
+                    continue
 
-                    try:
-                        obj = json.loads(line)
+                try:
+                    obj = json.loads(line)
 
-                    except json.JSONDecodeError:
-                        continue
+                except json.JSONDecodeError:
+                    continue
 
-                    if "error" in obj:
-                        raise ValueError(obj["error"])
+                if "error" in obj:
+                    raise ValueError(obj["error"])
 
-                    if "status" in obj:
-                        on_progress(obj["status"])
+                if "status" in obj:
+                    on_progress(obj["status"])
 
     def __init__(self, api_key: str, api_url: str | None) -> None:
         """
