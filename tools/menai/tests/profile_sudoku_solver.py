@@ -33,12 +33,9 @@ _MENAI_MODULES_DIR = _REPO_ROOT / "menai_modules"
 from menai import Menai
 
 
-# ---------------------------------------------------------------------------
 # Puzzle suite
 # Each entry is (label, board) where board is a list of 81 integers,
 # row-major, with 0 for empty cells.
-# ---------------------------------------------------------------------------
-
 DIFFICULTY_NAMES = ["easy", "medium", "hard", "expert"]
 
 # Ordered easy → expert; difficulty tag at index 1 matches DIFFICULTY_NAMES.

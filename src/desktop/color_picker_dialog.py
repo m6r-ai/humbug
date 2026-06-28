@@ -797,10 +797,6 @@ class ThemeColorPickerDialog(QDialog):
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
 
-    # ------------------------------------------------------------------
-    # UI construction
-    # ------------------------------------------------------------------
-
     def _build_ui(self) -> None:
         zoom = self._style_manager.zoom_factor()
         main_layout = QVBoxLayout()
@@ -1119,10 +1115,6 @@ class ThemeColorPickerDialog(QDialog):
         main_layout.addWidget(footer)
 
         self.setLayout(main_layout)
-
-    # ------------------------------------------------------------------
-    # Event handlers
-    # ------------------------------------------------------------------
 
     def _on_mode_selected(self, mode: ColorTheme) -> None:
         self._style_manager.set_color_theme(mode)

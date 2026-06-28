@@ -240,10 +240,6 @@ def _dispatch(s: str, pos: int, stack: list) -> tuple[object, int]:
     raise ValueError(f"Unexpected character {ch!r} at position {pos}")
 
 
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
-
 if __name__ == '__main__':
     import json
 
