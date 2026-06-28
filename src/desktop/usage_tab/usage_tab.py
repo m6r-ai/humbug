@@ -319,8 +319,23 @@ class UsageTab(TabBase):
         """
 
     def get_state(self, temp_state: bool = False) -> TabState:
-        return TabState(type=self.tool_name(), tab_id=self._tab_id, path="", metadata={})
+        """
+        Get serializable state for mindspace persistence.
+
+        When capturing temporary state (e.g. moving between columns), the set
+        of expanded provider accordions is included so it can be restored.
+        """
+        metadata: dict = {}
+        if temp_state:
+            metadata["expanded_providers"] = list(self._usage_widget.expanded_providers())
+
+        return TabState(type=self.tool_name(), tab_id=self._tab_id, path="", metadata=metadata)
 
     @classmethod
     def restore_from_state(cls, state: TabState, parent: QWidget) -> "UsageTab":
-        return cls(state.tab_id, parent)
+        """Create and restore a usage tab from serialized state."""
+        tab = cls(state.tab_id, parent)
+        if state.metadata and "expanded_providers" in state.metadata:
+            tab._usage_widget.restore_expanded_providers(set(state.metadata["expanded_providers"]))
+
+        return tab

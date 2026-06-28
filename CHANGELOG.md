@@ -8,6 +8,8 @@ New features:
 
 Bug fixes:
 
+- On moving a token usage tab the provider stats retain their expansion state.
+
 ## v51 (2026-06-28)
 
 New features:

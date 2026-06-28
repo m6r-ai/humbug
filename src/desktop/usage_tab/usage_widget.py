@@ -315,11 +315,6 @@ class UsageWidget(QWidget):
 
         sorted_providers = self._sorted_providers(by_provider)
 
-        # On first display, expand the highest-usage provider so the page isn't
-        # entirely collapsed; subsequent toggles are remembered across refreshes.
-        if not self._expanded_providers and sorted_providers:
-            self._expanded_providers.add(sorted_providers[0][0])
-
         for provider, models in sorted_providers:
             cl.addWidget(self._provider_detail_card(
                 provider, models, color_map, model_colors, total_tokens,
@@ -500,3 +495,17 @@ class UsageWidget(QWidget):
         """Reset usage data for the current mindspace."""
         if self._mindspace_manager.has_mindspace():
             self._mindspace_manager.mindspace().reset_usage()
+
+    def expanded_providers(self) -> set[str]:
+        """Return the set of provider names whose accordion is currently expanded."""
+        return set(self._expanded_providers)
+
+    def restore_expanded_providers(self, providers: set[str]) -> None:
+        """
+        Replace the expanded-provider set and rebuild the display.
+
+        Used by UsageTab to restore ephemeral expand/collapse state when the
+        tab is moved between columns.
+        """
+        self._expanded_providers = set(providers)
+        self.refresh()
