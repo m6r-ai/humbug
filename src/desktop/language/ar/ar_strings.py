@@ -52,6 +52,7 @@ def get_arabic_strings() -> LanguageStrings:
         close_tabs_to_left="إغلاق التبويبات إلى اليسار",
         close_tabs_to_right="إغلاق التبويبات إلى اليمين",
         close_other_tabs="إغلاق التبويبات الأخرى",
+        close_column="إغلاق العمود",
 
         # Edit menu items
         submit_message="إرسال الرسالة",

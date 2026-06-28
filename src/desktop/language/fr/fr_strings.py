@@ -51,6 +51,7 @@ def get_french_strings() -> LanguageStrings:
         close_tabs_to_left="Fermer les onglets à gauche",
         close_tabs_to_right="Fermer les onglets à droite",
         close_other_tabs="Fermer les autres onglets",
+        close_column="Fermer la colonne",
 
         # Edit menu items
         submit_message="Envoyer le message",

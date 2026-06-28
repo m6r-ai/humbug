@@ -42,6 +42,7 @@ class LanguageStrings:
     close_tabs_to_left: str
     close_tabs_to_right: str
     close_other_tabs: str
+    close_column: str
 
     # Edit menu items
     submit_message: str

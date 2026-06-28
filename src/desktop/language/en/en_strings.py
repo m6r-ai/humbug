@@ -51,6 +51,7 @@ def get_english_strings() -> LanguageStrings:
         close_tabs_to_left="Close Tabs to the Left",
         close_tabs_to_right="Close Tabs to the Right",
         close_other_tabs="Close Other Tabs",
+        close_column="Close Column",
 
         # Edit menu items
         submit_message="Submit Message",

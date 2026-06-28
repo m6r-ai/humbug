@@ -415,6 +415,9 @@ class TabManager(QWidget):
         close_others_action = menu.addAction(strings.close_other_tabs)
         close_others_action.setEnabled(tab_count > 1)
 
+        close_column_action = menu.addAction(strings.close_column)
+        close_column_action.setEnabled(True)
+
         action = menu.exec_(global_pos)
         if action is None:
             return
@@ -430,6 +433,9 @@ class TabManager(QWidget):
 
         elif action == close_others_action:
             self._close_tabs_in_column(column, [i for i in range(tab_count) if i != tab_index])
+
+        elif action == close_column_action:
+            self._close_tabs_in_column(column, list(range(tab_count)))
 
     def _close_tabs_in_column(self, column: ColumnWidget, indexes: list[int]) -> None:
         """

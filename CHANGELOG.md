@@ -4,6 +4,7 @@
 
 New features:
 
+- Added feature to close all tabs in a column from the tab label context menu.
 
 Bug fixes:
 
