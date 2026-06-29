@@ -63,7 +63,6 @@ from menai.menai_vcode import (
     MenaiVCodeReturn,
     MenaiVCodeTailApply,
     MenaiVCodeTailCall,
-    MenaiVCodeTrace,
 )
 from menai.menai_vcode_allocator import SlotMap, allocate_slots
 from menai.menai_vcode_peephole import peephole
@@ -432,18 +431,6 @@ class MenaiBytecodeBuilder:
                     instr.capture_index,
                     src2=ctx.slot_of(instr.value),
                 )
-                i += 1
-                continue
-
-            if isinstance(instr, MenaiVCodeTrace):
-                for msg in instr.messages:
-                    ctx.emit(Opcode.EMIT_TRACE, ctx.slot_of(msg))
-
-                dst_slot = ctx.slot_of(instr.dst)
-                val_slot = ctx.slot_of(instr.value)
-                if dst_slot != val_slot:
-                    ctx.emit(Opcode.MOVE, val_slot, dest=dst_slot)
-
                 i += 1
                 continue
 

@@ -27,12 +27,6 @@ from menai.menai_token import MenaiToken, MenaiTokenType
 from menai.menai_lexer import MenaiLexer
 from menai.menai_ast_builder import MenaiASTBuilder
 
-# Trace watchers (for debugging)
-from menai.menai_vm import MenaiTraceWatcher
-from menai.menai_trace import (
-    MenaiStdoutTraceWatcher, MenaiFileTraceWatcher, MenaiBufferingTraceWatcher
-)
-
 __all__ = [
     # Main API
     "Menai",
@@ -51,8 +45,4 @@ __all__ = [
 
     # Lower-level components
     "MenaiToken", "MenaiTokenType", "MenaiLexer", "MenaiASTBuilder",
-
-    # Trace watchers
-    "MenaiTraceWatcher", "MenaiStdoutTraceWatcher",
-    "MenaiFileTraceWatcher", "MenaiBufferingTraceWatcher",
 ]

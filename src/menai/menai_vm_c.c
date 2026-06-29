@@ -197,7 +197,6 @@ _menai_mul_overflow(long a, long b, long *r) {
 #define OP_APPLY 34
 #define OP_TAIL_APPLY 35
 #define OP_RETURN 37
-#define OP_EMIT_TRACE 40
 #define OP_NONE_P 50
 #define OP_FUNCTION_P 60
 #define OP_FUNCTION_EQ_P 61
@@ -1698,10 +1697,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_raise_eval_error("apply: first argument must be a function");
             goto error;
         }
-
-        case OP_EMIT_TRACE:
-            /* Trace is a no-op in the C VM — no watcher support yet. */
-            break;
 
         case OP_NONE_P: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);

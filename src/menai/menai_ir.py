@@ -156,13 +156,6 @@ class MenaiIRBuildSet:
 
 
 @dataclass
-class MenaiIRTrace:
-    """Plan for compiling a trace expression."""
-    message_plans: list['MenaiIRExpr']  # Messages to emit
-    value_plan: 'MenaiIRExpr'           # Expression to evaluate and return
-
-
-@dataclass
 class MenaiIRBuildStruct:
     """
     Plan for compiling a struct constructor call (TypeName f1 f2 ... fN).
@@ -192,6 +185,5 @@ MenaiIRExpr = (  # pylint: disable=invalid-name
     MenaiIRBuildDict |
     MenaiIRBuildSet |
     MenaiIRBuildStruct |
-    MenaiIRReturn |
-    MenaiIRTrace
+    MenaiIRReturn
 )

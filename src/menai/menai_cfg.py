@@ -254,20 +254,6 @@ class MenaiCFGPhiInstr:
     incoming: list[tuple[MenaiCFGValue, 'MenaiCFGBlock']]
 
 
-@dataclass
-class MenaiCFGTraceInstr:
-    """
-    %result = trace [%msg, ...] %value
-
-    Emits each message via EMIT_TRACE then passes `value` through as the
-    result.  The VM codegen emits EMIT_TRACE for each message then leaves
-    `value` on the stack.
-    """
-    result: MenaiCFGValue
-    messages: list[MenaiCFGValue]
-    value: MenaiCFGValue
-
-
 # Union of all non-terminator instruction types.
 # MenaiCFGPatchClosureInstr is intentionally excluded — it has no result and
 # is stored in MenaiCFGBlock.patch_instrs rather than MenaiCFGBlock.instrs.
@@ -286,7 +272,6 @@ MenaiCFGInstr = (  # pylint: disable=invalid-name
     | MenaiCFGMakeClosureInstr
     | MenaiCFGPatchClosureInstr
     | MenaiCFGPhiInstr
-    | MenaiCFGTraceInstr
 )
 
 
@@ -506,9 +491,6 @@ def _fmt_instr(instr: MenaiCFGInstr) -> str:
         parts = ", ".join(f"{v} <- block{b.id}" for v, b in instr.incoming)
         return f"{instr.result} = phi [{parts}]"
 
-    if isinstance(instr, MenaiCFGTraceInstr):
-        return f"{instr.result} = trace {_fmt_values(instr.messages)} {instr.value}"
-
     return f"<unknown instr {type(instr).__name__}>"
 
 
@@ -627,9 +609,6 @@ def value_ids_in_instr(instr: 'MenaiCFGInstr') -> list[int]:
 
     if isinstance(instr, MenaiCFGPatchClosureInstr):
         return [instr.closure.id, instr.value.id]
-
-    if isinstance(instr, MenaiCFGTraceInstr):
-        return [m.id for m in instr.messages] + [instr.value.id]
 
     # MenaiCFGConstInstr, MenaiCFGGlobalInstr, MenaiCFGParamInstr,
     # MenaiCFGFreeVarInstr, MenaiCFGPhiInstr: no input value references here.

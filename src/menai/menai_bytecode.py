@@ -68,9 +68,6 @@ class Opcode(IntEnum):
     TAIL_APPLY = _op(35, 2)             # TAIL_APPLY r_src0 r_src1 — func in src0, arg_list reg in src1, no dest
     RETURN = _op(37, 1)                 # RETURN r_src0 — return value in r_src0
 
-    # Debugging
-    EMIT_TRACE = _op(40, 1)             # EMIT_TRACE src0 — read register src0, emit to trace watcher
-
     # None operations
     NONE_P = _op(50, 1)                 # r_dest = (none? r_src0)
 
@@ -650,9 +647,6 @@ class Instruction:
 
         if opcode == Opcode.TAIL_APPLY:
             return f"TAIL_APPLY {rn(self.src0)} {rn(self.src1)}"
-
-        if opcode == Opcode.EMIT_TRACE:
-            return f"EMIT_TRACE {rn(self.src0)}"
 
         if opcode == Opcode.RAISE_ERROR:
             return f"RAISE_ERROR {rn(self.src0)}"

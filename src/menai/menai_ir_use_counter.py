@@ -24,7 +24,6 @@ from menai.menai_ir import (
     MenaiIRLetrec,
     MenaiIRQuote,
     MenaiIRReturn,
-    MenaiIRTrace,
     MenaiIRVariable,
 )
 
@@ -170,12 +169,6 @@ class MenaiIRUseCounter:
                 self._walk(field_plan, result, scope_stack, current_frame_id)
 
         elif isinstance(ir, MenaiIRReturn):
-            self._walk(ir.value_plan, result, scope_stack, current_frame_id)
-
-        elif isinstance(ir, MenaiIRTrace):
-            for msg in ir.message_plans:
-                self._walk(msg, result, scope_stack, current_frame_id)
-
             self._walk(ir.value_plan, result, scope_stack, current_frame_id)
 
         elif isinstance(ir, (MenaiIRConstant, MenaiIRQuote, MenaiIREmptyList, MenaiIRError)):

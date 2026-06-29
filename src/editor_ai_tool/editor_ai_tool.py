@@ -17,7 +17,6 @@ from ai_tool import (
     AIToolTimeoutError,
 )
 from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
-from menai import MenaiBufferingTraceWatcher
 from editor_context.editor_context import EditorContext
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
@@ -713,7 +712,7 @@ class EditorAITool(AITool):
         self,
         content: str,
         expression: str
-    ) -> tuple[str, list[str], bool]:
+    ) -> str:
         """
         Apply a Menai transform to buffer content synchronously.
 
@@ -722,7 +721,7 @@ class EditorAITool(AITool):
             expression: Menai expression referencing 'input-text' and 'input-lines'.
 
         Returns:
-            Tuple of (new_content, traces, traces_clipped).
+            The new content string.
 
         Raises:
             AIToolExecutionError: If the program returns an invalid type.
@@ -734,15 +733,7 @@ class EditorAITool(AITool):
             'input-lines': MenaiList(tuple(MenaiString(line) for line in lines)),
         }
 
-        watcher = MenaiBufferingTraceWatcher(max_traces=200)
-        self._menai.set_trace_watcher(watcher)
-        try:
-            raw_result = self._menai.evaluate_raw_with_bindings(expression, bindings)
-            traces = watcher.get_traces()
-            was_clipped = watcher.is_clipped()
-
-        finally:
-            self._menai.set_trace_watcher(None)
+        raw_result = self._menai.evaluate_raw_with_bindings(expression, bindings)
 
         if isinstance(raw_result, MenaiString):
             new_content = raw_result.value
@@ -761,7 +752,7 @@ class EditorAITool(AITool):
                 f"got {raw_result.type_name()}"
             )
 
-        return new_content, traces, was_clipped
+        return new_content
 
     async def _transform(
         self,
@@ -786,7 +777,7 @@ class EditorAITool(AITool):
                 asyncio.to_thread(self._transform_sync, original_content, program)
             )
             try:
-                new_content, traces, watcher_clipped = await asyncio.wait_for(task, timeout=30.0)
+                new_content = await asyncio.wait_for(task, timeout=30.0)
 
             except asyncio.TimeoutError:
                 self._logger.warning("Menai transform timed out for tab '%s'", context_id)
@@ -859,14 +850,11 @@ class EditorAITool(AITool):
             f"AI applied Menai transform to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {context_id}"
         )
 
-        trace_str = '\n'.join(traces) if traces else ''
         result_obj: dict[str, Any] = {
             "message": (
                 f"Transform applied to buffer ({result.get('hunks_applied', 0)} hunks). "
                 "Use save_file to persist."
             ),
-            "trace_data": trace_str,
-            "trace_data_clipped": "yes" if watcher_clipped else "no"
         }
         return AIToolResult(
             id=tool_call.id,

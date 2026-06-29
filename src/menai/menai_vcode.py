@@ -210,19 +210,6 @@ class MenaiVCodePatchClosure:
 
 
 @dataclass
-class MenaiVCodeTrace:
-    """
-    dst = trace(messages..., value)
-
-    Emits each message register via EMIT_TRACE then passes value through
-    as the result.
-    """
-    dst: MenaiVCodeReg
-    messages: list[MenaiVCodeReg]
-    value: MenaiVCodeReg
-
-
-@dataclass
 class MenaiVCodeJump:
     """Unconditional jump to label."""
     label: str
@@ -271,7 +258,6 @@ MenaiVCodeInstr = (  # pylint: disable=invalid-name
     | MenaiVCodeMakeList
     | MenaiVCodeMakeSet
     | MenaiVCodeMakeDict
-    | MenaiVCodeTrace
     | MenaiVCodeJump
     | MenaiVCodeJumpIfTrue
     | MenaiVCodeJumpIfFalse
@@ -374,9 +360,6 @@ def _fmt_instr(instr: MenaiVCodeInstr) -> str:
 
     if isinstance(instr, MenaiVCodeMakeDict):
         return f"{instr.dst} = MAKE_DICT {[(str(k), str(v)) for k, v in instr.pairs]}"
-
-    if isinstance(instr, MenaiVCodeTrace):
-        return f"{instr.dst} = TRACE {_fmt_regs(instr.messages)} {instr.value}"
 
     if isinstance(instr, MenaiVCodeJump):
         return f"JUMP {instr.label}"

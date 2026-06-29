@@ -218,10 +218,6 @@ class MenaiASTDesugarer:
                 # Quote: don't desugar the quoted expression
                 return expr
 
-            if name == 'trace':
-                # Trace is a special form - handle it
-                return self._desugar_trace(expr)
-
             if name == 'and':
                 return self._desugar_and(expr)
 
@@ -607,28 +603,6 @@ class MenaiASTDesugarer:
         desugared_body = self.desugar(body)
 
         return self._make_list((lambda_symbol, params_list, desugared_body), expr)
-
-    def _desugar_trace(self, expr: MenaiASTList) -> MenaiASTNode:
-        """
-        Desugar trace special form.
-
-        (trace msg1 msg2 ... msgN expr)
-
-        Trace is kept as-is but with desugared subexpressions.
-        The IR builder will handle creating the trace IR node.
-        """
-        if expr.length() < 3:  # (trace msg expr) minimum
-            raise MenaiEvalError(
-                message="trace requires at least 2 arguments (message, expr)",
-                suggestion="Usage: (trace \"message\" expression)"
-            )
-
-        # Desugar all subexpressions
-        desugared_elements: list[MenaiASTNode] = [self._make_symbol('trace', expr)]
-        for elem in expr.elements[1:]:  # Skip 'trace' symbol
-            desugared_elements.append(self.desugar(elem))
-
-        return self._make_list(tuple(desugared_elements), expr)
 
     def _desugar_call(self, expr: MenaiASTList) -> MenaiASTNode:
         """Desugar function call by desugaring all elements."""

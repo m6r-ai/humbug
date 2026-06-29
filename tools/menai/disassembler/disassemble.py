@@ -159,9 +159,6 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
         rhs = f"'{rhs_sym}'" if rhs_sym else rhs_reg
         annotation = f"  ; '{lhs_closure}'.{lhs_capture} = {rhs}"
 
-    elif opcode == Opcode.EMIT_TRACE:
-        annotation = f"  ; Emit {reg_name(instr.src0, code)} to trace watcher"
-
     elif opcode == Opcode.RAISE_ERROR:
         if src0 < len(code.constants):
             msg = code.constants[src0]

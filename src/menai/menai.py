@@ -11,7 +11,7 @@ from menai.menai_bytecode import CodeObject
 from menai.menai_compiler import MenaiCompiler
 from menai.menai_ast import MenaiASTNode
 from menai.menai_value import MenaiFunction, MenaiValue, MenaiDict
-from menai.menai_vm import MenaiVM, MenaiTraceWatcher
+from menai.menai_vm import MenaiVM
 from menai.menai_error import MenaiModuleNotFoundError, MenaiModuleError, MenaiCircularImportError
 
 
@@ -1203,7 +1203,7 @@ class Menai:
         per process, consistent with how _prelude_code itself is cached.
         """
         if Menai._prelude_dict is None:
-            result = self.vm.execute(self._prelude, None)
+            result = self.vm.execute(self._prelude, {})
             if not isinstance(result, MenaiDict):
                 raise RuntimeError("Prelude must evaluate to a dict")
 
@@ -1487,14 +1487,3 @@ class Menai:
             List of directories in the module search path
         """
         return self._module_path
-
-    def set_trace_watcher(self, watcher: MenaiTraceWatcher | None) -> None:
-        """
-        Set the trace watcher for this Menai instance.
-
-        The trace watcher receives messages from (trace ...) calls during evaluation.
-
-        Args:
-            watcher: MenaiTraceWatcher instance or None to disable tracing
-        """
-        self.vm.set_trace_watcher(watcher)

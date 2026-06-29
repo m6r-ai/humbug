@@ -8,7 +8,7 @@ from menai.menai_error import MenaiEvalError
 from menai.menai_ir import (
     MenaiIRExpr, MenaiIRConstant, MenaiIRVariable, MenaiIRIf, MenaiIRLet, MenaiIRLetrec,
     MenaiIRLambda, MenaiIRCall, MenaiIRQuote, MenaiIRError, MenaiIREmptyList,
-    MenaiIRReturn, MenaiIRTrace, MenaiIRBuildList, MenaiIRBuildDict, MenaiIRBuildSet,
+    MenaiIRReturn, MenaiIRBuildList, MenaiIRBuildDict, MenaiIRBuildSet,
     MenaiIRBuildStruct
 )
 from menai.menai_ast import (
@@ -213,9 +213,6 @@ class MenaiIRBuilder:
             if name == 'error':
                 return self._analyze_error(expr, ctx)
 
-            if name == 'trace':
-                return self._analyze_trace(expr, ctx, in_tail_position)
-
             if name == 'apply':
                 return self._analyze_apply(expr, ctx, in_tail_position)
 
@@ -232,15 +229,6 @@ class MenaiIRBuilder:
         assert len(expr.elements) == 2, "Error expression should have exactly 2 elements"
         message_plan = self._analyze_expression(expr.elements[1], ctx, in_tail_position=False)
         return MenaiIRError(message=message_plan)
-
-    def _analyze_trace(self, expr: MenaiASTList, ctx: AnalysisContext, in_tail_position: bool) -> MenaiIRTrace:
-        """Analyze a trace expression."""
-        assert len(expr.elements) >= 3, "Trace expression should have at least 3 elements"
-        messages = expr.elements[1:-1]
-        return_expr = expr.elements[-1]
-        message_plans = [self._analyze_expression(msg, ctx, in_tail_position=False) for msg in messages]
-        value_plan = self._analyze_expression(return_expr, ctx, in_tail_position)
-        return MenaiIRTrace(message_plans=message_plans, value_plan=value_plan)
 
     def _analyze_apply(self, expr: MenaiASTList, ctx: AnalysisContext, in_tail_position: bool) -> MenaiIRCall:
         """Analyze an apply expression."""

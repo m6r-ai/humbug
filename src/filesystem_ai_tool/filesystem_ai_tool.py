@@ -18,7 +18,6 @@ from ai_tool import (
     AIToolResult, AIToolCall, AIToolTimeoutError
 )
 from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
-from menai import MenaiBufferingTraceWatcher
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
@@ -2046,7 +2045,7 @@ class FileSystemAITool(AITool):
         path: Path,
         expression: str,
         encoding: str
-    ) -> tuple[str, str, list[str], bool]:
+    ) -> tuple[str, str]:
         """
         Read a file, run a Menai transform program, return results synchronously.
 
@@ -2056,7 +2055,7 @@ class FileSystemAITool(AITool):
             encoding: File encoding to use for reading.
 
         Returns:
-            Tuple of (original_content, new_content, traces, traces_clipped).
+            Tuple of (original_content, new_content).
 
         Raises:
             AIToolExecutionError: If the file cannot be read or the program returns
@@ -2077,16 +2076,7 @@ class FileSystemAITool(AITool):
             'input-lines': MenaiList(tuple(MenaiString(line) for line in lines)),
         }
 
-        watcher = MenaiBufferingTraceWatcher(max_traces=200)
-        self._menai.set_trace_watcher(watcher)
-        try:
-            raw_result = self._menai.evaluate_raw_with_bindings(expression, bindings)
-            traces = watcher.get_traces()
-
-            was_clipped = watcher.is_clipped()
-
-        finally:
-            self._menai.set_trace_watcher(None)
+        raw_result = self._menai.evaluate_raw_with_bindings(expression, bindings)
 
         if isinstance(raw_result, MenaiString):
 
@@ -2107,7 +2097,7 @@ class FileSystemAITool(AITool):
                 f"got {raw_result.type_name()}"
             )
 
-        return original_content, new_content, traces, was_clipped
+        return original_content, new_content
 
     async def _transform_file(
         self,
@@ -2142,7 +2132,7 @@ class FileSystemAITool(AITool):
                 asyncio.to_thread(self._transform_file_sync, path, program, encoding)
             )
             try:
-                original_content, new_content, traces, watcher_clipped = await asyncio.wait_for(
+                original_content, new_content = await asyncio.wait_for(
                     task, timeout=30.0
 
                 )
@@ -2238,11 +2228,8 @@ class FileSystemAITool(AITool):
             MindspaceLogLevel.INFO,
             f"AI transformed file: '{display_path}' ({len(diff_lines)} diff lines)"
         )
-        trace_str = '\n'.join(traces) if traces else ''
         result_obj: dict[str, Any] = {
             "message": f"Transform applied to '{display_path}' ({len(diff_lines)} diff lines).",
-            "trace_data": trace_str,
-            "trace_data_clipped": "yes" if watcher_clipped else "no"
         }
         return AIToolResult(
             id=tool_call.id,

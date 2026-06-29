@@ -4,7 +4,7 @@ import cmath
 from collections.abc import Callable
 import difflib
 import math
-from typing import Any, Protocol, cast
+from typing import Any, cast
 
 from menai.menai_bytecode import CodeObject, Opcode, unpack_instruction
 from menai.menai_error import MenaiEvalError, MenaiCancelledException
@@ -24,17 +24,6 @@ try:
 except ImportError:
     _c_vm_execute = None
     _C_VM_AVAILABLE = False
-
-
-class MenaiTraceWatcher(Protocol):
-    """Protocol for Menai trace watchers."""
-    def on_trace(self, message: str) -> None:
-        """
-        Called when a trace message is emitted.
-
-        Args:
-            message: The trace message as a string (Menai formatted)
-        """
 
 
 # Sentinel returned by _op_call, _op_apply, and _op_return (non-top-level) to
@@ -88,9 +77,6 @@ class MenaiVM:
         self.globals: dict[str, MenaiValue] = {}
         self.validate_bytecode = validate  # Whether to validate bytecode before execution
 
-        # Trace watcher for debugging support
-        self.trace_watcher: MenaiTraceWatcher | None = None
-
         # Cancellation support for non-blocking execution
         self._cancelled: bool = False
 
@@ -99,29 +85,6 @@ class MenaiVM:
 
         # Build dispatch table for fast opcode execution
         self._dispatch_table = self._build_dispatch_table()
-
-    def set_trace_watcher(self, watcher: MenaiTraceWatcher | None) -> None:
-        """
-        Set the trace watcher (replaces any existing watcher).
-
-        Args:
-            watcher: MenaiTraceWatcher instance or None to disable tracing
-        """
-        self.trace_watcher = watcher
-
-    def _emit_trace(self, message: MenaiValue) -> None:
-        """
-        Emit a trace event to the watcher.
-
-        Args:
-            message: The Menai value to trace
-        """
-        if self.trace_watcher is None:
-            return  # Fast path: no watcher, no work
-
-        # Convert message to string using describe() and notify watcher
-        message_str = message.describe()
-        self.trace_watcher.on_trace(message_str)
 
     def cancel(self) -> None:
         """
@@ -164,7 +127,6 @@ class MenaiVM:
         table[Opcode.APPLY] = self._op_apply
         table[Opcode.TAIL_APPLY] = self._op_tail_apply
         table[Opcode.RETURN] = self._op_return
-        table[Opcode.EMIT_TRACE] = self._op_emit_trace
         table[Opcode.FUNCTION_P] = self._op_function_p
         table[Opcode.FUNCTION_EQ_P] = self._op_function_eq_p
         table[Opcode.FUNCTION_NEQ_P] = self._op_function_neq_p
@@ -384,8 +346,11 @@ class MenaiVM:
         if self.validate_bytecode:
             validate_bytecode(code)
 
-        # Delegate to the C VM when available and no trace watcher is active.
-        if _C_VM_AVAILABLE and self.trace_watcher is None and not self._cancelled:
+        # Delegate to the C VM when available.
+        # The C VM cannot handle a dict of slow MenaiValue objects containing
+        # functions (their bytecode is None after round-tripping).  Only
+        # delegate when globals is a CodeObject, None, or empty.
+        if _C_VM_AVAILABLE and not self._cancelled and not isinstance(globals_dict, dict):
             return cast(Callable, _c_vm_execute)(code, globals_dict or {})
 
         # If globals_dict is a CodeObject (the prelude), execute it to obtain
@@ -1033,19 +998,6 @@ class MenaiVM:
         # Returning to a real caller: store result, signal the loop to re-sync frame.
         regs[caller.base + frame.return_dest] = regs[frame.base + src0]
         return _FRAME_CHANGE
-
-    def _op_emit_trace(  # pylint: disable=useless-return
-        self, frame: Frame, _dest: int, src0: int, _src1: int, _src2: int
-    ) -> MenaiValue | None:
-        """EMIT_TRACE src0: Read value from register src0 and emit to trace watcher."""
-        message = self.regs[frame.base + src0]
-
-        # Emit trace if watcher is available
-        if self.trace_watcher:
-            self._emit_trace(message)
-
-        # Continue execution (no return value)
-        return None
 
     def _op_function_p(  # pylint: disable=useless-return
         self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int

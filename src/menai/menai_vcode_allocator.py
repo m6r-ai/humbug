@@ -70,7 +70,6 @@ from menai.menai_vcode import (
     MenaiVCodeReturn,
     MenaiVCodeTailApply,
     MenaiVCodeTailCall,
-    MenaiVCodeTrace,
 )
 
 
@@ -175,26 +174,6 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
             for reg_id in uses:
                 _kill_if_dead(reg_id, idx)
 
-            _kill_if_dead(dst_id, idx)
-            continue
-
-        # MenaiVCodeTrace: result is an alias for the value input — assign
-        # them the same slot so the MOVE emitted by the bytecode builder is
-        # always a no-op and eliminated by the peephole pass.
-        if isinstance(instr, MenaiVCodeTrace):
-            for reg_id in [r.id for r in instr.messages]:
-                _kill_if_dead(reg_id, idx)
-
-            val_id = instr.value.id
-            dst_id = instr.dst.id
-            if val_id in slots:
-                slots[dst_id] = slots[val_id]
-
-            else:
-                slots[dst_id] = _free_slot()
-                slots[val_id] = slots[dst_id]
-
-            live.add(dst_id)
             _kill_if_dead(dst_id, idx)
             continue
 
@@ -389,9 +368,6 @@ def _defs_uses(instr: MenaiVCodeInstr) -> tuple[list[int], list[int]]:
 
     if isinstance(instr, MenaiVCodeMakeDict):
         return [instr.dst.id], [r.id for k, v in instr.pairs for r in (k, v)]
-
-    if isinstance(instr, MenaiVCodeTrace):
-        return [instr.dst.id], [r.id for r in instr.messages] + [instr.value.id]
 
     if isinstance(instr, MenaiVCodeJumpIfTrue):
         return [], [instr.cond.id]

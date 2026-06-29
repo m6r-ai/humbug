@@ -76,7 +76,7 @@ class BytecodeValidator:
     NO_DEST_OPCODES: frozenset = frozenset({
         Opcode.TAIL_CALL, Opcode.TAIL_APPLY,
         Opcode.PATCH_CLOSURE, Opcode.RETURN,
-        Opcode.EMIT_TRACE, Opcode.JUMP, Opcode.JUMP_IF_FALSE,
+        Opcode.JUMP, Opcode.JUMP_IF_FALSE,
         Opcode.JUMP_IF_TRUE, Opcode.RAISE_ERROR,
     })
 
@@ -355,17 +355,6 @@ class BytecodeValidator:
                     raise ValidationError(
                         ValidationErrorType.UNINITIALIZED_VARIABLE,
                         f"MOVE source register {var_index} may be uninitialized",
-                        instruction_index=instr_idx,
-                        opcode=opcode,
-                        context=f"Initialized variables: {sorted(current_initialized)}"
-                    )
-
-            if opcode == Opcode.EMIT_TRACE:
-                var_index = instr.src0
-                if var_index not in current_initialized:
-                    raise ValidationError(
-                        ValidationErrorType.UNINITIALIZED_VARIABLE,
-                        f"EMIT_TRACE source register {var_index} may be uninitialized",
                         instruction_index=instr_idx,
                         opcode=opcode,
                         context=f"Initialized variables: {sorted(current_initialized)}"

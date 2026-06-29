@@ -67,7 +67,6 @@ from menai.menai_cfg import (
     MenaiCFGSelfLoopTerm,
     MenaiCFGTailApplyTerm,
     MenaiCFGTailCallTerm,
-    MenaiCFGTraceInstr,
     MenaiCFGValue,
 )
 from menai.menai_vcode import (
@@ -94,7 +93,6 @@ from menai.menai_vcode import (
     MenaiVCodeReturn,
     MenaiVCodeTailApply,
     MenaiVCodeTailCall,
-    MenaiVCodeTrace,
 )
 
 
@@ -394,13 +392,6 @@ class MenaiVCodeBuilder:
             instrs.append(MenaiVCodeMakeDict(dst=dst, pairs=pairs))
             all_regs = [r for k, v in pairs for r in (k, v)]
             return max(max_reg_id, dst.id, *(r.id for r in all_regs)) if all_regs else max(max_reg_id, dst.id)
-
-        if isinstance(instr, MenaiCFGTraceInstr):
-            dst = self._reg(instr.result)
-            messages = [self._reg(m) for m in instr.messages]
-            value = self._reg(instr.value)
-            instrs.append(MenaiVCodeTrace(dst=dst, messages=messages, value=value))
-            return max(max_reg_id, dst.id, value.id, *(r.id for r in messages)) if messages else max(max_reg_id, dst.id, value.id)
 
         raise TypeError(
             f"MenaiVCodeBuilder: unhandled instruction {type(instr).__name__}"

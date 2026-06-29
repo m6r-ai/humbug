@@ -8,7 +8,6 @@ from typing import Any
 
 from menai import Menai, MenaiError, MenaiCancelledException
 from menai import MenaiTokenError, MenaiASTBuildError, MenaiCodegenError
-from menai import MenaiBufferingTraceWatcher
 from ai_tool import (
     AITool, AIToolCall, AIToolDefinition, AIToolParameter, AIToolResult,
     AIToolExecutionError, AIToolTimeoutError, AIToolAuthorizationCallback,
@@ -131,34 +130,21 @@ class MenaiAITool(AITool):
         """
         self._tool.vm.cancel()
 
-    def _evaluate_expression_sync(self, expression: str) -> tuple[str, list[str], bool]:
+    def _evaluate_expression_sync(self, expression: str) -> str:
         """
         Synchronous helper for expression evaluation.
-
-        Sets up trace collection and returns both result and traces.
 
         Args:
             expression: Menai expression to evaluate
 
         Returns:
-            Tuple of (result_string, traces_list, was_clipped)
+            Formatted result string
 
         Raises:
             Various Menai-related exceptions
         """
-        # Set up trace watcher to collect any trace output
-        watcher = MenaiBufferingTraceWatcher(max_traces=200)
-        self._tool.set_trace_watcher(watcher)
-
-        try:
-            result = self._tool.evaluate_and_format(expression)
-            traces = watcher.get_traces()
-            was_clipped = watcher.is_clipped()
-            return result, traces, was_clipped
-
-        finally:
-            # Clean up watcher
-            self._tool.set_trace_watcher(None)
+        result = self._tool.evaluate_and_format(expression)
+        return result
 
     def get_brief_description(self) -> str:
         """Get brief one-line description for system prompt."""
@@ -512,17 +498,6 @@ Syntax: (operator arg1 arg2 ...)
 - Module names can include subdirectories: (e.g. import "lib/helpers")
 - Available modules can be found in the module search path directories
 
-## Debugging with trace
-
-- (trace message1 message2 ... messageN expr) → special form for debugging
-- Emits messages BEFORE evaluating expr, then returns expr's value
-- Messages are evaluated and converted to strings for output
-- Traces appear in the tool result context for inspection
-- Example: (trace "Computing factorial" (factorial 5))
-- Multiple messages: (trace "x=" x "y=" y (integer+ x y))
-- Useful for debugging recursive functions and complex algorithms
-- Trace output shows execution order, helping identify logic issues
-
 ## Raising errors
 
 - (error msg) → special form that raises a runtime error; msg must be a string expression
@@ -598,7 +573,7 @@ Syntax: (operator arg1 arg2 ...)
 
             try:
                 # Wait for the task with timeout
-                result, traces, watcher_clipped = await asyncio.wait_for(
+                result = await asyncio.wait_for(
                     task,
                     timeout=10.0  # Increased timeout for complex functional programming
                 )
@@ -634,16 +609,8 @@ Syntax: (operator arg1 arg2 ...)
                     f"AI evaluated Menai expression: '{expression[:80]}{'...' if len(expression) > 80 else ''}'"
                 )
 
-            # Build context only if traces exist
-            trace_str = ""
-
-            if traces:
-                trace_str = "\n".join(traces)
-
             result_object = {
                 "result": result,
-                "trace_data": trace_str,
-                "trace_data_clipped": "yes" if watcher_clipped else "no"
             }
 
             return AIToolResult(

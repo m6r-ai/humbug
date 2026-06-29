@@ -24,7 +24,6 @@ from menai.menai_ir import (
     MenaiIRLetrec,
     MenaiIRQuote,
     MenaiIRReturn,
-    MenaiIRTrace,
     MenaiIRVariable,
 )
 from menai.menai_value import MenaiBoolean
@@ -107,12 +106,6 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
 
         if isinstance(ir, MenaiIRReturn):
             return MenaiIRReturn(value_plan=self._opt(ir.value_plan, frame_stack))
-
-        if isinstance(ir, MenaiIRTrace):
-            return MenaiIRTrace(
-                message_plans=[self._opt(m, frame_stack) for m in ir.message_plans],
-                value_plan=self._opt(ir.value_plan, frame_stack),
-            )
 
         if isinstance(ir, (MenaiIRConstant, MenaiIRVariable, MenaiIRQuote, MenaiIREmptyList, MenaiIRError)):
             return ir

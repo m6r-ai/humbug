@@ -19,7 +19,6 @@ making it safe for AI tool integration.
 - Pattern matching
 - Dictionaries with O(1) lookup
 - Module system
-- Trace debugging support
 
 ## Architecture
 
@@ -104,22 +103,6 @@ tool = Menai(
 ```python
 tool.clear_module_cache()                   # Clear cached modules
 tool.set_module_path([".", "my_modules"])   # Update search path (clears cache)
-```
-
-### Trace watchers
-
-```python
-from menai import MenaiStdoutTraceWatcher, MenaiBufferingTraceWatcher
-
-# Print traces to stdout
-tool = Menai()
-tool.add_trace_watcher(MenaiStdoutTraceWatcher())
-
-# Collect traces into a buffer
-watcher = MenaiBufferingTraceWatcher()
-tool.add_trace_watcher(watcher)
-tool.evaluate("...")
-print(watcher.get_traces())
 ```
 
 ### Error handling

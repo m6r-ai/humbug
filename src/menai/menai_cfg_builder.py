@@ -30,7 +30,6 @@ from menai.menai_cfg import (
     MenaiCFGSelfLoopTerm,
     MenaiCFGTailApplyTerm,
     MenaiCFGTailCallTerm,
-    MenaiCFGTraceInstr,
     MenaiCFGValue,
 )
 from menai.menai_ir import (
@@ -49,7 +48,6 @@ from menai.menai_ir import (
     MenaiIRLetrec,
     MenaiIRQuote,
     MenaiIRReturn,
-    MenaiIRTrace,
     MenaiIRVariable,
 )
 from menai.menai_value import MenaiList
@@ -239,9 +237,6 @@ class MenaiCFGBuilder:
             # MenaiIRReturn is the IR tree's explicit return wrapper.
             # We honour tail=True here since the IR already marked this.
             return self._build_expr(ir.value_plan, block, scope, state, tail=True)
-
-        if isinstance(ir, MenaiIRTrace):
-            return self._build_trace(ir, block, scope, state)
 
         if isinstance(ir, MenaiIRError):
             return self._build_error(ir, block, scope, state)
@@ -836,25 +831,6 @@ class MenaiCFGBuilder:
             result=result,
             op=ir.builtin_name,
             args=arg_vals,
-        ))
-        return result, block
-
-    def _build_trace(
-        self, ir: MenaiIRTrace, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState,
-    ) -> tuple[MenaiCFGValue, MenaiCFGBlock]:
-        """Build a trace instruction wrapping a value with debug messages."""
-        msg_vals: list[MenaiCFGValue] = []
-        for msg_plan in ir.message_plans:
-            msg_val, block = self._build_expr(msg_plan, block, scope, state, tail=False)
-            msg_vals.append(msg_val)
-
-        value_val, block = self._build_expr(ir.value_plan, block, scope, state, tail=False)
-
-        result = state.new_value("trace_result")
-        block.instrs.append(MenaiCFGTraceInstr(
-            result=result,
-            messages=msg_vals,
-            value=value_val,
         ))
         return result, block
 
