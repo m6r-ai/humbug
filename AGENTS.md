@@ -13,6 +13,20 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
   you want to be somewhere else.
 - Terminals will not open with a python virtual environment by default.  The venv is at `venv/` in the mindspace root.
 
+## Menai C VM binary
+
+- The Menai C VM is a compiled C extension (`src/menai/menai_vm_c*.so` / `.pyd`).
+- GitHub Actions builds it for all supported platforms on push to `main`
+  (see `.github/workflows/build-menai-vm.yml`).
+- If you don't have a C compiler, fetch the pre-built binary:
+  ```bash
+  python fetch-menai-vm.py
+  ```
+- If you do have a C compiler, build locally:
+  ```bash
+  python setup.py build_ext --inplace
+  ```
+
 ## Code quality
 
 - Before considering any code change complete, run the full suite of static analysis tools:

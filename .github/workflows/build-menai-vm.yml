@@ -1,0 +1,140 @@
+name: Build Menai C VM
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64
+          - runner: ubuntu-latest
+            python: "3.14"
+            label: linux-x86_64-py314
+          - runner: ubuntu-latest
+            python: "3.13"
+            label: linux-x86_64-py313
+          - runner: ubuntu-latest
+            python: "3.12"
+            label: linux-x86_64-py312
+          - runner: ubuntu-latest
+            python: "3.11"
+            label: linux-x86_64-py311
+          - runner: ubuntu-latest
+            python: "3.10"
+            label: linux-x86_64-py310
+          # Linux ARM64
+          - runner: ubuntu-24.04-arm
+            python: "3.14"
+            label: linux-arm64-py314
+          - runner: ubuntu-24.04-arm
+            python: "3.13"
+            label: linux-arm64-py313
+          - runner: ubuntu-24.04-arm
+            python: "3.12"
+            label: linux-arm64-py312
+          - runner: ubuntu-24.04-arm
+            python: "3.11"
+            label: linux-arm64-py311
+          - runner: ubuntu-24.04-arm
+            python: "3.10"
+            label: linux-arm64-py310
+          # macOS ARM64 (Apple Silicon)
+          - runner: macos-latest
+            python: "3.14"
+            label: macos-arm64-py314
+          - runner: macos-latest
+            python: "3.13"
+            label: macos-arm64-py313
+          - runner: macos-latest
+            python: "3.12"
+            label: macos-arm64-py312
+          - runner: macos-latest
+            python: "3.11"
+            label: macos-arm64-py311
+          - runner: macos-latest
+            python: "3.10"
+            label: macos-arm64-py310
+          # macOS x86_64 (Intel)
+          - runner: macos-13
+            python: "3.14"
+            label: macos-x86_64-py314
+          - runner: macos-13
+            python: "3.13"
+            label: macos-x86_64-py313
+          - runner: macos-13
+            python: "3.12"
+            label: macos-x86_64-py312
+          - runner: macos-13
+            python: "3.11"
+            label: macos-x86_64-py311
+          - runner: macos-13
+            python: "3.10"
+            label: macos-x86_64-py310
+          # Windows x86_64
+          - runner: windows-latest
+            python: "3.14"
+            label: windows-x86_64-py314
+          - runner: windows-latest
+            python: "3.13"
+            label: windows-x86_64-py313
+          - runner: windows-latest
+            python: "3.12"
+            label: windows-x86_64-py312
+          - runner: windows-latest
+            python: "3.11"
+            label: windows-x86_64-py311
+          - runner: windows-latest
+            python: "3.10"
+            label: windows-x86_64-py310
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install build dependencies
+        run: python -m pip install setuptools pytest
+
+      - name: Build C extension
+        run: python setup.py build_ext --inplace
+
+      - name: Discover extension filename
+        id: ext
+        shell: python
+        run: |
+          import sysconfig, os, glob
+          suffix = sysconfig.get_config_var('EXT_SUFFIX')
+          pattern = f'src/menai/menai_vm_c*{suffix}'
+          matches = glob.glob(pattern)
+          if not matches:
+              print(f'ERROR: no file matching {pattern}')
+              exit(1)
+          filename = os.path.basename(matches[0])
+          print(f'Found: {filename}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'filename={filename}\n')
+
+      - name: Verify import
+        run: python -c "from menai.menai_vm_c import execute; print('C VM OK')"
+
+      - name: Run Menai tests
+        run: python -m pytest tests/menai/ -x -q
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: menai-vm-${{ matrix.label }}
+          path: src/menai/${{ steps.ext.outputs.filename }}
+          if-no-files-found: error
+          retention-days: 90

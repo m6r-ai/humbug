@@ -7,6 +7,8 @@ New features:
 - AI messages that contain no content (previously displayed as "...") are now suppressed.
 - Removed the `trace` special form from Menai.  It was an interesting idea a few months ago but didn't turn out
   to be that useful in practice.
+- Set up GitHub actions to build binaries for the Menai VM and added a script to fetch these instead
+  of needing to compile them locally.
 
 Bug fixes:
 
