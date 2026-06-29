@@ -64,19 +64,19 @@ jobs:
             python: "3.10"
             label: macos-arm64-py310
           # macOS x86_64 (Intel)
-          - runner: macos-13
+          - runner: macos-15-intel
             python: "3.14"
             label: macos-x86_64-py314
-          - runner: macos-13
+          - runner: macos-15-intel
             python: "3.13"
             label: macos-x86_64-py313
-          - runner: macos-13
+          - runner: macos-15-intel
             python: "3.12"
             label: macos-x86_64-py312
-          - runner: macos-13
+          - runner: macos-15-intel
             python: "3.11"
             label: macos-x86_64-py311
-          - runner: macos-13
+          - runner: macos-15-intel
             python: "3.10"
             label: macos-x86_64-py310
           # Windows x86_64
