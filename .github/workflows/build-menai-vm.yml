@@ -97,9 +97,9 @@ jobs:
             label: windows-x86_64-py310
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
 
@@ -137,7 +137,7 @@ jobs:
         run: python -m pytest tests/menai/ -x -q
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: menai-vm-${{ matrix.label }}
           path: src/menai/${{ steps.ext.outputs.filename }}
