@@ -330,14 +330,16 @@ class MenaiVM:
     def execute(
         self,
         code: CodeObject,
-        globals_dict: dict[str, MenaiValue] | CodeObject | None = None
+        globals_dict: dict[str, MenaiValue] | CodeObject | None = None,
+        extra_bindings: dict[str, MenaiValue] | None = None
     ) -> MenaiValue:
         """
         Execute a code object and return the result.
 
         Args:
             code: Compiled code object to execute
-            globals_dict: Optional dictionary of global values (prelude functions and constants)
+            globals_dict: Optional globals — a CodeObject (prelude) or dict of global values
+            extra_bindings: Optional dict of extra name→value bindings merged into globals per-call
 
         Returns:
             Result value
@@ -347,11 +349,8 @@ class MenaiVM:
             validate_bytecode(code)
 
         # Delegate to the C VM when available.
-        # The C VM cannot handle a dict of slow MenaiValue objects containing
-        # functions (their bytecode is None after round-tripping).  Only
-        # delegate when globals is a CodeObject, None, or empty.
-        if _C_VM_AVAILABLE and not self._cancelled and not isinstance(globals_dict, dict):
-            return cast(Callable, _c_vm_execute)(code, globals_dict or {})
+        if _C_VM_AVAILABLE and not self._cancelled:
+            return cast(Callable, _c_vm_execute)(code, globals_dict or {}, extra_bindings or {})
 
         # If globals_dict is a CodeObject (the prelude), execute it to obtain
         # the actual globals dict, caching the result by object identity so the

@@ -1123,6 +1123,152 @@ globals_build(GlobalsTable *gt, const GlobalsTable *globals_gt)
     return 0;
 }
 
+static MenaiValue *globals_lookup_h(const GlobalsTable *gt, const char *name, hash_t h);
+
+/*
+ * globals_merge_extra - merge a Python dict of extra bindings into a per-call
+ * GlobalsTable.  Extra bindings shadow prelude entries with the same name.
+ *
+ * The extra bindings are simple values (strings, lists) that
+ * menai_convert_value handles without issue.  This avoids round-tripping
+ * prelude functions through Python (which would strip their bytecode).
+ *
+ * Returns 0 on success, -1 on error with a Python exception set.
+ */
+static int
+globals_merge_extra(GlobalsTable *gt, PyObject *extra_dict)
+{
+    if (!extra_dict || extra_dict == Py_None) {
+        return 0;
+    }
+
+    Py_ssize_t nextra = PyDict_Size(extra_dict);
+    if (nextra == 0) {
+        return 0;
+    }
+
+    /* Grow the entries array to hold the extra bindings. */
+    ssize_t new_count = gt->count + nextra;
+    GlobalsEntry *new_entries = (GlobalsEntry *)realloc(gt->entries, new_count * sizeof(GlobalsEntry));
+    if (!new_entries) {
+        PyErr_NoMemory();
+        return -1;
+    }
+
+    gt->entries = new_entries;
+
+    /* Rebuild the hash table with enough capacity for all entries. */
+    free(gt->slots);
+    gt->slots = NULL;
+    gt->slot_count = 0;
+
+    ssize_t min_slots = (new_count * 3 + 1) / 2;
+    ssize_t sc = 4;
+    while (sc < min_slots) {
+        sc <<= 1;
+    }
+
+    gt->slots = (GlobalsSlot *)calloc(sc, sizeof(GlobalsSlot));
+    if (!gt->slots) {
+        PyErr_NoMemory();
+        return -1;
+    }
+    gt->slot_count = sc;
+
+    /* Re-hash existing entries. */
+    ssize_t mask = sc - 1;
+    for (ssize_t i = 0; i < gt->count; i++) {
+        const char *name = gt->entries[i].name;
+        hash_t h = menai_name_str_hash(name);
+        uhash_t perturb = (uhash_t)h;
+        ssize_t slot = (ssize_t)(perturb & (uhash_t)mask);
+        while (1) {
+            if (gt->slots[slot].name == NULL) {
+                gt->slots[slot].name = name;
+                gt->slots[slot].hash = h;
+                gt->slots[slot].value = gt->entries[i].value;
+                break;
+            }
+            perturb >>= 5;
+            slot = (ssize_t)((5 * (uhash_t)slot + 1 + perturb) & (uhash_t)mask);
+        }
+    }
+
+    /* Insert extra bindings, overwriting existing entries with the same name. */
+    PyObject *key, *val;
+    Py_ssize_t pos = 0;
+    while (PyDict_Next(extra_dict, &pos, &key, &val)) {
+        const char *name_utf8 = PyUnicode_AsUTF8(key);
+        if (!name_utf8) {
+            return -1;
+        }
+
+        MenaiValue *fast_val = menai_convert_value(val);
+        if (!fast_val) {
+            return -1;
+        }
+
+        hash_t h = menai_name_str_hash(name_utf8);
+
+        /* Check if the name already exists in the hash table. */
+        MenaiValue *existing = globals_lookup_h(gt, name_utf8, h);
+        if (existing) {
+            /* Overwrite: find the entry and slot, replace the value. */
+            for (ssize_t i = 0; i < gt->count; i++) {
+                if (strcmp(gt->entries[i].name, name_utf8) == 0) {
+                    menai_release(gt->entries[i].value);
+                    gt->entries[i].value = fast_val;
+                    break;
+                }
+            }
+
+            /* Update the hash slot. */
+            uhash_t perturb = (uhash_t)h;
+            ssize_t slot = (ssize_t)(perturb & (uhash_t)mask);
+            for (;;) {
+                if (gt->slots[slot].name != NULL &&
+                    gt->slots[slot].hash == h &&
+                    strcmp(gt->slots[slot].name, name_utf8) == 0) {
+                    gt->slots[slot].value = fast_val;
+                    break;
+                }
+
+                perturb >>= 5;
+                slot = (ssize_t)((5 * (uhash_t)slot + 1 + perturb) & (uhash_t)mask);
+            }
+        } else {
+            /* New entry: strdup the name (globals_free will free it). */
+            char *name_copy = strdup(name_utf8);
+            if (!name_copy) {
+                menai_release(fast_val);
+                PyErr_NoMemory();
+                return -1;
+            }
+
+            gt->entries[gt->count].name = name_copy;
+            gt->entries[gt->count].value = fast_val;
+            gt->count++;
+
+            /* Insert into the hash table. */
+            uhash_t perturb = (uhash_t)h;
+            ssize_t slot = (ssize_t)(perturb & (uhash_t)mask);
+            while (1) {
+                if (gt->slots[slot].name == NULL) {
+                    gt->slots[slot].name = name_copy;
+                    gt->slots[slot].hash = h;
+                    gt->slots[slot].value = fast_val;
+                    break;
+                }
+
+                perturb >>= 5;
+                slot = (ssize_t)((5 * (uhash_t)slot + 1 + perturb) & (uhash_t)mask);
+            }
+        }
+    }
+
+    return 0;
+}
+
 static MenaiValue *
 globals_lookup_h(const GlobalsTable *gt, const char *name, hash_t h)
 {
@@ -6805,8 +6951,9 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
 {
     PyObject *code;
     PyObject *globals_dict;
+    PyObject *extra_bindings = NULL;
 
-    if (!PyArg_ParseTuple(args, "OO", &code, &globals_dict)) {
+    if (!PyArg_ParseTuple(args, "OO|O", &code, &globals_dict, &extra_bindings)) {
         return NULL;
     }
 
@@ -6832,6 +6979,16 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     if (globals_build(&globals, globals_gt) < 0) {
         menai_code_object_release(native_code);
         return NULL;
+    }
+
+    /* Merge extra bindings (input-text, input-lines, etc.) into the per-call
+     * globals table.  These shadow prelude entries with the same name. */
+    if (extra_bindings && extra_bindings != Py_None) {
+        if (globals_merge_extra(&globals, extra_bindings) < 0) {
+            globals_free(&globals);
+            menai_code_object_release(native_code);
+            return NULL;
+        }
     }
 
     /* Compute the register window size. */
