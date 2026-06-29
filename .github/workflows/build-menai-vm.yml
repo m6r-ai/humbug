@@ -126,7 +126,12 @@ jobs:
               f.write(f'filename={filename}\n')
 
       - name: Verify import
-        run: python -c "from menai.menai_vm_c import execute; print('C VM OK')"
+        shell: python
+        run: |
+          import sys
+          sys.path.insert(0, 'src')
+          from menai.menai_vm_c import execute
+          print('C VM OK')
 
       - name: Run Menai tests
         run: python -m pytest tests/menai/ -x -q
