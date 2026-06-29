@@ -501,7 +501,7 @@ menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a)
     }
 
     /* Extract as little-endian two's complement bytes. */
-#if PY_VERSION_HEX >= 0x030E00A1
+#if PY_VERSION_HEX >= 0x030D0000
     int bytearray_ret = _PyLong_AsByteArray((PyLongObject *)obj, buf, nbytes, 1, 1, 1);
 #else
     int bytearray_ret = _PyLong_AsByteArray((PyLongObject *)obj, buf, nbytes, 1, 1);
