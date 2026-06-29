@@ -59,9 +59,9 @@ class ASTComment(ASTNode):
 @dataclass
 class ASTList(ASTNode):
     """A list with elements and associated comments."""
-    elements: list[ASTNode | 'ASTComment']  # Mix of nodes and comments
+    elements: list[ASTNode | ASTComment]  # Mix of nodes and comments
 
-    def __init__(self, elements: list[ASTNode | 'ASTComment'], start_line: int):
+    def __init__(self, elements: list[ASTNode | ASTComment], start_line: int):
         self.elements = elements
         self.start_line = start_line
         self.end_line = start_line  # Will be updated when we know the closing paren line
