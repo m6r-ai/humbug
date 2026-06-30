@@ -41,19 +41,19 @@
  * used throughout this file.  The Interlocked* functions and SwitchToThread
  * are compiler intrinsics, so we only need their declarations.
  */
-long __cdecl InterlockedCompareExchange(long volatile *Destination, long Exchange, long Comparand);
+long _InterlockedCompareExchange(long volatile *Destination, long Exchange, long Comparand);
 #pragma intrinsic(_InterlockedCompareExchange)
-long __cdecl InterlockedExchange(long volatile *Target, long Value);
+long _InterlockedExchange(long volatile *Target, long Value);
 #pragma intrinsic(_InterlockedExchange)
-int __cdecl SwitchToThread(void);
+int _SwitchToThread(void);
 #pragma intrinsic(_SwitchToThread)
 
 typedef volatile long _menai_atomic_int;
 static inline int _menai_atomic_load(_menai_atomic_int *p) {
-    return (int)InterlockedCompareExchange(p, 0, 0);
+    return (int)_InterlockedCompareExchange(p, 0, 0);
 }
 static inline void _menai_atomic_store(_menai_atomic_int *p, int val) {
-    InterlockedExchange(p, (long)val);
+    _InterlockedExchange(p, (long)val);
 }
 
 #else
