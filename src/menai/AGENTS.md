@@ -121,11 +121,12 @@ You can find tools related to Menai in tools/menai.
 
 ## VM implementation
 
-The C VM (`menai_vm_c`) is the primary implementation.  It is compiled from C source
-and loaded at runtime; the Python VM (`menai_vm.py`) is retained as a fallback for
-platforms or builds where the C extension is not available.  When implementing new
-functionality, target the C VM first.  The Python VM is a legacy fallback and is
-being phased out.
+The C VM (`menai_vm_c`) is the execution engine, compiled from C source and
+loaded at runtime.  `menai_vm.py` is a thin Python wrapper that exposes the C
+VM's `execute` and `cancel` functions to the rest of the codebase.  Pre-built
+binaries for all supported platforms are published via GitHub Releases (use
+`python fetch-menai-vm.py` to download, or `python setup.py build_ext --inplace`
+to build locally).
 
 The C VM currently makes use of some Python runtime library functionality, but with the
 exception of the bridge layer between C and Python, the C code should be systematically

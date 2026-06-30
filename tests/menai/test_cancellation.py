@@ -7,7 +7,6 @@ import pytest
 
 from menai import Menai
 from menai.menai_error import MenaiCancelledException
-from menai.menai_vm import _C_VM_AVAILABLE
 
 
 # A Menai expression that loops for a very long time (infinite recursion with
@@ -26,7 +25,6 @@ def menai():
     return Menai()
 
 
-@pytest.mark.skipif(not _C_VM_AVAILABLE, reason="C VM not available")
 class TestCVMCancellation:
     """Tests for the C VM's thread-safe cancellation mechanism."""
 

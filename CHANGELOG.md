@@ -9,6 +9,8 @@ New features:
   to be that useful in practice.
 - Set up GitHub actions to build binaries for the Menai VM and added a script to fetch these instead
   of needing to compile them locally.
+- Removed the legacy Python implementation fo the Menai VM.  The C version is now definitive on all platforms, with binaries
+  available from GitHub.
 
 Bug fixes:
 
