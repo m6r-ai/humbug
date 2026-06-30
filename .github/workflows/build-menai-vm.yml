@@ -3,9 +3,10 @@ name: Build Menai C VM
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # needed to create releases and upload assets
 
 jobs:
   build:
@@ -136,10 +137,16 @@ jobs:
       - name: Run Menai tests
         run: python -m pytest tests/menai/ -x -q
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
+      - name: Stage binary for release
+        run: cp "src/menai/${{ steps.ext.outputs.filename }}" "${{ matrix.label }}.bin"
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: menai-vm-${{ matrix.label }}
-          path: src/menai/${{ steps.ext.outputs.filename }}
-          if-no-files-found: error
-          retention-days: 90
+          tag_name: menai-vm-latest
+          name: Menai C VM (latest)
+          body: |
+            Pre-built Menai C VM binaries, automatically built from main.
+            Updated on every successful build.
+          prerelease: true
+          files: ${{ matrix.label }}.bin
