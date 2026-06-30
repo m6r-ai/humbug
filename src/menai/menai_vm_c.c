@@ -33,6 +33,9 @@
  */
 #if defined(_MSC_VER) && !defined(__clang__)
 
+/* windows.h declares the Interlocked* intrinsics and Sleep(). */
+#include <windows.h>
+
 /* MSVC fallback — Interlocked API */
 typedef volatile long _menai_atomic_int;
 static inline int _menai_atomic_load(_menai_atomic_int *p) {
