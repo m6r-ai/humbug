@@ -5,6 +5,10 @@
  *
  * menai_vm_c.execute(code, globals_dict) -> MenaiValue *
  *
+ * Also exposes:
+ *
+ * menai_vm_c.cancel() -> None   (request cancellation of the running execute)
+ *
  * The MenaiVM Python class in menai_vm.py calls this in place of its Python
  * execute loop when this extension is available.
  *
@@ -19,6 +23,38 @@
 #include <string.h>
 
 #include "menai_vm_c.h"
+
+/*
+ * Portable atomics for the cancellation flag.
+ *
+ * We prefer C11 <stdatomic.h>, but older MSVC versions that compile with
+ * /std:c11 do not ship it.  In that case we fall back to the Win32
+ * Interlocked API (available on every MSVC).
+ */
+#if defined(_MSC_VER) && !defined(__clang__)
+
+/* MSVC fallback — Interlocked API */
+typedef volatile long _menai_atomic_int;
+static inline int _menai_atomic_load(_menai_atomic_int *p) {
+    return (int)InterlockedCompareExchange(p, 0, 0);
+}
+static inline void _menai_atomic_store(_menai_atomic_int *p, int val) {
+    InterlockedExchange(p, (long)val);
+}
+
+#else
+
+/* C11 stdatomic */
+#include <stdatomic.h>
+typedef atomic_int _menai_atomic_int;
+static inline int _menai_atomic_load(_menai_atomic_int *p) {
+    return atomic_load(p);
+}
+static inline void _menai_atomic_store(_menai_atomic_int *p, int val) {
+    atomic_store(p, val);
+}
+
+#endif
 
 /*
  * Portable complex arithmetic — avoids <complex.h>, which is unsupported on MSVC.
@@ -158,6 +194,32 @@ _menai_mul_overflow(long a, long b, long *r) {
  * Limits
  */
 #define MAX_FRAME_DEPTH 1024
+
+/*
+ * Cancellation — an atomic flag set by cancel() from any thread.
+ *
+ * The execute_loop checks this every CANCEL_CHECK_INTERVAL instructions.
+ * It is reset to 0 at the start of each execute call so that a stale
+ * cancellation from a previous call does not affect the next one.
+ */
+static _menai_atomic_int _cancel_requested = 0;
+
+/*
+ * Pending-call callback used by the cancellation mechanism.
+ *
+ * Py_AddPendingCall lets another thread schedule this callback without
+ * holding the GIL.  The interpreter runs it at the next signal-check
+ * point (PyErr_CheckSignals).  We set the atomic flag here so that the
+ * execute loop can detect it and raise MenaiCancelledException.
+ */
+static int
+_cancel_pending_callback(PyObject *arg, void *unused)
+{
+    (void)arg;
+    (void)unused;
+    _menai_atomic_store(&_cancel_requested, 1);
+    return 0;
+}
 
 /*
  * Cancellation check interval.
@@ -1392,6 +1454,27 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         /* Cancellation check */
         if ((++instr_count & (CANCEL_CHECK_INTERVAL - 1)) == 0) {
             instr_count = 0;
+
+            /*
+             * Release the GIL briefly and yield so another thread can
+             * call cancel() (which needs the GIL to enter Python).
+             * The microsleep ensures the OS scheduler runs the other
+             * thread, not just a theoretical GIL hand-off.
+             */
+#ifndef _MSC_VER
+            Py_BEGIN_ALLOW_THREADS
+            usleep(100);  /* 0.1 ms */
+            Py_END_ALLOW_THREADS
+#else
+            Py_BEGIN_ALLOW_THREADS
+            Sleep(0);
+            Py_END_ALLOW_THREADS
+#endif
+
+            if (_menai_atomic_load(&_cancel_requested)) {
+                PyErr_SetObject(MenaiCancelledException_type, Py_None);
+                goto error;
+            }
             if (PyErr_CheckSignals() < 0) {
                 goto error;
             }
@@ -6953,6 +7036,9 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     PyObject *globals_dict;
     PyObject *extra_bindings = NULL;
 
+    /* Clear any stale cancellation from a previous call. */
+    _menai_atomic_store(&_cancel_requested, 0);
+
     if (!PyArg_ParseTuple(args, "OO|O", &code, &globals_dict, &extra_bindings)) {
         return NULL;
     }
@@ -7030,6 +7116,19 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
 }
 
 /*
+ * menai_vm_c_cancel — request cancellation of the currently running execute().
+ *
+ * Thread-safe: may be called from a different thread than the one in execute().
+ * The flag is checked at the next cancellation check point in the execution loop.
+ */
+static PyObject *
+menai_vm_c_cancel(PyObject *self, PyObject *args)
+{
+    _menai_atomic_store(&_cancel_requested, 1);
+    Py_RETURN_NONE;
+}
+
+/*
  * Module definition
  */
 static PyMethodDef menai_vm_c_methods[] = {
@@ -7038,6 +7137,12 @@ static PyMethodDef menai_vm_c_methods[] = {
         menai_vm_c_execute,
         METH_VARARGS,
         "Execute a Menai CodeObject and return the result."
+    },
+    {
+        "cancel",
+        menai_vm_c_cancel,
+        METH_NOARGS,
+        "Request cancellation of the currently running execute() call."
     },
     { NULL, NULL, 0, NULL }
 };

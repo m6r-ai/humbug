@@ -26,6 +26,12 @@ except ImportError:
     _C_VM_AVAILABLE = False
 
 
+# When the C VM is available, import its cancel() function for thread-safe cancellation.
+if _C_VM_AVAILABLE:
+    from menai.menai_vm_c import cancel as _c_vm_cancel  # type: ignore[import-not-found]
+
+
+
 # Sentinel returned by _op_call, _op_apply, and _op_return (non-top-level) to
 # signal that the active frame has changed and the loop should re-sync from
 # self._frames[self.frame_depth].  Using a module-level singleton avoids per-call allocation.
@@ -90,14 +96,20 @@ class MenaiVM:
         """
         Request cancellation of the currently executing code.
 
-        This sets a flag that will be checked periodically during execution.
-        The cancellation is not immediate - it will be honored at the next
-        cancellation check point (every ~1000 instructions by default).
+        When the C VM is available, this calls the C extension's cancel()
+        which sets a thread-safe atomic flag checked in the C execution loop.
+
+        Otherwise, this sets a Python flag that is checked periodically during
+        the Python execution loop (every ~1000 instructions).
 
         This method is thread-safe and can be called from a different thread
         than the one executing the VM.
         """
-        self._cancelled = True
+        if _C_VM_AVAILABLE:
+            _c_vm_cancel()
+
+        else:
+            self._cancelled = True
 
     def _build_dispatch_table(self) -> list[Any]:
         """
@@ -348,8 +360,8 @@ class MenaiVM:
         if self.validate_bytecode:
             validate_bytecode(code)
 
-        # Delegate to the C VM when available.
-        if _C_VM_AVAILABLE and not self._cancelled:
+        # Delegate to the C VM when available (the C VM handles its own cancellation).
+        if _C_VM_AVAILABLE:
             return cast(Callable, _c_vm_execute)(code, globals_dict or {}, extra_bindings or {})
 
         # If globals_dict is a CodeObject (the prelude), execute it to obtain
