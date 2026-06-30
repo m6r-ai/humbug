@@ -36,7 +36,7 @@ It enables your LLMs to:
 - Get detailed help if it runs into any problems with tools
 - Orchestrate its own UI.
 
-Humbug’s tool system is flexible, secure, and designed to make it easy to add new capabilities.
+Humbug's tool system is flexible, secure, and designed to make it easy to add new capabilities.
 
 ### Human-in-the-loop
 
@@ -180,13 +180,15 @@ Humbug is open source and the project welcomes contributions. If you're interest
 ## Requirements
 
 - Python 3.10 or higher
-- **Windows only:** [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-  (Visual C++ 14.0 or later) — required to compile the Menai C extension.
-  During installation, select the **"Desktop development with C++"** workload.
+- **Windows only (for building the Menai C extension from source):**
+  [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+  (Visual C++ 14.0 or later). During installation, select the **"Desktop development with C++"** workload.
   This is a one-time setup; once installed it is used automatically by `setup.py`.
-- **Linux only:** Python development headers — required to compile the Menai C extension.
-  Install via your package manager, e.g. on Debian/Ubuntu: `sudo apt install gcc python3-dev`
-  (gcc is also required if not already present).
+  Not needed if you use `python fetch-menai-vm.py` to download a pre-built binary instead.
+- **Linux only (for building the Menai C extension from source):**
+  Python development headers and gcc. Install via your package manager,
+  e.g. on Debian/Ubuntu: `sudo apt install gcc python3-dev`.
+  Not needed if you use `python fetch-menai-vm.py` to download a pre-built binary instead.
 - API keys for most cloud-based LLMs (some are free; Ollama runs locally without API keys)
 
 Runtime dependencies (installed automatically):
@@ -231,13 +233,26 @@ Developer dependencies (installed automatically with `.[dev]`):
    python -m desktop
    ```
 
-4. Build the Menai C extension:
+4. Get the Menai C extension (optional but recommended):
+
+   Humbug includes a fast C implementation of the Menai language engine.
+   Without it, Humbug falls back to a slower Python implementation automatically.
+
+   **Option A — Download a pre-built binary (recommended, no compiler needed):**
+
+   ```bash
+   python fetch-menai-vm.py
+   ```
+
+   This auto-detects your platform and Python version. No C compiler, build tools, or GitHub authentication required. If no pre-built binary is available for your platform, fall back to Option B.
+
+   **Option B — Build from source:**
 
    ```bash
    python setup.py build_ext --inplace
    ```
 
-   This compiles the C VM for Menai. Without it Humbug falls back to the slower Python VM automatically, so this step is optional but recommended for performance.
+   See the Requirements section above for the C compiler / build tools needed for your platform.
 
 5. Initial configuration:
 
