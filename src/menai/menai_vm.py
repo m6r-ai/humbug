@@ -7,6 +7,7 @@ from menai.menai_bytecode import CodeObject
 from menai.menai_value import MenaiValue
 from menai.menai_vm_bytecode_validator import validate_bytecode
 
+# pylint: disable=no-name-in-module
 from menai.menai_vm_c import execute as _c_vm_execute  # type: ignore[import-not-found]
 from menai.menai_vm_c import cancel as _c_vm_cancel    # type: ignore[import-not-found]
 
@@ -32,7 +33,8 @@ class MenaiVM:
         )
 
     def cancel(self) -> None:
-        """Request cancellation of the currently executing code.
+        """
+        Request cancellation of the currently executing code.
 
         Thread-safe: may be called from a different thread than the one
         executing the VM.  The flag is checked at the next cancellation

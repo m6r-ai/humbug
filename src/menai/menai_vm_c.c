@@ -33,10 +33,21 @@
  */
 #if defined(_MSC_VER) && !defined(__clang__)
 
-/* windows.h declares the Interlocked* intrinsics and Sleep(). */
-#include <windows.h>
+/*
+ * MSVC fallback using compiler intrinsics.
+ *
+ * We deliberately avoid <windows.h> because it defines a 'small' macro
+ * that collides with the MenaiInteger/MenaiBigInt 'small' struct field
+ * used throughout this file.  The Interlocked* functions and SwitchToThread
+ * are compiler intrinsics, so we only need their declarations.
+ */
+long __cdecl InterlockedCompareExchange(long volatile *Destination, long Exchange, long Comparand);
+#pragma intrinsic(_InterlockedCompareExchange)
+long __cdecl InterlockedExchange(long volatile *Target, long Value);
+#pragma intrinsic(_InterlockedExchange)
+int __cdecl SwitchToThread(void);
+#pragma intrinsic(_SwitchToThread)
 
-/* MSVC fallback — Interlocked API */
 typedef volatile long _menai_atomic_int;
 static inline int _menai_atomic_load(_menai_atomic_int *p) {
     return (int)InterlockedCompareExchange(p, 0, 0);
@@ -206,23 +217,6 @@ _menai_mul_overflow(long a, long b, long *r) {
  * cancellation from a previous call does not affect the next one.
  */
 static _menai_atomic_int _cancel_requested = 0;
-
-/*
- * Pending-call callback used by the cancellation mechanism.
- *
- * Py_AddPendingCall lets another thread schedule this callback without
- * holding the GIL.  The interpreter runs it at the next signal-check
- * point (PyErr_CheckSignals).  We set the atomic flag here so that the
- * execute loop can detect it and raise MenaiCancelledException.
- */
-static int
-_cancel_pending_callback(PyObject *arg, void *unused)
-{
-    (void)arg;
-    (void)unused;
-    _menai_atomic_store(&_cancel_requested, 1);
-    return 0;
-}
 
 /*
  * Cancellation check interval.
@@ -1470,7 +1464,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             Py_END_ALLOW_THREADS
 #else
             Py_BEGIN_ALLOW_THREADS
-            Sleep(0);
+            SwitchToThread();
             Py_END_ALLOW_THREADS
 #endif
 
