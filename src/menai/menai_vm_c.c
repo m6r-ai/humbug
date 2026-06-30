@@ -1475,6 +1475,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_SetObject(MenaiCancelledException_type, Py_None);
                 goto error;
             }
+
             if (PyErr_CheckSignals() < 0) {
                 goto error;
             }
