@@ -1,0 +1,88 @@
+name: Build App
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            label: macos-arm64
+          - runner: macos-15-intel
+            label: macos-x86_64
+          - runner: windows-latest
+            label: windows-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller certifi pyside6 qasync
+
+      - name: Fetch pre-built Menai C VM binary
+        run: python fetch-menai-vm.py
+
+      # --- macOS build -----------------------------------------------------
+      - name: Install create-dmg (macOS)
+        if: runner.os == 'macOS'
+        run: brew install create-dmg
+
+      - name: Build app with PyInstaller (macOS)
+        if: runner.os == 'macOS'
+        env:
+          CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+        run: pyinstaller humbug.spec --clean
+
+      - name: Create DMG (macOS)
+        if: runner.os == 'macOS'
+        run: ./build-dmg.sh
+
+      - name: Upload artifact (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Humbug-${{ matrix.label }}
+          path: dist/Humbug.dmg
+
+      # --- Windows build ---------------------------------------------------
+      - name: Install Inno Setup (Windows)
+        if: runner.os == 'Windows'
+        run: choco install innosetup -y --no-progress
+
+      - name: Build app with PyInstaller (Windows)
+        if: runner.os == 'Windows'
+        run: pyinstaller humbug.spec --clean
+
+      - name: Run Inno Setup (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          set ISCC=""
+          if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" set ISCC="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if exist "C:\Program Files\Inno Setup 6\ISCC.exe" set ISCC="C:\Program Files\Inno Setup 6\ISCC.exe"
+          if %ISCC%=="" (
+            echo ERROR: Inno Setup not found.
+            exit /b 1
+          )
+          %ISCC% humbug-installer.iss
+
+      - name: Upload artifact (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Humbug-${{ matrix.label }}
+          path: dist/Humbug-Setup.exe
