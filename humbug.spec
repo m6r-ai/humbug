@@ -1,5 +1,3 @@
-# humbug.spec
-#
 # PyInstaller config file
 #
 import os
@@ -71,6 +69,7 @@ if sys.platform == 'win32':
         entitlements_file=None
     )
 else:
+    # macOS and Linux: produce a COLLECT directory
     exe = EXE(
         pyz,
         a.scripts,
@@ -82,9 +81,9 @@ else:
         strip=False,
         upx=True,
         console=False,
-        icon='icons/Humbug.icns',
+        icon='icons/Humbug.icns' if sys.platform == 'darwin' else 'resources/icons/app-icon.png',
         target_arch=None,
-        codesign_identity=codesign_id,
+        codesign_identity=codesign_id if sys.platform == 'darwin' else None,
         entitlements_file=None
     )
 
@@ -99,17 +98,17 @@ else:
         name='Humbug'
     )
 
-if sys.platform != 'win32':
-    app = BUNDLE(
-        coll,
-        name='Humbug.app',
-        icon='icons/Humbug.icns',
-        bundle_identifier='ai.m6r.humbug',
-        info_plist={
-            'CFBundleDisplayName': 'Humbug',
-            'CFBundleShortVersionString': '52',
-            'CFBundleVersion': '52',
-            'NSPrincipalClass': 'NSApplication',
-            'NSAppleScriptEnabled': False
-        }
-    )
+    if sys.platform == 'darwin':
+        app = BUNDLE(
+            coll,
+            name='Humbug.app',
+            icon='icons/Humbug.icns',
+            bundle_identifier='ai.m6r.humbug',
+            info_plist={
+                'CFBundleDisplayName': 'Humbug',
+                'CFBundleShortVersionString': '52',
+                'CFBundleVersion': '52',
+                'NSPrincipalClass': 'NSApplication',
+                'NSAppleScriptEnabled': False
+            }
+        )
