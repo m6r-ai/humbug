@@ -34,11 +34,6 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 - This avoids building against a stale VM binary — run the VM build workflow first, then trigger the app build.
 - The workflow fetches the pre-built Menai C VM binary (py314) via `fetch-menai-vm.py`
   rather than compiling from source.
-- Build artifacts (`.dmg` and `.exe` installer) are uploaded as workflow artifacts for testing
-  before promotion to a release.
-- Code signing is optional — the workflow signs when `CODESIGN_IDENTITY` secret is present
-  and builds unsigned otherwise.
-- Linux app packaging is not yet implemented; the matrix can be extended when ready.
 
 ## Code quality
 
