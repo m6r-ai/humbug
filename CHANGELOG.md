@@ -11,6 +11,8 @@ New features:
   of needing to compile them locally.
 - Removed the legacy Python implementation fo the Menai VM.  The C version is now definitive on all platforms, with binaries
   available from GitHub.
+- Added Linux binary app build scripts.
+- Set up GitHub actions to build binaries for MacOS, Windows, and Linux.
 
 Bug fixes:
 
