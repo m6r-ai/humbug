@@ -36,7 +36,29 @@ jobs:
       - name: Fetch pre-built Menai C VM binary
         run: python fetch-menai-vm.py
 
-      # --- macOS build -----------------------------------------------------
+      # macOS build
+      - name: Import code signing certificate (macOS)
+        if: runner.os == 'macOS'
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+        run: |
+          # Create a temporary keychain
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PWD="$(uuidgen)"
+          security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
+
+          # Import the certificate
+          CERT_PATH="$RUNNER_TEMP/certificate.p12"
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$CERT_PATH"
+          security import "$CERT_PATH" -P "$MACOS_CERTIFICATE_PWD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+
+          # Set the cert identity for codesign
+          security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain
+          security find-identity -v
+
       - name: Install create-dmg (macOS)
         if: runner.os == 'macOS'
         run: brew install create-dmg
@@ -51,6 +73,29 @@ jobs:
         if: runner.os == 'macOS'
         run: ./build-dmg.sh
 
+      - name: Notarize DMG (macOS)
+        if: runner.os == 'macOS'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit dist/Humbug.dmg \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          xcrun stapler staple dist/Humbug.app
+
+      - name: Cleanup keychain (macOS)
+        if: runner.os == 'macOS' && always()
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          if security show-keychain-info "$KEYCHAIN_PATH" &>/dev/null; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi
+
       - name: Upload artifact (macOS)
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v7
@@ -58,7 +103,7 @@ jobs:
           name: Humbug-${{ matrix.label }}
           path: dist/Humbug.dmg
 
-      # --- Windows build ---------------------------------------------------
+      # Windows build
       - name: Install Inno Setup (Windows)
         if: runner.os == 'Windows'
         run: choco install innosetup -y --no-progress
