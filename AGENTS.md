@@ -29,11 +29,13 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 
 ## App builds
 
-- GitHub Actions builds and packages the desktop app for macOS and Windows via manual trigger
+- GitHub Actions builds and packages the desktop app for macOS, Windows, and Linux via manual trigger
   only (see `.github/workflows/build-app.yml`).
 - This avoids building against a stale VM binary — run the VM build workflow first, then trigger the app build.
 - The workflow fetches the pre-built Menai C VM binary (py314) via `fetch-menai-vm.py`
   rather than compiling from source.
+- macOS produces a signed/notarized `.dmg`, Windows produces an `.exe` installer via Inno Setup,
+  and Linux produces an `.AppImage` for x86_64 and ARM64 via `build-appimage.sh`.
 
 ## Code quality
 
