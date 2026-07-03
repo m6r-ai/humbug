@@ -162,6 +162,27 @@ The tireless ability of LLMs to morph software into new forms also means the sof
 
 The `conversations` directory in the Humbug git repository includes a lot of discussions with AIs about improvements to itself.
 
+## Getting Humbug
+
+You can either run Humbug as a developer (see the notes below) or by downloading an executable.
+Executables are available for MacOS (Apple silicon or Intel x86), Windows (x86), or Linux (Intel x86 or ARM64).
+
+[Download Humbug from GitHub](https://github.com/m6r-ai/humbug/releases)
+
+
+### Note for Windows users
+
+The Windows download is not currently code-signed, so Windows Defender SmartScreen may show a "Windows protected your PC" warning when you run it for the first time.
+To proceed, click **More info** then **Run anyway**.
+This is expected for an open-source project and the warning will become less frequent over time as the build accumulates reputation.
+
+## Getting started
+
+When you first start Humbug it will check to see if any AI providers and models have been configured.
+If they haven't then Humbug will guide you to the right place to configure them in the settings.
+
+Humbug will run with local AI models via Ollama or VLLM, and will also run with API keys from the major LLM cloud services.
+
 ## Learn more
 
 - **User manual:** [User manual](./docs/user-manual/index.md)
@@ -177,7 +198,14 @@ The `conversations` directory in the Humbug git repository includes a lot of dis
 
 Humbug is open source and the project welcomes contributions. If you're interested in helping, join the Discord server.
 
-## Requirements
+If you plan to contribute changes, see [CONTRIBUTING.md](./CONTRIBUTING.md) for coding standards and how to verify your work.
+
+## Developer notes
+
+### Software requirements
+
+Most of Humbug is written in Python so you need a Python developement setup to work with it.  The Menai virtual
+machine is written in C, but there are pre-built binaries for these libraries that can be downloaded for most platforms.
 
 - Python 3.10 or higher
 - **Windows only (for building the Menai C extension from source):**
@@ -189,7 +217,6 @@ Humbug is open source and the project welcomes contributions. If you're interest
   Python development headers and gcc. Install via your package manager,
   e.g. on Debian/Ubuntu: `sudo apt install gcc python3-dev`.
   Not needed if you use `python fetch-menai-vm.py` to download a pre-built binary instead.
-- API keys for most cloud-based LLMs (some are free; Ollama runs locally without API keys)
 
 Runtime dependencies (installed automatically):
 - PySide6 (the GUI framework)
@@ -253,9 +280,3 @@ Developer dependencies (installed automatically with `.[dev]`):
    ```
 
    See the Requirements section above for the C compiler / build tools needed for your platform.
-
-5. Initial configuration:
-
-   If you load Humbug and don't have any AIs already configured, it will guide you how to use any AI API keys you have.
-
-If you plan to contribute changes, see [CONTRIBUTING.md](./CONTRIBUTING.md) for coding standards and how to verify your work.
