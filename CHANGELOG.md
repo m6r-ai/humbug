@@ -13,6 +13,7 @@ New features:
   available from GitHub.
 - Added Linux binary app build scripts.
 - Set up GitHub actions to build binaries for MacOS, Windows, and Linux.
+- Added YAML and TOML syntax highlighters.
 
 Bug fixes:
 
