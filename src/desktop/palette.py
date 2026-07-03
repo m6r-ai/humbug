@@ -210,6 +210,12 @@ _DARK_COLORS: dict[ColorRole, str] = {
     # Line numbers
     ColorRole.LINE_NUMBER: "#606060",
 
+    # Editor decorations
+    ColorRole.EDITOR_CURRENT_LINE: "#2a2d2e",
+    ColorRole.EDITOR_BRACKET_MATCH: "#2f5c3a",
+    ColorRole.EDITOR_OCCURRENCE: "#33415a",
+    ColorRole.EDITOR_INDENT_GUIDE: "#3a3a3a",
+
     # Diff view colours
     ColorRole.DIFF_REMOVED_BACKGROUND: "#402020",
     ColorRole.DIFF_ADDED_BACKGROUND: "#204020",
@@ -431,6 +437,12 @@ _COLOR_BLIND_COLORS: dict[ColorRole, str] = {
     # Line numbers
     ColorRole.LINE_NUMBER: "#8b949e",
 
+    # Editor decorations
+    ColorRole.EDITOR_CURRENT_LINE: "#161b22",
+    ColorRole.EDITOR_BRACKET_MATCH: "#1c3a5e",
+    ColorRole.EDITOR_OCCURRENCE: "#3a2f10",
+    ColorRole.EDITOR_INDENT_GUIDE: "#30363d",
+
     # Diff view colours
     ColorRole.DIFF_REMOVED_BACKGROUND: "#4a2a12",
     ColorRole.DIFF_ADDED_BACKGROUND: "#143d36",
@@ -649,6 +661,12 @@ _OCEAN_LIGHT_COLORS: dict[ColorRole, str] = {
 
     # Line numbers
     ColorRole.LINE_NUMBER: "#c0c0c0",
+
+    # Editor decorations
+    ColorRole.EDITOR_CURRENT_LINE: "#e9eff4",
+    ColorRole.EDITOR_BRACKET_MATCH: "#cfe8d4",
+    ColorRole.EDITOR_OCCURRENCE: "#d7e6fb",
+    ColorRole.EDITOR_INDENT_GUIDE: "#d0d7de",
 
     # Diff view colours
     ColorRole.DIFF_REMOVED_BACKGROUND: "#f0c8c8",
@@ -870,6 +888,12 @@ _LIGHT_COLORS: dict[ColorRole, str] = {
 
     # Line numbers
     ColorRole.LINE_NUMBER: "#c0c0c0",
+
+    # Editor decorations
+    ColorRole.EDITOR_CURRENT_LINE: "#eef2f6",
+    ColorRole.EDITOR_BRACKET_MATCH: "#c8e6c9",
+    ColorRole.EDITOR_OCCURRENCE: "#dbe8ff",
+    ColorRole.EDITOR_INDENT_GUIDE: "#e2e2e2",
 
     # Diff view colours
     ColorRole.DIFF_REMOVED_BACKGROUND: "#f0c8c8",

@@ -151,6 +151,9 @@ class SettingsDialog(QDialog):
         self._editor_tabs_section: SettingsSection
         self._soft_tabs_check: SettingsSwitch
         self._tab_size_spin: SettingsSpinBox
+        self._trim_whitespace_check: SettingsSwitch
+        self._final_newline_check: SettingsSwitch
+        self._show_whitespace_check: SettingsSwitch
         self._auto_backup_check: SettingsSwitch
         self._backup_interval_spin: SettingsSpinBox
         self._editor_container: SettingsContainer
@@ -547,6 +550,15 @@ class SettingsDialog(QDialog):
         self._tab_size_spin = SettingsFactory.create_spinbox(strings.tab_size, 1, 8, 1)
         container.add_setting(self._tab_size_spin)
 
+        self._trim_whitespace_check = SettingsFactory.create_switch(strings.trim_trailing_whitespace)
+        container.add_setting(self._trim_whitespace_check)
+
+        self._final_newline_check = SettingsFactory.create_switch(strings.ensure_final_newline)
+        container.add_setting(self._final_newline_check)
+
+        self._show_whitespace_check = SettingsFactory.create_switch(strings.show_whitespace)
+        container.add_setting(self._show_whitespace_check)
+
         spacer = SettingsFactory.create_spacer(24)
         container.add_setting(spacer)
 
@@ -698,6 +710,9 @@ class SettingsDialog(QDialog):
         return MindspaceSettings(
             use_soft_tabs=self._soft_tabs_check.get_value(),
             tab_size=self._tab_size_spin.get_value(),
+            trim_trailing_whitespace=self._trim_whitespace_check.get_value(),
+            ensure_final_newline=self._final_newline_check.get_value(),
+            show_whitespace=self._show_whitespace_check.get_value(),
             auto_backup=self._auto_backup_check.get_value(),
             auto_backup_interval=self._backup_interval_spin.get_value(),
             terminal_fixed_width_enabled=self._terminal_fixed_width_check.get_value(),
@@ -773,6 +788,9 @@ class SettingsDialog(QDialog):
         # Editor
         self._soft_tabs_check.set_value(settings.use_soft_tabs)
         self._tab_size_spin.set_value(settings.tab_size)
+        self._trim_whitespace_check.set_value(settings.trim_trailing_whitespace)
+        self._final_newline_check.set_value(settings.ensure_final_newline)
+        self._show_whitespace_check.set_value(settings.show_whitespace)
 
         # Backup
         self._auto_backup_check.set_value(settings.auto_backup)

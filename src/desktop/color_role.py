@@ -179,6 +179,12 @@ class ColorRole(Enum):
     # Editor line numbers
     LINE_NUMBER = auto()                # Line number
 
+    # Editor decorations
+    EDITOR_CURRENT_LINE = auto()        # Background tint for the caret's line
+    EDITOR_BRACKET_MATCH = auto()       # Background for a matched bracket pair
+    EDITOR_OCCURRENCE = auto()          # Background for other occurrences of the selection
+    EDITOR_INDENT_GUIDE = auto()        # Vertical indentation guide lines
+
     # Diff view colours
     DIFF_REMOVED_BACKGROUND = auto()    # Background for removed lines
     DIFF_ADDED_BACKGROUND = auto()      # Background for added lines

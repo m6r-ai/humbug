@@ -198,6 +198,9 @@ class LanguageStrings:
     editor_settings: str
     use_soft_tabs: str
     tab_size: str
+    trim_trailing_whitespace: str
+    ensure_final_newline: str
+    show_whitespace: str
     backup_settings: str
     auto_backup: str
     backup_interval: str

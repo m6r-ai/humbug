@@ -24,6 +24,9 @@ class MindspaceSettings:
     reasoning_effort: str | None = None
     use_soft_tabs: bool = True
     tab_size: int = 4
+    trim_trailing_whitespace: bool = False  # Trim trailing whitespace on save
+    ensure_final_newline: bool = False       # Ensure a single trailing newline on save
+    show_whitespace: bool = False            # Render spaces/tabs in the editor
     auto_backup: bool = False  # Default to off
     auto_backup_interval: int = 300  # Default 5 minutes in seconds
     terminal_fixed_width_enabled: bool = True  # Default to a minimum width
@@ -259,6 +262,18 @@ class MindspaceSettings:
             )
             tab_size = 4
 
+        trim_trailing_whitespace = editor.get("trimTrailingWhitespace", False)
+        if not isinstance(trim_trailing_whitespace, bool):
+            trim_trailing_whitespace = False
+
+        ensure_final_newline = editor.get("ensureFinalNewline", False)
+        if not isinstance(ensure_final_newline, bool):
+            ensure_final_newline = False
+
+        show_whitespace = editor.get("showWhitespace", False)
+        if not isinstance(show_whitespace, bool):
+            show_whitespace = False
+
         auto_backup = editor.get("autoBackup", False)
         if not isinstance(auto_backup, bool):
             cls._logger.warning(
@@ -338,6 +353,9 @@ class MindspaceSettings:
             reasoning_effort=reasoning_effort,
             use_soft_tabs=use_soft_tabs,
             tab_size=tab_size,
+            trim_trailing_whitespace=trim_trailing_whitespace,
+            ensure_final_newline=ensure_final_newline,
+            show_whitespace=show_whitespace,
             auto_backup=auto_backup,
             auto_backup_interval=auto_backup_interval,
             terminal_fixed_width_enabled=terminal_fixed_width_enabled,
@@ -361,6 +379,9 @@ class MindspaceSettings:
             "editor": {
                 "useSoftTabs": self.use_soft_tabs,
                 "tabSize": self.tab_size,
+                "trimTrailingWhitespace": self.trim_trailing_whitespace,
+                "ensureFinalNewline": self.ensure_final_newline,
+                "showWhitespace": self.show_whitespace,
                 "autoBackup": self.auto_backup,
                 "autoBackupInterval": self.auto_backup_interval,
             },

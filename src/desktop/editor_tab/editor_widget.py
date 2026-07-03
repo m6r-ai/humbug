@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
 from PySide6.QtCore import Qt, QRect, Signal, QTimer, QRegularExpression
 from PySide6.QtGui import (
     QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
-    QResizeEvent, QPaintEvent, QTextDocument, QContextMenuEvent
+    QResizeEvent, QPaintEvent, QTextDocument, QContextMenuEvent, QWheelEvent, QTextOption
 )
 
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
@@ -34,6 +34,34 @@ class EditorWidget(QPlainTextEdit):
     text_changed = Signal()          # Emitted on every text change
     status_updated = Signal()        # Request status bar update
     file_saved = Signal(str)         # File path saved
+
+    # Line-comment token per language, used by the toggle-comment command.
+    # Languages absent here have no line-comment support in the editor.
+    _LINE_COMMENT_PREFIXES: dict[ProgrammingLanguage, str] = {
+        ProgrammingLanguage.C: "//",
+        ProgrammingLanguage.CPP: "//",
+        ProgrammingLanguage.CSHARP: "//",
+        ProgrammingLanguage.GO: "//",
+        ProgrammingLanguage.JAVA: "//",
+        ProgrammingLanguage.JAVASCRIPT: "//",
+        ProgrammingLanguage.TYPESCRIPT: "//",
+        ProgrammingLanguage.KOTLIN: "//",
+        ProgrammingLanguage.RUST: "//",
+        ProgrammingLanguage.SWIFT: "//",
+        ProgrammingLanguage.SOLIDITY: "//",
+        ProgrammingLanguage.PHP: "//",
+        ProgrammingLanguage.PYTHON: "#",
+        ProgrammingLanguage.BASH: "#",
+        ProgrammingLanguage.RUBY: "#",
+        ProgrammingLanguage.TOML: "#",
+        ProgrammingLanguage.YAML: "#",
+        ProgrammingLanguage.LUA: "--",
+        ProgrammingLanguage.SCHEME: ";",
+    }
+
+    # Auto-closing bracket pairs and self-closing quote characters.
+    _AUTO_PAIRS: dict[str, str] = {"(": ")", "[": "]", "{": "}"}
+    _AUTO_QUOTES: tuple[str, ...] = ('"', "'", "`")
 
     def __init__(self, path: str = "", untitled_number: int | None = None, parent: QWidget | None = None) -> None:
         """
@@ -90,6 +118,9 @@ class EditorWidget(QPlainTextEdit):
         self._current_match = -1
         self._last_search: tuple = ("", False, False)
 
+        # Composable editor decorations (applied together via setExtraSelections).
+        self._find_selections: list[QTextEdit.ExtraSelection] = []
+
         # Smooth scrolling
         self._smooth_scroll_timer = QTimer(self)
         self._smooth_scroll_timer.setInterval(SMOOTH_SCROLL_INTERVAL_MS)
@@ -116,6 +147,11 @@ class EditorWidget(QPlainTextEdit):
         self.textChanged.connect(self._on_text_changed)
         self.cursorPositionChanged.connect(self.status_updated)
 
+        # Keep the current-line / bracket-match / occurrence decorations in sync
+        # with the caret and selection.
+        self.cursorPositionChanged.connect(self._refresh_extra_selections)
+        self.selectionChanged.connect(self._refresh_extra_selections)
+
 
         # Load file if path provided
         if self._path:
@@ -126,6 +162,7 @@ class EditorWidget(QPlainTextEdit):
 
         # Update auto-backup based on current mindspace settings
         self._update_auto_backup_from_settings()
+        self._apply_whitespace_rendering()
 
     def _load_file(self) -> None:
         """Load content from file path."""
@@ -257,6 +294,24 @@ class EditorWidget(QPlainTextEdit):
     def _on_mindspace_settings_changed(self) -> None:
         """Handle mindspace settings changes."""
         self._update_auto_backup_from_settings()
+        self._apply_whitespace_rendering()
+
+    def _apply_whitespace_rendering(self) -> None:
+        """Show or hide rendered spaces/tabs per the mindspace setting."""
+        show = False
+        if self._mindspace_manager.has_mindspace():
+            show = cast(MindspaceSettings, self._mindspace_manager.settings()).show_whitespace
+
+        option = self.document().defaultTextOption()
+        flags = option.flags()
+        if show:
+            flags |= QTextOption.Flag.ShowTabsAndSpaces
+
+        else:
+            flags &= ~QTextOption.Flag.ShowTabsAndSpaces
+
+        option.setFlags(flags)
+        self.document().setDefaultTextOption(option)
 
     def _on_language_changed(self) -> None:
         """Handle language changes by updating the UI."""
@@ -440,6 +495,43 @@ class EditorWidget(QPlainTextEdit):
         if self._auto_backup_timer.isActive():
             self._cleanup_backup_files()
 
+    def _apply_save_cleanup(self) -> None:
+        """Trim trailing whitespace and/or ensure a final newline per settings."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        settings = cast(MindspaceSettings, self._mindspace_manager.settings())
+        if not (settings.trim_trailing_whitespace or settings.ensure_final_newline):
+            return
+
+        newline = chr(10)
+        original = self.toPlainText()
+        lines = original.split(newline)
+        if settings.trim_trailing_whitespace:
+            lines = [line.rstrip(" \t") for line in lines]
+
+        cleaned = newline.join(lines)
+        if settings.ensure_final_newline and cleaned and not cleaned.endswith(newline):
+            cleaned += newline
+
+        if cleaned == original:
+            return
+
+        # Replace the whole document as one undoable edit, keeping the caret and
+        # scroll position stable.
+        caret = self.textCursor().position()
+        vscroll = self.verticalScrollBar().value()
+        editor = self.textCursor()
+        editor.beginEditBlock()
+        editor.select(QTextCursor.SelectionType.Document)
+        editor.insertText(cleaned)
+        editor.endEditBlock()
+
+        restored = self.textCursor()
+        restored.setPosition(min(caret, len(cleaned)))
+        self.setTextCursor(restored)
+        self.verticalScrollBar().setValue(vscroll)
+
     def save_file(self) -> bool:
         """
         Save the current file.
@@ -450,6 +542,7 @@ class EditorWidget(QPlainTextEdit):
         if not self._path:
             return self.save_file_as()
 
+        self._apply_save_cleanup()
         content = self.toPlainText()
         with open(self._path, 'w', encoding='utf-8') as f:
             f.write(content)
@@ -682,6 +775,82 @@ class EditorWidget(QPlainTextEdit):
                 width,
                 cr.height()
             )
+
+    def paintEvent(self, event: QPaintEvent) -> None:  # type: ignore[override]
+        """Paint the editor, then overlay indentation guide lines."""
+        super().paintEvent(event)
+        self._paint_indent_guides(event)
+
+    def wheelEvent(self, event: QWheelEvent) -> None:  # type: ignore[override]
+        """Ctrl+scroll adjusts the application zoom; otherwise scroll normally."""
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            delta = event.angleDelta().y()
+            if delta != 0:
+                self._zoom_by(1 if delta > 0 else -1)
+
+            event.accept()
+            return
+
+        super().wheelEvent(event)
+
+    def _zoom_by(self, direction: int) -> None:
+        """Step the application zoom by one point, keeping an integer font size."""
+        base = self._style_manager.base_font_size()
+        if base <= 0:
+            return
+
+        current_pt = round(base * self._style_manager.zoom_factor())
+        min_pt = max(1, round(base * 0.5))
+        max_pt = round(base * 2.0)
+        new_pt = min(max_pt, max(min_pt, current_pt + direction))
+        self._style_manager.set_zoom(new_pt / base)
+
+    def _paint_indent_guides(self, event: QPaintEvent) -> None:
+        """Draw subtle vertical guides at each indentation level of visible lines."""
+        space_width = self.fontMetrics().horizontalAdvance(" ")
+        _, tab_size = self._current_indent_settings()
+        if space_width <= 0 or tab_size <= 0:
+            return
+
+        painter = QPainter(self.viewport())
+        painter.setPen(self._style_manager.get_color(ColorRole.EDITOR_INDENT_GUIDE))
+        offset = self.contentOffset()
+        margin = self.document().documentMargin()
+        rect_bottom = event.rect().bottom()
+
+        block = self.firstVisibleBlock()
+        while block.isValid():
+            geometry = self.blockBoundingGeometry(block).translated(offset)
+            if geometry.top() > rect_bottom:
+                break
+
+            if block.isVisible():
+                indent_cols = self._leading_indent_columns(block.text(), tab_size)
+                level = tab_size
+                while level < indent_cols:
+                    x = int(geometry.left() + margin + level * space_width)
+                    painter.drawLine(x, int(geometry.top()), x, int(geometry.bottom()) - 1)
+                    level += tab_size
+
+            block = block.next()
+
+        painter.end()
+
+    @staticmethod
+    def _leading_indent_columns(text: str, tab_size: int) -> int:
+        """Return the visual column width of *text*'s leading whitespace."""
+        cols = 0
+        for ch in text:
+            if ch == " ":
+                cols += 1
+
+            elif ch == "\t":
+                cols += tab_size - (cols % tab_size)
+
+            else:
+                break
+
+        return cols
 
     def _line_number_area_paint_event(self, event: QPaintEvent) -> None:
         """Paint the line numbers."""
@@ -944,14 +1113,62 @@ class EditorWidget(QPlainTextEdit):
         Args:
             event: The key event to handle
         """
-        if event.key() == Qt.Key.Key_Home:
+        modifiers = event.modifiers()
+        key = event.key()
+        ctrl = bool(modifiers & Qt.KeyboardModifier.ControlModifier)
+        alt = bool(modifiers & Qt.KeyboardModifier.AltModifier)
+        shift = bool(modifiers & Qt.KeyboardModifier.ShiftModifier)
+
+        # Toggle line comment (Ctrl+/).
+        if ctrl and not alt and key == Qt.Key.Key_Slash:
+            self._toggle_line_comment()
+            event.accept()
+            return
+
+        # Delete the current line(s) (Ctrl+Shift+K).
+        if ctrl and shift and key == Qt.Key.Key_K:
+            self._delete_lines()
+            event.accept()
+            return
+
+        # Duplicate the current line(s) (Shift+Alt+Up/Down).
+        if alt and shift and key in (Qt.Key.Key_Up, Qt.Key.Key_Down):
+            self._duplicate_lines()
+            event.accept()
+            return
+
+        # Move the current line(s) up/down (Alt+Up/Down).
+        if alt and not ctrl and not shift and key in (Qt.Key.Key_Up, Qt.Key.Key_Down):
+            self._move_lines(-1 if key == Qt.Key.Key_Up else 1)
+            event.accept()
+            return
+
+        # Auto-indent on Enter/Return (plain, or with Shift).
+        if not ctrl and not alt and key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self._insert_newline_with_indent()
+            event.accept()
+            return
+
+        # Delete an empty auto-inserted pair with a single Backspace.
+        if key == Qt.Key.Key_Backspace and not modifiers and self._backspace_between_pair():
+            event.accept()
+            return
+
+        # Auto-close brackets/quotes, wrap the selection, or skip over a closer.
+        if not ctrl and not alt and event.text() and self._handle_auto_pair(event.text()):
+            event.accept()
+            return
+
+        # Smart Home: first press → first non-whitespace, second → column 0.
+        if key == Qt.Key.Key_Home and not ctrl and not alt:
             cursor = self.textCursor()
-            mode = (
-                QTextCursor.MoveMode.KeepAnchor
-                if event.modifiers() & Qt.KeyboardModifier.ShiftModifier
-                else QTextCursor.MoveMode.MoveAnchor
-            )
-            cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, mode)
+            mode = QTextCursor.MoveMode.KeepAnchor if shift else QTextCursor.MoveMode.MoveAnchor
+            block = cursor.block()
+            text = block.text()
+            first_non_ws = len(text) - len(text.lstrip(" \t"))
+            col = cursor.position() - block.position()
+            target_col = 0 if col == first_non_ws else first_non_ws
+            cursor.setPosition(block.position() + target_col, mode)
             self.setTextCursor(cursor)
             event.accept()
             return
@@ -1331,8 +1548,10 @@ class EditorWidget(QPlainTextEdit):
 
             selections.append(extra_selection)
 
-        # Apply selections
-        self.setExtraSelections(selections)
+        # Hand the find matches to the shared composer so they coexist with the
+        # current-line, bracket-match, and occurrence decorations.
+        self._find_selections = selections
+        self._refresh_extra_selections()
 
     def _scroll_to_match(self, match_index: int) -> None:
         """
@@ -1348,8 +1567,402 @@ class EditorWidget(QPlainTextEdit):
             self._start_smooth_scroll_to_cursor(cursor)
 
     def _clear_highlights(self) -> None:
-        """Clear all search highlights."""
-        self.setExtraSelections([])
+        """Clear the search-match highlights (other decorations are preserved)."""
+        self._find_selections = []
+        self._refresh_extra_selections()
+
+    def _refresh_extra_selections(self) -> None:
+        """
+        Recompose every editor decoration and apply it in one pass.
+
+        Qt only supports a single ``setExtraSelections`` list, so the current-line
+        tint, occurrence highlights, search matches, and bracket-match markers are
+        all built here and applied together.  Order matters: later entries paint
+        over earlier ones where they overlap.
+        """
+        selections: list[QTextEdit.ExtraSelection] = []
+        selections.extend(self._current_line_selections())
+        selections.extend(self._occurrence_selections())
+        selections.extend(self._find_selections)
+        selections.extend(self._bracket_match_selections())
+        self.setExtraSelections(selections)
+
+    def _make_selection(self, start: int, end: int, color: ColorRole,
+                        full_width: bool = False) -> "QTextEdit.ExtraSelection":
+        """Build a single extra-selection over [start, end) with the given colour."""
+        cursor = QTextCursor(self.document())
+        cursor.setPosition(start)
+        cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+
+        selection = QTextEdit.ExtraSelection()
+        fmt = QTextCharFormat()
+        fmt.setBackground(self._style_manager.get_color(color))
+        if full_width:
+            fmt.setProperty(QTextCharFormat.Property.FullWidthSelection, True)
+
+        selection.format = fmt  # type: ignore[attr-defined]
+        selection.cursor = cursor  # type: ignore[attr-defined]
+        return selection
+
+    def _current_line_selections(self) -> list["QTextEdit.ExtraSelection"]:
+        """Return a full-width tint for the caret's line (only when there's no selection)."""
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            return []
+
+        block = cursor.block()
+        return [self._make_selection(
+            block.position(), block.position(), ColorRole.EDITOR_CURRENT_LINE, full_width=True
+        )]
+
+    def _bracket_match_selections(self) -> list["QTextEdit.ExtraSelection"]:
+        """Highlight the bracket adjacent to the caret and its matching partner."""
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            return []
+
+        text = self.toPlainText()
+        pos = cursor.position()
+        pairs = {"(": ")", "[": "]", "{": "}"}
+        closers = {v: k for k, v in pairs.items()}
+
+        # Prefer the bracket to the right of the caret, else the one to the left.
+        for probe in (pos, pos - 1):
+            if 0 <= probe < len(text):
+                ch = text[probe]
+                if ch in pairs:
+                    match = self._find_matching_bracket(text, probe, 1, ch, pairs[ch])
+
+                elif ch in closers:
+                    match = self._find_matching_bracket(text, probe, -1, ch, closers[ch])
+
+                else:
+                    continue
+
+                if match is not None:
+                    return [
+                        self._make_selection(probe, probe + 1, ColorRole.EDITOR_BRACKET_MATCH),
+                        self._make_selection(match, match + 1, ColorRole.EDITOR_BRACKET_MATCH),
+                    ]
+
+        return []
+
+    @staticmethod
+    def _find_matching_bracket(text: str, start: int, direction: int,
+                               open_ch: str, close_ch: str) -> int | None:
+        """Scan from *start* in *direction* for the bracket matching *open_ch*."""
+        depth = 0
+        i = start
+        while 0 <= i < len(text):
+            ch = text[i]
+            if ch == open_ch:
+                depth += 1
+
+            elif ch == close_ch:
+                depth -= 1
+                if depth == 0:
+                    return i
+
+            i += direction
+
+        return None
+
+    def _occurrence_selections(self) -> list["QTextEdit.ExtraSelection"]:
+        """Highlight other occurrences of the selected word."""
+        cursor = self.textCursor()
+        if not cursor.hasSelection():
+            return []
+
+        # Only highlight a single-line, word-like selection of a sensible length.
+        selected = cursor.selectedText()
+        stripped = selected.strip()
+        if len(stripped) < 2 or stripped != selected or not self._is_word_like(selected):
+            return []
+
+        text = self.toPlainText()
+        if len(text) > 500_000:
+            return []
+
+        sel_start = cursor.selectionStart()
+        selections: list[QTextEdit.ExtraSelection] = []
+        needle_len = len(selected)
+        idx = text.find(selected)
+        while idx != -1:
+            if idx != sel_start:  # skip the active selection itself
+                selections.append(
+                    self._make_selection(idx, idx + needle_len, ColorRole.EDITOR_OCCURRENCE)
+                )
+
+            idx = text.find(selected, idx + needle_len)
+
+        return selections
+
+    @staticmethod
+    def _is_word_like(s: str) -> bool:
+        """True if *s* is a single identifier-style token (letters, digits, underscore)."""
+        return all(c.isalnum() or c == "_" for c in s)
+
+    # -- Auto-closing brackets and quotes ------------------------------------
+
+    def _handle_auto_pair(self, ch: str) -> bool:
+        """
+        Handle a typed bracket or quote, returning True if it was consumed.
+
+        Wraps a selection, skips over an existing closer, or inserts a matching
+        pair with the caret placed between the two characters.
+        """
+        cursor = self.textCursor()
+        text = self.toPlainText()
+
+        # Wrap the current selection in the pair.
+        if cursor.hasSelection() and (ch in self._AUTO_PAIRS or ch in self._AUTO_QUOTES):
+            closer = self._AUTO_PAIRS.get(ch, ch)
+            start = cursor.selectionStart()
+            # Qt uses U+2029 (paragraph separator) for newlines in selected text.
+            inner = cursor.selectedText().replace(chr(0x2029), chr(10))
+            cursor.beginEditBlock()
+            cursor.insertText(ch + inner + closer)
+            cursor.endEditBlock()
+            reselect = self.textCursor()
+            reselect.setPosition(start + 1)
+            reselect.setPosition(start + 1 + len(inner), QTextCursor.MoveMode.KeepAnchor)
+            self.setTextCursor(reselect)
+            return True
+
+        if cursor.hasSelection():
+            return False
+
+        pos = cursor.position()
+        next_ch = text[pos] if pos < len(text) else ""
+
+        # Type over an existing closing bracket or quote instead of duplicating it.
+        if (ch in self._AUTO_PAIRS.values() or ch in self._AUTO_QUOTES) and next_ch == ch:
+            cursor.movePosition(QTextCursor.MoveOperation.NextCharacter)
+            self.setTextCursor(cursor)
+            return True
+
+        # Insert a matching bracket pair.
+        if ch in self._AUTO_PAIRS:
+            cursor.beginEditBlock()
+            cursor.insertText(ch + self._AUTO_PAIRS[ch])
+            cursor.endEditBlock()
+            cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter)
+            self.setTextCursor(cursor)
+            return True
+
+        # Insert a matching quote pair, unless we're right after a word (e.g. an
+        # apostrophe in "don't") where a single quote is almost always intended.
+        if ch in self._AUTO_QUOTES:
+            prev_ch = text[pos - 1] if pos > 0 else ""
+            if prev_ch.isalnum():
+                return False
+
+            cursor.beginEditBlock()
+            cursor.insertText(ch + ch)
+            cursor.endEditBlock()
+            cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter)
+            self.setTextCursor(cursor)
+            return True
+
+        return False
+
+    def _backspace_between_pair(self) -> bool:
+        """Delete both characters of an empty pair when Backspace is pressed between them."""
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            return False
+
+        pos = cursor.position()
+        text = self.toPlainText()
+        if pos == 0 or pos >= len(text):
+            return False
+
+        prev_ch = text[pos - 1]
+        next_ch = text[pos]
+        is_pair = self._AUTO_PAIRS.get(prev_ch) == next_ch or (
+            prev_ch in self._AUTO_QUOTES and next_ch == prev_ch
+        )
+        if not is_pair:
+            return False
+
+        cursor.beginEditBlock()
+        cursor.deleteChar()
+        cursor.deletePreviousChar()
+        cursor.endEditBlock()
+        return True
+
+    # -- Indentation / line editing helpers ----------------------------------
+
+    def _current_indent_settings(self) -> tuple[bool, int]:
+        """Return (use_soft_tabs, tab_size), defaulting to 4-space soft tabs."""
+        mindspace_manager = MindspaceManager()
+        if mindspace_manager.has_mindspace():
+            settings = cast(MindspaceSettings, mindspace_manager.settings())
+            return settings.use_soft_tabs, settings.tab_size
+
+        return True, 4
+
+    def _selected_line_range(self, cursor: QTextCursor) -> tuple[int, int]:
+        """Return the inclusive (first, last) block numbers the selection covers."""
+        # A selection ending exactly at a line start does not pull in that
+        # trailing line (matching how block indent/outdent already behaves).
+        doc = self.document()
+        start = cursor.selectionStart()
+        end = cursor.selectionEnd()
+        first = doc.findBlock(start).blockNumber()
+        last = doc.findBlock(end).blockNumber()
+        if last > first and doc.findBlock(end).position() == end:
+            last -= 1
+
+        return first, last
+
+    def _insert_newline_with_indent(self) -> None:
+        """Insert a newline, carrying the current line's indent plus one extra level."""
+        cursor = self.textCursor()
+        block_text = cursor.block().text()
+        col = cursor.position() - cursor.block().position()
+        before_cursor = block_text[:col]
+        indent = before_cursor[:len(before_cursor) - len(before_cursor.lstrip(" \t"))]
+
+        use_soft, tab_size = self._current_indent_settings()
+        one_level = " " * tab_size if use_soft else "\t"
+        extra = one_level if before_cursor.rstrip().endswith(("{", ":", "(", "[")) else ""
+
+        cursor.beginEditBlock()
+        cursor.insertText("\n" + indent + extra)
+        cursor.endEditBlock()
+        self.setTextCursor(cursor)
+
+    def _toggle_line_comment(self) -> None:
+        """Comment or uncomment the selected lines using the language's line token."""
+        prefix = self._LINE_COMMENT_PREFIXES.get(self._syntax)
+        if not prefix:
+            return
+
+        doc = self.document()
+        cursor = self.textCursor()
+        first, last = self._selected_line_range(cursor)
+        blocks = [doc.findBlockByNumber(n) for n in range(first, last + 1)]
+
+        # Comment unless every non-blank line is already commented (then uncomment).
+        non_blank = [b for b in blocks if b.text().strip()]
+        all_commented = bool(non_blank) and all(
+            b.text().lstrip(" \t").startswith(prefix) for b in non_blank
+        )
+
+        edit = QTextCursor(doc)
+        edit.beginEditBlock()
+        try:
+            for block in blocks:
+                text = block.text()
+                if not text.strip():
+                    continue
+
+                indent_len = len(text) - len(text.lstrip(" \t"))
+                edit.setPosition(block.position() + indent_len)
+                if all_commented:
+                    after = text[indent_len:]
+                    remove_len = len(prefix) + 1 if after.startswith(prefix + " ") else len(prefix)
+                    edit.setPosition(edit.position() + remove_len, QTextCursor.MoveMode.KeepAnchor)
+                    edit.removeSelectedText()
+
+                else:
+                    edit.insertText(prefix + " ")
+
+        finally:
+            edit.endEditBlock()
+
+    def _line_segment(self, first: int, last: int) -> tuple[int, int]:
+        """Return the (start, end) character offsets spanning whole blocks first..last."""
+        doc = self.document()
+        first_block = doc.findBlockByNumber(first)
+        last_block = doc.findBlockByNumber(last)
+        return first_block.position(), last_block.position() + len(last_block.text())
+
+    def _duplicate_lines(self) -> None:
+        """Duplicate the current line(s) below the selection."""
+        cursor = self.textCursor()
+        first, last = self._selected_line_range(cursor)
+        seg_start, seg_end = self._line_segment(first, last)
+        segment = self.toPlainText()[seg_start:seg_end]
+
+        edit = self.textCursor()
+        edit.beginEditBlock()
+        edit.setPosition(seg_end)
+        edit.insertText("\n" + segment)
+        edit.endEditBlock()
+
+    def _delete_lines(self) -> None:
+        """Delete the current line(s) entirely, including a joining newline."""
+        doc = self.document()
+        cursor = self.textCursor()
+        first, last = self._selected_line_range(cursor)
+        seg_start, seg_end = self._line_segment(first, last)
+
+        edit = QTextCursor(doc)
+        edit.beginEditBlock()
+        if last < doc.blockCount() - 1:
+            # Consume the newline after the block range.
+            edit.setPosition(seg_start)
+            edit.setPosition(doc.findBlockByNumber(last + 1).position(), QTextCursor.MoveMode.KeepAnchor)
+
+        else:
+            # Last line in the document: consume the newline before it instead.
+            start = seg_start
+            if first > 0:
+                prev = doc.findBlockByNumber(first - 1)
+                start = prev.position() + len(prev.text())
+
+            edit.setPosition(start)
+            edit.setPosition(seg_end, QTextCursor.MoveMode.KeepAnchor)
+
+        edit.removeSelectedText()
+        edit.endEditBlock()
+
+    def _move_lines(self, direction: int) -> None:
+        """Move the current line(s) up (direction<0) or down (direction>0)."""
+        doc = self.document()
+        cursor = self.textCursor()
+        first, last = self._selected_line_range(cursor)
+
+        if direction < 0 and first == 0:
+            return
+
+        if direction > 0 and last == doc.blockCount() - 1:
+            return
+
+        seg_start, seg_end = self._line_segment(first, last)
+        text = self.toPlainText()
+
+        edit = QTextCursor(doc)
+        edit.beginEditBlock()
+        try:
+            if direction < 0:
+                prev = doc.findBlockByNumber(first - 1)
+                # Remove the previous line plus its trailing newline...
+                edit.setPosition(prev.position())
+                edit.setPosition(seg_start, QTextCursor.MoveMode.KeepAnchor)
+                prev_line = text[prev.position():seg_start - 1]  # exclude the newline
+                edit.removeSelectedText()
+                # ...and reinsert it after the moved block, which shifted up.
+                new_end = seg_end - (seg_start - prev.position())
+                edit.setPosition(new_end)
+                edit.insertText("\n" + prev_line)
+
+            else:
+                nxt = doc.findBlockByNumber(last + 1)
+                next_end = nxt.position() + len(nxt.text())
+                next_line = text[nxt.position():next_end]
+                # Remove the next line plus the newline joining it to the block...
+                edit.setPosition(seg_end)
+                edit.setPosition(next_end, QTextCursor.MoveMode.KeepAnchor)
+                edit.removeSelectedText()
+                # ...and reinsert it before the moved block.
+                edit.setPosition(seg_start)
+                edit.insertText(next_line + "\n")
+
+        finally:
+            edit.endEditBlock()
 
     def _start_smooth_scroll_to_cursor(self, cursor: QTextCursor) -> None:
         """
