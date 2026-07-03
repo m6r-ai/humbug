@@ -17,6 +17,20 @@ included with the release.
 
 ---
 
+### Windows: SmartScreen warning
+
+The Windows executable is not currently code-signed, so Windows Defender SmartScreen may display
+a "Windows protected your PC" warning when you try to run the installer for the first time.
+This is expected for an open-source project. To proceed:
+
+1. Click **More info**
+2. Click **Run anyway**
+
+This warning will become less frequent as the build accumulates SmartScreen reputation over time.
+
+You can also unblock the file before running: right-click the downloaded `.exe`, select
+**Properties**, check **Unblock** at the bottom of the General tab, and click **OK**.
+
 ## Option 2: Install from source
 
 Before installing from source, make sure you have **Python 3.10 or higher** installed on your system. You can
