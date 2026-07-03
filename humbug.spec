@@ -106,8 +106,8 @@ else:
             bundle_identifier='ai.m6r.humbug',
             info_plist={
                 'CFBundleDisplayName': 'Humbug',
-                'CFBundleShortVersionString': '52',
-                'CFBundleVersion': '52',
+                'CFBundleShortVersionString': '53',
+                'CFBundleVersion': '53',
                 'NSPrincipalClass': 'NSApplication',
                 'NSAppleScriptEnabled': False
             }
