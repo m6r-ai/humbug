@@ -238,7 +238,7 @@ Language-specific syntax highlighting system.
 **Language subdirectories:**
 - `menai/`, `c/`, `cpp/`, `csharp/`, `css/`, `diff/`, `go/`, `html/`, `java/`
 - `javascript/`, `json/`, `kotlin/`, `lua/`, `markdown/`, `metaphor/`, `move/`
-- `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `typescript/`, `xml/`
+- `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `toml/`, `typescript/`, `xml/`, `yaml/`
 
 ### `src/terminal/`
 Cross-platform terminal emulator with Unix and Windows implementations.

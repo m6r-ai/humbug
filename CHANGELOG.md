@@ -11,6 +11,7 @@ New features:
   of needing to compile them locally.
 - Removed the legacy Python implementation fo the Menai VM.  The C version is now definitive on all platforms, with binaries
   available from GitHub.
+- Added YAML and TOML syntax highlighters.
 
 Bug fixes:
 

@@ -25,5 +25,7 @@ from syntax.swift.swift_parser import SwiftParser
 from syntax.text.text_parser import TextParser
 from syntax.typescript.typescript_parser import TypeScriptParser
 from syntax.xml.xml_parser import XMLParser
+from syntax.toml.toml_parser import TOMLParser
+from syntax.yaml.yaml_parser import YAMLParser
 from syntax.parser_registry import ParserRegistry
 # pylint: enable=unused-import
