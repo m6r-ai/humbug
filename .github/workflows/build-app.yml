@@ -54,6 +54,14 @@ jobs:
       - name: Fetch pre-built Menai C VM binary
         run: python fetch-menai-vm.py
 
+      - name: Extract version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(python -c "from src.desktop.version import CURRENT_VERSION; print(CURRENT_VERSION)")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+
       # macOS build
       - name: Import code signing certificate (macOS)
         if: runner.os == 'macOS'
@@ -100,7 +108,7 @@ jobs:
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          xcrun notarytool submit dist/Humbug.dmg \
+          xcrun notarytool submit dist/Humbug-v${{ steps.version.outputs.version }}-macos-*.dmg \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_APP_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
@@ -120,8 +128,8 @@ jobs:
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v7
         with:
-          name: Humbug-${{ matrix.label }}
-          path: dist/Humbug.dmg
+          name: Humbug-v${{ steps.version.outputs.version }}-${{ matrix.label }}
+          path: dist/Humbug-v${{ steps.version.outputs.version }}-macos-*.dmg
 
       # Windows build
       - name: Install Inno Setup (Windows)
@@ -135,6 +143,8 @@ jobs:
       - name: Run Inno Setup (Windows)
         if: runner.os == 'Windows'
         shell: cmd
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
         run: |
           set ISCC=""
           if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" set ISCC="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
@@ -143,14 +153,14 @@ jobs:
             echo ERROR: Inno Setup not found.
             exit /b 1
           )
-          %ISCC% humbug-installer.iss
+          %ISCC% /dMyAppVersion=%APP_VERSION% humbug-installer.iss
 
       - name: Upload artifact (Windows)
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v7
         with:
-          name: Humbug-${{ matrix.label }}
-          path: dist/Humbug-Setup.exe
+          name: Humbug-v${{ steps.version.outputs.version }}-${{ matrix.label }}
+          path: dist/Humbug-v${{ steps.version.outputs.version }}-windows-x86_64.exe
 
       # Linux build
       - name: Build app with PyInstaller (Linux)
@@ -165,5 +175,5 @@ jobs:
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v7
         with:
-          name: Humbug-${{ matrix.label }}
-          path: dist/Humbug-*.AppImage
+          name: Humbug-v${{ steps.version.outputs.version }}-${{ matrix.label }}
+          path: dist/Humbug-v${{ steps.version.outputs.version }}-linux-*.AppImage

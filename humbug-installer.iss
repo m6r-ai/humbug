@@ -1,5 +1,8 @@
+#ifndef MyAppVersion
+  #error "MyAppVersion must be defined. Pass it via ISCC: /dMyAppVersion=<version> (extracted from src\desktop\version.py)"
+#endif
+
 #define MyAppName "Humbug"
-#define MyAppVersion "53"
 #define MyAppPublisher "m6r.ai"
 #define MyAppURL "https://github.com/m6r-ai/humbug"
 #define MyAppExeName "Humbug.exe"
@@ -16,7 +19,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=dist
-OutputBaseFilename=Humbug-Setup
+OutputBaseFilename=Humbug-v{#MyAppVersion}-windows-x86_64
 SetupIconFile=icons\Humbug.ico
 Compression=lzma
 SolidCompression=yes

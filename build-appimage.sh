@@ -10,7 +10,7 @@
 #   ./build-appimage.sh
 #
 # Output:
-#   dist/Humbug-x86_64.AppImage  (or -aarch64.AppImage on ARM)
+#   dist/Humbug-v<version>-linux-<arch>.AppImage
 
 set -e
 
@@ -20,6 +20,13 @@ BUILD_DIR="$DIST_DIR/Humbug"
 
 if [ ! -d "$BUILD_DIR" ]; then
     echo "ERROR: $BUILD_DIR not found. Run PyInstaller first."
+    exit 1
+fi
+
+# Get version from version.py
+VERSION=$(python -c "from src.desktop.version import CURRENT_VERSION; print(CURRENT_VERSION)")
+if [ -z "$VERSION" ]; then
+    echo "ERROR: Could not determine version."
     exit 1
 fi
 
@@ -68,7 +75,7 @@ case "$ARCH" in
         APPIMAGE_ARCH="x86_64"
         ;;
     aarch64|arm64)
-        APPIMAGE_ARCH="aarch64"
+        APPIMAGE_ARCH="arm64"
         ;;
     *)
         APPIMAGE_ARCH="$ARCH"
@@ -82,7 +89,7 @@ else
     AIM="$DIST_DIR/appimagetool"
     if [ ! -f "$AIM" ]; then
         echo "Downloading appimagetool..."
-        APPIMAGE_RELEASE_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${APPIMAGE_ARCH}.AppImage"
+        APPIMAGE_RELEASE_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${ARCH}.AppImage"
         curl -fsSL -o "$AIM" "$APPIMAGE_RELEASE_URL"
         chmod +x "$AIM"
         # Workaround for FUSE issues on some CI runners
@@ -91,7 +98,7 @@ else
 fi
 
 # Build the AppImage
-OUTPUT="$DIST_DIR/Humbug-${APPIMAGE_ARCH}.AppImage"
+OUTPUT="$DIST_DIR/Humbug-v${VERSION}-linux-${APPIMAGE_ARCH}.AppImage"
 echo "Building $OUTPUT ..."
 "$AIM" "$DIST_DIR/$APP_DIR" "$OUTPUT"
 

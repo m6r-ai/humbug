@@ -8,6 +8,13 @@ import certifi
 
 codesign_id = os.environ['CODESIGN_IDENTITY'] if 'CODESIGN_IDENTITY' in os.environ else None
 
+# Read version from version.py
+import importlib.util
+_spec = importlib.util.spec_from_file_location("version", "src/desktop/version.py")
+_version_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_version_module)
+APP_VERSION = str(_version_module.CURRENT_VERSION)
+
 block_cipher = None
 
 # On Windows, explicitly collect the in-place compiled Menai C extension (.pyd).
@@ -106,8 +113,8 @@ else:
             bundle_identifier='ai.m6r.humbug',
             info_plist={
                 'CFBundleDisplayName': 'Humbug',
-                'CFBundleShortVersionString': '53',
-                'CFBundleVersion': '53',
+                'CFBundleShortVersionString': APP_VERSION,
+                'CFBundleVersion': APP_VERSION,
                 'NSPrincipalClass': 'NSApplication',
                 'NSAppleScriptEnabled': False
             }
