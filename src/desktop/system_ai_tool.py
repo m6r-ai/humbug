@@ -241,9 +241,6 @@ class SystemAITool(AITool):
         if not path_str:
             raise AIToolExecutionError("Path parameter is required")
 
-        if path_str.startswith(os.sep):
-            path_str = path_str[1:]
-
         abs_path = self._mindspace.get_absolute_path(path_str)
 
         relative_path = self._mindspace.get_mindspace_relative_path(abs_path)
