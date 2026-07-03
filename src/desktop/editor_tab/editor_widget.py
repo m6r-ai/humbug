@@ -467,6 +467,11 @@ class EditorWidget(QPlainTextEdit):
             self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
 
         self.file_saved.emit(self._path)
+
+        # Refresh the VCS panel immediately: a working-tree edit changes git
+        # status but touches neither .git/HEAD nor .git/index, so the poller
+        # would otherwise only notice it on its next timed poll.
+        MindspaceVCSPoller().force_refresh()
         return True
 
     def save_file_as(self) -> bool:
