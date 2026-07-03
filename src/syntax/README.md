@@ -60,23 +60,26 @@ Utility functions for programming language operations:
 
 The module includes dedicated subdirectories for each supported programming language:
 
+### AI Programming
+- **`menai/`** - Menai programming language support
+
 ### Web Technologies
-- **`html/`** - HTML markup language support
-- **`xml/`** - XML markup language support
 - **`css/`** - CSS stylesheet language support
+- **`html/`** - HTML markup language support
 - **`javascript/`** - JavaScript language support
-- **`typescript/`** - TypeScript language support
 - **`json/`** - JSON data format support
+- **`typescript/`** - TypeScript language support
+- **`xml/`** - XML markup language support
 
 ### Systems Programming
 - **`c/`** - C programming language support
 - **`cpp/`** - C++ programming language support
-- **`rust/`** - Rust programming language support
 - **`go/`** - Go programming language support
+- **`rust/`** - Rust programming language support
 
 ### Object-Oriented Languages
-- **`java/`** - Java programming language support
 - **`csharp/`** - C# programming language support
+- **`java/`** - Java programming language support
 - **`kotlin/`** - Kotlin programming language support
 - **`swift/`** - Swift programming language support
 
@@ -85,13 +88,14 @@ The module includes dedicated subdirectories for each supported programming lang
 - **`scheme/`** - Scheme/Lisp language support
 
 ### Specialized Languages
-- **`solidity/`** - Solidity smart contract language support
 - **`move/`** - Move programming language support
+- **`solidity/`** - Solidity smart contract language support
 
 ### Documentation and Text
 - **`markdown/`** - Markdown markup language support
-- **`metaphor/`** - Metaphor domain-specific language support
 - **`text/`** - Plain text support
+- **`toml/`** - TOML configuration file support
+- **`yaml/`** - YAML data serialization support
 
 ## Key Features
 
