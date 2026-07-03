@@ -79,7 +79,9 @@ jobs:
 
       - name: Install create-dmg (macOS)
         if: runner.os == 'macOS'
-        run: brew install create-dmg
+        run: |
+          brew untap aws/tap 2>/dev/null || true
+          brew install create-dmg
 
       - name: Build app with PyInstaller (macOS)
         if: runner.os == 'macOS'
