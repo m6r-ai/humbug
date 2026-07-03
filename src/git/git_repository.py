@@ -9,14 +9,28 @@ from git.git_error import GitCommandError, GitNotFoundError, GitNotRepositoryErr
 
 _GIT_TIMEOUT = 10  # seconds
 
+# Network-bound operations (fetch/pull/push) can legitimately take much longer
+# than local queries, so they use an extended timeout.
+_GIT_NETWORK_TIMEOUT = 120  # seconds
 
-def _run_git(args: list[str], cwd: str) -> str:
+
+def _run_git(
+    args: list[str],
+    cwd: str,
+    timeout: int = _GIT_TIMEOUT,
+    input_text: str | None = None,
+    env: dict[str, str] | None = None,
+) -> str:
     """
     Run a git command and return its stdout.
 
     Args:
         args: Git arguments (excluding the 'git' executable itself)
         cwd: Working directory for the command
+        timeout: Maximum time in seconds to wait for the command to complete
+        input_text: Optional text piped to the command's stdin (e.g. a patch)
+        env: Optional extra environment variables merged over the current
+            environment (e.g. GIT_EDITOR=true to keep git non-interactive)
 
     Returns:
         Stdout output as a string
@@ -31,6 +45,10 @@ def _run_git(args: list[str], cwd: str) -> str:
     else:
         creationflags = 0
 
+    run_env = None
+    if env:
+        run_env = {**os.environ, **env}
+
     try:
         result = subprocess.run(
             ["git"] + args,
@@ -39,8 +57,10 @@ def _run_git(args: list[str], cwd: str) -> str:
             capture_output=True,
             text=True,
             encoding="utf-8",
-            timeout=_GIT_TIMEOUT,
+            timeout=timeout,
             creationflags=creationflags,
+            input=input_text,
+            env=run_env,
         )
 
     except FileNotFoundError as e:
@@ -48,7 +68,7 @@ def _run_git(args: list[str], cwd: str) -> str:
 
     except subprocess.TimeoutExpired as e:
         raise GitCommandError(
-            f"git command timed out after {_GIT_TIMEOUT}s",
+            f"git command timed out after {timeout}s",
             returncode=-1,
             stderr=""
         ) from e
@@ -61,6 +81,36 @@ def _run_git(args: list[str], cwd: str) -> str:
         )
 
     return result.stdout
+
+
+def init_repository(path: str) -> None:
+    """
+    Initialise a new git repository at *path*.
+
+    Args:
+        path: Absolute path to an existing directory to turn into a repository.
+
+    Raises:
+        GitNotFoundError: If git is not installed or not on PATH
+        GitCommandError: If the command fails
+    """
+    _run_git(["init"], cwd=path)
+
+
+def clone_repository(url: str, parent_dir: str, timeout: int = 300) -> None:
+    """
+    Clone *url* into a new subdirectory of *parent_dir*.
+
+    Args:
+        url: The repository URL to clone.
+        parent_dir: Existing directory to clone into (git creates a subfolder).
+        timeout: Maximum time in seconds to allow for the clone.
+
+    Raises:
+        GitNotFoundError: If git is not installed or not on PATH
+        GitCommandError: If the clone fails
+    """
+    _run_git(["clone", url], cwd=parent_dir, timeout=timeout)
 
 
 def find_repo_root(path: str) -> str:
@@ -93,6 +143,81 @@ def find_repo_root(path: str) -> str:
             ) from e
 
         raise
+
+
+# Directories that never contain a project repo worth surfacing and are
+# expensive to descend into.  The scan skips these outright.
+_SCAN_SKIP_DIRS = frozenset({
+    ".git", "node_modules", "__pycache__", ".venv", "venv", ".tox",
+    ".mypy_cache", ".pytest_cache", "build", "dist", ".idea",
+})
+
+
+def find_repositories(root: str, max_depth: int = 4) -> list[str]:
+    """
+    Find all git repositories at or below *root*.
+
+    Walks the directory tree looking for directories that contain a ``.git``
+    entry.  Descent continues *past* a discovered repository so that nested
+    repositories (for example a project cloned inside a mindspace that is itself
+    a repo) are surfaced too.  Descent stops at *max_depth* levels below *root*
+    and at well-known heavy directories.
+
+    Args:
+        root: Absolute path to the directory to scan (e.g. a mindspace root).
+        max_depth: Maximum directory depth below *root* to search.
+
+    Returns:
+        Sorted list of absolute repository root paths.  A repository at *root*
+        itself is included.
+    """
+    if not os.path.isdir(root):
+        return []
+
+    root = os.path.normpath(root)
+    found: list[str] = []
+    _scan_for_repos(root, root, max_depth, found)
+    return sorted(found)
+
+
+def _scan_for_repos(current: str, root: str, max_depth: int, found: list[str]) -> None:
+    """
+    Recursively collect repository roots into *found*.
+
+    A directory that is itself a repository is recorded and still descended
+    into, so nested repositories are discovered.  The ``.git`` directory itself
+    is never entered (it is in the skip set).
+
+    Args:
+        current: Directory currently being inspected.
+        root: The original scan root, used to compute depth.
+        max_depth: Maximum depth below root to descend.
+        found: Accumulator list of discovered repository roots.
+    """
+    # A repository's marker is ``.git`` — a directory normally, but a file for
+    # linked worktrees and submodules (a "gitdir:" pointer).
+    if os.path.exists(os.path.join(current, ".git")):
+        found.append(current)
+
+    depth = 0 if current == root else current[len(root):].count(os.sep)
+    if depth >= max_depth:
+        return
+
+    try:
+        entries = os.scandir(current)
+
+    except OSError:
+        return
+
+    with entries:
+        for entry in entries:
+            if not entry.is_dir(follow_symlinks=False):
+                continue
+
+            if entry.name in _SCAN_SKIP_DIRS or entry.name.startswith("."):
+                continue
+
+            _scan_for_repos(entry.path, root, max_depth, found)
 
 
 def is_file_tracked(repo_root: str, file_path: str) -> bool:
@@ -207,6 +332,81 @@ def _untracked_file_diff(file_path: str) -> str:
     body = "".join(f"+{line}" if line.endswith("\n") else f"+{line}\n" for line in lines)
 
     return header + body
+
+
+def get_unstaged_file_diff(repo_root: str, file_path: str) -> str:
+    """
+    Return the unstaged diff for a file (index vs working tree).
+
+    Args:
+        repo_root: Absolute path to the repository root.
+        file_path: Absolute path to the file.
+
+    Returns:
+        Unified diff text (empty if there are no unstaged changes).
+
+    Raises:
+        GitNotFoundError: If git is not installed or not on PATH.
+        GitCommandError: If the command fails unexpectedly.
+    """
+    return _run_git(["diff", "--", file_path], cwd=repo_root)
+
+
+def get_staged_file_diff(repo_root: str, file_path: str) -> str:
+    """
+    Return the staged diff for a file (HEAD vs index).
+
+    Args:
+        repo_root: Absolute path to the repository root.
+        file_path: Absolute path to the file.
+
+    Returns:
+        Unified diff text (empty if nothing is staged for the file).
+
+    Raises:
+        GitNotFoundError: If git is not installed or not on PATH.
+        GitCommandError: If the command fails unexpectedly.
+    """
+    return _run_git(["diff", "--cached", "--", file_path], cwd=repo_root)
+
+
+def split_file_diff(diff_text: str) -> tuple[str, list[str]]:
+    """
+    Split a single-file unified diff into its header and hunks.
+
+    Args:
+        diff_text: The unified diff for one file.
+
+    Returns:
+        A tuple of (header, hunks) where *header* is the text preceding the
+        first ``@@`` hunk (the ``diff --git`` / ``---`` / ``+++`` lines) and
+        *hunks* is a list of hunk texts each starting with ``@@``.  Rejoining
+        the header with any subset of hunks yields an applyable patch.
+    """
+    lines = diff_text.splitlines(keepends=True)
+    header_lines: list[str] = []
+    hunks: list[str] = []
+    current: list[str] = []
+    in_hunk = False
+
+    for line in lines:
+        if line.startswith("@@"):
+            if current:
+                hunks.append("".join(current))
+
+            current = [line]
+            in_hunk = True
+
+        elif in_hunk:
+            current.append(line)
+
+        else:
+            header_lines.append(line)
+
+    if current:
+        hunks.append("".join(current))
+
+    return "".join(header_lines), hunks
 
 
 def get_file_at_head(repo_root: str, file_path: str) -> str | None:

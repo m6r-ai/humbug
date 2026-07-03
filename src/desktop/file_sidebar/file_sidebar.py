@@ -40,6 +40,7 @@ class FileSidebar(SidebarBase):
     file_opened_in_editor = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in editor
     file_opened_in_preview = Signal(str)  # Emits path when file is opened in preview
     file_opened_in_diff = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in diff
+    manage_git_requested = Signal(str)  # Emits the enclosing repository root when "Manage Git" is chosen
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the files view widget."""
@@ -662,6 +663,28 @@ class FileSidebar(SidebarBase):
 
         return self._filter_model.mapFromSource(source_index)
 
+    def _enclosing_repo(self, path: str) -> str:
+        """
+        Return the discovered repository root that contains *path*, or "".
+
+        When several repos qualify (nested layouts) the deepest one wins.
+
+        Args:
+            path: Absolute path to a folder.
+
+        Returns:
+            Absolute repository root path, or empty string if none contains it.
+        """
+        normalized = os.path.normpath(path)
+        best = ""
+        for repo in self._vcs_poller.repositories():
+            repo_norm = os.path.normpath(repo)
+            if normalized == repo_norm or normalized.startswith(repo_norm + os.sep):
+                if len(repo_norm) > len(best):
+                    best = repo_norm
+
+        return best
+
     def _show_breadcrumb_context_menu(self, path: str, global_pos: QPoint) -> None:
         """
         Show a context menu for a breadcrumb item at the given screen position.
@@ -727,6 +750,14 @@ class FileSidebar(SidebarBase):
                 rename_action.triggered.connect(lambda: self._start_rename(index))
                 delete_action = menu.addAction(strings.delete)
                 delete_action.triggered.connect(lambda: self._handle_delete_folder(path))
+
+                repo_root = self._enclosing_repo(path)
+                if repo_root:
+                    menu.addSeparator()
+                    manage_git_action = menu.addAction(strings.git_manage)
+                    manage_git_action.triggered.connect(
+                        lambda: self.manage_git_requested.emit(repo_root)
+                    )
 
             else:
                 # File context menu
