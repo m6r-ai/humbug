@@ -28,6 +28,25 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH
             ],
         ),
+        ("claude-sonnet-5", "anthropic"): AIModel(
+            name="claude-sonnet-5",
+            provider="anthropic",
+            display_name="Claude Sonnet 5",
+            context_window=1000000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+            adaptive_thinking_only=True,
+        ),
         ("claude-sonnet-4-6", "anthropic"): AIModel(
             name="claude-sonnet-4-6",
             provider="anthropic",
@@ -65,10 +84,10 @@ class AIConversationSettings:
             ],
             adaptive_thinking_only=True,
         ),
-        ("claude-opus-4-7", "anthropic"): AIModel(
-            name="claude-opus-4-7",
+        ("claude-fable-5", "anthropic"): AIModel(
+            name="claude-fable-5",
             provider="anthropic",
-            display_name="Claude Opus 4.7",
+            display_name="Claude Fable 5",
             context_window=1000000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=False,

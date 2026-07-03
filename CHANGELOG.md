@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v52 (2026-06-xx)
+## v52 (2026-07-03)
 
 New features:
 
@@ -14,6 +14,7 @@ New features:
 - Added Linux binary app build scripts.
 - Set up GitHub actions to build binaries for MacOS, Windows, and Linux.
 - Added YAML and TOML syntax highlighters.
+- Added Claude Sonnet 5 and Claude Fable 5.  Removed Claude Opus 4.7.
 
 Bug fixes:
 
