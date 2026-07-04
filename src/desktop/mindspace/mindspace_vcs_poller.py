@@ -15,7 +15,7 @@ from git import (
 from desktop.file_watcher.file_watcher import FileWatcher
 
 
-_POLL_INTERVAL_MS = 10000
+_POLL_INTERVAL_MS = 3000
 
 
 @dataclass
