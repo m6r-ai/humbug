@@ -483,9 +483,9 @@ fetch_slow_type(PyObject *mod, const char *name, PyTypeObject **dst)
  * boundary to ensure all values returned to Python callers are proper Python
  * objects with the full MenaiValue interface (to_python, describe, etc.).
  *
- * For MenaiFunction, bytecode is set to None because the slow Python VM will
- * never be asked to execute these functions — they are returned as values only.
- * captured_values are recursively converted to slow values.
+ * For MenaiFunction, bytecode is set to None because these functions are
+ * returned as values only, never executed on the Python side.
+ * captured_values are recursively converted.
  *
  * Returns a new reference, or NULL on error with a Python exception set.
  */
@@ -751,7 +751,7 @@ menai_value_to_slow_value(MenaiValue *val)
             (PyObject *)Slow_FunctionType,
             py_params,
             py_name,
-            Py_None,   /* bytecode — not needed; slow VM won't execute this */
+            Py_None,   /* bytecode — not needed; functions are values only */
             py_caps,
             py_variadic,
             NULL);

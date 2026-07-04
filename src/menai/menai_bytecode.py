@@ -499,7 +499,7 @@ def unpack_instruction(word: int) -> 'Instruction':
     """
     Unpack a 64-bit instruction word into an Instruction object.
 
-    Used by the validator, disassembler, and the pure-Python VM shim.
+    Used by the validator and disassembler.
     """
     return Instruction(
         opcode=(word >> _OPCODE_SHIFT) & _OPCODE_MASK,
