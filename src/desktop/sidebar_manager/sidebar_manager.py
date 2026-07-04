@@ -41,6 +41,7 @@ class SidebarManager(QWidget):
     file_opened_in_editor = Signal(str, bool)
     file_opened_in_preview = Signal(str)
     file_opened_in_diff = Signal(str, bool)
+    history_requested = Signal(str)                 # repo_root
     new_conversation_requested = Signal(str)
     settings_requested = Signal()
     tab_overview_requested = Signal()
@@ -384,6 +385,18 @@ class SidebarManager(QWidget):
         self._set_active_panel(panel_id)
         if self._sidebar_collapsed:
             self.toggle_requested.emit()
+
+    def manage_git(self, repo_root: str) -> None:
+        """
+        Reveal the VCS panel and focus it on the given repository.
+
+        Args:
+            repo_root: Absolute path to the repository root to manage.
+        """
+        self.show_panel("vcs")
+        panel = self._panel_widgets.get("vcs")
+        if panel is not None and hasattr(panel, "set_active_repo"):
+            panel.set_active_repo(repo_root)
 
     def set_mindspace(self, path: str) -> None:
         """

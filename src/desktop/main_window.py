@@ -41,6 +41,7 @@ from desktop.color_role import ColorRole
 from desktop.conversation_sidebar.conversation_sidebar import ConversationSidebar
 from desktop.conversation_tab.conversation_tab import ConversationTab
 from desktop.diff_tab.diff_tab import DiffTab
+from desktop.git_history_tab.git_history_tab import GitHistoryTab
 from desktop.editor_tab.editor_tab import EditorTab
 from desktop.exception_notifier import get_exception_notifier
 from desktop.file_sidebar.file_sidebar import FileSidebar
@@ -133,6 +134,13 @@ def _create_diff_tab(
     return DiffTab(info.context_id, info.path, parent)
 
 
+def _create_git_history_tab(
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+) -> GitHistoryTab:
+    """Context factory for GitHistoryTab."""
+    return GitHistoryTab(info.context_id, info.path, parent)
+
+
 def _create_log_tab(
     info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> LogTab:
@@ -174,6 +182,7 @@ def _wire_vcs_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
     panel.file_opened_in_editor.connect(mgr.file_opened_in_editor)
     panel.file_opened_in_preview.connect(mgr.file_opened_in_preview)
     panel.file_opened_in_diff.connect(mgr.file_opened_in_diff)
+    panel.history_requested.connect(mgr.history_requested)
 
 
 def _wire_file_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
@@ -186,6 +195,7 @@ def _wire_file_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
     panel.file_opened_in_editor.connect(mgr.file_opened_in_editor)
     panel.file_opened_in_preview.connect(mgr.file_opened_in_preview)
     panel.file_opened_in_diff.connect(mgr.file_opened_in_diff)
+    panel.manage_git_requested.connect(mgr.manage_git)
 
 
 def _wire_preview_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
@@ -560,6 +570,7 @@ class MainWindow(QMainWindow):
         self._sidebar_manager.file_opened_in_editor.connect(self._on_sidebar_file_opened_in_editor)
         self._sidebar_manager.file_opened_in_preview.connect(self._on_sidebar_file_opened_in_preview)
         self._sidebar_manager.file_opened_in_diff.connect(self._on_sidebar_file_opened_in_diff)
+        self._sidebar_manager.history_requested.connect(self._on_sidebar_history_requested)
         self._sidebar_manager.search_result_activated.connect(self._on_mindspace_search_result_activated)
         self._sidebar_manager.search_highlights_cleared.connect(self._clear_global_search_highlights)
         self._sidebar_manager.open_mindspace_requested.connect(self._on_open_mindspace)
@@ -587,12 +598,14 @@ class MainWindow(QMainWindow):
         tab_manager.register_tab_factory("terminal", TerminalTab.restore_from_state)
         tab_manager.register_tab_factory("preview", PreviewTab.restore_from_state)
         tab_manager.register_tab_factory("diff", DiffTab.restore_from_state)
+        tab_manager.register_tab_factory("git_history", GitHistoryTab.restore_from_state)
 
         tab_manager.register_context_factory("conversation", _create_conversation_tab)
         tab_manager.register_context_factory("editor", _create_editor_tab)
         tab_manager.register_context_factory("terminal", _create_terminal_tab)
         tab_manager.register_context_factory("preview", _create_preview_tab)
         tab_manager.register_context_factory("diff", _create_diff_tab)
+        tab_manager.register_context_factory("git_history", _create_git_history_tab)
         tab_manager.register_context_factory("log", _create_log_tab)
         tab_manager.register_context_factory("shell", _create_shell_tab)
         tab_manager.register_context_factory("usage", _create_usage_tab)
@@ -1467,6 +1480,28 @@ class MainWindow(QMainWindow):
                 MindspaceLogLevel.INFO,
                 f"User opened diff: '{path}'\ntab ID: {context_id}"
             )
+
+    def _on_sidebar_history_requested(self, repo_root: str) -> None:
+        """Open (or focus) the commit-history tab for a repository."""
+        if not repo_root:
+            return
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = contexts.get_by_path_and_type(repo_root, "git_history")
+        if existing:
+            contexts.focus(existing.context_id)
+            return
+
+        context_id = contexts.open(
+            context_type="git_history",
+            path=repo_root,
+            title=f"History — {os.path.basename(repo_root.rstrip(os.sep))}",
+            is_ephemeral=False,
+        )
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"User opened git history: '{repo_root}'\ntab ID: {context_id}"
+        )
 
     def _on_sidebar_file_clicked(self, source: str, path: str, ephemeral: bool) -> None:
         """Handle click of a file from the sidebar."""
