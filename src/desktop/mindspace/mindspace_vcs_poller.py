@@ -9,7 +9,7 @@ from PySide6.QtCore import QObject, QTimer, Signal
 
 from git import GitCommandError, GitNotFoundError, GitNotRepositoryError
 from git import (
-    MergeState, VCSFileStatus, find_repo_root, find_repositories, get_merge_state, get_status
+    MergeState, VCSFileStatus, find_repositories, get_merge_state, get_status
 )
 
 from desktop.file_watcher.file_watcher import FileWatcher
@@ -122,32 +122,34 @@ def _status_subtree(repo: str, mindspace_path: str) -> str:
     return ms
 
 
+def _is_within_mindspace(path: str, mindspace_path: str) -> bool:
+    """Return True if *path* is the mindspace root or a descendant of it."""
+    if not path or not mindspace_path:
+        return False
+
+    path_norm = os.path.normpath(path)
+    root_norm = os.path.normpath(mindspace_path)
+    return path_norm == root_norm or path_norm.startswith(root_norm + os.sep)
+
+
 def _discover_repos(mindspace_path: str) -> list[str]:
     """
-    Return every repository associated with the mindspace.
+    Return the repositories located inside the mindspace.
 
-    Prefers repositories found *within* the mindspace (one per project).  If
-    none are found, falls back to the repository that *contains* the mindspace,
-    if any, preserving the original single-repo behaviour.
+    Enforces a hard mindspace boundary: only repositories at or below the
+    mindspace root are surfaced.  We deliberately never climb up to an enclosing
+    repository, so the panel can never operate on files outside the mindspace.
 
     Args:
         mindspace_path: Absolute path to the mindspace root.
 
     Returns:
-        Sorted list of absolute repository root paths.
+        Sorted list of absolute repository root paths (empty if none inside).
     """
     if not mindspace_path:
         return []
 
-    repos = find_repositories(mindspace_path)
-    if repos:
-        return repos
-
-    try:
-        return [find_repo_root(mindspace_path)]
-
-    except (GitNotFoundError, GitNotRepositoryError, GitCommandError):
-        return []
+    return find_repositories(mindspace_path)
 
 
 class MindspaceVCSPoller(QObject):
@@ -251,9 +253,13 @@ class MindspaceVCSPoller(QObject):
         Args:
             repo_root: Absolute path to a repository root.  May be a repo that
                 has not been discovered yet (e.g. just selected from the file
-                tree); a refresh is triggered to pick it up.
+                tree); a refresh is triggered to pick it up.  A repo outside the
+                mindspace is rejected to preserve the mindspace boundary.
         """
         repo_root = os.path.normpath(repo_root) if repo_root else ""
+        if repo_root and not _is_within_mindspace(repo_root, self._mindspace_path):
+            return
+
         if repo_root == self._active_repo:
             return
 
