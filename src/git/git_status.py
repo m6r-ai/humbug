@@ -17,7 +17,12 @@ class VCSStatusCode(Enum):
     RENAMED = auto()
     COPIED = auto()
     UNTRACKED = auto()
+    CONFLICTED = auto()
     UNKNOWN = auto()
+
+
+# Porcelain XY combinations that indicate an unmerged (conflicted) file.
+_UNMERGED_STATES = frozenset({"DD", "AU", "UD", "UA", "DU", "AA", "UU"})
 
 
 @dataclass(frozen=True)
@@ -26,6 +31,46 @@ class VCSFileStatus:
     code: VCSStatusCode
     path: str                       # Absolute path to the file (new path for renames)
     original_path: str | None       # Absolute path to the original file (renames/copies only)
+    # Per-column codes from the porcelain XY status.  ``index_code`` is None when
+    # the file has no staged change (X column blank); ``worktree_code`` is None
+    # when the working tree matches the index (Y column blank).  These let a
+    # staging UI split files into "Staged" and "Changes" groups.
+    index_code: VCSStatusCode | None = None
+    worktree_code: VCSStatusCode | None = None
+    is_conflicted: bool = False
+
+    def is_staged(self) -> bool:
+        """Return True if this file has changes staged in the index."""
+        return self.index_code is not None
+
+    def is_unstaged(self) -> bool:
+        """Return True if this file has unstaged working-tree changes."""
+        return self.worktree_code is not None
+
+
+def _char_to_code(char: str) -> VCSStatusCode | None:
+    """
+    Map a single porcelain status character to a VCSStatusCode.
+
+    Args:
+        char: One character from the X or Y status column.
+
+    Returns:
+        The corresponding VCSStatusCode, or None if the column is blank.
+    """
+    mapping = {
+        "M": VCSStatusCode.MODIFIED,
+        "A": VCSStatusCode.ADDED,
+        "D": VCSStatusCode.DELETED,
+        "R": VCSStatusCode.RENAMED,
+        "C": VCSStatusCode.COPIED,
+        "?": VCSStatusCode.UNTRACKED,
+    }
+
+    if char in (" ", ""):
+        return None
+
+    return mapping.get(char, VCSStatusCode.UNKNOWN)
 
 
 def _xy_to_code(xy: str) -> VCSStatusCode:
@@ -116,7 +161,27 @@ def get_status(repo_root: str, subtree_path: str) -> list[VCSFileStatus]:
 
         xy = token[:2]
         rel_path = token[3:]
-        code = _xy_to_code(xy)
+        is_conflicted = xy in _UNMERGED_STATES
+
+        # Untracked files ("??") have no staged component; git reports them in
+        # the worktree column only.  For all other statuses the X column is the
+        # index (staged) state and the Y column is the working-tree state.
+        # Conflicted files are surfaced separately, so they carry neither a
+        # staged nor an unstaged code (keeping them out of those groups).
+        if is_conflicted:
+            code = VCSStatusCode.CONFLICTED
+            index_code = None
+            worktree_code = None
+
+        elif xy == "??":
+            code = VCSStatusCode.UNTRACKED
+            index_code = None
+            worktree_code = VCSStatusCode.UNTRACKED
+
+        else:
+            code = _xy_to_code(xy)
+            index_code = _char_to_code(xy[0])
+            worktree_code = _char_to_code(xy[1])
 
         original_path: str | None = None
 
@@ -134,7 +199,14 @@ def get_status(repo_root: str, subtree_path: str) -> list[VCSFileStatus]:
         if not _within_subtree(abs_path, subtree_path):
             continue
 
-        entries.append(VCSFileStatus(code=code, path=abs_path, original_path=original_path))
+        entries.append(VCSFileStatus(
+            code=code,
+            path=abs_path,
+            original_path=original_path,
+            index_code=index_code,
+            worktree_code=worktree_code,
+            is_conflicted=is_conflicted,
+        ))
 
     return entries
 
