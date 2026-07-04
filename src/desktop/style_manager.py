@@ -1409,13 +1409,26 @@ class StyleManager(QObject):
             }}
         """
 
-    def create_menu(self, parent: QWidget) -> QMenu:
+    def create_menu(self, parent: QWidget, title: str = "") -> QMenu:
         """Create a styled QMenu with correct attributes for all platforms."""
-        menu = QMenu(parent)
+        menu = QMenu(title, parent)
         menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         menu.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         menu.setStyleSheet(self.get_menu_stylesheet())
         return menu
+
+    def add_submenu(self, parent_menu: QMenu, title: str) -> QMenu:
+        """
+        Add a styled submenu to a menu.
+
+        Submenus created implicitly by ``QMenu.addMenu(str)`` do not receive the
+        frameless/translucent attributes, so they render a native square frame
+        beneath the rounded stylesheet border. Creating the submenu explicitly
+        gives it the same treatment as a top-level menu.
+        """
+        submenu = self.create_menu(parent_menu, title)
+        parent_menu.addMenu(submenu)
+        return submenu
 
     def get_menu_stylesheet(self) -> str:
         """Apply styling to a specific menu."""
