@@ -30,6 +30,16 @@ entirely with the contributor.
 - Test docstrings describe expected behaviour only. They must not reference historical
   bugs, previously broken behaviour, or implementation details of past fixes. A test is
   a specification, not a changelog.
+- **YAGNI (You Aren't Gonna Need It).** Do not add code speculatively. Every method,
+  function, class, and module must have a concrete reason to exist: it must be used
+  somewhere in Humbug or its supporting tools. If code cannot be reached at runtime it
+  should not exist. Do not add "helper" functions, convenience methods, or abstraction
+  layers unless they are called by real code in this contribution. If a reviewer asks
+  "where is this used?" and the answer is "it might be useful someday", the code will be
+  rejected. Pylint's built-in checks (unused-import, unused-argument, unused-variable,
+  unused-private-member) catch some of this automatically, but they do not catch
+  unreachable public methods or speculative abstraction layers — that is the contributor's
+  responsibility.
 
 ## Dependency rules
 

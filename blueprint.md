@@ -80,6 +80,17 @@ It also prevents the kind of gradual coupling that is especially risky when LLMs
 contributing code, since an AI might otherwise introduce a convenience import that silently
 creates a circular dependency between modules.
 
+### YAGNI — no speculative code
+Humbug strongly follows the YAGNI (You Aren't Gonna Need It) principle. Every method,
+function, class, and module must have a concrete reason to exist: it must be used
+somewhere in Humbug or its supporting tools. Code that cannot be reached at runtime
+should not exist and must be removed. This applies to both human and AI contributors.
+"It might be useful someday" is never a justification for adding code. Speculative
+abstraction layers, unused helper functions, and unreachable methods add maintenance
+burden and cognitive load, and make the codebase harder for both humans and AIs to
+reason about. When restructuring code, anything that is no longer called should be
+removed rather than left in place.
+
 ## What Humbug is NOT
 
 - **Not a replacement for the OS.** Humbug runs on top of Windows, macOS, and Linux

@@ -74,6 +74,17 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 - These and other style rules are enforced by the style checker pylint plugin (`tools/style_checker/`), which runs
   automatically as part of `python -m tools.code_checker`.
 
+## YAGNI (You Aren't Gonna Need It)
+
+Humbug strongly follows the YAGNI principle.  If there is no clear reason for a feature, method, or helper to exist,
+it should not be added.
+
+- Every method, function, class, and module must be used somewhere in the codebase.  If code cannot be reached at
+  runtime in Humbug or its supporting tools, remove it.
+- Do not add speculative helper functions, convenience methods, or abstraction layers that are not called by real
+  code.  "It might be useful someday" is not a valid reason.
+- When restructuring or refactoring, remove any code that is no longer called rather than leaving it in place.
+
 ## Code restructuring
 
 - When restructuring or rewriting code you MUST NOT remove comments.  If a comment is likely or definitely wrong then draw the
