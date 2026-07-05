@@ -109,7 +109,7 @@ ignored-modules = ["PySide6.*"]
 minversion = "7.0"
 addopts = "-ra -q --cov=src --cov-report=html"
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = [".", "src"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

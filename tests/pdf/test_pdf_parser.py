@@ -6,7 +6,7 @@ from pdf.pdf_errors import PDFParseError, PDFUnsupportedError
 from pdf.pdf_parser import parse
 from pdf.pdf_types import PDFObjectRef, PDFStream
 
-from .conftest import make_pdf, make_compressed_pdf
+from conftest import make_pdf, make_compressed_pdf
 
 
 class TestParse:

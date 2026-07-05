@@ -76,7 +76,7 @@ class MarkdownParser(Parser):
         """
         Strip all leading blockquote markers from a line.
 
-        Mirrors dmarkdown's _identify_line_type blockquote-stripping loop so that
+        Mirrors markdown_'s _identify_line_type blockquote-stripping loop so that
         the rest of the parser always works on the innermost content regardless of
         how many levels of '>' nesting are present.
 

@@ -4,7 +4,7 @@ from pdf.pdf_errors import PDFExtractionError
 from pdf.pdf_extractor import extract_text
 from pdf.pdf_parser import parse
 
-from .conftest import make_pdf, make_compressed_pdf, make_form_xobject_pdf, make_tounicode_pdf, make_raw_content_pdf
+from conftest import make_pdf, make_compressed_pdf, make_form_xobject_pdf, make_tounicode_pdf, make_raw_content_pdf
 
 
 class TestExtractText:

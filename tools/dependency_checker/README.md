@@ -49,7 +49,7 @@ modules:
     internal_dependencies:
       - ai
       - syntax
-      - dmarkdown
+      - markdown_
     external_dependencies:
       - "standard_library"
       - "PySide6"
@@ -61,7 +61,7 @@ modules:
   ai:
     internal_dependencies:
       - syntax
-      - dmarkdown
+      - markdown_
     external_dependencies:
       - "standard_library"
       - "openai"
@@ -76,7 +76,7 @@ modules:
       - "standard_library"
       - "pygments"          # Specific packages allowed
   
-  dmarkdown:
+  markdown_:
     internal_dependencies: []
     external_dependencies:
       - "standard_library"
@@ -254,7 +254,7 @@ Dependency Check Results
 ========================
 
 ✓ syntax/ - checked, no violations
-✓ dmarkdown/ - checked, no violations
+✓ markdown_/ - checked, no violations
 ✗ ai/ - 2 violation(s) found (1 internal, 1 external)
 
 Internal Module Violations:

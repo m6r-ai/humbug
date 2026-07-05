@@ -2,10 +2,10 @@ import argparse
 import sys
 from pathlib import Path
 
-from dhtml import HtmlError, HtmlParseError, document_ir_to_html, html_ast_to_document_ir, parse_html
-from dmarkdown.document_ir_to_markdown import document_ir_to_markdown
-from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
-from dmarkdown.markdown_to_document_ir import markdown_ast_to_document_ir
+from html_ import HtmlError, HtmlParseError, document_ir_to_html, html_ast_to_document_ir, parse_html
+from markdown_.document_ir_to_markdown import document_ir_to_markdown
+from markdown_.markdown_ast_builder import MarkdownASTBuilder
+from markdown_.markdown_to_document_ir import markdown_ast_to_document_ir
 from document_ir.image_sidecar import extract_images_to_sidecar
 from document_ir.document_ir_node import DocumentIRDocumentNode
 from docx import (

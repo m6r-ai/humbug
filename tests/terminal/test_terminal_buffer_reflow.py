@@ -3,7 +3,7 @@
 from terminal.terminal_buffer import TerminalBuffer
 from terminal.terminal_line import TerminalCharacterAttributes
 
-from tests.terminal.conftest import get_line_text, get_screen_text
+from conftest import get_line_text, get_screen_text
 
 
 def _write(buf: TerminalBuffer, text: str) -> None:

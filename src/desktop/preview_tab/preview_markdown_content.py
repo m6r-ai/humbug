@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QColor
 
-from dmarkdown import MarkdownConverter
+from markdown_ import MarkdownConverter
 from syntax import ProgrammingLanguage
 
 from desktop.preview_tab.preview_content_widget import PreviewContentWidget

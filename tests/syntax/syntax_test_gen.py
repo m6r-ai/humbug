@@ -10,7 +10,7 @@ from syntax import ParserRegistry, ProgrammingLanguageUtils
 import syntax.parser_imports
 # pylint: enable=unused-import
 
-from tests.syntax.syntax_test_serializer import save_tokens_to_json
+from syntax_test_serializer import save_tokens_to_json
 
 
 def main():

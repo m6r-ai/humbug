@@ -3,7 +3,7 @@ import pytest
 from docx.docx_errors import DocxExtractionError, DocxParseError, DocxUnsupportedError
 from docx.docx_extractor import extract_text
 
-from .conftest import (
+from conftest import (
     make_docx,
     make_docx_bad_xml,
     make_docx_missing_document,

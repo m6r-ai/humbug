@@ -5,7 +5,7 @@ import pytest
 from terminal.terminal_state import TerminalState
 from terminal.terminal_buffer import TerminalBuffer
 
-from tests.terminal.conftest import get_screen_text
+from conftest import get_screen_text
 
 
 def _put(state: TerminalState, text: str) -> None:

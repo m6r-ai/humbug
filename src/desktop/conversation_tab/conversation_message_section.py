@@ -12,7 +12,7 @@ from PySide6.QtGui import (
     QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QTextDocument
 )
 
-from dmarkdown import MarkdownASTNode, MarkdownASTCodeBlockNode, MarkdownASTTextNode
+from markdown_ import MarkdownASTNode, MarkdownASTCodeBlockNode, MarkdownASTTextNode
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 from desktop.color_role import ColorRole

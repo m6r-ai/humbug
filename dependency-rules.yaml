@@ -65,20 +65,20 @@ modules:
       - ai_tool
       - ai_transcript_conversation
       - clock_ai_tool
-      - dhtml
       - context
       - conversation_ai_tool
       - conversation_context
       - delegate_ai_tool
       - diff
-      - dmarkdown
       - document_converter_ai_tool
       - editor_ai_tool
       - editor_context
       - filesystem_ai_tool
       - git
       - help_ai_tool
+      - html_
       - http_client
+      - markdown_
       - menai_ai_tool
       - mindspace
       - pdf
@@ -99,7 +99,7 @@ modules:
     external_dependencies:
       - "standard_library"
 
-  dmarkdown:
+  markdown_:
     internal_dependencies:
       - document_ir
       - syntax
@@ -115,15 +115,15 @@ modules:
     internal_dependencies:
       - ai_tool
       - document_ir
-      - dhtml
-      - dmarkdown
       - docx
+      - html_
+      - markdown_
       - mindspace
       - syntax
     external_dependencies:
       - "standard_library"
 
-  dhtml:
+  html_:
     internal_dependencies:
       - document_ir
     external_dependencies:
@@ -156,8 +156,8 @@ modules:
     internal_dependencies:
       - ai_tool
       - diff
-      - dhtml
       - docx
+      - html_
       - menai
       - mindspace
       - pdf

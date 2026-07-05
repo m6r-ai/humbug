@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayou
 from PySide6.QtCore import Signal, Qt, QPoint, QObject, QEvent, QRegularExpression
 from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QTextDocument
 
-from dmarkdown import MarkdownASTNode, MarkdownASTCodeBlockNode
+from markdown_ import MarkdownASTNode, MarkdownASTCodeBlockNode
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 from desktop.color_role import ColorRole

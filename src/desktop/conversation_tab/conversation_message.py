@@ -12,7 +12,7 @@ from PySide6.QtGui import QGuiApplication, QPaintEvent, QColor, QPainter, QPen, 
 
 from ai import AIMessageSource
 from ai_tool import AIToolCall
-from dmarkdown import MarkdownASTTextNode, MarkdownConverter
+from markdown_ import MarkdownASTTextNode, MarkdownConverter
 from syntax import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 

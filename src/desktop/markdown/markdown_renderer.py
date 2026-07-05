@@ -18,7 +18,7 @@ from PySide6.QtGui import (
 
 from syntax import TokenType
 
-from dmarkdown import (
+from markdown_ import (
     MarkdownASTNode, MarkdownASTVisitor, MarkdownASTDocumentNode, MarkdownASTParagraphNode, MarkdownASTHeadingNode,
     MarkdownASTTextNode, MarkdownASTBoldNode, MarkdownASTEmphasisNode, MarkdownASTInlineCodeNode,
     MarkdownASTCodeBlockNode, MarkdownASTListItemNode, MarkdownASTOrderedListNode,

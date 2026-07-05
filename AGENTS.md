@@ -163,24 +163,13 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `vcs_sidebar/` - VCS/diff panel implementation
 - `widgets/` - Reusable Qt widgets
 
-### `src/dhtml/`
-HTML document processing. Includes a self-contained lexer and DOM-building parser
-(no external dependencies), a plain-text extractor, and converters to/from the
-`document_ir` intermediate representation. Supports HTML5 implied-close rules and
-void elements. Used by the filesystem tool (transparent text extraction on read)
-and the document converter tool (HTML ↔ other formats).
-
 ### `src/diff/`
 Unified diff parsing and application with fuzzy matching.
-
-### `src/dmarkdown/`
-Advanced markdown support, including converting to/from a markdown AST.
-Includes `doc_ir_to_markdown.py` for serialising a doc_ir tree to Markdown text.
 
 ### `src/document_converter_ai_tool/`
 AI tool implementation for converting documents between supported formats (e.g. Markdown ↔ DOCX).
 Both input and output paths must be inside the mindspace. Write operations require user authorization
-and are audit-logged. Conversion pipelines are built on `src/dmarkdown/` and `src/docx/`.
+and are audit-logged. Conversion pipelines are built on `src/markdown_/` and `src/docx/`.
 
 ### `src/document_ir`
 Abstract document IR.
@@ -200,6 +189,13 @@ AI tool implementation for file operations.
 ### `src/git/`
 Lightweight, GUI-free tools for git operations.
 
+### `src/html_/`
+HTML document processing. Includes a self-contained lexer and DOM-building parser
+(no external dependencies), a plain-text extractor, and converters to/from the
+`document_ir` intermediate representation. Supports HTML5 implied-close rules and
+void elements. Used by the filesystem tool (transparent text extraction on read)
+and the document converter tool (HTML ↔ other formats).
+
 ### `src/http_client/`
 Async HTTP client built on the Python standard library (`asyncio` streams + `ssl`).
 No external dependencies.  Provides `HttpClient` and `HttpResponse` with GET/POST,
@@ -207,6 +203,10 @@ TLS, streaming, timeouts, redirect following, and a structured exception hierarc
 
 ### `src/help_ai_tool/`
 AI tool implementation for tool documentation.
+
+### `src/markdown_/`
+Advanced markdown support, including converting to/from a markdown AST.
+Includes `doc_ir_to_markdown.py` for serialising a doc_ir tree to Markdown text.
 
 ### `src/mindspace/`
 Front-end-agnostic mindspace model. Manages the mindspace path, settings, search,
@@ -253,11 +253,11 @@ Test structure mirrors `src/` organization:
 - `ai_transcript_conversation/` - AI transcript/conversation tests
 - `clock_ai_tool/` - Clock AI tool tests
 - `diff/` - Diff system tests
-- `dhtml/` - HTML processing tests
+- `html_/` - HTML processing tests
 - `docx/` - DOCX handling tests
 - `document_converter_ai_tool/` - Document converter AI tool tests
 - `document_ir/` - Document IR tests
-- `dmarkdown/` - Markdown parser tests
+- `markdown_/` - Markdown parser tests
 - `editor_ai_tool/` - Editor AI tool tests
 - `filesystem_ai_tool/` - Filesystem AI tool tests
 - `http_client/` - HTTP client tests

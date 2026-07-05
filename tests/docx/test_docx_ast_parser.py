@@ -40,7 +40,7 @@ from docx import (
     DocxASTTableCellPropertiesNode,
     DocxASTSectionPropertiesNode,
 )
-from tests.docx.conftest import (
+from conftest import (
     make_docx,
     make_encrypted_docx,
     make_docx_missing_document,
