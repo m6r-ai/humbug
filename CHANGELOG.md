@@ -10,6 +10,11 @@ Bug fixes:
 
 - Fixed a problem that could create empty directories from the system AI tool.
 
+Internal structure changes:
+
+- Renamed `src/dmarkdown` to `src/markdown_` and `src/dhtml` to `src/html_` to unify the approach for package namespace
+  collisions.
+
 ## v52 (2026-07-03)
 
 New features:
