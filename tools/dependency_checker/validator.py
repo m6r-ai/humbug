@@ -20,7 +20,7 @@ class Violation:
     imported_module: str
     import_statement: str
     rule_description: str
-    violation_type: str = "internal"  # "internal" or "external"
+    violation_type: str = "internal"  # "internal", "external", or "unused"
 
 
 @dataclass
@@ -46,6 +46,10 @@ class ValidationResult:
     def external_violations(self) -> list[Violation]:
         """Get only the external dependency violations."""
         return [v for v in self.violations if v.violation_type == "external"]
+
+    def unused_violations(self) -> list[Violation]:
+        """Get only the unused dependency declaration violations."""
+        return [v for v in self.violations if v.violation_type == "unused"]
 
 
 class DependencyValidator:
@@ -96,6 +100,12 @@ class DependencyValidator:
             )
             violations.extend(file_violations)
             files_checked += 1
+
+        actual_deps = self._collect_actual_deps(
+            module_name, python_files, known_modules
+        )
+        unused_violations = self._check_unused_dependencies(module_name, actual_deps)
+        violations.extend(unused_violations)
 
         return ValidationResult(
             violations=violations,
@@ -154,6 +164,86 @@ class DependencyValidator:
                             rule_description=f"{current_module} cannot depend on external module {external_module}",
                             violation_type="external"
                         ))
+
+        return violations
+
+    def _collect_actual_deps(
+        self,
+        module_name: str,
+        python_files: list[str],
+        known_modules: set[str]
+    ) -> tuple[set[str], set[str]]:
+        """Collect the set of internal and external deps actually used by a module."""
+        actual_internal: set[str] = set()
+        actual_external: set[str] = set()
+
+        for file_path in python_files:
+            imports = self.parser.parse_file(file_path)
+
+            for import_info in imports:
+                target_module = self.parser.resolve_module_name(
+                    import_info, file_path, known_modules
+                )
+
+                if target_module is not None:
+                    if target_module != module_name:
+                        actual_internal.add(target_module)
+
+                elif self.parser.is_third_party_import(import_info.module, known_modules):
+                    external_module = self.parser.get_external_module_name(import_info)
+                    actual_external.add(external_module)
+
+        return actual_internal, actual_external
+
+    def _check_unused_dependencies(
+        self,
+        module_name: str,
+        actual_deps: tuple[set[str], set[str]]
+    ) -> list[Violation]:
+        """Check for declared dependencies that are not actually used."""
+        violations: list[Violation] = []
+        actual_internal, actual_external = actual_deps
+
+        if module_name not in self.config.modules:
+            return violations
+
+        module_config = self.config.modules[module_name]
+
+        for dep in module_config.internal_dependencies:
+            if dep not in actual_internal:
+                violations.append(Violation(
+                    file_path="",
+                    line_number=0,
+                    importing_module=module_name,
+                    imported_module=dep,
+                    import_statement="",
+                    rule_description=f"{module_name} declares unused internal dependency '{dep}'",
+                    violation_type="unused"
+                ))
+
+        special_markers = {"standard_library", "third_party"}
+
+        for dep in module_config.external_dependencies:
+            if dep in special_markers:
+                continue
+
+            if dep in actual_external:
+                continue
+
+            if dep.endswith("*"):
+                prefix = dep[:-1]
+                if any(name.startswith(prefix) for name in actual_external):
+                    continue
+
+            violations.append(Violation(
+                file_path="",
+                line_number=0,
+                importing_module=module_name,
+                imported_module=dep,
+                import_statement="",
+                rule_description=f"{module_name} declares unused external dependency '{dep}'",
+                violation_type="unused"
+            ))
 
         return violations
 

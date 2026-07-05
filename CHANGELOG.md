@@ -14,6 +14,7 @@ Internal structure changes:
 
 - Renamed `src/dmarkdown` to `src/markdown_` and `src/dhtml` to `src/html_` to unify the approach for package namespace
   collisions.
+- Tightened up the dependency_checker tool so it catches unused dependencies as well as missing dependencies.
 
 ## v52 (2026-07-03)
 

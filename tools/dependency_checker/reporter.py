@@ -42,6 +42,7 @@ class DependencyReporter:
             module_violations = [v for v in result.violations if v.importing_module == module]
             internal_count = len([v for v in module_violations if v.violation_type == "internal"])
             external_count = len([v for v in module_violations if v.violation_type == "external"])
+            unused_count = len([v for v in module_violations if v.violation_type == "unused"])
 
             violation_desc = []
             if internal_count > 0:
@@ -49,6 +50,9 @@ class DependencyReporter:
 
             if external_count > 0:
                 violation_desc.append(f"{external_count} external")
+
+            if unused_count > 0:
+                violation_desc.append(f"{unused_count} unused")
 
             lines.append(f"✗ {module}/ - {len(module_violations)} violation(s) found ({', '.join(violation_desc)})")
 
@@ -58,6 +62,7 @@ class DependencyReporter:
             # Group violations by type
             internal_violations = result.internal_violations()
             external_violations = result.external_violations()
+            unused_violations = result.unused_violations()
 
             if internal_violations:
                 lines.append("Internal Module Violations:")
@@ -72,6 +77,14 @@ class DependencyReporter:
                 lines.append("-" * 33)
                 self._add_violation_details(lines, external_violations)
 
+            if unused_violations:
+                if internal_violations or external_violations:
+                    lines.append("")
+
+                lines.append("Unused Dependency Declarations:")
+                lines.append("-" * 31)
+                self._add_violation_details(lines, unused_violations)
+
         # Overall summary
         lines.append("")
         lines.append("Summary:")
@@ -85,6 +98,9 @@ class DependencyReporter:
         if result.external_violations():
             lines.append(f"  External violations: {len(result.external_violations())}")
 
+        if result.unused_violations():
+            lines.append(f"  Unused declarations: {len(result.unused_violations())}")
+
         if result.has_violations():
             lines.append(f"  Status: ✗ FAILED - {result.violation_count()} violation(s)")
 
@@ -95,25 +111,19 @@ class DependencyReporter:
 
     def _add_violation_details(self, lines: list[str], violations: list[Violation]) -> None:
         """Add violation details to the output lines."""
-        # Group violations by file
-        violations_by_file: dict[str, list[Violation]] = {}
-        for violation in violations:
-            if violation.file_path not in violations_by_file:
-                violations_by_file[violation.file_path] = []
+        for violation in sorted(violations, key=lambda v: (v.importing_module, v.imported_module)):
+            if violation.violation_type == "unused":
+                lines.append(f"  ⚠ {violation.rule_description}")
+                lines.append("")
 
-            violations_by_file[violation.file_path].append(violation)
+            else:
+                # Show relative path if possible
+                try:
+                    display_path = str(Path(violation.file_path).relative_to(Path.cwd()))
 
-        for file_path in sorted(violations_by_file.keys()):
-            file_violations = violations_by_file[file_path]
+                except ValueError:
+                    display_path = violation.file_path
 
-            # Show relative path if possible
-            try:
-                display_path = str(Path(file_path).relative_to(Path.cwd()))
-
-            except ValueError:
-                display_path = file_path
-
-            for violation in sorted(file_violations, key=lambda v: v.line_number):
                 violation_icon = "🔒" if violation.violation_type == "external" else "🔗"
                 lines.append(f"{display_path}:{violation.line_number}")
                 lines.append(f"  └─ {violation_icon} Illegal import: {violation.import_statement}")

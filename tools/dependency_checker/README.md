@@ -8,6 +8,7 @@ A comprehensive tool for enforcing inter-module dependency rules in Python proje
 - **Internal Module Control**: Manage dependencies between your project's modules
 - **External Dependency Control**: Fine-grained control over third-party package usage
 - **Secure by Default**: External dependencies must be explicitly allowed
+- **Unused Dependency Detection**: Flags declared dependencies (internal or external) that no file in the module actually imports
 - **Comprehensive Analysis**: Parses all Python files to extract import statements
 - **Human-Readable Reports**: Clear text output with detailed violation information
 - **CI/CD Integration**: Returns appropriate exit codes for automated pipelines
@@ -256,6 +257,7 @@ Dependency Check Results
 ✓ syntax/ - checked, no violations
 ✓ markdown_/ - checked, no violations
 ✗ ai/ - 2 violation(s) found (1 internal, 1 external)
+✗ data/ - 1 violation(s) found (1 unused)
 
 Internal Module Violations:
 ---------------------------
@@ -269,13 +271,18 @@ src/ai/client.py:3
   └─ 🔒 Illegal import: import PySide6
      Rule: ai cannot depend on external module PySide6
 
+Unused Dependency Declarations:
+-------------------------------
+  ⚠ data declares unused internal dependency 'utils'
+
 Summary:
   Files checked: 45
   Modules checked: 4
-  Total violations: 2
+  Total violations: 3
   Internal violations: 1
   External violations: 1
-  Status: ✗ FAILED - 2 violation(s)
+  Unused declarations: 1
+  Status: ✗ FAILED - 3 violation(s)
 ```
 
 ## Testing and Exploration

@@ -45,7 +45,6 @@ modules:
     internal_dependencies:
       - ai
       - ai_transcript_conversation
-      - context
     external_dependencies:
       - "standard_library"
 
@@ -76,7 +75,6 @@ modules:
       - filesystem_ai_tool
       - git
       - help_ai_tool
-      - html_
       - http_client
       - markdown_
       - menai_ai_tool
@@ -119,7 +117,6 @@ modules:
       - html_
       - markdown_
       - mindspace
-      - syntax
     external_dependencies:
       - "standard_library"
 
@@ -146,7 +143,6 @@ modules:
 
   editor_context:
     internal_dependencies:
-      - context
       - diff
     external_dependencies:
       - "standard_library"
@@ -157,7 +153,6 @@ modules:
       - ai_tool
       - diff
       - docx
-      - html_
       - menai
       - mindspace
       - pdf
@@ -196,10 +191,8 @@ modules:
   mindspace:
     internal_dependencies:
       - ai
-      - ai_transcript_conversation
       - ai_tool
       - context
-      - terminal
     external_dependencies:
       - "standard_library"
 
@@ -217,8 +210,7 @@ modules:
       - "standard_library"
 
   preview_context:
-    internal_dependencies:
-      - context
+    internal_dependencies: []
     external_dependencies:
       - "standard_library"
 
@@ -242,7 +234,6 @@ modules:
 
   terminal_context:
     internal_dependencies:
-      - context
       - terminal
     external_dependencies:
       - "standard_library"
