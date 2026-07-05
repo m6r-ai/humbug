@@ -118,6 +118,18 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
                 16.4142C21 15.8284 21 14.8856 21 13Z" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
         </svg>
     ''',
+    "diff": '''
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 6C3 7.65685 4.34315 9 6 9C7.65685 9 9 7.65685 9 6C9 4.34315 7.65685 3 6 3C4.34315 3 3 4.34315 3 6Z"
+                stroke="{color}" stroke-width="2"/>
+            <path d="M3 18C3 19.6569 4.34315 21 6 21C7.65685 21 9 19.6569 9 18C9 16.3431 7.65685 15 6 15C4.34315 15 3 16.3431 3 18Z"
+                stroke="{color}" stroke-width="2"/>
+            <path d="M15 6C15 7.65685 16.3431 9 18 9C19.6569 9 21 7.65685 21 6C21 4.34315 19.6569 3 18 3C16.3431 3 15 4.34315 15 6Z"
+                stroke="{color}" stroke-width="2"/>
+            <path d="M6 15V9" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M18 9V12.3242C18 16.9982 16.9424 18 12.008 18H9" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    ''',
     "editor": '''
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M13 21H21" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -137,18 +149,32 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path d="M4 10H20" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
         </svg>
     ''',
-    "search": '''
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M15 15L21 21" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="{color}" stroke-width="2"/>
-        </svg>
-    ''',
     "log": '''
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M5 12H7.75044C7.89947 12 8.03179 11.9046 8.07892 11.7632V11.7632L9.875 6.375V6.375C9.91626
                 6.25122 10.0918 6.25238 10.1364 6.375V6.375L13.875 16.6562L13.885 16.6837C13.9253 16.7946 14.0812
                 16.797 14.125 16.6875V16.6875L15.8841 12.2898V12.2898C15.9541 12.1148 16.1236 12 16.3122 12H19"
                 stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    ''',
+    "preview": '''
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.8284 6.82843C18.4065 7.40649 18.6955 7.69552 18.8478 8.06306C19 8.4306 19 8.83935
+                19 9.65685L19 17C19 18.8856 19 19.8284 18.4142 20.4142C17.8284 21 16.8856 21 15 21H9C7.11438
+                21 6.17157 21 5.58579 20.4142C5 19.8284 5 18.8856 5 17L5 7C5 5.11438 5 4.17157 5.58579
+                3.58579C6.17157 3 7.11438 3 9 3H12.3431C13.1606 3 13.5694 3 13.9369 3.15224C14.3045 3.30448
+                14.5935 3.59351 15.1716 4.17157L17.8284 6.82843Z" stroke="{color}"
+                stroke-width="2" stroke-linejoin="round"/>
+            <path d="M9 6L11 6" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 9L12 9" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 12L11 12" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 15L12 15" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    ''',
+    "search": '''
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 15L21 21" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="{color}" stroke-width="2"/>
         </svg>
     ''',
     "shell": '''
@@ -172,32 +198,6 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
                 3 17.8856 3 16V12V8Z" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
         </svg>
     ''',
-    "preview": '''
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.8284 6.82843C18.4065 7.40649 18.6955 7.69552 18.8478 8.06306C19 8.4306 19 8.83935
-                19 9.65685L19 17C19 18.8856 19 19.8284 18.4142 20.4142C17.8284 21 16.8856 21 15 21H9C7.11438
-                21 6.17157 21 5.58579 20.4142C5 19.8284 5 18.8856 5 17L5 7C5 5.11438 5 4.17157 5.58579
-                3.58579C6.17157 3 7.11438 3 9 3H12.3431C13.1606 3 13.5694 3 13.9369 3.15224C14.3045 3.30448
-                14.5935 3.59351 15.1716 4.17157L17.8284 6.82843Z" stroke="{color}"
-                stroke-width="2" stroke-linejoin="round"/>
-            <path d="M9 6L11 6" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M10 9L12 9" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M9 12L11 12" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M10 15L12 15" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    ''',
-    "diff": '''
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 6C3 7.65685 4.34315 9 6 9C7.65685 9 9 7.65685 9 6C9 4.34315 7.65685 3 6 3C4.34315 3 3 4.34315 3 6Z"
-                stroke="{color}" stroke-width="2"/>
-            <path d="M3 18C3 19.6569 4.34315 21 6 21C7.65685 21 9 19.6569 9 18C9 16.3431 7.65685 15 6 15C4.34315 15 3 16.3431 3 18Z"
-                stroke="{color}" stroke-width="2"/>
-            <path d="M15 6C15 7.65685 16.3431 9 18 9C19.6569 9 21 7.65685 21 6C21 4.34315 19.6569 3 18 3C16.3431 3 15 4.34315 15 6Z"
-                stroke="{color}" stroke-width="2"/>
-            <path d="M6 15V9" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M18 9V12.3242C18 16.9982 16.9424 18 12.008 18H9" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-    ''',
     "usage": '''
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2Z"
@@ -205,6 +205,17 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path d="M12 6V8M12 16V18" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
             <path d="M9 9.5C9 8.67157 9.67157 8 10.5 8H13C14.1046 8 15 8.89543 15 10C15 11.1046 14.1046 12 13 12H11C9.89543 12 9 12.8954 9 14C9 15.1046 9.89543 16 11 16H13.5C14.3284 16 15 15.3284 15 14.5"
                 stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    ''',
+    "critical": '''
+        <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9.22843V14.7716C3 15.302 3.21071 15.8107 3.58579 16.1858L7.81421 20.4142C8.18929 20.7893 8.69799
+                21 9.22843 21H14.7716C15.302 21 15.8107 20.7893 16.1858 20.4142L20.4142 16.1858C20.7893 15.8107 21
+                15.302 21 14.7716V9.22843C21 8.69799 20.7893 8.18929 20.4142 7.81421L16.1858 3.58579C15.8107 3.21071
+                15.302 3 14.7716 3H9.22843C8.69799 3 8.18929 3.21071 7.81421 3.58579L3.58579 7.81421C3.21071 8.18929
+                3 8.69799 3 9.22843Z" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 8V13" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 16V15.9888" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
         </svg>
     ''',
     "info": '''
@@ -221,26 +232,6 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path d="M10 17H14" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     ''',
-    "warning": '''
-        <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 10V13" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
-            <path d="M12 16V15.9888" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
-            <path d="M10.2518 5.147L3.6508 17.0287C2.91021 18.3618 3.87415 20 5.39912 20H18.6011C20.126 20 21.09
-                18.3618 20.3494 17.0287L13.7484 5.147C12.9864 3.77538 11.0138 3.77538 10.2518 5.147Z"
-                stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    ''',
-    "critical": '''
-        <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 9.22843V14.7716C3 15.302 3.21071 15.8107 3.58579 16.1858L7.81421 20.4142C8.18929 20.7893 8.69799
-                21 9.22843 21H14.7716C15.302 21 15.8107 20.7893 16.1858 20.4142L20.4142 16.1858C20.7893 15.8107 21
-                15.302 21 14.7716V9.22843C21 8.69799 20.7893 8.18929 20.4142 7.81421L16.1858 3.58579C15.8107 3.21071
-                15.302 3 14.7716 3H9.22843C8.69799 3 8.18929 3.21071 7.81421 3.58579L3.58579 7.81421C3.21071 8.18929
-                3 8.69799 3 9.22843Z" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 8V13" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
-            <path d="M12 16V15.9888" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-    ''',
     "question": '''
         <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12
@@ -251,19 +242,13 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path d="M12 16H12.01" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     ''',
-    "save": '''
-        <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-            <path stroke="{color}" stroke-width="6" fill="none" d="M8,40, L8,56 L56,56 L56,40"/>
-            <path stroke="{color}" stroke-width="6" fill="none" d="M32,8, L32,40"/>
-            <path stroke="{color}" stroke-width="6" fill="none" d="M20,28, L32,40, L44,28"/>
-        </svg>
-    ''',
-    "floppy": '''
-        <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-            <path stroke="{color}" stroke-width="6" fill="none" stroke-linejoin="miter"
-                d="M8,8 L44,8 L56,20 L56,56 L8,56 Z"/>
-            <path stroke="{color}" stroke-width="6" fill="none" stroke-linejoin="miter" d="M18,8 L18,24 L42,24 L42,8"/>
-            <rect x="20" y="36" width="24" height="16" stroke="{color}" stroke-width="6" fill="none"/>
+    "warning": '''
+        <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 10V13" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 16V15.9888" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
+            <path d="M10.2518 5.147L3.6508 17.0287C2.91021 18.3618 3.87415 20 5.39912 20H18.6011C20.126 20 21.09
+                18.3618 20.3494 17.0287L13.7484 5.147C12.9864 3.77538 11.0138 3.77538 10.2518 5.147Z"
+                stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     ''',
     "cog": '''
@@ -280,12 +265,6 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path stroke="{color}" stroke-width="6" fill="none" d="M22,22, L10,22 L10,54 L42,54 L42,42"/>
         </svg>
     ''',
-    "fork": '''
-        <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-            <path stroke="{color}" stroke-width="6" fill="none"
-                d="M32,8 L32,32 M32,32 L8,56 L8,40 M8,56 L24,56 M32,32 L56,56 L56,40 M56,56 L40,56"/>
-        </svg>
-    ''',
     "delete": '''
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
             <path stroke="{color}" stroke-width="6" fill="none"
@@ -298,10 +277,31 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path stroke="{color}" stroke-width="6" fill="none" d="M8,56 L56,56 M40,12 L52,24 L24,52 L8,56 L12,40 L40,12 Z"/>
         </svg>
     ''',
-    "submit": '''
+    "floppy": '''
+        <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <path stroke="{color}" stroke-width="6" fill="none" stroke-linejoin="miter"
+                d="M8,8 L44,8 L56,20 L56,56 L8,56 Z"/>
+            <path stroke="{color}" stroke-width="6" fill="none" stroke-linejoin="miter" d="M18,8 L18,24 L42,24 L42,8"/>
+            <rect x="20" y="36" width="24" height="16" stroke="{color}" stroke-width="6" fill="none"/>
+        </svg>
+    ''',
+    "fork": '''
+        <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <path stroke="{color}" stroke-width="6" fill="none"
+                d="M32,8 L32,32 M32,32 L8,56 L8,40 M8,56 L24,56 M32,32 L56,56 L56,40 M56,56 L40,56"/>
+        </svg>
+    ''',
+    "paperclip": '''
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-            <path stroke="{color}" stroke-width="6" fill="none" d="M8,32 L32,8 L56,32"/>
-            <path stroke="{color}" stroke-width="6" fill="none" d="M32,56 L32,8"/>
+            <path d="M56 32 L34 54 C28 60 19 60 13 54 C7 48 7 39 13 33 L39 8 C43 4 49 4 53 8 C57 12 57 18 53 22 L29 46 C27 48 24 48 22 46 C20 44 20 41 22 39 L44 17"
+                  fill="none" stroke="{color}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    ''',
+    "save": '''
+        <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <path stroke="{color}" stroke-width="6" fill="none" d="M8,40, L8,56 L56,56 L56,40"/>
+            <path stroke="{color}" stroke-width="6" fill="none" d="M32,8, L32,40"/>
+            <path stroke="{color}" stroke-width="6" fill="none" d="M20,28, L32,40, L44,28"/>
         </svg>
     ''',
     "stop": '''
@@ -310,10 +310,10 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <rect x="20" y="20" width="24" height="24" fill="{color}" stroke="none"/>
         </svg>
     ''',
-    "paperclip": '''
+    "submit": '''
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-            <path d="M56 32 L34 54 C28 60 19 60 13 54 C7 48 7 39 13 33 L39 8 C43 4 49 4 53 8 C57 12 57 18 53 22 L29 46 C27 48 24 48 22 46 C20 44 20 41 22 39 L44 17"
-                  fill="none" stroke="{color}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path stroke="{color}" stroke-width="6" fill="none" d="M8,32 L32,8 L56,32"/>
+            <path stroke="{color}" stroke-width="6" fill="none" d="M32,56 L32,8"/>
         </svg>
     ''',
     "minimize": '''
@@ -391,6 +391,124 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
 
 
 MINDSPACE_ICON_PACK: Final[dict[str, str]] = {
+    "archive": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <path d="M50 30 L50 82" stroke="accentColor" stroke-width="6" stroke-dasharray="7 5"/>
+        </svg>
+    ''',
+    "audio": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <path d="M50 44 L68 40 L68 48 L50 52 Z" fill="accentColor"/>
+            <path d="M50 44 L50 70 M68 40 L68 64" stroke="accentColor" stroke-width="5" fill="none"/>
+            <circle cx="44" cy="70" r="7" fill="accentColor"/>
+            <circle cx="62" cy="64" r="7" fill="accentColor"/>
+        </svg>
+    ''',
+    "beaker": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M42 20 L42 46 L26 78 C24 82 27 87 33 87 L67 87 C73 87 76 82 74 78 L58 46 L58 20"
+                fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M38 20 L62 20" stroke="currentColor" stroke-width="5"/>
+            <path d="M33 66 L67 66" stroke="accentColor" stroke-width="5"/>
+        </svg>
+    ''',
+    "binary": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <rect x="28" y="28" width="44" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="5"/>
+            <rect x="42" y="42" width="16" height="16" fill="accentColor"/>
+            <path d="M40 28 L40 18 M60 28 L60 18 M40 72 L40 82 M60 72 L60 82 M28 40 L18 40 M28 60 L18 60 M72 40 L82 40 M72 60 L82 60"
+                stroke="currentColor" stroke-width="4"/>
+        </svg>
+    ''',
+    "blueprint": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <line x1="20" y1="50" x2="80" y2="50" stroke="currentColor" stroke-width="4"/>
+            <line x1="50" y1="10" x2="50" y2="90" stroke="currentColor" stroke-width="4"/>
+        </svg>
+    ''',
+    "book": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M50 26 C40 20 24 22 20 24 L20 78 C24 76 40 74 50 80 C60 74 76 76 80 78 L80 24 C76 22 60 20 50 26 Z"
+                fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M50 26 L50 80" stroke="accentColor" stroke-width="4"/>
+        </svg>
+    ''',
+    "certificate": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <circle cx="50" cy="52" r="11" fill="none" stroke="accentColor" stroke-width="4"/>
+            <path d="M44 61 L44 78 L50 72 L56 78 L56 61" fill="accentColor"/>
+        </svg>
+    ''',
+    "conversation": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M15 15 C15 15 85 15 85 15 C85 15 85 55 85 55 C85 55 70 55 70 55 L50 80 L50 55 C50 55 15 55 15 55 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+        </svg>
+    ''',
+    "code": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <path d="M30 30 L50 30" stroke="accentColor" stroke-width="5"/>
+            <path d="M30 50 L70 50" stroke="accentColor" stroke-width="5"/>
+            <path d="M30 70 L70 70" stroke="accentColor" stroke-width="5"/>
+        </svg>
+    ''',
+    "config": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <path d="M44 42 C36 42 41 50 33 50 C41 50 36 58 44 58" fill="none" stroke="accentColor" stroke-width="4"/>
+            <path d="M56 42 C64 42 59 50 67 50 C59 50 64 58 56 58" fill="none" stroke="accentColor" stroke-width="4"/>
+        </svg>
+    ''',
+    "database": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <ellipse cx="50" cy="26" rx="26" ry="10" fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M24 26 L24 74 C24 80 36 84 50 84 C64 84 76 80 76 74 L76 26"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M24 50 C24 56 36 60 50 60 C64 60 76 56 76 50" fill="none" stroke="accentColor" stroke-width="4"/>
+        </svg>
+    ''',
+    "design": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <circle cx="40" cy="48" r="6" fill="accentColor"/>
+            <rect x="54" y="42" width="12" height="12" fill="accentColor"/>
+            <path d="M40 62 L49 76 L31 76 Z" fill="accentColor"/>
+        </svg>
+    ''',
+    "document": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <path d="M30 45 L70 45 M30 58 L70 58 M30 71 L58 71" stroke="accentColor" stroke-width="5"/>
+        </svg>
+    ''',
+    "file": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+        </svg>
+    ''',
     "folder": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
             <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 85 L10 85 L10 25"
@@ -419,163 +537,6 @@ MINDSPACE_ICON_PACK: Final[dict[str, str]] = {
                 fill="folderColor" stroke="none" opacity="0.55"/>
         </svg>
     ''',
-    "file": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-        </svg>
-    ''',
-    "conversation": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M15 15 C15 15 85 15 85 15 C85 15 85 55 85 55 C85 55 70 55 70 55 L50 80 L50 55 C50 55 15 55 15 55 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-        </svg>
-    ''',
-    "code": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <path d="M30 30 L50 30" stroke="accentColor" stroke-width="5"/>
-            <path d="M30 50 L70 50" stroke="accentColor" stroke-width="5"/>
-            <path d="M30 70 L70 70" stroke="accentColor" stroke-width="5"/>
-        </svg>
-    ''',
-    "text": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <path d="M30 30 L50 30" stroke="accentColor" stroke-width="5"/>
-            <path d="M30 50 L70 50" stroke="accentColor" stroke-width="5"/>
-            <path d="M30 70 L70 70" stroke="accentColor" stroke-width="5"/>
-        </svg>
-    ''',
-    "blueprint": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <line x1="20" y1="50" x2="80" y2="50" stroke="currentColor" stroke-width="4"/>
-            <line x1="50" y1="10" x2="50" y2="90" stroke="currentColor" stroke-width="4"/>
-        </svg>
-    ''',
-    "document": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <path d="M30 45 L70 45 M30 58 L70 58 M30 71 L58 71" stroke="accentColor" stroke-width="5"/>
-        </svg>
-    ''',
-    "pdf": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <rect x="28" y="58" width="44" height="18" rx="3" fill="accentColor"/>
-        </svg>
-    ''',
-    "image": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <circle cx="38" cy="48" r="6" fill="accentColor"/>
-            <path d="M28 76 L46 56 L58 68 L68 58 L74 76 Z" fill="accentColor"/>
-        </svg>
-    ''',
-    "video": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <path d="M42 46 L68 60 L42 74 Z" fill="accentColor"/>
-        </svg>
-    ''',
-    "audio": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <path d="M50 44 L68 40 L68 48 L50 52 Z" fill="accentColor"/>
-            <path d="M50 44 L50 70 M68 40 L68 64" stroke="accentColor" stroke-width="5" fill="none"/>
-            <circle cx="44" cy="70" r="7" fill="accentColor"/>
-            <circle cx="62" cy="64" r="7" fill="accentColor"/>
-        </svg>
-    ''',
-    "archive": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <path d="M50 30 L50 82" stroke="accentColor" stroke-width="6" stroke-dasharray="7 5"/>
-        </svg>
-    ''',
-    "binary": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <rect x="28" y="28" width="44" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="5"/>
-            <rect x="42" y="42" width="16" height="16" fill="accentColor"/>
-            <path d="M40 28 L40 18 M60 28 L60 18 M40 72 L40 82 M60 72 L60 82 M28 40 L18 40 M28 60 L18 60 M72 40 L82 40 M72 60 L82 60"
-                stroke="currentColor" stroke-width="4"/>
-        </svg>
-    ''',
-    "database": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <ellipse cx="50" cy="26" rx="26" ry="10" fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M24 26 L24 74 C24 80 36 84 50 84 C64 84 76 80 76 74 L76 26"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M24 50 C24 56 36 60 50 60 C64 60 76 56 76 50" fill="none" stroke="accentColor" stroke-width="4"/>
-        </svg>
-    ''',
-    "table": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <path d="M28 48 L72 48 M28 64 L72 64 M44 42 L44 78 M58 42 L58 78" stroke="accentColor" stroke-width="4"/>
-        </svg>
-    ''',
-    "terminal": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <rect x="16" y="22" width="68" height="56" rx="6" fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M30 42 L42 51 L30 60" fill="none" stroke="accentColor" stroke-width="5" stroke-linejoin="round"/>
-            <path d="M50 62 L68 62" stroke="accentColor" stroke-width="5"/>
-        </svg>
-    ''',
-    "config": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <path d="M44 42 C36 42 41 50 33 50 C41 50 36 58 44 58" fill="none" stroke="accentColor" stroke-width="4"/>
-            <path d="M56 42 C64 42 59 50 67 50 C59 50 64 58 56 58" fill="none" stroke="accentColor" stroke-width="4"/>
-        </svg>
-    ''',
-    "gear": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="13" fill="none" stroke="currentColor" stroke-width="5"/>
-            <circle cx="50" cy="50" r="4" fill="accentColor"/>
-            <path d="M50 18 L50 30 M50 70 L50 82 M18 50 L30 50 M70 50 L82 50 M28 28 L37 37 M63 63 L72 72 M72 28 L63 37 M37 63 L28 72"
-                stroke="currentColor" stroke-width="5"/>
-        </svg>
-    ''',
-    "key": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <circle cx="36" cy="40" r="15" fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M47 51 L76 80 M66 76 L76 66 M56 66 L66 76" fill="none" stroke="accentColor" stroke-width="5"/>
-        </svg>
-    ''',
-    "certificate": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <circle cx="50" cy="52" r="11" fill="none" stroke="accentColor" stroke-width="4"/>
-            <path d="M44 61 L44 78 L50 72 L56 78 L56 61" fill="accentColor"/>
-        </svg>
-    ''',
     "font": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
             <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
@@ -584,20 +545,12 @@ MINDSPACE_ICON_PACK: Final[dict[str, str]] = {
             <path d="M37 76 L50 40 L63 76 M42 63 L58 63" fill="none" stroke="accentColor" stroke-width="5"/>
         </svg>
     ''',
-    "design": '''
+    "gear": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
-                fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <circle cx="40" cy="48" r="6" fill="accentColor"/>
-            <rect x="54" y="42" width="12" height="12" fill="accentColor"/>
-            <path d="M40 62 L49 76 L31 76 Z" fill="accentColor"/>
-        </svg>
-    ''',
-    "package": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M50 16 L82 33 L82 67 L50 84 L18 67 L18 33 Z" fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M18 33 L50 50 L82 33 M50 50 L50 84" fill="none" stroke="accentColor" stroke-width="4"/>
+            <circle cx="50" cy="50" r="13" fill="none" stroke="currentColor" stroke-width="5"/>
+            <circle cx="50" cy="50" r="4" fill="accentColor"/>
+            <path d="M50 18 L50 30 M50 70 L50 82 M18 50 L30 50 M70 50 L82 50 M28 28 L37 37 M63 63 L72 72 M72 28 L63 37 M37 63 L28 72"
+                stroke="currentColor" stroke-width="5"/>
         </svg>
     ''',
     "git": '''
@@ -609,46 +562,67 @@ MINDSPACE_ICON_PACK: Final[dict[str, str]] = {
             <path d="M32 52 C32 46 58 50 59 46" fill="none" stroke="accentColor" stroke-width="5"/>
         </svg>
     ''',
-    "lock": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <rect x="20" y="44" width="60" height="42" rx="6" fill="none" stroke="currentColor" stroke-width="5"/>
-            <path d="M32 44 L32 32 C32 16 68 16 68 32 L68 44" fill="none" stroke="currentColor" stroke-width="5"/>
-            <circle cx="50" cy="61" r="6" fill="accentColor"/>
-            <path d="M50 66 L50 77" stroke="accentColor" stroke-width="5"/>
-        </svg>
-    ''',
-    "beaker": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M42 20 L42 46 L26 78 C24 82 27 87 33 87 L67 87 C73 87 76 82 74 78 L58 46 L58 20"
-                fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
-            <path d="M38 20 L62 20" stroke="currentColor" stroke-width="5"/>
-            <path d="M33 66 L67 66" stroke="accentColor" stroke-width="5"/>
-        </svg>
-    ''',
-    "symlink": '''
+    "image": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
             <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
                 fill="none" stroke="currentColor" stroke-width="5"/>
             <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
-            <path d="M36 68 C36 54 52 54 60 54 M60 54 L52 46 M60 54 L52 62"
-                fill="none" stroke="accentColor" stroke-width="5" stroke-linejoin="round"/>
+            <circle cx="38" cy="48" r="6" fill="accentColor"/>
+            <path d="M28 76 L46 56 L58 68 L68 58 L74 76 Z" fill="accentColor"/>
         </svg>
     ''',
-    "submodule": '''
+    "key": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 85 L10 85 L10 25"
-                fill="none" stroke="currentColor" stroke-width="6"/>
-            <circle cx="50" cy="55" r="8" fill="none" stroke="accentColor" stroke-width="5"/>
+            <circle cx="36" cy="40" r="15" fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M47 51 L76 80 M66 76 L76 66 M56 66 L66 76" fill="none" stroke="accentColor" stroke-width="5"/>
         </svg>
     ''',
-    "book": '''
+    "lang_c": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M50 26 C40 20 24 22 20 24 L20 78 C24 76 40 74 50 80 C60 74 76 76 80 78 L80 24 C76 22 60 20 50 26 Z"
-                fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
-            <path d="M50 26 L50 80" stroke="accentColor" stroke-width="4"/>
+            <rect x="6" y="6" width="88" height="88" rx="14" fill="#004482"/>
+            <text x="52" y="72" font-family="Helvetica,Arial,sans-serif" font-size="58"
+                font-weight="bold" text-anchor="middle" fill="#ffffff">C</text>
         </svg>
     ''',
-    # ---- Language brand logos (fixed brand colours, theme-independent) ----
+    "lang_cpp": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <rect x="6" y="6" width="88" height="88" rx="14" fill="#00599c"/>
+            <text x="50" y="64" font-family="Helvetica,Arial,sans-serif" font-size="36"
+                font-weight="bold" text-anchor="middle" fill="#ffffff">C++</text>
+        </svg>
+    ''',
+    "lang_css": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M22 14 L78 14 L73 82 L50 90 L27 82 Z" fill="#264de4"/>
+            <path d="M50 20 L50 84 L68 79 L72 20 Z" fill="#2965f1"/>
+            <text x="50" y="62" font-family="Helvetica,Arial,sans-serif" font-size="30"
+                font-weight="bold" text-anchor="middle" fill="#ffffff">3</text>
+        </svg>
+    ''',
+    "lang_go": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <rect x="6" y="26" width="88" height="48" rx="10" fill="#00acd7"/>
+            <text x="50" y="66" font-family="Helvetica,Arial,sans-serif" font-size="34"
+                font-weight="bold" text-anchor="middle" fill="#ffffff">GO</text>
+        </svg>
+    ''',
+    "lang_html": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M22 14 L78 14 L73 82 L50 90 L27 82 Z" fill="#e34c26"/>
+            <path d="M50 20 L50 84 L68 79 L72 20 Z" fill="#ef652a"/>
+            <text x="50" y="62" font-family="Helvetica,Arial,sans-serif" font-size="30"
+                font-weight="bold" text-anchor="middle" fill="#ffffff">5</text>
+        </svg>
+    ''',
+    "lang_java": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M40 18 C44 26 40 32 44 40 M54 16 C58 24 54 30 58 38"
+                fill="none" stroke="#e76f00" stroke-width="5" stroke-linecap="round"/>
+            <path d="M28 50 L72 50 L69 74 C68 80 62 84 55 84 L45 84 C38 84 32 80 31 74 Z"
+                fill="#5382a1"/>
+            <path d="M72 54 C84 54 86 64 78 68 L73 70" fill="none" stroke="#5382a1" stroke-width="5"/>
+        </svg>
+    ''',
     "lang_js": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
             <rect x="6" y="6" width="88" height="88" rx="8" fill="#f7df1e"/>
@@ -656,34 +630,31 @@ MINDSPACE_ICON_PACK: Final[dict[str, str]] = {
                 font-weight="bold" text-anchor="end" fill="#000">JS</text>
         </svg>
     ''',
-    "lang_ts": '''
+    "lang_jupyter": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <rect x="6" y="6" width="88" height="88" rx="8" fill="#3178c6"/>
-            <text x="90" y="86" font-family="Helvetica,Arial,sans-serif" font-size="38"
-                font-weight="bold" text-anchor="end" fill="#ffffff">TS</text>
-        </svg>
-    ''',
-    "lang_react": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <g fill="none" stroke="#61dafb" stroke-width="4">
-                <ellipse cx="50" cy="50" rx="42" ry="16"/>
-                <ellipse cx="50" cy="50" rx="42" ry="16" transform="rotate(60 50 50)"/>
-                <ellipse cx="50" cy="50" rx="42" ry="16" transform="rotate(120 50 50)"/>
+            <g fill="#f37726">
+                <circle cx="26" cy="16" r="6"/>
+                <circle cx="50" cy="11" r="6"/>
+                <circle cx="74" cy="16" r="6"/>
+                <path d="M20 46 C20 66 36 80 50 80 C64 80 80 66 80 46 C72 60 60 66 50 66
+                    C40 66 28 60 20 46 Z"/>
+                <path d="M80 40 C80 24 64 30 50 30 C36 30 20 24 20 40 C28 34 40 38 50 38
+                    C60 38 72 34 80 40 Z" opacity="0.7"/>
             </g>
-            <circle cx="50" cy="50" r="8" fill="#61dafb"/>
         </svg>
     ''',
-    "lang_vue": '''
+    "lang_kotlin": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M50 84 L84 24 L67 24 L50 54 L33 24 L16 24 Z" fill="#41b883"/>
-            <path d="M50 54 L67 24 L58 24 L50 40 L42 24 L33 24 Z" fill="#35495e"/>
+            <path d="M14 14 L88 14 L51 51 Z" fill="#e24462"/>
+            <path d="M14 14 L51 51 L14 88 Z" fill="#9c46b8"/>
+            <path d="M88 86 L51 51 L14 88 Z" fill="#7f52ff"/>
         </svg>
     ''',
-    "lang_svelte": '''
+    "lang_php": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <rect x="6" y="6" width="88" height="88" rx="16" fill="#ff3e00"/>
-            <text x="50" y="72" font-family="Helvetica,Arial,sans-serif" font-size="56"
-                font-weight="bold" font-style="italic" text-anchor="middle" fill="#ffffff">S</text>
+            <ellipse cx="50" cy="50" rx="47" ry="29" fill="#777bb4"/>
+            <text x="50" y="61" font-family="Helvetica,Arial,sans-serif" font-size="30"
+                font-weight="bold" font-style="italic" text-anchor="middle" fill="#ffffff">php</text>
         </svg>
     ''',
     "lang_python": '''
@@ -698,34 +669,21 @@ MINDSPACE_ICON_PACK: Final[dict[str, str]] = {
             <circle cx="60" cy="76" r="4" fill="#ffffff"/>
         </svg>
     ''',
-    "lang_html": '''
+    "lang_react": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M22 14 L78 14 L73 82 L50 90 L27 82 Z" fill="#e34c26"/>
-            <path d="M50 20 L50 84 L68 79 L72 20 Z" fill="#ef652a"/>
-            <text x="50" y="62" font-family="Helvetica,Arial,sans-serif" font-size="30"
-                font-weight="bold" text-anchor="middle" fill="#ffffff">5</text>
+            <g fill="none" stroke="#61dafb" stroke-width="4">
+                <ellipse cx="50" cy="50" rx="42" ry="16"/>
+                <ellipse cx="50" cy="50" rx="42" ry="16" transform="rotate(60 50 50)"/>
+                <ellipse cx="50" cy="50" rx="42" ry="16" transform="rotate(120 50 50)"/>
+            </g>
+            <circle cx="50" cy="50" r="8" fill="#61dafb"/>
         </svg>
     ''',
-    "lang_css": '''
+    "lang_ruby": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M22 14 L78 14 L73 82 L50 90 L27 82 Z" fill="#264de4"/>
-            <path d="M50 20 L50 84 L68 79 L72 20 Z" fill="#2965f1"/>
-            <text x="50" y="62" font-family="Helvetica,Arial,sans-serif" font-size="30"
-                font-weight="bold" text-anchor="middle" fill="#ffffff">3</text>
-        </svg>
-    ''',
-    "lang_sass": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <rect x="6" y="6" width="88" height="88" rx="16" fill="#cc6699"/>
-            <text x="50" y="72" font-family="Helvetica,Arial,sans-serif" font-size="56"
-                font-weight="bold" text-anchor="middle" fill="#ffffff">S</text>
-        </svg>
-    ''',
-    "lang_go": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <rect x="6" y="26" width="88" height="48" rx="10" fill="#00acd7"/>
-            <text x="50" y="66" font-family="Helvetica,Arial,sans-serif" font-size="34"
-                font-weight="bold" text-anchor="middle" fill="#ffffff">GO</text>
+            <path d="M30 20 L70 20 L88 40 L50 88 L12 40 Z" fill="#cc342d"/>
+            <path d="M30 20 L40 40 L60 40 L70 20 M12 40 L88 40 M40 40 L50 88 L60 40"
+                fill="none" stroke="#9b111e" stroke-width="3"/>
         </svg>
     ''',
     "lang_rust": '''
@@ -745,41 +703,18 @@ MINDSPACE_ICON_PACK: Final[dict[str, str]] = {
                 font-weight="bold" text-anchor="middle" fill="#b7410e">R</text>
         </svg>
     ''',
-    "lang_java": '''
+    "lang_sass": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M40 18 C44 26 40 32 44 40 M54 16 C58 24 54 30 58 38"
-                fill="none" stroke="#e76f00" stroke-width="5" stroke-linecap="round"/>
-            <path d="M28 50 L72 50 L69 74 C68 80 62 84 55 84 L45 84 C38 84 32 80 31 74 Z"
-                fill="#5382a1"/>
-            <path d="M72 54 C84 54 86 64 78 68 L73 70" fill="none" stroke="#5382a1" stroke-width="5"/>
+            <rect x="6" y="6" width="88" height="88" rx="16" fill="#cc6699"/>
+            <text x="50" y="72" font-family="Helvetica,Arial,sans-serif" font-size="56"
+                font-weight="bold" text-anchor="middle" fill="#ffffff">S</text>
         </svg>
     ''',
-    "lang_c": '''
+    "lang_svelte": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <rect x="6" y="6" width="88" height="88" rx="14" fill="#004482"/>
-            <text x="52" y="72" font-family="Helvetica,Arial,sans-serif" font-size="58"
-                font-weight="bold" text-anchor="middle" fill="#ffffff">C</text>
-        </svg>
-    ''',
-    "lang_cpp": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <rect x="6" y="6" width="88" height="88" rx="14" fill="#00599c"/>
-            <text x="50" y="64" font-family="Helvetica,Arial,sans-serif" font-size="36"
-                font-weight="bold" text-anchor="middle" fill="#ffffff">C++</text>
-        </svg>
-    ''',
-    "lang_ruby": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M30 20 L70 20 L88 40 L50 88 L12 40 Z" fill="#cc342d"/>
-            <path d="M30 20 L40 40 L60 40 L70 20 M12 40 L88 40 M40 40 L50 88 L60 40"
-                fill="none" stroke="#9b111e" stroke-width="3"/>
-        </svg>
-    ''',
-    "lang_php": '''
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <ellipse cx="50" cy="50" rx="47" ry="29" fill="#777bb4"/>
-            <text x="50" y="61" font-family="Helvetica,Arial,sans-serif" font-size="30"
-                font-weight="bold" font-style="italic" text-anchor="middle" fill="#ffffff">php</text>
+            <rect x="6" y="6" width="88" height="88" rx="16" fill="#ff3e00"/>
+            <text x="50" y="72" font-family="Helvetica,Arial,sans-serif" font-size="56"
+                font-weight="bold" font-style="italic" text-anchor="middle" fill="#ffffff">S</text>
         </svg>
     ''',
     "lang_swift": '''
@@ -789,24 +724,88 @@ MINDSPACE_ICON_PACK: Final[dict[str, str]] = {
                 C42 48 54 52 60 56 C50 42 40 30 30 22 Z" fill="#ffffff"/>
         </svg>
     ''',
-    "lang_kotlin": '''
+    "lang_ts": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <path d="M14 14 L88 14 L51 51 Z" fill="#e24462"/>
-            <path d="M14 14 L51 51 L14 88 Z" fill="#9c46b8"/>
-            <path d="M88 86 L51 51 L14 88 Z" fill="#7f52ff"/>
+            <rect x="6" y="6" width="88" height="88" rx="8" fill="#3178c6"/>
+            <text x="90" y="86" font-family="Helvetica,Arial,sans-serif" font-size="38"
+                font-weight="bold" text-anchor="end" fill="#ffffff">TS</text>
         </svg>
     ''',
-    "lang_jupyter": '''
+    "lang_vue": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <g fill="#f37726">
-                <circle cx="26" cy="16" r="6"/>
-                <circle cx="50" cy="11" r="6"/>
-                <circle cx="74" cy="16" r="6"/>
-                <path d="M20 46 C20 66 36 80 50 80 C64 80 80 66 80 46 C72 60 60 66 50 66
-                    C40 66 28 60 20 46 Z"/>
-                <path d="M80 40 C80 24 64 30 50 30 C36 30 20 24 20 40 C28 34 40 38 50 38
-                    C60 38 72 34 80 40 Z" opacity="0.7"/>
-            </g>
+            <path d="M50 84 L84 24 L67 24 L50 54 L33 24 L16 24 Z" fill="#41b883"/>
+            <path d="M50 54 L67 24 L58 24 L50 40 L42 24 L33 24 Z" fill="#35495e"/>
+        </svg>
+    ''',
+    "lock": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <rect x="20" y="44" width="60" height="42" rx="6" fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M32 44 L32 32 C32 16 68 16 68 32 L68 44" fill="none" stroke="currentColor" stroke-width="5"/>
+            <circle cx="50" cy="61" r="6" fill="accentColor"/>
+            <path d="M50 66 L50 77" stroke="accentColor" stroke-width="5"/>
+        </svg>
+    ''',
+    "package": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M50 16 L82 33 L82 67 L50 84 L18 67 L18 33 Z" fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M18 33 L50 50 L82 33 M50 50 L50 84" fill="none" stroke="accentColor" stroke-width="4"/>
+        </svg>
+    ''',
+    "pdf": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <rect x="28" y="58" width="44" height="18" rx="3" fill="accentColor"/>
+        </svg>
+    ''',
+    "submodule": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M10 25 C10 25 35 25 40 25 C45 25 47 15 50 15 C53 15 90 15 90 15 L90 85 L10 85 L10 25"
+                fill="none" stroke="currentColor" stroke-width="6"/>
+            <circle cx="50" cy="55" r="8" fill="none" stroke="accentColor" stroke-width="5"/>
+        </svg>
+    ''',
+    "symlink": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <path d="M36 68 C36 54 52 54 60 54 M60 54 L52 46 M60 54 L52 62"
+                fill="none" stroke="accentColor" stroke-width="5" stroke-linejoin="round"/>
+        </svg>
+    ''',
+    "table": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <path d="M28 48 L72 48 M28 64 L72 64 M44 42 L44 78 M58 42 L58 78" stroke="accentColor" stroke-width="4"/>
+        </svg>
+    ''',
+    "terminal": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <rect x="16" y="22" width="68" height="56" rx="6" fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M30 42 L42 51 L30 60" fill="none" stroke="accentColor" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M50 62 L68 62" stroke="accentColor" stroke-width="5"/>
+        </svg>
+    ''',
+    "text": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <path d="M30 30 L50 30" stroke="accentColor" stroke-width="5"/>
+            <path d="M30 50 L70 50" stroke="accentColor" stroke-width="5"/>
+            <path d="M30 70 L70 70" stroke="accentColor" stroke-width="5"/>
+        </svg>
+    ''',
+    "video": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"
+                fill="none" stroke="currentColor" stroke-width="5"/>
+            <path d="M60 10 L80 30" stroke="currentColor" stroke-width="5" fill="none"/>
+            <path d="M42 46 L68 60 L42 74 Z" fill="accentColor"/>
         </svg>
     '''
 }
