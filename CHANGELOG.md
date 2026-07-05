@@ -2,6 +2,10 @@
 
 ## v53 (2026-07-xx)
 
+New features:
+
+- Added new file icons.
+
 Bug fixes:
 
 - Fixed a problem that could create empty directories from the system AI tool.
