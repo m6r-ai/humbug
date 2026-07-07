@@ -199,7 +199,7 @@ def get_french_strings() -> LanguageStrings:
         # Mindspace folders dialog
         mindspace_folders_title="Configurer les dossiers de l'espace mental",
         mindspace_path="Chemin de l'espace mental",
-        conversations_folder='Créer le dossier "conversations"',
+        humbug_folder='Créer le dossier ".humbug"',
         src_folder='Créer le dossier "src"',
 
         # Mindspace settings

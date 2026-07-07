@@ -49,10 +49,10 @@ class MindspaceFoldersDialog(QDialog):
         )
         self._settings_container.add_setting(self._path_display)
 
-        self._conversations_check = SettingsFactory.create_switch(strings.conversations_folder)
-        self._conversations_check.set_value(True)
-        self._conversations_check.setEnabled(False)
-        self._settings_container.add_setting(self._conversations_check)
+        self._humbug_check = SettingsFactory.create_switch(strings.humbug_folder)
+        self._humbug_check.set_value(True)
+        self._humbug_check.setEnabled(False)
+        self._settings_container.add_setting(self._humbug_check)
 
         self._src_check = SettingsFactory.create_switch(strings.src_folder)
         self._src_check.set_value(False)
@@ -99,8 +99,7 @@ class MindspaceFoldersDialog(QDialog):
         Returns:
             List of folder names to create in mindspace
         """
-        folders = ['conversations']
-
+        folders: list[str] = []
         if self._src_check.get_value():
             folders.append('src')
 

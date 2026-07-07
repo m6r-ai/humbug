@@ -190,7 +190,7 @@ class LanguageStrings:
     # Mindspace folders dialog
     mindspace_folders_title: str
     mindspace_path: str
-    conversations_folder: str
+    humbug_folder: str
     src_folder: str
 
     # Mindspace settings

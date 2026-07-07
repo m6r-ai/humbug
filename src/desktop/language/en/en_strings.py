@@ -199,7 +199,7 @@ def get_english_strings() -> LanguageStrings:
         # Mindspace folders dialog
         mindspace_folders_title="Configure Mindspace Folders",
         mindspace_path="Mindspace Path",
-        conversations_folder='Create "conversations" Folder',
+        humbug_folder='Create ".humbug" Folder',
         src_folder='Create "src" Folder',
 
         # Mindspace settings

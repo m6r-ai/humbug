@@ -200,7 +200,7 @@ def get_arabic_strings() -> LanguageStrings:
         # Mindspace folders dialog
         mindspace_folders_title="تكوين مجلدات المساحة الذهنية",
         mindspace_path="مسار المساحة الذهنية",
-        conversations_folder='إنشاء مجلد "conversations"',
+        humbug_folder='إنشاء مجلد ".humbug"',
         src_folder='إنشاء مجلد "src"',
 
         # Mindspace settings
