@@ -269,7 +269,9 @@ class AIMessage:
                 usage = AIUsage(
                     prompt_tokens=usage_data["prompt_tokens"],
                     completion_tokens=usage_data["completion_tokens"],
-                    total_tokens=usage_data["total_tokens"]
+                    total_tokens=usage_data["total_tokens"],
+                    cache_write_tokens=usage_data.get("cache_write_tokens", 0),
+                    cache_read_tokens=usage_data.get("cache_read_tokens", 0),
                 )
 
             except (KeyError, TypeError) as e:

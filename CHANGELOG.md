@@ -12,6 +12,7 @@ New features:
 Bug fixes:
 
 - Fixed a problem that could create empty directories from the system AI tool.
+- Fixed a problem where cached token usages were zeroed out on reloading a conversation.
 
 Internal structure changes:
 

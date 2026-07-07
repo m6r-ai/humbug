@@ -4,6 +4,7 @@ import pytest
 
 from ai import AIConversationHistory
 from ai.ai_message import AIMessage, AIMessageSource
+from ai.ai_usage import AIUsage
 
 
 def _make_user_message(content: str = "hello", attachment_guids=None) -> AIMessage:
@@ -148,3 +149,40 @@ class TestAIMessageAttachments:
         copy = msg.copy()
         copy.attachments.append("g2")
         assert msg.attachments == ["g1"]
+
+
+class TestAIMessageUsageRoundTrip:
+    """Tests for usage data surviving a to_transcript_dict / from_transcript_dict round-trip."""
+
+    def test_round_trip_preserves_cache_tokens(self):
+        """Cache read/write token counts survive a transcript round-trip."""
+        usage = AIUsage(
+            prompt_tokens=100,
+            completion_tokens=50,
+            total_tokens=150,
+            cache_write_tokens=200,
+            cache_read_tokens=300,
+        )
+        original = AIMessage.create(AIMessageSource.AI, "response", usage=usage)
+        d = original.to_transcript_dict()
+        restored = AIMessage.from_transcript_dict(d)
+        assert restored.usage is not None
+        assert restored.usage.cache_write_tokens == 200
+        assert restored.usage.cache_read_tokens == 300
+        assert restored.usage.prompt_tokens == 100
+        assert restored.usage.completion_tokens == 50
+        assert restored.usage.total_tokens == 150
+
+    def test_round_trip_preserves_zero_cache_tokens(self):
+        """Usage with zero cache tokens round-trips correctly."""
+        usage = AIUsage(
+            prompt_tokens=10,
+            completion_tokens=5,
+            total_tokens=15,
+        )
+        original = AIMessage.create(AIMessageSource.AI, "response", usage=usage)
+        d = original.to_transcript_dict()
+        restored = AIMessage.from_transcript_dict(d)
+        assert restored.usage is not None
+        assert restored.usage.cache_write_tokens == 0
+        assert restored.usage.cache_read_tokens == 0
