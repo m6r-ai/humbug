@@ -14,7 +14,7 @@ from mindspace.mindspace_log_level import MindspaceLogLevel
 
 from desktop.file_sidebar.file_sidebar_model import FileSidebarModel
 from desktop.file_sidebar.file_sidebar_tree_view import FileSidebarTreeView
-from desktop.file_utils import is_binary_image_file
+from desktop.file_utils import is_binary_image_file, is_conversation_file
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -38,6 +38,7 @@ class FileSidebar(SidebarBase):
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_opened_in_editor = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in editor
+    file_opened_in_conversation = Signal(str)  # Emits path when file is opened in conversation
     file_opened_in_preview = Signal(str)  # Emits path when file is opened in preview
     file_opened_in_diff = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in diff
 
@@ -731,15 +732,19 @@ class FileSidebar(SidebarBase):
 
             else:
                 # File context menu
+                conversation_action = menu.addAction(strings.open_in_conversation)
+                conversation_action.setEnabled(is_conversation_file(path))
+                conversation_action.triggered.connect(lambda: self._handle_conversation_file(path))
+                if self._vcs_poller.has_repo():
+                    diff_action = menu.addAction(strings.open_in_diff)
+                    diff_action.setEnabled(self._vcs_poller.has_vcs_changes(path))
+                    diff_action.triggered.connect(lambda: self._handle_diff_file(path))
+
                 edit_action = menu.addAction(strings.open_in_editor)
                 edit_action.setEnabled(not is_binary_image_file(path))
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
                 preview_view_action = menu.addAction(strings.open_in_preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
-                if self._vcs_poller.has_repo():
-                    diff_action = menu.addAction(strings.open_in_diff)
-                    diff_action.setEnabled(self._vcs_poller.has_vcs_changes(path))
-                    diff_action.triggered.connect(lambda: self._handle_diff_file(path))
 
                 duplicate_action = menu.addAction(strings.duplicate)
                 duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
@@ -883,6 +888,10 @@ class FileSidebar(SidebarBase):
             return
 
         delegate.start_editing(index, select_extension=False)
+
+    def _handle_conversation_file(self, path: str) -> None:
+        """Open a file as a conversation."""
+        self.file_opened_in_conversation.emit(path)
 
     def _handle_edit_file(self, path: str) -> None:
         """Edit a file."""

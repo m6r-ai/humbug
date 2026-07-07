@@ -332,6 +332,7 @@ def get_arabic_strings() -> LanguageStrings:
         open_in_editor="فتح في المحرر",
         open_in_preview="فتح في المعاينة",
         open_in_diff="فتح في الفرق",
+        open_in_conversation="فتح في المحادثة",
         duplicate="تكرار",
         sort_by="ترتيب حسب",
         sort_by_name="ترتيب حسب الاسم",

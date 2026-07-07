@@ -331,6 +331,7 @@ def get_french_strings() -> LanguageStrings:
         open_in_editor="Ouvrir dans l'éditeur",
         open_in_preview="Ouvrir dans l'aperçu",
         open_in_diff="Ouvrir dans le diff",
+        open_in_conversation="Ouvrir dans la conversation",
         duplicate="Dupliquer",
         sort_by="Trier par",
         sort_by_name="Trier par nom",

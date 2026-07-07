@@ -13,7 +13,7 @@ from git import VCSFileStatus, VCSStatusCode
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 from desktop.color_role import ColorRole
-from desktop.file_utils import is_binary_image_file
+from desktop.file_utils import is_binary_image_file, is_conversation_file
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -93,6 +93,7 @@ class VCSSidebar(SidebarBase):
     """Sidebar panel showing VCS-modified files for the current mindspace."""
 
     file_clicked = Signal(str, str, bool)                  # panel_id, path, ephemeral
+    file_opened_in_conversation = Signal(str)              # path
     file_opened_in_editor = Signal(str, bool)              # path, ephemeral
     file_opened_in_preview = Signal(str)                   # path
     file_deleted = Signal(str)                             # path
@@ -238,6 +239,12 @@ class VCSSidebar(SidebarBase):
 
         strings = self._language_manager.strings()
         menu = self._style_manager.create_menu(self)
+
+        # Conversation is only meaningful for files that still exist on disk.
+        if os.path.exists(path):
+            conversation_action = menu.addAction(strings.open_in_conversation)
+            conversation_action.setEnabled(is_conversation_file(path))
+            conversation_action.triggered.connect(lambda: self.file_opened_in_conversation.emit(path))
 
         diff_action = menu.addAction(strings.open_in_diff)
         diff_action.triggered.connect(lambda: self.file_opened_in_diff.emit(path, False))

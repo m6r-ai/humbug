@@ -331,6 +331,7 @@ def get_english_strings() -> LanguageStrings:
         open_in_editor="Open In Editor",
         open_in_preview="Open In Preview",
         open_in_diff="Open In Diff",
+        open_in_conversation="Open In Conversation",
         duplicate="Duplicate",
         sort_by="Sort By",
         sort_by_name="Sort by name",

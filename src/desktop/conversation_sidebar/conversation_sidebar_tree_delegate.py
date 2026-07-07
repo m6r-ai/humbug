@@ -4,6 +4,7 @@ import os
 
 from PySide6.QtCore import QModelIndex
 
+from desktop.file_utils import is_conversation_file
 from desktop.sidebar.sidebar_tree_delegate import SidebarTreeDelegate
 
 
@@ -11,23 +12,11 @@ class ConversationSidebarTreeDelegate(SidebarTreeDelegate):
     """Specialized tree delegate for conversations that handles conversation file extension preservation."""
 
     def _is_conversation_file(self, file_path: str) -> bool:
-        """
-        Check if a file is a conversation file based on its extension.
-
-        Args:
-            file_path: Path to check
-
-        Returns:
-            True if this is a conversation file (.conv or .json)
-        """
-        if not file_path:
+        """Check if a file is a conversation file (.conv or .json)."""
+        if not file_path or not os.path.isfile(file_path):
             return False
 
-        if not os.path.isfile(file_path):
-            return False
-
-        _, ext = os.path.splitext(file_path.lower())
-        return ext in ['.conv', '.json']
+        return is_conversation_file(file_path)
 
     def _get_original_extension(self, file_path: str) -> str:
         """

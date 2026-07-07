@@ -16,10 +16,11 @@ from desktop.conversation_sidebar.conversation_sidebar_tree_delegate import Conv
 from desktop.conversation_sidebar.conversation_sidebar_tree_view import ConversationSidebarTreeView
 from desktop.conversation_sidebar.conversation_sidebar_dag_model import ConversationSidebarDAGModel
 from desktop.conversation_sidebar.conversation_sidebar_index import ConversationSidebarIndex
-from desktop.file_utils import is_binary_image_file
+from desktop.file_utils import is_binary_image_file, is_conversation_file
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_breadcrumb_bar import SidebarBreadcrumbBar
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
@@ -38,7 +39,9 @@ class ConversationSidebar(SidebarBase):
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_opened_in_editor = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in editor
+    file_opened_in_conversation = Signal(str)  # Emits path when file is opened in conversation
     file_opened_in_preview = Signal(str)  # Emits path when file is opened in preview
+    file_opened_in_diff = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in diff
     new_conversation_requested = Signal(str)  # Emits target folder path when user requests new conversation in folder
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -48,6 +51,7 @@ class ConversationSidebar(SidebarBase):
         self._style_manager = StyleManager()
         self._logger = logging.getLogger("ConversationSidebar")
         self._mindspace_manager = MindspaceManager()
+        self._vcs_poller = MindspaceVCSPoller()
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -123,23 +127,11 @@ class ConversationSidebar(SidebarBase):
         self._auto_scroll_active = False
 
     def _is_conversation_file(self, file_path: str) -> bool:
-        """
-        Check if a file is a conversation file based on its extension.
-
-        Args:
-            file_path: Path to check
-
-        Returns:
-            True if this is a conversation file (.conv or .json)
-        """
-        if not file_path:
+        """Check if a file is a conversation file (.conv or .json)."""
+        if not file_path or not os.path.isfile(file_path):
             return False
 
-        if not os.path.isfile(file_path):
-            return False
-
-        _, ext = os.path.splitext(file_path.lower())
-        return ext in ['.conv', '.json']
+        return is_conversation_file(file_path)
 
     def _get_original_extension(self, file_path: str) -> str:
         """
@@ -920,6 +912,14 @@ class ConversationSidebar(SidebarBase):
 
             else:
                 # File context menu
+                conversation_action = menu.addAction(strings.open_in_conversation)
+                conversation_action.setEnabled(is_conversation_file(path))
+                conversation_action.triggered.connect(lambda: self._handle_conversation_file(path))
+                if self._vcs_poller.has_repo():
+                    diff_action = menu.addAction(strings.open_in_diff)
+                    diff_action.setEnabled(self._vcs_poller.has_vcs_changes(path))
+                    diff_action.triggered.connect(lambda: self._handle_diff_file(path))
+
                 edit_action = menu.addAction(strings.open_in_editor)
                 edit_action.setEnabled(not is_binary_image_file(path))
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
@@ -1003,9 +1003,17 @@ class ConversationSidebar(SidebarBase):
 
         delegate.start_editing(index, select_extension=False)
 
+    def _handle_conversation_file(self, path: str) -> None:
+        """Open a file as a conversation."""
+        self.file_opened_in_conversation.emit(path)
+
     def _handle_edit_file(self, path: str) -> None:
         """Edit a file."""
         self.file_opened_in_editor.emit(path, False)
+
+    def _handle_diff_file(self, path: str) -> None:
+        """Open a file diff view."""
+        self.file_opened_in_diff.emit(path, False)
 
     def _handle_preview_view_file(self, path: str) -> None:
         """View a file in the preview."""

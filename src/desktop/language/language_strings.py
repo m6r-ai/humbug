@@ -312,6 +312,7 @@ class LanguageStrings:
     open_in_editor: str
     open_in_preview: str
     open_in_diff: str
+    open_in_conversation: str
     duplicate: str
     sort_by: str
     sort_by_name: str
