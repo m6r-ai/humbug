@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QMenu
 )
 
+from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 from desktop.conversation_sidebar.conversation_sidebar_tree_delegate import ConversationSidebarTreeDelegate
@@ -75,6 +76,7 @@ class ConversationSidebar(SidebarBase):
         self._tree_view.file_dropped.connect(self._on_file_dropped)
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
+        self._breadcrumb_bar.set_drag_source_validator(self._tree_view.is_valid_drag_source)
 
         self._bc_container = SidebarBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
@@ -1159,7 +1161,7 @@ class ConversationSidebar(SidebarBase):
             return
 
         # Set conversations directory path
-        self._conversations_path = os.path.join(path, "conversations")
+        self._conversations_path = os.path.join(path, Mindspace.MINDSPACE_DIR, Mindspace.CONVERSATIONS_DIR)
 
         # Ensure conversations directory exists
         if not os.path.exists(self._conversations_path):

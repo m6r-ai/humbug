@@ -1,6 +1,5 @@
 """Preview model implementation for mindspace preview view."""
 
-import os
 from typing import cast
 
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex, Qt
@@ -56,11 +55,6 @@ class PreviewSidebarModel(QSortFilterProxyModel):
         index = source_model.index(source_row, 0, source_parent)
         file_name = source_model.fileName(index)
         if file_name == ".":
-            return False
-
-        # Always hide .humbug directory
-        file_path = source_model.filePath(index)
-        if os.path.basename(file_path) == ".humbug":
             return False
 
         return True

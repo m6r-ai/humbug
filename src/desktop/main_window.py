@@ -1938,7 +1938,7 @@ class MainWindow(QMainWindow):
         """
         timestamp = datetime.now(timezone.utc)
         title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-        folder = relative_folder if relative_folder is not None else "conversations"
+        folder = relative_folder if relative_folder is not None else self._mindspace_manager.mindspace().conversations_rel_path()
         filename = os.path.join(folder, f"{title}.conv")
         return title, self._mindspace_manager.get_absolute_path(filename)
 
@@ -1952,7 +1952,7 @@ class MainWindow(QMainWindow):
             return None
 
         try:
-            self._mindspace_manager.ensure_mindspace_dir("conversations")
+            self._mindspace_manager.ensure_mindspace_dir(self._mindspace_manager.mindspace().conversations_rel_path())
 
         except MindspaceError as e:
             strings = self._language_manager.strings()
@@ -2002,7 +2002,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            self._mindspace_manager.ensure_mindspace_dir("conversations")
+            self._mindspace_manager.ensure_mindspace_dir(self._mindspace_manager.mindspace().conversations_rel_path())
             relative_folder = self._mindspace_manager.get_relative_path(folder_path)
             title, full_path = self._generate_conversation_path(relative_folder)
             context_id = self._mindspace_manager.mindspace().contexts().open(

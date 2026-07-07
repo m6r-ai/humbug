@@ -570,8 +570,8 @@ class DelegateAITool(AITool):
         """
         timestamp = datetime.now(timezone.utc)
         title = "dAI-" + timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-        filename = os.path.join("conversations", f"{title}.conv")
-        self._mindspace.ensure_mindspace_dir("conversations")
+        filename = os.path.join(self._mindspace.conversations_rel_path(), f"{title}.conv")
+        self._mindspace.ensure_mindspace_dir(self._mindspace.conversations_rel_path())
         return self._mindspace.get_absolute_path(filename)
 
     def _get_default_temperature(self) -> float | None:

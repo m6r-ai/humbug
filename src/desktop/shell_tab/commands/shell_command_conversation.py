@@ -145,10 +145,10 @@ class ShellCommandConversation(ShellCommand):
 
         requester_id = self._requester_id
         try:
-            self._mindspace.ensure_mindspace_dir("conversations")
+            self._mindspace.ensure_mindspace_dir(self._mindspace.conversations_rel_path())
             timestamp = datetime.now(timezone.utc)
             title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-            filename = os.path.join("conversations", f"{title}.conv")
+            filename = os.path.join(self._mindspace.conversations_rel_path(), f"{title}.conv")
             full_path = self._mindspace.get_absolute_path(filename)
 
             initial_model = None

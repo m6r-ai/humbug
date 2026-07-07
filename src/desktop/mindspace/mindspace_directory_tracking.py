@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 import os
 
+from mindspace.mindspace import Mindspace
+
 
 @dataclass
 class MindspaceDirectoryTracking:
@@ -15,14 +17,14 @@ class MindspaceDirectoryTracking:
         """Create default tracking with mindspace root path."""
         return cls(
             file_dialog=mindspace_path,
-            conversations=os.path.join(mindspace_path, "conversations")
+            conversations=os.path.join(mindspace_path, Mindspace.MINDSPACE_DIR, Mindspace.CONVERSATIONS_DIR)
         )
 
     def to_dict(self) -> dict[str, str]:
         """Convert to serializable dictionary."""
         return {
             "fileDialog": self.file_dialog,
-            "conversations": self.conversations
+            "conversations": self.conversations,
         }
 
     @classmethod
@@ -30,5 +32,7 @@ class MindspaceDirectoryTracking:
         """Create from dictionary, falling back to mindspace path if stored paths invalid."""
         return cls(
             file_dialog=data.get("fileDialog", mindspace_path),
-            conversations=data.get("conversations", os.path.join(mindspace_path, "conversations"))
+            conversations=data.get("conversations", os.path.join(
+                mindspace_path, Mindspace.MINDSPACE_DIR, Mindspace.CONVERSATIONS_DIR)
+            )
         )

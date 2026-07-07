@@ -4,6 +4,8 @@ import json
 import logging
 import os
 
+from mindspace.mindspace import Mindspace
+
 from desktop.mindspace.mindspace_directory_tracking import MindspaceDirectoryTracking
 
 
@@ -36,7 +38,9 @@ class MindspaceDirectoryTracker:
                     self._tracking.file_dialog = mindspace_path
 
                 if not os.path.exists(self._tracking.conversations):
-                    self._tracking.conversations = os.path.join(mindspace_path, "conversations")
+                    self._tracking.conversations = os.path.join(
+                        mindspace_path, Mindspace.MINDSPACE_DIR, Mindspace.CONVERSATIONS_DIR
+                    )
 
             else:
                 self._tracking = MindspaceDirectoryTracking.create_default(mindspace_path)

@@ -77,6 +77,7 @@ class PreviewSidebar(SidebarBase):
         self._tree_view.file_dropped.connect(self._on_file_dropped)
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
+        self._breadcrumb_bar.set_drag_source_validator(self._tree_view.is_valid_drag_source)
 
         self._bc_container = SidebarBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)

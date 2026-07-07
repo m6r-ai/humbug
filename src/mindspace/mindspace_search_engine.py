@@ -3,6 +3,7 @@ import os
 import re
 from dataclasses import dataclass
 
+from mindspace.mindspace import Mindspace
 from mindspace.mindspace_content_type import MindspaceContentType
 
 
@@ -133,7 +134,7 @@ class MindspaceSearchEngine:
 
     def _classify_content_type(self, mindspace_path: str, path: str) -> MindspaceContentType:
         """Classify a file as conversation content or general file content."""
-        conversations_path = os.path.join(mindspace_path, "conversations")
+        conversations_path = os.path.join(mindspace_path, Mindspace.MINDSPACE_DIR, Mindspace.CONVERSATIONS_DIR)
         normalized_path = os.path.normpath(path)
         normalized_conversations = os.path.normpath(conversations_path)
         if normalized_path.startswith(normalized_conversations + os.sep) or normalized_path == normalized_conversations:

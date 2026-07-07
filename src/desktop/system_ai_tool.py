@@ -360,7 +360,7 @@ class SystemAITool(AITool):
             )
 
         try:
-            self._mindspace.ensure_mindspace_dir("conversations")
+            self._mindspace.ensure_mindspace_dir(self._mindspace.conversations_rel_path())
 
             requester_id = self._requester_tab_id(requester_ref) or ""
             title = os.path.splitext(os.path.basename(conversation_path))[0]
@@ -448,7 +448,7 @@ class SystemAITool(AITool):
             reasoning_effort = reasoning_effort_arg
 
         try:
-            self._mindspace.ensure_mindspace_dir("conversations")
+            self._mindspace.ensure_mindspace_dir(self._mindspace.conversations_rel_path())
 
             # Build the conversation settings
             settings = self._mindspace.settings()
@@ -471,7 +471,7 @@ class SystemAITool(AITool):
             # Generate conversation path
             timestamp = datetime.now(timezone.utc)
             conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-            filename = os.path.join("conversations", f"{conversation_title}.conv")
+            filename = os.path.join(self._mindspace.conversations_rel_path(), f"{conversation_title}.conv")
             full_path = self._mindspace.get_absolute_path(filename)
 
             # Build the AIConversation with settings applied, wrap in transcript

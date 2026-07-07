@@ -5,6 +5,9 @@
 New features:
 
 - Added new file icons.
+- Conversations now move to `.humbug/conversation` instead of `conversations` as they're not directly part of the mindspace
+  file content and are auto-managed by Humbug.  The `.humbug` directory now becomes visible to support viewing and drag-and-drop
+  operations.
 
 Bug fixes:
 

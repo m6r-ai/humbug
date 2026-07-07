@@ -94,13 +94,12 @@ it should not be added.
 
 ```text
 humbug/
+├── docs/                   # Documentation
+├── icons/                  # Application icons
+├── menai_modules/          # Menai standard library modules
 ├── src/                    # Main source code
 ├── tests/                  # Test suite
 ├── tools/                  # Development and analysis tools
-├── docs/                   # Documentation
-├── menai_modules/          # Menai standard library modules
-├── conversations/          # Example AI conversations
-├── icons/                  # Application icons
 └── pyproject.toml          # Python project configuration
 ```
 
@@ -221,7 +220,9 @@ Includes `doc_ir_to_markdown.py` for serialising a doc_ir tree to Markdown text.
 
 ### `src/mindspace/`
 Front-end-agnostic mindspace model. Manages the mindspace path, settings, search,
-interactions log, and the context registry. No Qt or GUI dependencies.
+interactions log, the context registry, and the conversations directory (`.humbug/conversations/`).
+Conversations are migrated from the legacy `conversations/` root directory on open.
+No Qt or GUI dependencies.
 
 ### `src/menai/`
 Pure functional programming language designed for AI use. Includes lexer, parser, compiler, and virtual machine.

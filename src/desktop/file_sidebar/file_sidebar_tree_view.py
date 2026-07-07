@@ -6,6 +6,7 @@ from typing import cast
 from PySide6.QtCore import QSortFilterProxyModel, QDir, QModelIndex
 from PySide6.QtWidgets import QWidget, QFileSystemModel
 
+from mindspace.mindspace import Mindspace
 from desktop.sidebar.sidebar_tree_view import SidebarTreeView
 
 
@@ -38,9 +39,12 @@ class FileSidebarTreeView(SidebarTreeView):
         Returns:
             True if the path can be dragged, False otherwise
         """
-        # Check if this is a valid drag target
-        source_basename = os.path.basename(path)
-        if source_basename in ['.', '.humbug', 'conversations']:
+        if os.path.basename(path) == '.':
+            return False
+
+        humbug_dir = os.path.join(self._mindspace_path, Mindspace.MINDSPACE_DIR)
+        conversations_dir = os.path.join(humbug_dir, Mindspace.CONVERSATIONS_DIR)
+        if path in (humbug_dir, conversations_dir):
             return False
 
         return True

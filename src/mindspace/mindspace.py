@@ -28,6 +28,7 @@ class Mindspace:
     SESSION_FILE = "session.json"
     INTERACTIONS_FILE = "system.json"
     USAGE_FILE = "usage.json"
+    CONVERSATIONS_DIR = "conversations"
 
     def __init__(
         self,
@@ -141,6 +142,7 @@ class Mindspace:
         try:
             settings = MindspaceSettings.load(os.path.join(mindspace_dir, self.SETTINGS_FILE))
             self._path = path
+            self._migrate_conversations()
             self._settings = settings
             self._load_interactions()
             self._load_usage()
@@ -182,6 +184,39 @@ class Mindspace:
 
         except OSError as e:
             raise MindspaceError(f"Failed to save mindspace settings: {str(e)}") from e
+
+    def conversations_dir(self) -> str:
+        """
+        Return the absolute path to the conversations directory.
+
+        The conversations directory lives inside the .humbug directory so that
+        conversations do not clutter the user's mindspace content.  The directory
+        is created if it does not already exist.
+
+        Returns:
+            Absolute path to the conversations directory.
+
+        Raises:
+            MindspaceError: No mindspace is open or directory could not be created.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        path = os.path.join(self._path, self.MINDSPACE_DIR, self.CONVERSATIONS_DIR)
+        try:
+            os.makedirs(path, exist_ok=True)
+
+        except OSError as e:
+            raise MindspaceError(f"Failed to create conversations directory: {str(e)}") from e
+
+        return path
+
+    def conversations_rel_path(self) -> str:
+        """
+        Return the mindspace-relative path to the conversations directory.
+
+        Returns:
+            Path relative to the mindspace root, e.g. '.humbug/conversations'.
+        """
+        return os.path.join(self.MINDSPACE_DIR, self.CONVERSATIONS_DIR)
 
     def get_absolute_path(self, path: str) -> str:
         """
@@ -409,6 +444,76 @@ class Mindspace:
         self._save_usage()
         if self._on_usage_updated:
             self._on_usage_updated()
+
+    def _migrate_conversations(self) -> None:
+        """
+        Migrate conversations from the legacy mindspace-root location to .humbug/.
+
+        If a 'conversations' directory exists at the mindspace root (the legacy
+        location) and no conversations directory exists inside .humbug, move it.
+        This is a one-time migration that runs when a mindspace is opened.
+        """
+        old_path = os.path.join(self._path, self.CONVERSATIONS_DIR)
+        new_path = os.path.join(self._path, self.MINDSPACE_DIR, self.CONVERSATIONS_DIR)
+
+        if not os.path.isdir(old_path):
+            return
+
+        if os.path.isdir(new_path):
+            # Both exist — log and leave the old one in place rather than risk data loss.
+            self._logger.warning(
+                "Conversations directory exists at both '%s' and '%s'; "
+                "leaving legacy directory in place",
+                old_path, new_path
+            )
+            return
+
+        try:
+            shutil.move(old_path, new_path)
+            self._migrate_session_paths(
+                self.CONVERSATIONS_DIR,
+                os.path.join(self.MINDSPACE_DIR, self.CONVERSATIONS_DIR))
+            self._logger.info("Migrated conversations from '%s' to '%s'", old_path, new_path)
+
+        except OSError as e:
+            self._logger.error("Failed to migrate conversations from '%s' to '%s': %s",
+                               old_path, new_path, str(e))
+
+    def _migrate_session_paths(self, old_dir: str, new_dir: str) -> None:
+        """
+        Rewrite conversation paths in the session file after migration.
+
+        Session paths are stored relative to the mindspace root.  This updates
+        any path that starts with the old conversations prefix to use the new
+        .humbug/conversations prefix.
+
+        Args:
+            old_dir: The old conversations directory name relative to mindspace root.
+            new_dir: The new conversations directory path relative to mindspace root.
+        """
+        session_file = os.path.join(self._path, self.MINDSPACE_DIR, self.SESSION_FILE)
+        if not os.path.exists(session_file):
+            return
+
+        try:
+            with open(session_file, encoding='utf-8') as f:
+                state = json.load(f)
+
+            old_prefix = old_dir + os.sep
+            new_prefix = new_dir + os.sep
+            changed = False
+            for tab_state in state.get('tabs', []):
+                path = tab_state.get('path')
+                if path and path.startswith(old_prefix):
+                    tab_state['path'] = new_prefix + path[len(old_prefix):]
+                    changed = True
+
+            if changed:
+                with open(session_file, 'w', encoding='utf-8') as f:
+                    json.dump(state, f, indent=4)
+
+        except (json.JSONDecodeError, OSError) as e:
+            self._logger.warning("Failed to migrate session paths: %s", str(e))
 
     def _apply_tool_settings(self, settings: MindspaceSettings) -> None:
         """Apply tool enabled states from settings to the tool manager."""

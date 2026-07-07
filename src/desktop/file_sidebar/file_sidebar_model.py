@@ -1,6 +1,5 @@
 """File tree view implementation for mindspace files."""
 
-import os
 from typing import cast
 
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex, Qt
@@ -11,7 +10,7 @@ from desktop.user.user_manager import UserManager
 
 
 class FileSidebarModel(QSortFilterProxyModel):
-    """Filter model to hide .humbug directory and apply custom sorting."""
+    """Filter model for mindspace files with custom sorting."""
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize the filter model."""
@@ -44,7 +43,7 @@ class FileSidebarModel(QSortFilterProxyModel):
         return base_flags | Qt.ItemFlag.ItemIsEditable
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex) -> bool:
-        """Filter out .humbug directory."""
+        """Filter rows for display."""
        # If no mindspace is open, don't show any files
         if not self._mindspace_root:
             return False
@@ -56,11 +55,6 @@ class FileSidebarModel(QSortFilterProxyModel):
         index = source_model.index(source_row, 0, source_parent)
         file_name = source_model.fileName(index)
         if file_name == ".":
-            return False
-
-        # Always hide .humbug directory
-        file_path = source_model.filePath(index)
-        if os.path.basename(file_path) == ".humbug":
             return False
 
         return True

@@ -84,6 +84,7 @@ class SidebarBreadcrumbBar(QTreeView):
         self._drop_target_index: QModelIndex = QModelIndex()
 
         self._drop_handler: Callable[[str, str], None] | None = None
+        self._drag_source_validator: Callable[[str], bool] | None = None
         self._scroll_handler: Callable[[str], None] | None = None
         self._collapse_handler: Callable[[str], None] | None = None
         self._context_menu_handler: Callable[[str, QPoint], None] | None = None
@@ -112,6 +113,19 @@ class SidebarBreadcrumbBar(QTreeView):
             handler: Drop handler callable
         """
         self._drop_handler = handler
+
+    def set_drag_source_validator(self, validator: Callable[[str], bool]) -> None:
+        """
+        Set the callable that validates whether a dragged path is an allowed drag source.
+
+        Signature: validator(path) -> bool
+
+        When set, the breadcrumb bar rejects drops whose dragged path fails validation.
+
+        Args:
+            validator: Drag source validator callable
+        """
+        self._drag_source_validator = validator
 
     def set_scroll_handler(self, handler: Callable[[str], None]) -> None:
         """
@@ -443,6 +457,9 @@ class SidebarBreadcrumbBar(QTreeView):
             return False
 
         if os.path.dirname(dragged_norm) == target_norm:
+            return False
+
+        if self._drag_source_validator and not self._drag_source_validator(dragged_path):
             return False
 
         return True
