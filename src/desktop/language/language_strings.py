@@ -339,7 +339,6 @@ class LanguageStrings:
     tooltip_fork_message: str
     tooltip_delete_from_message: str
     tooltip_edit_message: str
-    tooltip_edit_file: str
     tooltip_submit_message: str
     tooltip_stop_message: str
     tooltip_settings_message: str

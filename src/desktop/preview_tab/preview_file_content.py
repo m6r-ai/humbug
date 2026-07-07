@@ -3,9 +3,9 @@
 from collections.abc import Callable
 import logging
 
-from PySide6.QtWidgets import QVBoxLayout, QWidget, QHBoxLayout, QLabel, QToolButton, QTextEdit
-from PySide6.QtCore import QPoint, Qt, QSize, QRegularExpression
-from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QIcon, QTextDocument
+from PySide6.QtWidgets import QVBoxLayout, QWidget, QHBoxLayout, QLabel, QTextEdit
+from PySide6.QtCore import QPoint, Qt, QRegularExpression
+from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QTextDocument
 
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
@@ -49,27 +49,18 @@ class PreviewFileContent(PreviewContentWidget):
         self._layout.setSpacing(spacing)
         self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
-        # Create header with edit button
+        # Create header with language label
         self._header_container = QWidget()
         self._header_container.setObjectName("_header_container")
         self._header_layout = QHBoxLayout(self._header_container)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
         self._header_layout.setSpacing(4)
 
-        # Add language label
         self._syntax_header = QLabel()
         self._syntax_header.setObjectName("_syntax_header")
         self._syntax_header.setIndent(0)
         self._syntax_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self._header_layout.addWidget(self._syntax_header)
-        # Add stretch to fill space
-        self._header_layout.addStretch()
-
-        # Add Edit button with icon
-        self._edit_button = QToolButton()
-        self._edit_button.setObjectName("_edit_button")
-        self._edit_button.clicked.connect(self._on_edit_clicked)
-        self._header_layout.addWidget(self._edit_button)
 
         # Add header to layout
         self._content_layout.addWidget(self._header_container)
@@ -96,10 +87,6 @@ class PreviewFileContent(PreviewContentWidget):
         # Call apply_style directly to initialize styling
         self._on_language_changed()
         self.apply_style()
-
-    def _on_edit_clicked(self) -> None:
-        """Handle the edit button being clicked."""
-        self.edit_clicked.emit()
 
     def _on_mouse_pressed(self, event: QMouseEvent) -> None:
         """
@@ -141,9 +128,6 @@ class PreviewFileContent(PreviewContentWidget):
                 syntax=ProgrammingLanguageUtils.get_display_name(self._syntax)
             )
             self._syntax_header.setText(syntax_header)
-
-        if self._edit_button:
-            self._edit_button.setToolTip(strings.tooltip_edit_file)
 
     def set_content(self, text: str, path: str | None) -> None:
         """
@@ -381,22 +365,6 @@ class PreviewFileContent(PreviewContentWidget):
 
         # Style syntax header
         self._syntax_header.setFont(font)
-
-        icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * zoom_factor)
-        icon_size = QSize(icon_scaled_size, icon_scaled_size)
-
-        self._edit_button.setIcon(QIcon(style_manager.scale_icon("edit", icon_base_size)))
-        self._edit_button.setIconSize(icon_size)
-
-    def supports_editing(self) -> bool:
-        """
-        Check if this content type supports editing.
-
-        Returns:
-            True if this content type supports editing, False otherwise
-        """
-        return True
 
     def get_content_type(self) -> str:
         """

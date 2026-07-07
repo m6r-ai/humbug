@@ -358,7 +358,6 @@ def get_english_strings() -> LanguageStrings:
         tooltip_fork_message="Fork conversation at this message",
         tooltip_delete_from_message="Delete conversation from this point",
         tooltip_edit_message="Edit this message",
-        tooltip_edit_file="Edit this file",
         tooltip_submit_message="Submit message",
         tooltip_stop_message="Stop current processing",
         tooltip_settings_message="Open conversation settings",

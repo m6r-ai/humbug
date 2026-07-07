@@ -551,20 +551,6 @@ class PreviewTab(TabBase):
 
             {style_manager.get_scrollbar_stylesheet("#PreviewWidget #PreviewFileContent #_text_area QScrollBar")}
 
-            #PreviewWidget #PreviewFileContent #_edit_button {{
-                background-color: transparent;
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 0;
-                padding: 0px;
-            }}
-            #PreviewWidget #PreviewFileContent #_edit_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-            }}
-            #PreviewWidget #PreviewFileContent #_edit_button:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-            }}
-
             #PreviewWidget QWidget#PreviewMarkdownContent {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 border: none;

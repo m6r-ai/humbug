@@ -358,7 +358,6 @@ def get_french_strings() -> LanguageStrings:
         tooltip_fork_message="Dupliquer la conversation à partir de ce message",
         tooltip_delete_from_message="Supprimer la conversation à partir d'ici",
         tooltip_edit_message="Modifier ce message",
-        tooltip_edit_file="Modifier ce fichier",
         tooltip_submit_message="Envoyer le message",
         tooltip_stop_message="Arrêter le traitement du message",
         tooltip_settings_message="Ouvrir les paramètres de la conversation",

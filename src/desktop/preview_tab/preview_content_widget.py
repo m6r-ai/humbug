@@ -184,15 +184,6 @@ class PreviewContentWidget(QFrame):
         """
         return []
 
-    def supports_editing(self) -> bool:
-        """
-        Check if this content type supports editing.
-
-        Returns:
-            True if this content type supports editing, False otherwise
-        """
-        return False
-
     def get_content_type(self) -> str:
         """
         Get the type of this content.

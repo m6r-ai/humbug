@@ -359,7 +359,6 @@ def get_arabic_strings() -> LanguageStrings:
         tooltip_fork_message="تفريع المحادثة من هذه الرسالة",
         tooltip_delete_from_message="حذف المحادثة من هذه النقطة",
         tooltip_edit_message="تحرير هذه الرسالة",
-        tooltip_edit_file="تحرير هذا الملف",
         tooltip_submit_message="إرسال الرسالة",
         tooltip_stop_message="إيقاف المعالجة الحالية",
         tooltip_settings_message="فتح إعدادات المحادثة",
