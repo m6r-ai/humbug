@@ -1,8 +1,8 @@
 # Viewing Git Diffs
 
-The diff tab shows a side-by-side comparison of a file's current state against its last
-committed version in git. It gives you a clear view of exactly what has changed before you
-commit — or before you hand work off to the AI to continue.
+The diff tab shows a comparison of a file's current state against its last committed version
+in git. It gives you a clear view of exactly what has changed before you commit — or before
+you hand work off to the AI to continue.
 
 The diff tab is only available when your mindspace is inside a git repository.
 
@@ -21,15 +21,37 @@ There are several ways to open a diff for a file:
 
 ## Reading the diff
 
-The diff tab shows the two versions of the file side by side:
+The diff tab has two layout modes: **inline** and **side-by-side**. Inline is the default and
+shows a single-column unified diff — all removed lines followed by all added lines within each
+hunk. Side-by-side shows the two versions of the file in separate panes.
+
+### Inline mode
+
+Changed lines are shown in a single column:
+
+- **Removed lines** (present only in the last committed version) appear in red
+- **Added lines** (present only in your current working copy) appear in green
+- Unchanged lines are shown for context
+
+### Side-by-side mode
+
+The two versions of the file are shown in separate panes:
 
 - The **left pane** shows the last committed version (HEAD)
 - The **right pane** shows your current working copy
 
-Changed lines are highlighted. Added lines appear in green, removed lines in red, and
-unchanged lines are shown for context.
+Added lines appear in green, removed lines in red, and unchanged lines are shown for context.
 
 The status bar shows the filename and the total number of changed rows in the diff.
+
+### Switching between modes
+
+You can switch between inline and side-by-side at any time by **right-clicking** in the diff
+tab and choosing **Show Side by Side** or **Show Inline** from the context menu. This changes
+the layout for the current tab only.
+
+The initial layout for new diff tabs is controlled by the **Diff View** setting in
+[Mindspace Settings](mindspace-settings.md). The default is inline.
 
 ---
 
@@ -44,7 +66,7 @@ A hunk is a contiguous block of changed lines. You can jump between hunks using:
 
 ## Finding text
 
-Press **Cmd+F** / **Ctrl+F** to open the find bar and search across both panes of the diff.
+Press **Cmd+F** / **Ctrl+F** to open the find bar and search across the diff.
 The find bar supports case-sensitive search, regular expressions, and whole-word matching.
 
 ---

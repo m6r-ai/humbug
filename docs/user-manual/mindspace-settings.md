@@ -32,6 +32,14 @@ mindspace. You can override them per-conversation at any time.
 
 ---
 
+## Diff
+
+- **Diff View** — the default layout for new diff tabs. **Inline** shows a single-column unified
+  diff; **Side by Side** shows the old and new versions in separate panes. Default is Inline.
+  You can switch between layouts at any time from the diff tab's context menu.
+
+---
+
 ## Terminal
 
 - **Fixed width** — when enabled, the terminal has a minimum column width. If the tab is
