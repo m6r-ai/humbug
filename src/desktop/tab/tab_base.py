@@ -7,6 +7,8 @@ from PySide6.QtCore import Signal
 from PySide6.QtGui import QPixmap
 
 from context.context_registry import ContextRegistry
+from mindspace.mindspace_settings import MindspaceSettings
+
 from desktop.file_watcher import FileWatcher
 from desktop.status_message import StatusMessage
 from desktop.tab.tab_state import TabState
@@ -613,4 +615,14 @@ class TabBase(QFrame):
         Called by TabManager when the application style changes.  The default
         implementation is a no-op.  Subclasses that own styled content widgets
         should override this to forward the call to those widgets.
+        """
+
+    def apply_mindspace_settings(self, settings: MindspaceSettings) -> None:
+        """
+        Apply updated mindspace settings to this tab.
+
+        Called by TabManager when the user changes mindspace settings.  The
+        default implementation is a no-op.  Override in tabs that need to react
+        to runtime settings changes (e.g. TerminalTab reacts to terminal width
+        changes).
         """

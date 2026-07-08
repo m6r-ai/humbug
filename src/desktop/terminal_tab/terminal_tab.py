@@ -13,7 +13,9 @@ from PySide6.QtCore import Qt, QRegularExpression
 from terminal import TerminalBase, TerminalState, create_terminal
 
 from context.context_registry import ContextRegistry
+from mindspace.mindspace_settings import MindspaceSettings
 from terminal_context.terminal_context import TerminalContext
+
 
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -728,18 +730,36 @@ class TerminalTab(TabBase):
         keystrokes_bytes = keystrokes.encode('utf-8')
         await self._terminal_process.write_data(keystrokes_bytes)
 
-    def apply_style(self) -> None:
-        """Apply current style settings to the tab's content widgets."""
-        super().apply_style()
-        self._find_widget.apply_style()
-        self._terminal_widget.apply_style()
+    def apply_mindspace_settings(self, settings: MindspaceSettings) -> None:
+        """Apply updated mindspace settings, reacting to terminal width changes."""
+        new_width = settings.terminal_fixed_width if settings.terminal_fixed_width_enabled else None
+        old_width = self._terminal_widget.preferred_pixel_width()
+        self._terminal_widget.set_fixed_width(new_width)
+        new_pixel_width = self._terminal_widget.preferred_pixel_width()
 
+        if new_pixel_width == old_width:
+            return
+
+        self._update_terminal_max_width()
+        self._find_widget.set_preferred_width(self.preferred_width)
+        self.preferred_width_changed.emit()
+
+    def _update_terminal_max_width(self) -> None:
+        """Constrain the terminal widget to its preferred pixel width, or remove the constraint."""
         pixel_width = self._terminal_widget.preferred_pixel_width()
         if pixel_width is not None:
             self._terminal_widget.setMaximumWidth(pixel_width + 1)
 
         else:
             self._terminal_widget.setMaximumWidth(16777215)  # QWIDGETSIZE_MAX
+
+    def apply_style(self) -> None:
+        """Apply current style settings to the tab's content widgets."""
+        super().apply_style()
+        self._find_widget.apply_style()
+        self._terminal_widget.apply_style()
+
+        self._update_terminal_max_width()
 
         new_stylesheet = self._build_stylesheet()
         if new_stylesheet != self.styleSheet():

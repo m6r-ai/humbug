@@ -505,9 +505,19 @@ class TabManager(QWidget):
         """Wire or unwire registry callbacks when a mindspace opens or closes."""
         if self._mindspace_manager.has_mindspace():
             self._subscribe_to_registry()
+            self._apply_mindspace_settings_to_tabs()
 
         else:
             self._unsubscribe_from_registry()
+
+    def _apply_mindspace_settings_to_tabs(self) -> None:
+        """Forward updated mindspace settings to all open tabs."""
+        settings = self._mindspace_manager.settings()
+        if settings is None:
+            return
+
+        for tab in self._tabs.values():
+            tab.apply_mindspace_settings(settings)
 
     def _subscribe_to_registry(self) -> None:
         """Register TabManager as a subscriber to the active ContextRegistry."""

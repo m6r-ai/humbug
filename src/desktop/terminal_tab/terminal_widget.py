@@ -1365,6 +1365,20 @@ class TerminalWidget(QAbstractScrollArea):
         zoom = self._style_manager.zoom_factor()
         return math.ceil(self._fixed_width * self._base_char_width * zoom) + margins.left() + margins.right() + scrollbar_size
 
+    def set_fixed_width(self, width: int | None) -> None:
+        """
+        Update the fixed terminal width in columns, or pass None for no fixed width.
+
+        Called when the user changes the terminal width setting at runtime.
+        Triggers a dimension update so the terminal grid reflows immediately.
+        """
+        if width == self._fixed_width:
+            return
+
+        self._fixed_width = width
+        self._update_dimensions()
+        self.viewport().update()
+
     def create_state_metadata(self) -> dict:
         """Create metadata dictionary capturing widget state."""
         return self._state.create_state_metadata()
