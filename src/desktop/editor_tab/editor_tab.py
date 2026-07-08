@@ -572,8 +572,6 @@ class EditorTab(TabBase):
     def apply_style(self) -> None:
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
-        style_manager = StyleManager()
-        self._editor_widget.setMaximumWidth(style_manager.scaled_tab_width())
         self._editor_widget.apply_style()
 
         new_stylesheet = self._build_stylesheet()

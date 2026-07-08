@@ -1912,8 +1912,7 @@ class ConversationWidget(QWidget):
         style_manager = self._style_manager
         spacing = int(style_manager.message_bubble_spacing())
 
-        max_content_width = style_manager.scaled_tab_width()
-        input_width = min(self._scroll_area.viewport().width(), max_content_width) - 2 * spacing + 2
+        input_width = self._scroll_area.viewport().width() - 2 * spacing + 2
         self._input.resize(input_width, self._input.height())
 
     def _update_input_position(self, input_height: int | None = None) -> None:

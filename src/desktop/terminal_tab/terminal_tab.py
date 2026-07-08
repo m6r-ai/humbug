@@ -142,8 +142,6 @@ class TerminalTab(TabBase):
         terminal_container_layout.addWidget(self._terminal_widget)
         layout.addWidget(terminal_container)
 
-        self._find_widget.set_preferred_width(self.preferred_width)
-
         # Connect signals
         self._terminal_widget.data_ready.connect(self._on_data_ready)
 
@@ -741,7 +739,6 @@ class TerminalTab(TabBase):
             return
 
         self._update_terminal_max_width()
-        self._find_widget.set_preferred_width(self.preferred_width)
         self.preferred_width_changed.emit()
 
     def _update_terminal_max_width(self) -> None:

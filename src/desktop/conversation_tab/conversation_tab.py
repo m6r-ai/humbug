@@ -61,7 +61,6 @@ class ConversationTab(TabBase):
         # Add find widget at top (initially hidden)
         self._find_widget = FindWidget(self)
         self._find_widget.hide()
-        self._find_widget.set_preferred_width(self.preferred_width)
         self._find_widget.closed.connect(self._close_find)
         self._find_widget.search_changed.connect(self._on_search_changed)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
@@ -472,8 +471,6 @@ class ConversationTab(TabBase):
     def apply_style(self) -> None:
         """Apply current style settings to the tab's content widgets."""
         self._find_widget.apply_style()
-        style_manager = StyleManager()
-        self._conversation_widget.setMaximumWidth(style_manager.scaled_tab_width())
         self._conversation_widget.apply_style()
 
         new_stylesheet = self._build_stylesheet()

@@ -49,7 +49,6 @@ class DiffTab(TabBase):
         # Add find widget at top (initially hidden)
         self._find_widget = FindWidget(self)
         self._find_widget.hide()
-        self._find_widget.set_preferred_width(self.preferred_width)
         self._find_widget.closed.connect(self._close_find)
         self._find_widget.search_changed.connect(self._on_search_changed)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
@@ -95,7 +94,6 @@ class DiffTab(TabBase):
     def _on_mode_changed(self) -> None:
         """Handle a view mode change from the diff widget's context menu."""
         self._view_mode = self._diff_widget.mode()
-        self._find_widget.set_preferred_width(self.preferred_width)
         self.preferred_width_changed.emit()
 
     def _open_in_editor(self, line: int, column: int) -> None:

@@ -119,7 +119,6 @@ class UsageTab(TabBase):
         return self._style_manager.scaled_tab_width()
 
     def apply_style(self) -> None:
-        self._usage_widget.setMaximumWidth(self._style_manager.scaled_tab_width())
         self._usage_widget.apply_style()
 
         new_stylesheet = self._build_stylesheet()
