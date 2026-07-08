@@ -23,6 +23,7 @@ class TabBase(QFrame):
     activated = Signal()  # Emits when tab is activated by user interaction
     tab_label_changed = Signal(str, str)  # Emits (tab_id, new_title) when the tab bar label should change
     close_requested = Signal()  # Emits when tab requests to be closed
+    preferred_width_changed = Signal()  # Emits when preferred_width() may return a different value
 
     def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
         """
@@ -599,6 +600,9 @@ class TabBase(QFrame):
 
         When None, the column containing this tab will take whatever space is available after
         constrained columns have been allocated their preferred widths.
+
+        Subclasses whose preferred width can change at runtime must emit
+        preferred_width_changed so the tab manager can resize columns.
         """
         return None
 

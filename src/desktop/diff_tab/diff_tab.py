@@ -96,6 +96,7 @@ class DiffTab(TabBase):
         """Handle a view mode change from the diff widget's context menu."""
         self._view_mode = self._diff_widget.mode()
         self._find_widget.set_preferred_width(self.preferred_width)
+        self.preferred_width_changed.emit()
 
     def _open_in_editor(self, line: int, column: int) -> None:
         """Open this tab's file in an editor tab, navigating to the given line and column."""

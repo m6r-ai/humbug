@@ -616,6 +616,7 @@ class TabManager(QWidget):
         tab.file_state_changed.connect(self._on_tab_file_state_changed)
         tab.tab_label_changed.connect(self._on_tab_label_changed)
         tab.close_requested.connect(lambda: self.close_tab_by_id(tab_id, force_close=True))
+        tab.preferred_width_changed.connect(self._on_tab_preferred_width_changed)
 
         self._tabs[tab_id] = tab
 
@@ -1494,6 +1495,12 @@ class TabManager(QWidget):
             tab_bar.set_tab_text(tab_index, new_title)
 
         self._update_tab_bar_for_label_change(tab)
+
+    def _on_tab_preferred_width_changed(self) -> None:
+        """Recompute column sizes when a tab's preferred width may have changed."""
+        # Defer so that multiple width changes in the same event-loop tick coalesce
+        # into a single layout pass.
+        QTimer.singleShot(0, self.show_all_columns)
 
     def current_tab_path(self) -> str:
         """
