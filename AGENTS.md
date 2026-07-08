@@ -245,8 +245,8 @@ Context model for open preview tabs (`PreviewContext`).
 Language-specific syntax highlighting system.
 
 **Language subdirectories:**
-- `menai/`, `c/`, `cpp/`, `csharp/`, `css/`, `diff/`, `go/`, `html/`, `java/`
-- `javascript/`, `json/`, `kotlin/`, `lua/`, `markdown/`, `metaphor/`, `move/`
+- `bash/`, `batch/`, `c/`, `cpp/`, `csharp/`, `css/`, `diff/`, `go/`, `html/`, `java/`
+- `javascript/`, `json/`, `kotlin/`, `lua/`, `markdown/`, `menai/`, `metaphor/`, `move/`
 - `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `toml/`, `typescript/`, `xml/`, `yaml/`
 
 ### `src/terminal/`

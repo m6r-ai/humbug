@@ -29,6 +29,8 @@ class ProgrammingLanguageUtils:
     _NAME_TO_LANGUAGE: dict[str, ProgrammingLanguage] = {
         "aifpl": ProgrammingLanguage.MENAI,
         "bash": ProgrammingLanguage.BASH,
+        "bat": ProgrammingLanguage.BATCH,
+        "batch": ProgrammingLanguage.BATCH,
         "c": ProgrammingLanguage.C,
         "c++": ProgrammingLanguage.CPP,
         "cpp": ProgrammingLanguage.CPP,
@@ -84,6 +86,7 @@ class ProgrammingLanguageUtils:
     # Mapping from enum members to lowercase language names
     _LANGUAGE_TO_NAME: dict[ProgrammingLanguage, str] = {
         ProgrammingLanguage.BASH: "bash",
+        ProgrammingLanguage.BATCH: "batch",
         ProgrammingLanguage.C: "c",
         ProgrammingLanguage.CPP: "cpp",
         ProgrammingLanguage.CSHARP: "csharp",
@@ -119,6 +122,7 @@ class ProgrammingLanguageUtils:
     _EXTENSION_TO_LANGUAGE: dict[str, ProgrammingLanguage] = {
         '.aifpl': ProgrammingLanguage.MENAI,
         '.bash': ProgrammingLanguage.BASH,
+        '.bat': ProgrammingLanguage.BATCH,
         '.c': ProgrammingLanguage.C,
         '.cc': ProgrammingLanguage.CPP,
         '.cfg': ProgrammingLanguage.TEXT,
@@ -130,6 +134,7 @@ class ProgrammingLanguageUtils:
         '.csv': ProgrammingLanguage.TEXT,
         '.cxx': ProgrammingLanguage.CPP,
         '.diff': ProgrammingLanguage.DIFF,
+        '.cmd': ProgrammingLanguage.BATCH,
         '.env': ProgrammingLanguage.TEXT,
         '.fish': ProgrammingLanguage.BASH,
         '.go': ProgrammingLanguage.GO,
@@ -176,6 +181,7 @@ class ProgrammingLanguageUtils:
     # Mapping from programming languages to display names
     _LANGUAGE_TO_DISPLAY_NAME: dict[ProgrammingLanguage, str] = {
         ProgrammingLanguage.BASH: "Bash",
+        ProgrammingLanguage.BATCH: "Batch",
         ProgrammingLanguage.C: "C",
         ProgrammingLanguage.CPP: "C++",
         ProgrammingLanguage.CSHARP: "C#",
@@ -210,6 +216,7 @@ class ProgrammingLanguageUtils:
     # Mapping from programming languages to file extensions (with leading dot)
     _LANGUAGE_TO_EXTENSION: dict[ProgrammingLanguage, str] = {
         ProgrammingLanguage.BASH: ".sh",
+        ProgrammingLanguage.BATCH: ".bat",
         ProgrammingLanguage.C: ".c",
         ProgrammingLanguage.CPP: ".cpp",
         ProgrammingLanguage.CSHARP: ".cs",

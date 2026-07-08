@@ -1,7 +1,8 @@
 """Imports all parsers to ensure they are registered in the ParserRegistry."""
 
 # pylint: disable=unused-import
-from syntax.menai.menai_parser import MenaiParser
+from syntax.bash.bash_parser import BashParser
+from syntax.batch.batch_parser import BatchParser
 from syntax.c.c_parser import CParser
 from syntax.cpp.cpp_parser import CppParser
 from syntax.csharp.csharp_parser import CSharpParser
@@ -15,6 +16,7 @@ from syntax.json.json_parser import JSONParser
 from syntax.lua.lua_parser import LuaParser
 from syntax.kotlin.kotlin_parser import KotlinParser
 from syntax.markdown.markdown_parser import MarkdownParser
+from syntax.menai.menai_parser import MenaiParser
 from syntax.metaphor.metaphor_parser import MetaphorParser
 from syntax.move.move_parser import MoveParser
 from syntax.python.python_parser import PythonParser

@@ -5,6 +5,7 @@ class ProgrammingLanguage(IntEnum):
     """Programming language enum."""
     UNKNOWN = -1
     BASH = auto()
+    BATCH = auto()
     C = auto()
     CPP = auto()
     CSHARP = auto()

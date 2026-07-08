@@ -60,41 +60,30 @@ Utility functions for programming language operations:
 
 The module includes dedicated subdirectories for each supported programming language:
 
-### AI Programming
-- **`menai/`** - Menai programming language support
-
-### Web Technologies
-- **`css/`** - CSS stylesheet language support
-- **`html/`** - HTML markup language support
-- **`javascript/`** - JavaScript language support
-- **`json/`** - JSON data format support
-- **`typescript/`** - TypeScript language support
-- **`xml/`** - XML markup language support
-
-### Systems Programming
+- **`bash/`** - Bash/Shell (sh, bash, zsh, fish) language support
+- **`batch/`** - Windows Batch (.bat, .cmd) script support
 - **`c/`** - C programming language support
 - **`cpp/`** - C++ programming language support
-- **`go/`** - Go programming language support
-- **`rust/`** - Rust programming language support
-
-### Object-Oriented Languages
 - **`csharp/`** - C# programming language support
+- **`css/`** - CSS stylesheet language support
+- **`go/`** - Go programming language support
+- **`html/`** - HTML markup language support
 - **`java/`** - Java programming language support
+- **`javascript/`** - JavaScript language support
+- **`json/`** - JSON data format support
 - **`kotlin/`** - Kotlin programming language support
-- **`swift/`** - Swift programming language support
-
-### Dynamic Languages
-- **`python/`** - Python programming language support
-- **`scheme/`** - Scheme/Lisp language support
-
-### Specialized Languages
-- **`move/`** - Move programming language support
-- **`solidity/`** - Solidity smart contract language support
-
-### Documentation and Text
 - **`markdown/`** - Markdown markup language support
+- **`menai/`** - Menai programming language support
+- **`move/`** - Move programming language support
+- **`python/`** - Python programming language support
+- **`rust/`** - Rust programming language support
+- **`scheme/`** - Scheme/Lisp language support
+- **`solidity/`** - Solidity smart contract language support
+- **`swift/`** - Swift programming language support
 - **`text/`** - Plain text support
 - **`toml/`** - TOML configuration file support
+- **`typescript/`** - TypeScript language support
+- **`xml/`** - XML markup language support
 - **`yaml/`** - YAML data serialization support
 
 ## Key Features

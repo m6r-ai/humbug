@@ -8,6 +8,7 @@ New features:
   file content and are auto-managed by Humbug.  The `.humbug` directory now becomes visible to support viewing and drag-and-drop
   operations.
 - Added a new diff tab view to allow an inline view as well as a side-by-side view.
+- Added Unix shell and Windows batch file syntax highlighting.
 - Added new file icons.
 - Removed the edit button from file previews as editing can now be done via the context menu.
 
