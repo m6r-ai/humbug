@@ -26,6 +26,7 @@ class MindspaceSettings:
     tab_size: int = 4
     auto_backup: bool = False  # Default to off
     auto_backup_interval: int = 300  # Default 5 minutes in seconds
+    diff_side_by_side: bool = False  # Default to inline (narrow) diff view
     terminal_fixed_width_enabled: bool = True  # Default to a minimum width
     terminal_fixed_width: int = 80  # Default minimum width in columns if enabled
     terminal_scrollback_enabled: bool = True  # Default to limited scrollback
@@ -282,6 +283,14 @@ class MindspaceSettings:
             )
             auto_backup_interval = 300
 
+        diff_side_by_side = editor.get("diffSideBySide", False)
+        if not isinstance(diff_side_by_side, bool):
+            cls._logger.warning(
+                "Invalid diffSideBySide type in %s: expected bool, got %s. Using default.",
+                path, type(diff_side_by_side).__name__
+            )
+            diff_side_by_side = False
+
         # Load terminal settings with validation
         terminal_fixed_width_enabled = terminal.get("minimumWidthEnabled", True)
         if not isinstance(terminal_fixed_width_enabled, bool):
@@ -340,6 +349,7 @@ class MindspaceSettings:
             tab_size=tab_size,
             auto_backup=auto_backup,
             auto_backup_interval=auto_backup_interval,
+            diff_side_by_side=diff_side_by_side,
             terminal_fixed_width_enabled=terminal_fixed_width_enabled,
             terminal_fixed_width=terminal_fixed_width,
             terminal_scrollback_enabled=terminal_scrollback_enabled,
@@ -363,6 +373,7 @@ class MindspaceSettings:
                 "tabSize": self.tab_size,
                 "autoBackup": self.auto_backup,
                 "autoBackupInterval": self.auto_backup_interval,
+                "diffSideBySide": self.diff_side_by_side,
             },
             "terminal": {
                 "minimumWidthEnabled": self.terminal_fixed_width_enabled,

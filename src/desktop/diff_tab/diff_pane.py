@@ -139,14 +139,16 @@ class DiffPane(QPlainTextEdit):
     line are painted during the standard paint event using the row-type metadata
     stored in each QTextBlock's _BlockData.
 
-    The pane hides its own vertical scrollbar; the parent DiffWidget provides a
-    single shared scrollbar that drives both panes simultaneously.
+    The pane hides its own vertical scrollbar in side-by-side mode (the parent
+    DiffWidget provides a shared scrollbar).  In inline mode the pane's own
+    scrollbar is shown.
     """
 
     open_in_editor_requested = Signal(int, int)
     open_in_preview_requested = Signal()
+    toggle_view_mode_requested = Signal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None, show_scrollbar: bool = False) -> None:
         super().__init__(parent)
         self._logger = logging.getLogger("DiffPane")
         self.setObjectName("DiffPane")
@@ -156,7 +158,12 @@ class DiffPane(QPlainTextEdit):
 
         self.setReadOnly(True)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        if show_scrollbar:
+            self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        else:
+            self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setFrameStyle(0)
 
@@ -167,6 +174,7 @@ class DiffPane(QPlainTextEdit):
 
         self._highlighter = _DiffPaneHighlighter(self)
         self._language_manager = LanguageManager()
+        self._toggle_mode_label: str = ""
 
     def set_syntax(self, language: ProgrammingLanguage) -> None:
         """
@@ -176,6 +184,15 @@ class DiffPane(QPlainTextEdit):
             language: The programming language to use for highlighting.
         """
         self._highlighter.set_syntax(language)
+
+    def set_toggle_mode_label(self, label: str) -> None:
+        """
+        Set the text shown for the view-mode toggle in the context menu.
+
+        Args:
+            label: The menu item text for switching modes.
+        """
+        self._toggle_mode_label = label
 
     def load_rows(self, rows: list[DiffRow], use_left: bool) -> None:
         """
@@ -191,6 +208,29 @@ class DiffPane(QPlainTextEdit):
             use_left: If True, render left_text and left_line_no; otherwise
                       render right_text and right_line_no.
         """
+        self._load_rows_impl(rows, use_left)
+
+    def load_rows_inline(self, rows: list[DiffRow]) -> None:
+        """
+        Populate the pane for inline (unified) display.
+
+        REMOVED rows render their left_text (old content); all other rows
+        render their right_text (new content or context).
+
+        Args:
+            rows: Row descriptors produced by DiffViewBuilder.
+        """
+        self._load_rows_impl(rows, None)
+
+    def _load_rows_impl(self, rows: list[DiffRow], use_left: bool | None) -> None:
+        """
+        Internal loader shared by load_rows and load_rows_inline.
+
+        Args:
+            rows: Row descriptors produced by DiffViewBuilder.
+            use_left: True for the left pane, False for the right pane, or
+                None for inline mode where REMOVED rows pick left_text.
+        """
         self.clear()
         cursor = self.textCursor()
         cursor.movePosition(cursor.MoveOperation.Start)
@@ -200,8 +240,20 @@ class DiffPane(QPlainTextEdit):
             if i > 0:
                 cursor.insertBlock()
 
-            text = row.left_text if use_left else row.right_text
-            line_no = row.left_line_no if use_left else row.right_line_no
+            if use_left is None:
+                pick_left = row.row_type == DiffRowType.REMOVED
+
+            else:
+                pick_left = use_left
+
+            if pick_left:
+                text = row.left_text
+                line_no = row.left_line_no
+
+            else:
+                text = row.right_text
+                line_no = row.right_line_no
+
             cursor.insertText(text)
 
             block = cursor.block()
@@ -259,6 +311,9 @@ class DiffPane(QPlainTextEdit):
         edit_action.triggered.connect(lambda: self.open_in_editor_requested.emit(block_number, column))
         preview_action = menu.addAction(strings.open_in_preview)
         preview_action.triggered.connect(self.open_in_preview_requested)
+        menu.addSeparator()
+        toggle_mode_action = menu.addAction(self._toggle_mode_label)
+        toggle_mode_action.triggered.connect(self.toggle_view_mode_requested)
         menu.exec_(event.globalPos())
 
     def paintEvent(self, event: QPaintEvent) -> None:

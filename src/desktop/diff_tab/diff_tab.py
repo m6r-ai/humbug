@@ -10,6 +10,7 @@ from editor_context.editor_context import EditorContext
 from git import GitNotFoundError, GitNotRepositoryError, find_repo_root
 
 from desktop.diff_tab.diff_widget import DiffWidget
+from desktop.diff_tab.diff_row import DiffViewMode
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
@@ -21,7 +22,7 @@ from desktop.widgets import FindWidget
 
 
 class DiffTab(TabBase):
-    """Tab showing a side-by-side diff between the working tree and HEAD for one file."""
+    """Tab showing a diff between the working tree and HEAD for one file."""
 
     def __init__(self, tab_id: str, path: str, parent: QWidget | None = None) -> None:
         """
@@ -35,6 +36,8 @@ class DiffTab(TabBase):
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("DiffTab")
         self._path = path
+
+        self._view_mode = self._read_view_mode()
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -53,10 +56,11 @@ class DiffTab(TabBase):
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
         layout.addWidget(self._find_widget)
 
-        self._diff_widget = DiffWidget(path, self)
+        self._diff_widget = DiffWidget(path, self, mode=self._view_mode)
         self._diff_widget.status_updated.connect(self.update_status)
         self._diff_widget.open_in_editor_requested.connect(self._open_in_editor)
         self._diff_widget.open_in_preview_requested.connect(self._open_in_preview)
+        self._diff_widget.mode_changed.connect(self._on_mode_changed)
         layout.addWidget(self._diff_widget)
 
         if path:
@@ -68,6 +72,30 @@ class DiffTab(TabBase):
 
         self.update_status()
         self.apply_style()
+
+    def _read_view_mode(self) -> DiffViewMode:
+        """
+        Read the initial diff view mode from mindspace settings.
+
+        Falls back to INLINE if no mindspace is open or settings are unavailable.
+        """
+        mindspace_manager = MindspaceManager()
+        if not mindspace_manager.has_mindspace():
+            return DiffViewMode.INLINE
+
+        settings = mindspace_manager.settings()
+        if settings is None:
+            return DiffViewMode.INLINE
+
+        if settings.diff_side_by_side:
+            return DiffViewMode.SIDE_BY_SIDE
+
+        return DiffViewMode.INLINE
+
+    def _on_mode_changed(self) -> None:
+        """Handle a view mode change from the diff widget's context menu."""
+        self._view_mode = self._diff_widget.mode()
+        self._find_widget.set_preferred_width(self.preferred_width)
 
     def _open_in_editor(self, line: int, column: int) -> None:
         """Open this tab's file in an editor tab, navigating to the given line and column."""
@@ -189,9 +217,14 @@ class DiffTab(TabBase):
         self.status_message.emit(message)
 
     def preferred_width(self) -> int | None:
-        """Return the preferred column width: twice the default editor column width."""
+        """
+        Return the preferred column width based on the current view mode.
+
+        Side-by-side uses double width; inline uses the default editor width.
+        """
         style_manager = StyleManager()
-        return style_manager.scaled_tab_width(2.0)
+        scale = 2.0 if self._view_mode == DiffViewMode.SIDE_BY_SIDE else 1.0
+        return style_manager.scaled_tab_width(scale)
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """Return serialisable state for mindspace persistence."""

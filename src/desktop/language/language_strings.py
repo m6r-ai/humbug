@@ -210,6 +210,12 @@ class LanguageStrings:
     terminal_close_on_exit: str
     tool_settings: str
     tools_description: str
+    diff_settings: str
+    diff_view_mode: str
+    diff_view_inline: str
+    diff_view_side_by_side: str
+    diff_show_side_by_side: str
+    diff_show_inline: str
 
     # Unified settings dialog
     settings_all_mindspaces: str
@@ -220,6 +226,7 @@ class LanguageStrings:
     settings_ai_model: str
     settings_ai_tools: str
     settings_editor: str
+    settings_diff: str
     settings_terminal: str
     settings_tabs: str
 

@@ -224,6 +224,14 @@ def get_arabic_strings() -> LanguageStrings:
         tool_settings="إعدادات أدوات الذكاء الاصطناعي",
         tools_description="تفعيل أو إلغاء تفعيل الأدوات الفردية لهذا المساحة الذهنية",
 
+        # Diff view settings
+        diff_settings="إعدادات الفروقات",
+        diff_view_mode="عرض الفروقات",
+        diff_view_inline="متسلسل",
+        diff_view_side_by_side="جنباً إلى جنب",
+        diff_show_side_by_side="عرض جنباً إلى جنب",
+        diff_show_inline="عرض متسلسل",
+
         # Unified settings dialog
         settings_all_mindspaces="جميع المساحات الذهنية",
         settings_this_mindspace="هذه المساحة الذهنية",
@@ -233,6 +241,7 @@ def get_arabic_strings() -> LanguageStrings:
         settings_ai_model="نموذج الذكاء الاصطناعي",
         settings_ai_tools="أدوات الذكاء الاصطناعي",
         settings_editor="المحرر",
+        settings_diff="الفروقات",
         settings_terminal="الطرفية",
         settings_tabs="علامات التبويب",
 

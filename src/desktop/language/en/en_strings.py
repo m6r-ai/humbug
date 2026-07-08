@@ -223,6 +223,14 @@ def get_english_strings() -> LanguageStrings:
         tool_settings="AI Tool Settings",
         tools_description="Enable or disable individual tools for this mindspace",
 
+        # Diff view settings
+        diff_settings="Diff Settings",
+        diff_view_mode="Diff View",
+        diff_view_inline="Inline",
+        diff_view_side_by_side="Side by Side",
+        diff_show_side_by_side="Show Side by Side",
+        diff_show_inline="Show Inline",
+
         # Unified settings dialog
         settings_all_mindspaces="All Mindspaces",
         settings_this_mindspace="This Mindspace",
@@ -232,6 +240,7 @@ def get_english_strings() -> LanguageStrings:
         settings_ai_model="AI Model",
         settings_ai_tools="AI Tools",
         settings_editor="Editor",
+        settings_diff="Diff",
         settings_terminal="Terminal",
         settings_tabs="Tabs",
 

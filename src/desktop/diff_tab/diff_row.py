@@ -1,11 +1,18 @@
-"""Row descriptor for the side-by-side diff view."""
+"""Row descriptor and view mode for the diff view."""
 
 from dataclasses import dataclass
 from enum import Enum, auto
 
 
+class DiffViewMode(Enum):
+    """Layout mode for the diff tab."""
+
+    INLINE = auto()          # Single-column unified diff (narrow)
+    SIDE_BY_SIDE = auto()    # Two-column split (wide)
+
+
 class DiffRowType(Enum):
-    """The visual kind of a single row in the side-by-side view."""
+    """The visual kind of a single row in the diff view."""
 
     CONTEXT = auto()    # Unchanged line, shown identically on both sides
     REMOVED = auto()    # Line present only on the left (old) side
@@ -16,7 +23,7 @@ class DiffRowType(Enum):
 @dataclass
 class DiffRow:
     """
-    A single row in the side-by-side diff view.
+    A single row in the diff view.
 
     For CONTEXT and CHANGED rows both sides carry text.
     For REMOVED rows only left_text is set; right_text is empty.

@@ -223,6 +223,14 @@ def get_french_strings() -> LanguageStrings:
         tool_settings="Paramètres des outils IA",
         tools_description="Activer ou désactiver des outils individuels pour cet espace mental",
 
+        # Diff view settings
+        diff_settings="Paramètres du diff",
+        diff_view_mode="Affichage du diff",
+        diff_view_inline="En ligne",
+        diff_view_side_by_side="Côte à côte",
+        diff_show_side_by_side="Afficher côte à côte",
+        diff_show_inline="Afficher en ligne",
+
         # Unified settings dialog
         settings_all_mindspaces="Tous les espaces mentaux",
         settings_this_mindspace="Cet espace mental",
@@ -232,6 +240,7 @@ def get_french_strings() -> LanguageStrings:
         settings_ai_model="Modèle IA",
         settings_ai_tools="Outils IA",
         settings_editor="Éditeur",
+        settings_diff="Diff",
         settings_terminal="Terminal",
         settings_tabs="Tabulations",
 

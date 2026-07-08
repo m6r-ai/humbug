@@ -1,15 +1,15 @@
-"""Converts full file content and parsed diff hunks into side-by-side row descriptors."""
+"""Converts full file content and parsed diff hunks into row descriptors."""
 
 
 from diff.diff_types import DiffHunk
 
-from desktop.diff_tab.diff_row import DiffRow, DiffRowType
+from desktop.diff_tab.diff_row import DiffRow, DiffRowType, DiffViewMode
 
 
 class DiffViewBuilder:
     """
     Transforms two full file line lists and a list of DiffHunk objects into a flat
-    list of DiffRow objects suitable for side-by-side rendering.
+    list of DiffRow objects suitable for rendering.
 
     Both the old (HEAD) and new (working tree) line lists are required so that
     context lines outside hunks can be emitted in full, allowing a syntax
@@ -29,16 +29,28 @@ class DiffViewBuilder:
     removed lines become REMOVED rows (real text on left, blank on right).  For
     the opposite case, surplus added lines become ADDED rows (blank on left, real
     text on right).
+
+    In INLINE mode, removed and added lines are never paired into CHANGED rows —
+    every removed line becomes a REMOVED row and every added line becomes an
+    ADDED row, producing a unified-diff layout.
     """
 
-    def build(self, old_lines: list[str], new_lines: list[str], hunks: list[DiffHunk]) -> list[DiffRow]:
+    def build(
+        self,
+        old_lines: list[str],
+        new_lines: list[str],
+        hunks: list[DiffHunk],
+        mode: DiffViewMode = DiffViewMode.SIDE_BY_SIDE,
+    ) -> list[DiffRow]:
         """
-        Build the flat row list for a complete side-by-side diff.
+        Build the flat row list for a complete diff.
 
         Args:
             old_lines: All lines of the old (HEAD) file, without trailing newlines.
             new_lines: All lines of the new (working tree) file, without trailing newlines.
             hunks: Parsed hunks from DiffParser, in file order.
+            mode: Layout mode — INLINE unpairs changed lines, SIDE_BY_SIDE
+                  pairs them 1-to-1.
 
         Returns:
             Ordered list of DiffRow objects ready for rendering.
@@ -71,7 +83,7 @@ class DiffViewBuilder:
 
             for diff_line in hunk.lines:
                 if diff_line.type == ' ':
-                    self._flush_run(rows, removed, added, old_pos, new_pos)
+                    self._flush_run(rows, removed, added, old_pos, new_pos, mode)
                     old_pos += len(removed)
                     new_pos += len(added)
                     removed = []
@@ -93,7 +105,7 @@ class DiffViewBuilder:
                 elif diff_line.type == '+':
                     added.append(diff_line.content)
 
-            self._flush_run(rows, removed, added, old_pos, new_pos)
+            self._flush_run(rows, removed, added, old_pos, new_pos, mode)
             old_pos += len(removed)
             new_pos += len(added)
 
@@ -118,14 +130,18 @@ class DiffViewBuilder:
         added: list[str],
         old_start: int,
         new_start: int,
+        mode: DiffViewMode = DiffViewMode.SIDE_BY_SIDE,
     ) -> None:
         """
-        Emit rows for a paired run of removed and added lines.
+        Emit rows for a run of removed and added lines.
 
-        Lines are paired 1-to-1 as CHANGED rows for as long as both sides have
-        content.  Surplus lines on the longer side become REMOVED or ADDED rows,
-        which carry an empty string on the opposite side.  This keeps both panes
-        at the same document block count.
+        In SIDE_BY_SIDE mode, lines are paired 1-to-1 as CHANGED rows for as long
+        as both sides have content.  Surplus lines on the longer side become
+        REMOVED or ADDED rows, which carry an empty string on the opposite side.
+        This keeps both panes at the same document block count.
+
+        In INLINE mode, removed lines are emitted first as REMOVED rows, then
+        added lines as ADDED rows, producing a unified-diff layout.
 
         Args:
             rows: Row list to append to.
@@ -133,8 +149,30 @@ class DiffViewBuilder:
             added: Added-line contents for this run.
             old_start: 0-indexed position of the first removed line.
             new_start: 0-indexed position of the first added line.
+            mode: Layout mode controlling pairing behaviour.
         """
         if not removed and not added:
+            return
+
+        if mode == DiffViewMode.INLINE:
+            for i, content in enumerate(removed):
+                rows.append(DiffRow(
+                    row_type=DiffRowType.REMOVED,
+                    left_text=content,
+                    right_text="",
+                    left_line_no=old_start + i + 1,
+                    right_line_no=None,
+                ))
+
+            for i, content in enumerate(added):
+                rows.append(DiffRow(
+                    row_type=DiffRowType.ADDED,
+                    left_text="",
+                    right_text=content,
+                    left_line_no=None,
+                    right_line_no=new_start + i + 1,
+                ))
+
             return
 
         paired = min(len(removed), len(added))

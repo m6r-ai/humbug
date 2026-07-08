@@ -53,10 +53,11 @@ SECTION_AI_BACKENDS = "ai_backends"
 SECTION_AI_MODEL = "ai_model"
 SECTION_AI_TOOLS = "ai_tools"
 SECTION_EDITOR = "editor"
+SECTION_DIFF = "diff"
 SECTION_TERMINAL = "terminal"
 
 _ALL_MINDSPACES_SECTIONS = [SECTION_DISPLAY, SECTION_FILE_ACCESS, SECTION_AI_BACKENDS]
-_THIS_MINDSPACE_SECTIONS = [SECTION_AI_MODEL, SECTION_AI_TOOLS, SECTION_EDITOR, SECTION_TERMINAL]
+_THIS_MINDSPACE_SECTIONS = [SECTION_AI_MODEL, SECTION_AI_TOOLS, SECTION_EDITOR, SECTION_DIFF, SECTION_TERMINAL]
 
 
 class _NavItemDelegate(QStyledItemDelegate):
@@ -155,6 +156,10 @@ class SettingsDialog(QDialog):
         self._backup_interval_spin: SettingsSpinBox
         self._editor_container: SettingsContainer
 
+        self._diff_heading: SettingsPageHeading
+        self._diff_view_combo: SettingsCombo
+        self._diff_container: SettingsContainer
+
         self._terminal_heading: SettingsPageHeading
         self._terminal_fixed_width_check: SettingsSwitch
         self._terminal_fixed_width_spin: SettingsSpinBox
@@ -252,6 +257,7 @@ class SettingsDialog(QDialog):
         self._build_ai_model_page()
         self._build_tools_page()
         self._build_editor_page()
+        self._build_diff_page()
         self._build_terminal_page()
 
     def _add_nav_group(self, label: str) -> QListWidgetItem:
@@ -572,6 +578,32 @@ class SettingsDialog(QDialog):
         self._section_pages[SECTION_EDITOR] = page
         self._add_nav_section(SECTION_EDITOR, strings.settings_editor)
 
+    def _build_diff_page(self) -> None:
+        """Build the Diff settings page."""
+        strings = self._language_manager.strings()
+        container = SettingsContainer()
+
+        self._diff_heading = SettingsFactory.create_page_heading(strings.diff_settings)
+        container.add_setting(self._diff_heading)
+
+        self._diff_view_combo = SettingsFactory.create_combo(
+            strings.diff_view_mode,
+            [
+                (strings.diff_view_inline, False),
+                (strings.diff_view_side_by_side, True),
+            ],
+        )
+        container.add_setting(self._diff_view_combo)
+
+        container.add_stretch()
+        container.value_changed.connect(self._on_value_changed)
+
+        self._diff_container = container
+        page = self._make_scroll_page(container)
+        self._stack.addWidget(page)
+        self._section_pages[SECTION_DIFF] = page
+        self._add_nav_section(SECTION_DIFF, strings.settings_diff)
+
     def _build_terminal_page(self) -> None:
         """Build the Terminal settings page."""
         strings = self._language_manager.strings()
@@ -700,6 +732,7 @@ class SettingsDialog(QDialog):
             tab_size=self._tab_size_spin.get_value(),
             auto_backup=self._auto_backup_check.get_value(),
             auto_backup_interval=self._backup_interval_spin.get_value(),
+            diff_side_by_side=self._diff_view_combo.get_value(),
             terminal_fixed_width_enabled=self._terminal_fixed_width_check.get_value(),
             terminal_fixed_width=self._terminal_fixed_width_spin.get_value(),
             terminal_scrollback_enabled=self._terminal_scrollback_check.get_value(),
@@ -773,6 +806,9 @@ class SettingsDialog(QDialog):
         # Editor
         self._soft_tabs_check.set_value(settings.use_soft_tabs)
         self._tab_size_spin.set_value(settings.tab_size)
+
+        # Diff view
+        self._diff_view_combo.set_value(settings.diff_side_by_side)
 
         # Backup
         self._auto_backup_check.set_value(settings.auto_backup)
@@ -1240,6 +1276,7 @@ class SettingsDialog(QDialog):
             SECTION_AI_MODEL: strings.settings_ai_model,
             SECTION_AI_TOOLS: strings.settings_ai_tools,
             SECTION_EDITOR: strings.settings_editor,
+            SECTION_DIFF: strings.settings_diff,
             SECTION_TERMINAL: strings.settings_terminal,
         }
         for section_id, item in self._section_items.items():
@@ -1252,6 +1289,7 @@ class SettingsDialog(QDialog):
         self._ai_model_heading.set_label(strings.model_settings)
         self._tools_heading.set_label(strings.tool_settings)
         self._editor_heading.set_label(strings.editor_settings)
+        self._diff_heading.set_label(strings.diff_settings)
         self._terminal_heading.set_label(strings.terminal_settings)
 
         # Update Display page controls
@@ -1318,6 +1356,15 @@ class SettingsDialog(QDialog):
         self._soft_tabs_check.set_label(strings.use_soft_tabs)
         self._tab_size_spin.set_label(strings.tab_size)
         self._editor_tabs_section.set_label(strings.settings_tabs)
+
+        # Update Diff page controls
+        current_diff_mode = self._diff_view_combo.get_value()
+        self._diff_view_combo.set_label(strings.diff_view_mode)
+        self._diff_view_combo.set_items([
+            (strings.diff_view_inline, False),
+            (strings.diff_view_side_by_side, True),
+        ])
+        self._diff_view_combo.set_value(current_diff_mode)
 
         # Update Backup page controls
         self._auto_backup_check.set_label(strings.auto_backup)
@@ -1439,6 +1486,7 @@ class SettingsDialog(QDialog):
             tab_size=settings.tab_size,
             auto_backup=settings.auto_backup,
             auto_backup_interval=settings.auto_backup_interval,
+            diff_side_by_side=settings.diff_side_by_side,
             terminal_fixed_width_enabled=settings.terminal_fixed_width_enabled,
             terminal_fixed_width=settings.terminal_fixed_width,
             terminal_scrollback_enabled=settings.terminal_scrollback_enabled,
