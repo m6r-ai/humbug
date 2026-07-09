@@ -475,6 +475,21 @@ class AIConversationSettings:
         ),
 
         # xAI models
+        ("grok-4.5", "xai"): AIModel(
+            name="grok-4.5",
+            provider="xai",
+            display_name="Grok 4.5",
+            context_window=500000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH
+            ],
+        ),
         ("grok-4.3", "xai"): AIModel(
             name="grok-4.3",
             provider="xai",
