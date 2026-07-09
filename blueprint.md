@@ -81,15 +81,69 @@ contributing code, since an AI might otherwise introduce a convenience import th
 creates a circular dependency between modules.
 
 ### YAGNI — no speculative code
-Humbug strongly follows the YAGNI (You Aren't Gonna Need It) principle. Every method,
+Humbug follows the YAGNI (You Aren't Gonna Need It) principle. Every method,
 function, class, and module must have a concrete reason to exist: it must be used
 somewhere in Humbug or its supporting tools. Code that cannot be reached at runtime
 should not exist and must be removed. This applies to both human and AI contributors.
+
 "It might be useful someday" is never a justification for adding code. Speculative
 abstraction layers, unused helper functions, and unreachable methods add maintenance
 burden and cognitive load, and make the codebase harder for both humans and AIs to
-reason about. When restructuring code, anything that is no longer called should be
-removed rather than left in place.
+reason about.
+
+With this said, where multiple uses become aparent we do want to refactor to avoid
+needless duplications.  Clean architecture is important.  When restructuring code,
+anything that is no longer called should be removed rather than left in place.
+
+### AI tool safety
+AI tools are the interface between the AI and the user's environment. They are governed by
+three safety principles.
+
+**Mindspace-scoped access.** Tools operate within the mindspace boundary. The `.humbug/`
+directory — which contains conversations, settings, the audit log, and other internal state —
+is excluded from all tool operations. This prevents the AI from accessing or modifying its own
+audit trail, and keeps internal infrastructure invisible to both the user and the AI.
+
+**Human-in-the-loop for side effects.** Tools that only read state — listing files, viewing
+diffs, checking git status — run automatically without interruption. Tools that change state —
+writing files, running terminal commands, applying diffs — require explicit user approval
+before each action. The user sees exactly what the AI intends to do and can approve, reject,
+or ask for clarification. This is not friction; it is the user's ability to course-correct
+before a mistake becomes expensive.
+
+**Bounded outputs.** Tools that can produce large outputs — file contents, search results,
+git logs, diffs — must enforce a size limit (currently 64KB). If output exceeds the limit, it
+is truncated with a notice indicating how much was omitted. This prevents a single tool call
+from flooding the AI's context window with content it cannot use, which would waste tokens
+and crowd out relevant information. The AI can always make a more targeted follow-up request.
+
+### Two levels of version control
+Humbug recognises two fundamentally different kinds of content within a mindspace, each
+with its own versioning needs and ownership model.
+
+**Humbug-internal versioning** concerns the `.humbug/` directory — conversations, settings,
+the audit log, usage data, and shell history. This is Humbug's content, not the user's.
+The user should not have to think about versioning it, just as they do not have to think
+about how conversations are stored on disk. Humbug manages this transparently and
+automatically, providing protection against accidental deletion, the ability to recover past
+state, and a foundation for future features such as cross-device sync and cryptographic
+verification of the audit log. This level is infrastructure: invisible to the user and
+inaccessible to the AI.
+
+**User repository versioning** concerns everything else in the mindspace. The user's
+content follows the user's rules — they choose their repositories, branching strategies,
+remotes, and commit conventions. Humbug's role is to be a capable participant in the user's
+existing version control workflow, not to replace or override it. A mindspace is not a
+repository: it may contain multiple git repositories, partial repositories, or no version
+control at all. Version control tools must therefore be path-aware, discovering which
+repository (if any) contains a given file or directory, rather than assuming a single
+repo root.
+
+These two levels are kept strictly separate. Conflating them would create two problems:
+an AI able to rewrite its own audit trail (a security risk) and internal state management
+requiring user intervention (a usability failure). When a mindspace root is itself a git
+repository and `.humbug/` lives physically inside it, the `.humbug/` directory should be
+excluded from the user's repository so the two versioning concerns never interfere.
 
 ## What Humbug is NOT
 

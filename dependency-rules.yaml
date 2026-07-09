@@ -74,6 +74,7 @@ modules:
       - editor_context
       - filesystem_ai_tool
       - git
+      - git_ai_tool
       - help_ai_tool
       - http_client
       - markdown_
@@ -162,6 +163,14 @@ modules:
 
   git:
     internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  git_ai_tool:
+    internal_dependencies:
+      - ai_tool
+      - git
+      - mindspace
     external_dependencies:
       - "standard_library"
 

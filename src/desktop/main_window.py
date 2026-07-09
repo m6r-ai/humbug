@@ -28,6 +28,7 @@ from document_converter_ai_tool.document_converter_ai_tool import DocumentConver
 from editor_ai_tool.editor_ai_tool import EditorAITool
 from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
+from git_ai_tool.git_ai_tool import GitAITool
 from help_ai_tool.help_ai_tool import HelpAITool
 from menai_ai_tool.menai_ai_tool import MenaiAITool
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError
@@ -680,12 +681,19 @@ class MainWindow(QMainWindow):
         # Store Menai tool instance so we can update its module path when mindspace changes
         self._menai_tool = MenaiAITool()
         self._menai_tool.set_mindspace(mindspace)
-        self._ai_tool_manager.register_tool(
-            self._menai_tool, "Menai: evaluates expressions using Menai Language syntax"
-        )
         self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
         self._ai_tool_manager.register_tool(
+            ConversationAITool(mindspace), "Conversation: operations for interacting with conversation tabs"
+        )
+        self._ai_tool_manager.register_tool(
             DelegateAITool(mindspace), "Delegate: delegates tasks to specialized AI instances"
+        )
+        self._ai_tool_manager.register_tool(
+            DocumentConverterAITool(self._resolve_mindspace_path, mindspace),
+            "DocumentConverter: converts documents between supported formats in the current mindspace"
+        )
+        self._ai_tool_manager.register_tool(
+            EditorAITool(mindspace), "Editor: operations for interacting with editor tabs"
         )
         self._ai_tool_manager.register_tool(
             FileSystemAITool(
@@ -696,27 +704,24 @@ class MainWindow(QMainWindow):
             "FileSystem: handles file operations in the current mindspace"
         )
         self._ai_tool_manager.register_tool(
-            DocumentConverterAITool(self._resolve_mindspace_path, mindspace),
-            "DocumentConverter: converts documents between supported formats in the current mindspace"
+            GitAITool(mindspace),
+            "Git: version control operations for git repositories in the current mindspace"
+        )
+        self._ai_tool_manager.register_tool(
+            HelpAITool(self._ai_tool_manager), "Help: provides detailed documentation for AI tools and operations"
+        )
+        self._ai_tool_manager.register_tool(
+            self._menai_tool, "Menai: evaluates expressions using Menai Language syntax"
+        )
+        self._ai_tool_manager.register_tool(
+            PreviewAITool(mindspace), "Preview: operations for interacting with preview tabs"
         )
         self._ai_tool_manager.register_tool(
             SystemAITool(self._tab_manager, mindspace),
             "System: manages UI tab lifecycle operations (create, open, close, organize tabs)"
         )
         self._ai_tool_manager.register_tool(
-            EditorAITool(mindspace), "Editor: operations for interacting with editor tabs"
-        )
-        self._ai_tool_manager.register_tool(
             TerminalAITool(mindspace), "Terminal: operations for interacting with terminal tabs"
-        )
-        self._ai_tool_manager.register_tool(
-            ConversationAITool(mindspace), "Conversation: operations for interacting with conversation tabs"
-        )
-        self._ai_tool_manager.register_tool(
-            PreviewAITool(mindspace), "Preview: operations for interacting with preview tabs"
-        )
-        self._ai_tool_manager.register_tool(
-            HelpAITool(self._ai_tool_manager), "Help: provides detailed documentation for AI tools and operations"
         )
 
         QTimer.singleShot(0, self._restore_last_mindspace)

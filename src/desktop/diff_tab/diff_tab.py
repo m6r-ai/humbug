@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import QRegularExpression
 
 from editor_context.editor_context import EditorContext
-from git import GitNotFoundError, GitNotRepositoryError, find_repo_root
+from git import GitNotFoundError, find_repo_root
 
 from desktop.diff_tab.diff_widget import DiffWidget
 from desktop.diff_tab.diff_row import DiffViewMode
@@ -175,7 +175,7 @@ class DiffTab(TabBase):
         re-run the diff (and show the 'no differences' message) after a commit.
 
         Args:
-            _status: The new list of VCSFileStatus entries (unused; we always
+            _status: The new list of GitFileStatus entries (unused; we always
                 refresh so the widget can re-evaluate the diff from scratch).
         """
         self._diff_widget.refresh()
@@ -258,11 +258,13 @@ class DiffTab(TabBase):
         if not os.path.exists(path):
             return False
 
-        try:
-            find_repo_root(path)
-            return True
+        mindspace_manager = MindspaceManager()
+        mindspace_path = mindspace_manager.mindspace_path()
 
-        except (GitNotFoundError, GitNotRepositoryError):
+        try:
+            return find_repo_root(path, mindspace_path) is not None
+
+        except GitNotFoundError:
             return False
 
     def can_close_tab(self) -> bool:

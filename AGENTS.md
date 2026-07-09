@@ -197,7 +197,19 @@ Context model for open editor tabs (`EditorContext`, `EditorDiffApplier`).
 AI tool implementation for file operations.
 
 ### `src/git/`
-Lightweight, GUI-free tools for git operations.
+Lightweight, GUI-free tools for git operations. Provides repository discovery (including
+mindspace-bounded resolution), status, diff, log, branch, file-at-ref, and changed-files-at-ref queries. No GUI
+dependencies. Used by the VCS sidebar, diff tabs, and the git AI tool.
+
+### `src/git_ai_tool/`
+AI tool implementation for version control operations. Exposes read-only git operations
+(status, diff, log, branch, show, stat) to the AI. All operations are scoped to repositories whose
+root is within the mindspace boundary. The `.humbug/` directory is excluded from all operations.
+Diff supports per-file and per-ref diffing. Log supports skip, ref, and file-path filtering.
+Branch lists both local and remote branches. All operations have 64KB output truncation.
+
+### `src/help_ai_tool/`
+AI tool implementation for tool documentation.
 
 ### `src/html_/`
 HTML document processing. Includes a self-contained lexer and DOM-building parser
@@ -211,24 +223,21 @@ Async HTTP client built on the Python standard library (`asyncio` streams + `ssl
 No external dependencies.  Provides `HttpClient` and `HttpResponse` with GET/POST,
 TLS, streaming, timeouts, redirect following, and a structured exception hierarchy.
 
-### `src/help_ai_tool/`
-AI tool implementation for tool documentation.
-
 ### `src/markdown_/`
 Advanced markdown support, including converting to/from a markdown AST.
 Includes `doc_ir_to_markdown.py` for serialising a doc_ir tree to Markdown text.
-
-### `src/mindspace/`
-Front-end-agnostic mindspace model. Manages the mindspace path, settings, search,
-interactions log, the context registry, and the conversations directory (`.humbug/conversations/`).
-Conversations are migrated from the legacy `conversations/` root directory on open.
-No Qt or GUI dependencies.
 
 ### `src/menai/`
 Pure functional programming language designed for AI use. Includes lexer, parser, compiler, and virtual machine.
 
 ### `src/menai_ai_tool/`
 AI tool implementation for Menai language execution.
+
+### `src/mindspace/`
+Front-end-agnostic mindspace model. Manages the mindspace path, settings, search,
+interactions log, the context registry, and the conversations directory (`.humbug/conversations/`).
+Conversations are migrated from the legacy `conversations/` root directory on open.
+No Qt or GUI dependencies.
 
 ### `src/pdf/`
 Pure-Python PDF text extraction (stdlib only). Parses PDF structure, decodes streams
@@ -272,6 +281,8 @@ Test structure mirrors `src/` organization:
 - `markdown_/` - Markdown parser tests
 - `editor_ai_tool/` - Editor AI tool tests
 - `filesystem_ai_tool/` - Filesystem AI tool tests
+- `git/` - Git repository operation tests
+- `git_ai_tool/` - Git AI tool tests
 - `http_client/` - HTTP client tests
 - `menai/` - Menai language tests
 - `menai_ai_tool/` - Menai AI tool tests

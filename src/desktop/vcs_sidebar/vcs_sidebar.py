@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QApplication, QFrame, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 )
 
-from git import VCSFileStatus, VCSStatusCode
+from git import GitFileStatus, GitStatusCode
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 from desktop.color_role import ColorRole
@@ -25,14 +25,14 @@ from desktop.style_manager import StyleManager
 from desktop.vcs_sidebar.vcs_sidebar_delegate import VCSSidebarDelegate
 
 
-_STATUS_LABELS: dict[VCSStatusCode, str] = {
-    VCSStatusCode.MODIFIED: "M",
-    VCSStatusCode.ADDED: "A",
-    VCSStatusCode.DELETED: "D",
-    VCSStatusCode.RENAMED: "R",
-    VCSStatusCode.COPIED: "C",
-    VCSStatusCode.UNTRACKED: "?",
-    VCSStatusCode.UNKNOWN: "!",
+_STATUS_LABELS: dict[GitStatusCode, str] = {
+    GitStatusCode.MODIFIED: "M",
+    GitStatusCode.ADDED: "A",
+    GitStatusCode.DELETED: "D",
+    GitStatusCode.RENAMED: "R",
+    GitStatusCode.COPIED: "C",
+    GitStatusCode.UNTRACKED: "?",
+    GitStatusCode.UNKNOWN: "!",
 }
 
 
@@ -111,7 +111,7 @@ class VCSSidebar(SidebarBase):
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._mindspace_path: str = ""
-        self._current_status: list[VCSFileStatus] = []
+        self._current_status: list[GitFileStatus] = []
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -204,7 +204,7 @@ class VCSSidebar(SidebarBase):
 
         self.repo_available.emit(has_repo)
 
-    def _on_status_changed(self, status: list[VCSFileStatus]) -> None:
+    def _on_status_changed(self, status: list[GitFileStatus]) -> None:
         """Update the list when git status changes."""
         self._current_status = status
         self._rebuild_list()
@@ -304,7 +304,7 @@ class VCSSidebar(SidebarBase):
                 [MessageBoxButton.OK]
             )
 
-    def _display_name(self, entry: VCSFileStatus) -> str:
+    def _display_name(self, entry: GitFileStatus) -> str:
         """
         Return a short display name for a status entry.
 
@@ -312,14 +312,14 @@ class VCSSidebar(SidebarBase):
         path relative to the mindspace root.
 
         Args:
-            entry: The VCSFileStatus entry to format.
+            entry: The GitFileStatus entry to format.
 
         Returns:
             Human-readable display string.
         """
         rel = self._rel_path(entry.path)
 
-        if entry.code in (VCSStatusCode.RENAMED, VCSStatusCode.COPIED) and entry.original_path:
+        if entry.code in (GitStatusCode.RENAMED, GitStatusCode.COPIED) and entry.original_path:
             old_rel = self._rel_path(entry.original_path)
             return f"{old_rel} → {rel}"
 
@@ -344,23 +344,23 @@ class VCSSidebar(SidebarBase):
 
         return os.path.basename(abs_path)
 
-    def _color_for_code(self, code: VCSStatusCode) -> QColor:
+    def _color_for_code(self, code: GitStatusCode) -> QColor:
         """
         Return the theme-appropriate foreground colour for a status code.
 
         Args:
-            code: The VCSStatusCode to look up.
+            code: The GitStatusCode to look up.
 
         Returns:
             QColor for the status entry foreground.
         """
-        if code in (VCSStatusCode.ADDED, VCSStatusCode.UNTRACKED):
+        if code in (GitStatusCode.ADDED, GitStatusCode.UNTRACKED):
             return self._style_manager.get_color(ColorRole.VCS_ADDED)
 
-        if code == VCSStatusCode.DELETED:
+        if code == GitStatusCode.DELETED:
             return self._style_manager.get_color(ColorRole.VCS_DELETED)
 
-        if code in (VCSStatusCode.RENAMED, VCSStatusCode.COPIED):
+        if code in (GitStatusCode.RENAMED, GitStatusCode.COPIED):
             return self._style_manager.get_color(ColorRole.VCS_RENAMED)
 
         return self._style_manager.get_color(ColorRole.VCS_MODIFIED)

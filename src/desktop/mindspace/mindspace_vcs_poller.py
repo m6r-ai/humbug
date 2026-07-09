@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from git import GitCommandError, GitNotFoundError, GitNotRepositoryError
-from git import VCSFileStatus, find_repo_root, get_status
+from git import GitRepository, GitFileStatus, find_repo_root
 
 from desktop.file_watcher.file_watcher import FileWatcher
 
@@ -20,7 +20,7 @@ _POLL_INTERVAL_MS = 10000
 class _PollResult:
     """Result of a single background poll cycle."""
     repo_root: str
-    status: list[VCSFileStatus]
+    status: list[GitFileStatus]
     error: Exception | None
 
 
@@ -46,7 +46,7 @@ def _poll_worker(mindspace_path: str, current_repo_root: str) -> _PollResult:
         return _PollResult(repo_root="", status=[], error=None)
 
     try:
-        status = get_status(repo_root, mindspace_path)
+        status = GitRepository(repo_root).get_status(mindspace_path)
         return _PollResult(repo_root=repo_root, status=status, error=None)
 
     except (GitNotFoundError, GitNotRepositoryError, GitCommandError) as e:
@@ -57,8 +57,9 @@ def _detect_repo_root(mindspace_path: str, current_repo_root: str) -> str:
     """
     Return the git repo root for the mindspace, or empty string if none.
 
-    Uses a cheap filesystem check first (.git directory existence) before
-    falling back to the subprocess-based find_repo_root call.
+    Uses a cheap filesystem check first (.git directory existence) to verify
+    the previously known repo root is still valid, then falls back to
+    find_repo_root with the mindspace as boundary for discovery.
 
     Args:
         mindspace_path: Absolute path to the mindspace root.
@@ -72,22 +73,12 @@ def _detect_repo_root(mindspace_path: str, current_repo_root: str) -> str:
         if os.path.exists(git_dir):
             return current_repo_root
 
-    candidate = mindspace_path
-    while True:
-        if os.path.exists(os.path.join(candidate, ".git")):
-            try:
-                return find_repo_root(candidate)
+    try:
+        repo_root = find_repo_root(mindspace_path, mindspace_path)
+        return repo_root if repo_root else ""
 
-            except (GitNotFoundError, GitNotRepositoryError, GitCommandError):
-                return ""
-
-        parent = os.path.dirname(candidate)
-        if parent == candidate:
-            break
-
-        candidate = parent
-
-    return ""
+    except (GitNotFoundError, GitCommandError):
+        return ""
 
 
 class MindspaceVCSPoller(QObject):
@@ -115,7 +106,7 @@ class MindspaceVCSPoller(QObject):
     """
 
     repo_state_changed = Signal(bool)               # True = repo found, False = no repo
-    status_changed = Signal(list)                   # list[VCSFileStatus]
+    status_changed = Signal(list)                   # list[GitFileStatus]
 
     _instance = None
     _logger = logging.getLogger("MindspaceVCSPoller")
@@ -138,7 +129,7 @@ class MindspaceVCSPoller(QObject):
         self._mindspace_path: str = ""
         self._repo_root: str = ""
         self._has_repo: bool = False
-        self._last_status: list[VCSFileStatus] = []
+        self._last_status: list[GitFileStatus] = []
         self._poll_running: bool = False
 
         self._file_watcher = FileWatcher()

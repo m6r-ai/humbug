@@ -88,4 +88,4 @@ your working copy and HEAD.
 
 ---
 
-*[Index](index.md) · Previous: [Previewing Content](preview.md) · Next: [Searching](searching.md)*
+*[Index](index.md) · Previous: [Previewing Content](preview.md) · Next: [AI Tools](ai-tools.md)*

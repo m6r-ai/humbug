@@ -10,11 +10,12 @@ from PySide6.QtGui import QKeyEvent, QResizeEvent
 from diff import DiffParser, DiffParseError
 from diff.diff_types import DiffHunk
 
-from git import GitCommandError, GitNotFoundError, GitNotRepositoryError, find_repo_root, get_file_at_head, get_file_diff
+from git import GitCommandError, GitNotFoundError, GitRepository, find_repo_root
 
 from syntax import ProgrammingLanguageUtils
 
 from desktop.style_manager import StyleManager
+from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.language.language_manager import LanguageManager
 from desktop.diff_tab.diff_pane import DiffPane
 from desktop.diff_tab.diff_row import DiffRow, DiffRowType, DiffViewMode
@@ -478,10 +479,18 @@ class DiffWidget(QWidget):
         Old lines are empty for untracked files (no HEAD version exists).
         """
         try:
-            repo_root = find_repo_root(self._path)
-            diff_text = get_file_diff(repo_root, self._path)
+            mindspace_manager = MindspaceManager()
+            mindspace_path = mindspace_manager.mindspace_path()
+            repo_root = find_repo_root(self._path, mindspace_path)
 
-            head_content = get_file_at_head(repo_root, self._path)
+            if repo_root is None:
+                self._show_message("This file is not inside a git repository.")
+                return None
+
+            repo = GitRepository(repo_root)
+            diff_text = repo.get_file_diff(self._path)
+
+            head_content = repo.get_file_at_head(self._path)
             old_lines = head_content.splitlines() if head_content is not None else []
 
             with open(self._path, encoding="utf-8", errors="replace") as f:
@@ -491,10 +500,6 @@ class DiffWidget(QWidget):
 
         except GitNotFoundError:
             self._show_message("git is not available on this system.")
-            return None
-
-        except GitNotRepositoryError:
-            self._show_message("This file is not inside a git repository.")
             return None
 
         except GitCommandError as e:

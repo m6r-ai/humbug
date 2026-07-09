@@ -5,25 +5,26 @@ This package provides a lightweight interface for querying git repository
 state and retrieving file diffs without any GUI dependencies.
 """
 
+from git.git_commit_info import GitCommitInfo
 from git.git_error import GitCommandError, GitError, GitNotFoundError, GitNotRepositoryError
-from git.git_repository import find_repo_root, get_file_at_head, get_file_diff, is_file_tracked
-from git.git_status import VCSFileStatus, VCSStatusCode, get_status
+from git.git_repository import GitRepository, find_repo_root
+from git.git_status import GitFileStatus, GitStatusCode
 
 __all__ = [
+    # Commit info
+    "GitCommitInfo",
+
     # Exceptions
     "GitError",
     "GitNotFoundError",
     "GitNotRepositoryError",
     "GitCommandError",
 
-    # Repository functions
+    # Repository
+    "GitRepository",
     "find_repo_root",
-    "is_file_tracked",
-    "get_file_at_head",
-    "get_file_diff",
 
     # Status
-    "VCSFileStatus",
-    "VCSStatusCode",
-    "get_status",
+    "GitFileStatus",
+    "GitStatusCode",
 ]
