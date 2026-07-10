@@ -106,6 +106,13 @@ class _DocumentIRToMarkdownSerialiser:
         if isinstance(node, DocumentIRDefinitionListNode):
             return self._serialise_definition_list(node)
 
+        # Inline nodes appearing at block level (e.g. bare <a> or text in <body>
+        # without a <p> wrapper) are treated as an implicit paragraph.
+        inline_types = (DocumentIRTextSpanNode, DocumentIRLinkNode, DocumentIRImageNode, DocumentIRLineBreakNode)
+        if isinstance(node, inline_types):
+            text = self._serialise_inline_children([node])
+            return text if text else None
+
         return None
 
     def _serialise_heading(self, node: DocumentIRHeadingNode) -> str:

@@ -82,6 +82,16 @@ class HttpResponse:
         data = await self._read_full_body()
         return data.decode("utf-8")
 
+    async def content(self) -> bytes:
+        """
+        Read the entire response body as raw bytes.
+
+        Returns:
+            Response body as bytes.
+        """
+        data = await self._read_full_body()
+        return data
+
     async def json(self) -> dict[str, Any]:
         """
         Read the entire response body and parse as JSON.
@@ -299,6 +309,21 @@ class HttpClient:
             HttpResponse instance
         """
         return await self._request("GET", url, headers=headers)
+
+    async def head(self, url: str, headers: dict[str, str] | None = None) -> HttpResponse:
+        """
+        Send a HEAD request.
+
+        Like GET but the server returns only headers, no body.
+
+        Args:
+            url: Full URL to fetch
+            headers: Optional request headers
+
+        Returns:
+            HttpResponse instance (body will be empty)
+        """
+        return await self._request("HEAD", url, headers=headers)
 
     async def post(
         self,

@@ -8,6 +8,7 @@ New features:
   file content and are auto-managed by Humbug.  The `.humbug` directory now becomes visible to support viewing and drag-and-drop
   operations.
 - Added a new git AI tool to allow an AI to query git status without needing to use a terminal.
+- Added a new HTTP client tool to allow an AI to query remote endpoints such as websites.
 - Added a new diff tab view to allow an inline view as well as a side-by-side view.
 - Added Unix shell and Windows batch file syntax highlighting.
 - Added Grok 4.5.

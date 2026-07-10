@@ -76,6 +76,7 @@ modules:
       - git
       - git_ai_tool
       - help_ai_tool
+      - http_ai_tool
       - http_client
       - markdown_
       - menai_ai_tool
@@ -98,18 +99,6 @@ modules:
     external_dependencies:
       - "standard_library"
 
-  markdown_:
-    internal_dependencies:
-      - document_ir
-      - syntax
-    external_dependencies:
-      - "standard_library"
-
-  document_ir:
-    internal_dependencies: []
-    external_dependencies:
-      - "standard_library"
-
   document_converter_ai_tool:
     internal_dependencies:
       - ai_tool
@@ -121,9 +110,8 @@ modules:
     external_dependencies:
       - "standard_library"
 
-  html_:
-    internal_dependencies:
-      - document_ir
+  document_ir:
+    internal_dependencies: []
     external_dependencies:
       - "standard_library"
 
@@ -180,8 +168,31 @@ modules:
     external_dependencies:
       - "standard_library"
 
+  html_:
+    internal_dependencies:
+      - document_ir
+    external_dependencies:
+      - "standard_library"
+
+  http_ai_tool:
+    internal_dependencies:
+      - ai_tool
+      - http_client
+      - mindspace
+      - html_
+      - markdown_
+    external_dependencies:
+      - "standard_library"
+
   http_client:
     internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  markdown_:
+    internal_dependencies:
+      - document_ir
+      - syntax
     external_dependencies:
       - "standard_library"
 

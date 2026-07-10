@@ -30,6 +30,7 @@ from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 from git_ai_tool.git_ai_tool import GitAITool
 from help_ai_tool.help_ai_tool import HelpAITool
+from http_ai_tool.http_ai_tool import HttpAITool
 from menai_ai_tool.menai_ai_tool import MenaiAITool
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from mindspace.mindspace_log_level import MindspaceLogLevel
@@ -709,6 +710,9 @@ class MainWindow(QMainWindow):
         )
         self._ai_tool_manager.register_tool(
             HelpAITool(self._ai_tool_manager), "Help: provides detailed documentation for AI tools and operations"
+        )
+        self._ai_tool_manager.register_tool(
+            HttpAITool(mindspace), "HTTP: fetch URLs, make POST requests, and download files"
         )
         self._ai_tool_manager.register_tool(
             self._menai_tool, "Menai: evaluates expressions using Menai Language syntax"

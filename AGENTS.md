@@ -211,6 +211,16 @@ Branch lists both local and remote branches. All operations have 64KB output tru
 ### `src/help_ai_tool/`
 AI tool implementation for tool documentation.
 
+### `src/http_ai_tool/`
+AI tool implementation for HTTP operations, wrapping the `http_client` library.
+Exposes GET, HEAD, POST, and download operations.
+All operations require user authorization (the user sees the method, URL, headers,
+and body before approving). HTML responses are converted to readable markdown by
+default via the `html_` → `document_ir` → `markdown_` pipeline; use `format="raw"`
+for the original HTML. GET/POST responses are truncated to 64KB. HEAD returns
+headers only (no body). Download writes directly to a file in the mindspace without size limits.
+directly to a file in the mindspace without size limits.
+
 ### `src/html_/`
 HTML document processing. Includes a self-contained lexer and DOM-building parser
 (no external dependencies), a plain-text extractor, and converters to/from the
@@ -284,6 +294,7 @@ Test structure mirrors `src/` organization:
 - `git/` - Git repository operation tests
 - `git_ai_tool/` - Git AI tool tests
 - `http_client/` - HTTP client tests
+- `http_ai_tool/` - HTTP AI tool tests
 - `menai/` - Menai language tests
 - `menai_ai_tool/` - Menai AI tool tests
 - `pdf/` - PDF extraction tests

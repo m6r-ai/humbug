@@ -82,6 +82,24 @@ class TestDocumentStructure:
         result = _md(_doc(_para(_span("text"))))
         assert result.endswith("\n")
 
+    def test_bare_text_span_at_document_level(self):
+        """A text span directly under the document should be treated as an implicit paragraph."""
+        result = _md(_doc(_span("Hello")))
+        assert result == "Hello\n"
+
+    def test_bare_link_at_document_level(self):
+        """A link directly under the document should be treated as an implicit paragraph."""
+        link = DocumentIRLinkNode(url="https://example.com")
+        link.add_child(_span("click here"))
+        result = _md(_doc(link))
+        assert "[click here](https://example.com)" in result
+
+    def test_bare_image_at_document_level(self):
+        """An image directly under the document should be treated as an implicit paragraph."""
+        img = DocumentIRImageNode(url="photo.png", alt_text="A photo")
+        result = _md(_doc(img))
+        assert "![A photo](photo.png)" in result
+
 
 # ---------------------------------------------------------------------------
 # Headings
