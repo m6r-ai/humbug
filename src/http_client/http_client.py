@@ -293,7 +293,7 @@ class HttpClient:
 
     Each request creates a new TCP/TLS connection.  No connection pooling.
     Supports GET, HEAD, POST, PUT, PATCH, and DELETE, JSON and raw byte bodies, TLS with caller-supplied
-    SSL contexts, connect/read timeouts, and redirect following.
+    SSL contexts, connect/read timeouts, redirect following, and HTTP CONNECT / SOCKS5 proxy tunneling.
     """
 
     def __init__(
@@ -303,6 +303,7 @@ class HttpClient:
         connect_timeout: float = _DEFAULT_CONNECT_TIMEOUT,
         ssl_handshake_timeout: float = _DEFAULT_SSL_HANDSHAKE_TIMEOUT,
         read_timeout: float = _DEFAULT_READ_TIMEOUT,
+        proxy: str | None = None,
     ) -> None:
         """
         Initialize the HTTP client.
@@ -313,12 +314,15 @@ class HttpClient:
             connect_timeout: Seconds to wait for TCP connection.
             ssl_handshake_timeout: Seconds to wait for TLS handshake.
             read_timeout: Seconds to wait for each read operation.
+            proxy: Proxy URL (e.g. 'http://proxy:8080' or 'socks5://proxy:1080').
+                When set, all connections are tunneled through the proxy.
         """
         self._ssl_context = ssl_context
         self._family = family
         self._connect_timeout = connect_timeout
         self._ssl_handshake_timeout = ssl_handshake_timeout
         self._read_timeout = read_timeout
+        self._proxy = proxy
 
     async def get(self, url: str, headers: dict[str, str] | None = None) -> HttpResponse:
         """
@@ -495,21 +499,11 @@ class HttpClient:
 
         # Connect
         try:
-            ssl_param: ssl.SSLContext | bool | None = None
-            if use_tls:
-                ssl_param = self._ssl_context if self._ssl_context else True
+            if self._proxy:
+                reader, writer = await self._connect_via_proxy(host, port, use_tls)
 
-            reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(
-                    host=host,
-                    port=port,
-                    ssl=ssl_param,
-                    ssl_handshake_timeout=self._ssl_handshake_timeout if use_tls else None,
-                    server_hostname=host if use_tls else None,
-                    family=self._family if self._family else 0,
-                ),
-                timeout=self._connect_timeout,
-            )
+            else:
+                reader, writer = await self._connect_direct(host, port, use_tls)
 
         except asyncio.TimeoutError as e:
             raise ServerTimeoutError(f"Connection to {host}:{port} timed out") from e
@@ -587,6 +581,268 @@ class HttpClient:
         except Exception:
             writer.close()
             raise
+
+    async def _connect_direct(
+        self,
+        host: str,
+        port: int,
+        use_tls: bool,
+    ) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+        """
+        Open a direct TCP/TLS connection to the target host.
+
+        Args:
+            host: Target hostname.
+            port: Target port.
+            use_tls: Whether to perform TLS handshake.
+
+        Returns:
+            Tuple of (reader, writer) for the established connection.
+        """
+        ssl_param: ssl.SSLContext | bool | None = None
+        if use_tls:
+            ssl_param = self._ssl_context if self._ssl_context else True
+
+        return await asyncio.wait_for(
+            asyncio.open_connection(
+                host=host,
+                port=port,
+                ssl=ssl_param,
+                ssl_handshake_timeout=self._ssl_handshake_timeout if use_tls else None,
+                server_hostname=host if use_tls else None,
+                family=self._family if self._family else 0,
+            ),
+            timeout=self._connect_timeout,
+        )
+
+    async def _connect_via_proxy(
+        self,
+        host: str,
+        port: int,
+        use_tls: bool,
+    ) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+        """
+        Connect to the target through an HTTP CONNECT or SOCKS5 proxy.
+
+        Opens a TCP connection to the proxy, performs the proxy handshake
+        to establish a tunnel, then optionally upgrades to TLS.
+
+        Args:
+            host: Target hostname (not the proxy).
+            port: Target port (not the proxy).
+            use_tls: Whether to perform TLS over the tunnelled connection.
+
+        Returns:
+            Tuple of (reader, writer) for the tunnelled connection.
+
+        Raises:
+            ClientConnectorError: If the proxy rejects the tunnel or the
+                proxy URL is invalid.
+        """
+        proxy_parsed = urlsplit(self._proxy)
+        proxy_scheme = proxy_parsed.scheme.lower()
+        proxy_host: str = str(proxy_parsed.hostname or "")
+        proxy_port = proxy_parsed.port or (
+            1080 if proxy_scheme in ("socks5", "socks5h") else 8080
+        )
+
+        if not proxy_host:
+            raise ClientConnectorError(f"Invalid proxy URL: missing host in {self._proxy}")
+
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(
+                host=proxy_host,
+                port=proxy_port,
+                family=self._family if self._family else 0,
+            ),
+            timeout=self._connect_timeout,
+        )
+
+        try:
+            if proxy_scheme in ("socks5", "socks5h"):
+                await self._socks5_handshake(reader, writer, host, port)
+
+            else:
+                await self._http_connect_handshake(reader, writer, host, port)
+
+        except ClientConnectorError:
+            writer.close()
+            raise
+
+        except (ConnectionError, OSError, asyncio.IncompleteReadError) as e:
+            writer.close()
+            raise ClientConnectorError(f"Proxy handshake failed: {e}") from e
+
+        if use_tls:
+            ssl_context = self._ssl_context if self._ssl_context else ssl.create_default_context()
+            sock = writer.get_extra_info("socket")
+            dup_sock = socket.fromfd(sock.fileno(), sock.family, sock.type)
+            writer.close()
+            loop = asyncio.get_running_loop()
+            new_reader = asyncio.StreamReader()
+            protocol = asyncio.StreamReaderProtocol(new_reader)
+            transport, _ = await asyncio.wait_for(
+                loop.create_connection(
+                    lambda: protocol,
+                    sock=dup_sock,
+                    ssl=ssl_context,
+                    server_hostname=host,
+                    ssl_handshake_timeout=self._ssl_handshake_timeout,
+                ),
+                timeout=self._connect_timeout,
+            )
+            writer = asyncio.StreamWriter(transport, protocol, new_reader, loop)
+            reader = new_reader
+
+        return reader, writer
+
+    async def _http_connect_handshake(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        host: str,
+        port: int,
+    ) -> None:
+        """
+        Perform an HTTP CONNECT handshake through an HTTP proxy.
+
+        Sends CONNECT host:port and checks for a 200 response.
+
+        Args:
+            reader: Stream reader connected to the proxy.
+            writer: Stream writer connected to the proxy.
+            host: Target hostname.
+            port: Target port.
+
+        Raises:
+            ClientConnectorError: If the proxy returns a non-200 status.
+        """
+        connect_request = (
+            f"CONNECT {host}:{port} HTTP/1.1\r\n"
+            f"Host: {host}:{port}\r\n"
+            f"\r\n"
+        )
+        writer.write(connect_request.encode("latin-1"))
+        await writer.drain()
+
+        status_line = await asyncio.wait_for(
+            reader.readline(),
+            timeout=self._connect_timeout,
+        )
+        status_parts = status_line.decode("latin-1").strip().split(" ", 2)
+        if len(status_parts) < 2 or not status_parts[1].isdigit():
+            raise ClientConnectorError(f"Malformed proxy response: {status_line!r}")
+
+        proxy_status = int(status_parts[1])
+
+        # Consume remaining headers
+        while True:
+            line = await asyncio.wait_for(
+                reader.readline(),
+                timeout=self._connect_timeout,
+            )
+            if not line or line in (b"\r\n", b"\n"):
+                break
+
+        if proxy_status != 200:
+            raise ClientConnectorError(
+                f"Proxy returned status {proxy_status} for CONNECT {host}:{port}"
+            )
+
+    async def _socks5_handshake(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        host: str,
+        port: int,
+    ) -> None:
+        """
+        Perform a SOCKS5 handshake (no-auth method) through a SOCKS5 proxy.
+
+        Sends a greeting requesting no-auth, then a connect request for the
+        target host/port.  Checks the proxy's response for success.
+
+        Args:
+            reader: Stream reader connected to the proxy.
+            writer: Stream writer connected to the proxy.
+            host: Target hostname.
+            port: Target port.
+
+        Raises:
+            ClientConnectorError: If the proxy rejects the connection or
+                returns an error reply.
+        """
+        # Greeting: version 5, one auth method, no-auth (0x00)
+        writer.write(b"\x05\x01\x00")
+        await writer.drain()
+
+        greeting_response = await asyncio.wait_for(
+            reader.readexactly(2),
+            timeout=self._connect_timeout,
+        )
+
+        if greeting_response[0] != 0x05:
+            raise ClientConnectorError(f"Invalid SOCKS5 version in greeting response: {greeting_response[0]}")
+
+        if greeting_response[1] != 0x00:
+            raise ClientConnectorError(
+                f"SOCKS5 proxy rejected auth method: {greeting_response[1]}"
+            )
+
+        # Connect request: version 5, connect (0x01), reserved (0x00),
+        # address type domain (0x03), host length, host, port (big-endian)
+        host_bytes = host.encode("ascii")
+        connect_request = (
+            b"\x05\x01\x00\x03"
+            + bytes([len(host_bytes)])
+            + host_bytes
+            + port.to_bytes(2, "big")
+        )
+        writer.write(connect_request)
+        await writer.drain()
+
+        connect_response = await asyncio.wait_for(
+            reader.readexactly(4),
+            timeout=self._connect_timeout,
+        )
+
+        if connect_response[0] != 0x05:
+            raise ClientConnectorError(f"Invalid SOCKS5 version in connect response: {connect_response[0]}")
+
+        if connect_response[1] != 0x00:
+            raise ClientConnectorError(
+                f"SOCKS5 proxy connect failed with error code: {connect_response[1]}"
+            )
+
+        # Consume the bound address based on address type
+        addr_type = connect_response[3]
+        if addr_type == 0x01:
+            await asyncio.wait_for(
+                reader.readexactly(4),
+                timeout=self._connect_timeout,
+            )
+
+        elif addr_type == 0x03:
+            addr_len = await asyncio.wait_for(
+                reader.readexactly(1),
+                timeout=self._connect_timeout,
+            )
+            await asyncio.wait_for(
+                reader.readexactly(addr_len[0]),
+                timeout=self._connect_timeout,
+            )
+
+        elif addr_type == 0x04:
+            await asyncio.wait_for(
+                reader.readexactly(16),
+                timeout=self._connect_timeout,
+            )
+
+        # Consume the bound port (2 bytes)
+        await asyncio.wait_for(
+            reader.readexactly(2),
+            timeout=self._connect_timeout,
+        )
 
     async def _read_response(
         self,

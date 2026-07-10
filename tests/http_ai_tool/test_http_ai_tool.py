@@ -1488,7 +1488,7 @@ class TestHttpAIToolTimeout:
 
             _execute_tool(tool, tool_call)
 
-        mock_client_class.assert_called_once_with(read_timeout=10.0)
+        mock_client_class.assert_called_once_with(read_timeout=10.0, proxy=None)
 
     def test_timeout_passes_to_client_on_post(self) -> None:
         """POST with timeout should pass it to the HttpClient constructor."""
@@ -1506,7 +1506,7 @@ class TestHttpAIToolTimeout:
 
             _execute_tool(tool, tool_call)
 
-        mock_client_class.assert_called_once_with(read_timeout=30.0)
+        mock_client_class.assert_called_once_with(read_timeout=30.0, proxy=None)
 
     def test_timeout_passes_to_client_on_delete(self) -> None:
         """DELETE with timeout should pass it to the HttpClient constructor."""
@@ -1524,7 +1524,7 @@ class TestHttpAIToolTimeout:
 
             _execute_tool(tool, tool_call)
 
-        mock_client_class.assert_called_once_with(read_timeout=5.0)
+        mock_client_class.assert_called_once_with(read_timeout=5.0, proxy=None)
 
     def test_timeout_passes_to_client_on_head(self) -> None:
         """HEAD with timeout should pass it to the HttpClient constructor."""
@@ -1546,7 +1546,7 @@ class TestHttpAIToolTimeout:
 
             _execute_tool(tool, tool_call)
 
-        mock_client_class.assert_called_once_with(read_timeout=15.0)
+        mock_client_class.assert_called_once_with(read_timeout=15.0, proxy=None)
 
     def test_timeout_passes_to_client_on_download(self) -> None:
         """Download with timeout should pass it to the HttpClient constructor."""
@@ -1573,7 +1573,7 @@ class TestHttpAIToolTimeout:
 
                 _execute_tool(tool, tool_call)
 
-            mock_client_class.assert_called_once_with(read_timeout=60.0)
+            mock_client_class.assert_called_once_with(read_timeout=60.0, proxy=None)
 
     def test_default_timeout_when_not_specified(self) -> None:
         """GET without timeout should use the default 300s read timeout."""
@@ -1589,7 +1589,7 @@ class TestHttpAIToolTimeout:
 
             _execute_tool(tool, tool_call)
 
-        mock_client_class.assert_called_once_with(read_timeout=300.0)
+        mock_client_class.assert_called_once_with(read_timeout=300.0, proxy=None)
 
     def test_timeout_float_value(self) -> None:
         """GET with a float timeout should pass it as a float."""
@@ -1605,7 +1605,7 @@ class TestHttpAIToolTimeout:
 
             _execute_tool(tool, tool_call)
 
-        mock_client_class.assert_called_once_with(read_timeout=0.5)
+        mock_client_class.assert_called_once_with(read_timeout=0.5, proxy=None)
 
     def test_timeout_zero_raises(self) -> None:
         """GET with timeout=0 should raise AIToolExecutionError."""
@@ -2540,3 +2540,199 @@ class TestHttpAIToolDecompression:
 
         text = asyncio.run(run())
         assert text == original
+
+class TestHttpAIToolProxy:
+    """Tests for proxy parameter support."""
+
+    def test_proxy_passes_to_client_on_get(self) -> None:
+        """GET with proxy should pass it to the HttpClient constructor."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com", proxy="http://proxy.corp:8080"
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(
+            read_timeout=300.0, proxy="http://proxy.corp:8080"
+        )
+
+    def test_proxy_passes_to_client_on_post(self) -> None:
+        """POST with proxy should pass it to the HttpClient constructor."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "post", url="https://example.com/api", json={"x": 1},
+            proxy="socks5://proxy:1080"
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(
+            read_timeout=300.0, proxy="socks5://proxy:1080"
+        )
+
+    def test_proxy_passes_to_client_on_delete(self) -> None:
+        """DELETE with proxy should pass it to the HttpClient constructor."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "delete", url="https://example.com/api/1", proxy="http://proxy:3128"
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.delete = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(
+            read_timeout=300.0, proxy="http://proxy:3128"
+        )
+
+    def test_proxy_passes_to_client_on_head(self) -> None:
+        """HEAD with proxy should pass it to the HttpClient constructor."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "head", url="https://example.com", proxy="socks5h://proxy:1080"
+        )
+        mock_response = MagicMock()
+        mock_response.status.return_value = 200
+        mock_response.headers.return_value = {}
+        mock_response.content = AsyncMock(return_value=b"")
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.head = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(
+            read_timeout=300.0, proxy="socks5h://proxy:1080"
+        )
+
+    def test_proxy_passes_to_client_on_download(self) -> None:
+        """Download with proxy should pass it to the HttpClient constructor."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            mindspace = _make_mindspace_mock(tmp)
+            tool = HttpAITool(mindspace)
+            tool_call = _make_tool_call(
+                "download", url="https://example.com/file.txt",
+                destination="file.txt", proxy="http://proxy:8080"
+            )
+            mock_response = MagicMock()
+            mock_response.status.return_value = 200
+            mock_response.headers.return_value = {}
+            mock_response.content = AsyncMock(return_value=b"data")
+
+            with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+                mock_client = MagicMock()
+                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+                mock_client.__aexit__ = AsyncMock(return_value=None)
+                mock_client.get = AsyncMock(return_value=mock_response)
+                mock_client_class.return_value = mock_client
+
+                _execute_tool(tool, tool_call)
+
+            mock_client_class.assert_called_once_with(
+                read_timeout=300.0, proxy="http://proxy:8080"
+            )
+
+    def test_no_proxy_when_not_specified(self) -> None:
+        """GET without proxy should pass proxy=None to the HttpClient constructor."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com")
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(read_timeout=300.0, proxy=None)
+
+    def test_proxy_invalid_scheme_raises(self) -> None:
+        """GET with an invalid proxy scheme should raise AIToolExecutionError."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com", proxy="ftp://proxy:21"
+        )
+        with pytest.raises(AIToolExecutionError, match="scheme"):
+            _execute_tool(tool, tool_call)
+
+    def test_proxy_missing_host_raises(self) -> None:
+        """GET with a proxy URL missing a host should raise AIToolExecutionError."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com", proxy="http://"
+        )
+        with pytest.raises(AIToolExecutionError, match="hostname"):
+            _execute_tool(tool, tool_call)
+
+    def test_proxy_non_string_raises(self) -> None:
+        """GET with a non-string proxy should raise AIToolExecutionError."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com", proxy=123
+        )
+        with pytest.raises(AIToolExecutionError, match="string"):
+            _execute_tool(tool, tool_call)
+
+    def test_proxy_allowed_on_all_operations(self) -> None:
+        """All operations should allow the proxy parameter."""
+        tool = HttpAITool(_make_mindspace_mock())
+        ops = tool.get_operation_definitions()
+        for op_name in ("get", "head", "post", "put", "patch", "delete", "download"):
+            assert "proxy" in ops[op_name].allowed_parameters, f"{op_name} should allow proxy"
+
+    def test_proxy_in_additional_parameters(self) -> None:
+        """proxy should be in the tool's additional parameters."""
+        tool = HttpAITool(_make_mindspace_mock())
+        definition = tool.get_definition()
+        proxy_param = next((p for p in definition.parameters if p.name == "proxy"), None)
+        assert proxy_param is not None
+        assert proxy_param.type == "string"
+
+    def test_proxy_with_timeout_passes_both(self) -> None:
+        """GET with both proxy and timeout should pass both to the HttpClient constructor."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com",
+            proxy="http://proxy:8080", timeout=15
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(
+            read_timeout=15.0, proxy="http://proxy:8080"
+        )

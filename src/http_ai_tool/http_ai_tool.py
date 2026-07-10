@@ -147,6 +147,14 @@ class HttpAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
+                    name="proxy",
+                    type="string",
+                    description="Proxy URL to tunnel the connection through. "
+                                "Supported schemes: 'http', 'https', 'socks5', 'socks5h' "
+                                "(e.g. 'http://proxy.corp:8080' or 'socks5://proxy:1080').",
+                    required=False
+                ),
+                AIToolParameter(
                     name="destination",
                     type="string",
                     description="Destination file path in the mindspace for the download operation "
@@ -170,7 +178,7 @@ class HttpAITool(AITool):
                 name="get",
                 handler=self._get,
                 extract_context=self._extract_get_context,
-                allowed_parameters={"url", "headers", "username", "password", "timeout", "format", "cookies"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout", "format", "cookies", "proxy"},
                 required_parameters={"url"},
                 description=(
                     "Fetch a URL via GET. Returns the HTTP status code, content type, "
@@ -183,7 +191,7 @@ class HttpAITool(AITool):
                 name="head",
                 handler=self._head,
                 extract_context=self._extract_head_context,
-                allowed_parameters={"url", "headers", "username", "password", "timeout", "cookies"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout", "cookies", "proxy"},
                 required_parameters={"url"},
                 description=(
                     "Send a HEAD request to a URL. Returns the HTTP status code and "
@@ -198,7 +206,7 @@ class HttpAITool(AITool):
                 extract_context=self._extract_post_context,
                 allowed_parameters={
                     "url", "headers", "username", "password", "json", "data",
-                    "multipart", "timeout", "format", "cookies",
+                    "multipart", "timeout", "format", "cookies", "proxy",
                 },
                 required_parameters={"url"},
                 description=(
@@ -214,7 +222,7 @@ class HttpAITool(AITool):
                 extract_context=self._extract_put_context,
                 allowed_parameters={
                     "url", "headers", "username", "password", "json", "data",
-                    "multipart", "timeout", "format", "cookies",
+                    "multipart", "timeout", "format", "cookies", "proxy",
                 },
                 required_parameters={"url"},
                 description=(
@@ -230,7 +238,7 @@ class HttpAITool(AITool):
                 extract_context=self._extract_patch_context,
                 allowed_parameters={
                     "url", "headers", "username", "password", "json", "data",
-                    "multipart", "timeout", "format", "cookies",
+                    "multipart", "timeout", "format", "cookies", "proxy",
                 },
                 required_parameters={"url"},
                 description=(
@@ -244,7 +252,7 @@ class HttpAITool(AITool):
                 name="delete",
                 handler=self._delete,
                 extract_context=self._extract_delete_context,
-                allowed_parameters={"url", "headers", "username", "password", "timeout", "format", "cookies"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout", "format", "cookies", "proxy"},
                 required_parameters={"url"},
                 description=(
                     "Send a DELETE request to a URL. Returns the HTTP status code, "
@@ -257,7 +265,7 @@ class HttpAITool(AITool):
                 name="download",
                 handler=self._download,
                 extract_context=self._extract_download_context,
-                allowed_parameters={"url", "headers", "username", "password", "timeout", "destination", "cookies"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout", "destination", "cookies", "proxy"},
                 required_parameters={"url", "destination"},
                 description=(
                     "Download a file from a URL and save it to the mindspace. The file is "
@@ -279,6 +287,7 @@ class HttpAITool(AITool):
         url = self._get_required_str_value("url", arguments)
         headers = self._get_optional_dict_value("headers", arguments)
         timeout = self._get_timeout(arguments)
+        proxy = self._get_proxy(arguments)
         format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
 
         headers = self._apply_basic_auth(headers, arguments)
@@ -295,7 +304,7 @@ class HttpAITool(AITool):
             raise AIToolAuthorizationDenied(f"User denied permission to fetch URL: {url}")
 
         try:
-            async with HttpClient(read_timeout=timeout) as client:
+            async with HttpClient(read_timeout=timeout, proxy=proxy) as client:
                 response = await client.get(url, headers=headers)
                 return await self._build_result(tool_call, response, format_type)
 
@@ -317,6 +326,7 @@ class HttpAITool(AITool):
         url = self._get_required_str_value("url", arguments)
         headers = self._get_optional_dict_value("headers", arguments)
         timeout = self._get_timeout(arguments)
+        proxy = self._get_proxy(arguments)
 
         headers = self._apply_basic_auth(headers, arguments)
         headers = self._apply_cookies(headers, arguments)
@@ -332,7 +342,7 @@ class HttpAITool(AITool):
             raise AIToolAuthorizationDenied(f"User denied permission to check URL: {url}")
 
         try:
-            async with HttpClient(read_timeout=timeout) as client:
+            async with HttpClient(read_timeout=timeout, proxy=proxy) as client:
                 response = await client.head(url, headers=headers)
                 return await self._build_head_result(tool_call, response)
 
@@ -381,6 +391,7 @@ class HttpAITool(AITool):
         url = self._get_required_str_value("url", arguments)
         headers = self._get_optional_dict_value("headers", arguments)
         timeout = self._get_timeout(arguments)
+        proxy = self._get_proxy(arguments)
         format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
 
         headers = self._apply_basic_auth(headers, arguments)
@@ -397,7 +408,7 @@ class HttpAITool(AITool):
             raise AIToolAuthorizationDenied(f"User denied permission to DELETE URL: {url}")
 
         try:
-            async with HttpClient(read_timeout=timeout) as client:
+            async with HttpClient(read_timeout=timeout, proxy=proxy) as client:
                 response = await client.delete(url, headers=headers)
                 return await self._build_result(tool_call, response, format_type)
 
@@ -432,6 +443,7 @@ class HttpAITool(AITool):
         json_body = arguments.get("json")
         data_body = self._get_optional_str_value("data", arguments)
         timeout = self._get_timeout(arguments)
+        proxy = self._get_proxy(arguments)
         format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
 
         headers = self._apply_basic_auth(headers, arguments)
@@ -457,7 +469,7 @@ class HttpAITool(AITool):
             raise AIToolAuthorizationDenied(f"User denied permission to {method} to URL: {url}")
 
         try:
-            async with HttpClient(read_timeout=timeout) as client:
+            async with HttpClient(read_timeout=timeout, proxy=proxy) as client:
                 client_method = {
                     "POST": client.post,
                     "PUT": client.put,
@@ -503,6 +515,7 @@ class HttpAITool(AITool):
         destination = self._get_required_str_value("destination", arguments)
         headers = self._get_optional_dict_value("headers", arguments)
         timeout = self._get_timeout(arguments)
+        proxy = self._get_proxy(arguments)
 
         headers = self._apply_basic_auth(headers, arguments)
         headers = self._apply_cookies(headers, arguments)
@@ -538,7 +551,7 @@ class HttpAITool(AITool):
             )
 
         try:
-            async with HttpClient(read_timeout=timeout) as client:
+            async with HttpClient(read_timeout=timeout, proxy=proxy) as client:
                 response = await client.get(url, headers=headers)
 
                 status = response.status()
@@ -884,6 +897,41 @@ class HttpAITool(AITool):
             raise AIToolExecutionError("'timeout' must be a positive number of seconds")
 
         return float(timeout)
+
+    _VALID_PROXY_SCHEMES: frozenset[str] = frozenset({"http", "https", "socks5", "socks5h"})
+
+    def _get_proxy(self, arguments: dict[str, Any]) -> str | None:
+        """
+        Extract and validate the proxy parameter from arguments.
+
+        Args:
+            arguments: Tool call arguments possibly containing 'proxy'.
+
+        Returns:
+            Proxy URL string, or None if not specified.
+
+        Raises:
+            AIToolExecutionError: If the proxy URL has an invalid scheme or
+                is missing a host.
+        """
+        proxy = arguments.get("proxy")
+
+        if proxy is None:
+            return None
+
+        if not isinstance(proxy, str):
+            raise AIToolExecutionError("'proxy' must be a string URL")
+
+        parsed = urlsplit(proxy)
+        if parsed.scheme.lower() not in self._VALID_PROXY_SCHEMES:
+            raise AIToolExecutionError(
+                f"'proxy' scheme must be one of {sorted(self._VALID_PROXY_SCHEMES)}: {proxy}"
+            )
+
+        if not parsed.hostname:
+            raise AIToolExecutionError(f"'proxy' must include a hostname: {proxy}")
+
+        return proxy
 
     def _validate_url(self, url: str) -> None:
         """

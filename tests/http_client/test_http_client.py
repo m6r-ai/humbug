@@ -111,7 +111,7 @@ class MockHTTPServer:
         finally:
             try:
                 writer.write_eof()
-            except (ConnectionError, OSError):
+            except (ConnectionError, OSError, NotImplementedError):
                 pass
             await writer.drain()
             writer.close()
@@ -1386,5 +1386,429 @@ class TestDecompression:
                     response = await client.get(server.url("/"))
                     data = await response.content()
                     assert data == original
+
+        asyncio.run(run())
+
+
+# --- Tests: proxy support ---
+
+class MockHTTPProxyServer:
+    """A mock HTTP CONNECT proxy server for testing."""
+
+    def __init__(
+        self,
+        target_handler: asyncio.Callable[[dict, asyncio.StreamWriter], asyncio.Awaitable[None]],
+        target_use_tls: bool = False,
+    ) -> None:
+        """
+        Initialize the mock proxy server.
+
+        Args:
+            target_handler: Handler for the target server behind the proxy.
+            target_use_tls: Whether the target server uses TLS.
+        """
+        self._target_handler = target_handler
+        self._target_use_tls = target_use_tls
+        self._server: asyncio.base_events.Server | None = None
+        self._target_server: MockHTTPServer | None = None
+        self._host = "127.0.0.1"
+        self._port = 0
+        self._cert_dir: tempfile.TemporaryDirectory | None = None
+        self._client_ssl_context: ssl.SSLContext | None = None
+
+    def host(self) -> str:
+        """Return the proxy server host."""
+        return self._host
+
+    def port(self) -> int:
+        """Return the proxy server port."""
+        return self._port
+
+    def proxy_url(self) -> str:
+        """Return the proxy URL."""
+        return f"http://{self._host}:{self._port}"
+
+    def target_url(self, path: str = "/") -> str:
+        """Return a full URL for the target server."""
+        return self._target_server.url(path) if self._target_server else ""
+
+    def ssl_context(self) -> ssl.SSLContext | None:
+        """Return the client SSL context for TLS targets."""
+        return self._client_ssl_context
+
+    async def __aenter__(self) -> 'MockHTTPProxyServer':
+        """Start the proxy and target servers."""
+        self._target_server = MockHTTPServer(self._target_handler, use_tls=self._target_use_tls)
+        await self._target_server.__aenter__()
+
+        if self._target_use_tls:
+            self._cert_dir = self._target_server._cert_dir
+            self._client_ssl_context = self._target_server.ssl_context()
+
+        self._server = await asyncio.start_server(
+            self._handle_client,
+            host=self._host,
+            port=0,
+        )
+
+        sock = self._server.sockets[0]
+        self._port = sock.getsockname()[1]
+
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        """Stop the proxy and target servers."""
+        if self._server:
+            self._server.close()
+            await self._server.wait_closed()
+
+        if self._target_server:
+            await self._target_server.__aexit__(*args)
+
+    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        """Handle a proxy client connection."""
+        try:
+            request_line = await reader.readline()
+            parts = request_line.decode("latin-1").strip().split(" ")
+
+            if len(parts) < 2 or parts[0] != "CONNECT":
+                writer.write(b"HTTP/1.1 405 Method Not Allowed\r\n\r\n")
+                await writer.drain()
+                return
+
+            # Read and discard headers
+            while True:
+                line = await reader.readline()
+                if not line or line in (b"\r\n", b"\n"):
+                    break
+
+            # Send 200 Connection Established
+            writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+            await writer.drain()
+
+            # Now tunnel: connect to the target server and relay
+            target_host = self._target_server.host()
+            target_port = self._target_server.port()
+
+            target_reader, target_writer = await asyncio.open_connection(
+                host=target_host,
+                port=target_port,
+            )
+
+            await asyncio.gather(
+                self._relay(reader, target_writer),
+                self._relay(target_reader, writer),
+            )
+
+        except (ConnectionError, asyncio.IncompleteReadError, OSError):
+            pass
+
+        finally:
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except (ConnectionError, OSError):
+                pass
+
+    async def _relay(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        """Relay data between a reader and writer."""
+        try:
+            while True:
+                data = await reader.read(4096)
+                if not data:
+                    break
+
+                writer.write(data)
+                await writer.drain()
+
+        except (ConnectionError, OSError):
+            pass
+
+        finally:
+            try:
+                writer.close()
+            except (ConnectionError, OSError):
+                pass
+
+
+class MockSocks5ProxyServer:
+    """A mock SOCKS5 proxy server for testing."""
+
+    def __init__(
+        self,
+        target_handler: asyncio.Callable[[dict, asyncio.StreamWriter], asyncio.Awaitable[None]],
+        target_use_tls: bool = False,
+    ) -> None:
+        """
+        Initialize the mock SOCKS5 proxy server.
+
+        Args:
+            target_handler: Handler for the target server behind the proxy.
+            target_use_tls: Whether the target server uses TLS.
+        """
+        self._target_handler = target_handler
+        self._target_use_tls = target_use_tls
+        self._server: asyncio.base_events.Server | None = None
+        self._target_server: MockHTTPServer | None = None
+        self._host = "127.0.0.1"
+        self._port = 0
+        self._client_ssl_context: ssl.SSLContext | None = None
+
+    def host(self) -> str:
+        """Return the proxy server host."""
+        return self._host
+
+    def port(self) -> int:
+        """Return the proxy server port."""
+        return self._port
+
+    def proxy_url(self) -> str:
+        """Return the proxy URL."""
+        return f"socks5://{self._host}:{self._port}"
+
+    def target_url(self, path: str = "/") -> str:
+        """Return a full URL for the target server."""
+        return self._target_server.url(path) if self._target_server else ""
+
+    def ssl_context(self) -> ssl.SSLContext | None:
+        """Return the client SSL context for TLS targets."""
+        return self._client_ssl_context
+
+    async def __aenter__(self) -> 'MockSocks5ProxyServer':
+        """Start the proxy and target servers."""
+        self._target_server = MockHTTPServer(self._target_handler, use_tls=self._target_use_tls)
+        await self._target_server.__aenter__()
+
+        if self._target_use_tls:
+            self._client_ssl_context = self._target_server.ssl_context()
+
+        self._server = await asyncio.start_server(
+            self._handle_client,
+            host=self._host,
+            port=0,
+        )
+
+        sock = self._server.sockets[0]
+        self._port = sock.getsockname()[1]
+
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        """Stop the proxy and target servers."""
+        if self._server:
+            self._server.close()
+            await self._server.wait_closed()
+
+        if self._target_server:
+            await self._target_server.__aexit__(*args)
+
+    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        """Handle a SOCKS5 proxy client connection."""
+        try:
+            # Read greeting
+            greeting = await reader.readexactly(2)
+            if greeting[0] != 0x05:
+                writer.write(b"\x05\xff")
+                await writer.drain()
+                return
+
+            # Read and discard the declared auth methods
+            nmethods = greeting[1]
+            if nmethods > 0:
+                await reader.readexactly(nmethods)
+
+            # Accept no-auth method
+            writer.write(b"\x05\x00")
+            await writer.drain()
+
+            # Read connect request
+            header = await reader.readexactly(4)
+            if header[0] != 0x05 or header[1] != 0x01:
+                writer.write(b"\x05\x07\x00\x01\x00\x00\x00\x00\x00\x00")
+                await writer.drain()
+                return
+
+            addr_type = header[3]
+            if addr_type == 0x01:
+                addr = await reader.readexactly(4)
+                target_host = socket.inet_ntoa(addr)
+
+            elif addr_type == 0x03:
+                addr_len = await reader.readexactly(1)
+                host_bytes = await reader.readexactly(addr_len[0])
+                target_host = host_bytes.decode("ascii")
+
+            elif addr_type == 0x04:
+                addr = await reader.readexactly(16)
+                target_host = socket.inet_ntop(socket.AF_INET6, addr)
+
+            else:
+                writer.write(b"\x05\x08\x00\x01\x00\x00\x00\x00\x00\x00")
+                await writer.drain()
+                return
+
+            port_bytes = await reader.readexactly(2)
+            target_port = int.from_bytes(port_bytes, "big")
+
+            # Connect to target
+            target_reader, target_writer = await asyncio.open_connection(
+                host=target_host,
+                port=target_port,
+            )
+
+            # Send success response with bound address
+            writer.write(b"\x05\x00\x00\x01\x00\x00\x00\x00\x00\x00")
+            await writer.drain()
+
+            await asyncio.gather(
+                self._relay(reader, target_writer),
+                self._relay(target_reader, writer),
+            )
+
+        except (ConnectionError, asyncio.IncompleteReadError, OSError):
+            pass
+
+        finally:
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except (ConnectionError, OSError):
+                pass
+
+    async def _relay(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        """Relay data between a reader and writer."""
+        try:
+            while True:
+                data = await reader.read(4096)
+                if not data:
+                    break
+
+                writer.write(data)
+                await writer.drain()
+
+        except (ConnectionError, OSError):
+            pass
+
+        finally:
+            try:
+                writer.close()
+            except (ConnectionError, OSError):
+                pass
+
+
+class TestHttpProxy:
+    """Tests for HTTP CONNECT proxy support."""
+
+    def test_get_via_http_proxy(self) -> None:
+        """GET request through an HTTP CONNECT proxy returns the correct response."""
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(writer, 200, b"proxied hello")
+
+        async def run() -> None:
+            async with MockHTTPProxyServer(handler) as proxy:
+                async with HttpClient(proxy=proxy.proxy_url()) as client:
+                    response = await client.get(proxy.target_url("/"))
+                    text = await response.text()
+                    assert text == "proxied hello"
+
+        asyncio.run(run())
+
+    def test_post_via_http_proxy(self) -> None:
+        """POST request through an HTTP CONNECT proxy sends and receives correctly."""
+        received: dict = {}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["body"] = request["body"]
+            received["method"] = request["method"]
+            _write_response(writer, 200, b"proxied post ok")
+
+        async def run() -> None:
+            async with MockHTTPProxyServer(handler) as proxy:
+                async with HttpClient(proxy=proxy.proxy_url()) as client:
+                    response = await client.post(proxy.target_url("/api"), json={"key": "value"})
+                    text = await response.text()
+                    assert text == "proxied post ok"
+
+        asyncio.run(run())
+        assert json.loads(received["body"]) == {"key": "value"}
+        assert received["method"] == "POST"
+
+    def test_get_via_http_proxy_with_tls(self) -> None:
+        """GET request through an HTTP CONNECT proxy to an HTTPS target works."""
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(writer, 200, b"secure proxied hello")
+
+        async def run() -> None:
+            async with MockHTTPProxyServer(handler, target_use_tls=True) as proxy:
+                async with HttpClient(
+                    proxy=proxy.proxy_url(),
+                    ssl_context=proxy.ssl_context(),
+                ) as client:
+                    response = await client.get(proxy.target_url("/"))
+                    text = await response.text()
+                    assert text == "secure proxied hello"
+
+        asyncio.run(run())
+
+
+class TestSocks5Proxy:
+    """Tests for SOCKS5 proxy support."""
+
+    def test_get_via_socks5_proxy(self) -> None:
+        """GET request through a SOCKS5 proxy returns the correct response."""
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(writer, 200, b"socks5 proxied hello")
+
+        async def run() -> None:
+            async with MockSocks5ProxyServer(handler) as proxy:
+                async with HttpClient(proxy=proxy.proxy_url()) as client:
+                    response = await client.get(proxy.target_url("/"))
+                    text = await response.text()
+                    assert text == "socks5 proxied hello"
+
+        asyncio.run(run())
+
+    def test_post_via_socks5_proxy(self) -> None:
+        """POST request through a SOCKS5 proxy sends and receives correctly."""
+        received: dict = {}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["body"] = request["body"]
+            received["method"] = request["method"]
+            _write_response(writer, 200, b"socks5 post ok")
+
+        async def run() -> None:
+            async with MockSocks5ProxyServer(handler) as proxy:
+                async with HttpClient(proxy=proxy.proxy_url()) as client:
+                    response = await client.post(proxy.target_url("/api"), json={"x": 1})
+                    text = await response.text()
+                    assert text == "socks5 post ok"
+
+        asyncio.run(run())
+        assert json.loads(received["body"]) == {"x": 1}
+        assert received["method"] == "POST"
+
+    def test_get_via_socks5_proxy_with_tls(self) -> None:
+        """GET request through a SOCKS5 proxy to an HTTPS target works."""
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(writer, 200, b"secure socks5 hello")
+
+        async def run() -> None:
+            async with MockSocks5ProxyServer(handler, target_use_tls=True) as proxy:
+                async with HttpClient(
+                    proxy=proxy.proxy_url(),
+                    ssl_context=proxy.ssl_context(),
+                ) as client:
+                    response = await client.get(proxy.target_url("/"))
+                    text = await response.text()
+                    assert text == "secure socks5 hello"
 
         asyncio.run(run())
