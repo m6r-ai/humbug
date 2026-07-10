@@ -33,7 +33,7 @@ from http_client import (
 from markdown_ import document_ir_to_markdown
 
 
-_MAX_RESPONSE_BYTES = 64 * 1024
+_MAX_INLINE_RESPONSE_BYTES = 64 * 1024
 
 # Header names whose values are redacted in authorization UI (case-insensitive).
 _SENSITIVE_HEADER_NAMES = frozenset({
@@ -56,8 +56,10 @@ class HttpAITool(AITool):
     and downloading files.
 
     All operations require user authorization. The user sees the method,
-    URL, headers, and body before approving. GET/POST/PUT/PATCH/DELETE responses are truncated
-    to 64KB.
+    URL, headers, and body before approving. GET/POST/PUT/PATCH/DELETE return
+    response bodies inline only when the final body text is at most 64KB
+    (measured after HTML-to-markdown or JSON formatting when those apply).
+    Larger bodies fail the tool call with instructions to use download.
 
     HTML responses are converted to readable markdown by default. Use
     ``format="raw"`` to receive the original HTML.
@@ -77,9 +79,11 @@ class HttpAITool(AITool):
                 "methods, and download files from external services. It supports GET, HEAD, POST, "
                 "PUT, PATCH, DELETE, and download operations.\n\n"
                 "All operations require user authorization — the user sees the method, URL, "
-                "headers, and body before approving. GET/POST/PUT/PATCH/DELETE responses are converted to readable "
-                "markdown or truncated to 64KB. Download writes directly to a file in the mindspace "
-                "without size limits."
+                "headers, and body before approving. GET/POST/PUT/PATCH/DELETE return the response "
+                "body inline only when that final body text is at most 64KB (after HTML-to-markdown "
+                "or JSON formatting when those apply); larger bodies fail the tool call and the "
+                "full response should be fetched with download. Download writes directly to a file "
+                "in the mindspace without an inline size limit."
             ),
             additional_parameters=[
                 AIToolParameter(
@@ -195,7 +199,8 @@ class HttpAITool(AITool):
                     "Fetch a URL via GET. Returns the HTTP status code, content type, "
                     "and response body as text. HTML responses are converted to readable "
                     "markdown by default; use format=\"raw\" for the original HTML. "
-                    "Output is truncated to 64KB."
+                    "The body is returned inline only when at most 64KB after any formatting; "
+                    "larger bodies fail the tool call — use download for the full response."
                 )
             ),
             "head": AIToolOperationDefinition(
@@ -224,7 +229,8 @@ class HttpAITool(AITool):
                     "Send a POST request with an optional JSON, raw, or multipart body. Returns the HTTP "
                     "status code, content type, and response body as text. HTML responses are "
                     "converted to readable markdown by default; use format=\"raw\" for the "
-                    "original HTML. Output is truncated to 64KB."
+                    "original HTML. The body is returned inline only when at most 64KB after any "
+                    "formatting; larger bodies fail the tool call — use download for the full response."
                 )
             ),
             "put": AIToolOperationDefinition(
@@ -240,7 +246,8 @@ class HttpAITool(AITool):
                     "Send a PUT request with an optional JSON, raw, or multipart body. Returns the HTTP "
                     "status code, content type, and response body as text. HTML responses are "
                     "converted to readable markdown by default; use format=\"raw\" for the "
-                    "original HTML. Output is truncated to 64KB."
+                    "original HTML. The body is returned inline only when at most 64KB after any "
+                    "formatting; larger bodies fail the tool call — use download for the full response."
                 )
             ),
             "patch": AIToolOperationDefinition(
@@ -256,7 +263,8 @@ class HttpAITool(AITool):
                     "Send a PATCH request with an optional JSON, raw, or multipart body. Returns the HTTP "
                     "status code, content type, and response body as text. HTML responses are "
                     "converted to readable markdown by default; use format=\"raw\" for the "
-                    "original HTML. Output is truncated to 64KB."
+                    "original HTML. The body is returned inline only when at most 64KB after any "
+                    "formatting; larger bodies fail the tool call — use download for the full response."
                 )
             ),
             "delete": AIToolOperationDefinition(
@@ -269,7 +277,8 @@ class HttpAITool(AITool):
                     "Send a DELETE request to a URL. Returns the HTTP status code, "
                     "content type, and response body as text. HTML responses are converted "
                     "to readable markdown by default; use format=\"raw\" for the original "
-                    "HTML. Output is truncated to 64KB."
+                    "HTML. The body is returned inline only when at most 64KB after any "
+                    "formatting; larger bodies fail the tool call — use download for the full response."
                 )
             ),
             "download": AIToolOperationDefinition(
@@ -281,7 +290,7 @@ class HttpAITool(AITool):
                 description=(
                     "Download a file from a URL and save it to the mindspace. The file is "
                     "written directly to disk without passing through the AI's context window, "
-                    "so there is no 64KB size limit. Returns the status code, content type, "
+                    "so there is no inline size limit. Returns the status code, content type, "
                     "and number of bytes written."
                 )
             ),
@@ -564,7 +573,8 @@ class HttpAITool(AITool):
                 if status >= 400:
                     body = await response.text()
                     raise AIToolExecutionError(
-                        f"Download failed with HTTP {status}: {self._truncate(body)}"
+                        f"Download failed with HTTP {status}: "
+                        f"{self._error_body_excerpt(body)}"
                     )
 
                 content_type = response.headers().get("content-type", "")
@@ -614,8 +624,9 @@ class HttpAITool(AITool):
         """
         Build an AIToolResult from an HttpResponse.
 
-        Reads the response body and converts it based on content type and
-        the requested format. Truncates to _MAX_RESPONSE_BYTES.
+        Reads the response body and converts it based on content type and the
+        requested format. Raises AIToolExecutionError when the final body text
+        exceeds _MAX_INLINE_RESPONSE_BYTES.
 
         Args:
             tool_call: The original tool call.
@@ -624,6 +635,9 @@ class HttpAITool(AITool):
 
         Returns:
             AIToolResult with status, content type, and body.
+
+        Raises:
+            AIToolExecutionError: If the formatted body exceeds the inline limit.
         """
         headers = response.headers()
         content_type = response.headers().get("content-type", "")
@@ -636,7 +650,7 @@ class HttpAITool(AITool):
             except Exception:
                 body = ""
 
-            body = self._truncate(body)
+            self._ensure_inline_body_fits(body)
             return AIToolResult(
                 id=tool_call.id,
                 name="http",
@@ -658,8 +672,7 @@ class HttpAITool(AITool):
         else:
             body = await response.text()
 
-        body = self._truncate(body)
-
+        self._ensure_inline_body_fits(body)
         return AIToolResult(
             id=tool_call.id,
             name="http",
@@ -719,7 +732,7 @@ class HttpAITool(AITool):
         Args:
             status: HTTP status code.
             content_type: Response content type.
-            body: Response body text (already truncated).
+            body: Response body text.
             headers: Response headers dict.
 
         Returns:
@@ -775,24 +788,46 @@ class HttpAITool(AITool):
             self._logger.warning("HTML to markdown conversion failed: %s", str(e))
             return html
 
-    def _truncate(self, content: str) -> str:
+    def _ensure_inline_body_fits(self, content: str) -> None:
         """
-        Truncate content if it exceeds the response size limit.
+        Reject response bodies that exceed the inline context size limit.
 
         Args:
             content: Full content string.
 
-        Returns:
-            Content truncated to _MAX_RESPONSE_BYTES with a notice, or the
-            original content if within the limit.
+        Raises:
+            AIToolExecutionError: If content exceeds _MAX_INLINE_RESPONSE_BYTES.
         """
+        size = len(content.encode("utf-8"))
+        if size <= _MAX_INLINE_RESPONSE_BYTES:
+            return
+
+        raise AIToolExecutionError(
+            f"Response body is too large to return inline ({size} bytes; "
+            f"limit is {_MAX_INLINE_RESPONSE_BYTES} bytes). Use the http download "
+            f"operation to save the full response to a mindspace file, then read "
+            f"or search it with the filesystem tools."
+        )
+
+    def _error_body_excerpt(self, content: str) -> str:
+        """
+        Return a short excerpt of an HTTP error body for exception messages.
+
+        Args:
+            content: Full error response body.
+
+        Returns:
+            The original content if small enough for an error message, otherwise
+            a prefix with an omission note.
+        """
+        max_excerpt_bytes = 2 * 1024
         content_bytes = content.encode("utf-8")
-        if len(content_bytes) <= _MAX_RESPONSE_BYTES:
+        if len(content_bytes) <= max_excerpt_bytes:
             return content
 
-        truncated = content_bytes[:_MAX_RESPONSE_BYTES].decode("utf-8", errors="ignore")
-        omitted = len(content_bytes) - _MAX_RESPONSE_BYTES
-        return f"{truncated}\n... output truncated, {omitted} bytes omitted"
+        excerpt = content_bytes[:max_excerpt_bytes].decode("utf-8", errors="ignore")
+        omitted = len(content_bytes) - max_excerpt_bytes
+        return f"{excerpt}\n... error body truncated, {omitted} bytes omitted"
 
     def _redact_header_value(self, name: str, value: str) -> str:
         """

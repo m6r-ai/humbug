@@ -293,8 +293,8 @@ class TestHttpAIToolGet:
         assert "Status: 404" in result.content
         assert "Not Found" in result.content
 
-    def test_get_truncates_large_response(self) -> None:
-        """GET should truncate responses over 64KB."""
+    def test_get_large_response_body_raises_execution_error(self) -> None:
+        """GET should fail when the response body exceeds the inline size limit."""
         tool = HttpAITool(_make_mindspace_mock())
         large_text = "A" * (70 * 1024)
         tool_call = _make_tool_call("get", url="https://example.com")
@@ -306,9 +306,11 @@ class TestHttpAIToolGet:
             mock_client.get = AsyncMock(return_value=mock_response)
             mock_client_class.return_value = mock_client
 
-            result = _execute_tool(tool, tool_call)
+            with pytest.raises(AIToolExecutionError, match="too large to return inline") as exc_info:
+                _execute_tool(tool, tool_call)
 
-        assert "truncated" in result.content
+        assert "download" in str(exc_info.value)
+        assert str(70 * 1024) in str(exc_info.value)
 
     def test_get_connection_error_raises_execution_error(self) -> None:
         """GET with a connection error should raise AIToolExecutionError."""
@@ -1682,30 +1684,32 @@ class TestHttpAIToolHtmlConversion:
         assert result == html
 
 
-class TestHttpAIToolTruncation:
-    """Tests for response truncation."""
+class TestHttpAIToolInlineBodyLimit:
+    """Tests for the inline response body size limit."""
 
-    def test_short_content_not_truncated(self) -> None:
-        """Content under 64KB should not be truncated."""
+    def test_short_content_accepted(self) -> None:
+        """Content under 64KB should be accepted for inline return."""
         tool = HttpAITool(_make_mindspace_mock())
         content = "Hello, world!"
-        result = tool._truncate(content)
-        assert result == content
+        tool._ensure_inline_body_fits(content)
 
-    def test_large_content_truncated(self) -> None:
-        """Content over 64KB should be truncated with a notice."""
+    def test_large_content_raises_execution_error(self) -> None:
+        """Content over 64KB should fail with AIToolExecutionError."""
         tool = HttpAITool(_make_mindspace_mock())
         content = "A" * (70 * 1024)
-        result = tool._truncate(content)
-        assert "truncated" in result
-        assert "omitted" in result
+        with pytest.raises(AIToolExecutionError, match="too large to return inline") as exc_info:
+            tool._ensure_inline_body_fits(content)
 
-    def test_truncation_at_exact_limit(self) -> None:
-        """Content at exactly 64KB should not be truncated."""
+        message = str(exc_info.value)
+        assert "download" in message
+        assert str(70 * 1024) in message
+        assert str(64 * 1024) in message
+
+    def test_content_at_exact_limit_accepted(self) -> None:
+        """Content at exactly 64KB should be accepted for inline return."""
         tool = HttpAITool(_make_mindspace_mock())
         content = "A" * (64 * 1024)
-        result = tool._truncate(content)
-        assert result == content
+        tool._ensure_inline_body_fits(content)
 
 
 class TestHttpAIToolUrlValidation:
