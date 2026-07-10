@@ -269,7 +269,7 @@ class HttpClient:
     Minimal async HTTP client built on asyncio streams.
 
     Each request creates a new TCP/TLS connection.  No connection pooling.
-    Supports GET and POST, JSON and raw byte bodies, TLS with caller-supplied
+    Supports GET, HEAD, POST, PUT, PATCH, and DELETE, JSON and raw byte bodies, TLS with caller-supplied
     SSL contexts, connect/read timeouts, and redirect following.
     """
 
@@ -346,6 +346,65 @@ class HttpClient:
         """
         return await self._request("POST", url, headers=headers, json=json, data=data)
 
+    async def put(
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        data: bytes | None = None,
+    ) -> HttpResponse:
+        """
+        Send a PUT request.
+
+        Args:
+            url: Full URL to send to
+            headers: Optional request headers
+            json: JSON body (serialized automatically)
+            data: Raw byte body (used instead of json if both provided)
+
+        Returns:
+            HttpResponse instance
+        """
+        return await self._request("PUT", url, headers=headers, json=json, data=data)
+
+    async def patch(
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        data: bytes | None = None,
+    ) -> HttpResponse:
+        """
+        Send a PATCH request.
+
+        Args:
+            url: Full URL to send to
+            headers: Optional request headers
+            json: JSON body (serialized automatically)
+            data: Raw byte body (used instead of json if both provided)
+
+        Returns:
+            HttpResponse instance
+        """
+        return await self._request("PATCH", url, headers=headers, json=json, data=data)
+
+    async def delete(
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+    ) -> HttpResponse:
+        """
+        Send a DELETE request.
+
+        Args:
+            url: Full URL to send to
+            headers: Optional request headers
+
+        Returns:
+            HttpResponse instance
+        """
+        return await self._request("DELETE", url, headers=headers)
+
     async def __aenter__(self) -> 'HttpClient':
         """Enter async context."""
         return self
@@ -407,7 +466,7 @@ class HttpClient:
             body = json_module.dumps(json).encode("utf-8")
             request_headers.setdefault("Content-Type", "application/json")
 
-        if method == "POST":
+        if method in ("POST", "PUT", "PATCH"):
             request_headers["Content-Length"] = str(len(body) if body is not None else 0)
 
         # Connect
@@ -468,8 +527,8 @@ class HttpClient:
                     redirect_json = json
                     redirect_data = data
 
-                    # 301, 302, 303: POST becomes GET, body dropped
-                    if response.status() in (301, 302, 303) and method == "POST":
+                    # 301, 302, 303: methods with a body are changed to GET
+                    if response.status() in (301, 302, 303) and method in ("POST", "PUT", "PATCH"):
                         redirect_method = "GET"
                         redirect_json = None
                         redirect_data = None

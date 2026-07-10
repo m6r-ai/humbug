@@ -36,10 +36,11 @@ _MAX_RESPONSE_BYTES = 64 * 1024
 
 class HttpAITool(AITool):
     """
-    HTTP tool for fetching URLs, making POST requests, and downloading files.
+    HTTP tool for fetching URLs, making requests with all standard HTTP methods,
+    and downloading files.
 
     All operations require user authorization. The user sees the method,
-    URL, headers, and body before approving. GET/POST responses are truncated
+    URL, headers, and body before approving. GET/POST/PUT/PATCH/DELETE responses are truncated
     to 64KB.
 
     HTML responses are converted to readable markdown by default. Use
@@ -56,10 +57,11 @@ class HttpAITool(AITool):
         return self._build_definition_from_operations(
             name="http",
             description_prefix=(
-                "The http tool lets you (the AI) fetch URLs, make POST requests, and download "
-                "files from external services. It supports GET, POST, and download operations.\n\n"
+                "The http tool lets you (the AI) fetch URLs, make requests with all standard HTTP "
+                "methods, and download files from external services. It supports GET, HEAD, POST, "
+                "PUT, PATCH, DELETE, and download operations.\n\n"
                 "All operations require user authorization — the user sees the method, URL, "
-                "headers, and body before approving. GET/POST responses are converted to readable "
+                "headers, and body before approving. GET/POST/PUT/PATCH/DELETE responses are converted to readable "
                 "markdown or truncated to 64KB. Download writes directly to a file in the mindspace "
                 "without size limits."
             ),
@@ -113,8 +115,8 @@ class HttpAITool(AITool):
     def get_brief_description(self) -> str:
         """Get brief one-line description for system prompt."""
         return (
-            "HTTP client operations (GET, HEAD, POST, download). Fetch URLs, check headers, "
-            "make API requests, download files. HTML responses converted to markdown by default."
+            "HTTP client operations (GET, HEAD, POST, PUT, PATCH, DELETE, download). Fetch URLs, "
+            "check headers, make API requests, download files. HTML responses converted to markdown by default."
         )
 
     def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
@@ -157,6 +159,45 @@ class HttpAITool(AITool):
                     "status code, content type, and response body as text. HTML responses are "
                     "converted to readable markdown by default; use format=\"raw\" for the "
                     "original HTML. Output is truncated to 64KB."
+                )
+            ),
+            "put": AIToolOperationDefinition(
+                name="put",
+                handler=self._put,
+                extract_context=self._extract_put_context,
+                allowed_parameters={"url", "headers", "json", "data", "format"},
+                required_parameters={"url"},
+                description=(
+                    "Send a PUT request with an optional JSON or raw body. Returns the HTTP "
+                    "status code, content type, and response body as text. HTML responses are "
+                    "converted to readable markdown by default; use format=\"raw\" for the "
+                    "original HTML. Output is truncated to 64KB."
+                )
+            ),
+            "patch": AIToolOperationDefinition(
+                name="patch",
+                handler=self._patch,
+                extract_context=self._extract_patch_context,
+                allowed_parameters={"url", "headers", "json", "data", "format"},
+                required_parameters={"url"},
+                description=(
+                    "Send a PATCH request with an optional JSON or raw body. Returns the HTTP "
+                    "status code, content type, and response body as text. HTML responses are "
+                    "converted to readable markdown by default; use format=\"raw\" for the "
+                    "original HTML. Output is truncated to 64KB."
+                )
+            ),
+            "delete": AIToolOperationDefinition(
+                name="delete",
+                handler=self._delete,
+                extract_context=self._extract_delete_context,
+                allowed_parameters={"url", "headers", "format"},
+                required_parameters={"url"},
+                description=(
+                    "Send a DELETE request to a URL. Returns the HTTP status code, "
+                    "content type, and response body as text. HTML responses are converted "
+                    "to readable markdown by default; use format=\"raw\" for the original "
+                    "HTML. Output is truncated to 64KB."
                 )
             ),
             "download": AIToolOperationDefinition(
@@ -250,6 +291,78 @@ class HttpAITool(AITool):
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """POST operation — send a POST request."""
+        return await self._body_request("POST", tool_call, request_authorization)
+
+    async def _put(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """PUT operation — send a PUT request."""
+        return await self._body_request("PUT", tool_call, request_authorization)
+
+    async def _patch(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """PATCH operation — send a PATCH request."""
+        return await self._body_request("PATCH", tool_call, request_authorization)
+
+    async def _delete(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """DELETE operation — send a DELETE request."""
+        arguments = tool_call.arguments
+        url = self._get_required_str_value("url", arguments)
+        headers = self._get_optional_dict_value("headers", arguments)
+        format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
+
+        self._validate_url(url)
+
+        context = f"The AI is requesting to DELETE URL:\n  DELETE {url}"
+        if headers:
+            context += f"\n  Headers: {headers}"
+
+        authorized = await request_authorization("http", arguments, context, None, True)
+
+        if not authorized:
+            raise AIToolAuthorizationDenied(f"User denied permission to DELETE URL: {url}")
+
+        try:
+            async with HttpClient() as client:
+                response = await client.delete(url, headers=headers)
+                return await self._build_result(tool_call, response, format_type)
+
+        except (ClientConnectorError, ServerTimeoutError, ClientResponseError, HttpClientError) as e:
+            raise AIToolExecutionError(f"HTTP request failed: {e}") from e
+
+        except Exception as e:
+            self._logger.error("Unexpected error in DELETE %s: %s", url, str(e), exc_info=True)
+            raise AIToolExecutionError(f"HTTP request failed: {e}") from e
+
+    async def _body_request(
+        self,
+        method: str,
+        tool_call: AIToolCall,
+        request_authorization: AIToolAuthorizationCallback,
+    ) -> AIToolResult:
+        """
+        Shared handler for body-carrying HTTP methods (POST, PUT, PATCH).
+
+        Args:
+            method: HTTP method name (POST, PUT, or PATCH).
+            tool_call: The original tool call containing arguments.
+            request_authorization: Authorization callback.
+
+        Returns:
+            AIToolResult with status, content type, and body.
+        """
         arguments = tool_call.arguments
         url = self._get_required_str_value("url", arguments)
         headers = self._get_optional_dict_value("headers", arguments)
@@ -259,7 +372,7 @@ class HttpAITool(AITool):
 
         self._validate_url(url)
 
-        context = f"The AI is requesting to POST to URL:\n  POST {url}"
+        context = f"The AI is requesting to {method} to URL:\n  {method} {url}"
         if headers:
             context += f"\n  Headers: {headers}"
 
@@ -272,11 +385,16 @@ class HttpAITool(AITool):
         authorized = await request_authorization("http", arguments, context, None, True)
 
         if not authorized:
-            raise AIToolAuthorizationDenied(f"User denied permission to POST to URL: {url}")
+            raise AIToolAuthorizationDenied(f"User denied permission to {method} to URL: {url}")
 
         try:
             async with HttpClient() as client:
-                response = await client.post(
+                client_method = {
+                    "POST": client.post,
+                    "PUT": client.put,
+                    "PATCH": client.patch,
+                }[method]
+                response = await client_method(
                     url,
                     headers=headers,
                     json=json_body if json_body is not None else None,
@@ -288,7 +406,7 @@ class HttpAITool(AITool):
             raise AIToolExecutionError(f"HTTP request failed: {e}") from e
 
         except Exception as e:
-            self._logger.error("Unexpected error in POST %s: %s", url, str(e), exc_info=True)
+            self._logger.error("Unexpected error in %s %s: %s", method, url, str(e), exc_info=True)
             raise AIToolExecutionError(f"HTTP request failed: {e}") from e
 
     async def _download(
@@ -627,6 +745,21 @@ class HttpAITool(AITool):
         """Extract context for POST operation."""
         url = arguments.get("url", "?")
         return f"POST {url}"
+
+    def _extract_put_context(self, arguments: dict[str, Any]) -> str | None:
+        """Extract context for PUT operation."""
+        url = arguments.get("url", "?")
+        return f"PUT {url}"
+
+    def _extract_patch_context(self, arguments: dict[str, Any]) -> str | None:
+        """Extract context for PATCH operation."""
+        url = arguments.get("url", "?")
+        return f"PATCH {url}"
+
+    def _extract_delete_context(self, arguments: dict[str, Any]) -> str | None:
+        """Extract context for DELETE operation."""
+        url = arguments.get("url", "?")
+        return f"DELETE {url}"
 
     def _extract_head_context(self, arguments: dict[str, Any]) -> str | None:
         """Extract context for HEAD operation."""

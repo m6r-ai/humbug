@@ -427,6 +427,221 @@ class TestHttpPost:
         assert received["content_length"] == "0"
 
 
+# --- Tests: basic PUT ---
+
+class TestHttpPut:
+    """Tests for HTTP PUT requests."""
+
+    def test_put_with_json_body(self) -> None:
+        """PUT request sends JSON body with correct method."""
+        received: dict = {}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["method"] = request["method"]
+            received["body"] = request["body"]
+            received["content_type"] = request["headers"].get("content-type")
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.put(server.url("/api"), json={"name": "updated"})
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["method"] == "PUT"
+        assert json.loads(received["body"]) == {"name": "updated"}
+        assert received["content_type"] == "application/json"
+
+    def test_put_with_raw_data(self) -> None:
+        """PUT request sends raw byte body."""
+        received: dict = {}
+        raw = b'{"raw": "put"}'
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["body"] = request["body"]
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.put(
+                        server.url("/"),
+                        data=raw,
+                        headers={"Content-Type": "application/json"},
+                    )
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["body"] == raw
+
+    def test_put_sends_content_length(self) -> None:
+        """PUT request sends Content-Length header."""
+        received: dict = {}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["content_length"] = request["headers"].get("content-length")
+            received["method"] = request["method"]
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.put(server.url("/"), json={"x": 1})
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["method"] == "PUT"
+        assert received["content_length"] is not None
+        assert received["content_length"] != "0"
+
+
+# --- Tests: basic PATCH ---
+
+class TestHttpPatch:
+    """Tests for HTTP PATCH requests."""
+
+    def test_patch_with_json_body(self) -> None:
+        """PATCH request sends JSON body with correct method."""
+        received: dict = {}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["method"] = request["method"]
+            received["body"] = request["body"]
+            received["content_type"] = request["headers"].get("content-type")
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.patch(server.url("/api"), json={"op": "replace", "path": "/name", "value": "new"})
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["method"] == "PATCH"
+        assert json.loads(received["body"]) == {"op": "replace", "path": "/name", "value": "new"}
+        assert received["content_type"] == "application/json"
+
+    def test_patch_with_raw_data(self) -> None:
+        """PATCH request sends raw byte body."""
+        received: dict = {}
+        raw = b'{"raw": "patch"}'
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["body"] = request["body"]
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.patch(
+                        server.url("/"),
+                        data=raw,
+                        headers={"Content-Type": "application/json"},
+                    )
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["body"] == raw
+
+    def test_patch_sends_content_length(self) -> None:
+        """PATCH request sends Content-Length header."""
+        received: dict = {}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["content_length"] = request["headers"].get("content-length")
+            received["method"] = request["method"]
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.patch(server.url("/"), json={"x": 1})
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["method"] == "PATCH"
+        assert received["content_length"] is not None
+        assert received["content_length"] != "0"
+
+
+# --- Tests: basic DELETE ---
+
+class TestHttpDelete:
+    """Tests for HTTP DELETE requests."""
+
+    def test_delete_sends_correct_method(self) -> None:
+        """DELETE request sends the correct method."""
+        received: dict = {}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["method"] = request["method"]
+            received["path"] = request["path"]
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.delete(server.url("/api/resource/123"))
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["method"] == "DELETE"
+        assert received["path"] == "/api/resource/123"
+
+    def test_delete_returns_response(self) -> None:
+        """DELETE request returns a response with the correct status."""
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(writer, 204, b"")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.delete(server.url("/api/resource/123"))
+                    assert response.status() == 204
+                    text = await response.text()
+                    assert text == ""
+
+        asyncio.run(run())
+
+    def test_delete_passes_headers(self) -> None:
+        """DELETE request sends caller-supplied headers."""
+        received_headers: dict[str, str] = {}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received_headers.update(request["headers"])
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.delete(
+                        server.url("/"),
+                        headers={"Authorization": "Bearer token123"},
+                    )
+                    await response.text()
+
+        asyncio.run(run())
+        assert received_headers.get("authorization") == "Bearer token123"
+
+    def test_delete_does_not_send_content_length(self) -> None:
+        """DELETE request does not send a Content-Length header."""
+        received: dict = {}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["content_length"] = request["headers"].get("content-length")
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.delete(server.url("/"))
+                    await response.text()
+
+        asyncio.run(run())
+        assert "content_length" not in received or received["content_length"] is None
+
+
 # --- Tests: error handling ---
 
 class TestHttpErrors:

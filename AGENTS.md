@@ -213,13 +213,12 @@ AI tool implementation for tool documentation.
 
 ### `src/http_ai_tool/`
 AI tool implementation for HTTP operations, wrapping the `http_client` library.
-Exposes GET, HEAD, POST, and download operations.
+Exposes GET, HEAD, POST, PUT, PATCH, DELETE, and download operations.
 All operations require user authorization (the user sees the method, URL, headers,
 and body before approving). HTML responses are converted to readable markdown by
 default via the `html_` → `document_ir` → `markdown_` pipeline; use `format="raw"`
-for the original HTML. GET/POST responses are truncated to 64KB. HEAD returns
+for the original HTML. GET/POST/PUT/PATCH/DELETE responses are truncated to 64KB. HEAD returns
 headers only (no body). Download writes directly to a file in the mindspace without size limits.
-directly to a file in the mindspace without size limits.
 
 ### `src/html_/`
 HTML document processing. Includes a self-contained lexer and DOM-building parser
@@ -230,7 +229,7 @@ and the document converter tool (HTML ↔ other formats).
 
 ### `src/http_client/`
 Async HTTP client built on the Python standard library (`asyncio` streams + `ssl`).
-No external dependencies.  Provides `HttpClient` and `HttpResponse` with GET/POST,
+No external dependencies.  Provides `HttpClient` and `HttpResponse` with GET/HEAD/POST/PUT/PATCH/DELETE,
 TLS, streaming, timeouts, redirect following, and a structured exception hierarchy.
 
 ### `src/markdown_/`

@@ -79,13 +79,16 @@ class TestHttpAIToolDefinition:
         assert definition.name == "http"
 
     def test_definition_has_operations(self) -> None:
-        """Tool should define get and post operations."""
+        """Tool should define all expected operations."""
         tool = HttpAITool(_make_mindspace_mock())
         operations = tool.get_operation_definitions()
         assert "get" in operations
         assert "head" in operations
         assert "download" in operations
         assert "post" in operations
+        assert "put" in operations
+        assert "patch" in operations
+        assert "delete" in operations
 
     def test_brief_description(self) -> None:
         """Brief description should mention HTTP operations."""
@@ -635,6 +638,324 @@ class TestHttpAIToolPost:
             _execute_tool(tool, tool_call, auth)
 
         assert captured_destructive == [False]
+
+
+class TestHttpAIToolPut:
+    """Tests for the PUT operation."""
+
+    def test_put_requires_url(self) -> None:
+        """PUT without url should raise AIToolExecutionError."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("put")
+        with pytest.raises(AIToolExecutionError, match="url"):
+            _execute_tool(tool, tool_call)
+
+    def test_put_requires_authorization(self) -> None:
+        """PUT should raise AIToolAuthorizationDenied when denied."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("put", url="https://example.com")
+        auth = _make_auth_callback(authorized=False)
+        with pytest.raises(AIToolAuthorizationDenied):
+            _execute_tool(tool, tool_call, auth)
+
+    def test_put_with_json_body(self) -> None:
+        """PUT should send JSON body when provided."""
+        tool = HttpAITool(_make_mindspace_mock())
+        json_body = {"name": "updated", "value": 99}
+        tool_call = _make_tool_call("put", url="https://example.com/api/1", json=json_body)
+        mock_response = _make_mock_response(
+            headers={"content-type": "application/json"},
+            json_data={"success": True}
+        )
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.put = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        mock_client.put.assert_called_once_with(
+            "https://example.com/api/1",
+            headers=None,
+            json=json_body,
+            data=None,
+        )
+        assert "Status: 200" in result.content
+
+    def test_put_with_raw_data(self) -> None:
+        """PUT should send raw data when provided."""
+        tool = HttpAITool(_make_mindspace_mock())
+        data_body = "raw put body"
+        tool_call = _make_tool_call("put", url="https://example.com/api/1", data=data_body)
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.put = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client.put.assert_called_once_with(
+            "https://example.com/api/1",
+            headers=None,
+            json=None,
+            data=b"raw put body",
+        )
+
+    def test_put_marks_destructive(self) -> None:
+        """PUT should mark the authorization request as destructive."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("put", url="https://example.com/api/1", json={"x": 1})
+        mock_response = _make_mock_response(text="OK")
+
+        captured_destructive: list[bool] = []
+
+        async def capturing_auth(
+            _tool_name: str,
+            _arguments: dict[str, Any],
+            _context: str,
+            _requester_ref: Any,
+            destructive: bool
+        ) -> bool:
+            captured_destructive.append(destructive)
+            return True
+
+        auth = MagicMock(side_effect=capturing_auth)
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.put = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call, auth)
+
+        assert captured_destructive == [True]
+
+    def test_put_context(self) -> None:
+        """PUT context should include the URL."""
+        tool = HttpAITool(_make_mindspace_mock())
+        ops = tool.get_operation_definitions()
+        result = ops["put"].extract_context({"url": "https://example.com"})
+        assert result == "PUT https://example.com"
+
+
+class TestHttpAIToolPatch:
+    """Tests for the PATCH operation."""
+
+    def test_patch_requires_url(self) -> None:
+        """PATCH without url should raise AIToolExecutionError."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("patch")
+        with pytest.raises(AIToolExecutionError, match="url"):
+            _execute_tool(tool, tool_call)
+
+    def test_patch_requires_authorization(self) -> None:
+        """PATCH should raise AIToolAuthorizationDenied when denied."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("patch", url="https://example.com")
+        auth = _make_auth_callback(authorized=False)
+        with pytest.raises(AIToolAuthorizationDenied):
+            _execute_tool(tool, tool_call, auth)
+
+    def test_patch_with_json_body(self) -> None:
+        """PATCH should send JSON body when provided."""
+        tool = HttpAITool(_make_mindspace_mock())
+        json_body = {"op": "replace", "path": "/name", "value": "new"}
+        tool_call = _make_tool_call("patch", url="https://example.com/api/1", json=json_body)
+        mock_response = _make_mock_response(
+            headers={"content-type": "application/json"},
+            json_data={"success": True}
+        )
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.patch = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        mock_client.patch.assert_called_once_with(
+            "https://example.com/api/1",
+            headers=None,
+            json=json_body,
+            data=None,
+        )
+        assert "Status: 200" in result.content
+
+    def test_patch_with_raw_data(self) -> None:
+        """PATCH should send raw data when provided."""
+        tool = HttpAITool(_make_mindspace_mock())
+        data_body = "raw patch body"
+        tool_call = _make_tool_call("patch", url="https://example.com/api/1", data=data_body)
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.patch = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client.patch.assert_called_once_with(
+            "https://example.com/api/1",
+            headers=None,
+            json=None,
+            data=b"raw patch body",
+        )
+
+    def test_patch_marks_destructive(self) -> None:
+        """PATCH should mark the authorization request as destructive."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("patch", url="https://example.com/api/1", json={"x": 1})
+        mock_response = _make_mock_response(text="OK")
+
+        captured_destructive: list[bool] = []
+
+        async def capturing_auth(
+            _tool_name: str,
+            _arguments: dict[str, Any],
+            _context: str,
+            _requester_ref: Any,
+            destructive: bool
+        ) -> bool:
+            captured_destructive.append(destructive)
+            return True
+
+        auth = MagicMock(side_effect=capturing_auth)
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.patch = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call, auth)
+
+        assert captured_destructive == [True]
+
+    def test_patch_context(self) -> None:
+        """PATCH context should include the URL."""
+        tool = HttpAITool(_make_mindspace_mock())
+        ops = tool.get_operation_definitions()
+        result = ops["patch"].extract_context({"url": "https://example.com"})
+        assert result == "PATCH https://example.com"
+
+
+class TestHttpAIToolDelete:
+    """Tests for the DELETE operation."""
+
+    def test_delete_requires_url(self) -> None:
+        """DELETE without url should raise AIToolExecutionError."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("delete")
+        with pytest.raises(AIToolExecutionError, match="url"):
+            _execute_tool(tool, tool_call)
+
+    def test_delete_requires_authorization(self) -> None:
+        """DELETE should raise AIToolAuthorizationDenied when denied."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("delete", url="https://example.com")
+        auth = _make_auth_callback(authorized=False)
+        with pytest.raises(AIToolAuthorizationDenied):
+            _execute_tool(tool, tool_call, auth)
+
+    def test_delete_calls_client_delete(self) -> None:
+        """DELETE should call the client's delete method."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("delete", url="https://example.com/api/1")
+        mock_response = _make_mock_response(
+            status=204,
+            headers={"content-type": "application/json"},
+            text=""
+        )
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.delete = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        mock_client.delete.assert_called_once_with(
+            "https://example.com/api/1",
+            headers=None,
+        )
+        assert "Status: 204" in result.content
+
+    def test_delete_passes_headers(self) -> None:
+        """DELETE should pass headers to the HTTP client."""
+        tool = HttpAITool(_make_mindspace_mock())
+        headers = {"Authorization": "Bearer token123"}
+        tool_call = _make_tool_call("delete", url="https://example.com/api/1", headers=headers)
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.delete = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client.delete.assert_called_once_with(
+            "https://example.com/api/1",
+            headers=headers,
+        )
+
+    def test_delete_marks_destructive(self) -> None:
+        """DELETE should mark the authorization request as destructive."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("delete", url="https://example.com/api/1")
+        mock_response = _make_mock_response(text="OK")
+
+        captured_destructive: list[bool] = []
+
+        async def capturing_auth(
+            _tool_name: str,
+            _arguments: dict[str, Any],
+            _context: str,
+            _requester_ref: Any,
+            destructive: bool
+        ) -> bool:
+            captured_destructive.append(destructive)
+            return True
+
+        auth = MagicMock(side_effect=capturing_auth)
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.delete = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call, auth)
+
+        assert captured_destructive == [True]
+
+    def test_delete_context(self) -> None:
+        """DELETE context should include the URL."""
+        tool = HttpAITool(_make_mindspace_mock())
+        ops = tool.get_operation_definitions()
+        result = ops["delete"].extract_context({"url": "https://example.com"})
+        assert result == "DELETE https://example.com"
+
+    def test_delete_validates_url_scheme(self) -> None:
+        """DELETE with missing scheme should raise AIToolExecutionError."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("delete", url="example.com")
+        with pytest.raises(AIToolExecutionError, match="scheme"):
+            _execute_tool(tool, tool_call)
 
 
 class TestHttpAIToolHtmlConversion:
