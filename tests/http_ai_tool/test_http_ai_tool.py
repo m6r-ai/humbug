@@ -454,12 +454,11 @@ class TestHttpAIToolHead:
 
         assert "Status: 404" in result.content
 
-    def test_head_context(self) -> None:
-        """HEAD context should include the URL."""
+    def test_head_has_no_extract_context(self) -> None:
+        """HEAD should not attach extract_context (URL is in the approval reason)."""
         tool = HttpAITool(_make_mindspace_mock())
         ops = tool.get_operation_definitions()
-        result = ops["head"].extract_context({"url": "https://example.com"})
-        assert result == "HEAD https://example.com"
+        assert ops["head"].extract_context is None
 
 
 class TestHttpAIToolPost:
@@ -737,12 +736,11 @@ class TestHttpAIToolPut:
 
         assert captured_destructive == [True]
 
-    def test_put_context(self) -> None:
-        """PUT context should include the URL."""
+    def test_put_has_no_extract_context(self) -> None:
+        """PUT should not attach extract_context (URL is in the approval reason)."""
         tool = HttpAITool(_make_mindspace_mock())
         ops = tool.get_operation_definitions()
-        result = ops["put"].extract_context({"url": "https://example.com"})
-        assert result == "PUT https://example.com"
+        assert ops["put"].extract_context is None
 
 
 class TestHttpAIToolPatch:
@@ -842,12 +840,11 @@ class TestHttpAIToolPatch:
 
         assert captured_destructive == [True]
 
-    def test_patch_context(self) -> None:
-        """PATCH context should include the URL."""
+    def test_patch_has_no_extract_context(self) -> None:
+        """PATCH should not attach extract_context (URL is in the approval reason)."""
         tool = HttpAITool(_make_mindspace_mock())
         ops = tool.get_operation_definitions()
-        result = ops["patch"].extract_context({"url": "https://example.com"})
-        assert result == "PATCH https://example.com"
+        assert ops["patch"].extract_context is None
 
 
 class TestHttpAIToolDelete:
@@ -943,12 +940,11 @@ class TestHttpAIToolDelete:
 
         assert captured_destructive == [True]
 
-    def test_delete_context(self) -> None:
-        """DELETE context should include the URL."""
+    def test_delete_has_no_extract_context(self) -> None:
+        """DELETE should not attach extract_context (URL is in the approval reason)."""
         tool = HttpAITool(_make_mindspace_mock())
         ops = tool.get_operation_definitions()
-        result = ops["delete"].extract_context({"url": "https://example.com"})
-        assert result == "DELETE https://example.com"
+        assert ops["delete"].extract_context is None
 
     def test_delete_validates_url_scheme(self) -> None:
         """DELETE with missing scheme should raise AIToolExecutionError."""
@@ -1747,19 +1743,17 @@ class TestHttpAIToolUrlValidation:
 class TestHttpAIToolContextExtraction:
     """Tests for context extraction."""
 
-    def test_get_context(self) -> None:
-        """GET context should include the URL."""
+    def test_get_has_no_extract_context(self) -> None:
+        """GET should not attach extract_context (URL is in the approval reason)."""
         tool = HttpAITool(_make_mindspace_mock())
         ops = tool.get_operation_definitions()
-        result = ops["get"].extract_context({"url": "https://example.com"})
-        assert result == "GET https://example.com"
+        assert ops["get"].extract_context is None
 
-    def test_post_context(self) -> None:
-        """POST context should include the URL."""
+    def test_post_has_no_extract_context(self) -> None:
+        """POST should not attach extract_context (URL is in the approval reason)."""
         tool = HttpAITool(_make_mindspace_mock())
         ops = tool.get_operation_definitions()
-        result = ops["post"].extract_context({"url": "https://example.com"})
-        assert result == "POST https://example.com"
+        assert ops["post"].extract_context is None
 
 
 class TestHttpAIToolDownload:
@@ -1982,16 +1976,11 @@ class TestHttpAIToolDownload:
                 with pytest.raises(AIToolExecutionError, match="404"):
                     _execute_tool(tool, tool_call)
 
-    def test_download_context(self) -> None:
-        """Download context should include URL and destination."""
+    def test_download_has_no_extract_context(self) -> None:
+        """Download should not attach extract_context (URL is in the approval reason)."""
         tool = HttpAITool(_make_mindspace_mock())
         ops = tool.get_operation_definitions()
-        result = ops["download"].extract_context({
-            "url": "https://example.com/file.txt",
-            "destination": "local.txt"
-        })
-        assert "https://example.com/file.txt" in result
-        assert "local.txt" in result
+        assert ops["download"].extract_context is None
 
 
 class TestHttpAIToolCookies:
@@ -2736,3 +2725,143 @@ class TestHttpAIToolProxy:
         mock_client_class.assert_called_once_with(
             read_timeout=15.0, proxy="http://proxy:8080"
         )
+
+
+class TestHttpAIToolAuthorizationDisplay:
+    """Tests for authorization reason text and context block formatting."""
+
+    def test_get_auth_reason_includes_url_and_hides_empty_context(self) -> None:
+        """GET authorization reason should state the URL; empty headers hide the context block."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com/path")
+        mock_response = _make_mock_response(text="OK")
+
+        captured: list[tuple[str, str | None]] = []
+
+        async def capturing_auth(
+            _tool_name: str,
+            _arguments: dict[str, Any],
+            reason: str,
+            context: str | None,
+            _destructive: bool,
+        ) -> bool:
+            captured.append((reason, context))
+            return True
+
+        auth = MagicMock(side_effect=capturing_auth)
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call, auth)
+
+        assert len(captured) == 1
+        reason, context = captured[0]
+        assert "https://example.com/path" in reason
+        assert "GET" in reason
+        assert context is None
+
+    def test_get_auth_context_formats_and_redacts_headers(self) -> None:
+        """GET authorization context should list headers and redact secrets."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get",
+            url="https://example.com",
+            headers={
+                "Authorization": "Bearer secret-token",
+                "Accept": "application/json",
+                "X-Api-Key": "key-123",
+            },
+        )
+        mock_response = _make_mock_response(text="OK")
+
+        captured: list[str | None] = []
+
+        async def capturing_auth(
+            _tool_name: str,
+            _arguments: dict[str, Any],
+            _reason: str,
+            context: str | None,
+            _destructive: bool,
+        ) -> bool:
+            captured.append(context)
+            return True
+
+        auth = MagicMock(side_effect=capturing_auth)
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call, auth)
+
+        assert len(captured) == 1
+        context = captured[0]
+        assert context is not None
+        assert "Accept: application/json" in context
+        assert "Authorization: [REDACTED]" in context
+        assert "X-Api-Key: [REDACTED]" in context
+        assert "secret-token" not in context
+        assert "key-123" not in context
+
+    def test_post_auth_context_includes_json_body(self) -> None:
+        """POST authorization context should include redacted headers and JSON body."""
+        tool = HttpAITool(_make_mindspace_mock())
+        json_body = {"name": "test", "value": 42}
+        tool_call = _make_tool_call(
+            "post",
+            url="https://example.com/api",
+            headers={"Content-Type": "application/json", "Cookie": "session=abc"},
+            json=json_body,
+        )
+        mock_response = _make_mock_response(text="OK")
+
+        captured: list[tuple[str, str | None]] = []
+
+        async def capturing_auth(
+            _tool_name: str,
+            _arguments: dict[str, Any],
+            reason: str,
+            context: str | None,
+            _destructive: bool,
+        ) -> bool:
+            captured.append((reason, context))
+            return True
+
+        auth = MagicMock(side_effect=capturing_auth)
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call, auth)
+
+        assert len(captured) == 1
+        reason, context = captured[0]
+        assert "POST" in reason
+        assert "https://example.com/api" in reason
+        assert context is not None
+        assert "Content-Type: application/json" in context
+        assert "Cookie: [REDACTED]" in context
+        assert "session=abc" not in context
+        assert "--- body ---" in context
+        assert '"name": "test"' in context
+        assert '"value": 42' in context
+
+    def test_build_authorization_context_block_body_only(self) -> None:
+        """Context block with only a body and no headers should still be shown."""
+        tool = HttpAITool(_make_mindspace_mock())
+        block = tool._build_authorization_context_block(  # pylint: disable=protected-access
+            None, data_body="plain body"
+        )
+        assert block == "plain body"

@@ -35,6 +35,17 @@ from markdown_ import document_ir_to_markdown
 
 _MAX_RESPONSE_BYTES = 64 * 1024
 
+# Header names whose values are redacted in authorization UI (case-insensitive).
+_SENSITIVE_HEADER_NAMES = frozenset({
+    "authorization",
+    "proxy-authorization",
+    "cookie",
+    "set-cookie",
+    "x-api-key",
+    "api-key",
+    "x-auth-token",
+})
+
 _SET_COOKIE_SPLIT_PATTERN = re.compile(
     r", (?=[A-Za-z!#$%&'*+\-.^_`|~]+=)"
 )
@@ -177,7 +188,7 @@ class HttpAITool(AITool):
             "get": AIToolOperationDefinition(
                 name="get",
                 handler=self._get,
-                extract_context=self._extract_get_context,
+                extract_context=None,
                 allowed_parameters={"url", "headers", "username", "password", "timeout", "format", "cookies", "proxy"},
                 required_parameters={"url"},
                 description=(
@@ -190,7 +201,7 @@ class HttpAITool(AITool):
             "head": AIToolOperationDefinition(
                 name="head",
                 handler=self._head,
-                extract_context=self._extract_head_context,
+                extract_context=None,
                 allowed_parameters={"url", "headers", "username", "password", "timeout", "cookies", "proxy"},
                 required_parameters={"url"},
                 description=(
@@ -203,7 +214,7 @@ class HttpAITool(AITool):
             "post": AIToolOperationDefinition(
                 name="post",
                 handler=self._post,
-                extract_context=self._extract_post_context,
+                extract_context=None,
                 allowed_parameters={
                     "url", "headers", "username", "password", "json", "data",
                     "multipart", "timeout", "format", "cookies", "proxy",
@@ -219,7 +230,7 @@ class HttpAITool(AITool):
             "put": AIToolOperationDefinition(
                 name="put",
                 handler=self._put,
-                extract_context=self._extract_put_context,
+                extract_context=None,
                 allowed_parameters={
                     "url", "headers", "username", "password", "json", "data",
                     "multipart", "timeout", "format", "cookies", "proxy",
@@ -235,7 +246,7 @@ class HttpAITool(AITool):
             "patch": AIToolOperationDefinition(
                 name="patch",
                 handler=self._patch,
-                extract_context=self._extract_patch_context,
+                extract_context=None,
                 allowed_parameters={
                     "url", "headers", "username", "password", "json", "data",
                     "multipart", "timeout", "format", "cookies", "proxy",
@@ -251,7 +262,7 @@ class HttpAITool(AITool):
             "delete": AIToolOperationDefinition(
                 name="delete",
                 handler=self._delete,
-                extract_context=self._extract_delete_context,
+                extract_context=None,
                 allowed_parameters={"url", "headers", "username", "password", "timeout", "format", "cookies", "proxy"},
                 required_parameters={"url"},
                 description=(
@@ -264,7 +275,7 @@ class HttpAITool(AITool):
             "download": AIToolOperationDefinition(
                 name="download",
                 handler=self._download,
-                extract_context=self._extract_download_context,
+                extract_context=None,
                 allowed_parameters={"url", "headers", "username", "password", "timeout", "destination", "cookies", "proxy"},
                 required_parameters={"url", "destination"},
                 description=(
@@ -294,11 +305,11 @@ class HttpAITool(AITool):
         headers = self._apply_cookies(headers, arguments)
         self._validate_url(url)
 
-        context = f"The AI is requesting to fetch URL:\n  GET {url}"
-        if headers:
-            context += f"\n  Headers: {headers}"
-
-        authorized = await request_authorization("http", arguments, context, None, False)
+        reason = f"The AI is requesting to GET {url}"
+        auth_context = self._build_authorization_context_block(headers)
+        authorized = await request_authorization(
+            "http", arguments, reason, auth_context, False
+        )
 
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to fetch URL: {url}")
@@ -332,11 +343,11 @@ class HttpAITool(AITool):
         headers = self._apply_cookies(headers, arguments)
         self._validate_url(url)
 
-        context = f"The AI is requesting to check URL:\n  HEAD {url}"
-        if headers:
-            context += f"\n  Headers: {headers}"
-
-        authorized = await request_authorization("http", arguments, context, None, False)
+        reason = f"The AI is requesting to HEAD {url}"
+        auth_context = self._build_authorization_context_block(headers)
+        authorized = await request_authorization(
+            "http", arguments, reason, auth_context, False
+        )
 
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to check URL: {url}")
@@ -398,11 +409,11 @@ class HttpAITool(AITool):
         headers = self._apply_cookies(headers, arguments)
         self._validate_url(url)
 
-        context = f"The AI is requesting to DELETE URL:\n  DELETE {url}"
-        if headers:
-            context += f"\n  Headers: {headers}"
-
-        authorized = await request_authorization("http", arguments, context, None, True)
+        reason = f"The AI is requesting to DELETE {url}"
+        auth_context = self._build_authorization_context_block(headers)
+        authorized = await request_authorization(
+            "http", arguments, reason, auth_context, True
+        )
 
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to DELETE URL: {url}")
@@ -450,20 +461,16 @@ class HttpAITool(AITool):
         headers = self._apply_cookies(headers, arguments)
         self._validate_url(url)
 
-        context = f"The AI is requesting to {method} to URL:\n  {method} {url}"
-        if headers:
-            context += f"\n  Headers: {headers}"
-
-        if multipart_parts is not None:
-            context += f"\n  Multipart parts: {json_module.dumps(multipart_parts, indent=2)}"
-
-        if json_body is not None:
-            context += f"\n  JSON body: {json_module.dumps(json_body, indent=2)}"
-
-        elif data_body is not None:
-            context += f"\n  Body: {data_body}"
-
-        authorized = await request_authorization("http", arguments, context, None, True)
+        reason = f"The AI is requesting to {method} {url}"
+        auth_context = self._build_authorization_context_block(
+            headers,
+            json_body=json_body,
+            data_body=data_body,
+            multipart_parts=multipart_parts if isinstance(multipart_parts, list) else None,
+        )
+        authorized = await request_authorization(
+            "http", arguments, reason, auth_context, True
+        )
 
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to {method} to URL: {url}")
@@ -524,26 +531,24 @@ class HttpAITool(AITool):
         dest_path, display_path = self._resolve_destination_path(destination)
 
         if dest_path.exists():
-            context = (
-                f"The AI is requesting to download:\n  {url}\n"
+            reason = (
+                f"The AI is requesting to download {url}. "
                 f"This will overwrite the existing file '{display_path}'. "
                 f"The previous contents will be lost."
             )
-
             destructive = True
 
         else:
-            context = (
-                f"The AI is requesting to download:\n  {url}\n"
+            reason = (
+                f"The AI is requesting to download {url}. "
                 f"This will create a new file '{display_path}'."
             )
-
             destructive = False
 
-        if headers:
-            context += f"\n  Headers: {headers}"
-
-        authorized = await request_authorization("http", arguments, context, None, destructive)
+        auth_context = self._build_authorization_context_block(headers)
+        authorized = await request_authorization(
+            "http", arguments, reason, auth_context, destructive
+        )
 
         if not authorized:
             raise AIToolAuthorizationDenied(
@@ -788,6 +793,130 @@ class HttpAITool(AITool):
         truncated = content_bytes[:_MAX_RESPONSE_BYTES].decode("utf-8", errors="ignore")
         omitted = len(content_bytes) - _MAX_RESPONSE_BYTES
         return f"{truncated}\n... output truncated, {omitted} bytes omitted"
+
+    def _redact_header_value(self, name: str, value: str) -> str:
+        """
+        Redact sensitive header values for authorization UI display.
+
+        Args:
+            name: Header name.
+            value: Header value.
+
+        Returns:
+            Redacted value for sensitive headers, otherwise the original value.
+        """
+        if name.lower() in _SENSITIVE_HEADER_NAMES:
+            return "[REDACTED]"
+
+        return value
+
+    def _format_headers_for_authorization(self, headers: dict[str, str] | None) -> str | None:
+        """
+        Format request headers for the authorization context block.
+
+        Sensitive values are redacted. Returns None if there are no headers.
+
+        Args:
+            headers: Effective request headers after auth/cookie merging.
+
+        Returns:
+            Multi-line header text, or None if headers is empty/None.
+        """
+        if not headers:
+            return None
+
+        lines = [
+            f"{name}: {self._redact_header_value(name, str(value))}"
+            for name, value in headers.items()
+        ]
+        return "\n".join(lines)
+
+    def _format_body_for_authorization(
+        self,
+        json_body: Any = None,
+        data_body: str | None = None,
+        multipart_parts: list[Any] | None = None,
+    ) -> str | None:
+        """
+        Format a request body for the authorization context block.
+
+        Multipart parts take precedence over json, which takes precedence over raw data
+        (matching send order). Sensitive fields in multipart file content are not fully
+        inspected; only header-style secrets are redacted elsewhere.
+
+        Args:
+            json_body: Optional JSON body object.
+            data_body: Optional raw body string.
+            multipart_parts: Optional multipart part list.
+
+        Returns:
+            Formatted body text, or None if no body is present.
+        """
+        if multipart_parts is not None:
+            try:
+                return json_module.dumps(multipart_parts, indent=2)
+
+            except (TypeError, ValueError):
+                return str(multipart_parts)
+
+        if json_body is not None:
+            try:
+                return json_module.dumps(json_body, indent=2)
+
+            except (TypeError, ValueError):
+                return str(json_body)
+
+        if data_body is not None:
+            return data_body
+
+        return None
+
+    def _build_authorization_context_block(
+        self,
+        headers: dict[str, str] | None,
+        json_body: Any = None,
+        data_body: str | None = None,
+        multipart_parts: list[Any] | None = None,
+    ) -> str | None:
+        """
+        Build the optional authorization UI context code block.
+
+        Includes redacted headers and, when present, the request body. Returns None
+        when there is nothing to show so the UI hides the block.
+
+        Args:
+            headers: Effective request headers.
+            json_body: Optional JSON body.
+            data_body: Optional raw body.
+            multipart_parts: Optional multipart parts.
+
+        Returns:
+            Context block text, or None if empty.
+        """
+        sections: list[str] = []
+
+        header_text = self._format_headers_for_authorization(headers)
+        if header_text is not None:
+            sections.append(header_text)
+
+        body_text = self._format_body_for_authorization(
+            json_body=json_body,
+            data_body=data_body,
+            multipart_parts=multipart_parts,
+        )
+        if body_text is not None:
+            if sections:
+                sections.append("")
+                sections.append("--- body ---")
+                sections.append(body_text)
+
+            else:
+                sections.append(body_text)
+
+        if not sections:
+            return None
+
+        return "\n".join(sections)
 
     def _apply_basic_auth(
         self,
@@ -1180,38 +1309,3 @@ class HttpAITool(AITool):
 
         return Path(resolved), os.path.relpath(resolved, mindspace_real)
 
-    def _extract_get_context(self, arguments: dict[str, Any]) -> str | None:
-        """Extract context for GET operation."""
-        url = arguments.get("url", "?")
-        return f"GET {url}"
-
-    def _extract_post_context(self, arguments: dict[str, Any]) -> str | None:
-        """Extract context for POST operation."""
-        url = arguments.get("url", "?")
-        return f"POST {url}"
-
-    def _extract_put_context(self, arguments: dict[str, Any]) -> str | None:
-        """Extract context for PUT operation."""
-        url = arguments.get("url", "?")
-        return f"PUT {url}"
-
-    def _extract_patch_context(self, arguments: dict[str, Any]) -> str | None:
-        """Extract context for PATCH operation."""
-        url = arguments.get("url", "?")
-        return f"PATCH {url}"
-
-    def _extract_delete_context(self, arguments: dict[str, Any]) -> str | None:
-        """Extract context for DELETE operation."""
-        url = arguments.get("url", "?")
-        return f"DELETE {url}"
-
-    def _extract_head_context(self, arguments: dict[str, Any]) -> str | None:
-        """Extract context for HEAD operation."""
-        url = arguments.get("url", "?")
-        return f"HEAD {url}"
-
-    def _extract_download_context(self, arguments: dict[str, Any]) -> str | None:
-        """Extract context for download operation."""
-        url = arguments.get("url", "?")
-        destination = arguments.get("destination", "?")
-        return f"download {url} -> {destination}"
