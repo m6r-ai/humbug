@@ -420,16 +420,21 @@ class DiffWidget(QWidget):
             self._update_shared_scrollbar()
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        """Handle keyboard scrolling for the shared scrollbar."""
-        if self._scrollbar is None:
+        """Handle keyboard scrolling for the active vertical scrollbar."""
+        key = event.key()
+        if event.modifiers() & (Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.ControlModifier |
+                                Qt.KeyboardModifier.ShiftModifier):
             super().keyPressEvent(event)
             return
 
-        key = event.key()
-        scroll_bar = self._scrollbar
+        # Side-by-side uses the external shared scrollbar; inline uses the pane's own.
+        if self._scrollbar is not None:
+            scroll_bar = self._scrollbar
 
-        if event.modifiers() & (Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.ControlModifier |
-                                Qt.KeyboardModifier.ShiftModifier):
+        elif self._inline_pane is not None:
+            scroll_bar = self._inline_pane.verticalScrollBar()
+
+        else:
             super().keyPressEvent(event)
             return
 
