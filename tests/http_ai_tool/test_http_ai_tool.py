@@ -1992,3 +1992,492 @@ class TestHttpAIToolDownload:
         })
         assert "https://example.com/file.txt" in result
         assert "local.txt" in result
+
+
+class TestHttpAIToolCookies:
+    """Tests for cookie support (sending cookies and displaying Set-Cookie headers)."""
+
+    def test_cookies_sets_cookie_header_on_get(self) -> None:
+        """GET with cookies should set the Cookie header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com",
+            cookies={"session": "abc123", "token": "xyz789"}
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"]
+        assert "Cookie" in call_headers
+        assert "session=abc123" in call_headers["Cookie"]
+        assert "token=xyz789" in call_headers["Cookie"]
+
+    def test_cookies_sets_cookie_header_on_post(self) -> None:
+        """POST with cookies should set the Cookie header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "post", url="https://example.com/api",
+            json={"x": 1}, cookies={"session": "abc123"}
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.post.call_args.kwargs["headers"]
+        assert "Cookie" in call_headers
+        assert "session=abc123" in call_headers["Cookie"]
+
+    def test_cookies_sets_cookie_header_on_delete(self) -> None:
+        """DELETE with cookies should set the Cookie header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "delete", url="https://example.com/api/1",
+            cookies={"session": "abc123"}
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.delete = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.delete.call_args.kwargs["headers"]
+        assert "Cookie" in call_headers
+        assert "session=abc123" in call_headers["Cookie"]
+
+    def test_cookies_sets_cookie_header_on_head(self) -> None:
+        """HEAD with cookies should set the Cookie header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "head", url="https://example.com",
+            cookies={"session": "abc123"}
+        )
+        mock_response = MagicMock()
+        mock_response.status.return_value = 200
+        mock_response.headers.return_value = {}
+        mock_response.content = AsyncMock(return_value=b"")
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.head = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.head.call_args.kwargs["headers"]
+        assert "Cookie" in call_headers
+        assert "session=abc123" in call_headers["Cookie"]
+
+    def test_cookies_sets_cookie_header_on_download(self) -> None:
+        """Download with cookies should set the Cookie header."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            mindspace = _make_mindspace_mock(tmp)
+            tool = HttpAITool(mindspace)
+            tool_call = _make_tool_call(
+                "download", url="https://example.com/file.txt",
+                destination="file.txt", cookies={"session": "abc123"}
+            )
+            mock_response = MagicMock()
+            mock_response.status.return_value = 200
+            mock_response.headers.return_value = {}
+            mock_response.content = AsyncMock(return_value=b"data")
+
+            with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+                mock_client = MagicMock()
+                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+                mock_client.__aexit__ = AsyncMock(return_value=None)
+                mock_client.get = AsyncMock(return_value=mock_response)
+                mock_client_class.return_value = mock_client
+
+                _execute_tool(tool, tool_call)
+
+            call_headers = mock_client.get.call_args.kwargs["headers"]
+            assert "Cookie" in call_headers
+            assert "session=abc123" in call_headers["Cookie"]
+
+    def test_cookies_sets_cookie_header_on_put(self) -> None:
+        """PUT with cookies should set the Cookie header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "put", url="https://example.com/api/1",
+            json={"x": 1}, cookies={"session": "abc123"}
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.put = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.put.call_args.kwargs["headers"]
+        assert "Cookie" in call_headers
+        assert "session=abc123" in call_headers["Cookie"]
+
+    def test_cookies_sets_cookie_header_on_patch(self) -> None:
+        """PATCH with cookies should set the Cookie header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "patch", url="https://example.com/api/1",
+            json={"x": 1}, cookies={"session": "abc123"}
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.patch = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.patch.call_args.kwargs["headers"]
+        assert "Cookie" in call_headers
+        assert "session=abc123" in call_headers["Cookie"]
+
+    def test_cookies_merges_with_explicit_cookie_header(self) -> None:
+        """Cookies parameter should merge with an explicit Cookie header, not overwrite."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com",
+            headers={"Cookie": "existing=val"},
+            cookies={"new": "cookie"}
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"]
+        assert "existing=val" in call_headers["Cookie"]
+        assert "new=cookie" in call_headers["Cookie"]
+
+    def test_cookies_merges_with_explicit_cookie_header_case_insensitive(self) -> None:
+        """Cookies should merge with an explicit lowercase 'cookie' header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com",
+            headers={"cookie": "existing=val"},
+            cookies={"new": "cookie"}
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"]
+        assert "existing=val" in call_headers["cookie"]
+        assert "new=cookie" in call_headers["cookie"]
+        assert "Cookie" not in call_headers
+
+    def test_no_cookies_does_not_set_cookie_header(self) -> None:
+        """No cookies parameter should not set a Cookie header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com")
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"] or {}
+        assert "Cookie" not in call_headers
+
+    def test_empty_cookies_dict_does_not_set_cookie_header(self) -> None:
+        """Empty cookies dict should not set a Cookie header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com", cookies={})
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"] or {}
+        assert "Cookie" not in call_headers
+
+    def test_cookies_preserves_other_headers(self) -> None:
+        """Cookies should preserve other caller-supplied headers."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com",
+            headers={"X-Custom": "value", "Accept": "application/json"},
+            cookies={"session": "abc123"}
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"]
+        assert call_headers["X-Custom"] == "value"
+        assert call_headers["Accept"] == "application/json"
+        assert "Cookie" in call_headers
+
+    def test_cookies_non_dict_raises(self) -> None:
+        """Non-dict cookies should raise AIToolExecutionError."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com", cookies="session=abc")
+        with pytest.raises(AIToolExecutionError, match="cookies.*object"):
+            _execute_tool(tool, tool_call)
+
+    def test_cookies_allowed_on_all_operations(self) -> None:
+        """All operations should allow the cookies parameter."""
+        tool = HttpAITool(_make_mindspace_mock())
+        ops = tool.get_operation_definitions()
+        for op_name in ("get", "head", "post", "put", "patch", "delete", "download"):
+            assert "cookies" in ops[op_name].allowed_parameters, f"{op_name} should allow cookies"
+
+    def test_cookies_in_additional_parameters(self) -> None:
+        """cookies should be in the tool's additional parameters."""
+        tool = HttpAITool(_make_mindspace_mock())
+        definition = tool.get_definition()
+        cookie_param = next((p for p in definition.parameters if p.name == "cookies"), None)
+        assert cookie_param is not None
+        assert cookie_param.type == "object"
+
+    def test_set_cookie_displayed_in_get_result(self) -> None:
+        """GET response with Set-Cookie should display it in the result."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com")
+        mock_response = _make_mock_response(
+            headers={"content-type": "text/plain", "set-cookie": "session=abc123; Path=/; HttpOnly"},
+            text="Hello"
+        )
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        assert "Set-Cookie: session=abc123; Path=/; HttpOnly" in result.content
+
+    def test_multiple_set_cookies_displayed_separately_in_get_result(self) -> None:
+        """Multiple Set-Cookie headers should be displayed on separate lines."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com")
+        mock_response = _make_mock_response(
+            headers={
+                "content-type": "text/plain",
+                "set-cookie": "session=abc123; Path=/, token=xyz789; HttpOnly"
+            },
+            text="Hello"
+        )
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        assert "Set-Cookie: session=abc123; Path=/" in result.content
+        assert "Set-Cookie: token=xyz789; HttpOnly" in result.content
+
+    def test_set_cookie_displayed_in_head_result(self) -> None:
+        """HEAD response with Set-Cookie should display it in the result."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("head", url="https://example.com")
+        mock_response = MagicMock()
+        mock_response.status.return_value = 200
+        mock_response.headers.return_value = {
+            "content-type": "text/html",
+            "set-cookie": "session=abc123; Path=/; HttpOnly",
+        }
+        mock_response.content = AsyncMock(return_value=b"")
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.head = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        assert "Set-Cookie: session=abc123; Path=/; HttpOnly" in result.content
+
+    def test_multiple_set_cookies_displayed_separately_in_head_result(self) -> None:
+        """Multiple Set-Cookie headers in HEAD should be on separate lines."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("head", url="https://example.com")
+        mock_response = MagicMock()
+        mock_response.status.return_value = 200
+        mock_response.headers.return_value = {
+            "set-cookie": "session=abc123; Path=/, token=xyz789; HttpOnly"
+        }
+        mock_response.content = AsyncMock(return_value=b"")
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.head = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        assert "Set-Cookie: session=abc123; Path=/" in result.content
+        assert "Set-Cookie: token=xyz789; HttpOnly" in result.content
+
+    def test_no_set_cookie_not_displayed_in_result(self) -> None:
+        """Response without Set-Cookie should not include Set-Cookie in result."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com")
+        mock_response = _make_mock_response(
+            headers={"content-type": "text/plain"},
+            text="Hello"
+        )
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        assert "Set-Cookie" not in result.content
+
+    def test_set_cookie_with_expires_date_not_split(self) -> None:
+        """Set-Cookie with Expires containing a comma should not be split incorrectly."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com")
+        mock_response = _make_mock_response(
+            headers={
+                "content-type": "text/plain",
+                "set-cookie": "session=abc123; Expires=Wed, 01 Jan 2025 00:00:00 GMT; Path=/"
+            },
+            text="Hello"
+        )
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        assert "Set-Cookie: session=abc123; Expires=Wed, 01 Jan 2025 00:00:00 GMT; Path=/" in result.content
+
+    def test_multiple_set_cookies_with_expires_dates(self) -> None:
+        """Multiple Set-Cookie headers with Expires dates should be split correctly."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com")
+        mock_response = _make_mock_response(
+            headers={
+                "content-type": "text/plain",
+                "set-cookie": (
+                    "session=abc123; Expires=Wed, 01 Jan 2025 00:00:00 GMT; Path=/, "
+                    "token=xyz789; Expires=Thu, 02 Jan 2025 00:00:00 GMT; HttpOnly"
+                )
+            },
+            text="Hello"
+        )
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        assert "Set-Cookie: session=abc123; Expires=Wed, 01 Jan 2025 00:00:00 GMT; Path=/" in result.content
+        assert "Set-Cookie: token=xyz789; Expires=Thu, 02 Jan 2025 00:00:00 GMT; HttpOnly" in result.content
+
+    def test_set_cookie_displayed_in_error_result(self) -> None:
+        """Set-Cookie should be displayed even in error responses (status >= 400)."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com")
+        mock_response = _make_mock_response(
+            status=401,
+            headers={"content-type": "text/plain", "set-cookie": "session=expired; Path=/"},
+            text="Unauthorized"
+        )
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        assert "Status: 401" in result.content
+        assert "Set-Cookie: session=expired; Path=/" in result.content
+
+    def test_cookies_works_with_basic_auth(self) -> None:
+        """Cookies and Basic Auth should work together."""
+        import base64
+
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com",
+            username="user", password="pass",
+            cookies={"session": "abc123"}
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"]
+        expected = base64.b64encode(b"user:pass").decode("ascii")
+        assert call_headers["Authorization"] == f"Basic {expected}"
+        assert "session=abc123" in call_headers["Cookie"]

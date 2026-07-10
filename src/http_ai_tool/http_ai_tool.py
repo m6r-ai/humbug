@@ -1,6 +1,7 @@
 """HTTP AI tool for fetching URLs and making POST requests."""
 
 import base64
+import re
 import json as json_module
 import logging
 import os
@@ -34,6 +35,9 @@ from markdown_ import document_ir_to_markdown
 
 _MAX_RESPONSE_BYTES = 64 * 1024
 
+_SET_COOKIE_SPLIT_PATTERN = re.compile(
+    r", (?=[A-Za-z!#$%&'*+\-.^_`|~]+=)"
+)
 
 class HttpAITool(AITool):
     """
@@ -136,6 +140,13 @@ class HttpAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
+                    name="cookies",
+                    type="object",
+                    description="Cookies to send with the request as a {name: value} object. "
+                                "Merged with any explicit 'Cookie' header.",
+                    required=False
+                ),
+                AIToolParameter(
                     name="destination",
                     type="string",
                     description="Destination file path in the mindspace for the download operation "
@@ -159,7 +170,7 @@ class HttpAITool(AITool):
                 name="get",
                 handler=self._get,
                 extract_context=self._extract_get_context,
-                allowed_parameters={"url", "headers", "username", "password", "timeout", "format"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout", "format", "cookies"},
                 required_parameters={"url"},
                 description=(
                     "Fetch a URL via GET. Returns the HTTP status code, content type, "
@@ -172,7 +183,7 @@ class HttpAITool(AITool):
                 name="head",
                 handler=self._head,
                 extract_context=self._extract_head_context,
-                allowed_parameters={"url", "headers", "username", "password", "timeout"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout", "cookies"},
                 required_parameters={"url"},
                 description=(
                     "Send a HEAD request to a URL. Returns the HTTP status code and "
@@ -185,7 +196,10 @@ class HttpAITool(AITool):
                 name="post",
                 handler=self._post,
                 extract_context=self._extract_post_context,
-                allowed_parameters={"url", "headers", "username", "password", "json", "data", "multipart", "timeout", "format"},
+                allowed_parameters={
+                    "url", "headers", "username", "password", "json", "data",
+                    "multipart", "timeout", "format", "cookies",
+                },
                 required_parameters={"url"},
                 description=(
                     "Send a POST request with an optional JSON, raw, or multipart body. Returns the HTTP "
@@ -198,7 +212,10 @@ class HttpAITool(AITool):
                 name="put",
                 handler=self._put,
                 extract_context=self._extract_put_context,
-                allowed_parameters={"url", "headers", "username", "password", "json", "data", "multipart", "timeout", "format"},
+                allowed_parameters={
+                    "url", "headers", "username", "password", "json", "data",
+                    "multipart", "timeout", "format", "cookies",
+                },
                 required_parameters={"url"},
                 description=(
                     "Send a PUT request with an optional JSON, raw, or multipart body. Returns the HTTP "
@@ -211,7 +228,10 @@ class HttpAITool(AITool):
                 name="patch",
                 handler=self._patch,
                 extract_context=self._extract_patch_context,
-                allowed_parameters={"url", "headers", "username", "password", "json", "data", "multipart", "timeout", "format"},
+                allowed_parameters={
+                    "url", "headers", "username", "password", "json", "data",
+                    "multipart", "timeout", "format", "cookies",
+                },
                 required_parameters={"url"},
                 description=(
                     "Send a PATCH request with an optional JSON, raw, or multipart body. Returns the HTTP "
@@ -224,7 +244,7 @@ class HttpAITool(AITool):
                 name="delete",
                 handler=self._delete,
                 extract_context=self._extract_delete_context,
-                allowed_parameters={"url", "headers", "username", "password", "timeout", "format"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout", "format", "cookies"},
                 required_parameters={"url"},
                 description=(
                     "Send a DELETE request to a URL. Returns the HTTP status code, "
@@ -237,7 +257,7 @@ class HttpAITool(AITool):
                 name="download",
                 handler=self._download,
                 extract_context=self._extract_download_context,
-                allowed_parameters={"url", "headers", "username", "password", "timeout", "destination"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout", "destination", "cookies"},
                 required_parameters={"url", "destination"},
                 description=(
                     "Download a file from a URL and save it to the mindspace. The file is "
@@ -262,6 +282,7 @@ class HttpAITool(AITool):
         format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
 
         headers = self._apply_basic_auth(headers, arguments)
+        headers = self._apply_cookies(headers, arguments)
         self._validate_url(url)
 
         context = f"The AI is requesting to fetch URL:\n  GET {url}"
@@ -298,6 +319,7 @@ class HttpAITool(AITool):
         timeout = self._get_timeout(arguments)
 
         headers = self._apply_basic_auth(headers, arguments)
+        headers = self._apply_cookies(headers, arguments)
         self._validate_url(url)
 
         context = f"The AI is requesting to check URL:\n  HEAD {url}"
@@ -362,6 +384,7 @@ class HttpAITool(AITool):
         format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
 
         headers = self._apply_basic_auth(headers, arguments)
+        headers = self._apply_cookies(headers, arguments)
         self._validate_url(url)
 
         context = f"The AI is requesting to DELETE URL:\n  DELETE {url}"
@@ -412,6 +435,7 @@ class HttpAITool(AITool):
         format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
 
         headers = self._apply_basic_auth(headers, arguments)
+        headers = self._apply_cookies(headers, arguments)
         self._validate_url(url)
 
         context = f"The AI is requesting to {method} to URL:\n  {method} {url}"
@@ -481,6 +505,7 @@ class HttpAITool(AITool):
         timeout = self._get_timeout(arguments)
 
         headers = self._apply_basic_auth(headers, arguments)
+        headers = self._apply_cookies(headers, arguments)
         self._validate_url(url)
 
         dest_path, display_path = self._resolve_destination_path(destination)
@@ -582,6 +607,7 @@ class HttpAITool(AITool):
         Returns:
             AIToolResult with status, content type, and body.
         """
+        headers = response.headers()
         content_type = response.headers().get("content-type", "")
         status = response.status()
 
@@ -596,7 +622,7 @@ class HttpAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="http",
-                content=f"Status: {status}\nContent-Type: {content_type}\n\n{body}"
+                content=self._build_result_content(status, content_type, body, headers)
             )
 
         if "text/html" in content_type and format_type != "raw":
@@ -619,7 +645,7 @@ class HttpAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="http",
-            content=f"Status: {status}\nContent-Type: {content_type}\n\n{body}"
+            content=self._build_result_content(status, content_type, body, headers)
         )
 
     async def _build_head_result(
@@ -647,13 +673,66 @@ class HttpAITool(AITool):
         lines = [f"Status: {status}"]
 
         for key, value in headers.items():
-            lines.append(f"{key}: {value}")
+            if key.lower() == "set-cookie":
+                for cookie in self._split_set_cookie(value):
+                    lines.append(f"Set-Cookie: {cookie}")
+
+            else:
+                lines.append(f"{key}: {value}")
 
         return AIToolResult(
             id=tool_call.id,
             name="http",
             content="\n".join(lines)
         )
+
+    def _build_result_content(
+        self,
+        status: int,
+        content_type: str,
+        body: str,
+        headers: dict[str, str],
+    ) -> str:
+        """
+        Build the content string for a standard HTTP result.
+
+        Includes status, content type, Set-Cookie headers (if any), and body.
+
+        Args:
+            status: HTTP status code.
+            content_type: Response content type.
+            body: Response body text (already truncated).
+            headers: Response headers dict.
+
+        Returns:
+            Formatted content string.
+        """
+        parts = [f"Status: {status}", f"Content-Type: {content_type}"]
+
+        set_cookie = headers.get("set-cookie")
+        if set_cookie:
+            for cookie in self._split_set_cookie(set_cookie):
+                parts.append(f"Set-Cookie: {cookie}")
+
+        parts.append("")
+        parts.append(body)
+        return "\n".join(parts)
+
+    def _split_set_cookie(self, value: str) -> list[str]:
+        """
+        Split a comma-joined Set-Cookie header value into individual cookies.
+
+        The HTTP client concatenates multiple same-name headers with ', '.
+        A single Set-Cookie value can contain commas (e.g. in Expires dates),
+        so we split on the pattern of a cookie name followed by '='.
+
+        Args:
+            value: The raw Set-Cookie header value (possibly comma-joined).
+
+        Returns:
+            List of individual cookie strings.
+        """
+        return _SET_COOKIE_SPLIT_PATTERN.split(value)
 
     def _html_to_markdown(self, html: str) -> str:
         """
@@ -731,6 +810,50 @@ class HttpAITool(AITool):
             credentials = f"{username}:{password}"
             encoded = base64.b64encode(credentials.encode("utf-8")).decode("ascii")
             result["Authorization"] = f"Basic {encoded}"
+
+        return result
+
+    def _apply_cookies(
+        self,
+        headers: dict[str, str] | None,
+        arguments: dict[str, Any],
+    ) -> dict[str, str] | None:
+        """
+        Apply cookies from the 'cookies' argument to the request headers.
+
+        If 'cookies' is provided (a dict of {name: value} pairs), they are
+        merged into a Cookie header. If the caller already provided an
+        explicit Cookie header (case-insensitive), the cookies are merged
+        into it rather than overwriting it.
+
+        Args:
+            headers: Existing request headers, or None.
+            arguments: Tool call arguments possibly containing 'cookies'.
+
+        Returns:
+            Headers dict with cookies applied if applicable, or the
+            original headers unchanged if no cookies are provided.
+        """
+        cookies = arguments.get("cookies")
+        if cookies is None:
+            return headers
+
+        if not isinstance(cookies, dict):
+            raise AIToolExecutionError("'cookies' must be an object of {name: value} pairs")
+
+        cookie_pairs = [f"{name}={value}" for name, value in cookies.items()]
+        if not cookie_pairs:
+            return headers
+
+        cookie_str = "; ".join(cookie_pairs)
+        result = dict(headers) if headers is not None else {}
+
+        existing_key = next((k for k in result if k.lower() == "cookie"), None)
+        if existing_key is not None:
+            result[existing_key] = f"{result[existing_key]}; {cookie_str}"
+
+        else:
+            result["Cookie"] = cookie_str
 
         return result
 

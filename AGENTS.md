@@ -216,6 +216,8 @@ AI tool implementation for HTTP operations, wrapping the `http_client` library.
 Exposes GET, HEAD, POST, PUT, PATCH, DELETE, and download operations.
 POST/PUT/PATCH support JSON, raw, and multipart/form-data bodies (including file uploads).
 All operations support HTTP Basic Authentication via username/password parameters.
+All operations accept a `cookies` parameter ({name: value} pairs) merged into the Cookie
+header, and response `Set-Cookie` headers are parsed and displayed in results.
 All operations accept an optional timeout parameter (seconds) to limit read wait time.
 All operations require user authorization (the user sees the method, URL, headers,
 and body before approving). HTML responses are converted to readable markdown by
