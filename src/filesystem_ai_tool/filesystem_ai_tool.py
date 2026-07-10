@@ -17,13 +17,13 @@ from ai_tool import (
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
     AIToolResult, AIToolCall, AIToolTimeoutError
 )
-from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
-from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
-from syntax.programming_language_utils import ProgrammingLanguageUtils
+from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
+from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 from filesystem_ai_tool.filesystem_diff_applier import FilesystemDiffApplier
