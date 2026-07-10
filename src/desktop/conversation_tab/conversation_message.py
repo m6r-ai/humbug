@@ -40,6 +40,7 @@ class ConversationMessage(QFrame):
     selection_changed = Signal(bool)
     scroll_requested = Signal(QPoint)
     mouse_released = Signal()
+    link_clicked = Signal(str)
     fork_requested = Signal()
     edit_confirmed = Signal(str)
     delete_requested = Signal()
@@ -665,6 +666,7 @@ class ConversationMessage(QFrame):
         )
         section.scroll_requested.connect(self.scroll_requested)
         section.mouse_released.connect(self.mouse_released)
+        section.link_clicked.connect(self.link_clicked)
 
         # Determine style class
         is_user_message = self._message_source == AIMessageSource.USER

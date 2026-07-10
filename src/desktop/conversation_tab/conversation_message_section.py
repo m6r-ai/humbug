@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout,
     QToolButton, QFileDialog, QWidget, QSizePolicy
 )
-from PySide6.QtCore import Signal, Qt, QPoint, QRegularExpression
+from PySide6.QtCore import Signal, Qt, QPoint, QRegularExpression, QObject, QEvent
 from PySide6.QtGui import (
     QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QTextDocument
 )
@@ -28,6 +28,7 @@ class ConversationMessageSection(QFrame):
 
     selection_changed = Signal(bool)
     scroll_requested = Signal(QPoint)
+    link_clicked = Signal(str)
     mouse_released = Signal()
 
     def __init__(
@@ -134,8 +135,16 @@ class ConversationMessageSection(QFrame):
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
         self._text_area.mouse_released.connect(self._on_mouse_released)
-        if self._renderer is not None and isinstance(self._text_area, MarkdownTextEdit):
-            self._text_area.text_width_changed.connect(self._on_text_width_changed)
+        if isinstance(self._text_area, MarkdownTextEdit):
+            if not is_input:
+                self._text_area.link_clicked.connect(self.link_clicked)
+
+            # Mouse tracking for link cursor changes
+            self._text_area.viewport().setMouseTracking(True)
+            self._text_area.viewport().installEventFilter(self)
+
+            if self._renderer is not None:
+                self._text_area.text_width_changed.connect(self._on_text_width_changed)
 
         self._mouse_left_button_pressed = False
 
@@ -251,6 +260,28 @@ class ConversationMessageSection(QFrame):
         """Handle mouse release from text area."""
         self._mouse_left_button_pressed = False
         self.mouse_released.emit()
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        """
+        Filter events for the text area viewport to update cursor on link hover.
+
+        Args:
+            watched: The object being watched
+            event: The event that occurred
+
+        Returns:
+            True if the event was handled, False to pass it along
+        """
+        if watched == self._text_area.viewport() and event.type() == QEvent.Type.MouseMove:
+            mouse_event = cast(QMouseEvent, event)
+            url = self._text_area.anchorAt(mouse_event.pos())
+            if url:
+                self._text_area.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
+
+            else:
+                self._text_area.viewport().setCursor(Qt.CursorShape.IBeamCursor)
+
+        return False
 
     def _on_selection_changed(self) -> None:
         """Handle selection changes in the text area."""

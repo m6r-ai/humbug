@@ -11,8 +11,8 @@ from typing import Any, cast
 from PySide6.QtWidgets import (
     QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QFileDialog
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QEvent, QSize
-from PySide6.QtGui import QCursor, QFont, QGuiApplication, QIcon, QResizeEvent
+from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QEvent, QSize, QUrl
+from PySide6.QtGui import QCursor, QDesktopServices, QFont, QGuiApplication, QIcon, QResizeEvent
 
 from ai import (
     AIConversationEvent, AIConversationHistory, AIConversationSettings,
@@ -491,6 +491,7 @@ class ConversationWidget(QWidget):
         )
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouse_released.connect(self._stop_scroll)
+        msg_widget.link_clicked.connect(self._on_link_clicked)
         msg_widget.fork_requested.connect(self._on_message_fork_requested)
         msg_widget.edit_confirmed.connect(self._on_message_edit_confirmed)
         msg_widget.delete_requested.connect(self._on_message_delete_requested)
@@ -1852,6 +1853,20 @@ class ConversationWidget(QWidget):
             return
 
         self._message_with_selection = message_widget
+
+    def _on_link_clicked(self, url: str) -> None:
+        """
+        Handle link clicks from message content.
+
+        External URLs are opened in the system's default browser.
+
+        Args:
+            url: The URL that was clicked
+        """
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+
+        QDesktopServices.openUrl(QUrl(url))
 
     def has_selection(self) -> bool:
         """Check if any message has selected text."""
