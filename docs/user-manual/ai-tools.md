@@ -29,18 +29,19 @@ The following tools are available to the AI in every conversation:
 
 | Tool | What it does | Approval needed? |
 |---|---|---|
-| **Filesystem** | Read, write, search, and manage files and directories in your mindspace | Writes only |
-| **Editor** | Read, search, navigate, and modify text in open editor tabs | Modifications only |
-| **Terminal** | Send commands and read output from terminal tabs | Yes, each command |
-| **Git** | Read-only git operations: status, diff, log, branches, file contents at a ref, and files changed in a commit | No |
-| **Conversation** | Browse, search, and navigate conversation history | No |
-| **Preview** | Search and navigate file/directory preview content | No |
-| **Document Converter** | Convert documents between Markdown, DOCX, and HTML | Yes |
-| **Menai** | Evaluate expressions in a pure functional programming language designed for AI use | No |
 | **Clock** | Get the current time, sleep, and set alarms | No |
+| **Conversation** | Browse, search, and navigate conversation history | No |
 | **Delegation** | Delegate tasks to specialised child AI instances for parallel or focused work | No |
-| **System** | Create, open, close, and organise UI tabs (editor, terminal, conversation, etc.) | No |
+| **Document Converter** | Convert documents between Markdown, DOCX, and HTML | Yes |
+| **Editor** | Read, search, navigate, and modify text in open editor tabs | Modifications only |
+| **Filesystem** | Read, write, search, and manage files and directories in your mindspace | Writes only |
+| **Git** | Read-only git operations: status, diff, log, branches, file contents at a ref, and files changed in a commit | No |
 | **Help** | List available tools and get detailed documentation on any tool | No |
+| **HTTP** | Fetch URLs, make API requests (GET, HEAD, POST, PUT, PATCH, DELETE), and download files. Supports Basic Auth, cookies, multipart uploads, timeouts, and HTTP/SOCKS5 proxies | Yes |
+| **Menai** | Evaluate expressions in a pure functional programming language designed for AI use | No |
+| **Preview** | Search and navigate file/directory preview content | No |
+| **System** | Create, open, close, and organise UI tabs (editor, terminal, conversation, etc.) | No |
+| **Terminal** | Send commands and read output from terminal tabs | Yes, each command |
 
 ---
 

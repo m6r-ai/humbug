@@ -12,6 +12,7 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 - If you open a terminal it will automatically be in the root of the mindspace directory.  Don't change directory unless
   you want to be somewhere else.
 - Terminals will not open with a python virtual environment by default.  The venv is at `venv/` in the mindspace root.
+- If you send a command to a terminal, don't forget the newline or carriage return required (Unix, or Windows specific).
 
 ## Menai C VM binary
 
@@ -203,10 +204,7 @@ dependencies. Used by the VCS sidebar, diff tabs, and the git AI tool.
 
 ### `src/git_ai_tool/`
 AI tool implementation for version control operations. Exposes read-only git operations
-(status, diff, log, branch, show, stat) to the AI. All operations are scoped to repositories whose
-root is within the mindspace boundary. The `.humbug/` directory is excluded from all operations.
-Diff supports per-file and per-ref diffing. Log supports skip, ref, and file-path filtering.
-Branch lists both local and remote branches. All operations have 64KB output truncation.
+(status, diff, log, branch, show, stat) to the AI.
 
 ### `src/help_ai_tool/`
 AI tool implementation for tool documentation.
@@ -214,17 +212,6 @@ AI tool implementation for tool documentation.
 ### `src/http_ai_tool/`
 AI tool implementation for HTTP operations, wrapping the `http_client` library.
 Exposes GET, HEAD, POST, PUT, PATCH, DELETE, and download operations.
-POST/PUT/PATCH support JSON, raw, and multipart/form-data bodies (including file uploads).
-All operations support HTTP Basic Authentication via username/password parameters.
-All operations accept a `cookies` parameter ({name: value} pairs) merged into the Cookie
-header, and response `Set-Cookie` headers are parsed and displayed in results.
-All operations accept an optional timeout parameter (seconds) to limit read wait time.
-Compressed responses (gzip, deflate) are transparently decompressed by the underlying client.
-All operations require user authorization (the user sees the method, URL, headers,
-and body before approving). HTML responses are converted to readable markdown by
-default via the `html_` → `document_ir` → `markdown_` pipeline; use `format="raw"`
-for the original HTML. GET/POST/PUT/PATCH/DELETE responses are truncated to 64KB. HEAD returns
-headers only (no body). Download writes directly to a file in the mindspace without size limits.
 
 ### `src/html_/`
 HTML document processing. Includes a self-contained lexer and DOM-building parser
@@ -236,7 +223,8 @@ and the document converter tool (HTML ↔ other formats).
 ### `src/http_client/`
 Async HTTP client built on the Python standard library (`asyncio` streams + `ssl`).
 No external dependencies.  Provides `HttpClient` and `HttpResponse` with GET/HEAD/POST/PUT/PATCH/DELETE,
-TLS, streaming, timeouts, redirect following, transparent gzip/deflate decompression, and a structured exception hierarchy.
+TLS, streaming, timeouts, redirect following, transparent gzip/deflate decompression,
+HTTP CONNECT/SOCKS5 proxy tunneling, and a structured exception hierarchy.
 
 ### `src/markdown_/`
 Advanced markdown support, including converting to/from a markdown AST.
