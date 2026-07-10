@@ -2481,3 +2481,62 @@ class TestHttpAIToolCookies:
         expected = base64.b64encode(b"user:pass").decode("ascii")
         assert call_headers["Authorization"] == f"Basic {expected}"
         assert "session=abc123" in call_headers["Cookie"]
+
+class TestHttpAIToolDecompression:
+    """Tests for transparent gzip/deflate decompression through the AI tool."""
+
+    def test_get_handles_gzip_response(self) -> None:
+        """GET with a gzip-compressed response returns decompressed content."""
+        import gzip
+        import asyncio
+
+        original = "Hello, compressed world! " * 10
+        compressed = gzip.compress(original.encode("utf-8"))
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            from tests.http_client.test_http_client import _write_response
+            _write_response(
+                writer, 200, compressed,
+                headers={"Content-Encoding": "gzip", "Content-Type": "text/plain"},
+            )
+
+        async def run() -> Any:
+            from tests.http_client.test_http_client import MockHTTPServer
+            from http_client import HttpClient
+
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    text = await response.text()
+                    return text
+
+        text = asyncio.run(run())
+        assert text == original
+
+    def test_get_handles_deflate_response(self) -> None:
+        """GET with a deflate-compressed response returns decompressed content."""
+        import zlib
+        import asyncio
+
+        original = "Deflate compressed content " * 10
+        compressed = zlib.compress(original.encode("utf-8"))
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            from tests.http_client.test_http_client import _write_response
+            _write_response(
+                writer, 200, compressed,
+                headers={"Content-Encoding": "deflate", "Content-Type": "text/plain"},
+            )
+
+        async def run() -> Any:
+            from tests.http_client.test_http_client import MockHTTPServer
+            from http_client import HttpClient
+
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    text = await response.text()
+                    return text
+
+        text = asyncio.run(run())
+        assert text == original

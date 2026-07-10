@@ -1,9 +1,11 @@
 """Async HTTP client built on the Python standard library."""
 
 import asyncio
+import gzip
 import json as json_module
 import socket
 import ssl
+import zlib
 from collections.abc import AsyncGenerator
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
@@ -115,6 +117,14 @@ class HttpResponse:
         if self._reader is None:
             return
 
+        encoding = self._headers.get("content-encoding", "").lower()
+        if encoding in ("gzip", "deflate"):
+            data = await self._read_full_body()
+            for line in data.splitlines(keepends=True):
+                yield line
+
+            return
+
         self._body_read = True
         try:
             chunked = self._headers.get("transfer-encoding", "").lower() == "chunked"
@@ -153,7 +163,8 @@ class HttpResponse:
                 async for chunk in self._read_chunked_data():
                     chunks.append(chunk)
 
-                return b"".join(chunks)
+                data = b"".join(chunks)
+                return self._decompress(data)
 
             content_length = self._headers.get("content-length")
             if content_length is not None:
@@ -162,14 +173,26 @@ class HttpResponse:
                     return b""
 
                 data = await self._timed_readexactly(length)
-                return data
+                return self._decompress(data)
 
             # No Content-Length and no chunked encoding — read until close
             data = await self._timed_read(-1)
-            return data
+            return self._decompress(data)
 
         finally:
             self._close_writer()
+
+    def _decompress(self, data: bytes) -> bytes:
+        """Decompress response body based on Content-Encoding header."""
+        encoding = self._headers.get("content-encoding", "").lower()
+
+        if encoding == "gzip":
+            return gzip.decompress(data)
+
+        if encoding == "deflate":
+            return zlib.decompress(data)
+
+        return data
 
     async def _read_chunked_data(self) -> AsyncGenerator[bytes, None]:
         """Yield decoded chunk data from a chunked transfer-encoding response."""
@@ -450,6 +473,7 @@ class HttpClient:
             "Host": host if port in (80, 443) else f"{host}:{port}",
             "User-Agent": _DEFAULT_USER_AGENT,
             "Accept": "*/*",
+            "Accept-Encoding": "gzip, deflate",
             "Connection": "close",
         }
 

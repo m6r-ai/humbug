@@ -219,6 +219,7 @@ All operations support HTTP Basic Authentication via username/password parameter
 All operations accept a `cookies` parameter ({name: value} pairs) merged into the Cookie
 header, and response `Set-Cookie` headers are parsed and displayed in results.
 All operations accept an optional timeout parameter (seconds) to limit read wait time.
+Compressed responses (gzip, deflate) are transparently decompressed by the underlying client.
 All operations require user authorization (the user sees the method, URL, headers,
 and body before approving). HTML responses are converted to readable markdown by
 default via the `html_` → `document_ir` → `markdown_` pipeline; use `format="raw"`
@@ -235,7 +236,7 @@ and the document converter tool (HTML ↔ other formats).
 ### `src/http_client/`
 Async HTTP client built on the Python standard library (`asyncio` streams + `ssl`).
 No external dependencies.  Provides `HttpClient` and `HttpResponse` with GET/HEAD/POST/PUT/PATCH/DELETE,
-TLS, streaming, timeouts, redirect following, and a structured exception hierarchy.
+TLS, streaming, timeouts, redirect following, transparent gzip/deflate decompression, and a structured exception hierarchy.
 
 ### `src/markdown_/`
 Advanced markdown support, including converting to/from a markdown AST.

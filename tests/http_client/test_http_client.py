@@ -1,10 +1,12 @@
 """Tests for the async HTTP client."""
 
 import asyncio
+import gzip
 import json
 import socket
 import ssl
 import tempfile
+import zlib
 from pathlib import Path
 
 import pytest
@@ -1124,3 +1126,265 @@ class TestExceptionHierarchy:
         error = ClientResponseError(404, "Not Found")
         assert error.status() == 404
         assert error.message() == "Not Found"
+# --- Tests: gzip/deflate decompression ---
+
+class TestDecompression:
+    """Tests for gzip and deflate response decompression."""
+
+    def test_gzip_response_decompressed(self) -> None:
+        """gzip-compressed response body is transparently decompressed."""
+        original = b"Hello, compressed world! " * 10
+        compressed = gzip.compress(original)
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(
+                writer, 200, compressed,
+                headers={"Content-Encoding": "gzip"},
+            )
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    text = await response.text()
+                    assert text == original.decode("utf-8")
+
+        asyncio.run(run())
+
+    def test_deflate_response_decompressed(self) -> None:
+        """deflate-compressed response body is transparently decompressed."""
+        original = b"Deflate compressed content " * 10
+        compressed = zlib.compress(original)
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(
+                writer, 200, compressed,
+                headers={"Content-Encoding": "deflate"},
+            )
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    text = await response.text()
+                    assert text == original.decode("utf-8")
+
+        asyncio.run(run())
+
+    def test_gzip_response_content(self) -> None:
+        """gzip-compressed response content() returns decompressed bytes."""
+        original = b"Binary data: \x00\x01\x02\x03 " * 5
+        compressed = gzip.compress(original)
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(
+                writer, 200, compressed,
+                headers={"Content-Encoding": "gzip"},
+            )
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    data = await response.content()
+                    assert data == original
+
+        asyncio.run(run())
+
+    def test_gzip_response_json(self) -> None:
+        """gzip-compressed JSON response is decompressed and parsed correctly."""
+        json_body = json.dumps({"key": "value", "items": [1, 2, 3]}).encode()
+        compressed = gzip.compress(json_body)
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(
+                writer, 200, compressed,
+                headers={"Content-Encoding": "gzip", "Content-Type": "application/json"},
+            )
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    data = await response.json()
+                    assert data == {"key": "value", "items": [1, 2, 3]}
+
+        asyncio.run(run())
+
+    def test_no_compression_returns_raw_body(self) -> None:
+        """Response without Content-Encoding returns the raw body unchanged."""
+        original = b"No compression here"
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(writer, 200, original)
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    data = await response.content()
+                    assert data == original
+
+        asyncio.run(run())
+
+    def test_gzip_with_chunked_transfer_encoding(self) -> None:
+        """gzip-compressed chunked response is decompressed correctly."""
+        original = b"Chunked compressed data " * 10
+        compressed = gzip.compress(original)
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_chunked_response(
+                writer, 200, [compressed],
+                headers={"Content-Encoding": "gzip"},
+            )
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    text = await response.text()
+                    assert text == original.decode("utf-8")
+
+        asyncio.run(run())
+
+    def test_deflate_with_chunked_transfer_encoding(self) -> None:
+        """deflate-compressed chunked response is decompressed correctly."""
+        original = b"Chunked deflate data " * 10
+        compressed = zlib.compress(original)
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_chunked_response(
+                writer, 200, [compressed],
+                headers={"Content-Encoding": "deflate"},
+            )
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    text = await response.text()
+                    assert text == original.decode("utf-8")
+
+        asyncio.run(run())
+
+    def test_gzip_content_lines(self) -> None:
+        """content_lines yields decompressed lines from a gzip response."""
+        original_lines = [b"line one\n", b"line two\n", b"line three\n"]
+        original = b"".join(original_lines)
+        compressed = gzip.compress(original)
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(
+                writer, 200, compressed,
+                headers={"Content-Encoding": "gzip"},
+            )
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    lines = []
+                    async for line in response.content_lines():
+                        lines.append(line)
+                    assert lines == original_lines
+
+        asyncio.run(run())
+
+    def test_deflate_content_lines(self) -> None:
+        """content_lines yields decompressed lines from a deflate response."""
+        original_lines = [b"alpha\n", b"beta\n", b"gamma\n"]
+        original = b"".join(original_lines)
+        compressed = zlib.compress(original)
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(
+                writer, 200, compressed,
+                headers={"Content-Encoding": "deflate"},
+            )
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    lines = []
+                    async for line in response.content_lines():
+                        lines.append(line)
+                    assert lines == original_lines
+
+        asyncio.run(run())
+
+    def test_accept_encoding_header_sent(self) -> None:
+        """Client sends Accept-Encoding: gzip, deflate by default."""
+        received_headers: dict[str, str] = {}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received_headers.update(request["headers"])
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    await response.text()
+
+        asyncio.run(run())
+        assert received_headers.get("accept-encoding") == "gzip, deflate"
+
+    def test_accept_encoding_can_be_overridden(self) -> None:
+        """Caller-supplied Accept-Encoding header overrides the default."""
+        received_headers: dict[str, str] = {}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received_headers.update(request["headers"])
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(
+                        server.url("/"),
+                        headers={"Accept-Encoding": "identity"},
+                    )
+                    await response.text()
+
+        asyncio.run(run())
+        assert received_headers.get("accept-encoding") == "identity"
+
+    def test_gzip_empty_body(self) -> None:
+        """gzip response with empty body decompresses to empty bytes."""
+        compressed = gzip.compress(b"")
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(
+                writer, 200, compressed,
+                headers={"Content-Encoding": "gzip"},
+            )
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    text = await response.text()
+                    assert text == ""
+
+        asyncio.run(run())
+
+    def test_gzip_large_response(self) -> None:
+        """Large gzip-compressed response is decompressed correctly."""
+        original = b"A" * 100000
+        compressed = gzip.compress(original)
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            _write_response(
+                writer, 200, compressed,
+                headers={"Content-Encoding": "gzip"},
+            )
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    data = await response.content()
+                    assert data == original
+
+        asyncio.run(run())
