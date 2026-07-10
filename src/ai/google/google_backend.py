@@ -251,7 +251,6 @@ class GoogleBackend(AIBackend):
 
         # Remove anything after the last user message - we'll start with that last one
         assert last_user_message_index >= 0, "Last user message index should be valid"
-        self._logger.debug("Removing unfinished user message at index %d", last_user_message_index)
         result = result[:last_user_message_index+1]
 
         return result
