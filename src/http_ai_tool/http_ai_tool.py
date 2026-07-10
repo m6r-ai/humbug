@@ -1308,4 +1308,3 @@ class HttpAITool(AITool):
             )
 
         return Path(resolved), os.path.relpath(resolved, mindspace_real)
-
