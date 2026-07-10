@@ -214,6 +214,9 @@ AI tool implementation for tool documentation.
 ### `src/http_ai_tool/`
 AI tool implementation for HTTP operations, wrapping the `http_client` library.
 Exposes GET, HEAD, POST, PUT, PATCH, DELETE, and download operations.
+POST/PUT/PATCH support JSON, raw, and multipart/form-data bodies (including file uploads).
+All operations support HTTP Basic Authentication via username/password parameters.
+All operations accept an optional timeout parameter (seconds) to limit read wait time.
 All operations require user authorization (the user sees the method, URL, headers,
 and body before approving). HTML responses are converted to readable markdown by
 default via the `html_` → `document_ir` → `markdown_` pipeline; use `format="raw"`

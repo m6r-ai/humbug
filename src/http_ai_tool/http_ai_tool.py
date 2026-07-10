@@ -1,5 +1,6 @@
 """HTTP AI tool for fetching URLs and making POST requests."""
 
+import base64
 import json as json_module
 import logging
 import os
@@ -73,6 +74,20 @@ class HttpAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
+                    name="username",
+                    type="string",
+                    description="Username for HTTP Basic Authentication. If provided, 'password' "
+                                "must also be set. An explicit 'Authorization' header takes precedence.",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="password",
+                    type="string",
+                    description="Password for HTTP Basic Authentication. If provided, 'username' "
+                                "must also be set.",
+                    required=False
+                ),
+                AIToolParameter(
                     name="headers",
                     type="object",
                     description="Optional request headers as a key-value object "
@@ -89,8 +104,18 @@ class HttpAITool(AITool):
                 AIToolParameter(
                     name="data",
                     type="string",
-                    description="Raw body string for POST requests. Used instead of 'json' "
+                    description="Raw body string for POST/PUT/PATCH requests. Used instead of 'json' "
                                 "if both are provided.",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="multipart",
+                    type="array",
+                    description="Multipart form-data parts for file uploads. Each part is an object "
+                                "with 'name' (field name), and either 'content' (text value) or "
+                                "'file_path' (path to a file in the mindspace). Optional: 'filename' "
+                                "and 'content_type' for file parts. Takes precedence over 'json' "
+                                "and 'data'. Only for POST/PUT/PATCH.",
                     required=False
                 ),
                 AIToolParameter(
@@ -101,6 +126,14 @@ class HttpAITool(AITool):
                                 "body without conversion. Has no effect on non-HTML responses.",
                     required=False,
                     enum=["markdown", "raw"]
+                ),
+                AIToolParameter(
+                    name="timeout",
+                    type="number",
+                    description="Maximum time in seconds to wait for a response. Applies to "
+                                "the read phase of each request (per-read-operation, not total). "
+                                "Default is 300 seconds if not specified.",
+                    required=False
                 ),
                 AIToolParameter(
                     name="destination",
@@ -126,7 +159,7 @@ class HttpAITool(AITool):
                 name="get",
                 handler=self._get,
                 extract_context=self._extract_get_context,
-                allowed_parameters={"url", "headers", "format"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout", "format"},
                 required_parameters={"url"},
                 description=(
                     "Fetch a URL via GET. Returns the HTTP status code, content type, "
@@ -139,7 +172,7 @@ class HttpAITool(AITool):
                 name="head",
                 handler=self._head,
                 extract_context=self._extract_head_context,
-                allowed_parameters={"url", "headers"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout"},
                 required_parameters={"url"},
                 description=(
                     "Send a HEAD request to a URL. Returns the HTTP status code and "
@@ -152,10 +185,10 @@ class HttpAITool(AITool):
                 name="post",
                 handler=self._post,
                 extract_context=self._extract_post_context,
-                allowed_parameters={"url", "headers", "json", "data", "format"},
+                allowed_parameters={"url", "headers", "username", "password", "json", "data", "multipart", "timeout", "format"},
                 required_parameters={"url"},
                 description=(
-                    "Send a POST request with an optional JSON or raw body. Returns the HTTP "
+                    "Send a POST request with an optional JSON, raw, or multipart body. Returns the HTTP "
                     "status code, content type, and response body as text. HTML responses are "
                     "converted to readable markdown by default; use format=\"raw\" for the "
                     "original HTML. Output is truncated to 64KB."
@@ -165,10 +198,10 @@ class HttpAITool(AITool):
                 name="put",
                 handler=self._put,
                 extract_context=self._extract_put_context,
-                allowed_parameters={"url", "headers", "json", "data", "format"},
+                allowed_parameters={"url", "headers", "username", "password", "json", "data", "multipart", "timeout", "format"},
                 required_parameters={"url"},
                 description=(
-                    "Send a PUT request with an optional JSON or raw body. Returns the HTTP "
+                    "Send a PUT request with an optional JSON, raw, or multipart body. Returns the HTTP "
                     "status code, content type, and response body as text. HTML responses are "
                     "converted to readable markdown by default; use format=\"raw\" for the "
                     "original HTML. Output is truncated to 64KB."
@@ -178,10 +211,10 @@ class HttpAITool(AITool):
                 name="patch",
                 handler=self._patch,
                 extract_context=self._extract_patch_context,
-                allowed_parameters={"url", "headers", "json", "data", "format"},
+                allowed_parameters={"url", "headers", "username", "password", "json", "data", "multipart", "timeout", "format"},
                 required_parameters={"url"},
                 description=(
-                    "Send a PATCH request with an optional JSON or raw body. Returns the HTTP "
+                    "Send a PATCH request with an optional JSON, raw, or multipart body. Returns the HTTP "
                     "status code, content type, and response body as text. HTML responses are "
                     "converted to readable markdown by default; use format=\"raw\" for the "
                     "original HTML. Output is truncated to 64KB."
@@ -191,7 +224,7 @@ class HttpAITool(AITool):
                 name="delete",
                 handler=self._delete,
                 extract_context=self._extract_delete_context,
-                allowed_parameters={"url", "headers", "format"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout", "format"},
                 required_parameters={"url"},
                 description=(
                     "Send a DELETE request to a URL. Returns the HTTP status code, "
@@ -204,7 +237,7 @@ class HttpAITool(AITool):
                 name="download",
                 handler=self._download,
                 extract_context=self._extract_download_context,
-                allowed_parameters={"url", "headers", "destination"},
+                allowed_parameters={"url", "headers", "username", "password", "timeout", "destination"},
                 required_parameters={"url", "destination"},
                 description=(
                     "Download a file from a URL and save it to the mindspace. The file is "
@@ -225,8 +258,10 @@ class HttpAITool(AITool):
         arguments = tool_call.arguments
         url = self._get_required_str_value("url", arguments)
         headers = self._get_optional_dict_value("headers", arguments)
+        timeout = self._get_timeout(arguments)
         format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
 
+        headers = self._apply_basic_auth(headers, arguments)
         self._validate_url(url)
 
         context = f"The AI is requesting to fetch URL:\n  GET {url}"
@@ -239,7 +274,7 @@ class HttpAITool(AITool):
             raise AIToolAuthorizationDenied(f"User denied permission to fetch URL: {url}")
 
         try:
-            async with HttpClient() as client:
+            async with HttpClient(read_timeout=timeout) as client:
                 response = await client.get(url, headers=headers)
                 return await self._build_result(tool_call, response, format_type)
 
@@ -260,7 +295,9 @@ class HttpAITool(AITool):
         arguments = tool_call.arguments
         url = self._get_required_str_value("url", arguments)
         headers = self._get_optional_dict_value("headers", arguments)
+        timeout = self._get_timeout(arguments)
 
+        headers = self._apply_basic_auth(headers, arguments)
         self._validate_url(url)
 
         context = f"The AI is requesting to check URL:\n  HEAD {url}"
@@ -273,7 +310,7 @@ class HttpAITool(AITool):
             raise AIToolAuthorizationDenied(f"User denied permission to check URL: {url}")
 
         try:
-            async with HttpClient() as client:
+            async with HttpClient(read_timeout=timeout) as client:
                 response = await client.head(url, headers=headers)
                 return await self._build_head_result(tool_call, response)
 
@@ -321,8 +358,10 @@ class HttpAITool(AITool):
         arguments = tool_call.arguments
         url = self._get_required_str_value("url", arguments)
         headers = self._get_optional_dict_value("headers", arguments)
+        timeout = self._get_timeout(arguments)
         format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
 
+        headers = self._apply_basic_auth(headers, arguments)
         self._validate_url(url)
 
         context = f"The AI is requesting to DELETE URL:\n  DELETE {url}"
@@ -335,7 +374,7 @@ class HttpAITool(AITool):
             raise AIToolAuthorizationDenied(f"User denied permission to DELETE URL: {url}")
 
         try:
-            async with HttpClient() as client:
+            async with HttpClient(read_timeout=timeout) as client:
                 response = await client.delete(url, headers=headers)
                 return await self._build_result(tool_call, response, format_type)
 
@@ -366,15 +405,21 @@ class HttpAITool(AITool):
         arguments = tool_call.arguments
         url = self._get_required_str_value("url", arguments)
         headers = self._get_optional_dict_value("headers", arguments)
+        multipart_parts = arguments.get("multipart")
         json_body = arguments.get("json")
         data_body = self._get_optional_str_value("data", arguments)
+        timeout = self._get_timeout(arguments)
         format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
 
+        headers = self._apply_basic_auth(headers, arguments)
         self._validate_url(url)
 
         context = f"The AI is requesting to {method} to URL:\n  {method} {url}"
         if headers:
             context += f"\n  Headers: {headers}"
+
+        if multipart_parts is not None:
+            context += f"\n  Multipart parts: {json_module.dumps(multipart_parts, indent=2)}"
 
         if json_body is not None:
             context += f"\n  JSON body: {json_module.dumps(json_body, indent=2)}"
@@ -388,18 +433,31 @@ class HttpAITool(AITool):
             raise AIToolAuthorizationDenied(f"User denied permission to {method} to URL: {url}")
 
         try:
-            async with HttpClient() as client:
+            async with HttpClient(read_timeout=timeout) as client:
                 client_method = {
                     "POST": client.post,
                     "PUT": client.put,
                     "PATCH": client.patch,
                 }[method]
-                response = await client_method(
-                    url,
-                    headers=headers,
-                    json=json_body if json_body is not None else None,
-                    data=data_body.encode("utf-8") if data_body is not None and json_body is None else None,
-                )
+
+                if multipart_parts is not None:
+                    boundary, body = self._build_multipart_body(multipart_parts)
+                    request_headers = dict(headers) if headers else {}
+                    request_headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+                    response = await client_method(
+                        url,
+                        headers=request_headers,
+                        data=body,
+                    )
+
+                else:
+                    response = await client_method(
+                        url,
+                        headers=headers,
+                        json=json_body if json_body is not None else None,
+                        data=data_body.encode("utf-8") if data_body is not None and json_body is None else None,
+                    )
+
                 return await self._build_result(tool_call, response, format_type)
 
         except (ClientConnectorError, ServerTimeoutError, ClientResponseError, HttpClientError) as e:
@@ -420,7 +478,9 @@ class HttpAITool(AITool):
         url = self._get_required_str_value("url", arguments)
         destination = self._get_required_str_value("destination", arguments)
         headers = self._get_optional_dict_value("headers", arguments)
+        timeout = self._get_timeout(arguments)
 
+        headers = self._apply_basic_auth(headers, arguments)
         self._validate_url(url)
 
         dest_path, display_path = self._resolve_destination_path(destination)
@@ -453,7 +513,7 @@ class HttpAITool(AITool):
             )
 
         try:
-            async with HttpClient() as client:
+            async with HttpClient(read_timeout=timeout) as client:
                 response = await client.get(url, headers=headers)
 
                 status = response.status()
@@ -637,6 +697,71 @@ class HttpAITool(AITool):
         omitted = len(content_bytes) - _MAX_RESPONSE_BYTES
         return f"{truncated}\n... output truncated, {omitted} bytes omitted"
 
+    def _apply_basic_auth(
+        self,
+        headers: dict[str, str] | None,
+        arguments: dict[str, Any],
+    ) -> dict[str, str] | None:
+        """
+        Apply HTTP Basic Authentication from username/password arguments.
+
+        If both 'username' and 'password' are present in arguments, and the
+        headers do not already contain an 'Authorization' key, the Basic Auth
+        header is added. An explicit 'Authorization' header always takes
+        precedence.
+
+        Args:
+            headers: Existing request headers, or None.
+            arguments: Tool call arguments possibly containing username/password.
+
+        Returns:
+            Headers dict with Basic Auth applied if applicable, or the
+            original headers unchanged if no credentials are provided.
+        """
+        username = arguments.get("username")
+        password = arguments.get("password")
+
+        if username is None or password is None:
+            return headers
+
+        result = dict(headers) if headers is not None else {}
+
+        has_auth = any(k.lower() == "authorization" for k in result)
+        if not has_auth:
+            credentials = f"{username}:{password}"
+            encoded = base64.b64encode(credentials.encode("utf-8")).decode("ascii")
+            result["Authorization"] = f"Basic {encoded}"
+
+        return result
+
+    _DEFAULT_READ_TIMEOUT: float = 300.0
+
+    def _get_timeout(self, arguments: dict[str, Any]) -> float:
+        """
+        Extract and validate the timeout parameter from arguments.
+
+        Args:
+            arguments: Tool call arguments possibly containing 'timeout'.
+
+        Returns:
+            Timeout in seconds, or the default of 300.0 if not specified.
+
+        Raises:
+            AIToolExecutionError: If the timeout is not a positive number.
+        """
+        timeout = arguments.get("timeout")
+
+        if timeout is None:
+            return self._DEFAULT_READ_TIMEOUT
+
+        if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
+            raise AIToolExecutionError("'timeout' must be a number (seconds)")
+
+        if timeout <= 0:
+            raise AIToolExecutionError("'timeout' must be a positive number of seconds")
+
+        return float(timeout)
+
     def _validate_url(self, url: str) -> None:
         """
         Validate that a URL has a scheme and host.
@@ -692,6 +817,154 @@ class HttpAITool(AITool):
             raise AIToolExecutionError(f"'{key}' must be an object")
 
         return value
+
+    def _build_multipart_body(
+        self,
+        parts: list[dict[str, Any]],
+    ) -> tuple[str, bytes]:
+        """
+        Build a multipart/form-data body from a list of part definitions.
+
+        Args:
+            parts: List of part objects. Each part must have a 'name' field,
+                and either 'content' (text value) or 'file_path' (path to a
+                file in the mindspace). Optional fields: 'filename' and
+                'content_type' for file parts.
+
+        Returns:
+            Tuple of (boundary, body_bytes) where boundary is the MIME
+            boundary string and body_bytes is the complete multipart body.
+
+        Raises:
+            AIToolExecutionError: If parts are malformed or a file cannot be read.
+        """
+        if not isinstance(parts, list) or len(parts) == 0:
+            raise AIToolExecutionError("'multipart' must be a non-empty array of parts")
+
+        boundary = f"----HumbugBoundary{os.urandom(16).hex()}"
+
+        body = bytearray()
+        for i, part in enumerate(parts):
+            if not isinstance(part, dict):
+                raise AIToolExecutionError(f"multipart part {i} must be an object")
+
+            name = part.get("name")
+            if not name or not isinstance(name, str):
+                raise AIToolExecutionError(
+                    f"multipart part {i} must have a 'name' field"
+                )
+
+            content = part.get("content")
+            file_path = part.get("file_path")
+
+            if content is not None and file_path is not None:
+                raise AIToolExecutionError(
+                    f"multipart part '{name}' cannot have both 'content' and 'file_path'"
+                )
+
+            if content is None and file_path is None:
+                raise AIToolExecutionError(
+                    f"multipart part '{name}' must have either 'content' or 'file_path'"
+                )
+
+            part_filename = None
+            part_content_type = None
+            part_data: bytes
+
+            if file_path is not None:
+                if not isinstance(file_path, str):
+                    raise AIToolExecutionError(
+                        f"multipart part '{name}' file_path must be a string"
+                    )
+
+                resolved_path = self._resolve_source_path(file_path)
+
+                try:
+                    with open(resolved_path, "rb") as f:
+                        part_data = f.read()
+
+                except OSError as e:
+                    raise AIToolExecutionError(
+                        f"Failed to read file for multipart part '{name}': {e}"
+                    ) from e
+
+                part_filename = part.get("filename") or os.path.basename(file_path)
+                part_content_type = part.get("content_type") or "application/octet-stream"
+
+            else:
+                if not isinstance(content, str):
+                    raise AIToolExecutionError(
+                        f"multipart part '{name}' content must be a string"
+                    )
+
+                part_data = content.encode("utf-8")
+                part_filename = part.get("filename")
+                part_content_type = part.get("content_type")
+
+            body.extend(f"--{boundary}\r\n".encode("latin-1"))
+
+            header = f'Content-Disposition: form-data; name="{name}"'
+            if part_filename:
+                header += f'; filename="{part_filename}"'
+
+            body.extend(f"{header}\r\n".encode("latin-1"))
+
+            if part_content_type:
+                body.extend(f"Content-Type: {part_content_type}\r\n".encode("latin-1"))
+
+            body.extend(b"\r\n")
+            body.extend(part_data)
+            body.extend(b"\r\n")
+
+        body.extend(f"--{boundary}--\r\n".encode("latin-1"))
+
+        return boundary, bytes(body)
+
+    def _resolve_source_path(self, source: str) -> str:
+        """
+        Resolve a source file path within the mindspace for reading.
+
+        Args:
+            source: Path relative to the mindspace root, or absolute
+                within the mindspace.
+
+        Returns:
+            Resolved absolute path as a string.
+
+        Raises:
+            AIToolExecutionError: If no mindspace is open, the path resolves
+                outside the mindspace boundary, inside .humbug/, or the file
+                does not exist.
+        """
+        mindspace_path = self._mindspace.mindspace_path()
+
+        if not mindspace_path:
+            raise AIToolExecutionError("No mindspace is open")
+
+        if os.path.isabs(source):
+            abs_path = os.path.abspath(source)
+
+        else:
+            abs_path = os.path.join(mindspace_path, source)
+
+        resolved = os.path.realpath(abs_path)
+        mindspace_real = os.path.realpath(mindspace_path)
+
+        if not (resolved == mindspace_real or resolved.startswith(mindspace_real + os.sep)):
+            raise AIToolExecutionError(
+                f"Source path is outside the mindspace: {source}"
+            )
+
+        humbug_dir = os.path.join(mindspace_real, Mindspace.MINDSPACE_DIR)
+        if resolved == humbug_dir or resolved.startswith(humbug_dir + os.sep):
+            raise AIToolExecutionError(
+                "Cannot read from the .humbug/ directory — it is managed by Humbug internally."
+            )
+
+        if not os.path.isfile(resolved):
+            raise AIToolExecutionError(f"Source file does not exist: {source}")
+
+        return resolved
 
     def _resolve_destination_path(self, destination: str) -> tuple[Any, str]:
         """

@@ -958,6 +958,677 @@ class TestHttpAIToolDelete:
             _execute_tool(tool, tool_call)
 
 
+class TestHttpAIToolMultipart:
+    """Tests for multipart/form-data support."""
+
+    def test_multipart_with_text_parts(self) -> None:
+        """POST with multipart text parts should build correct body."""
+        tool = HttpAITool(_make_mindspace_mock())
+        parts = [
+            {"name": "field1", "content": "value1"},
+            {"name": "field2", "content": "value2"},
+        ]
+        tool_call = _make_tool_call(
+            "post", url="https://example.com/api", multipart=parts
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client.post.assert_called_once()
+        call_kwargs = mock_client.post.call_args
+        headers = call_kwargs.kwargs["headers"]
+        assert "multipart/form-data" in headers["Content-Type"]
+        assert "boundary=" in headers["Content-Type"]
+
+        body = call_kwargs.kwargs["data"]
+        assert b'name="field1"' in body
+        assert b'value1' in body
+        assert b'name="field2"' in body
+        assert b'value2' in body
+
+    def test_multipart_with_file_part(self) -> None:
+        """POST with multipart file part should read file and include it."""
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            file_path = os.path.join(tmp, "upload.txt")
+            with open(file_path, "wb") as f:
+                f.write(b"file contents here")
+
+            mindspace = _make_mindspace_mock(tmp)
+            tool = HttpAITool(mindspace)
+            parts = [
+                {"name": "file", "file_path": "upload.txt"},
+            ]
+            tool_call = _make_tool_call(
+                "post", url="https://example.com/upload", multipart=parts
+            )
+            mock_response = _make_mock_response(text="Uploaded")
+            with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+                mock_client = MagicMock()
+                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+                mock_client.__aexit__ = AsyncMock(return_value=None)
+                mock_client.post = AsyncMock(return_value=mock_response)
+                mock_client_class.return_value = mock_client
+
+                _execute_tool(tool, tool_call)
+
+            call_kwargs = mock_client.post.call_args.kwargs
+            body = call_kwargs["data"]
+            assert b"file contents here" in body
+            assert b'filename="upload.txt"' in body
+            assert b"application/octet-stream" in body
+
+    def test_multipart_file_part_with_explicit_filename_and_type(self) -> None:
+        """Multipart file part should use explicit filename and content_type if provided."""
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            file_path = os.path.join(tmp, "data.bin")
+            with open(file_path, "wb") as f:
+                f.write(b"\x00\x01\x02binary")
+
+            mindspace = _make_mindspace_mock(tmp)
+            tool = HttpAITool(mindspace)
+            parts = [
+                {
+                    "name": "attachment",
+                    "file_path": "data.bin",
+                    "filename": "report.pdf",
+                    "content_type": "application/pdf",
+                },
+            ]
+            tool_call = _make_tool_call(
+                "post", url="https://example.com/upload", multipart=parts
+            )
+            mock_response = _make_mock_response(text="OK")
+            with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+                mock_client = MagicMock()
+                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+                mock_client.__aexit__ = AsyncMock(return_value=None)
+                mock_client.post = AsyncMock(return_value=mock_response)
+                mock_client_class.return_value = mock_client
+
+                _execute_tool(tool, tool_call)
+
+            body = mock_client.post.call_args.kwargs["data"]
+            assert b'filename="report.pdf"' in body
+            assert b"application/pdf" in body
+
+    def test_multipart_takes_precedence_over_json(self) -> None:
+        """Multipart should take precedence over json."""
+        tool = HttpAITool(_make_mindspace_mock())
+        parts = [{"name": "field", "content": "value"}]
+        tool_call = _make_tool_call(
+            "post",
+            url="https://example.com/api",
+            multipart=parts,
+            json={"key": "value"},
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_kwargs = mock_client.post.call_args.kwargs
+        assert "multipart/form-data" in call_kwargs["headers"]["Content-Type"]
+        assert "json" not in call_kwargs
+        assert call_kwargs["data"] is not None
+
+    def test_multipart_mixed_text_and_file(self) -> None:
+        """POST with mixed text and file parts should include both."""
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            file_path = os.path.join(tmp, "doc.txt")
+            with open(file_path, "wb") as f:
+                f.write(b"document content")
+
+            mindspace = _make_mindspace_mock(tmp)
+            tool = HttpAITool(mindspace)
+            parts = [
+                {"name": "title", "content": "My Document"},
+                {"name": "file", "file_path": "doc.txt"},
+            ]
+            tool_call = _make_tool_call(
+                "post", url="https://example.com/upload", multipart=parts
+            )
+            mock_response = _make_mock_response(text="OK")
+            with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+                mock_client = MagicMock()
+                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+                mock_client.__aexit__ = AsyncMock(return_value=None)
+                mock_client.post = AsyncMock(return_value=mock_response)
+                mock_client_class.return_value = mock_client
+
+                _execute_tool(tool, tool_call)
+
+            body = mock_client.post.call_args.kwargs["data"]
+            assert b"My Document" in body
+            assert b"document content" in body
+            assert b'name="title"' in body
+            assert b'name="file"' in body
+
+    def test_multipart_empty_parts_raises(self) -> None:
+        """Multipart with empty parts array should raise."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "post", url="https://example.com/api", multipart=[]
+        )
+        with pytest.raises(AIToolExecutionError, match="non-empty"):
+            _execute_tool(tool, tool_call)
+
+    def test_multipart_part_missing_name_raises(self) -> None:
+        """Multipart part without name should raise."""
+        tool = HttpAITool(_make_mindspace_mock())
+        parts = [{"content": "value"}]
+        tool_call = _make_tool_call(
+            "post", url="https://example.com/api", multipart=parts
+        )
+        with pytest.raises(AIToolExecutionError, match="name"):
+            _execute_tool(tool, tool_call)
+
+    def test_multipart_part_both_content_and_file_path_raises(self) -> None:
+        """Multipart part with both content and file_path should raise."""
+        tool = HttpAITool(_make_mindspace_mock())
+        parts = [{"name": "field", "content": "val", "file_path": "some.txt"}]
+        tool_call = _make_tool_call(
+            "post", url="https://example.com/api", multipart=parts
+        )
+        with pytest.raises(AIToolExecutionError, match="both"):
+            _execute_tool(tool, tool_call)
+
+    def test_multipart_part_neither_content_nor_file_path_raises(self) -> None:
+        """Multipart part with neither content nor file_path should raise."""
+        tool = HttpAITool(_make_mindspace_mock())
+        parts = [{"name": "field"}]
+        tool_call = _make_tool_call(
+            "post", url="https://example.com/api", multipart=parts
+        )
+        with pytest.raises(AIToolExecutionError, match="either"):
+            _execute_tool(tool, tool_call)
+
+    def test_multipart_file_outside_mindspace_raises(self) -> None:
+        """Multipart file_path outside mindspace should raise."""
+        tool = HttpAITool(_make_mindspace_mock("/tmp/mindspace"))
+        parts = [{"name": "file", "file_path": "/etc/passwd"}]
+        tool_call = _make_tool_call(
+            "post", url="https://example.com/api", multipart=parts
+        )
+        with pytest.raises(AIToolExecutionError, match="outside"):
+            _execute_tool(tool, tool_call)
+
+    def test_multipart_file_in_humbug_dir_raises(self) -> None:
+        """Multipart file_path inside .humbug/ should raise."""
+        tool = HttpAITool(_make_mindspace_mock("/tmp/mindspace"))
+        parts = [{"name": "file", "file_path": ".humbug/secrets.txt"}]
+        tool_call = _make_tool_call(
+            "post", url="https://example.com/api", multipart=parts
+        )
+        with pytest.raises(AIToolExecutionError, match="humbug"):
+            _execute_tool(tool, tool_call)
+
+    def test_multipart_file_not_found_raises(self) -> None:
+        """Multipart file_path for nonexistent file should raise."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            mindspace = _make_mindspace_mock(tmp)
+            tool = HttpAITool(mindspace)
+            parts = [{"name": "file", "file_path": "nonexistent.txt"}]
+            tool_call = _make_tool_call(
+                "post", url="https://example.com/api", multipart=parts
+            )
+            with pytest.raises(AIToolExecutionError, match="does not exist"):
+                _execute_tool(tool, tool_call)
+
+    def test_multipart_works_with_put(self) -> None:
+        """PUT with multipart should also work."""
+        tool = HttpAITool(_make_mindspace_mock())
+        parts = [{"name": "field", "content": "value"}]
+        tool_call = _make_tool_call(
+            "put", url="https://example.com/api/1", multipart=parts
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.put = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_kwargs = mock_client.put.call_args.kwargs
+        assert "multipart/form-data" in call_kwargs["headers"]["Content-Type"]
+        assert call_kwargs["data"] is not None
+
+
+class TestHttpAIToolBasicAuth:
+    """Tests for HTTP Basic Authentication support."""
+
+    def test_basic_auth_sets_authorization_header_on_get(self) -> None:
+        """GET with username/password should set Basic Auth header."""
+        import base64
+
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com", username="user", password="pass"
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"]
+        expected = base64.b64encode(b"user:pass").decode("ascii")
+        assert call_headers["Authorization"] == f"Basic {expected}"
+
+    def test_basic_auth_sets_authorization_header_on_post(self) -> None:
+        """POST with username/password should set Basic Auth header."""
+        import base64
+
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "post", url="https://example.com/api",
+            json={"x": 1}, username="admin", password="secret"
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.post.call_args.kwargs["headers"]
+        expected = base64.b64encode(b"admin:secret").decode("ascii")
+        assert call_headers["Authorization"] == f"Basic {expected}"
+
+    def test_basic_auth_sets_authorization_header_on_delete(self) -> None:
+        """DELETE with username/password should set Basic Auth header."""
+        import base64
+
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "delete", url="https://example.com/api/1",
+            username="user", password="pass"
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.delete = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.delete.call_args.kwargs["headers"]
+        expected = base64.b64encode(b"user:pass").decode("ascii")
+        assert call_headers["Authorization"] == f"Basic {expected}"
+
+    def test_basic_auth_sets_authorization_header_on_download(self) -> None:
+        """Download with username/password should set Basic Auth header."""
+        import base64
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            mindspace = _make_mindspace_mock(tmp)
+            tool = HttpAITool(mindspace)
+            tool_call = _make_tool_call(
+                "download", url="https://example.com/file.txt",
+                destination="file.txt", username="user", password="pass"
+            )
+            mock_response = MagicMock()
+            mock_response.status.return_value = 200
+            mock_response.headers.return_value = {}
+            mock_response.content = AsyncMock(return_value=b"data")
+
+            with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+                mock_client = MagicMock()
+                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+                mock_client.__aexit__ = AsyncMock(return_value=None)
+                mock_client.get = AsyncMock(return_value=mock_response)
+                mock_client_class.return_value = mock_client
+
+                _execute_tool(tool, tool_call)
+
+            call_headers = mock_client.get.call_args.kwargs["headers"]
+            expected = base64.b64encode(b"user:pass").decode("ascii")
+            assert call_headers["Authorization"] == f"Basic {expected}"
+
+    def test_basic_auth_sets_authorization_header_on_head(self) -> None:
+        """HEAD with username/password should set Basic Auth header."""
+        import base64
+
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "head", url="https://example.com",
+            username="user", password="pass"
+        )
+        mock_response = MagicMock()
+        mock_response.status.return_value = 200
+        mock_response.headers.return_value = {}
+        mock_response.content = AsyncMock(return_value=b"")
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.head = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.head.call_args.kwargs["headers"]
+        expected = base64.b64encode(b"user:pass").decode("ascii")
+        assert call_headers["Authorization"] == f"Basic {expected}"
+
+    def test_explicit_authorization_header_takes_precedence(self) -> None:
+        """Explicit Authorization header should take precedence over Basic Auth."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com",
+            headers={"Authorization": "Bearer token123"},
+            username="user", password="pass"
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"]
+        assert call_headers["Authorization"] == "Bearer token123"
+
+    def test_basic_auth_without_username_does_not_set_header(self) -> None:
+        """Only password (no username) should not set Authorization header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com", password="pass"
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"] or {}
+        assert "Authorization" not in call_headers
+
+    def test_basic_auth_without_password_does_not_set_header(self) -> None:
+        """Only username (no password) should not set Authorization header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com", username="user"
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"] or {}
+        assert "Authorization" not in call_headers
+
+    def test_basic_auth_no_credentials_does_not_set_header(self) -> None:
+        """No username or password should not set Authorization header."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com")
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"] or {}
+        assert "Authorization" not in call_headers
+
+    def test_basic_auth_preserves_other_headers(self) -> None:
+        """Basic Auth should preserve other caller-supplied headers."""
+        import base64
+
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com",
+            headers={"X-Custom": "value", "Accept": "application/json"},
+            username="user", password="pass"
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"]
+        assert call_headers["X-Custom"] == "value"
+        assert call_headers["Accept"] == "application/json"
+        assert "Authorization" in call_headers
+
+    def test_basic_auth_case_insensitive_header_check(self) -> None:
+        """Explicit 'authorization' (lowercase) should take precedence too."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "get", url="https://example.com",
+            headers={"authorization": "Bearer token123"},
+            username="user", password="pass"
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        call_headers = mock_client.get.call_args.kwargs["headers"]
+        assert call_headers["authorization"] == "Bearer token123"
+        assert "Authorization" not in call_headers
+
+
+class TestHttpAIToolTimeout:
+    """Tests for configurable timeout support."""
+
+    def test_timeout_passes_to_client_on_get(self) -> None:
+        """GET with timeout should pass it to the HttpClient constructor."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com", timeout=10)
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(read_timeout=10.0)
+
+    def test_timeout_passes_to_client_on_post(self) -> None:
+        """POST with timeout should pass it to the HttpClient constructor."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "post", url="https://example.com/api", json={"x": 1}, timeout=30
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(read_timeout=30.0)
+
+    def test_timeout_passes_to_client_on_delete(self) -> None:
+        """DELETE with timeout should pass it to the HttpClient constructor."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "delete", url="https://example.com/api/1", timeout=5
+        )
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.delete = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(read_timeout=5.0)
+
+    def test_timeout_passes_to_client_on_head(self) -> None:
+        """HEAD with timeout should pass it to the HttpClient constructor."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call(
+            "head", url="https://example.com", timeout=15
+        )
+        mock_response = MagicMock()
+        mock_response.status.return_value = 200
+        mock_response.headers.return_value = {}
+        mock_response.content = AsyncMock(return_value=b"")
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.head = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(read_timeout=15.0)
+
+    def test_timeout_passes_to_client_on_download(self) -> None:
+        """Download with timeout should pass it to the HttpClient constructor."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            mindspace = _make_mindspace_mock(tmp)
+            tool = HttpAITool(mindspace)
+            tool_call = _make_tool_call(
+                "download", url="https://example.com/file.txt",
+                destination="file.txt", timeout=60
+            )
+            mock_response = MagicMock()
+            mock_response.status.return_value = 200
+            mock_response.headers.return_value = {}
+            mock_response.content = AsyncMock(return_value=b"data")
+
+            with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+                mock_client = MagicMock()
+                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+                mock_client.__aexit__ = AsyncMock(return_value=None)
+                mock_client.get = AsyncMock(return_value=mock_response)
+                mock_client_class.return_value = mock_client
+
+                _execute_tool(tool, tool_call)
+
+            mock_client_class.assert_called_once_with(read_timeout=60.0)
+
+    def test_default_timeout_when_not_specified(self) -> None:
+        """GET without timeout should use the default 300s read timeout."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com")
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(read_timeout=300.0)
+
+    def test_timeout_float_value(self) -> None:
+        """GET with a float timeout should pass it as a float."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com", timeout=0.5)
+        mock_response = _make_mock_response(text="OK")
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            _execute_tool(tool, tool_call)
+
+        mock_client_class.assert_called_once_with(read_timeout=0.5)
+
+    def test_timeout_zero_raises(self) -> None:
+        """GET with timeout=0 should raise AIToolExecutionError."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com", timeout=0)
+        with pytest.raises(AIToolExecutionError, match="positive"):
+            _execute_tool(tool, tool_call)
+
+    def test_timeout_negative_raises(self) -> None:
+        """GET with a negative timeout should raise AIToolExecutionError."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com", timeout=-5)
+        with pytest.raises(AIToolExecutionError, match="positive"):
+            _execute_tool(tool, tool_call)
+
+    def test_timeout_non_number_raises(self) -> None:
+        """GET with a non-numeric timeout should raise AIToolExecutionError."""
+        tool = HttpAITool(_make_mindspace_mock())
+        tool_call = _make_tool_call("get", url="https://example.com", timeout="10")
+        with pytest.raises(AIToolExecutionError, match="number"):
+            _execute_tool(tool, tool_call)
+
+
 class TestHttpAIToolHtmlConversion:
     """Tests for HTML to markdown conversion."""
 
