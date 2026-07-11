@@ -9,7 +9,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ai_tool import AIToolCall, AIToolExecutionError
+from ai_tool import (
+    AIToolAuthorizationDenied,
+    AIToolCall,
+    AIToolExecutionError,
+)
 from git_ai_tool.git_ai_tool import GitAITool
 from mindspace.mindspace import Mindspace
 
@@ -35,9 +39,33 @@ def _make_tool_call(operation: str, **kwargs: Any) -> AIToolCall:
     return AIToolCall(id="test-id", name="git", arguments=arguments)
 
 
-def _execute_tool(tool: GitAITool, tool_call: AIToolCall) -> Any:
+def _make_auth_callback(authorized: bool = True) -> MagicMock:
+    """Create a mocked authorization callback."""
+    mock = MagicMock()
+
+    async def mock_auth_callback(
+        _tool_name: str,
+        _arguments: dict[str, Any],
+        _context: str,
+        _auth_context: str | None,
+        _destructive: bool
+    ) -> bool:
+        return authorized
+
+    mock.side_effect = mock_auth_callback
+    return mock
+
+
+def _execute_tool(
+    tool: GitAITool,
+    tool_call: AIToolCall,
+    auth_callback: MagicMock | None = None,
+) -> Any:
     """Execute a tool call synchronously and return the result."""
-    return asyncio.run(tool.execute(tool_call, None, MagicMock()))
+    if auth_callback is None:
+        auth_callback = _make_auth_callback(authorized=True)
+
+    return asyncio.run(tool.execute(tool_call, None, auth_callback))
 
 
 @pytest.fixture
@@ -409,8 +437,8 @@ class TestOutputLimits:
             assert "output truncated" in result.content
             assert "more files omitted" in result.content
 
-    def test_diff_truncated_with_large_changes(self) -> None:
-        """Diff should truncate when working-tree changes are large."""
+    def test_diff_large_changes_raise_execution_error(self) -> None:
+        """Diff should fail when working-tree changes exceed the inline limit."""
         with tempfile.TemporaryDirectory() as mindspace_path:
             _run(["git", "init"], cwd=mindspace_path)
             _run(["git", "config", "user.email", "t@t.com"], cwd=mindspace_path)
@@ -427,10 +455,10 @@ class TestOutputLimits:
                     f.write("modified line with lots of text " * 10 + "\n")
 
             tool = GitAITool(_make_mindspace_mock(mindspace_path))
-            result = _execute_tool(tool, _make_tool_call("diff"))
+            with pytest.raises(AIToolExecutionError, match="too large to return inline") as exc_info:
+                _execute_tool(tool, _make_tool_call("diff"))
 
-            assert "output truncated" in result.content
-            assert "remaining diffs omitted" in result.content
+            assert "output_path" in str(exc_info.value)
 
     def test_log_truncated_with_many_commits(self) -> None:
         """Log should truncate when there are many commits with long messages."""
@@ -453,8 +481,8 @@ class TestOutputLimits:
             assert "output truncated" in result.content
             assert "more commits omitted" in result.content
 
-    def test_show_truncated_with_large_file(self) -> None:
-        """Show should truncate when the file content at a ref is large."""
+    def test_show_large_file_raises_execution_error(self) -> None:
+        """Show should fail when the file content at a ref exceeds the inline limit."""
         with tempfile.TemporaryDirectory() as mindspace_path:
             _run(["git", "init"], cwd=mindspace_path)
             _run(["git", "config", "user.email", "t@t.com"], cwd=mindspace_path)
@@ -468,19 +496,74 @@ class TestOutputLimits:
             _run(["git", "commit", "-m", "init"], cwd=mindspace_path)
 
             tool = GitAITool(_make_mindspace_mock(mindspace_path))
-            result = _execute_tool(tool, _make_tool_call("show", path="big.txt", ref="HEAD"))
+            with pytest.raises(AIToolExecutionError, match="too large to return inline") as exc_info:
+                _execute_tool(tool, _make_tool_call("show", path="big.txt", ref="HEAD"))
 
-            assert "output truncated" in result.content
-            assert "bytes omitted" in result.content
+            assert "output_path" in str(exc_info.value)
 
-    def test_show_not_truncated_for_small_file(self, temp_repo_in_mindspace: Any) -> None:
-        """Show should not truncate small files."""
+    def test_show_large_file_writes_with_output_path(self) -> None:
+        """Show should write full content when output_path is provided."""
+        with tempfile.TemporaryDirectory() as mindspace_path:
+            _run(["git", "init"], cwd=mindspace_path)
+            _run(["git", "config", "user.email", "t@t.com"], cwd=mindspace_path)
+            _run(["git", "config", "user.name", "T"], cwd=mindspace_path)
+
+            payload = ("line with lots of content " * 10 + "\n") * 5000
+            with open(os.path.join(mindspace_path, "big.txt"), "w", encoding="utf-8") as f:
+                f.write(payload)
+            _run(["git", "add", "."], cwd=mindspace_path)
+            _run(["git", "commit", "-m", "init"], cwd=mindspace_path)
+
+            tool = GitAITool(_make_mindspace_mock(mindspace_path))
+            result = _execute_tool(
+                tool,
+                _make_tool_call(
+                    "show",
+                    path="big.txt",
+                    ref="HEAD",
+                    output_path="spilled/big-at-head.txt",
+                ),
+            )
+
+            assert result.error is None
+            assert "Wrote full git show output" in result.content
+            assert "spilled/big-at-head.txt" in result.content
+
+            written = os.path.join(mindspace_path, "spilled", "big-at-head.txt")
+            with open(written, encoding="utf-8") as f:
+                assert f.read() == payload
+
+    def test_diff_large_changes_write_denied(self) -> None:
+        """Diff with output_path should raise when the user denies write approval."""
+        with tempfile.TemporaryDirectory() as mindspace_path:
+            _run(["git", "init"], cwd=mindspace_path)
+            _run(["git", "config", "user.email", "t@t.com"], cwd=mindspace_path)
+            _run(["git", "config", "user.name", "T"], cwd=mindspace_path)
+
+            with open(os.path.join(mindspace_path, "big.txt"), "w", encoding="utf-8") as f:
+                f.write("original\n")
+            _run(["git", "add", "."], cwd=mindspace_path)
+            _run(["git", "commit", "-m", "init"], cwd=mindspace_path)
+
+            with open(os.path.join(mindspace_path, "big.txt"), "w", encoding="utf-8") as f:
+                for _ in range(5000):
+                    f.write("modified line with lots of text " * 10 + "\n")
+
+            tool = GitAITool(_make_mindspace_mock(mindspace_path))
+            with pytest.raises(AIToolAuthorizationDenied, match="denied permission"):
+                _execute_tool(
+                    tool,
+                    _make_tool_call("diff", output_path="out.diff"),
+                    auth_callback=_make_auth_callback(authorized=False),
+                )
+
+    def test_show_small_file_returns_inline(self, temp_repo_in_mindspace: Any) -> None:
+        """Show should return small files inline."""
         _mindspace_path, mindspace = temp_repo_in_mindspace
         tool = GitAITool(mindspace)
         result = _execute_tool(tool, _make_tool_call("show", path="file1.txt", ref="HEAD"))
 
         assert result.error is None
-        assert "output truncated" not in result.content
         assert "line 1" in result.content
 
 

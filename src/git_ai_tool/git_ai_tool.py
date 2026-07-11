@@ -2,11 +2,14 @@
 
 import logging
 import os
+import tempfile
+from pathlib import Path
 from typing import Any
 
 from ai_tool import (
     AITool,
     AIToolAuthorizationCallback,
+    AIToolAuthorizationDenied,
     AIToolCall,
     AIToolDefinition,
     AIToolExecutionError,
@@ -23,16 +26,18 @@ from git import (
 from mindspace.mindspace import Mindspace
 
 
-_MAX_RESPONSE_BYTES = 64 * 1024
+_MAX_INLINE_RESPONSE_BYTES = 64 * 1024
 
 
 class GitAITool(AITool):
     """
     Version control tool for interacting with git repositories.
 
-    Provides read-only access to git repository state within the mindspace.
-    All operations are scoped to repositories whose root is inside the mindspace
-    boundary.  The ``.humbug/`` directory is never accessible through this tool.
+    Provides read-only access to git repository state within the mindspace,
+    with optional approved writes when spilling large diff/show output to a
+    mindspace file. All operations are scoped to repositories whose root is
+    inside the mindspace boundary. The ``.humbug/`` directory is never
+    accessible through this tool.
     """
 
     def __init__(self, mindspace: Mindspace) -> None:
@@ -55,7 +60,9 @@ class GitAITool(AITool):
                 "repositories within the current mindspace. It supports querying repository status, "
                 "viewing diffs, commit history, branches, and file contents at specific revisions.\n\n"
                 "Only repositories whose root is within the mindspace boundary are accessible. "
-                "The .humbug/ directory is excluded from all operations."
+                "The .humbug/ directory is excluded from all operations. Diff and show return content "
+                "inline only when at most 64KB; larger output fails unless output_path is set to write "
+                "the full result to a mindspace file (requires approval)."
             ),
             additional_parameters=[
                 AIToolParameter(
@@ -90,6 +97,16 @@ class GitAITool(AITool):
                         "(for 'log' operation). Default 0. Use for paging through history."
                     ),
                     required=False
+                ),
+                AIToolParameter(
+                    name="output_path",
+                    type="string",
+                    description=(
+                        "Optional mindspace file path for diff and show. When set, the full output "
+                        "is written to this file (requires user approval) and the tool result is a "
+                        "short summary. Use for large content that exceeds the 64KB inline limit."
+                    ),
+                    required=False
                 )
             ]
         )
@@ -98,7 +115,7 @@ class GitAITool(AITool):
         """Get brief one-line description for system prompt."""
         return (
             "Version control operations (status, diff, log, branches, show file at ref, stat). "
-            "Read-only access to git repositories within the mindspace."
+            "Read-only git access in the mindspace; large diff/show can spill to a file."
         )
 
     def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
@@ -120,14 +137,16 @@ class GitAITool(AITool):
                 name="diff",
                 handler=self._diff,
                 extract_context=self._extract_diff_context,
-                allowed_parameters={"path", "ref"},
+                allowed_parameters={"path", "ref", "output_path"},
                 required_parameters=set(),
                 description=(
                     "Return a unified diff of working-tree changes in the repository. "
                     "If 'path' is a file, shows only the diff for that file. If 'path' is a directory, "
                     "shows the diff for the repository containing that path. If omitted, uses the "
                     "mindspace root. Use 'ref' to diff against a specific commit, branch, or tag "
-                    "(default HEAD). Untracked files are shown as fully added."
+                    "(default HEAD). Untracked files are shown as fully added. Inline only when the "
+                    "diff is at most 64KB; larger diffs fail the tool call unless output_path is set "
+                    "to write the full diff to a mindspace file (requires approval)."
                 )
             ),
             "log": AIToolOperationDefinition(
@@ -161,12 +180,15 @@ class GitAITool(AITool):
                 name="show",
                 handler=self._show,
                 extract_context=self._extract_show_context,
-                allowed_parameters={"path", "ref"},
+                allowed_parameters={"path", "ref", "output_path"},
                 required_parameters={"path", "ref"},
                 description=(
                     "Return the content of a file at a specific git ref (e.g. 'HEAD', a commit "
                     "hash, branch name, or tag). The 'path' identifies both the file and the "
-                    "repository. Returns an error if the file does not exist at the given ref."
+                    "repository. Returns an error if the file does not exist at the given ref. "
+                    "Inline only when the content is at most 64KB; larger content fails the tool "
+                    "call unless output_path is set to write the full content to a mindspace file "
+                    "(requires approval)."
                 )
             ),
             "stat": AIToolOperationDefinition(
@@ -261,6 +283,49 @@ class GitAITool(AITool):
 
         return GitRepository(repo_root)
 
+    def _resolve_output_path(self, output_path: str) -> tuple[Path, str]:
+        """
+        Resolve an output_path write target within the mindspace.
+
+        Args:
+            output_path: Path relative to the mindspace root, or absolute within
+                the mindspace.
+
+        Returns:
+            Tuple of (Path, display_path) where Path is the resolved pathlib.Path
+            and display_path is the mindspace-relative path.
+
+        Raises:
+            AIToolExecutionError: If no mindspace is open, or if the path resolves
+                outside the mindspace boundary or inside .humbug/.
+        """
+        mindspace_path = self._mindspace.mindspace_path()
+
+        if not mindspace_path:
+            raise AIToolExecutionError("No mindspace is open")
+
+        if os.path.isabs(output_path):
+            abs_path = os.path.abspath(output_path)
+
+        else:
+            abs_path = os.path.join(mindspace_path, output_path)
+
+        resolved = os.path.realpath(abs_path)
+        mindspace_real = os.path.realpath(mindspace_path)
+
+        if not (resolved == mindspace_real or resolved.startswith(mindspace_real + os.sep)):
+            raise AIToolExecutionError(
+                f"output_path is outside the mindspace: {output_path}"
+            )
+
+        humbug_dir = os.path.join(mindspace_real, Mindspace.MINDSPACE_DIR)
+        if resolved == humbug_dir or resolved.startswith(humbug_dir + os.sep):
+            raise AIToolExecutionError(
+                "Cannot write to the .humbug/ directory — it is managed by Humbug internally."
+            )
+
+        return Path(resolved), os.path.relpath(resolved, mindspace_real)
+
     async def _status(
         self,
         tool_call: AIToolCall,
@@ -311,7 +376,7 @@ class GitAITool(AITool):
         self,
         tool_call: AIToolCall,
         _requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Diff operation — show working-tree changes."""
         path = tool_call.arguments.get("path")
@@ -321,16 +386,39 @@ class GitAITool(AITool):
         if not isinstance(ref, str) or not ref:
             ref = "HEAD"
 
+        output_path = tool_call.arguments.get("output_path")
+        if output_path is not None and not isinstance(output_path, str):
+            raise AIToolExecutionError("'output_path' must be a string")
+
         # If path is a specific file, diff just that file
         if path is not None:
             resolved_path = self._resolve_path(path)
             if os.path.isfile(resolved_path):
-                return self._diff_single_file(tool_call, repo, resolved_path, ref)
+                return await self._diff_single_file(
+                    tool_call,
+                    repo,
+                    resolved_path,
+                    ref,
+                    output_path,
+                    request_authorization,
+                )
 
-        return self._diff_all_files(tool_call, repo, ref)
+        return await self._diff_all_files(
+            tool_call,
+            repo,
+            ref,
+            output_path,
+            request_authorization,
+        )
 
-    def _diff_single_file(
-        self, tool_call: AIToolCall, repo: GitRepository, file_path: str, ref: str = "HEAD"
+    async def _diff_single_file(
+        self,
+        tool_call: AIToolCall,
+        repo: GitRepository,
+        file_path: str,
+        ref: str,
+        output_path: str | None,
+        request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """
         Return the diff for a single file.
@@ -339,13 +427,17 @@ class GitAITool(AITool):
             tool_call: The original tool call.
             repo: The repository containing the file.
             file_path: Absolute path to the file to diff.
-            ref: Git ref to diff against (default "HEAD").
+            ref: Git ref to diff against.
+            output_path: Optional mindspace path to write the full diff.
+            request_authorization: Authorization callback for file writes.
 
         Returns:
-            AIToolResult with the file diff, truncated if necessary.
+            AIToolResult with the file diff, or a short write summary.
 
         Raises:
-            AIToolExecutionError: If the diff command fails.
+            AIToolExecutionError: If the diff command fails or output is too large
+                without output_path.
+            AIToolAuthorizationDenied: If the user denies writing output_path.
         """
         try:
             diff_text = repo.get_file_diff(file_path, ref)
@@ -367,14 +459,22 @@ class GitAITool(AITool):
                 content="No changes for this file.",
             )
 
-        return AIToolResult(
-            id=tool_call.id,
-            name="git",
-            content=self._truncate_content(diff_text),
+        return await self._deliver_content_result(
+            tool_call=tool_call,
+            content=diff_text,
+            operation_label="diff",
+            output_path=output_path,
+            request_authorization=request_authorization,
+            narrow_hint="Narrow path to a single smaller file, open a diff tab, or",
         )
 
-    def _diff_all_files(
-        self, tool_call: AIToolCall, repo: GitRepository, ref: str = "HEAD"
+    async def _diff_all_files(
+        self,
+        tool_call: AIToolCall,
+        repo: GitRepository,
+        ref: str,
+        output_path: str | None,
+        request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """
         Return the combined diff for all changed files in the working tree.
@@ -382,13 +482,17 @@ class GitAITool(AITool):
         Args:
             tool_call: The original tool call.
             repo: The repository to diff.
-            ref: Git ref to diff against (default "HEAD").
+            ref: Git ref to diff against.
+            output_path: Optional mindspace path to write the full diff.
+            request_authorization: Authorization callback for file writes.
 
         Returns:
-            AIToolResult with the combined diff, truncated if necessary.
+            AIToolResult with the combined diff, or a short write summary.
 
         Raises:
-            AIToolExecutionError: If the git status or diff command fails.
+            AIToolExecutionError: If the git status or diff command fails, or
+                output is too large without output_path.
+            AIToolAuthorizationDenied: If the user denies writing output_path.
         """
         try:
             entries = repo.get_status()
@@ -407,10 +511,6 @@ class GitAITool(AITool):
         for entry in entries:
             diff_text = repo.get_file_diff(entry.path, ref)
             if diff_text:
-                if self._would_exceed_limit(diff_parts, diff_text):
-                    diff_parts.append("... output truncated, remaining diffs omitted")
-                    break
-
                 diff_parts.append(diff_text)
 
         if not diff_parts:
@@ -420,10 +520,16 @@ class GitAITool(AITool):
                 content="Changes detected but no diff text could be generated.",
             )
 
-        return AIToolResult(
-            id=tool_call.id,
-            name="git",
-            content="\n".join(diff_parts),
+        combined = "\n".join(diff_parts)
+        return await self._deliver_content_result(
+            tool_call=tool_call,
+            content=combined,
+            operation_label="diff",
+            output_path=output_path,
+            request_authorization=request_authorization,
+            narrow_hint=(
+                "Diff individual files with path, open a diff tab, or"
+            ),
         )
 
     async def _log(
@@ -559,12 +665,16 @@ class GitAITool(AITool):
         self,
         tool_call: AIToolCall,
         _requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Show operation — display file content at a specific ref."""
         arguments = tool_call.arguments
         path = self._get_required_str_value("path", arguments)
         ref = self._get_required_str_value("ref", arguments)
+
+        output_path = arguments.get("output_path")
+        if output_path is not None and not isinstance(output_path, str):
+            raise AIToolExecutionError("'output_path' must be a string")
 
         resolved_path = self._resolve_path(path)
         repo = self._resolve_repo(path)
@@ -587,10 +697,13 @@ class GitAITool(AITool):
                 f"File '{path}' does not exist at ref '{ref}'."
             )
 
-        return AIToolResult(
-            id=tool_call.id,
-            name="git",
-            content=self._truncate_content(content)
+        return await self._deliver_content_result(
+            tool_call=tool_call,
+            content=content,
+            operation_label="show",
+            output_path=output_path,
+            request_authorization=request_authorization,
+            narrow_hint="Show a smaller path/ref, or",
         )
 
     async def _stat(
@@ -644,6 +757,138 @@ class GitAITool(AITool):
             content=self._format_result(repo.root(), lines),
         )
 
+    async def _deliver_content_result(
+        self,
+        tool_call: AIToolCall,
+        content: str,
+        operation_label: str,
+        output_path: str | None,
+        request_authorization: AIToolAuthorizationCallback,
+        narrow_hint: str,
+    ) -> AIToolResult:
+        """
+        Return content inline, write it to output_path, or fail if too large.
+
+        Args:
+            tool_call: The original tool call.
+            content: Full content string for the operation.
+            operation_label: Short name for error messages (e.g. 'diff').
+            output_path: Optional mindspace destination for a full write.
+            request_authorization: Authorization callback for writes.
+            narrow_hint: Guidance fragment for oversize errors without output_path.
+
+        Returns:
+            AIToolResult with inline content or a short write summary.
+
+        Raises:
+            AIToolExecutionError: If content exceeds the inline limit and
+                output_path is not set, or if the write fails.
+            AIToolAuthorizationDenied: If the user denies the write.
+        """
+        if output_path:
+            return await self._write_content_to_output_path(
+                tool_call=tool_call,
+                content=content,
+                operation_label=operation_label,
+                output_path=output_path,
+                request_authorization=request_authorization,
+            )
+
+        size = len(content.encode("utf-8"))
+        if size <= _MAX_INLINE_RESPONSE_BYTES:
+            return AIToolResult(
+                id=tool_call.id,
+                name="git",
+                content=content,
+            )
+
+        raise AIToolExecutionError(
+            f"Git {operation_label} output is too large to return inline "
+            f"({size} bytes; limit is {_MAX_INLINE_RESPONSE_BYTES} bytes). "
+            f"{narrow_hint} pass output_path to write the full result to a "
+            f"mindspace file (requires approval)."
+        )
+
+    async def _write_content_to_output_path(
+        self,
+        tool_call: AIToolCall,
+        content: str,
+        operation_label: str,
+        output_path: str,
+        request_authorization: AIToolAuthorizationCallback,
+    ) -> AIToolResult:
+        """
+        Authorize and write full operation content to a mindspace file.
+
+        Args:
+            tool_call: The original tool call.
+            content: Full content to write.
+            operation_label: Short name for messages (e.g. 'diff').
+            output_path: Mindspace-relative or absolute-within-mindspace path.
+            request_authorization: Authorization callback.
+
+        Returns:
+            AIToolResult summarizing the write.
+
+        Raises:
+            AIToolExecutionError: If the path is invalid or the write fails.
+            AIToolAuthorizationDenied: If the user denies the write.
+        """
+        dest_path, display_path = self._resolve_output_path(output_path)
+        size = len(content.encode("utf-8"))
+
+        if dest_path.exists():
+            reason = (
+                f"The AI is requesting to write git {operation_label} output "
+                f"({size:,} bytes) to '{display_path}'. This will overwrite the "
+                f"existing file. The previous contents will be lost."
+            )
+            destructive = True
+
+        else:
+            reason = (
+                f"The AI is requesting to write git {operation_label} output "
+                f"({size:,} bytes) to a new file '{display_path}'."
+            )
+            destructive = False
+
+        authorized = await request_authorization(
+            "git",
+            tool_call.arguments,
+            reason,
+            None,
+            destructive,
+        )
+
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to write git {operation_label} output to: {display_path}"
+            )
+
+        try:
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+            tmp_fd, tmp_path = tempfile.mkstemp(dir=dest_path.parent, suffix=".tmp")
+
+            with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            os.replace(tmp_path, dest_path)
+
+        except OSError as e:
+            raise AIToolExecutionError(
+                f"Failed to write file '{display_path}': {e}"
+            ) from e
+
+        return AIToolResult(
+            id=tool_call.id,
+            name="git",
+            content=(
+                f"Wrote full git {operation_label} output to: {display_path} "
+                f"({size:,} bytes)"
+            ),
+        )
+
     def _would_exceed_limit(self, parts: list[str], new_part: str) -> bool:
         """
         Return True if adding *new_part* to *parts* would exceed the response size limit.
@@ -653,30 +898,11 @@ class GitAITool(AITool):
             new_part: The next part to potentially add.
 
         Returns:
-            True if the combined size would exceed _MAX_RESPONSE_BYTES.
+            True if the combined size would exceed _MAX_INLINE_RESPONSE_BYTES.
         """
         current_size = sum(len(p.encode("utf-8")) for p in parts)
         new_size = len(new_part.encode("utf-8"))
-        return current_size + new_size > _MAX_RESPONSE_BYTES
-
-    def _truncate_content(self, content: str) -> str:
-        """
-        Truncate *content* if it exceeds the response size limit.
-
-        Args:
-            content: Full content string.
-
-        Returns:
-            Content truncated to _MAX_RESPONSE_BYTES with a notice, or the
-            original content if within the limit.
-        """
-        content_bytes = content.encode("utf-8")
-        if len(content_bytes) <= _MAX_RESPONSE_BYTES:
-            return content
-
-        truncated = content_bytes[:_MAX_RESPONSE_BYTES].decode("utf-8", errors="ignore")
-        omitted = len(content_bytes) - _MAX_RESPONSE_BYTES
-        return f"{truncated}\n... output truncated, {omitted} bytes omitted"
+        return current_size + new_size > _MAX_INLINE_RESPONSE_BYTES
 
     def _format_result(self, repo_root: str, lines: list[str]) -> str:
         """
@@ -699,12 +925,20 @@ class GitAITool(AITool):
     def _extract_diff_context(self, arguments: dict[str, Any]) -> str | None:
         """Extract context for diff operation."""
         path = arguments.get("path", "mindspace root")
+        output_path = arguments.get("output_path")
+        if output_path:
+            return f"git diff: {path} -> {output_path}"
+
         return f"git diff: {path}"
 
     def _extract_show_context(self, arguments: dict[str, Any]) -> str | None:
         """Extract context for show operation."""
         path = arguments.get("path", "?")
         ref = arguments.get("ref", "?")
+        output_path = arguments.get("output_path")
+        if output_path:
+            return f"git show {ref}: {path} -> {output_path}"
+
         return f"git show {ref}: {path}"
 
     def _extract_stat_context(self, arguments: dict[str, Any]) -> str | None:
