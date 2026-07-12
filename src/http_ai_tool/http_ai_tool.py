@@ -61,8 +61,6 @@ class HttpAITool(AITool):
     (measured after HTML-to-markdown or JSON formatting when those apply).
     Larger bodies fail the tool call with instructions to use download.
 
-    HTML responses are converted to readable markdown by default. Use
-    ``format="raw"`` to receive the original HTML.
     """
 
     def __init__(self, mindspace: Mindspace) -> None:
@@ -80,8 +78,8 @@ class HttpAITool(AITool):
                 "PUT, PATCH, DELETE, and download operations.\n\n"
                 "All operations require user authorization — the user sees the method, URL, "
                 "headers, and body before approving. GET/POST/PUT/PATCH/DELETE return the response "
-                "body inline only when that final body text is at most 64KB (after HTML-to-markdown "
-                "or JSON formatting when those apply); larger bodies fail the tool call and the "
+                "body inline only when that final body text is at most 64KB (after JSON formatting "
+                "or HTML-to-markdown conversion when those apply); larger bodies fail the tool call and the "
                 "full response should be fetched with download. Download writes directly to a file "
                 "in the mindspace without an inline size limit."
             ),
@@ -140,9 +138,9 @@ class HttpAITool(AITool):
                 AIToolParameter(
                     name="format",
                     type="string",
-                    description="Response format for HTML content. 'markdown' (default) converts "
-                                "HTML to readable markdown. 'raw' returns the original response "
-                                "body without conversion. Has no effect on non-HTML responses.",
+                    description="Response format for HTML content. When omitted, the response body "
+                                "is returned as-is. Set to 'markdown' to convert HTML to readable "
+                                "markdown. Has no effect on non-HTML responses.",
                     required=False,
                     enum=["markdown", "raw"]
                 ),
@@ -183,7 +181,7 @@ class HttpAITool(AITool):
         """Get brief one-line description for system prompt."""
         return (
             "HTTP client operations (GET, HEAD, POST, PUT, PATCH, DELETE, download). Fetch URLs, "
-            "check headers, make API requests, download files. HTML responses converted to markdown by default."
+            "check headers, make API requests, download files. Use format=\"markdown\" for HTML conversion."
         )
 
     def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
@@ -197,8 +195,8 @@ class HttpAITool(AITool):
                 required_parameters={"url"},
                 description=(
                     "Fetch a URL via GET. Returns the HTTP status code, content type, "
-                    "and response body as text. HTML responses are converted to readable "
-                    "markdown by default; use format=\"raw\" for the original HTML. "
+                    "and response body as text. Use format=\"markdown\" to convert HTML "
+                    "responses to readable markdown; otherwise the raw body is returned. "
                     "The body is returned inline only when at most 64KB after any formatting; "
                     "larger bodies fail the tool call — use download for the full response."
                 )
@@ -227,9 +225,9 @@ class HttpAITool(AITool):
                 required_parameters={"url"},
                 description=(
                     "Send a POST request with an optional JSON, raw, or multipart body. Returns the HTTP "
-                    "status code, content type, and response body as text. HTML responses are "
-                    "converted to readable markdown by default; use format=\"raw\" for the "
-                    "original HTML. The body is returned inline only when at most 64KB after any "
+                    "status code, content type, and response body as text. Use format=\"markdown\" "
+                    "to convert HTML responses to readable markdown; otherwise the raw body is "
+                    "returned. The body is returned inline only when at most 64KB after any "
                     "formatting; larger bodies fail the tool call — use download for the full response."
                 )
             ),
@@ -244,9 +242,9 @@ class HttpAITool(AITool):
                 required_parameters={"url"},
                 description=(
                     "Send a PUT request with an optional JSON, raw, or multipart body. Returns the HTTP "
-                    "status code, content type, and response body as text. HTML responses are "
-                    "converted to readable markdown by default; use format=\"raw\" for the "
-                    "original HTML. The body is returned inline only when at most 64KB after any "
+                    "status code, content type, and response body as text. Use format=\"markdown\" "
+                    "to convert HTML responses to readable markdown; otherwise the raw body is "
+                    "returned. The body is returned inline only when at most 64KB after any "
                     "formatting; larger bodies fail the tool call — use download for the full response."
                 )
             ),
@@ -261,9 +259,9 @@ class HttpAITool(AITool):
                 required_parameters={"url"},
                 description=(
                     "Send a PATCH request with an optional JSON, raw, or multipart body. Returns the HTTP "
-                    "status code, content type, and response body as text. HTML responses are "
-                    "converted to readable markdown by default; use format=\"raw\" for the "
-                    "original HTML. The body is returned inline only when at most 64KB after any "
+                    "status code, content type, and response body as text. Use format=\"markdown\" "
+                    "to convert HTML responses to readable markdown; otherwise the raw body is "
+                    "returned. The body is returned inline only when at most 64KB after any "
                     "formatting; larger bodies fail the tool call — use download for the full response."
                 )
             ),
@@ -275,9 +273,9 @@ class HttpAITool(AITool):
                 required_parameters={"url"},
                 description=(
                     "Send a DELETE request to a URL. Returns the HTTP status code, "
-                    "content type, and response body as text. HTML responses are converted "
-                    "to readable markdown by default; use format=\"raw\" for the original "
-                    "HTML. The body is returned inline only when at most 64KB after any "
+                    "content type, and response body as text. Use format=\"markdown\" to "
+                    "convert HTML responses to readable markdown; otherwise the raw body is "
+                    "returned. The body is returned inline only when at most 64KB after any "
                     "formatting; larger bodies fail the tool call — use download for the full response."
                 )
             ),
@@ -308,7 +306,7 @@ class HttpAITool(AITool):
         headers = self._get_optional_dict_value("headers", arguments)
         timeout = self._get_timeout(arguments)
         proxy = self._get_proxy(arguments)
-        format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
+        format_type = self._get_optional_str_value("format", arguments) or "raw"
 
         headers = self._apply_basic_auth(headers, arguments)
         headers = self._apply_cookies(headers, arguments)
@@ -412,7 +410,7 @@ class HttpAITool(AITool):
         headers = self._get_optional_dict_value("headers", arguments)
         timeout = self._get_timeout(arguments)
         proxy = self._get_proxy(arguments)
-        format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
+        format_type = self._get_optional_str_value("format", arguments) or "raw"
 
         headers = self._apply_basic_auth(headers, arguments)
         headers = self._apply_cookies(headers, arguments)
@@ -464,7 +462,7 @@ class HttpAITool(AITool):
         data_body = self._get_optional_str_value("data", arguments)
         timeout = self._get_timeout(arguments)
         proxy = self._get_proxy(arguments)
-        format_type = self._get_optional_str_value("format", arguments, "markdown") or "markdown"
+        format_type = self._get_optional_str_value("format", arguments) or "raw"
 
         headers = self._apply_basic_auth(headers, arguments)
         headers = self._apply_cookies(headers, arguments)
@@ -612,7 +610,8 @@ class HttpAITool(AITool):
                 f"Status: {status}\n"
                 f"Content-Type: {content_type}\n"
                 f"Saved to: {display_path} ({size:,} bytes)"
-            )
+            ),
+            context="text"
         )
 
     async def _build_result(
@@ -654,7 +653,8 @@ class HttpAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="http",
-                content=self._build_result_content(status, content_type, body, headers)
+                content=self._build_result_content(status, content_type, body, headers),
+                context="text"
             )
 
         if "text/html" in content_type and format_type != "raw":
@@ -676,7 +676,8 @@ class HttpAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="http",
-            content=self._build_result_content(status, content_type, body, headers)
+            content=self._build_result_content(status, content_type, body, headers),
+            context="text"
         )
 
     async def _build_head_result(
@@ -714,7 +715,8 @@ class HttpAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="http",
-            content="\n".join(lines)
+            content="\n".join(lines),
+            context="text"
         )
 
     def _build_result_content(

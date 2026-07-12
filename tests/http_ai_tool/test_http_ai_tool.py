@@ -210,10 +210,10 @@ class TestHttpAIToolGet:
         mock_client.get.assert_called_once_with("https://example.com", headers=headers)
 
     def test_get_html_converts_to_markdown(self) -> None:
-        """GET with text/html should convert to markdown."""
+        """GET with text/html and format=markdown should convert to markdown."""
         tool = HttpAITool(_make_mindspace_mock())
         html = "<html><body><h1>Title</h1><p>Hello</p></body></html>"
-        tool_call = _make_tool_call("get", url="https://example.com")
+        tool_call = _make_tool_call("get", url="https://example.com", format="markdown")
         mock_response = _make_mock_response(
             headers={"content-type": "text/html"},
             text=html
@@ -230,6 +230,27 @@ class TestHttpAIToolGet:
         assert "# Title" in result.content
         assert "Hello" in result.content
         assert "<html>" not in result.content
+
+    def test_get_html_no_format_returns_raw_html(self) -> None:
+        """GET with text/html and no format should return raw HTML."""
+        tool = HttpAITool(_make_mindspace_mock())
+        html = "<html><body><h1>Title</h1><p>Hello</p></body></html>"
+        tool_call = _make_tool_call("get", url="https://example.com")
+        mock_response = _make_mock_response(
+            headers={"content-type": "text/html"},
+            text=html
+        )
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client_class.return_value = mock_client
+
+            result = _execute_tool(tool, tool_call)
+
+        assert "<html>" in result.content
+        assert "<h1>Title</h1>" in result.content
 
     def test_get_html_raw_format_returns_html(self) -> None:
         """GET with format=raw should return raw HTML."""
