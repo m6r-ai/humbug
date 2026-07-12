@@ -232,6 +232,11 @@ class OpenAIBackend(AIBackend):
         if AIConversationSettings.supports_temperature(settings.model, settings.provider):
             data["temperature"] = settings.temperature
 
+        # Add reasoning effort if the model supports variable effort levels
+        efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model, settings.provider)
+        if efforts and settings.reasoning_effort is not None:
+            data["reasoning_effort"] = settings.reasoning_effort
+
         # Add tools if supported
         if self._supports_tools(settings):
             tool_definitions = self._tool_manager.get_tool_definitions()
