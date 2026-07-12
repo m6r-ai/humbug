@@ -521,7 +521,7 @@ _OCEAN_LIGHT_COLORS: dict[ColorRole, str] = {
     ColorRole.TEXT_HEADING: "#204080",
     ColorRole.TEXT_HEADING_BRIGHT: "#203880",
     ColorRole.TEXT_DISABLED: "#65758a",
-    ColorRole.TEXT_SELECTED: "#cfe4fb",
+    ColorRole.TEXT_SELECTED: "#8fc4fb",
     ColorRole.TEXT_FOUND: "#e0b4b4",
     ColorRole.TEXT_FOUND_DIM: "#f4d8d8",
     ColorRole.TEXT_RECOMMENDED: "#ffffff",
