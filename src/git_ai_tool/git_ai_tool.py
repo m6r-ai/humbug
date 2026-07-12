@@ -346,6 +346,7 @@ class GitAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="git",
+                context="text",
                 content="No changes in the working tree."
             )
 
@@ -369,6 +370,7 @@ class GitAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="git",
+            context="text",
             content=self._format_result(repo.root(), lines),
         )
 
@@ -456,6 +458,7 @@ class GitAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="git",
+                context="text",
                 content="No changes for this file.",
             )
 
@@ -504,6 +507,7 @@ class GitAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="git",
+                context="text",
                 content="No changes in the working tree.",
             )
 
@@ -517,6 +521,7 @@ class GitAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="git",
+                context="text",
                 content="Changes detected but no diff text could be generated.",
             )
 
@@ -576,6 +581,7 @@ class GitAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="git",
+                context="text",
                 content="No commits in this repository."
             )
 
@@ -598,6 +604,7 @@ class GitAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="git",
+            context="text",
             content=self._format_result(repo.root(), lines),
         )
 
@@ -658,6 +665,7 @@ class GitAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="git",
+            context="text",
             content="\n".join(lines)
         )
 
@@ -731,6 +739,7 @@ class GitAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="git",
+                context="text",
                 content="No files changed in this commit.",
             )
 
@@ -754,6 +763,7 @@ class GitAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="git",
+            context="text",
             content=self._format_result(repo.root(), lines),
         )
 
@@ -799,6 +809,7 @@ class GitAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="git",
+                context="text",
                 content=content,
             )
 
@@ -883,6 +894,7 @@ class GitAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="git",
+            context="text",
             content=(
                 f"Wrote full git {operation_label} output to: {display_path} "
                 f"({size:,} bytes)"
