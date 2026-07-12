@@ -12,6 +12,8 @@ New features:
 - Added a new diff tab view to allow an inline view as well as a side-by-side view.
 - Added Unix shell and Windows batch file syntax highlighting.
 - Added Grok 4.5.
+- Added GPT 4.6.
+- Removed GLM 4.7.
 - Added new file icons.
 - Removed the edit button from file previews as editing can now be done via the context menu.
 

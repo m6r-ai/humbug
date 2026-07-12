@@ -408,6 +408,45 @@ class AIConversationSettings:
         ),
 
         # OpenAI models
+        ("gpt-5.6-sol", "openai"): AIModel(
+            name="gpt-5.6-sol",
+            provider="openai",
+            display_name="GPT 5.6 Sol",
+            context_window=1048576,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+            ],
+        ),
+        ("gpt-5.6-terra", "openai"): AIModel(
+            name="gpt-5.6-terra",
+            provider="openai",
+            display_name="GPT 5.6 Terra",
+            context_window=1048576,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+            ],
+        ),
+        ("gpt-5.6-luna", "openai"): AIModel(
+            name="gpt-5.6-luna",
+            provider="openai",
+            display_name="GPT 5.6 Luna",
+            context_window=1048576,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+            ],
+        ),
         ("gpt-5.4-nano", "openai"): AIModel(
             name="gpt-5.4-nano",
             provider="openai",
@@ -527,20 +566,6 @@ class AIConversationSettings:
             name="glm-5.1",
             provider="zai",
             display_name="GLM 5.1",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
-            ],
-        ),
-        ("glm-4.7", "zai"): AIModel(
-            name="glm-4.7",
-            provider="zai",
-            display_name="GLM 4.7",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
