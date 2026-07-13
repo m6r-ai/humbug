@@ -80,6 +80,9 @@ class ConversationWidget(QWidget):
             ai_transcript_conversation: An existing AITranscriptConversation to adopt,
                 or None to create a new one
         """
+        # Protect against resizeEvent being called before we're ready
+        self._input_spacer: QWidget | None = None
+
         super().__init__(parent)
         self._logger = logging.getLogger("ConversationWidget")
 
@@ -170,7 +173,6 @@ class ConversationWidget(QWidget):
 
         # Initialize tracking variables
         self._auto_scroll = True
-        self._input_spacer: QWidget | None = None
         self._sticky_update_pending = False
 
         # Create layout
@@ -214,7 +216,6 @@ class ConversationWidget(QWidget):
         self._input.settings_requested.connect(self._on_input_settings_requested)
         self._input.attach_requested.connect(self._on_attach_requested)
         self._input.modified.connect(self.conversation_modified)
-
 
         # Invisible spacer that reserves the same height as the floating input
         # at the bottom of the scroll area so scrolling to the end doesn't hide
