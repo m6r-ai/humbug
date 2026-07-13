@@ -48,6 +48,7 @@ typedef uint16_t MenaiType;
 #define MENAITYPE_SET 0x000b
 #define MENAITYPE_STRUCT 0x000c
 #define MENAITYPE_STRUCTTYPE 0x000d
+#define MENAITYPE_BYTES 0x000e
 
 /*
  * MenaiValue_HEAD — common prefix for every Menai value struct.
@@ -489,6 +490,70 @@ static inline void
 menai_string_dealloc(MenaiValue *self)
 {
     menai_free(self);
+}
+
+/*
+ * MenaiBytes — immutable sequence of bytes (octets, 0–255).
+ *
+ * Owners store data inline via a flexible array member.  Slice views allocate
+ * only the header (sizeof(MenaiBytes)), point data into the owner's inline
+ * buffer at an offset, and retain the owner — exactly the same structural
+ * sharing pattern as MenaiList.  Views never form chains: all views point
+ * directly at the root owner.
+ */
+typedef struct {
+    MenaiValue_HEAD
+    ssize_t length;             /* logical byte count */
+    hash_t hash;                /* cached hash; -1 = not yet computed */
+    MenaiValue *owner;          /* non-NULL when this is a slice view */
+    uint8_t *data;              /* points to inline_data for owners, into owner for views */
+    uint8_t inline_data[];      /* FAM — storage for owning bytes */
+} MenaiBytes;
+
+static inline ssize_t
+menai_bytes_length(MenaiValue *b)
+{
+    return ((MenaiBytes *)b)->length;
+}
+
+static inline const uint8_t *
+menai_bytes_data(MenaiValue *b)
+{
+    return ((MenaiBytes *)b)->data;
+}
+
+static inline uint8_t
+menai_bytes_get(MenaiValue *b, ssize_t i)
+{
+    return ((MenaiBytes *)b)->data[i];
+}
+
+MenaiValue *menai_bytes_alloc(ssize_t n);
+MenaiValue *menai_bytes_new_empty(void);
+MenaiValue *menai_bytes_from_raw(const uint8_t *src, ssize_t n);
+MenaiValue *menai_bytes_from_pybytes(PyObject *pybytes);
+PyObject *menai_bytes_to_pybytes(MenaiValue *b);
+MenaiValue *menai_bytes_slice(MenaiValue *b, ssize_t start, ssize_t end);
+MenaiValue *menai_bytes_concat(MenaiValue *a, MenaiValue *b);
+MenaiValue *menai_bytes_ref(MenaiValue *b, ssize_t i);
+MenaiValue *menai_bytes_append_u8(MenaiValue *b, uint8_t value);
+int menai_bytes_equal(MenaiValue *a, MenaiValue *b);
+int menai_bytes_compare(MenaiValue *a, MenaiValue *b);
+hash_t menai_bytes_hash(MenaiValue *b);
+
+static inline void
+menai_bytes_dealloc(MenaiValue *self)
+{
+    MenaiBytes *b = (MenaiBytes *)self;
+    if (b->owner != NULL) {
+        /* View — release the backing owner; do not touch the data array. */
+        menai_release(b->owner);
+        menai_free(b);
+        return;
+    }
+
+    /* Owner — the data array is inline, freed with the struct. */
+    menai_free(b);
 }
 
 typedef struct {

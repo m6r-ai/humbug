@@ -282,6 +282,33 @@ class MenaiString(MenaiValue):
 
 
 @dataclass(slots=True, unsafe_hash=True)
+class MenaiBytes(MenaiValue):
+    """Represents immutable byte sequences."""
+    value: bytes
+
+    def to_python(self) -> bytes:
+        return self.value
+
+    def type_name(self) -> str:
+        return "bytes"
+
+    def describe(self) -> str:
+        """Format as #bytes\"hex\" display, truncating at 64 bytes (128 hex chars)."""
+        if len(self.value) > 64:
+            hex_str = self.value[:64].hex()
+            return f'#bytes"{hex_str}..."'
+
+        return f'#bytes"{self.value.hex()}"'
+
+    def __eq__(self, other: Any) -> bool:
+        """Compare byte sequences."""
+        if not isinstance(other, MenaiBytes):
+            return False
+
+        return self.value == other.value
+
+
+@dataclass(slots=True, unsafe_hash=True)
 class MenaiList(MenaiValue):
     """Represents lists of Menai values."""
     elements: tuple[MenaiValue, ...] = ()
@@ -436,6 +463,9 @@ class MenaiDict(MenaiValue):
 
         if type(key) is MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             return ('sym', key.name)
+
+        if type(key) is MenaiBytes:  # pylint: disable=unidiomatic-typecheck
+            return ('bytes', key.value)
 
         # MenaiStruct is hashable if all its fields are hashable scalars.
         # MenaiStruct is defined later in this module; isinstance works at runtime.

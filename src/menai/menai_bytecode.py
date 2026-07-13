@@ -276,6 +276,46 @@ class Opcode(IntEnum):
     # Generate integer range list
     RANGE = _op(380, 3)                 # r_dest = (range r_src0 r_src1 r_src2)
 
+    # Bytes operations — type foundation
+    BYTES_P = _op(400, 1)               # r_dest = (bytes? r_src0)
+    BYTES_EQ_P = _op(401, 2)            # r_dest = (bytes=? r_src0 r_src1)
+    BYTES_NEQ_P = _op(402, 2)           # r_dest = (bytes!=? r_src0 r_src1)
+    BYTES_LENGTH = _op(403, 1)          # r_dest = (bytes-length r_src0)
+    BYTES_REF = _op(410, 2)             # r_dest = (bytes-ref r_src0 r_src1)
+    BYTES_APPEND_U8 = _op(411, 2)       # r_dest = (bytes-append-u8 r_src0 r_src1)
+    LIST_TO_BYTES = _op(415, 1)         # r_dest = (list->bytes r_src0)
+    BYTES_SLICE = _op(420, 3)           # r_dest = (bytes-slice r_src0 r_src1 r_src2)
+    STRING_TO_BYTES = _op(425, 1)       # r_dest = (string->bytes r_src0)
+    BYTES_TO_STRING = _op(426, 1)       # r_dest = (bytes->string r_src0)
+    BYTES_TO_LIST = _op(427, 1)         # r_dest = (bytes->list r_src0)
+    BYTES_TO_STRING_HEX = _op(428, 1)   # r_dest = (bytes->string-hex r_src0)
+    STRING_HEX_TO_BYTES = _op(429, 1)  # r_dest = (string-hex->bytes r_src0)
+    BYTES_CONCAT = _op(435, 2)          # r_dest = (bytes-concat r_src0 r_src1)
+    BYTES_INDEX = _op(440, 2)           # r_dest = (bytes-index r_src0 r_src1)
+    BYTES_INDEX_INT = _op(441, 2)       # r_dest = (bytes-index-int r_src0 r_src1)
+    BYTES_LT_P = _op(445, 2)            # r_dest = (bytes<? r_src0 r_src1)
+    BYTES_GT_P = _op(446, 2)            # r_dest = (bytes>? r_src0 r_src1)
+    BYTES_LTE_P = _op(447, 2)           # r_dest = (bytes<=? r_src0 r_src1)
+    BYTES_GTE_P = _op(448, 2)           # r_dest = (bytes>=? r_src0 r_src1)
+    BYTES_READ_U8 = _op(460, 2)         # r_dest = (bytes-read-u8 r_src0 r_src1)
+    BYTES_READ_U16_LE = _op(461, 2)     # r_dest = (bytes-read-u16-le r_src0 r_src1)
+    BYTES_READ_U24_LE = _op(462, 2)     # r_dest = (bytes-read-u24-le r_src0 r_src1)
+    BYTES_READ_U32_LE = _op(463, 2)     # r_dest = (bytes-read-u32-le r_src0 r_src1)
+    BYTES_READ_U64_LE = _op(464, 2)     # r_dest = (bytes-read-u64-le r_src0 r_src1)
+    BYTES_READ_U16_BE = _op(465, 2)     # r_dest = (bytes-read-u16-be r_src0 r_src1)
+    BYTES_READ_U24_BE = _op(466, 2)     # r_dest = (bytes-read-u24-be r_src0 r_src1)
+    BYTES_READ_U32_BE = _op(467, 2)     # r_dest = (bytes-read-u32-be r_src0 r_src1)
+    BYTES_READ_U64_BE = _op(468, 2)     # r_dest = (bytes-read-u64-be r_src0 r_src1)
+    BYTES_READ_I8 = _op(469, 2)         # r_dest = (bytes-read-i8 r_src0 r_src1)
+    BYTES_READ_I16_LE = _op(470, 2)     # r_dest = (bytes-read-i16-le r_src0 r_src1)
+    BYTES_READ_I24_LE = _op(471, 2)     # r_dest = (bytes-read-i24-le r_src0 r_src1)
+    BYTES_READ_I32_LE = _op(472, 2)     # r_dest = (bytes-read-i32-le r_src0 r_src1)
+    BYTES_READ_I64_LE = _op(473, 2)     # r_dest = (bytes-read-i64-le r_src0 r_src1)
+    BYTES_READ_I16_BE = _op(474, 2)     # r_dest = (bytes-read-i16-be r_src0 r_src1)
+    BYTES_READ_I24_BE = _op(475, 2)     # r_dest = (bytes-read-i24-be r_src0 r_src1)
+    BYTES_READ_I32_BE = _op(476, 2)     # r_dest = (bytes-read-i32-be r_src0 r_src1)
+    BYTES_READ_I64_BE = _op(477, 2)     # r_dest = (bytes-read-i64-be r_src0 r_src1)
+
 
 # Maps builtin function name → (opcode, arity) for all fixed-arity builtins.
 #
@@ -461,6 +501,62 @@ BUILTIN_OPCODE_MAP: dict[str, tuple[Opcode, int]] = {
     'struct-type-name': (Opcode.STRUCT_TYPE_NAME, 1),
     'struct-fields': (Opcode.STRUCT_FIELDS, 1),
     'range': (Opcode.RANGE, 3),
+
+    # Bytes operations — type foundation
+    'bytes?': (Opcode.BYTES_P, 1),
+    'bytes=?': (Opcode.BYTES_EQ_P, 2),
+    'bytes!=?': (Opcode.BYTES_NEQ_P, 2),
+    'bytes-length': (Opcode.BYTES_LENGTH, 1),
+
+    # Bytes operations — single-byte bridge
+    'bytes-ref': (Opcode.BYTES_REF, 2),
+    'bytes-append-u8': (Opcode.BYTES_APPEND_U8, 2),
+
+    # Bytes operations — construction from list
+    'list->bytes': (Opcode.LIST_TO_BYTES, 1),
+
+    # Bytes operations — slicing
+    'bytes-slice': (Opcode.BYTES_SLICE, 3),
+
+    # Bytes operations — string, hex, and list conversions
+    'string->bytes': (Opcode.STRING_TO_BYTES, 1),
+    'bytes->string': (Opcode.BYTES_TO_STRING, 1),
+    'bytes->list': (Opcode.BYTES_TO_LIST, 1),
+    'bytes->string-hex': (Opcode.BYTES_TO_STRING_HEX, 1),
+    'string-hex->bytes': (Opcode.STRING_HEX_TO_BYTES, 1),
+
+    # Bytes operations — concatenation
+    'bytes-concat': (Opcode.BYTES_CONCAT, 2),
+
+    # Bytes operations — search
+    'bytes-index': (Opcode.BYTES_INDEX, 2),
+    'bytes-index-int': (Opcode.BYTES_INDEX_INT, 2),
+
+    # Bytes operations — lexicographic comparison
+    'bytes<?': (Opcode.BYTES_LT_P, 2),
+    'bytes>?': (Opcode.BYTES_GT_P, 2),
+    'bytes<=?': (Opcode.BYTES_LTE_P, 2),
+    'bytes>=?': (Opcode.BYTES_GTE_P, 2),
+
+    # Bytes operations — multi-byte reads
+    'bytes-read-u8': (Opcode.BYTES_READ_U8, 2),
+    'bytes-read-u16-le': (Opcode.BYTES_READ_U16_LE, 2),
+    'bytes-read-u24-le': (Opcode.BYTES_READ_U24_LE, 2),
+    'bytes-read-u32-le': (Opcode.BYTES_READ_U32_LE, 2),
+    'bytes-read-u64-le': (Opcode.BYTES_READ_U64_LE, 2),
+    'bytes-read-u16-be': (Opcode.BYTES_READ_U16_BE, 2),
+    'bytes-read-u24-be': (Opcode.BYTES_READ_U24_BE, 2),
+    'bytes-read-u32-be': (Opcode.BYTES_READ_U32_BE, 2),
+    'bytes-read-u64-be': (Opcode.BYTES_READ_U64_BE, 2),
+    'bytes-read-i8': (Opcode.BYTES_READ_I8, 2),
+    'bytes-read-i16-le': (Opcode.BYTES_READ_I16_LE, 2),
+    'bytes-read-i24-le': (Opcode.BYTES_READ_I24_LE, 2),
+    'bytes-read-i32-le': (Opcode.BYTES_READ_I32_LE, 2),
+    'bytes-read-i64-le': (Opcode.BYTES_READ_I64_LE, 2),
+    'bytes-read-i16-be': (Opcode.BYTES_READ_I16_BE, 2),
+    'bytes-read-i24-be': (Opcode.BYTES_READ_I24_BE, 2),
+    'bytes-read-i32-be': (Opcode.BYTES_READ_I32_BE, 2),
+    'bytes-read-i64-be': (Opcode.BYTES_READ_I64_BE, 2),
 }
 
 

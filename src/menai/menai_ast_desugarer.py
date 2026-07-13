@@ -18,7 +18,7 @@ from typing import Any, cast
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTInteger,
     MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBoolean, MenaiASTNone,
-    MenaiASTStruct
+    MenaiASTStruct, MenaiASTBytes,
 )
 from menai.menai_ast_dependency_analyzer import MenaiASTDependencyAnalyzer
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
@@ -264,6 +264,7 @@ class MenaiASTDesugarer:
                         (self._make_symbol(dollar_name, expr),) + tuple(desugared_args),
                         expr
                     )
+
                 # Constant-default completions.
                 constant_defaults: dict[str, MenaiASTNode] = {
                     'integer->complex': MenaiASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file),
@@ -284,8 +285,13 @@ class MenaiASTDesugarer:
                     )
                 # Computed-default completions: bind the collection to a temp to
                 # avoid double-evaluation, then synthesise the length call.
-                if name in ('string-slice', 'list-slice') and n_args == 2:
-                    length_fn = 'string-length' if name == 'string-slice' else 'list-length'
+                if name in ('string-slice', 'list-slice', 'bytes-slice') and n_args == 2:
+                    _slice_length_fns = {
+                        'string-slice': 'string-length',
+                        'list-slice': 'list-length',
+                        'bytes-slice': 'bytes-length',
+                    }
+                    length_fn = _slice_length_fns[name]
                     coll_arg = self.desugar(expr.elements[1])
                     start_arg = self.desugar(expr.elements[2])
                     temp = self._gen_temp()
@@ -323,6 +329,7 @@ class MenaiASTDesugarer:
                 'float-min', 'float-max',
                 'list-concat',
                 'string-concat',
+                'bytes-concat',
             ]:
                 return self._desugar_fold_variadic(expr)
 
@@ -331,18 +338,19 @@ class MenaiASTDesugarer:
                 'integer<?', 'integer>?', 'integer<=?', 'integer>=?',
                 'float<?',   'float>?',   'float<=?',   'float>=?',
                 'string<?',  'string>?',  'string<=?',  'string>=?',
+                'bytes<?',   'bytes>?',   'bytes<=?',   'bytes>=?',
             ]:
                 return self._desugar_comparison_chain(expr)
 
             # Strict equality predicates
             if name in [
-                'boolean=?', 'integer=?', 'float=?', 'complex=?', 'string=?', 'list=?', 'dict=?'
+                'boolean=?', 'integer=?', 'float=?', 'complex=?', 'string=?', 'list=?', 'dict=?', 'bytes=?'
             ]:
                 return self._desugar_strict_equality(expr)
 
             # Strict inequality predicates
             if name in [
-                'boolean!=?', 'integer!=?', 'float!=?', 'complex!=?', 'string!=?', 'list!=?', 'dict!=?'
+                'boolean!=?', 'integer!=?', 'float!=?', 'complex!=?', 'string!=?', 'list!=?', 'dict!=?', 'bytes!=?'
             ]:
                 return self._desugar_strict_inequality(expr)
 
@@ -736,6 +744,9 @@ class MenaiASTDesugarer:
             if op_name == 'list-concat':
                 return self._make_list((self._make_symbol('quote', expr), self._make_list((), expr)), expr)
 
+            if op_name == 'bytes-concat':
+                return MenaiASTBytes(b'', line=expr.line, column=expr.column, source_file=expr.source_file)
+
             # min/max with 0 args: let runtime raise the error
             return self._desugar_call(expr)
 
@@ -1015,7 +1026,7 @@ class MenaiASTDesugarer:
         check needed — grouping adds no benefit there.
         """
         if isinstance(pattern, (MenaiASTBoolean, MenaiASTInteger,
-                                MenaiASTFloat, MenaiASTComplex, MenaiASTString)):
+                                MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBytes)):
             return type(pattern)
 
         return None
@@ -1045,9 +1056,10 @@ class MenaiASTDesugarer:
         _type_info: dict[type, tuple[str, str]] = {
             MenaiASTBoolean: ('boolean?', 'boolean=?'),
             MenaiASTInteger: ('integer?', 'integer=?'),
-            MenaiASTFloat:   ('float?',   'float=?'),
+            MenaiASTFloat: ('float?', 'float=?'),
             MenaiASTComplex: ('complex?', 'complex=?'),
-            MenaiASTString:  ('string?',  'string=?'),
+            MenaiASTString: ('string?', 'string=?'),
+            MenaiASTBytes: ('bytes?', 'bytes=?'),
         }
         type_pred, eq_op = _type_info[lit_type]
         tmp_sym = MenaiASTSymbol(temp_var)
@@ -1222,6 +1234,14 @@ class MenaiASTDesugarer:
             test_expr = self._make_and([
                 MenaiASTList((MenaiASTSymbol('string?'), MenaiASTSymbol(temp_var))),
                 MenaiASTList((MenaiASTSymbol('string=?'), MenaiASTSymbol(temp_var), pattern)),
+            ], pattern)
+            return (test_expr, [])
+
+        if isinstance(pattern, MenaiASTBytes):
+            # (and (bytes? tmp) (bytes=? tmp literal))
+            test_expr = self._make_and([
+                MenaiASTList((MenaiASTSymbol('bytes?'), MenaiASTSymbol(temp_var))),
+                MenaiASTList((MenaiASTSymbol('bytes=?'), MenaiASTSymbol(temp_var), pattern)),
             ], pattern)
             return (test_expr, [])
 

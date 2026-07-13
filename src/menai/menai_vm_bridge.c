@@ -35,6 +35,7 @@ static PyTypeObject *Slow_SetType = NULL;
 static PyTypeObject *Slow_FunctionType = NULL;
 static PyTypeObject *Slow_StructTypeType = NULL;
 static PyTypeObject *Slow_StructType = NULL;
+static PyTypeObject *Slow_BytesType = NULL;
 
 /* Error type */
 PyObject *MenaiEvalError_type = NULL;
@@ -145,6 +146,17 @@ menai_convert_value(PyObject *src)
         }
 
         MenaiValue *r = menai_string_from_pyunicode(v);
+        Py_DECREF(v);
+        return r;
+    }
+
+    if (t == Slow_BytesType) {
+        PyObject *v = PyObject_GetAttrString(src, "value");
+        if (!v) {
+            return NULL;
+        }
+
+        MenaiValue *r = menai_bytes_from_pybytes(v);
         Py_DECREF(v);
         return r;
     }
@@ -548,6 +560,17 @@ menai_value_to_slow_value(MenaiValue *val)
         return result;
     }
 
+    if (t == MENAITYPE_BYTES) {
+        PyObject *py_bytes = menai_bytes_to_pybytes(val);
+        if (!py_bytes) {
+            return NULL;
+        }
+
+        PyObject *result = PyObject_CallOneArg((PyObject *)Slow_BytesType, py_bytes);
+        Py_DECREF(py_bytes);
+        return result;
+    }
+
     if (t == MENAITYPE_SYMBOL) {
         PyObject *py_str = menai_string_to_pyunicode(((MenaiSymbol *)val)->name);
         if (!py_str) {
@@ -824,6 +847,10 @@ menai_vm_bridge_init(void)
     }
 
     if (fetch_slow_type(slow_mod, "MenaiStruct", &Slow_StructType) < 0) {
+        goto fail;
+    }
+
+    if (fetch_slow_type(slow_mod, "MenaiBytes", &Slow_BytesType) < 0) {
         goto fail;
     }
 

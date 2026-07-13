@@ -43,7 +43,8 @@ extensions = [
             "src/menai/menai_vm_boolean.c",
             "src/menai/menai_vm_none.c",
             "src/menai/menai_vm_bridge.c",
-            "src/menai/menai_vm_value.c"
+            "src/menai/menai_vm_value.c",
+            "src/menai/menai_vm_bytes.c"
         ],
         include_dirs=[_MENAI_SRC],
         extra_compile_args=(

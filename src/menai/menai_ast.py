@@ -13,7 +13,7 @@ from typing import Any
 from menai.menai_value import (
     MenaiValue, MenaiInteger, MenaiFloat, MenaiComplex,
     MenaiString, MenaiBoolean, MenaiSymbol, MenaiList, MenaiDict, MenaiSet, MenaiNone, Menai_NONE,
-    MenaiStructType
+    MenaiStructType, MenaiBytes,
 )
 
 
@@ -182,6 +182,30 @@ class MenaiASTString(MenaiASTNode):
     def describe(self) -> str:
         escaped_content = self._escape_string(self.value)
         return f'"{escaped_content}"'
+
+    def __eq__(self, other: Any) -> bool:
+        return self.value == other.value
+
+
+@dataclass(frozen=True)
+class MenaiASTBytes(MenaiASTNode):
+    """Represents bytes values in AST."""
+    value: bytes
+
+    def to_runtime_value(self) -> MenaiBytes:
+        """Convert to runtime bytes (no metadata)."""
+        return MenaiBytes(self.value)
+
+    def type_name(self) -> str:
+        return "bytes"
+
+    def describe(self) -> str:
+        """Format as #bytes\"hex\" display, truncating at 64 bytes (128 hex chars)."""
+        if len(self.value) > 64:
+            hex_str = self.value[:64].hex()
+            return f'#bytes"{hex_str}..."'
+
+        return f'#bytes"{self.value.hex()}"'
 
     def __eq__(self, other: Any) -> bool:
         return self.value == other.value

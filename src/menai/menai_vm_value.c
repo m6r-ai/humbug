@@ -52,6 +52,9 @@ menai_short_type_name(MenaiType t)
 
     case MENAITYPE_STRUCT:
         return "struct";
+
+    case MENAITYPE_BYTES:
+        return "bytes";
     }
 
     assert(0);
@@ -111,6 +114,10 @@ void menai_value_dealloc(MenaiValue *v)
 
     case MENAITYPE_STRUCT:
         menai_struct_dealloc(v);
+        break;
+
+    case MENAITYPE_BYTES:
+        menai_bytes_dealloc(v);
         break;
 
     default:

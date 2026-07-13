@@ -12,7 +12,7 @@ import math
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
     MenaiASTBoolean, MenaiASTSymbol, MenaiASTList, MenaiASTListLiteral, MenaiASTString,
-    MenaiASTDict, MenaiASTSet
+    MenaiASTDict, MenaiASTSet, MenaiASTBytes,
 )
 from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
 
@@ -57,6 +57,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         '$integer-min',
         '$integer-max',
         '$integer->complex',
+        '$integer-codepoint->string',
         '$float=?',
         '$float!=?',
         '$float-abs',
@@ -105,7 +106,8 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         '$string=?',
         '$string!=?',
         '$string->integer-codepoint',
-        '$integer-codepoint->string',
+        '$string->bytes',
+        '$string-hex->bytes',
     }
 
     def __init__(self) -> None:
@@ -140,6 +142,7 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
             '$integer-min': self._fold_integer_min,
             '$integer-max': self._fold_integer_max,
             '$integer->complex': self._fold_integer_to_complex,
+            '$integer-codepoint->string': self._fold_integer_codepoint_to_string,
             '$float=?': self._fold_float_eq,
             '$float!=?': self._fold_float_neq,
             '$float-abs': self._fold_float_abs,
@@ -188,7 +191,8 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
             '$string=?': self._fold_string_eq,
             '$string!=?': self._fold_string_neq,
             '$string->integer-codepoint': self._fold_string_to_integer_codepoint,
-            '$integer-codepoint->string': self._fold_integer_codepoint_to_string,
+            '$string->bytes': self._fold_string_to_bytes,
+            '$string-hex->bytes': self._fold_string_hex_to_bytes,
         }
 
         # Build jump table for special form optimization.  Note we don't include any special forms that were
@@ -1249,3 +1253,29 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
             return None
 
         return MenaiASTFloat(args[0].value if args[0].value >= args[1].value else args[1].value)
+
+    def _fold_string_to_bytes(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
+        """Fold string->bytes: arg must be a string, returns bytes (UTF-8 encoded)."""
+        if not isinstance(args[0], MenaiASTString):
+            return None
+
+        try:
+            return MenaiASTBytes(args[0].value.encode('utf-8'))
+
+        except UnicodeEncodeError:
+            return None  # Let runtime raise the error
+
+    def _fold_string_hex_to_bytes(self, args: list[MenaiASTNode]) -> MenaiASTNode | None:
+        """Fold string-hex->bytes: arg must be a hex string, returns bytes."""
+        if not isinstance(args[0], MenaiASTString):
+            return None
+
+        hex_str = args[0].value
+        if len(hex_str) % 2 != 0:
+            return None  # Invalid hex — let runtime raise the error
+
+        try:
+            return MenaiASTBytes(bytes.fromhex(hex_str))
+
+        except ValueError:
+            return None  # Invalid hex — let runtime raise the error

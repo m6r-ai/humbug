@@ -600,6 +600,121 @@ class Menai:
                    ($string->list str
                                   (if ($list-null? rest) "" ($list-first rest)))))
    (string->integer-codepoint (lambda (s) ($string->integer-codepoint s)))
+   (bytes? (lambda (x) ($bytes? x)))
+   (bytes=? (lambda (. args)
+             (if ($integer<? ($list-length args) 2)
+                 (error "Function 'bytes=?' requires at least 2 arguments")
+                 (letrec
+                   ((loop (lambda (lst prev)
+                            (if ($list-null? lst)
+                                #t
+                                (if ($bytes=? prev ($list-first lst))
+                                    (loop ($list-rest lst) ($list-first lst))
+                                    #f)))))
+                   (loop ($list-rest args) ($list-first args))))))
+   (bytes!=? (lambda (. args)
+              (if ($integer<? ($list-length args) 2)
+                  (error "Function 'bytes!=?' requires at least 2 arguments")
+                  (letrec
+                    ((outer (lambda (lst)
+                              (if ($list-null? lst)
+                                  #t
+                                  (letrec
+                                    ((inner (lambda (rest-lst)
+                                              (if ($list-null? rest-lst)
+                                                  (outer ($list-rest lst))
+                                                  (if ($bytes!=? ($list-first lst) ($list-first rest-lst))
+                                                      (inner ($list-rest rest-lst))
+                                                     #f)))))
+                                    (inner ($list-rest lst)))))))
+                    (outer args)))))
+   (bytes<? (lambda (. args)
+             (if ($integer<? ($list-length args) 2)
+                 (error "Function 'bytes<?' requires at least 2 arguments")
+                 (letrec
+                   ((loop (lambda (lst prev)
+                            (if ($list-null? lst)
+                                #t
+                                (if ($bytes<? prev ($list-first lst))
+                                    (loop ($list-rest lst) ($list-first lst))
+                                    #f)))))
+                   (loop ($list-rest args) ($list-first args))))))
+   (bytes>? (lambda (. args)
+             (if ($integer<? ($list-length args) 2)
+                 (error "Function 'bytes>?' requires at least 2 arguments")
+                 (letrec
+                   ((loop (lambda (lst prev)
+                            (if ($list-null? lst)
+                                #t
+                                (if ($bytes>? prev ($list-first lst))
+                                    (loop ($list-rest lst) ($list-first lst))
+                                    #f)))))
+                   (loop ($list-rest args) ($list-first args))))))
+   (bytes<=? (lambda (. args)
+              (if ($integer<? ($list-length args) 2)
+                  (error "Function 'bytes<=?' requires at least 2 arguments")
+                  (letrec
+                    ((loop (lambda (lst prev)
+                             (if ($list-null? lst)
+                                 #t
+                                 (if ($bytes<=? prev ($list-first lst))
+                                     (loop ($list-rest lst) ($list-first lst))
+                                    #f)))))
+                    (loop ($list-rest args) ($list-first args))))))
+   (bytes>=? (lambda (. args)
+              (if ($integer<? ($list-length args) 2)
+                  (error "Function 'bytes>=?' requires at least 2 arguments")
+                  (letrec
+                    ((loop (lambda (lst prev)
+                             (if ($list-null? lst)
+                                 #t
+                                 (if ($bytes>=? prev ($list-first lst))
+                                     (loop ($list-rest lst) ($list-first lst))
+                                    #f)))))
+                    (loop ($list-rest args) ($list-first args))))))
+   (bytes-length (lambda (b) ($bytes-length b)))
+   (bytes-ref (lambda (b i) ($bytes-ref b i)))
+   (bytes-append-u8 (lambda (b v) ($bytes-append-u8 b v)))
+   (bytes-slice (lambda (b start . rest)
+                  (if ($list-null? rest)
+                      ($bytes-slice b start ($bytes-length b))
+                      ($bytes-slice b start ($list-first rest)))))
+   (bytes-concat (lambda (. args)
+                   (if ($list-null? args)
+                       (string-hex->bytes "")
+                       (letrec
+                         ((loop (lambda (lst acc)
+                                  (if ($list-null? lst)
+                                      acc
+                                      (loop ($list-rest lst)
+                                            ($bytes-concat acc ($list-first lst)))))))
+                         (loop ($list-rest args) ($list-first args))))))
+   (string->bytes (lambda (s) ($string->bytes s)))
+   (bytes->string (lambda (b) ($bytes->string b)))
+   (bytes->list (lambda (b) ($bytes->list b)))
+   (bytes->string-hex (lambda (b) ($bytes->string-hex b)))
+   (string-hex->bytes (lambda (s) ($string-hex->bytes s)))
+   (list->bytes (lambda (lst) ($list->bytes lst)))
+   (bytes-index (lambda (needle haystack) ($bytes-index needle haystack)))
+   (bytes-index-int (lambda (byte b) ($bytes-index-int byte b)))
+   (bytes-read-u8 (lambda (b off) ($bytes-read-u8 b off)))
+   (bytes-read-u16-le (lambda (b off) ($bytes-read-u16-le b off)))
+   (bytes-read-u24-le (lambda (b off) ($bytes-read-u24-le b off)))
+   (bytes-read-u32-le (lambda (b off) ($bytes-read-u32-le b off)))
+   (bytes-read-u64-le (lambda (b off) ($bytes-read-u64-le b off)))
+   (bytes-read-u16-be (lambda (b off) ($bytes-read-u16-be b off)))
+   (bytes-read-u24-be (lambda (b off) ($bytes-read-u24-be b off)))
+   (bytes-read-u32-be (lambda (b off) ($bytes-read-u32-be b off)))
+   (bytes-read-u64-be (lambda (b off) ($bytes-read-u64-be b off)))
+   (bytes-read-i8 (lambda (b off) ($bytes-read-i8 b off)))
+   (bytes-read-i16-le (lambda (b off) ($bytes-read-i16-le b off)))
+   (bytes-read-i24-le (lambda (b off) ($bytes-read-i24-le b off)))
+   (bytes-read-i32-le (lambda (b off) ($bytes-read-i32-le b off)))
+   (bytes-read-i64-le (lambda (b off) ($bytes-read-i64-le b off)))
+   (bytes-read-i16-be (lambda (b off) ($bytes-read-i16-be b off)))
+   (bytes-read-i24-be (lambda (b off) ($bytes-read-i24-be b off)))
+   (bytes-read-i32-be (lambda (b off) ($bytes-read-i32-be b off)))
+   (bytes-read-i64-be (lambda (b off) ($bytes-read-i64-be b off)))
    (list (lambda (. args) args))
    (list? (lambda (x) ($list? x)))
    (list=? (lambda (. args)
@@ -1081,6 +1196,44 @@ class Menai:
         "any-set?" any-set?
         "all-set?" all-set?
         "range" range
+        "bytes?" bytes?
+        "bytes=?" bytes=?
+        "bytes!=?" bytes!=?
+        "bytes<?" bytes<?
+        "bytes>?" bytes>?
+        "bytes<=?" bytes<=?
+        "bytes>=?" bytes>=?
+        "bytes-length" bytes-length
+        "bytes-ref" bytes-ref
+        "bytes-append-u8" bytes-append-u8
+        "bytes-slice" bytes-slice
+        "bytes-concat" bytes-concat
+        "string->bytes" string->bytes
+        "bytes->string" bytes->string
+        "bytes->list" bytes->list
+        "bytes->string-hex" bytes->string-hex
+        "string-hex->bytes" string-hex->bytes
+        "list->bytes" list->bytes
+        "bytes-index" bytes-index
+        "bytes-index-int" bytes-index-int
+        "bytes-read-u8" bytes-read-u8
+        "bytes-read-u16-le" bytes-read-u16-le
+        "bytes-read-u24-le" bytes-read-u24-le
+        "bytes-read-u32-le" bytes-read-u32-le
+        "bytes-read-u64-le" bytes-read-u64-le
+        "bytes-read-u16-be" bytes-read-u16-be
+        "bytes-read-u24-be" bytes-read-u24-be
+        "bytes-read-u32-be" bytes-read-u32-be
+        "bytes-read-u64-be" bytes-read-u64-be
+        "bytes-read-i8" bytes-read-i8
+        "bytes-read-i16-le" bytes-read-i16-le
+        "bytes-read-i24-le" bytes-read-i24-le
+        "bytes-read-i32-le" bytes-read-i32-le
+        "bytes-read-i64-le" bytes-read-i64-le
+        "bytes-read-i16-be" bytes-read-i16-be
+        "bytes-read-i24-be" bytes-read-i24-be
+        "bytes-read-i32-be" bytes-read-i32-be
+        "bytes-read-i64-be" bytes-read-i64-be
         "pi" pi
         "e" e))
 """

@@ -67,6 +67,9 @@ menai_value_hash(MenaiValue *val)
     case MENAITYPE_STRING:
         return menai_string_hash(val);
 
+    case MENAITYPE_BYTES:
+        return menai_bytes_hash(val);
+
     case MENAITYPE_SYMBOL:
         return menai_string_hash(((MenaiSymbol *)val)->name);
 
@@ -143,6 +146,9 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
 
     case MENAITYPE_STRING:
         return menai_string_equal(a, b);
+
+    case MENAITYPE_BYTES:
+        return menai_bytes_equal(a, b);
 
     case MENAITYPE_SYMBOL:
         return menai_string_equal(((MenaiSymbol *)a)->name, ((MenaiSymbol *)b)->name);

@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Opcode, pack_instruction, make_instructions_array
 from menai.menai_error import MenaiCodegenError
 from menai.menai_value import (
+    MenaiBytes,
     MenaiBoolean,
     MenaiComplex,
     MenaiDict,
@@ -164,7 +165,7 @@ class _EmitContext:
 
     def add_constant(self, value: MenaiValue) -> int:
         """Add value to the constant pool if not already present, and return its index."""
-        if isinstance(value, (MenaiInteger, MenaiFloat, MenaiComplex, MenaiBoolean, MenaiString)):
+        if isinstance(value, (MenaiInteger, MenaiFloat, MenaiComplex, MenaiBoolean, MenaiString, MenaiBytes)):
             key: tuple = (type(value).__name__, value.value)
 
         else:

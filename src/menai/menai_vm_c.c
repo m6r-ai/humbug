@@ -434,6 +434,44 @@ static _menai_atomic_int _cancel_requested = 0;
 #define OP_STRUCT_TYPE_NAME 370
 #define OP_STRUCT_FIELDS 371
 #define OP_RANGE 380
+#define OP_BYTES_P 400
+#define OP_BYTES_EQ_P 401
+#define OP_BYTES_NEQ_P 402
+#define OP_BYTES_LENGTH 403
+#define OP_BYTES_REF 410
+#define OP_BYTES_APPEND_U8 411
+#define OP_LIST_TO_BYTES 415
+#define OP_BYTES_SLICE 420
+#define OP_STRING_TO_BYTES 425
+#define OP_BYTES_TO_STRING 426
+#define OP_BYTES_TO_LIST 427
+#define OP_BYTES_TO_STRING_HEX 428
+#define OP_STRING_HEX_TO_BYTES 429
+#define OP_BYTES_CONCAT 435
+#define OP_BYTES_INDEX 440
+#define OP_BYTES_INDEX_INT 441
+#define OP_BYTES_LT_P 445
+#define OP_BYTES_GT_P 446
+#define OP_BYTES_LTE_P 447
+#define OP_BYTES_GTE_P 448
+#define OP_BYTES_READ_U8 460
+#define OP_BYTES_READ_U16_LE 461
+#define OP_BYTES_READ_U24_LE 462
+#define OP_BYTES_READ_U32_LE 463
+#define OP_BYTES_READ_U64_LE 464
+#define OP_BYTES_READ_U16_BE 465
+#define OP_BYTES_READ_U24_BE 466
+#define OP_BYTES_READ_U32_BE 467
+#define OP_BYTES_READ_U64_BE 468
+#define OP_BYTES_READ_I8 469
+#define OP_BYTES_READ_I16_LE 470
+#define OP_BYTES_READ_I24_LE 471
+#define OP_BYTES_READ_I32_LE 472
+#define OP_BYTES_READ_I64_LE 473
+#define OP_BYTES_READ_I16_BE 474
+#define OP_BYTES_READ_I24_BE 475
+#define OP_BYTES_READ_I32_BE 476
+#define OP_BYTES_READ_I64_BE 477
 
 /*
  * Singleton values fetched from menai_vm_bridge at init time.
@@ -467,6 +505,7 @@ static PyObject *MenaiCancelledException_type = NULL;
 #define IS_MENAI_FUNCTION(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_FUNCTION)
 #define IS_MENAI_STRUCTTYPE(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_STRUCTTYPE)
 #define IS_MENAI_STRUCT(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_STRUCT)
+#define IS_MENAI_BYTES(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_BYTES)
 
 
 static inline int
@@ -561,6 +600,49 @@ static inline MenaiValue *make_integer_from_long(long n)
     return menai_integer_from_long(n);
 }
 
+/*
+ * integer_to_long — extract a C long from a MenaiInteger.
+ * Returns 0 on success, -1 on error (with Python exception set).
+ */
+static inline int
+integer_to_long_checked(MenaiValue *val, long *out)
+{
+    MenaiInteger *ib = (MenaiInteger *)val;
+    if (!ib->is_big) {
+        *out = ib->small;
+        return 0;
+    }
+
+    return menai_bigint_to_long(&ib->big, out);
+}
+
+/*
+ * integer_to_long — extract a C long from a MenaiInteger (assumes valid).
+ * Caller must ensure val is a MenaiInteger.
+ */
+static inline long
+integer_to_long(MenaiValue *val)
+{
+    MenaiInteger *ib = (MenaiInteger *)val;
+    if (!ib->is_big) {
+        return ib->small;
+    }
+
+    long result;
+    menai_bigint_to_long(&ib->big, &result);
+    return result;
+}
+
+/*
+ * integer_to_ssize_t — extract a ssize_t from a MenaiInteger (assumes valid).
+ * Caller must ensure val is a MenaiInteger.
+ */
+static inline ssize_t
+integer_to_ssize_t(MenaiValue *val)
+{
+    return (ssize_t)integer_to_long(val);
+}
+
 static inline MenaiValue *make_float(double v)
 {
     return menai_float_alloc(v);
@@ -608,6 +690,11 @@ static inline int require_complex(MenaiValue* val, const char *op_name)
 static inline int require_string(MenaiValue* val, const char *op_name)
 {
     return require_type_impl(IS_MENAI_STRING(val), val, op_name, "string arguments");
+}
+
+static inline int require_bytes(MenaiValue *val, const char *op_name)
+{
+    return require_type_impl(IS_MENAI_BYTES(val), val, op_name, "bytes arguments");
 }
 
 static inline int require_list(MenaiValue* val, const char *op_name)
@@ -5022,6 +5109,791 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
+
+        case OP_BYTES_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            bool_store(regs, base + dest, IS_MENAI_BYTES(regs[base + src0]));
+            break;
+        }
+
+        case OP_BYTES_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            if (!require_bytes(a, "bytes=?")) {
+                goto error;
+            }
+
+            if (!require_bytes(b, "bytes=?")) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, menai_bytes_equal(a, b));
+            break;
+        }
+
+        case OP_BYTES_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            if (!require_bytes(a, "bytes!=?")) {
+                goto error;
+            }
+
+            if (!require_bytes(b, "bytes!=?")) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, !menai_bytes_equal(a, b));
+            break;
+        }
+
+        case OP_BYTES_LENGTH: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            MenaiValue *a = regs[base + src0];
+            if (!require_bytes(a, "bytes-length")) {
+                goto error;
+            }
+
+            MenaiValue *_r = make_integer_from_ssize_t(menai_bytes_length(a));
+            if (_r == NULL) {
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, _r);
+            break;
+        }
+
+        case OP_BYTES_REF: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            MenaiValue *idx_val = regs[base + src1];
+            if (!require_bytes(b, "bytes-ref")) {
+                goto error;
+            }
+
+            if (!IS_MENAI_INTEGER(idx_val)) {
+                menai_raise_eval_error("bytes-ref: offset must be an integer");
+                goto error;
+            }
+
+            ssize_t offset = integer_to_ssize_t(idx_val);
+            ssize_t blen = menai_bytes_length(b);
+            if (offset < 0 || offset >= blen) {
+                menai_raise_eval_errorf("bytes-ref: offset %zd out of bounds for length %zd", offset, blen);
+                goto error;
+            }
+
+            MenaiValue *_r = menai_bytes_ref(b, offset);
+            if (_r == NULL) {
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, _r);
+            break;
+        }
+
+        case OP_BYTES_APPEND_U8: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            MenaiValue *v = regs[base + src1];
+            if (!require_bytes(b, "bytes-append-u8")) {
+                goto error;
+            }
+
+            if (!IS_MENAI_INTEGER(v)) {
+                menai_raise_eval_error("bytes-append-u8: value must be an integer");
+                goto error;
+            }
+
+            long val = integer_to_long(v);
+            if (val < 0 || val > 255) {
+                menai_raise_eval_errorf("bytes-append-u8: value %ld out of range 0-255", val);
+                goto error;
+            }
+
+            MenaiValue *_r = menai_bytes_append_u8(b, (uint8_t)val);
+            if (_r == NULL) {
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, _r);
+            break;
+        }
+
+        case OP_LIST_TO_BYTES: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            MenaiValue *lst = regs[base + src0];
+            if (!require_list(lst, "list->bytes")) {
+                goto error;
+            }
+
+            ssize_t n = menai_list_length(lst);
+            MenaiValue *result = menai_bytes_alloc(n);
+            if (result == NULL) {
+                goto error;
+            }
+
+            MenaiBytes *mb = (MenaiBytes *)result;
+            for (ssize_t i = 0; i < n; i++) {
+                MenaiValue *elem = menai_list_get((MenaiList *)lst, i);
+                if (!IS_MENAI_INTEGER(elem)) {
+                    menai_raise_eval_error("list->bytes: list elements must be integers");
+                    menai_release(result);
+                    goto error;
+                }
+
+                long val = integer_to_long(elem);
+                if (val < 0 || val > 255) {
+                    menai_raise_eval_errorf("list->bytes: element %ld out of range 0-255", val);
+                    menai_release(result);
+                    goto error;
+                }
+
+                mb->inline_data[i] = (uint8_t)val;
+            }
+
+            menai_reg_set_own(regs, base + dest, result);
+            break;
+        }
+
+        case OP_BYTES_SLICE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            int src2 = (int)(word & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            MenaiValue *start_val = regs[base + src1];
+            MenaiValue *end_val = regs[base + src2];
+            if (!require_bytes(b, "bytes-slice")) {
+                goto error;
+            }
+
+            if (!IS_MENAI_INTEGER(start_val)) {
+                menai_raise_eval_error("bytes-slice: start must be an integer");
+                goto error;
+            }
+
+            if (!IS_MENAI_INTEGER(end_val)) {
+                menai_raise_eval_error("bytes-slice: end must be an integer");
+                goto error;
+            }
+
+            ssize_t blen = menai_bytes_length(b);
+            ssize_t start = integer_to_ssize_t(start_val);
+            ssize_t end = integer_to_ssize_t(end_val);
+            if (start < 0) {
+                start = 0;
+            }
+
+            if (end > blen) {
+                end = blen;
+            }
+
+            if (start > end) {
+                start = end;
+            }
+
+            MenaiValue *_r = menai_bytes_slice(b, start, end);
+            if (_r == NULL) {
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, _r);
+            break;
+        }
+
+        case OP_STRING_TO_BYTES: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            MenaiValue *s = regs[base + src0];
+            if (!require_string(s, "string->bytes")) {
+                goto error;
+            }
+
+            ssize_t slen = menai_string_length(s);
+            const uint32_t *cp = menai_string_data(s);
+
+            /* Encode UTF-32 codepoints to UTF-8 bytes */
+            ssize_t nbytes = 0;
+            for (ssize_t i = 0; i < slen; i++) {
+                uint32_t c = cp[i];
+                if (c < 0x80) {
+                    nbytes += 1;
+                } else if (c < 0x800) {
+                    nbytes += 2;
+                } else if (c < 0x10000) {
+                    nbytes += 3;
+                } else {
+                    nbytes += 4;
+                }
+            }
+
+            MenaiValue *result = menai_bytes_alloc(nbytes);
+            if (result == NULL) {
+                goto error;
+            }
+
+            MenaiBytes *mb = (MenaiBytes *)result;
+            ssize_t pos = 0;
+            for (ssize_t i = 0; i < slen; i++) {
+                uint32_t c = cp[i];
+                if (c < 0x80) {
+                    mb->inline_data[pos++] = (uint8_t)c;
+                } else if (c < 0x800) {
+                    mb->inline_data[pos++] = (uint8_t)(0xC0 | (c >> 6));
+                    mb->inline_data[pos++] = (uint8_t)(0x80 | (c & 0x3F));
+                } else if (c < 0x10000) {
+                    mb->inline_data[pos++] = (uint8_t)(0xE0 | (c >> 12));
+                    mb->inline_data[pos++] = (uint8_t)(0x80 | ((c >> 6) & 0x3F));
+                    mb->inline_data[pos++] = (uint8_t)(0x80 | (c & 0x3F));
+                } else {
+                    mb->inline_data[pos++] = (uint8_t)(0xF0 | (c >> 18));
+                    mb->inline_data[pos++] = (uint8_t)(0x80 | ((c >> 12) & 0x3F));
+                    mb->inline_data[pos++] = (uint8_t)(0x80 | ((c >> 6) & 0x3F));
+                    mb->inline_data[pos++] = (uint8_t)(0x80 | (c & 0x3F));
+                }
+            }
+
+            menai_reg_set_own(regs, base + dest, result);
+            break;
+        }
+
+        case OP_BYTES_TO_STRING: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            if (!require_bytes(b, "bytes->string")) {
+                goto error;
+            }
+
+            ssize_t nbytes = menai_bytes_length(b);
+            const uint8_t *data = menai_bytes_data(b);
+
+            /* Decode UTF-8 to UTF-32 codepoints */
+            ssize_t ncp = 0;
+            ssize_t i = 0;
+            while (i < nbytes) {
+                uint8_t c = data[i];
+                if (c < 0x80) {
+                    i += 1;
+                } else if ((c & 0xE0) == 0xC0) {
+                    if (i + 2 > nbytes || (data[i+1] & 0xC0) != 0x80) {
+                        menai_raise_eval_error("bytes->string: invalid UTF-8 sequence");
+                        goto error;
+                    }
+                    i += 2;
+                } else if ((c & 0xF0) == 0xE0) {
+                    if (i + 3 > nbytes || (data[i+1] & 0xC0) != 0x80 || (data[i+2] & 0xC0) != 0x80) {
+                        menai_raise_eval_error("bytes->string: invalid UTF-8 sequence");
+                        goto error;
+                    }
+                    i += 3;
+                } else if ((c & 0xF8) == 0xF0) {
+                    if (i + 4 > nbytes || (data[i+1] & 0xC0) != 0x80 || (data[i+2] & 0xC0) != 0x80 || (data[i+3] & 0xC0) != 0x80) {
+                        menai_raise_eval_error("bytes->string: invalid UTF-8 sequence");
+                        goto error;
+                    }
+                    i += 4;
+                } else {
+                    menai_raise_eval_error("bytes->string: invalid UTF-8 sequence");
+                    goto error;
+                }
+                ncp++;
+            }
+
+            uint32_t *cp_buf = (uint32_t *)malloc((size_t)ncp * sizeof(uint32_t));
+            if (!cp_buf) {
+                PyErr_NoMemory();
+                goto error;
+            }
+
+            i = 0;
+            ssize_t cp_idx = 0;
+            while (i < nbytes) {
+                uint8_t c = data[i];
+                if (c < 0x80) {
+                    cp_buf[cp_idx++] = c;
+                    i += 1;
+                } else if ((c & 0xE0) == 0xC0) {
+                    cp_buf[cp_idx++] = ((uint32_t)(c & 0x1F) << 6) | (data[i+1] & 0x3F);
+                    i += 2;
+                } else if ((c & 0xF0) == 0xE0) {
+                    cp_buf[cp_idx++] = ((uint32_t)(c & 0x0F) << 12) | ((uint32_t)(data[i+1] & 0x3F) << 6) | (data[i+2] & 0x3F);
+                    i += 3;
+                } else {
+                    cp_buf[cp_idx++] = ((uint32_t)(c & 0x07) << 18) | ((uint32_t)(data[i+1] & 0x3F) << 12) | ((uint32_t)(data[i+2] & 0x3F) << 6) | (data[i+3] & 0x3F);
+                    i += 4;
+                }
+            }
+
+            MenaiValue *result = menai_string_from_codepoints(cp_buf, ncp);
+            free(cp_buf);
+            if (result == NULL) {
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, result);
+            break;
+        }
+
+        case OP_BYTES_TO_LIST: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            if (!require_bytes(b, "bytes->list")) {
+                goto error;
+            }
+
+            ssize_t nbytes = menai_bytes_length(b);
+            MenaiValue *result = menai_list_alloc(nbytes);
+            if (result == NULL) {
+                goto error;
+            }
+
+            MenaiValue **arr = menai_list_elements(result);
+            const uint8_t *data = menai_bytes_data(b);
+            for (ssize_t i = 0; i < nbytes; i++) {
+                arr[i] = menai_integer_from_long((long)data[i]);
+                if (arr[i] == NULL) {
+                    for (ssize_t j = 0; j < i; j++) {
+                        menai_release(arr[j]);
+                    }
+
+                    menai_release(result);
+                    goto error;
+                }
+            }
+
+            menai_reg_set_own(regs, base + dest, result);
+            break;
+        }
+
+        case OP_BYTES_TO_STRING_HEX: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            if (!require_bytes(b, "bytes->string-hex")) {
+                goto error;
+            }
+
+            ssize_t nbytes = menai_bytes_length(b);
+            const uint8_t *data = menai_bytes_data(b);
+
+            uint32_t *cp_buf = (uint32_t *)malloc((size_t)(nbytes * 2) * sizeof(uint32_t));
+            if (!cp_buf) {
+                PyErr_NoMemory();
+                goto error;
+            }
+
+            static const uint32_t hex_chars[] = {
+                '0', '1', '2', '3', '4', '5', '6', '7',
+                '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+            };
+
+            for (ssize_t i = 0; i < nbytes; i++) {
+                cp_buf[i * 2] = hex_chars[(data[i] >> 4) & 0xF];
+                cp_buf[i * 2 + 1] = hex_chars[data[i] & 0xF];
+            }
+
+            MenaiValue *result = menai_string_from_codepoints(cp_buf, nbytes * 2);
+            free(cp_buf);
+            if (result == NULL) {
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, result);
+            break;
+        }
+
+        case OP_STRING_HEX_TO_BYTES: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            MenaiValue *s = regs[base + src0];
+            if (!require_string(s, "string-hex->bytes")) {
+                goto error;
+            }
+
+            ssize_t slen = menai_string_length(s);
+            const uint32_t *cp = menai_string_data(s);
+
+            if (slen % 2 != 0) {
+                menai_raise_eval_error("string-hex->bytes: hex string must have even length");
+                goto error;
+            }
+
+            ssize_t nbytes = slen / 2;
+            MenaiValue *result = menai_bytes_alloc(nbytes);
+            if (result == NULL) {
+                goto error;
+            }
+
+            MenaiBytes *mb = (MenaiBytes *)result;
+            for (ssize_t i = 0; i < nbytes; i++) {
+                uint32_t hi = cp[i * 2];
+                uint32_t lo = cp[i * 2 + 1];
+                int hi_val = -1, lo_val = -1;
+
+                if (hi >= '0' && hi <= '9') {
+                    hi_val = hi - '0';
+                } else if (hi >= 'a' && hi <= 'f') {
+                    hi_val = hi - 'a' + 10;
+                } else if (hi >= 'A' && hi <= 'F') {
+                    hi_val = hi - 'A' + 10;
+                }
+
+                if (lo >= '0' && lo <= '9') {
+                    lo_val = lo - '0';
+                } else if (lo >= 'a' && lo <= 'f') {
+                    lo_val = lo - 'a' + 10;
+                } else if (lo >= 'A' && lo <= 'F') {
+                    lo_val = lo - 'A' + 10;
+                }
+
+                if (hi_val < 0 || lo_val < 0) {
+                    menai_raise_eval_error("string-hex->bytes: invalid hex character");
+                    menai_release(result);
+                    goto error;
+                }
+
+                mb->inline_data[i] = (uint8_t)((hi_val << 4) | lo_val);
+            }
+
+            menai_reg_set_own(regs, base + dest, result);
+            break;
+        }
+
+        case OP_BYTES_CONCAT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            if (!require_bytes(a, "bytes-concat")) {
+                goto error;
+            }
+
+            if (!require_bytes(b, "bytes-concat")) {
+                goto error;
+            }
+
+            MenaiValue *_r = menai_bytes_concat(a, b);
+            if (_r == NULL) {
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, _r);
+            break;
+        }
+
+        case OP_BYTES_INDEX: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *needle = regs[base + src0];
+            MenaiValue *haystack = regs[base + src1];
+            if (!require_bytes(needle, "bytes-index")) {
+                goto error;
+            }
+
+            if (!require_bytes(haystack, "bytes-index")) {
+                goto error;
+            }
+
+            ssize_t nlen = menai_bytes_length(needle);
+            ssize_t hlen = menai_bytes_length(haystack);
+            if (nlen == 0) {
+                menai_reg_set_borrow(regs, base + dest, make_integer_from_ssize_t(0));
+                break;
+            }
+
+            if (nlen > hlen) {
+                menai_reg_set_borrow(regs, base + dest, Menai_NONE);
+                break;
+            }
+
+            const uint8_t *nd = menai_bytes_data(needle);
+            const uint8_t *hd = menai_bytes_data(haystack);
+            ssize_t limit = hlen - nlen;
+            ssize_t found = -1;
+            for (ssize_t i = 0; i <= limit; i++) {
+                if (memcmp(hd + i, nd, (size_t)nlen) == 0) {
+                    found = i;
+                    break;
+                }
+            }
+
+            if (found == -1) {
+                menai_reg_set_borrow(regs, base + dest, Menai_NONE);
+            } else {
+                MenaiValue *_r = make_integer_from_ssize_t(found);
+                if (_r == NULL) {
+                    goto error;
+                }
+
+                menai_reg_set_own(regs, base + dest, _r);
+            }
+            break;
+        }
+
+        case OP_BYTES_INDEX_INT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *byte_val = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            if (!IS_MENAI_INTEGER(byte_val)) {
+                menai_raise_eval_error("bytes-index-int: byte must be an integer");
+                goto error;
+            }
+
+            if (!require_bytes(b, "bytes-index-int")) {
+                goto error;
+            }
+
+            long target = integer_to_long(byte_val);
+            if (target < 0 || target > 255) {
+                menai_raise_eval_errorf("bytes-index-int: byte value %ld out of range 0-255", target);
+                goto error;
+            }
+
+            ssize_t blen = menai_bytes_length(b);
+            const uint8_t *data = menai_bytes_data(b);
+            ssize_t found = -1;
+            for (ssize_t i = 0; i < blen; i++) {
+                if (data[i] == (uint8_t)target) {
+                    found = i;
+                    break;
+                }
+            }
+
+            if (found == -1) {
+                menai_reg_set_borrow(regs, base + dest, Menai_NONE);
+            } else {
+                MenaiValue *_r = make_integer_from_ssize_t(found);
+                if (_r == NULL) {
+                    goto error;
+                }
+
+                menai_reg_set_own(regs, base + dest, _r);
+            }
+            break;
+        }
+
+        case OP_BYTES_LT_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            if (!require_bytes(a, "bytes<?")) {
+                goto error;
+            }
+
+            if (!require_bytes(b, "bytes<?")) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, menai_bytes_compare(a, b) < 0);
+            break;
+        }
+
+        case OP_BYTES_GT_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            if (!require_bytes(a, "bytes>?")) {
+                goto error;
+            }
+
+            if (!require_bytes(b, "bytes>?")) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, menai_bytes_compare(a, b) > 0);
+            break;
+        }
+
+        case OP_BYTES_LTE_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            if (!require_bytes(a, "bytes<=?")) {
+                goto error;
+            }
+
+            if (!require_bytes(b, "bytes<=?")) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, menai_bytes_compare(a, b) <= 0);
+            break;
+        }
+
+        case OP_BYTES_GTE_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            if (!require_bytes(a, "bytes>=?")) {
+                goto error;
+            }
+
+            if (!require_bytes(b, "bytes>=?")) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, menai_bytes_compare(a, b) >= 0);
+            break;
+        }
+
+        case OP_BYTES_READ_U8: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            MenaiValue *off_val = regs[base + src1];
+            if (!require_bytes(b, "bytes-read-u8")) {
+                goto error;
+            }
+
+            if (!IS_MENAI_INTEGER(off_val)) {
+                menai_raise_eval_error("bytes-read-u8: offset must be an integer");
+                goto error;
+            }
+
+            ssize_t offset = integer_to_ssize_t(off_val);
+            ssize_t blen = menai_bytes_length(b);
+            if (offset < 0 || offset >= blen) {
+                menai_raise_eval_errorf("bytes-read-u8: offset %zd out of bounds for length %zd", offset, blen);
+                goto error;
+            }
+
+            MenaiValue *_r = menai_integer_from_long((long)menai_bytes_get(b, offset));
+            if (_r == NULL) {
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, _r);
+            break;
+        }
+
+        case OP_BYTES_READ_I8: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            MenaiValue *off_val = regs[base + src1];
+            if (!require_bytes(b, "bytes-read-i8")) {
+                goto error;
+            }
+
+            if (!IS_MENAI_INTEGER(off_val)) {
+                menai_raise_eval_error("bytes-read-i8: offset must be an integer");
+                goto error;
+            }
+
+            ssize_t offset = integer_to_ssize_t(off_val);
+            ssize_t blen = menai_bytes_length(b);
+            if (offset < 0 || offset >= blen) {
+                menai_raise_eval_errorf("bytes-read-i8: offset %zd out of bounds for length %zd", offset, blen);
+                goto error;
+            }
+
+            int8_t val = (int8_t)menai_bytes_get(b, offset);
+            MenaiValue *_r = menai_integer_from_long((long)val);
+            if (_r == NULL) {
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, _r);
+            break;
+        }
+
+        /* Multi-byte read helpers using a shared pattern.  Each reads N bytes
+         * at the given offset, assembles them in the specified endianness,
+         * and returns an integer.  */
+#define BYTES_READ_MULTI(opcode_name, width, is_signed, le) \
+        case opcode_name: { \
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK); \
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK); \
+            MenaiValue *b = regs[base + src0]; \
+            MenaiValue *off_val = regs[base + src1]; \
+            if (!require_bytes(b, #opcode_name)) { \
+                goto error; \
+            } \
+            if (!IS_MENAI_INTEGER(off_val)) { \
+                menai_raise_eval_error(#opcode_name ": offset must be an integer"); \
+                goto error; \
+            } \
+            ssize_t offset = integer_to_ssize_t(off_val); \
+            ssize_t blen = menai_bytes_length(b); \
+            if (offset < 0 || offset + (width) > blen) { \
+                menai_raise_eval_errorf(#opcode_name ": offset %zd out of bounds for length %zd", offset, blen); \
+                goto error; \
+            } \
+            const uint8_t *d = menai_bytes_data(b) + offset; \
+            unsigned long uval = 0; \
+            if (le) { \
+                for (int _i = 0; _i < (width); _i++) { \
+                    uval |= ((unsigned long)d[_i]) << (_i * 8); \
+                } \
+            } else { \
+                for (int _i = 0; _i < (width); _i++) { \
+                    uval = (uval << 8) | d[_i]; \
+                } \
+            } \
+            if (is_signed) { \
+                unsigned long sign_bit = 1UL << ((width) * 8 - 1); \
+                long sval; \
+                if (uval & sign_bit) { \
+                    if ((width) == sizeof(unsigned long)) { \
+                        sval = (long)uval; \
+                    } else { \
+                        sval = (long)(uval | ~((1UL << (width) * 8) - 1)); \
+                    } \
+                } else { \
+                    sval = (long)uval; \
+                } \
+                MenaiValue *_r = menai_integer_from_long(sval); \
+                if (_r == NULL) { goto error; } \
+                menai_reg_set_own(regs, base + dest, _r); \
+            } else { \
+                if ((width) == sizeof(unsigned long) && (long)uval < 0) { \
+                    /* Unsigned 64-bit value exceeds LONG_MAX */ \
+                    PyObject *py_uval = PyLong_FromUnsignedLongLong((unsigned long long)uval); \
+                    if (!py_uval) { goto error; } \
+                    MenaiBigInt big; \
+                    menai_bigint_init(&big); \
+                    if (menai_bigint_from_pylong(py_uval, &big) < 0) { \
+                        Py_DECREF(py_uval); \
+                        goto error; \
+                    } \
+                    Py_DECREF(py_uval); \
+                    MenaiValue *_r = menai_integer_from_bigint(big); \
+                    if (_r == NULL) { goto error; } \
+                    menai_reg_set_own(regs, base + dest, _r); \
+                } else { \
+                    MenaiValue *_r = menai_integer_from_long((long)uval); \
+                    if (_r == NULL) { goto error; } \
+                    menai_reg_set_own(regs, base + dest, _r); \
+                } \
+            } \
+            break; \
+        }
+
+        BYTES_READ_MULTI(OP_BYTES_READ_U16_LE, 2, 0, 1)
+        BYTES_READ_MULTI(OP_BYTES_READ_U24_LE, 3, 0, 1)
+        BYTES_READ_MULTI(OP_BYTES_READ_U32_LE, 4, 0, 1)
+        BYTES_READ_MULTI(OP_BYTES_READ_U64_LE, 8, 0, 1)
+        BYTES_READ_MULTI(OP_BYTES_READ_U16_BE, 2, 0, 0)
+        BYTES_READ_MULTI(OP_BYTES_READ_U24_BE, 3, 0, 0)
+        BYTES_READ_MULTI(OP_BYTES_READ_U32_BE, 4, 0, 0)
+        BYTES_READ_MULTI(OP_BYTES_READ_U64_BE, 8, 0, 0)
+        BYTES_READ_MULTI(OP_BYTES_READ_I16_LE, 2, 1, 1)
+        BYTES_READ_MULTI(OP_BYTES_READ_I24_LE, 3, 1, 1)
+        BYTES_READ_MULTI(OP_BYTES_READ_I32_LE, 4, 1, 1)
+        BYTES_READ_MULTI(OP_BYTES_READ_I64_LE, 8, 1, 1)
+        BYTES_READ_MULTI(OP_BYTES_READ_I16_BE, 2, 1, 0)
+        BYTES_READ_MULTI(OP_BYTES_READ_I24_BE, 3, 1, 0)
+        BYTES_READ_MULTI(OP_BYTES_READ_I32_BE, 4, 1, 0)
+        BYTES_READ_MULTI(OP_BYTES_READ_I64_BE, 8, 1, 0)
+
+#undef BYTES_READ_MULTI
 
         case OP_LIST_P: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);

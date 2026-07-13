@@ -14,7 +14,7 @@ from menai.menai_ir import (
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
     MenaiASTString, MenaiASTBoolean, MenaiASTNone, MenaiASTSymbol, MenaiASTList, MenaiASTListLiteral,
-    MenaiASTDict, MenaiASTSet, MenaiASTStruct
+    MenaiASTDict, MenaiASTSet, MenaiASTStruct, MenaiASTBytes,
 )
 
 
@@ -147,7 +147,7 @@ class MenaiIRBuilder:
 
         expr_type = type(expr)
 
-        if expr_type in (MenaiASTInteger, MenaiASTFloat, MenaiASTComplex, MenaiASTString):
+        if expr_type in (MenaiASTInteger, MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBytes):
             return MenaiIRConstant(value=expr.to_runtime_value())
 
         if expr_type is MenaiASTBoolean:
