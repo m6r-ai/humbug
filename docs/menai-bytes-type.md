@@ -45,7 +45,7 @@ The type is called `bytes`, not `blob`, because:
 
 ### No new literal syntax
 
-Bytes values are constructed via conversion functions that fold to constants at compile
+Bytes values are constructed via VM opcodes that fold to constants at compile
 time by the existing constant folder:
 
 ```menai
@@ -54,10 +54,10 @@ time by the existing constant folder:
 ```
 
 No `#hex"..."` or `#utf8"..."` literal syntax is needed. The constant folder already
-produces optimal encodings when conversion functions are called with literal arguments.
+produces optimal encodings when VM opcodes are called with literal arguments.
 Adding literal syntax would provide only cosmetic brevity with no semantic or runtime
 benefit, and would add parsing complexity and potential confusion about when to use
-literals vs conversion functions.
+literals vs VM opcodes.
 
 This is consistent with Menai's existing philosophy of explicit, unambiguous function
 names over syntactic sugar.
@@ -67,8 +67,8 @@ names over syntactic sugar.
 Menai strings are sequences of Unicode codepoints, not byte sequences. There is no
 "Latin-1 string encoding" — that concept is meaningless when strings are already fully
 decoded Unicode. The bridge between strings and bytes is UTF-8 encode/decode plus hex
-representation. If you need specific byte values that don't correspond to a Unicode
-string, use hex.
+representation, all implemented as VM opcodes. If you need specific byte values that
+don't correspond to a Unicode string, use hex.
 
 ## VM Opcodes vs Prelude Functions
 
@@ -124,37 +124,44 @@ these.
 (bytes-append-u8 b value)     ; append one byte (value must be 0-255)
 ```
 
-### Construction from integers (1)
+### Construction from list (1)
 
 Could be a fold of `bytes-append-u8`, but that's O(n) allocations for what should be a
-single allocation.
+single allocation. Named `list->bytes` to mirror `bytes->list` — the inverse operation.
 
 ```menai
-(bytes-from-list lst)         ; construct bytes from list of integers (0-255 each)
+(list->bytes lst)             ; construct bytes from list of integers (0-255 each)
 ```
 
 ### Slicing (1)
 
 Essential for parsing. If the VM implements bytes with structural sharing (offset +
 length into a backing buffer), slicing is O(1). This cannot be done in Menai because
-Menai code cannot create internal pointers into byte storage.
+Menai code cannot create internal pointers into byte storage. Follows the same pattern
+as `string-slice`: a VM opcode with arity 3 (bytes, start, end), a prelude wrapper for
+the optional-end case, and a desugarer computed-default that synthesises
+`($bytes-length b)` when the end is omitted.
 
 ```menai
 (bytes-slice b start end)     ; sub-bytes from start (inclusive) to end (exclusive)
 (bytes-slice b start)         ; sub-bytes from start to end
 ```
 
-### String conversions (3)
+### String and hex conversions (5)
 
 The bridge between Unicode strings and bytes. UTF-8 encode/decode involves multi-byte
 sequence handling that is non-trivial but expressible in Menai. However, these are
 common enough and the performance difference significant enough to warrant native
-implementation.
+implementation. Hex conversions are VM opcodes rather than prelude functions so that
+the constant folder can fold them when called with literal arguments — this is the
+de facto bytes literal mechanism (see Constant Folding).
 
 ```menai
 (string->bytes s)             ; UTF-8 encode
-(bytes->string b)             ; UTF-8 decode (error on invalid sequences)
+(bytes->string b)             ; UTF-8 decode (strict — error on invalid sequences)
 (bytes->list b)               ; list of integers (0-255 each)
+(bytes->string-hex b)         ; hex encode → lowercase hex string
+(string-hex->bytes s)         ; hex decode (error on invalid hex string)
 ```
 
 ### Inequality (1)
@@ -309,9 +316,15 @@ Critical for construction. If implemented as a fold of `bytes-append-u8` or pair
 `bytes-concat`, the result is O(n²) allocation. Native can precompute total length,
 allocate once, and memcpy.
 
+Variadic calls are handled the same way as `string-concat` and `list-concat`: the
+desugarer fold-reduces `(bytes-concat b1 b2 b3 ...)` into nested binary
+`($bytes-concat ($bytes-concat b1 b2) b3) ...` calls, and the prelude provides a
+zero-arg identity wrapper that returns empty bytes. The VM opcode itself is binary
+(arity 2).
+
 ```menai
 (bytes-concat b1 b2 ...)         ; concatenated bytes
-(bytes-concat)                   ; empty bytes (zero-arg identity)
+(bytes-concat)                   ; empty bytes (zero-arg identity, prelude wrapper)
 ```
 
 ### Lexicographic comparison (4)
@@ -332,9 +345,9 @@ Native `memcmp` is dramatically faster than a Menai loop of `bytes-ref` + `integ
 |----------|-------|
 | Type foundation | 4 |
 | Single-byte bridge | 2 |
-| Construction from integers | 1 |
+| Construction from list | 1 |
 | Slicing | 1 |
-| String conversions | 3 |
+| String and hex conversions | 5 |
 | Inequality | 1 |
 | Multi-byte reads | 17 |
 | Multi-byte append | 18 |
@@ -343,7 +356,7 @@ Native `memcmp` is dramatically faster than a Menai loop of `bytes-ref` + `integ
 | Search | 2 |
 | Concatenation | 1 |
 | Lexicographic comparison | 4 |
-| **Total** | **~76** |
+| **Total** | **~78** |
 
 ## Prelude Functions
 
@@ -359,19 +372,6 @@ lambdas, so there is no performance benefit to making these native.
 (fold-bytes (lambda (acc byte) (integer+ acc byte)) 0 b)
 (zip-bytes b1 b2)               ; → list of (byte byte) pairs
 ```
-
-### Hex conversions (2)
-
-Straightforward compositions of `integer->string` / `string->integer` with radix 16.
-Not hot paths.
-
-```menai
-(bytes->string-hex b)            ; "504b0304" (lowercase hex)
-(string-hex->bytes "504b0304")   ; hex string → bytes
-```
-
-These fold to constants at compile time when called with literal arguments, serving as
-the de facto bytes literal syntax.
 
 ### Convenience predicates (3)
 
@@ -410,45 +410,57 @@ The following were considered and rejected:
   code. Runtime conversion (`string-base64->bytes`) can be added as a prelude function
   if needed.
 - **New literal syntax** (`#hex"..."`, `#utf8"..."`) — the constant folder already
-  produces optimal encodings from conversion functions called with literals. New syntax
-  adds parsing complexity with no semantic or runtime benefit.
+  produces optimal encodings from `string->bytes` and `string-hex->bytes` VM opcodes
+  when called with literal arguments. New syntax adds parsing complexity with no
+  semantic or runtime benefit.
 
 ## Implementation Plan
 
 ### Phase 1: Core VM support
 
-1. Add `MenaiBytes` value type to `menai_value.py` (immutable, backed by `bytes` or
-   `bytearray` with copy-on-write semantics for slicing).
-2. Register all VM opcodes in `BUILTIN_OPCODE_ARITIES` in `menai_builtin_registry.py`.
-3. Implement opcodes in the C VM:
-   - Type foundation, single-byte bridge, construction, slicing, string conversions,
-     inequality.
+1. Add `MenaiBytes` value type to the C VM (`menai_vm_c.h` and a new `menai_vm_bytes.c`).
+   The C struct stores an immutable byte buffer with structural sharing for O(1) slicing
+   (offset + length into a backing buffer, following the same pattern as `MenaiList`).
+   Add a `MENAITYPE_BYTES` type tag. Add bytes support to `menai_value_hash` and
+   `menai_value_equal` so bytes can be used as dict keys.
+2. Add a thin `MenaiBytes` wrapper to `menai_value.py` for the slow-world bridge
+   (Python fallback and `to_python` / `describe` / `to_hashable_key` interop).
+3. Register all VM opcodes in `BUILTIN_OPCODE_ARITIES` in `menai_builtin_registry.py`.
+4. Implement opcodes in the C VM:
+   - Type foundation, single-byte bridge, construction, slicing, string and hex
+     conversions, inequality.
    - Multi-byte reads, appends, writes.
    - Variable-length integers (LEB128).
    - Search, concatenation, lexicographic comparison.
-4. Add `bytes?` type predicate support to the semantic analyzer.
+5. Add `bytes?` type predicate support to the semantic analyzer and desugarer (type
+   guard for `match` on bytes literals, computed-default for `bytes-slice`).
 
 ### Phase 2: Prelude functions
 
 1. Add prelude implementations to `_PRELUDE_SOURCE` in `menai.py`:
    - `map-bytes`, `filter-bytes`, `fold-bytes`, `zip-bytes`
-   - `bytes->string-hex`, `string-hex->bytes`
    - `bytes-empty?`, `bytes-prefix?`, `bytes-suffix?`
    - `bytes-split`, `bytes-split-int`
+2. Add `bytes-concat` to the fold-reducible variadic list in the desugarer (alongside
+   `string-concat`, `list-concat`).
 
-### Phase 3: Tests
+### Phase 3: Constant folding
+
+1. Add a new `MenaiASTBytes` AST node class to `menai_ast.py` (carrying raw byte data
+   as a Python `bytes` object) so the constant folder can emit bytes constants.
+2. Extend `MenaiASTConstantFolder` to fold `string->bytes` and `string-hex->bytes`
+   calls with literal arguments into `MenaiASTBytes` nodes.
+3. This serves as the bytes literal mechanism — no new literal syntax needed.
+4. Folding is placed before tests so that test code can use `string-hex->bytes` and
+   `string->bytes` with literals without runtime decode overhead.
+
+### Phase 4: Tests
 
 1. Unit tests for every VM opcode (type checking, correctness, bounds checking, error
    conditions).
 2. Unit tests for every prelude function.
 3. Integration tests demonstrating real format parsing (e.g., reading a zip local file
    header, parsing a PNG signature chunk).
-
-### Phase 4: Constant folding
-
-1. Extend `MenaiASTConstantFolder` to fold `string->bytes` and `string-hex->bytes` calls
-   with literal arguments into constant `MenaiBytes` values.
-2. This serves as the bytes literal mechanism — no new literal syntax needed.
 
 ### Phase 5: I/O framework integration (separate concern)
 
@@ -458,6 +470,52 @@ The following were considered and rejected:
    output, in addition to the existing text-based `input-text` / `input-lines` model.
 3. This is the permission boundary — Menai stays pure, the I/O framework handles human
    approval for reading and writing binary files.
+
+## Implementation Status
+
+### Completed
+
+- **C VM value type**: `MenaiBytes` struct in `menai_vm_c.h` with structural sharing for O(1)
+  slicing (owner/view pattern mirroring `MenaiList`). Implementation in `menai_vm_bytes.c`.
+  Type tag `MENAITYPE_BYTES` (0x000e). Hash, equality, compare, dealloc all wired into the
+  C VM dispatch (`menai_vm_value.c`, `menai_vm_hashtable.c`).
+- **Bridge layer**: `menai_convert_value` (slow→fast) and `menai_value_to_slow_value`
+  (fast→slow) handle bytes in `menai_vm_bridge.c`.
+- **Python value type**: `MenaiBytes` in `menai_value.py` with `to_hashable_key` support
+  for dict keys.
+- **AST node**: `MenaiASTBytes` in `menai_ast.py`.
+- **Bytecode opcodes**: 40+ opcodes registered in `menai_bytecode.py` (range 400–477)
+  and `BUILTIN_OPCODE_MAP`.
+- **Builtin registry**: All arities in `BUILTIN_FUNCTION_ARITIES` in
+  `menai_builtin_registry.py`.
+- **Desugarer**: `bytes-slice` computed-default, `bytes-concat` fold-reducible variadic,
+  `bytes=?`/`bytes!=?` strict equality, `bytes<?`/`bytes>?`/`bytes<=?`/`bytes>=?`
+  comparison chains, `MenaiASTBytes` in match pattern handling.
+- **Constant folder**: `string->bytes` and `string-hex->bytes` fold to `MenaiASTBytes`.
+- **IR builder**: `MenaiASTBytes` added to the constant literal tuple.
+- **Bytecode builder**: `MenaiBytes` added to constant pool dedup key.
+- **Prelude**: All bytes builtins as prelude lambdas in `menai.py`.
+- **C VM opcode handlers**: All implemented in `menai_vm_c.c` — type predicate, equality,
+  inequality, length, ref, append-u8, list→bytes, slice, string↔bytes (UTF-8), hex
+  conversions, bytes→list, concat, index, index-int, lexicographic comparisons, and all
+  18 multi-byte reads (u8/i8 + u16/u24/u32/u64 LE/BE + i16/i24/i32/i64 LE/BE) via a
+  `BYTES_READ_MULTI` macro with sign extension.
+- **Integer helpers**: `integer_to_long` and `integer_to_ssize_t` added to `menai_vm_c.c`
+  for extracting C integers from `MenaiInteger` in opcode handlers.
+- **Build**: `menai_vm_bytes.c` added to `setup.py`.
+- **Tests**: `tests/menai/test_bytes.py` with 196 test cases covering all implemented
+  opcodes. 192 passing, 4 failing (see Known Issues).
+  opcodes. All 196 passing.
+
+### Not Yet Implemented
+
+- Multi-byte **append** opcodes (18): `bytes-append-u16-le`, etc.
+- Multi-byte **write** opcodes (18): `bytes-write-u16-le`, etc.
+- LEB128 encode/decode (4): `bytes-read-uleb128`, `bytes-append-uleb128`,
+  `bytes-read-sleb128`, `bytes-append-sleb128`.
+- Prelude functions: `map-bytes`, `filter-bytes`, `fold-bytes`, `zip-bytes`,
+  `bytes-empty?`, `bytes-prefix?`, `bytes-suffix?`, `bytes-split`, `bytes-split-int`.
+- Phase 5: I/O framework integration.
 
 ## Example: Parsing a Zip Local File Header
 
@@ -494,8 +552,9 @@ Menai's noun-based type names (`list`, `string`, `dict`, `set`).
 
 ### Why no literal syntax
 
-The constant folder already produces optimal encodings when conversion functions are
-called with literal arguments. `string-hex->bytes "504b0304"` folds to the same bytes
+The constant folder already produces optimal encodings when `string->bytes` and
+`string-hex->bytes` VM opcodes are called with literal arguments.
+`string-hex->bytes "504b0304"` folds to the same bytes
 value that `#hex"504b0304"` would produce. New literal syntax adds parsing complexity,
 documentation burden, and potential confusion with no semantic or runtime benefit.
 
@@ -544,3 +603,39 @@ format library that needs ZigZag + LEB128 can compose them trivially.
 ```
 
 This is idiomatic Menai and doesn't require defining a struct type for a simple pair.
+
+### Why hex conversions are VM opcodes, not prelude functions
+
+`bytes->string-hex` and `string-hex->bytes` could be prelude functions composed from
+`integer->string` / `string->integer` with radix 16. However, making them VM opcodes
+allows the constant folder to fold them when called with literal arguments — this is
+the de facto bytes literal mechanism. The constant folder operates on `$`-prefixed
+primitives (VM opcodes), not prelude function names. Promoting hex conversions to
+opcodes keeps the folder's architecture unchanged.
+
+### Why `bytes-slice` follows the `string-slice` pattern
+
+`bytes-slice` has a VM opcode (arity 3: bytes, start, end) with a prelude wrapper for
+the optional-end case and a desugarer computed-default completion. This mirrors
+`string-slice` and `list-slice` exactly: `(bytes-slice b start)` desugars to
+`(let ((#:t b)) ($bytes-slice #:t start ($bytes-length #:t)))`.
+
+### Why `bytes-concat` follows the `string-concat` pattern
+
+The VM opcode is binary (arity 2). Variadic calls are fold-reduced by the desugarer
+into nested binary calls, and the prelude provides a zero-arg identity wrapper. This
+is the same pattern as `string-concat` and `list-concat`.
+
+### Why bytes can be dict keys
+
+Bytes values are hashable and can be used as dict keys. This is useful for lookup
+tables keyed by magic numbers, file signatures, or other fixed byte sequences. The
+hash is based on the logical byte content, not the internal representation, so two
+`MenaiBytes` values with the same bytes are equal regardless of whether one is a
+slice view and the other is a standalone copy.
+
+### Display format
+
+`(describe some-bytes)` produces a hex representation: `#bytes"504b0304"`. Values
+longer than 64 bytes are truncated with `...` after the first 64 bytes (128 hex
+characters). This is a display format, not literal syntax.

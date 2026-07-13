@@ -295,7 +295,7 @@ class TestBytesEquality:
 
     def test_bytes_eq_min_args(self, menai):
         """bytes=? requires at least 2 arguments."""
-        with pytest.raises(MenaiEvalError, match="requires at least 2"):
+        with pytest.raises(MenaiEvalError, match="bytes=.*has wrong number of arguments"):
             menai.evaluate('(bytes=? (string-hex->bytes "ab"))')
 
 
@@ -611,7 +611,7 @@ class TestBytesAsDictKey:
         """Bytes dict keys work with structural sharing (slices)."""
         original = '(string-hex->bytes "504b0304")'
         sliced = '(bytes-slice (string-hex->bytes "504b03040000") 0 4)'
-        expr = f'(dict-get (dict ({original}) "found") ({sliced}))'
+        expr = f'(dict-get (dict {original} "found") {sliced})'
         result = menai.evaluate(expr)
         assert result == "found"
 

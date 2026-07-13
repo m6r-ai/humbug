@@ -485,11 +485,14 @@ menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a)
     }
 
     /*
-     * For negative numbers, the two's complement representation may need one
-     * extra bit (sign bit), so we add 1 to nbits before computing nbytes.
-     * This ensures _PyLong_AsByteArray never fails due to insufficient space.
+     * _PyLong_AsByteArray with is_signed=1 needs room for the sign bit.
+     * For negative numbers, the two's complement may need one extra byte.
+     * For positive numbers where the magnitude's top bit is set (nbits is a
+     * multiple of 8), an extra byte is needed to hold a zero sign bit so the
+     * value is not mistaken for negative.
      */
-    size_t nbytes = (nbits + (is_neg ? 8 : 7)) / 8;
+    int needs_extra = (is_neg || (nbits % 8 == 0));
+    size_t nbytes = (nbits + (needs_extra ? 8 : 7)) / 8;
     if (nbytes == 0) {
         nbytes = 1;
     }
