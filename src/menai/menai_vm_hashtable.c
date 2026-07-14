@@ -14,7 +14,7 @@
 
 #include "menai_vm_c.h"
 
-/* Defined in menai_vm_value.c, */
+/* Defined in menai_vm_c.c */
 extern PyObject *MenaiEvalError_type;
 
 static inline uhash_t

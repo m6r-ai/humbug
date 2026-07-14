@@ -1,19 +1,13 @@
 /*
  * menai_vm_c.c — C implementation of the Menai VM execute loop.
  *
- * Exposes a single Python-callable function:
+ * Exposes:
+ *   menai_vm_c.execute(code, globals_dict) -> MenaiValue *   (in menai_vm_bridge.c)
+ *   menai_vm_c.cancel() -> None   (request cancellation of the running execute)
  *
- * menai_vm_c.execute(code, globals_dict) -> MenaiValue *
- *
- * Also exposes:
- *
- * menai_vm_c.cancel() -> None   (request cancellation of the running execute)
- *
- * The MenaiVM Python class in menai_vm.py calls this in place of its Python
- * execute loop when this extension is available.
- *
- * Build:
- *   python setup.py build_ext --inplace
+ * The execute entry point and all Python-boundary logic live in
+ * menai_vm_bridge.c.  This file contains the native execute loop,
+ * globals table management, and the cancel method.
  */
 #define _POSIX_C_SOURCE 200809L
 #include <math.h>
@@ -531,27 +525,8 @@ MenaiValue *Menai_EMPTY_SET = NULL;
 /*
  * Module-level state fetched at init
  */
-static PyObject *MenaiEvalError_type = NULL;
+PyObject *MenaiEvalError_type = NULL;
 static PyObject *MenaiCancelledException_type = NULL;
-
-/*
- * Fast type-check macros
- */
-#define IS_MENAI_NONE(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_NONE)
-#define IS_MENAI_BOOLEAN(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_BOOLEAN)
-#define IS_MENAI_INTEGER(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_INTEGER)
-#define IS_MENAI_FLOAT(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_FLOAT)
-#define IS_MENAI_COMPLEX(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_COMPLEX)
-#define IS_MENAI_STRING(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_STRING)
-#define IS_MENAI_SYMBOL(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_SYMBOL)
-#define IS_MENAI_LIST(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_LIST)
-#define IS_MENAI_DICT(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_DICT)
-#define IS_MENAI_SET(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_SET)
-#define IS_MENAI_FUNCTION(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_FUNCTION)
-#define IS_MENAI_STRUCTTYPE(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_STRUCTTYPE)
-#define IS_MENAI_STRUCT(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_STRUCT)
-#define IS_MENAI_BYTES(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_BYTES)
-
 
 static inline int
 menai_boolean_value(MenaiValue *o)
@@ -1030,36 +1005,9 @@ frame_setup(Frame *f, MenaiCodeObject *co, int base, int return_dest)
  */
 
 /*
- * GlobalsTable — open-addressing hash table for O(1) name lookup.
- *
- * Built once before execution starts from the globals dict.
- * Never mutated during execution.  Values are owned references.
- *
- * Lookup takes the UTF-8 string from frame->names_items[src0] (extracted once
- * at build time via PyUnicode_AsUTF8, cached in each slot).  The hash is a
- * FNV-1a string hash so the hot path cost is one hash + one strcmp per probe.
- * The slot count is the smallest power of 2 satisfying slot_count * 2 / 3 >= count.
+ * globals_free — free a GlobalsTable and all its owned resources.
  */
-typedef struct {
-    const char *name;   /* UTF-8 — points into PyUnicode internal buffer; NULL = empty */
-    Py_hash_t hash;     /* FNV-1a hash of name */
-    MenaiValue *value;  /* owned reference — valid only when name != NULL */
-} GlobalsSlot;
-
-typedef struct {
-    const char *name;   /* UTF-8 — points into PyUnicode internal buffer */
-    MenaiValue *value;  /* owned reference */
-} GlobalsEntry;
-
-typedef struct {
-    GlobalsSlot *slots;     /* hash table — slot_count entries */
-    GlobalsEntry *entries;  /* flat array — count entries, for iteration */
-    ssize_t slot_count;     /* power of 2 */
-    ssize_t count;          /* number of live entries */
-    int owns_names;         /* 1 if entries[i].name are strdup'd and must be freed */
-} GlobalsTable;
-
-static void
+void
 globals_free(GlobalsTable *gt)
 {
     for (ssize_t i = 0; i < gt->count; i++) {
@@ -1078,166 +1026,74 @@ globals_free(GlobalsTable *gt)
 }
 
 /*
- * Cached globals GlobalsTable.
- *
- * The globals dict (prelude functions and constants) is built once at Menai
- * startup and never changes.  We cache the converted GlobalsTable keyed by
- * the identity of the Python dict object.  On every subsequent execute() call
- * with the same dict pointer we reuse the cached table directly.
+ * globals_slot_insert — insert a (name, hash, value) triple into the
+ * GlobalsTable's open-addressing slot array.  The slot array must already
+ * be allocated with slot_count > 0.  Does NOT touch the entries array —
+ * the caller is responsible for that.
  */
-static PyObject *_cached_globals_dict = NULL;
-static GlobalsTable _cached_globals_gt;
-static int _cached_globals_gt_valid = 0;
+static void
+globals_slot_insert(GlobalsTable *gt, const char *name, hash_t h, MenaiValue *value)
+{
+    ssize_t mask = gt->slot_count - 1;
+    uhash_t perturb = (uhash_t)h;
+    ssize_t slot = (ssize_t)(perturb & (uhash_t)mask);
+    for (;;) {
+        if (gt->slots[slot].name == NULL) {
+            gt->slots[slot].name = name;
+            gt->slots[slot].hash = h;
+            gt->slots[slot].value = value;
+            break;
+        }
 
-/* Forward declaration — execute_loop is defined later in this file. */
-static MenaiValue *execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
-                                MenaiValue **regs, int max_locals);
+        perturb >>= 5;
+        slot = (ssize_t)((5 * (uhash_t)slot + 1 + perturb) & (uhash_t)mask);
+    }
+}
 
 /*
- * globals_get — return a pointer to the cached GlobalsTable, building it the
- * first time a given globals_dict is seen.
- *
- * globals_key is either a Python dict of slow MenaiValue objects, or a Python
- * CodeObject representing the prelude.  When it is a CodeObject the prelude is
- * executed here once and the resulting dict is unpacked into the GlobalsTable;
- * subsequent calls with the same CodeObject identity reuse the cached table.
- * Returns NULL on error with a Python exception set.
+ * globals_alloc_slots — allocate the entries and slots arrays for a
+ * GlobalsTable that will hold n entries.  Returns 0 on success, -1 on
+ * error (no Python exception set — caller handles).
  */
-static const GlobalsTable *
-globals_get(PyObject *globals_key)
+static int
+globals_alloc_slots(GlobalsTable *gt, ssize_t n)
 {
-    if (globals_key == _cached_globals_dict && _cached_globals_gt_valid) {
-        return &_cached_globals_gt;
+    gt->slots = NULL;
+    gt->entries = NULL;
+    gt->slot_count = 0;
+    gt->count = 0;
+    gt->owns_names = 0;
+
+    if (n > 0) {
+        gt->entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
+        if (gt->entries == NULL) {
+            return -1;
+        }
+
+        ssize_t min_slots = (n * 3 + 1) / 2;
+        ssize_t sc = 4;
+        while (sc < min_slots) {
+            sc <<= 1;
+        }
+
+        gt->slots = (GlobalsSlot *)calloc(sc, sizeof(GlobalsSlot));
+        if (gt->slots == NULL) {
+            free(gt->entries);
+            gt->entries = NULL;
+            return -1;
+        }
+
+        gt->slot_count = sc;
     }
 
-    if (_cached_globals_gt_valid) {
-        globals_free(&_cached_globals_gt);
-        _cached_globals_gt_valid = 0;
-        Py_DECREF(_cached_globals_dict);
-        _cached_globals_dict = NULL;
-    }
-
-    _cached_globals_gt.slots = NULL;
-    _cached_globals_gt.entries = NULL;
-    _cached_globals_gt.slot_count = 0;
-    _cached_globals_gt.count = 0;
-    _cached_globals_gt.owns_names = 1;
-
-    if (_py_code_object_type && Py_TYPE(globals_key) == _py_code_object_type) {
-        /*
-         * globals_key is a prelude CodeObject.  Execute it to obtain a
-         * MenaiDict of fast values, then unpack directly into the GlobalsTable
-         * without any slow round-trip.
-         */
-        MenaiCodeObject *prelude_co = menai_code_object_from_python(globals_key);
-        if (!prelude_co) {
-            return NULL;
-        }
-
-        int max_locals = menai_code_object_max_locals(prelude_co);
-        MenaiValue **regs = menai_regs_alloc((size_t)(MAX_FRAME_DEPTH + 1) * max_locals, Menai_NONE);
-        if (!regs) {
-            menai_code_object_release(prelude_co);
-            return NULL;
-        }
-
-        GlobalsTable empty;
-        empty.slots = NULL;
-        empty.entries = NULL;
-        empty.slot_count = 0;
-        empty.count = 0;
-        MenaiValue *result = execute_loop(prelude_co, &empty, regs, max_locals);
-        menai_regs_free(regs, (size_t)(MAX_FRAME_DEPTH + 1) * max_locals);
-        menai_code_object_release(prelude_co);
-        if (!result) {
-            return NULL;
-        }
-
-        if (!IS_MENAI_DICT(result)) {
-            menai_release(result);
-            PyErr_SetString(PyExc_TypeError, "Prelude must evaluate to a dict");
-            return NULL;
-        }
-
-        MenaiDict *d = (MenaiDict *)result;
-        ssize_t n = d->length;
-        if (n > 0) {
-            _cached_globals_gt.entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
-            if (!_cached_globals_gt.entries) {
-                menai_release(result);
-                PyErr_NoMemory();
-                return NULL;
-            }
-
-            for (ssize_t i = 0; i < n; i++) {
-                MenaiValue *k = d->keys[i];
-                if (!IS_MENAI_STRING(k)) {
-                    menai_release(result);
-                    globals_free(&_cached_globals_gt);
-                    PyErr_SetString(PyExc_TypeError, "Prelude dict keys must be strings");
-                    return NULL;
-                }
-
-                menai_retain(d->values[i]);
-                char *name_copy = menai_string_to_utf8(k, NULL);
-                if (!name_copy) {
-                    menai_release(result);
-                    globals_free(&_cached_globals_gt);
-                    return NULL;
-                }
-
-                _cached_globals_gt.entries[i].name = name_copy;
-                _cached_globals_gt.entries[i].value = d->values[i];
-                _cached_globals_gt.count++;
-            }
-        }
-
-        menai_release(result);
-    } else {
-        /* globals_key is a Python dict of slow MenaiValue objects. */
-        ssize_t n = PyDict_Size(globals_key);
-        if (n > 0) {
-            _cached_globals_gt.entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
-            if (!_cached_globals_gt.entries) {
-                PyErr_NoMemory();
-                return NULL;
-            }
-
-            PyObject *key, *val;
-            ssize_t pos = 0;
-            while (PyDict_Next(globals_key, &pos, &key, &val)) {
-                const char *name_utf8 = PyUnicode_AsUTF8(key);
-                if (!name_utf8) {
-                    globals_free(&_cached_globals_gt);
-                    return NULL;
-                }
-
-                char *name_copy = strdup(name_utf8);
-                if (!name_copy) {
-                    globals_free(&_cached_globals_gt);
-                    PyErr_NoMemory();
-                    return NULL;
-                }
-
-                MenaiValue *fast_val = menai_convert_value(val);
-                if (!fast_val) {
-                    free(name_copy);
-                    globals_free(&_cached_globals_gt);
-                    return NULL;
-                }
-
-                _cached_globals_gt.entries[_cached_globals_gt.count].name = name_copy;
-                _cached_globals_gt.entries[_cached_globals_gt.count].value = fast_val;
-                _cached_globals_gt.count++;
-            }
-        }
-    }
-
-    Py_INCREF(globals_key);
-    _cached_globals_dict = globals_key;
-    _cached_globals_gt_valid = 1;
-    return &_cached_globals_gt;
+    return 0;
 }
+
+/*
+ * Forward declaration — execute_loop is defined later in this file.
+ */
+static MenaiValue *execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
+                                MenaiValue **regs, int max_locals);
 
 /*
  * globals_build — build a GlobalsTable from the cached globals GlobalsTable.
@@ -1251,33 +1107,8 @@ globals_build(GlobalsTable *gt, const GlobalsTable *globals_gt)
 {
     ssize_t total = globals_gt ? globals_gt->count : 0;
 
-    gt->slots = NULL;
-    gt->entries = NULL;
-    gt->slot_count = 0;
-    gt->count = 0;
-    gt->owns_names = 0;
-
-    if (total > 0) {
-        gt->entries = (GlobalsEntry *)malloc(total * sizeof(GlobalsEntry));
-        if (gt->entries == NULL) {
-            return -1;
-        }
-
-        ssize_t min_slots = (total * 3 + 1) / 2;
-        ssize_t sc = 4;
-        while (sc < min_slots) {
-            sc <<= 1;
-        }
-
-        gt->slots = (GlobalsSlot *)malloc(sc * sizeof(GlobalsSlot));
-        if (gt->slots == NULL) {
-            free(gt->entries);
-            gt->entries = NULL;
-            return -1;
-        }
-
-        memset(gt->slots, 0, sc * sizeof(GlobalsSlot));
-        gt->slot_count = sc;
+    if (globals_alloc_slots(gt, total) < 0) {
+        return -1;
     }
 
     for (ssize_t i = 0; i < total; i++) {
@@ -1287,23 +1118,102 @@ globals_build(GlobalsTable *gt, const GlobalsTable *globals_gt)
         gt->count++;
     }
 
-    /* Populate the hash table from the entries array. */
-    ssize_t mask = gt->slot_count - 1;
     for (ssize_t i = 0; i < gt->count; i++) {
-        const char *name = gt->entries[i].name;
-        hash_t h = menai_name_str_hash(name);
-        uhash_t perturb = (uhash_t)h;
-        ssize_t slot = (ssize_t)(perturb & (uhash_t)mask);
-        for (;;) {
-            if (gt->slots[slot].name == NULL) {
-                gt->slots[slot].name = name;
-                gt->slots[slot].hash = h;
-                gt->slots[slot].value = gt->entries[i].value;
-                break;
+        hash_t h = menai_name_str_hash(gt->entries[i].name);
+        globals_slot_insert(gt, gt->entries[i].name, h, gt->entries[i].value);
+    }
+
+    return 0;
+}
+
+/*
+ * globals_build_from_dict — build a GlobalsTable from a native MenaiDict.
+ *
+ * Fills the entries array only (no hash slots).  Names are strdup'd from
+ * the MenaiString keys via menai_string_to_utf8.  Sets owns_names = 1.
+ * Returns 0 on success, -1 on error (Python exception set).
+ */
+int
+globals_build_from_dict(GlobalsTable *gt, MenaiValue *dict_val)
+{
+    MenaiDict *d = (MenaiDict *)dict_val;
+    ssize_t n = d->length;
+
+    gt->slots = NULL;
+    gt->entries = NULL;
+    gt->slot_count = 0;
+    gt->count = 0;
+    gt->owns_names = 1;
+
+    if (n > 0) {
+        gt->entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
+        if (gt->entries == NULL) {
+            PyErr_NoMemory();
+            return -1;
+        }
+
+        for (ssize_t i = 0; i < n; i++) {
+            MenaiValue *k = d->keys[i];
+            if (!IS_MENAI_STRING(k)) {
+                globals_free(gt);
+                PyErr_SetString(PyExc_TypeError,
+                    "Prelude dict keys must be strings");
+                return -1;
             }
 
-            perturb >>= 5;
-            slot = (ssize_t)((5 * (uhash_t)slot + 1 + perturb) & (uhash_t)mask);
+            char *name_copy = menai_string_to_utf8(k, NULL);
+            if (name_copy == NULL) {
+                globals_free(gt);
+                return -1;
+            }
+
+            menai_retain(d->values[i]);
+            gt->entries[gt->count].name = name_copy;
+            gt->entries[gt->count].value = d->values[i];
+            gt->count++;
+        }
+    }
+
+    return 0;
+}
+
+/*
+ * globals_build_from_arrays — build a GlobalsTable from arrays of names
+ * and values.
+ *
+ * Fills the entries array only (no hash slots).  Names are strdup'd from
+ * the input strings.  Values are retained.  Sets owns_names = 1.
+ * Returns 0 on success, -1 on error (Python exception set).
+ */
+int
+globals_build_from_arrays(GlobalsTable *gt, const char **names,
+                          MenaiValue **values, ssize_t n)
+{
+    gt->slots = NULL;
+    gt->entries = NULL;
+    gt->slot_count = 0;
+    gt->count = 0;
+    gt->owns_names = 1;
+
+    if (n > 0) {
+        gt->entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
+        if (gt->entries == NULL) {
+            PyErr_NoMemory();
+            return -1;
+        }
+
+        for (ssize_t i = 0; i < n; i++) {
+            char *name_copy = strdup(names[i]);
+            if (name_copy == NULL) {
+                globals_free(gt);
+                PyErr_NoMemory();
+                return -1;
+            }
+
+            menai_retain(values[i]);
+            gt->entries[gt->count].name = name_copy;
+            gt->entries[gt->count].value = values[i];
+            gt->count++;
         }
     }
 
@@ -1313,109 +1223,98 @@ globals_build(GlobalsTable *gt, const GlobalsTable *globals_gt)
 static MenaiValue *globals_lookup_h(const GlobalsTable *gt, const char *name, hash_t h);
 
 /*
- * globals_merge_extra - merge a Python dict of extra bindings into a per-call
- * GlobalsTable.  Extra bindings shadow prelude entries with the same name.
+ * globals_merge_extra_native — merge a native MenaiDict of extra bindings
+ * into a per-call GlobalsTable.  Extra bindings shadow prelude entries
+ * with the same name.
  *
- * The extra bindings are simple values (strings, lists) that
- * menai_convert_value handles without issue.  This avoids round-tripping
- * prelude functions through Python (which would strip their bytecode).
+ * If owns_names is 0, all existing borrowed names are strdup'd and
+ * owns_names is set to 1 so that globals_free will free all names.
  *
- * Returns 0 on success, -1 on error with a Python exception set.
+ * Returns 0 on success, -1 on error (Python exception set).
  */
 static int
-globals_merge_extra(GlobalsTable *gt, PyObject *extra_dict)
+globals_merge_extra_native(GlobalsTable *gt, MenaiValue *extra_dict_val)
 {
-    if (!extra_dict || extra_dict == Py_None) {
-        return 0;
-    }
-
-    Py_ssize_t nextra = PyDict_Size(extra_dict);
+    MenaiDict *extra = (MenaiDict *)extra_dict_val;
+    ssize_t nextra = extra->length;
     if (nextra == 0) {
         return 0;
     }
 
-    /* Grow the entries array to hold the extra bindings. */
+    /*
+     * If names are currently borrowed (owns_names == 0), strdup them all
+     * so that globals_free will correctly free every name including the
+     * new ones we are about to add.
+     */
+    if (!gt->owns_names) {
+        for (ssize_t i = 0; i < gt->count; i++) {
+            char *name_copy = strdup(gt->entries[i].name);
+            if (name_copy == NULL) {
+                PyErr_NoMemory();
+                return -1;
+            }
+            gt->entries[i].name = name_copy;
+        }
+        gt->owns_names = 1;
+    }
+
     ssize_t new_count = gt->count + nextra;
-    GlobalsEntry *new_entries = (GlobalsEntry *)realloc(gt->entries, new_count * sizeof(GlobalsEntry));
-    if (!new_entries) {
+    GlobalsEntry *new_entries = (GlobalsEntry *)realloc(gt->entries,
+        new_count * sizeof(GlobalsEntry));
+    if (new_entries == NULL) {
         PyErr_NoMemory();
         return -1;
     }
-
     gt->entries = new_entries;
 
-    /* Rebuild the hash table with enough capacity for all entries. */
     free(gt->slots);
     gt->slots = NULL;
     gt->slot_count = 0;
 
-    ssize_t min_slots = (new_count * 3 + 1) / 2;
-    ssize_t sc = 4;
-    while (sc < min_slots) {
-        sc <<= 1;
-    }
-
-    gt->slots = (GlobalsSlot *)calloc(sc, sizeof(GlobalsSlot));
-    if (!gt->slots) {
+    if (globals_alloc_slots(gt, new_count) < 0) {
         PyErr_NoMemory();
         return -1;
     }
-    gt->slot_count = sc;
 
-    /* Re-hash existing entries. */
-    ssize_t mask = sc - 1;
     for (ssize_t i = 0; i < gt->count; i++) {
-        const char *name = gt->entries[i].name;
-        hash_t h = menai_name_str_hash(name);
-        uhash_t perturb = (uhash_t)h;
-        ssize_t slot = (ssize_t)(perturb & (uhash_t)mask);
-        while (1) {
-            if (gt->slots[slot].name == NULL) {
-                gt->slots[slot].name = name;
-                gt->slots[slot].hash = h;
-                gt->slots[slot].value = gt->entries[i].value;
-                break;
-            }
-            perturb >>= 5;
-            slot = (ssize_t)((5 * (uhash_t)slot + 1 + perturb) & (uhash_t)mask);
-        }
+        hash_t h = menai_name_str_hash(gt->entries[i].name);
+        globals_slot_insert(gt, gt->entries[i].name, h, gt->entries[i].value);
     }
 
-    /* Insert extra bindings, overwriting existing entries with the same name. */
-    PyObject *key, *val;
-    Py_ssize_t pos = 0;
-    while (PyDict_Next(extra_dict, &pos, &key, &val)) {
-        const char *name_utf8 = PyUnicode_AsUTF8(key);
-        if (!name_utf8) {
+    for (ssize_t i = 0; i < nextra; i++) {
+        MenaiValue *k = extra->keys[i];
+        if (!IS_MENAI_STRING(k)) {
+            PyErr_SetString(PyExc_TypeError,
+                "Extra bindings keys must be strings");
             return -1;
         }
 
-        MenaiValue *fast_val = menai_convert_value(val);
-        if (!fast_val) {
+        char *name_copy = menai_string_to_utf8(k, NULL);
+        if (name_copy == NULL) {
             return -1;
         }
 
-        hash_t h = menai_name_str_hash(name_utf8);
+        MenaiValue *fast_val = extra->values[i];
+        menai_retain(fast_val);
 
-        /* Check if the name already exists in the hash table. */
-        MenaiValue *existing = globals_lookup_h(gt, name_utf8, h);
-        if (existing) {
-            /* Overwrite: find the entry and slot, replace the value. */
-            for (ssize_t i = 0; i < gt->count; i++) {
-                if (strcmp(gt->entries[i].name, name_utf8) == 0) {
-                    menai_release(gt->entries[i].value);
-                    gt->entries[i].value = fast_val;
+        hash_t h = menai_name_str_hash(name_copy);
+        MenaiValue *existing = globals_lookup_h(gt, name_copy, h);
+        if (existing != NULL) {
+            for (ssize_t j = 0; j < gt->count; j++) {
+                if (strcmp(gt->entries[j].name, name_copy) == 0) {
+                    menai_release(gt->entries[j].value);
+                    gt->entries[j].value = fast_val;
                     break;
                 }
             }
 
-            /* Update the hash slot. */
+            ssize_t mask = gt->slot_count - 1;
             uhash_t perturb = (uhash_t)h;
             ssize_t slot = (ssize_t)(perturb & (uhash_t)mask);
             for (;;) {
                 if (gt->slots[slot].name != NULL &&
                     gt->slots[slot].hash == h &&
-                    strcmp(gt->slots[slot].name, name_utf8) == 0) {
+                    strcmp(gt->slots[slot].name, name_copy) == 0) {
                     gt->slots[slot].value = fast_val;
                     break;
                 }
@@ -1423,33 +1322,14 @@ globals_merge_extra(GlobalsTable *gt, PyObject *extra_dict)
                 perturb >>= 5;
                 slot = (ssize_t)((5 * (uhash_t)slot + 1 + perturb) & (uhash_t)mask);
             }
-        } else {
-            /* New entry: strdup the name (globals_free will free it). */
-            char *name_copy = strdup(name_utf8);
-            if (!name_copy) {
-                menai_release(fast_val);
-                PyErr_NoMemory();
-                return -1;
-            }
 
+            free(name_copy);
+            menai_release(fast_val);
+        } else {
             gt->entries[gt->count].name = name_copy;
             gt->entries[gt->count].value = fast_val;
             gt->count++;
-
-            /* Insert into the hash table. */
-            uhash_t perturb = (uhash_t)h;
-            ssize_t slot = (ssize_t)(perturb & (uhash_t)mask);
-            while (1) {
-                if (gt->slots[slot].name == NULL) {
-                    gt->slots[slot].name = name_copy;
-                    gt->slots[slot].hash = h;
-                    gt->slots[slot].value = fast_val;
-                    break;
-                }
-
-                perturb >>= 5;
-                slot = (ssize_t)((5 * (uhash_t)slot + 1 + perturb) & (uhash_t)mask);
-            }
+            globals_slot_insert(gt, name_copy, h, fast_val);
         }
     }
 
@@ -8304,58 +8184,40 @@ error:
 }
 
 /*
- * menai_vm_c_execute — the Python-callable entry point
+ * menai_vm_clear_cancel — clear the cancellation flag.
+ *
+ * Called by the bridge at the start of each Python-initiated execute() call.
  */
-static PyObject *
-menai_vm_c_execute(PyObject *self, PyObject *args)
+void
+menai_vm_clear_cancel(void)
 {
-    PyObject *code;
-    PyObject *globals_dict;
-    PyObject *extra_bindings = NULL;
-
-    /* Clear any stale cancellation from a previous call. */
     _menai_atomic_store(&_cancel_requested, 0);
+}
 
-    if (!PyArg_ParseTuple(args, "OO|O", &code, &globals_dict, &extra_bindings)) {
-        return NULL;
-    }
-
-    /* Convert the Python CodeObject tree to a native MenaiCodeObject tree.
-     * All constants are converted to fast MenaiValue *s during this pass. */
-    MenaiCodeObject *native_code = menai_code_object_from_python(code);
-    if (!native_code) {
-        return NULL;
-    }
-
-    /* Get (or build) the cached GlobalsTable. */
-    const GlobalsTable *globals_gt = NULL;
-    if (globals_dict && globals_dict != Py_None) {
-        globals_gt = globals_get(globals_dict);
-        if (!globals_gt) {
-            menai_code_object_release(native_code);
-            return NULL;
-        }
-    }
-
-    /* Build the per-call globals table from the cached entries. */
+/*
+ * menai_vm_execute_native — native VM entry point.
+ *
+ * Executes code with the given cached globals table and optional extra
+ * bindings (a native MenaiDict, or NULL).  Returns a new reference to
+ * the result, or NULL on error (Python exception set).
+ */
+MenaiValue *
+menai_vm_execute_native(MenaiCodeObject *code, const GlobalsTable *globals_gt,
+                        MenaiValue *extra_bindings)
+{
     GlobalsTable globals;
     if (globals_build(&globals, globals_gt) < 0) {
-        menai_code_object_release(native_code);
         return NULL;
     }
 
-    /* Merge extra bindings (input-text, input-lines, etc.) into the per-call
-     * globals table.  These shadow prelude entries with the same name. */
-    if (extra_bindings && extra_bindings != Py_None) {
-        if (globals_merge_extra(&globals, extra_bindings) < 0) {
+    if (extra_bindings != NULL) {
+        if (globals_merge_extra_native(&globals, extra_bindings) < 0) {
             globals_free(&globals);
-            menai_code_object_release(native_code);
             return NULL;
         }
     }
 
-    /* Compute the register window size. */
-    int max_locals = menai_code_object_max_locals(native_code);
+    int max_locals = menai_code_object_max_locals(code);
     for (ssize_t i = 0; i < globals.count; i++) {
         MenaiValue *val = globals.entries[i].value;
         if (IS_MENAI_FUNCTION(val)) {
@@ -8366,30 +8228,19 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
         }
     }
 
-    /* Allocate the register array. */
-    MenaiValue **regs = menai_regs_alloc((size_t)(MAX_FRAME_DEPTH + 1) * max_locals, Menai_NONE);
+    MenaiValue **regs = menai_regs_alloc(
+        (size_t)(MAX_FRAME_DEPTH + 1) * max_locals, Menai_NONE);
     if (regs == NULL) {
         globals_free(&globals);
-        menai_code_object_release(native_code);
         return NULL;
     }
 
-    /* Run the VM. */
-    MenaiValue *result = execute_loop(native_code, &globals, regs, max_locals);
+    MenaiValue *result = execute_loop(code, &globals, regs, max_locals);
 
-    /* Clean up. */
     menai_regs_free(regs, (size_t)(MAX_FRAME_DEPTH + 1) * max_locals);
     globals_free(&globals);
-    menai_code_object_release(native_code);
 
-    if (result == NULL) {
-        return NULL;
-    }
-
-    /* Convert to a slow Python MenaiValue before returning to Python callers. */
-    PyObject *slow = menai_value_to_slow_value(result);
-    menai_release((MenaiValue *)result);
-    return slow;
+    return result;
 }
 
 /*

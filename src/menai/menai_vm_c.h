@@ -51,6 +51,24 @@ typedef uint16_t MenaiType;
 #define MENAITYPE_BYTES 0x000e
 
 /*
+ * Fast type-check macros
+ */
+#define IS_MENAI_NONE(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_NONE)
+#define IS_MENAI_BOOLEAN(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_BOOLEAN)
+#define IS_MENAI_INTEGER(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_INTEGER)
+#define IS_MENAI_FLOAT(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_FLOAT)
+#define IS_MENAI_COMPLEX(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_COMPLEX)
+#define IS_MENAI_STRING(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_STRING)
+#define IS_MENAI_SYMBOL(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_SYMBOL)
+#define IS_MENAI_LIST(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_LIST)
+#define IS_MENAI_DICT(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_DICT)
+#define IS_MENAI_SET(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_SET)
+#define IS_MENAI_FUNCTION(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_FUNCTION)
+#define IS_MENAI_STRUCTTYPE(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_STRUCTTYPE)
+#define IS_MENAI_STRUCT(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_STRUCT)
+#define IS_MENAI_BYTES(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_BYTES)
+
+/*
  * MenaiValue_HEAD — common prefix for every Menai value struct.
  *
  * ob_refcnt    — reference count.
@@ -248,13 +266,6 @@ menai_code_object_retain(MenaiCodeObject *co)
  * menai_code_object_release — decrement the reference count and free if zero.
  */
 void menai_code_object_release(MenaiCodeObject *co);
-
-/*
- * menai_code_object_from_python — build a MenaiCodeObject tree from a Python
- * CodeObject.  All constants are converted to fast MenaiValues.  Returns a
- * new reference (ob_refcnt == 1), or NULL on error with a Python exception set.
- */
-MenaiCodeObject *menai_code_object_from_python(PyObject *py_code);
 
 /*
  * menai_code_object_max_locals — return the maximum (local_count +
@@ -851,5 +862,54 @@ int menai_vm_bridge_init(void);
 
 MenaiValue *menai_format_float(double v);
 MenaiValue *menai_format_complex(double real, double imag);
+
+/*
+ * GlobalsTable — open-addressing hash table for O(1) name lookup.
+ *
+ * Built once before execution starts from the globals dict.
+ * Never mutated during execution.  Values are owned references.
+ *
+ * The cached table (built by the bridge) stores only the entries array;
+ * slot_count is 0 and slots is NULL.  The per-call table (built by
+ * globals_build from the cached table) allocates the hash slots.
+ */
+typedef struct {
+    const char *name;
+    hash_t hash;
+    MenaiValue *value;
+} GlobalsSlot;
+
+typedef struct {
+    const char *name;
+    MenaiValue *value;
+} GlobalsEntry;
+
+typedef struct {
+    GlobalsSlot *slots;
+    GlobalsEntry *entries;
+    ssize_t slot_count;
+    ssize_t count;
+    int owns_names;
+} GlobalsTable;
+
+void globals_free(GlobalsTable *gt);
+int globals_build_from_dict(GlobalsTable *gt, MenaiValue *dict_val);
+int globals_build_from_arrays(GlobalsTable *gt, const char **names,
+                              MenaiValue **values, ssize_t n);
+
+/*
+ * menai_vm_execute_native — native VM entry point.
+ *
+ * Executes code with the given cached globals table and optional extra
+ * bindings (a native MenaiDict, or NULL).  Returns a new reference to
+ * the result, or NULL on error (Python exception set).
+ */
+MenaiValue *menai_vm_execute_native(MenaiCodeObject *code,
+                                    const GlobalsTable *globals,
+                                    MenaiValue *extra_bindings);
+
+void menai_vm_clear_cancel(void);
+
+PyObject *menai_vm_c_execute(PyObject *self, PyObject *args);
 
 #endif /* MENAI_VM_C_H */

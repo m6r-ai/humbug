@@ -14,6 +14,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "menai_vm_c.h"
 
@@ -216,8 +217,295 @@ static PyTypeObject *Slow_StructTypeType = NULL;
 static PyTypeObject *Slow_StructType = NULL;
 static PyTypeObject *Slow_BytesType = NULL;
 
-/* Error type */
-PyObject *MenaiEvalError_type = NULL;
+/*
+ * _read_int — read a named integer attribute from a Python object.
+ */
+static int
+_read_int(PyObject *obj, const char *attr, int *out)
+{
+    PyObject *v = PyObject_GetAttrString(obj, attr);
+    if (!v) {
+        return -1;
+    }
+
+    long val = PyLong_AsLong(v);
+    Py_DECREF(v);
+    if (val == -1 && PyErr_Occurred()) {
+        return -1;
+    }
+
+    *out = (int)val;
+    return 0;
+}
+
+/*
+ * _read_bool — read a named boolean attribute from a Python object.
+ */
+static int
+_read_bool(PyObject *obj, const char *attr, int *out)
+{
+    PyObject *v = PyObject_GetAttrString(obj, attr);
+    if (!v) {
+        return -1;
+    }
+
+    int r = PyObject_IsTrue(v);
+    Py_DECREF(v);
+    if (r < 0) {
+        return -1;
+    }
+
+    *out = r;
+    return 0;
+}
+
+/*
+ * menai_code_object_from_python — build a MenaiCodeObject tree from a Python
+ * CodeObject.  All constants are converted to fast MenaiValues.  Returns a
+ * new reference (ob_refcnt == 1), or NULL on error with a Python exception set.
+ */
+static MenaiCodeObject *
+menai_code_object_from_python(PyObject *py_code)
+{
+    MenaiCodeObject *co = (MenaiCodeObject *)calloc(1, sizeof(MenaiCodeObject));
+    if (!co) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    co->ob_refcnt = 1;
+
+    /* Scalar fields */
+    if (_read_int(py_code, "param_count", &co->param_count) < 0) {
+        goto fail;
+    }
+
+    if (_read_int(py_code, "local_count", &co->local_count) < 0) {
+        goto fail;
+    }
+
+    if (_read_int(py_code, "outgoing_arg_slots", &co->outgoing_arg_slots) < 0) {
+        goto fail;
+    }
+
+    if (_read_bool(py_code, "is_variadic", &co->is_variadic) < 0) {
+        goto fail;
+    }
+
+    /* name — optional, used only for error messages */
+    {
+        PyObject *py_name = PyObject_GetAttrString(py_code, "name");
+        if (py_name) {
+            if (py_name != Py_None) {
+                const char *s = PyUnicode_AsUTF8(py_name);
+                if (s) {
+                    co->name = strdup(s);
+                }
+            }
+
+            Py_DECREF(py_name);
+        } else {
+            PyErr_Clear();
+        }
+    }
+
+    /* ncap — length of free_vars list */
+    {
+        PyObject *fv = PyObject_GetAttrString(py_code, "free_vars");
+        if (!fv) {
+            goto fail;
+        }
+
+        co->ncap = PyList_GET_SIZE(fv);
+        Py_DECREF(fv);
+    }
+
+    /* param_names — strdup each parameter name string */
+    {
+        PyObject *py_pnames = PyObject_GetAttrString(py_code, "param_names");
+        if (!py_pnames) {
+            goto fail;
+        }
+
+        co->nparam_names = PyList_GET_SIZE(py_pnames);
+        if (co->nparam_names > 0) {
+            co->param_names = (char **)calloc((size_t)co->nparam_names, sizeof(char *));
+            if (!co->param_names) {
+                Py_DECREF(py_pnames);
+                PyErr_NoMemory();
+                goto fail;
+            }
+
+            for (ssize_t i = 0; i < co->nparam_names; i++) {
+                const char *s = PyUnicode_AsUTF8(PyList_GET_ITEM(py_pnames, i));
+                if (!s) {
+                    Py_DECREF(py_pnames);
+                    goto fail;
+                }
+
+                co->param_names[i] = strdup(s);
+                if (!co->param_names[i]) {
+                    Py_DECREF(py_pnames);
+                    PyErr_NoMemory();
+                    goto fail;
+                }
+            }
+        }
+
+        Py_DECREF(py_pnames);
+    }
+
+    /* instructions — copy the packed array.array buffer */
+    {
+        PyObject *instrs_obj = PyObject_GetAttrString(py_code, "instructions");
+        if (!instrs_obj) {
+            goto fail;
+        }
+
+        Py_buffer view;
+        if (PyObject_GetBuffer(instrs_obj, &view, PyBUF_SIMPLE) < 0) {
+            Py_DECREF(instrs_obj);
+            goto fail;
+        }
+
+        co->code_len = (int)(view.len / sizeof(uint64_t));
+        if (co->code_len > 0) {
+            co->instrs = (uint64_t *)malloc(view.len);
+            if (!co->instrs) {
+                PyBuffer_Release(&view);
+                Py_DECREF(instrs_obj);
+                PyErr_NoMemory();
+                goto fail;
+            }
+
+            memcpy(co->instrs, view.buf, view.len);
+        }
+
+        PyBuffer_Release(&view);
+        Py_DECREF(instrs_obj);
+    }
+
+    /* names — strdup each global name string */
+    {
+        PyObject *py_names = PyObject_GetAttrString(py_code, "names");
+        if (!py_names) {
+            goto fail;
+        }
+
+        co->nnames = PyList_GET_SIZE(py_names);
+        if (co->nnames > 0) {
+            co->names = (const char **)calloc((size_t)co->nnames, sizeof(char *));
+            if (!co->names) {
+                Py_DECREF(py_names);
+                PyErr_NoMemory();
+                goto fail;
+            }
+
+            for (ssize_t i = 0; i < co->nnames; i++) {
+                const char *s = PyUnicode_AsUTF8(PyList_GET_ITEM(py_names, i));
+                if (!s) {
+                    Py_DECREF(py_names);
+                    goto fail;
+                }
+
+                co->names[i] = strdup(s);
+                if (!co->names[i]) {
+                    Py_DECREF(py_names);
+                    PyErr_NoMemory();
+                    goto fail;
+                }
+            }
+        }
+
+        Py_DECREF(py_names);
+    }
+
+    /* name_hashes — precompute FNV-1a hash of each global name string */
+    if (co->nnames > 0) {
+        co->name_hashes = (hash_t *)malloc((size_t)co->nnames * sizeof(hash_t));
+        if (!co->name_hashes) {
+            PyErr_NoMemory();
+            goto fail;
+        }
+
+        for (ssize_t i = 0; i < co->nnames; i++) {
+            co->name_hashes[i] = menai_name_str_hash(co->names[i]);
+        }
+    }
+
+    /*
+     * children — recurse first so that when we convert constants that are
+     * functions, their children already exist and can be referenced.
+     */
+    {
+        PyObject *py_children = PyObject_GetAttrString(py_code, "code_objects");
+        if (!py_children) {
+            goto fail;
+        }
+
+        co->nchildren = PyList_GET_SIZE(py_children);
+        if (co->nchildren > 0) {
+            co->children = (MenaiCodeObject **)calloc(
+                (size_t)co->nchildren, sizeof(MenaiCodeObject *));
+            if (!co->children) {
+                Py_DECREF(py_children);
+                PyErr_NoMemory();
+                goto fail;
+            }
+
+            for (ssize_t i = 0; i < co->nchildren; i++) {
+                co->children[i] = menai_code_object_from_python(
+                    PyList_GET_ITEM(py_children, i));
+                if (!co->children[i]) {
+                    Py_DECREF(py_children);
+                    goto fail;
+                }
+            }
+        }
+
+        Py_DECREF(py_children);
+    }
+
+    /*
+     * constants — convert each slow Python value to a fast MenaiValue *.
+     */
+    {
+        PyObject *py_constants = PyObject_GetAttrString(py_code, "constants");
+        if (!py_constants) {
+            goto fail;
+        }
+
+        co->nconst = PyList_GET_SIZE(py_constants);
+        if (co->nconst > 0) {
+            co->constants = (MenaiValue **)calloc(
+                (size_t)co->nconst, sizeof(MenaiValue *));
+            if (!co->constants) {
+                Py_DECREF(py_constants);
+                PyErr_NoMemory();
+                goto fail;
+            }
+
+            for (ssize_t i = 0; i < co->nconst; i++) {
+                PyObject *orig = PyList_GET_ITEM(py_constants, i);
+                MenaiValue *fast = menai_convert_value(orig);
+                if (!fast) {
+                    Py_DECREF(py_constants);
+                    goto fail;
+                }
+
+                co->constants[i] = fast;
+            }
+        }
+
+        Py_DECREF(py_constants);
+    }
+
+    return co;
+
+fail:
+    menai_code_object_release(co);
+    return NULL;
+}
 
 /*
  * menai_convert_value — convert one slow menai_value.py object to a fast type.
@@ -1014,6 +1302,267 @@ menai_value_to_slow_value(MenaiValue *val)
     return NULL;
 }
 
+/*
+ * Cached globals GlobalsTable.
+ *
+ * The globals dict (prelude functions and constants) is built once at Menai
+ * startup and never changes.  We cache the converted GlobalsTable keyed by
+ * the identity of the Python dict/CodeObject.  On every subsequent execute()
+ * call with the same key we reuse the cached table directly.
+ */
+static PyObject *_cached_globals_key = NULL;
+static GlobalsTable _cached_globals_gt;
+static int _cached_globals_gt_valid = 0;
+
+/*
+ * The CodeObject type from menai.menai_bytecode — used to identify prelude
+ * CodeObjects in bridge_globals_get.  Fetched once during bridge init.
+ */
+static PyTypeObject *_py_code_object_type = NULL;
+
+/*
+ * bridge_globals_get — return a pointer to the cached GlobalsTable, building
+ * it the first time a given globals_key is seen.
+ *
+ * globals_key is either a Python dict of slow MenaiValue objects, or a Python
+ * CodeObject representing the prelude.  When it is a CodeObject the prelude is
+ * executed here once and the resulting dict is unpacked into the GlobalsTable;
+ * subsequent calls with the same CodeObject identity reuse the cached table.
+ * Returns NULL on error with a Python exception set.
+ */
+static const GlobalsTable *
+bridge_globals_get(PyObject *globals_key)
+{
+    if (globals_key == _cached_globals_key && _cached_globals_gt_valid) {
+        return &_cached_globals_gt;
+    }
+
+    if (_cached_globals_gt_valid) {
+        globals_free(&_cached_globals_gt);
+        _cached_globals_gt_valid = 0;
+        Py_DECREF(_cached_globals_key);
+        _cached_globals_key = NULL;
+    }
+
+    if (_py_code_object_type && Py_TYPE(globals_key) == _py_code_object_type) {
+        /*
+         * globals_key is a prelude CodeObject.  Execute it to obtain a
+         * MenaiDict of fast values, then unpack directly into the
+         * GlobalsTable without any slow round-trip.
+         */
+        MenaiCodeObject *prelude_co = menai_code_object_from_python(globals_key);
+        if (!prelude_co) {
+            return NULL;
+        }
+
+        MenaiValue *result = menai_vm_execute_native(prelude_co, NULL, NULL);
+        menai_code_object_release(prelude_co);
+        if (!result) {
+            return NULL;
+        }
+
+        if (!IS_MENAI_DICT(result)) {
+            menai_release(result);
+            PyErr_SetString(PyExc_TypeError, "Prelude must evaluate to a dict");
+            return NULL;
+        }
+
+        if (globals_build_from_dict(&_cached_globals_gt, result) < 0) {
+            menai_release(result);
+            return NULL;
+        }
+
+        menai_release(result);
+    } else {
+        /*
+         * globals_key is a Python dict of slow MenaiValue objects.
+         * Convert each value and build the GlobalsTable from arrays.
+         */
+        Py_ssize_t n = PyDict_Size(globals_key);
+        if (n > 0) {
+            const char **names = (const char **)malloc(
+                (size_t)n * sizeof(const char *));
+            MenaiValue **values = (MenaiValue **)malloc(
+                (size_t)n * sizeof(MenaiValue *));
+            if (!names || !values) {
+                free(names);
+                free(values);
+                PyErr_NoMemory();
+                return NULL;
+            }
+
+            Py_ssize_t i = 0;
+            PyObject *key, *val;
+            Py_ssize_t pos = 0;
+            while (PyDict_Next(globals_key, &pos, &key, &val)) {
+                names[i] = PyUnicode_AsUTF8(key);
+                if (!names[i]) {
+                    for (Py_ssize_t j = 0; j < i; j++) {
+                        menai_release(values[j]);
+                    }
+                    free(names);
+                    free(values);
+                    return NULL;
+                }
+
+                values[i] = menai_convert_value(val);
+                if (!values[i]) {
+                    for (Py_ssize_t j = 0; j < i; j++) {
+                        menai_release(values[j]);
+                    }
+                    free(names);
+                    free(values);
+                    return NULL;
+                }
+
+                i++;
+            }
+
+            int rc = globals_build_from_arrays(&_cached_globals_gt,
+                                                names, values, (ssize_t)n);
+            for (Py_ssize_t j = 0; j < n; j++) {
+                menai_release(values[j]);
+            }
+            free(names);
+            free(values);
+            if (rc < 0) {
+                return NULL;
+            }
+        } else {
+            _cached_globals_gt.slots = NULL;
+            _cached_globals_gt.entries = NULL;
+            _cached_globals_gt.slot_count = 0;
+            _cached_globals_gt.count = 0;
+            _cached_globals_gt.owns_names = 1;
+        }
+    }
+
+    Py_INCREF(globals_key);
+    _cached_globals_key = globals_key;
+    _cached_globals_gt_valid = 1;
+    return &_cached_globals_gt;
+}
+
+/*
+ * menai_dict_from_pydict — convert a Python dict of (str, MenaiValue) pairs
+ * to a native MenaiDict.  Keys are converted to MenaiString, values via
+ * menai_convert_value.  Returns a new reference, or NULL on error.
+ */
+static MenaiValue *
+menai_dict_from_pydict(PyObject *pydict)
+{
+    Py_ssize_t n = PyDict_Size(pydict);
+    if (n == 0) {
+        return menai_dict_new_empty();
+    }
+
+    MenaiValue **keys = (MenaiValue **)malloc((size_t)n * sizeof(MenaiValue *));
+    MenaiValue **values = (MenaiValue **)malloc((size_t)n * sizeof(MenaiValue *));
+    hash_t *hashes = (hash_t *)malloc((size_t)n * sizeof(hash_t));
+    if (!keys || !values || !hashes) {
+        free(keys);
+        free(values);
+        free(hashes);
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    Py_ssize_t i = 0;
+    PyObject *key, *val;
+    Py_ssize_t pos = 0;
+    while (PyDict_Next(pydict, &pos, &key, &val)) {
+        keys[i] = menai_string_from_pyunicode(key);
+        if (!keys[i]) {
+            goto fail;
+        }
+
+        values[i] = menai_convert_value(val);
+        if (!values[i]) {
+            menai_release(keys[i]);
+            goto fail;
+        }
+
+        hashes[i] = menai_value_hash(keys[i]);
+        if (hashes[i] == -1) {
+            menai_release(keys[i]);
+            menai_release(values[i]);
+            goto fail;
+        }
+
+        i++;
+    }
+
+    return menai_dict_from_arrays_steal(keys, values, hashes, (ssize_t)n);
+
+fail:
+    for (Py_ssize_t j = 0; j < i; j++) {
+        menai_release(keys[j]);
+        menai_release(values[j]);
+    }
+    free(keys);
+    free(values);
+    free(hashes);
+    return NULL;
+}
+
+/*
+ * menai_vm_c_execute — the Python-callable entry point.
+ *
+ * Parses arguments, converts the code tree, builds the globals table, and
+ * calls menai_vm_execute_native to run the VM.  The result is converted back
+ * to a slow Python MenaiValue before returning.
+ */
+PyObject *
+menai_vm_c_execute(PyObject *self, PyObject *args)
+{
+    PyObject *code;
+    PyObject *globals_dict;
+    PyObject *extra_bindings = NULL;
+
+    /* Clear any stale cancellation from a previous call. */
+    menai_vm_clear_cancel();
+
+    if (!PyArg_ParseTuple(args, "OO|O", &code, &globals_dict, &extra_bindings)) {
+        return NULL;
+    }
+
+    MenaiCodeObject *native_code = menai_code_object_from_python(code);
+    if (!native_code) {
+        return NULL;
+    }
+
+    const GlobalsTable *globals_gt = NULL;
+    if (globals_dict && globals_dict != Py_None) {
+        globals_gt = bridge_globals_get(globals_dict);
+        if (!globals_gt) {
+            menai_code_object_release(native_code);
+            return NULL;
+        }
+    }
+
+    MenaiValue *native_extra = NULL;
+    if (extra_bindings && extra_bindings != Py_None) {
+        native_extra = menai_dict_from_pydict(extra_bindings);
+        if (!native_extra) {
+            menai_code_object_release(native_code);
+            return NULL;
+        }
+    }
+
+    MenaiValue *result = menai_vm_execute_native(native_code, globals_gt, native_extra);
+
+    menai_code_object_release(native_code);
+    menai_xrelease(native_extra);
+
+    if (result == NULL) {
+        return NULL;
+    }
+
+    PyObject *slow = menai_value_to_slow_value(result);
+    menai_release(result);
+    return slow;
+}
+
 int
 menai_vm_bridge_init(void)
 {
@@ -1082,17 +1631,20 @@ menai_vm_bridge_init(void)
     Py_DECREF(slow_mod);
     slow_mod = NULL;
 
-    /* Fetch MenaiEvalError */
-    PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
-    if (!err_mod) {
+    /* Fetch the CodeObject type — used by bridge_globals_get to identify
+     * prelude CodeObjects. */
+    PyObject *bytecode_mod = PyImport_ImportModule("menai.menai_bytecode");
+    if (!bytecode_mod) {
         return 0;
     }
 
-    MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
-    Py_DECREF(err_mod);
-    if (!MenaiEvalError_type) {
+    PyObject *co_type = PyObject_GetAttrString(bytecode_mod, "CodeObject");
+    Py_DECREF(bytecode_mod);
+    if (!co_type) {
         return 0;
     }
+
+    _py_code_object_type = (PyTypeObject *)co_type;
 
     menai_vm_none_init();
     menai_vm_boolean_init();
