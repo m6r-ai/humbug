@@ -14,8 +14,34 @@
 #include <stdint.h>
 
 #include "menai_vm_c.h"
+#include "menai_vm_atomic.h"
 
 static MenaiValue *slow_value_to_menai_value(PyObject *src);
+
+/*
+ * Module-level state fetched at init
+ */
+PyObject *MenaiEvalError_type = NULL;
+PyObject *MenaiCancelledException_type = NULL;
+
+/*
+ * Singleton values fetched from menai_vm_bridge at init time.
+ */
+MenaiValue *Menai_NONE = NULL;
+MenaiValue *Menai_TRUE = NULL;
+MenaiValue *Menai_FALSE = NULL;
+MenaiValue *Menai_EMPTY_LIST = NULL;
+MenaiValue *Menai_EMPTY_DICT = NULL;
+MenaiValue *Menai_EMPTY_SET = NULL;
+
+/*
+ * Cancellation — an atomic flag set by cancel() from any thread.
+ *
+ * The execute_loop checks this every CANCEL_CHECK_INTERVAL instructions.
+ * It is reset to 0 at the start of each execute call so that a stale
+ * cancellation from a previous call does not affect the next one.
+ */
+_menai_atomic_int _cancel_requested = 0;
 
 /*
  * Conversion helpers — Python boundary only.
@@ -1655,4 +1681,91 @@ menai_vm_bridge_init(void)
 fail:
     Py_XDECREF(slow_mod);
     return 0;
+}
+
+/*
+ * menai_vm_c_cancel — request cancellation of the currently running execute().
+ *
+ * Thread-safe: may be called from a different thread than the one in execute().
+ * The flag is checked at the next cancellation check point in the execution loop.
+ */
+static PyObject *
+menai_vm_c_cancel(PyObject *self, PyObject *args)
+{
+    _menai_atomic_store(&_cancel_requested, 1);
+    Py_RETURN_NONE;
+}
+
+/*
+ * Module definition
+ */
+static PyMethodDef menai_vm_c_methods[] = {
+    {
+        "execute",
+        menai_vm_c_execute,
+        METH_VARARGS,
+        "Execute a Menai CodeObject and return the result."
+    },
+    {
+        "cancel",
+        menai_vm_c_cancel,
+        METH_NOARGS,
+        "Request cancellation of the currently running execute() call."
+    },
+    { NULL, NULL, 0, NULL }
+};
+
+static struct PyModuleDef menai_vm_c_module = {
+    PyModuleDef_HEAD_INIT,
+    "menai.menai_vm_c",
+    NULL,
+    -1,
+    menai_vm_c_methods
+};
+
+static int
+menai_vm_shim_init(void)
+{
+    if (!menai_vm_bridge_init()) {
+        return -1;
+    }
+
+    Menai_NONE = menai_none_singleton();
+    Menai_TRUE = menai_boolean_true();
+    Menai_FALSE = menai_boolean_false();
+    Menai_EMPTY_LIST = menai_list_new_empty();
+    Menai_EMPTY_DICT = menai_dict_new_empty();
+    Menai_EMPTY_SET = menai_set_new_empty();
+
+    PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
+    if (err_mod == NULL) {
+        return -1;
+    }
+
+    MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
+    MenaiCancelledException_type = PyObject_GetAttrString(err_mod, "MenaiCancelledException");
+    Py_DECREF(err_mod);
+    if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL) {
+        Py_XDECREF(MenaiEvalError_type);
+        Py_XDECREF(MenaiCancelledException_type);
+        return -1;
+    }
+
+    return 0;
+}
+
+PyMODINIT_FUNC
+PyInit_menai_vm_c(void)
+{
+    PyObject *module = PyModule_Create(&menai_vm_c_module);
+    if (module == NULL) {
+        return NULL;
+    }
+
+    if (menai_vm_shim_init() < 0) {
+        Py_DECREF(module);
+        return NULL;
+    }
+
+    return module;
 }

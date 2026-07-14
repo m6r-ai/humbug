@@ -17,52 +17,7 @@
 #include <string.h>
 
 #include "menai_vm_c.h"
-
-/*
- * Portable atomics for the cancellation flag.
- *
- * We prefer C11 <stdatomic.h>, but older MSVC versions that compile with
- * /std:c11 do not ship it.  In that case we fall back to the Win32
- * Interlocked API (available on every MSVC).
- */
-#if defined(_MSC_VER) && !defined(__clang__)
-
-/*
- * MSVC fallback using compiler intrinsics.
- *
- * We deliberately avoid <windows.h> because it defines a 'small' macro
- * that collides with the MenaiInteger/MenaiBigInt 'small' struct field
- * used throughout this file.  The Interlocked* functions and SwitchToThread
- * are compiler intrinsics, so we only need their declarations.
- */
-long _InterlockedCompareExchange(long volatile *Destination, long Exchange, long Comparand);
-#pragma intrinsic(_InterlockedCompareExchange)
-long _InterlockedExchange(long volatile *Target, long Value);
-#pragma intrinsic(_InterlockedExchange)
-int _SwitchToThread(void);
-#pragma intrinsic(_SwitchToThread)
-
-typedef volatile long _menai_atomic_int;
-static inline int _menai_atomic_load(_menai_atomic_int *p) {
-    return (int)_InterlockedCompareExchange(p, 0, 0);
-}
-static inline void _menai_atomic_store(_menai_atomic_int *p, int val) {
-    _InterlockedExchange(p, (long)val);
-}
-
-#else
-
-/* C11 stdatomic */
-#include <stdatomic.h>
-typedef atomic_int _menai_atomic_int;
-static inline int _menai_atomic_load(_menai_atomic_int *p) {
-    return atomic_load(p);
-}
-static inline void _menai_atomic_store(_menai_atomic_int *p, int val) {
-    atomic_store(p, val);
-}
-
-#endif
+#include "menai_vm_atomic.h"
 
 /*
  * Portable complex arithmetic — avoids <complex.h>, which is unsupported on MSVC.
@@ -210,7 +165,7 @@ _menai_mul_overflow(long a, long b, long *r) {
  * It is reset to 0 at the start of each execute call so that a stale
  * cancellation from a previous call does not affect the next one.
  */
-static _menai_atomic_int _cancel_requested = 0;
+extern _menai_atomic_int _cancel_requested;
 
 /*
  * Cancellation check interval.
@@ -515,18 +470,18 @@ static _menai_atomic_int _cancel_requested = 0;
 /*
  * Singleton values fetched from menai_vm_bridge at init time.
  */
-MenaiValue *Menai_NONE = NULL;
-MenaiValue *Menai_TRUE = NULL;
-MenaiValue *Menai_FALSE = NULL;
-MenaiValue *Menai_EMPTY_LIST = NULL;
-MenaiValue *Menai_EMPTY_DICT = NULL;
-MenaiValue *Menai_EMPTY_SET = NULL;
+extern MenaiValue *Menai_NONE;
+extern MenaiValue *Menai_TRUE;
+extern MenaiValue *Menai_FALSE;
+extern MenaiValue *Menai_EMPTY_LIST;
+extern MenaiValue *Menai_EMPTY_DICT;
+extern MenaiValue *Menai_EMPTY_SET;
 
 /*
  * Module-level state fetched at init
  */
-PyObject *MenaiEvalError_type = NULL;
-static PyObject *MenaiCancelledException_type = NULL;
+extern PyObject *MenaiEvalError_type;
+extern PyObject *MenaiCancelledException_type;
 
 static inline int
 menai_boolean_value(MenaiValue *o)
@@ -8200,8 +8155,7 @@ menai_vm_clear_cancel(void)
  * the result, or NULL on error (Python exception set).
  */
 MenaiValue *
-menai_vm_execute_native(MenaiCodeObject *code, const GlobalsTable *globals_gt,
-                        MenaiValue *extra_bindings)
+menai_vm_execute_native(MenaiCodeObject *code, const GlobalsTable *globals_gt, MenaiValue *extra_bindings)
 {
     GlobalsTable globals;
     if (globals_build(&globals, globals_gt) < 0) {
@@ -8241,89 +8195,3 @@ menai_vm_execute_native(MenaiCodeObject *code, const GlobalsTable *globals_gt,
     return result;
 }
 
-/*
- * menai_vm_c_cancel — request cancellation of the currently running execute().
- *
- * Thread-safe: may be called from a different thread than the one in execute().
- * The flag is checked at the next cancellation check point in the execution loop.
- */
-static PyObject *
-menai_vm_c_cancel(PyObject *self, PyObject *args)
-{
-    _menai_atomic_store(&_cancel_requested, 1);
-    Py_RETURN_NONE;
-}
-
-/*
- * Module definition
- */
-static PyMethodDef menai_vm_c_methods[] = {
-    {
-        "execute",
-        menai_vm_c_execute,
-        METH_VARARGS,
-        "Execute a Menai CodeObject and return the result."
-    },
-    {
-        "cancel",
-        menai_vm_c_cancel,
-        METH_NOARGS,
-        "Request cancellation of the currently running execute() call."
-    },
-    { NULL, NULL, 0, NULL }
-};
-
-static struct PyModuleDef menai_vm_c_module = {
-    PyModuleDef_HEAD_INIT,
-    "menai.menai_vm_c",
-    NULL,
-    -1,
-    menai_vm_c_methods
-};
-
-static int
-menai_vm_shim_init(void)
-{
-    if (!menai_vm_bridge_init()) {
-        return -1;
-    }
-
-    Menai_NONE = menai_none_singleton();
-    Menai_TRUE = menai_boolean_true();
-    Menai_FALSE = menai_boolean_false();
-    Menai_EMPTY_LIST = menai_list_new_empty();
-    Menai_EMPTY_DICT = menai_dict_new_empty();
-    Menai_EMPTY_SET = menai_set_new_empty();
-
-    PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
-    if (err_mod == NULL) {
-        return -1;
-    }
-
-    MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
-    MenaiCancelledException_type = PyObject_GetAttrString(err_mod, "MenaiCancelledException");
-    Py_DECREF(err_mod);
-    if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL) {
-        Py_XDECREF(MenaiEvalError_type);
-        Py_XDECREF(MenaiCancelledException_type);
-        return -1;
-    }
-
-    return 0;
-}
-
-PyMODINIT_FUNC
-PyInit_menai_vm_c(void)
-{
-    PyObject *module = PyModule_Create(&menai_vm_c_module);
-    if (module == NULL) {
-        return NULL;
-    }
-
-    if (menai_vm_shim_init() < 0) {
-        Py_DECREF(module);
-        return NULL;
-    }
-
-    return module;
-}
