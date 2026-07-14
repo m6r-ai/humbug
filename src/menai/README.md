@@ -18,6 +18,7 @@ making it safe for AI tool integration.
 - Tail call optimization for recursive functions
 - Pattern matching
 - Dictionaries with O(1) lookup
+- Bytes type with multi-byte integer read/write (little/big-endian, LEB128)
 - Module system
 
 ## Architecture
@@ -133,6 +134,7 @@ Runtime values are instances of the `MenaiValue` hierarchy:
 | `MenaiString`   | `string`    |
 | `MenaiBoolean`  | `boolean`   |
 | `MenaiSymbol`   | `symbol`    |
+| `MenaiBytes`    | `bytes`     |
 | `MenaiList`     | `list`      |
 | `MenaiDict`     | `dict`      |
 | `MenaiSet`      | `set`       |

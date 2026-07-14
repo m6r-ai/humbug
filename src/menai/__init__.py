@@ -18,8 +18,8 @@ from menai.menai_ast import (
 # Value types
 from menai.menai_value import (
     MenaiValue, MenaiInteger, MenaiFloat, MenaiComplex,
-    MenaiString, MenaiBoolean, MenaiSymbol, MenaiList, MenaiDict, MenaiFunction,
-    MenaiSet, MenaiStructType, MenaiStruct
+    MenaiString, MenaiBoolean, MenaiSymbol, MenaiBytes, MenaiList, MenaiDict, MenaiFunction,
+    MenaiSet, MenaiStructType, MenaiStruct,
 )
 
 # Lower-level components (for advanced usage)
@@ -40,7 +40,7 @@ __all__ = [
 
     # Value types
     "MenaiValue", "MenaiInteger", "MenaiFloat", "MenaiComplex",
-    "MenaiString", "MenaiBoolean", "MenaiSymbol", "MenaiList", "MenaiDict", "MenaiFunction",
+    "MenaiString", "MenaiBoolean", "MenaiSymbol", "MenaiBytes", "MenaiList", "MenaiDict", "MenaiFunction",
     "MenaiSet", "MenaiStructType", "MenaiStruct",
 
     # Lower-level components

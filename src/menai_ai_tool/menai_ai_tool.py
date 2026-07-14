@@ -345,7 +345,7 @@ Syntax: (operator arg1 arg2 ...)
 ## Sets:
 
 - Immutable unordered collections of unique hashable values with O(1) membership testing
-- Valid element types: string, integer, float, complex, boolean, symbol (lists, dicts, functions, #none are not hashable)
+- Valid element types: string, integer, float, complex, boolean, symbol, bytes (lists, dicts, functions, #none are not hashable)
 - Type predicate: (set? x) → #t
 - Equality: (set=? s1 s2), (set!=? s1 s2) — order-insensitive; two sets are equal if they contain the same elements
 - Output format: sets display as #{1 2 3} — this is display-only; construction always uses (set ...)
@@ -380,6 +380,41 @@ Syntax: (operator arg1 arg2 ...)
 - Pattern matching destructuring form: (match p ((point x y) (integer+ x y)) (_ 0)) — compiler resolves field bindings at compile time
 - Hashability: structs are hashable (usable as set members or dict keys) if all their fields are hashable scalars
 - Structs are nominal: (let ((point (struct (x y))) (Vec (struct (x y)))) ...) — point and Vec are distinct types even with identical fields
+
+## Bytes operations:
+
+- Immutable sequences of bytes (octets, 0–255); no literal syntax — create via string-hex->bytes, string->bytes, or list->bytes
+- Display format: #bytes"hex" (truncated at 64 bytes / 128 hex chars), e.g. (string-hex->bytes "504b") → #bytes"504b"
+- Type predicate: (bytes? x) → #t
+- Equality: (bytes=? a b), (bytes!=? a b) — variadic, 2+ args
+- Ordered comparison: (bytes<? a b), (bytes>? a b), (bytes<=? a b), (bytes>=? a b) — lexicographic, variadic 2+ args
+- Construction: (string-hex->bytes "504b0304") → bytes from hex string, (string->bytes "hello") → UTF-8 encoded bytes, (list->bytes (list 80 75)) → bytes from integer list (0–255)
+- Conversion: (bytes->string-hex b) → hex string, (bytes->string b) → UTF-8 string (raises error on invalid UTF-8), (bytes->list b) → list of integers
+- Access: (bytes-ref b 0) → integer 0–255 at 0-based index, (bytes-length b) → integer
+- Slicing: (bytes-slice b start) → from start to end, (bytes-slice b start end) → from start to end (exclusive); clamps out-of-bounds to valid range
+- Concatenation: (bytes-concat b1 b2 ...) → variadic, (bytes-concat) → empty bytes
+- Append single byte: (bytes-append-u8 b 255) → new bytes with byte appended (value must be 0–255)
+- Search: (bytes-index needle haystack) → integer offset or #none, (bytes-index-int 75 b) → offset of first matching byte value or #none
+- Bytes are hashable (usable as set members or dict keys)
+- Multi-byte integer reads — all take (bytes offset) and return an integer:
+  - Unsigned: bytes-read-u8, bytes-read-u16-le, bytes-read-u16-be, bytes-read-u24-le, bytes-read-u24-be, bytes-read-u32-le, bytes-read-u32-be, bytes-read-u64-le, bytes-read-u64-be
+  - Signed: bytes-read-i8, bytes-read-i16-le, bytes-read-i16-be, bytes-read-i24-le, bytes-read-i24-be, bytes-read-i32-le, bytes-read-i32-be, bytes-read-i64-le, bytes-read-i64-be
+  - Raises error if not enough bytes from offset
+- Multi-byte integer appends — all take (bytes integer) and return new bytes; value must fit in the specified width:
+  - Unsigned: bytes-append-u16-le, bytes-append-u16-be, bytes-append-u24-le, bytes-append-u24-be, bytes-append-u32-le, bytes-append-u32-be, bytes-append-u64-le, bytes-append-u64-be
+  - Signed: bytes-append-i8, bytes-append-i16-le, bytes-append-i16-be, bytes-append-i24-le, bytes-append-i24-be, bytes-append-i32-le, bytes-append-i32-be, bytes-append-i64-le, bytes-append-i64-be
+- Multi-byte integer writes — all take (bytes offset integer) and return new bytes (original unchanged); value must fit in the specified width:
+  - Unsigned: bytes-write-u8, bytes-write-u16-le, bytes-write-u16-be, bytes-write-u24-le, bytes-write-u24-be, bytes-write-u32-le, bytes-write-u32-be, bytes-write-u64-le, bytes-write-u64-be
+  - Signed: bytes-write-i8, bytes-write-i16-le, bytes-write-i16-be, bytes-write-i24-le, bytes-write-i24-be, bytes-write-i32-le, bytes-write-i32-be, bytes-write-i64-le, bytes-write-i64-be
+  - Raises error if not enough bytes from offset
+- LEB128 variable-length integers:
+  - (bytes-read-uleb128 b offset) → (value next-offset) as a 2-element list; raises error if truncated
+  - (bytes-append-uleb128 b value) → new bytes with unsigned LEB128 encoding; value must be non-negative
+  - (bytes-read-sleb128 b offset) → (value next-offset) as a 2-element list; raises error if truncated
+  - (bytes-append-sleb128 b value) → new bytes with signed LEB128 encoding
+- Higher-order: (map-bytes f b) → new bytes with f applied to each byte; (filter-bytes pred b) → bytes of bytes satisfying pred; (fold-bytes f init b) → left fold over bytes; (zip-bytes b1 b2) → list of 2-element lists, stops at shorter
+- Predicates: (bytes-empty? b) → #t if length is 0; (bytes-prefix? b prefix) → #t if b starts with prefix; (bytes-suffix? b suffix) → #t if b ends with suffix
+- Splitting: (bytes-split b delimiter) → list of bytes split on delimiter (delimiter must be non-empty); (bytes-split-int b byte) → list of bytes split on single byte value
 
 ## Symbol operations:
 
@@ -516,7 +551,7 @@ Syntax: (operator arg1 arg2 ...)
 - Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't - there is no concept of "truthiness"
 - #none is not a boolean and cannot be used as a condition; use (none? x) to test for absence
 - The user CANNOT see Menai expressions or Menai results used with this tool directly; if you want to show either, you must format it as a message to the user.
-- Naming convention: direct operations are named, say, `list-X` with the list as the first argument; higher-order operations are named `X-list` with the function/predicate first and the list last. The same convention applies to dicts (`dict-X` / `X-dict`) and sets (`set-X` / `X-set`).
+- Naming convention: direct operations are named, say, `list-X` with the list as the first argument; higher-order operations are named `X-list` with the function/predicate first and the list last. The same convention applies to dicts (`dict-X` / `X-dict`), sets (`set-X` / `X-set`), and bytes (`bytes-X` / `X-bytes`).
 
 """
 
