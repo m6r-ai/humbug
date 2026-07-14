@@ -448,6 +448,42 @@ menai_bigint_from_long(long v, MenaiBigInt *a)
     return 0;
 }
 
+/* Set a to the unsigned value of v. */
+int
+menai_bigint_from_unsigned_long_long(unsigned long long v, MenaiBigInt *a)
+{
+    menai_bigint_free(a);
+    if (v == 0) {
+        return 0;
+    }
+
+    uint64_t mag = (uint64_t)v;
+
+    ssize_t len;
+    if (mag <= 0xFFFFFFFFUL) {
+        len = 1;
+    } else {
+        len = 2;
+    }
+
+    uint32_t *digits = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
+    if (digits == NULL) {
+        PyErr_NoMemory();
+        return -1;
+    }
+
+    digits[0] = (uint32_t)(mag & 0xFFFFFFFFUL);
+    if (len == 2) {
+        digits[1] = (uint32_t)(mag >> 32);
+    }
+
+    a->digits = digits;
+    a->length = len;
+    a->sign = 1;
+    _menai_bigint_normalize(a);
+    return 0;
+}
+
 /* Set a to the value of the CPython integer object obj. */
 int
 menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a)
@@ -841,6 +877,44 @@ menai_bigint_to_long(const MenaiBigInt *a, long *out)
         *out = (long)mag;
     }
 
+    return 0;
+}
+
+/* Return 1 if the value of a fits in an unsigned long long, 0 otherwise. */
+int
+menai_bigint_fits_unsigned_long_long(const MenaiBigInt *a)
+{
+    if (a->sign == -1) {
+        return 0;
+    }
+
+    if (a->length <= 2) {
+        return 1;
+    }
+
+    return 0;
+}
+
+/* Store the value of a in *out as an unsigned long long. */
+int
+menai_bigint_to_unsigned_long_long(const MenaiBigInt *a, unsigned long long *out)
+{
+    if (!menai_bigint_fits_unsigned_long_long(a)) {
+        PyErr_SetString(PyExc_OverflowError, "integer too large to convert to unsigned long long");
+        return -1;
+    }
+
+    if (a->length == 0) {
+        *out = 0;
+        return 0;
+    }
+
+    uint64_t mag = a->digits[0];
+    if (a->length == 2) {
+        mag |= ((uint64_t)a->digits[1] << 32);
+    }
+
+    *out = (unsigned long long)mag;
     return 0;
 }
 

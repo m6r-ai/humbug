@@ -780,6 +780,8 @@ class TestBytesMultiByteAppend:
     @pytest.mark.parametrize("value,expected_hex", [
         (0x0102030405060708, "0807060504030201"),
         (0x0000000000000000, "0000000000000000"),
+        (0x8000000000000000, "0000000000000080"),
+        (0xffffffffffffffff, "ffffffffffffffff"),
     ])
     def test_bytes_append_u64_le(self, menai, value, expected_hex):
         """bytes-append-u64-le encodes unsigned 64-bit little-endian."""
@@ -789,6 +791,8 @@ class TestBytesMultiByteAppend:
     @pytest.mark.parametrize("value,expected_hex", [
         (0x0102030405060708, "0102030405060708"),
         (0x0000000000000000, "0000000000000000"),
+        (0x8000000000000000, "8000000000000000"),
+        (0xffffffffffffffff, "ffffffffffffffff"),
     ])
     def test_bytes_append_u64_be(self, menai, value, expected_hex):
         """bytes-append-u64-be encodes unsigned 64-bit big-endian."""
@@ -964,6 +968,24 @@ class TestBytesMultiByteWrite:
         result = menai.evaluate('(bytes->string-hex (bytes-write-u64-be (string-hex->bytes "000000000000000000") 1 72623859790382856))')
         assert result == "000102030405060708"
 
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0x8000000000000000, "000000000000000080"),
+        (0xffffffffffffffff, "00ffffffffffffffff"),
+    ])
+    def test_write_u64_le_large(self, menai, value, expected_hex):
+        """bytes-write-u64-le writes unsigned 64-bit values above LONG_MAX."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-write-u64-le (string-hex->bytes "000000000000000000") 1 {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0x8000000000000000, "008000000000000000"),
+        (0xffffffffffffffff, "00ffffffffffffffff"),
+    ])
+    def test_write_u64_be_large(self, menai, value, expected_hex):
+        """bytes-write-u64-be writes unsigned 64-bit values above LONG_MAX."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-write-u64-be (string-hex->bytes "000000000000000000") 1 {value}))')
+        assert result == expected_hex
+
     def test_write_immutability(self, menai):
         """bytes-write returns new bytes; original is unchanged."""
         original = '(string-hex->bytes "00000000")'
@@ -993,6 +1015,8 @@ class TestBytesLeb128:
         (300, "ac02"),
         (16383, "ff7f"),
         (16384, "808001"),
+        (9223372036854775807, "ffffffffffffffff7f"),  # 2^63 - 1 = LONG_MAX
+        (18446744073709551615, "ffffffffffffffffff01"),  # 2^64 - 1 = UINT64_MAX
     ])
     def test_append_uleb128(self, menai, value, expected_hex):
         """bytes-append-uleb128 encodes unsigned LEB128."""
@@ -1006,6 +1030,8 @@ class TestBytesLeb128:
         ("8001", 128, 2),
         ("ac02", 300, 2),
         ("ff7f", 16383, 2),
+        ("ffffffffffffffff7f", 9223372036854775807, 9),   # 2^63 - 1 = LONG_MAX
+        ("ffffffffffffffffff01", 18446744073709551615, 10), # 2^64 - 1 = UINT64_MAX
     ])
     def test_read_uleb128(self, menai, hex_str, expected_value, expected_next):
         """bytes-read-uleb128 decodes unsigned LEB128 and returns (value next-offset)."""
@@ -1223,3 +1249,92 @@ class TestBytesPreludeSplit:
         """bytes-split-int produces an empty last segment for a trailing delimiter."""
         result = menai.evaluate('(map-list bytes->string-hex (bytes-split-int (string-hex->bytes "414200") 0))')
         assert result == ["4142", ""]
+
+class TestBytesU64RoundTrip:
+    """Test round-trip symmetry for unsigned 64-bit values above LONG_MAX.
+
+    Values in the range [2^63, 2^64-1] require the MenaiBigInt path on both
+    the write side (append/write) and the read side.  These tests verify
+    that encoding and decoding are symmetric for the full unsigned 64-bit range.
+    """
+
+    EMPTY = '(string-hex->bytes "")'
+
+    @pytest.mark.parametrize("value", [
+        0,
+        1,
+        9223372036854775807,   # 2^63 - 1 = LONG_MAX (boundary, still fits in long)
+        9223372036854775808,   # 2^63     = LONG_MAX + 1 (first bigint value)
+        18446744073709551614,  # 2^64 - 2
+        18446744073709551615,  # 2^64 - 1 = UINT64_MAX
+    ])
+    def test_append_read_u64_le_round_trip(self, menai, value):
+        """bytes-append-u64-le then bytes-read-u64-le recovers the original value."""
+        expr = f'(bytes-read-u64-le (bytes-append-u64-le {self.EMPTY} {value}) 0)'
+        assert menai.evaluate(expr) == value
+
+    @pytest.mark.parametrize("value", [
+        0,
+        1,
+        9223372036854775807,   # 2^63 - 1 = LONG_MAX
+        9223372036854775808,   # 2^63     = LONG_MAX + 1
+        18446744073709551614,  # 2^64 - 2
+        18446744073709551615,  # 2^64 - 1 = UINT64_MAX
+    ])
+    def test_append_read_u64_be_round_trip(self, menai, value):
+        """bytes-append-u64-be then bytes-read-u64-be recovers the original value."""
+        expr = f'(bytes-read-u64-be (bytes-append-u64-be {self.EMPTY} {value}) 0)'
+        assert menai.evaluate(expr) == value
+
+    @pytest.mark.parametrize("value", [
+        0,
+        1,
+        9223372036854775807,   # 2^63 - 1 = LONG_MAX
+        9223372036854775808,   # 2^63     = LONG_MAX + 1
+        18446744073709551614,  # 2^64 - 2
+        18446744073709551615,  # 2^64 - 1 = UINT64_MAX
+    ])
+    def test_write_read_u64_le_round_trip(self, menai, value):
+        """bytes-write-u64-le then bytes-read-u64-le recovers the original value."""
+        expr = f'(bytes-read-u64-le (bytes-write-u64-le (string-hex->bytes "0000000000000000") 0 {value}) 0)'
+        assert menai.evaluate(expr) == value
+
+    @pytest.mark.parametrize("value", [
+        0,
+        1,
+        9223372036854775807,   # 2^63 - 1 = LONG_MAX
+        9223372036854775808,   # 2^63     = LONG_MAX + 1
+        18446744073709551614,  # 2^64 - 2
+        18446744073709551615,  # 2^64 - 1 = UINT64_MAX
+    ])
+    def test_write_read_u64_be_round_trip(self, menai, value):
+        """bytes-write-u64-be then bytes-read-u64-be recovers the original value."""
+        expr = f'(bytes-read-u64-be (bytes-write-u64-be (string-hex->bytes "0000000000000000") 0 {value}) 0)'
+        assert menai.evaluate(expr) == value
+
+
+class TestBytesUleb128RoundTrip:
+    """Test round-trip symmetry for ULEB128 values above LONG_MAX.
+
+    ULEB128 encoding of values in [2^63, 2^64-1] requires the MenaiBigInt path
+    on both the append and read sides.
+    """
+
+    @pytest.mark.parametrize("value", [
+        0,
+        1,
+        127,
+        128,
+        624485,
+        9223372036854775807,   # 2^63 - 1 = LONG_MAX
+        9223372036854775808,   # 2^63     = LONG_MAX + 1
+        18446744073709551614,  # 2^64 - 2
+        18446744073709551615,  # 2^64 - 1 = UINT64_MAX
+    ])
+    def test_uleb128_round_trip(self, menai, value):
+        """bytes-append-uleb128 then bytes-read-uleb128 recovers the original value."""
+        expr = f'''
+            (match (bytes-read-uleb128 (bytes-append-uleb128 (string-hex->bytes "") {value}) 0)
+              ((val next) val))
+        '''
+        assert menai.evaluate(expr) == value

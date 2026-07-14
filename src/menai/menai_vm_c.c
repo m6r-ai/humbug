@@ -679,6 +679,28 @@ integer_to_long(MenaiValue *val)
 }
 
 /*
+ * integer_to_unsigned_long_long — extract an unsigned long long from a MenaiInteger.
+ * Returns 0 on success, -1 on error (with Python exception set).
+ * Caller must ensure val is a MenaiInteger.
+ */
+static inline int
+integer_to_unsigned_long_long(MenaiValue *val, unsigned long long *out)
+{
+    MenaiInteger *ib = (MenaiInteger *)val;
+    if (!ib->is_big) {
+        if (ib->small < 0) {
+            PyErr_SetString(PyExc_OverflowError,
+                            "can't convert negative integer to unsigned");
+            return -1;
+        }
+        *out = (unsigned long long)ib->small;
+        return 0;
+    }
+
+    return menai_bigint_to_unsigned_long_long(&ib->big, out);
+}
+
+/*
  * integer_to_ssize_t — extract a ssize_t from a MenaiInteger (assumes valid).
  * Caller must ensure val is a MenaiInteger.
  */
@@ -5900,15 +5922,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else { \
                 if ((width) == sizeof(unsigned long) && (long)uval < 0) { \
                     /* Unsigned 64-bit value exceeds LONG_MAX */ \
-                    PyObject *py_uval = PyLong_FromUnsignedLongLong((unsigned long long)uval); \
-                    if (!py_uval) { goto error; } \
                     MenaiBigInt big; \
                     menai_bigint_init(&big); \
-                    if (menai_bigint_from_pylong(py_uval, &big) < 0) { \
-                        Py_DECREF(py_uval); \
+                    if (menai_bigint_from_unsigned_long_long( \
+                            (unsigned long long)uval, &big) < 0) { \
                         goto error; \
                     } \
-                    Py_DECREF(py_uval); \
                     MenaiValue *_r = menai_integer_from_bigint(big); \
                     if (_r == NULL) { goto error; } \
                     menai_reg_set_own(regs, base + dest, _r); \
@@ -5959,8 +5978,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error(#opcode_name ": value must be an integer"); \
                 goto error; \
             } \
-            long val = integer_to_long(v); \
+            long val; \
             if (is_signed) { \
+                val = integer_to_long(v); \
                 if ((width) < (int)sizeof(long)) { \
                    long max_val = (long)((1UL << ((width) * 8 - 1)) - 1); \
                    if (val < -max_val - 1 || val > max_val) { \
@@ -5973,12 +5993,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 if (_r == NULL) { goto error; } \
                 menai_reg_set_own(regs, base + dest, _r); \
             } else { \
-                if (val < 0 || ((width) < (int)sizeof(long) && val > (long)((1UL << ((width) * 8)) - 1))) { \
-                    menai_raise_eval_errorf(#opcode_name ": value %ld out of range", val); \
+                unsigned long long uval_ull; \
+                if (integer_to_unsigned_long_long(v, &uval_ull) < 0) { \
+                    menai_raise_eval_errorf(#opcode_name ": value out of range"); \
                     goto error; \
                 } \
-                unsigned long uval = (unsigned long)val; \
-                MenaiValue *_r = menai_bytes_append_multi(b, uval, (width), le); \
+                if ((width) < (int)sizeof(unsigned long long) && \
+                        uval_ull > ((1ULL << ((width) * 8)) - 1)) { \
+                    menai_raise_eval_errorf(#opcode_name ": value out of range"); \
+                    goto error; \
+                } \
+                MenaiValue *_r = menai_bytes_append_multi(b, (unsigned long)uval_ull, (width), le); \
                 if (_r == NULL) { goto error; } \
                 menai_reg_set_own(regs, base + dest, _r); \
             } \
@@ -6035,8 +6060,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_raise_eval_errorf(#opcode_name ": offset %zd out of bounds for length %zd", offset, blen); \
                 goto error; \
             } \
-            long val = integer_to_long(v); \
+            unsigned long long uval_ull; \
             if (is_signed) { \
+                long val = integer_to_long(v); \
                if ((width) < (int)sizeof(long)) { \
                    long max_val = (long)((1UL << ((width) * 8 - 1)) - 1); \
                    if (val < -max_val - 1 || val > max_val) { \
@@ -6044,13 +6070,19 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                        goto error; \
                    } \
                } \
+                uval_ull = (unsigned long long)(unsigned long)val; \
             } else { \
-                if (val < 0 || ((width) < (int)sizeof(long) && val > (long)((1UL << ((width) * 8)) - 1))) { \
-                    menai_raise_eval_errorf(#opcode_name ": value %ld out of range", val); \
+                if (integer_to_unsigned_long_long(v, &uval_ull) < 0) { \
+                    menai_raise_eval_errorf(#opcode_name ": value out of range"); \
+                    goto error; \
+                } \
+                if ((width) < (int)sizeof(unsigned long long) && \
+                        uval_ull > ((1ULL << ((width) * 8)) - 1)) { \
+                    menai_raise_eval_errorf(#opcode_name ": value out of range"); \
                     goto error; \
                 } \
             } \
-            MenaiValue *_r = menai_bytes_write_multi(b, offset, (unsigned long)val, (width), le); \
+            MenaiValue *_r = menai_bytes_write_multi(b, offset, (unsigned long)uval_ull, (width), le); \
             if (_r == NULL) { goto error; } \
             menai_reg_set_own(regs, base + dest, _r); \
             break; \
@@ -6117,15 +6149,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *val_result;
             if ((long long)result < 0) {
                 /* Value exceeds LONG_MAX — use bigint path */
-                PyObject *py_val = PyLong_FromUnsignedLongLong(result);
-                if (!py_val) { goto error; }
                 MenaiBigInt big;
                 menai_bigint_init(&big);
-                if (menai_bigint_from_pylong(py_val, &big) < 0) {
-                    Py_DECREF(py_val);
+                if (menai_bigint_from_unsigned_long_long(result, &big) < 0) {
                     goto error;
                 }
-                Py_DECREF(py_val);
                 val_result = menai_integer_from_bigint(big);
                 if (val_result == NULL) { goto error; }
             } else {
@@ -6165,12 +6193,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("bytes-append-uleb128: value must be an integer");
                 goto error;
             }
-            long val = integer_to_long(v);
-            if (val < 0) {
-                menai_raise_eval_error("bytes-append-uleb128: value must be non-negative");
+            unsigned long long uval;
+            if (integer_to_unsigned_long_long(v, &uval) < 0) {
+                menai_raise_eval_errorf("bytes-append-uleb128: value must be non-negative");
                 goto error;
             }
-            unsigned long uval = (unsigned long)val;
             uint8_t buf[10];
             int nbytes = 0;
             do {
