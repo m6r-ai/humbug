@@ -3,8 +3,6 @@
  *
  * Representation: sign-magnitude, base 2^32, little-endian digits.
  * Zero: sign=0, length=0, digits=NULL.
- *
- * Only menai_bigint_from_pylong and menai_bigint_to_pylong may call the Python C API.
  */
 #include <stdlib.h>
 #include <stddef.h>
@@ -19,7 +17,6 @@
 static int _menai_bigint_cmp_mag(const MenaiBigInt *a, const MenaiBigInt *b);
 static int _menai_bigint_add_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
 static int _menai_bigint_sub_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
-static void _menai_bigint_normalize(MenaiBigInt *a);
 static int _menai_bigint_divmod_1(const MenaiBigInt *a, uint32_t b, MenaiBigInt *quotient, uint32_t *remainder);
 static int _menai_bigint_divmod_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *quotient, MenaiBigInt *remainder);
 
@@ -34,8 +31,8 @@ _mul32(uint32_t a, uint32_t b)
 }
 
 /* Strip leading zero digits and fix sign when length reaches 0. */
-static void
-_menai_bigint_normalize(MenaiBigInt *a)
+void
+menai_bigint_normalize(MenaiBigInt *a)
 {
     while (a->length > 0 && a->digits[a->length - 1] == 0) {
         a->length--;
@@ -98,7 +95,7 @@ _menai_bigint_add_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *r
     result->digits = digits;
     result->length = out_len;
     result->sign = 1;
-    _menai_bigint_normalize(result);
+    menai_bigint_normalize(result);
     return 0;
 }
 
@@ -135,7 +132,7 @@ _menai_bigint_sub_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *r
     result->digits = digits;
     result->length = out_len;
     result->sign = 1;
-    _menai_bigint_normalize(result);
+    menai_bigint_normalize(result);
     return 0;
 }
 
@@ -170,7 +167,7 @@ _menai_bigint_divmod_1(
     quotient->digits = qdigits;
     quotient->length = a->length;
     quotient->sign = 1;
-    _menai_bigint_normalize(quotient);
+    menai_bigint_normalize(quotient);
     *remainder = (uint32_t)rem;
     return 0;
 }
@@ -332,7 +329,7 @@ _menai_bigint_divmod_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt
     quotient->digits = qdigits;
     quotient->length = q_len;
     quotient->sign = 1;
-    _menai_bigint_normalize(quotient);
+    menai_bigint_normalize(quotient);
 
     /* Unnormalize remainder: shift un right by d bits. */
     uint32_t *rdigits = (uint32_t *)malloc((size_t)n * sizeof(uint32_t));
@@ -359,7 +356,7 @@ _menai_bigint_divmod_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt
     remainder->digits = rdigits;
     remainder->length = n;
     remainder->sign = 1;
-    _menai_bigint_normalize(remainder);
+    menai_bigint_normalize(remainder);
 
     free(un);
     free(vn);
@@ -444,7 +441,7 @@ menai_bigint_from_long(long v, MenaiBigInt *a)
     a->digits = digits;
     a->length = len;
     a->sign = sign;
-    _menai_bigint_normalize(a);
+    menai_bigint_normalize(a);
     return 0;
 }
 
@@ -480,114 +477,7 @@ menai_bigint_from_unsigned_long_long(unsigned long long v, MenaiBigInt *a)
     a->digits = digits;
     a->length = len;
     a->sign = 1;
-    _menai_bigint_normalize(a);
-    return 0;
-}
-
-/* Set a to the value of the CPython integer object obj. */
-int
-menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a)
-{
-    if (!PyLong_Check(obj)) {
-        PyErr_SetString(PyExc_TypeError, "expected int");
-        return -1;
-    }
-
-    /* Try small value first. */
-    int overflow = 0;
-    long v = PyLong_AsLongAndOverflow(obj, &overflow);
-    if (!overflow) {
-        if (v == -1 && PyErr_Occurred()) {
-            return -1;
-        }
-
-        return menai_bigint_from_long(v, a);
-    }
-
-    /* Large value: use _PyLong_AsByteArray. */
-    int sign = 0;
-#if PY_VERSION_HEX >= 0x030E00A1
-    PyLong_GetSign(obj, &sign);
-#else
-    sign = _PyLong_Sign(obj);
-#endif
-
-    int is_neg = (sign < 0);
-
-    /* Get number of bits. */
-    size_t nbits = (size_t)_PyLong_NumBits(obj);
-    if (nbits == (size_t)-1 && PyErr_Occurred()) {
-        return -1;
-    }
-
-    /*
-     * _PyLong_AsByteArray with is_signed=1 needs room for the sign bit.
-     * For negative numbers, the two's complement may need one extra byte.
-     * For positive numbers where the magnitude's top bit is set (nbits is a
-     * multiple of 8), an extra byte is needed to hold a zero sign bit so the
-     * value is not mistaken for negative.
-     */
-    int needs_extra = (is_neg || (nbits % 8 == 0));
-    size_t nbytes = (nbits + (needs_extra ? 8 : 7)) / 8;
-    if (nbytes == 0) {
-        nbytes = 1;
-    }
-
-    unsigned char *buf = (unsigned char *)malloc(nbytes);
-    if (buf == NULL) {
-        PyErr_NoMemory();
-        return -1;
-    }
-
-    /* Extract as little-endian two's complement bytes. */
-#if PY_VERSION_HEX >= 0x030D0000
-    int bytearray_ret = _PyLong_AsByteArray((PyLongObject *)obj, buf, nbytes, 1, 1, 1);
-#else
-    int bytearray_ret = _PyLong_AsByteArray((PyLongObject *)obj, buf, nbytes, 1, 1);
-#endif
-    if (bytearray_ret < 0) {
-        free(buf);
-        return -1;
-    }
-
-    /* If negative, negate the two's complement to get magnitude. */
-    if (is_neg) {
-        /* Flip bits and add 1. */
-        int carry = 1;
-        for (size_t i = 0; i < nbytes; i++) {
-            int val = (~buf[i] & 0xFF) + carry;
-            buf[i] = (unsigned char)(val & 0xFF);
-            carry = val >> 8;
-        }
-    }
-
-    /* Pack bytes into 32-bit digits (little-endian). */
-    ssize_t ndigits = (ssize_t)((nbytes + 3) / 4);
-    uint32_t *digits = (uint32_t *)malloc((size_t)ndigits * sizeof(uint32_t));
-    if (digits == NULL) {
-        free(buf);
-        PyErr_NoMemory();
-        return -1;
-    }
-
-    for (ssize_t i = 0; i < ndigits; i++) {
-        uint32_t d = 0;
-        for (int b = 0; b < 4; b++) {
-            size_t byte_idx = (size_t)(i * 4 + b);
-            if (byte_idx < nbytes) {
-                d |= ((uint32_t)buf[byte_idx]) << (b * 8);
-            }
-        }
-
-        digits[i] = d;
-    }
-
-    free(buf);
-    menai_bigint_free(a);
-    a->digits = digits;
-    a->length = ndigits;
-    a->sign = is_neg ? -1 : 1;
-    _menai_bigint_normalize(a);
+    menai_bigint_normalize(a);
     return 0;
 }
 
@@ -795,7 +685,7 @@ menai_bigint_from_double(double v, MenaiBigInt *a)
     a->digits = digits;
     a->length = nlimbs;
     a->sign = (v < 0.0) ? -1 : 1;
-    _menai_bigint_normalize(a);
+    menai_bigint_normalize(a);
     return 0;
 }
 
@@ -943,45 +833,6 @@ menai_bigint_to_double(const MenaiBigInt *a, double *out)
 
     *out = (a->sign == -1) ? -result : result;
     return 0;
-}
-
-/* Return a new CPython integer object representing the value of a. */
-PyObject *
-menai_bigint_to_pylong(const MenaiBigInt *a)
-{
-    if (a->length == 0) {
-        return PyLong_FromLong(0);
-    }
-
-    /* Pack digits into a byte array (little-endian). */
-    size_t nbytes = (size_t)a->length * 4;
-    unsigned char *buf = (unsigned char *)malloc(nbytes);
-    if (buf == NULL) {
-        PyErr_NoMemory();
-        return NULL;
-    }
-
-    for (ssize_t i = 0; i < a->length; i++) {
-        uint32_t d = a->digits[i];
-        buf[i * 4 + 0] = (unsigned char)(d & 0xFF);
-        buf[i * 4 + 1] = (unsigned char)((d >> 8) & 0xFF);
-        buf[i * 4 + 2] = (unsigned char)((d >> 16) & 0xFF);
-        buf[i * 4 + 3] = (unsigned char)((d >> 24) & 0xFF);
-    }
-
-    PyObject *result = _PyLong_FromByteArray(buf, nbytes, 1, 0);
-    free(buf);
-    if (result == NULL) {
-        return NULL;
-    }
-
-    if (a->sign == -1) {
-        PyObject *neg = PyNumber_Negative(result);
-        Py_DECREF(result);
-        return neg;
-    }
-
-    return result;
 }
 
 /*
@@ -1254,7 +1105,7 @@ menai_bigint_mul(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
     result->digits = digits;
     result->length = out_len;
     result->sign = res_sign;
-    _menai_bigint_normalize(result);
+    menai_bigint_normalize(result);
     return 0;
 }
 
@@ -1606,7 +1457,7 @@ _from_twos_complement(const uint32_t *buf, ssize_t len, MenaiBigInt *result)
         result->digits = digits;
         result->length = len;
         result->sign = 1;
-        _menai_bigint_normalize(result);
+        menai_bigint_normalize(result);
     } else {
         /* Negative: negate to get magnitude. */
         uint32_t *digits = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
@@ -1625,7 +1476,7 @@ _from_twos_complement(const uint32_t *buf, ssize_t len, MenaiBigInt *result)
         result->digits = digits;
         result->length = len;
         result->sign = -1;
-        _menai_bigint_normalize(result);
+        menai_bigint_normalize(result);
     }
 
     return 0;
@@ -1841,7 +1692,7 @@ menai_bigint_shift_left(const MenaiBigInt *a, ssize_t shift, MenaiBigInt *result
     result->digits = digits;
     result->length = out_len;
     result->sign = a->sign;
-    _menai_bigint_normalize(result);
+    menai_bigint_normalize(result);
     return 0;
 }
 
@@ -1932,7 +1783,7 @@ menai_bigint_shift_right(const MenaiBigInt *a, ssize_t shift, MenaiBigInt *resul
     result->digits = digits;
     result->length = out_len;
     result->sign = a->sign;
-    _menai_bigint_normalize(result);
+    menai_bigint_normalize(result);
 
     /* For negative numbers with bits shifted out, subtract 1 (floor). */
     if (a->sign == -1 && any_bits_out) {

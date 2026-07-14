@@ -321,9 +321,9 @@ typedef struct {
 #define menai_bigint_init(x) (memset((x), 0, sizeof(MenaiBigInt)))
 
 void menai_bigint_free(MenaiBigInt *a);
+void menai_bigint_normalize(MenaiBigInt *a);
 int menai_bigint_copy(const MenaiBigInt *src, MenaiBigInt *dst);
 int menai_bigint_from_long(long v, MenaiBigInt *a);
-int menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a);
 int menai_bigint_from_unsigned_long_long(unsigned long long v, MenaiBigInt *a);
 int menai_bigint_from_string(const char *s, int base, MenaiBigInt *a);
 int menai_bigint_from_codepoints(const uint32_t *data, ssize_t len, int base, MenaiBigInt *a);
@@ -333,7 +333,6 @@ int menai_bigint_to_long(const MenaiBigInt *a, long *out);
 int menai_bigint_to_double(const MenaiBigInt *a, double *out);
 int menai_bigint_fits_unsigned_long_long(const MenaiBigInt *a);
 int menai_bigint_to_unsigned_long_long(const MenaiBigInt *a, unsigned long long *out);
-PyObject *menai_bigint_to_pylong(const MenaiBigInt *a);
 MenaiValue *menai_bigint_to_menai_string(const MenaiBigInt *a, int base);
 Py_hash_t menai_bigint_hash(const MenaiBigInt *a);
 int menai_bigint_add(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
@@ -533,8 +532,6 @@ menai_bytes_get(MenaiValue *b, ssize_t i)
 MenaiValue *menai_bytes_alloc(ssize_t n);
 MenaiValue *menai_bytes_new_empty(void);
 MenaiValue *menai_bytes_from_raw(const uint8_t *src, ssize_t n);
-MenaiValue *menai_bytes_from_pybytes(PyObject *pybytes);
-PyObject *menai_bytes_to_pybytes(MenaiValue *b);
 MenaiValue *menai_bytes_slice(MenaiValue *b, ssize_t start, ssize_t end);
 MenaiValue *menai_bytes_concat(MenaiValue *a, MenaiValue *b);
 MenaiValue *menai_bytes_ref(MenaiValue *b, ssize_t i);

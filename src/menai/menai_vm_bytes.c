@@ -70,25 +70,6 @@ menai_bytes_from_raw(const uint8_t *src, ssize_t n)
 }
 
 MenaiValue *
-menai_bytes_from_pybytes(PyObject *pybytes)
-{
-    Py_ssize_t n;
-    char *buf;
-    if (PyBytes_AsStringAndSize(pybytes, &buf, &n) < 0) {
-        return NULL;
-    }
-
-    return menai_bytes_from_raw((const uint8_t *)buf, (ssize_t)n);
-}
-
-PyObject *
-menai_bytes_to_pybytes(MenaiValue *b)
-{
-    MenaiBytes *mb = (MenaiBytes *)b;
-    return PyBytes_FromStringAndSize((const char *)mb->data, (Py_ssize_t)mb->length);
-}
-
-MenaiValue *
 menai_bytes_slice(MenaiValue *b_val, ssize_t start, ssize_t end)
 {
     MenaiBytes *b = (MenaiBytes *)b_val;

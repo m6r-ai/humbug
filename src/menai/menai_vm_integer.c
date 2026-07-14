@@ -3,8 +3,6 @@
  *
  * Three-tier representation: small integer cache for [-5, 256], inline long
  * for values that fit in a C long, and MenaiBigInt bignum for everything else.
- * The Python C API is only used at the boundary (menai_bigint_from_pylong /
- * menai_bigint_to_pylong in menai_vm_bigint.c).
  */
 #include <stdlib.h>
 #include <string.h>
@@ -79,7 +77,7 @@ menai_vm_integer_init(void)
         }
 
         obj->ob_refcnt = 1;
-    	obj->ob_type = MENAITYPE_INTEGER;
+        obj->ob_type = MENAITYPE_INTEGER;
         obj->is_big = 0;
         obj->small = v;
         menai_bigint_init(&obj->big);
