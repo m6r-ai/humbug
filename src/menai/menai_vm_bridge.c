@@ -15,7 +15,7 @@
 
 #include "menai_vm_c.h"
 
-static MenaiValue *menai_convert_value(PyObject *src);
+static MenaiValue *slow_value_to_menai_value(PyObject *src);
 
 /*
  * Conversion helpers — Python boundary only.
@@ -198,7 +198,7 @@ menai_bigint_to_pylong(const MenaiBigInt *a)
 
 /*
  * Slow-world type objects — fetched once at module init.
- * Used by menai_convert_value to identify slow objects by type.
+ * Used by slow_value_to_menai_value to identify slow objects by type.
  * Will be removed in Phase 2 when the compiler emits fast types directly.
  */
 static PyTypeObject *Slow_NoneType = NULL;
@@ -486,7 +486,7 @@ menai_code_object_from_python(PyObject *py_code)
 
             for (ssize_t i = 0; i < co->nconst; i++) {
                 PyObject *orig = PyList_GET_ITEM(py_constants, i);
-                MenaiValue *fast = menai_convert_value(orig);
+                MenaiValue *fast = slow_value_to_menai_value(orig);
                 if (!fast) {
                     Py_DECREF(py_constants);
                     goto fail;
@@ -507,7 +507,7 @@ fail:
 }
 
 /*
- * menai_convert_value — convert one slow menai_value.py object to a fast type.
+ * slow_value_to_menai_value — convert one slow menai_value.py object to a fast type.
  *
  * Returns a new reference.  src must be a slow menai_value.py object; passing
  * a fast C value is a programming error and will abort.  For MenaiFunction,
@@ -515,7 +515,7 @@ fail:
  * does that lazily at call time to avoid cycles in letrec closures.
  */
 static MenaiValue *
-menai_convert_value(PyObject *src)
+slow_value_to_menai_value(PyObject *src)
 {
     PyTypeObject *t = Py_TYPE(src);
 
@@ -660,7 +660,7 @@ menai_convert_value(PyObject *src)
 
         MenaiValue **arr = menai_list_elements(lst);
         for (Py_ssize_t i = 0; i < n; i++) {
-            arr[i] = menai_convert_value(PyTuple_GET_ITEM(elems, i));
+            arr[i] = slow_value_to_menai_value(PyTuple_GET_ITEM(elems, i));
             if (!arr[i]) {
                 for (Py_ssize_t j = 0; j < i; j++) {
                     menai_release(arr[j]);
@@ -697,7 +697,7 @@ menai_convert_value(PyObject *src)
 
         for (Py_ssize_t i = 0; i < n; i++) {
             PyObject *pair = PyTuple_GET_ITEM(pairs, i);
-            MenaiValue *fk = menai_convert_value(PyTuple_GET_ITEM(pair, 0));
+            MenaiValue *fk = slow_value_to_menai_value(PyTuple_GET_ITEM(pair, 0));
             if (!fk) {
                 for (Py_ssize_t j = 0; j < i; j++) {
                     menai_release(keys[j]);
@@ -711,7 +711,7 @@ menai_convert_value(PyObject *src)
                 return NULL;
             }
 
-            MenaiValue *fv = menai_convert_value(PyTuple_GET_ITEM(pair, 1));
+            MenaiValue *fv = slow_value_to_menai_value(PyTuple_GET_ITEM(pair, 1));
             if (!fv) {
                 menai_release(fk);
                 for (Py_ssize_t j = 0; j < i; j++) {
@@ -768,7 +768,7 @@ menai_convert_value(PyObject *src)
         MenaiValue **elements = ((MenaiSet *)s)->elements;
         hash_t *hashes = ((MenaiSet *)s)->hashes;
         for (Py_ssize_t i = 0; i < n; i++) {
-            MenaiValue *fe = menai_convert_value(PyTuple_GET_ITEM(elems, i));
+            MenaiValue *fe = slow_value_to_menai_value(PyTuple_GET_ITEM(elems, i));
             if (!fe) {
                 for (Py_ssize_t j = 0; j < i; j++) {
                     menai_release(elements[j]);
@@ -884,7 +884,7 @@ menai_convert_value(PyObject *src)
             return NULL;
         }
 
-        MenaiValue *fast_st = menai_convert_value(st);
+        MenaiValue *fast_st = slow_value_to_menai_value(st);
         Py_DECREF(st);
         if (!fast_st) {
             Py_DECREF(fields);
@@ -902,7 +902,7 @@ menai_convert_value(PyObject *src)
         }
 
         for (Py_ssize_t i = 0; i < n; i++) {
-            MenaiValue *ff = menai_convert_value(PyTuple_GET_ITEM(fields, i));
+            MenaiValue *ff = slow_value_to_menai_value(PyTuple_GET_ITEM(fields, i));
             if (!ff) {
                 for (Py_ssize_t j = 0; j < i; j++) {
                     menai_release(fast_arr[j]);
@@ -957,7 +957,7 @@ menai_convert_value(PyObject *src)
 
         MenaiFunction *f = (MenaiFunction *)r;
         for (Py_ssize_t ci = 0; ci < f->bytecode->ncap; ci++) {
-            MenaiValue *fast_cv = menai_convert_value(PyList_GET_ITEM(cap, ci));
+            MenaiValue *fast_cv = slow_value_to_menai_value(PyList_GET_ITEM(cap, ci));
             if (!fast_cv) {
                 menai_release(r);
                 Py_DECREF(cap);
@@ -965,14 +965,14 @@ menai_convert_value(PyObject *src)
             }
 
             menai_release(f->captures[ci]);  /* release the None placeholder */
-            f->captures[ci] = fast_cv;       /* owns the ref from menai_convert_value */
+            f->captures[ci] = fast_cv;       /* owns the ref from slow_value_to_menai_value */
         }
 
         Py_DECREF(cap);
         return r;
     }
 
-    PyErr_Format(PyExc_TypeError, "menai_convert_value: unexpected type %R", (PyObject *)t);
+    PyErr_Format(PyExc_TypeError, "slow_value_to_menai_value: unexpected type %R", (PyObject *)t);
     return NULL;
 }
 
@@ -1003,7 +1003,7 @@ fetch_slow_type(PyObject *mod, const char *name, PyTypeObject **dst)
  * menai_value_to_slow_value — convert a fast MenaiValue * to its equivalent
  * slow menai_value.py Python object.
  *
- * This is the inverse of menai_convert_value.  It is used at the C VM execute
+ * This is the inverse of slow_value_to_menai_value.  It is used at the C VM execute
  * boundary to ensure all values returned to Python callers are proper Python
  * objects with the full MenaiValue interface (to_python, describe, etc.).
  *
@@ -1404,7 +1404,7 @@ bridge_globals_get(PyObject *globals_key)
                     return NULL;
                 }
 
-                values[i] = menai_convert_value(val);
+                values[i] = slow_value_to_menai_value(val);
                 if (!values[i]) {
                     for (Py_ssize_t j = 0; j < i; j++) {
                         menai_release(values[j]);
@@ -1445,7 +1445,7 @@ bridge_globals_get(PyObject *globals_key)
 /*
  * menai_dict_from_pydict — convert a Python dict of (str, MenaiValue) pairs
  * to a native MenaiDict.  Keys are converted to MenaiString, values via
- * menai_convert_value.  Returns a new reference, or NULL on error.
+ * slow_value_to_menai_value.  Returns a new reference, or NULL on error.
  */
 static MenaiValue *
 menai_dict_from_pydict(PyObject *pydict)
@@ -1475,7 +1475,7 @@ menai_dict_from_pydict(PyObject *pydict)
             goto fail;
         }
 
-        values[i] = menai_convert_value(val);
+        values[i] = slow_value_to_menai_value(val);
         if (!values[i]) {
             menai_release(keys[i]);
             goto fail;
@@ -1565,7 +1565,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
 int
 menai_vm_bridge_init(void)
 {
-    /* Fetch slow-world types — needed by menai_convert_value. */
+    /* Fetch slow-world types — needed by slow_value_to_menai_value. */
     PyObject *slow_mod = PyImport_ImportModule("menai.menai_value");
     if (!slow_mod) {
         return 0;
