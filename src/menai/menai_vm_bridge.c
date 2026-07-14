@@ -1346,6 +1346,38 @@ static int _cached_globals_gt_valid = 0;
 static PyTypeObject *_py_code_object_type = NULL;
 
 /*
+ * bridge_translate_error — translate a MENAI_ERR_* code from the native VM
+ * into a Python exception.  Must only be called when no Python exception is
+ * already set; VM-level errors (MENAI_ERR_EVAL, MENAI_ERR_CANCELLED) are
+ * raised directly by the VM via menai_raise_eval_error / the cancellation
+ * check, so this function has nothing to do for those codes.
+ */
+static void
+bridge_translate_error(int err)
+{
+    switch (err) {
+    case MENAI_ERR_NOMEM:
+        PyErr_NoMemory();
+        break;
+
+    case MENAI_ERR_OVERFLOW:
+        PyErr_SetString(PyExc_OverflowError, "integer overflow");
+        break;
+
+    case MENAI_ERR_VALUE:
+        PyErr_SetString(PyExc_ValueError, "invalid value");
+        break;
+
+    case MENAI_ERR_DIVZERO:
+        PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
+        break;
+
+    default:
+        break;
+    }
+}
+
+/*
  * bridge_globals_get — return a pointer to the cached GlobalsTable, building
  * it the first time a given globals_key is seen.
  *
@@ -1380,9 +1412,14 @@ bridge_globals_get(PyObject *globals_key)
             return NULL;
         }
 
-        MenaiValue *result = menai_vm_execute_native(prelude_co, NULL, NULL);
+        int err = MENAI_OK;
+        MenaiValue *result = menai_vm_execute_native(prelude_co, NULL, NULL, &err);
         menai_code_object_release(prelude_co);
         if (!result) {
+            if (!PyErr_Occurred()) {
+                bridge_translate_error(err);
+            }
+
             return NULL;
         }
 
@@ -1574,12 +1611,17 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
         }
     }
 
-    MenaiValue *result = menai_vm_execute_native(native_code, globals_gt, native_extra);
+    int err = MENAI_OK;
+    MenaiValue *result = menai_vm_execute_native(native_code, globals_gt, native_extra, &err);
 
     menai_code_object_release(native_code);
     menai_xrelease(native_extra);
 
     if (result == NULL) {
+        if (!PyErr_Occurred()) {
+            bridge_translate_error(err);
+        }
+
         return NULL;
     }
 

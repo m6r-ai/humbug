@@ -51,6 +51,25 @@ typedef uint16_t MenaiType;
 #define MENAITYPE_BYTES 0x000e
 
 /*
+ * Menai VM error codes — returned as negative values by leaf modules
+ * (bigint, string, hashtable, etc.) and propagated by the VM to the bridge,
+ * which translates them into the appropriate Python exception.
+ *
+ * Functions returning int return MENAI_OK (0) on success or a negative
+ * MENAI_ERR_* code on failure.  Functions returning a pointer return NULL
+ * on failure; the only failure mode for most pointer-returning functions is
+ * allocation failure (MENAI_ERR_NOMEM), so the error code is implicit.
+ */
+#define MENAI_OK 0
+#define MENAI_ERR_NOMEM -1
+#define MENAI_ERR_VALUE -2
+#define MENAI_ERR_OVERFLOW -3
+#define MENAI_ERR_DIVZERO -4
+#define MENAI_ERR_TYPE -5
+#define MENAI_ERR_EVAL -6
+#define MENAI_ERR_CANCELLED -7
+
+/*
  * Fast type-check macros
  */
 #define IS_MENAI_NONE(o) (((MenaiValue *)(o))->ob_type == MENAITYPE_NONE)
@@ -909,11 +928,13 @@ int globals_build_from_arrays(GlobalsTable *gt, const char **names,
  *
  * Executes code with the given cached globals table and optional extra
  * bindings (a native MenaiDict, or NULL).  Returns a new reference to
- * the result, or NULL on error (Python exception set).
+ * the result, or NULL on error.  On error, *out_err is set to a
+ * MENAI_ERR_* code (out_err must not be NULL).
  */
 MenaiValue *menai_vm_execute_native(MenaiCodeObject *code,
                                     const GlobalsTable *globals,
-                                    MenaiValue *extra_bindings);
+                                    MenaiValue *extra_bindings,
+                                    int *out_err);
 
 void menai_vm_clear_cancel(void);
 

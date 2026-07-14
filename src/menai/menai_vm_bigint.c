@@ -78,8 +78,7 @@ _menai_bigint_add_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *r
     ssize_t out_len = max_len + 1;
     uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     uint64_t carry = 0;
@@ -109,8 +108,7 @@ _menai_bigint_sub_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *r
     ssize_t out_len = a->length;
     uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     int64_t borrow = 0;
@@ -152,8 +150,7 @@ _menai_bigint_divmod_1(
 
     uint32_t *qdigits = (uint32_t *)malloc((size_t)a->length * sizeof(uint32_t));
     if (qdigits == NULL) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     uint64_t rem = 0;
@@ -208,15 +205,13 @@ _menai_bigint_divmod_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt
     ssize_t un_len = m + 1;
     uint32_t *un = (uint32_t *)malloc((size_t)un_len * sizeof(uint32_t));
     if (un == NULL) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     uint32_t *vn = (uint32_t *)calloc((size_t)n, sizeof(uint32_t));
     if (vn == NULL) {
         free(un);
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     /* Shift a left by d bits into un. */
@@ -258,8 +253,7 @@ _menai_bigint_divmod_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt
     if (qdigits == NULL) {
         free(un);
         free(vn);
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     uint64_t vn1 = vn[n - 1];
@@ -336,8 +330,7 @@ _menai_bigint_divmod_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt
     if (rdigits == NULL) {
         free(un);
         free(vn);
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     if (d == 0) {
@@ -387,8 +380,7 @@ menai_bigint_copy(const MenaiBigInt *src, MenaiBigInt *dst)
 
     uint32_t *digits = (uint32_t *)malloc((size_t)src->length * sizeof(uint32_t));
     if (digits == NULL) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     memcpy(digits, src->digits, (size_t)src->length * sizeof(uint32_t));
@@ -429,8 +421,7 @@ menai_bigint_from_long(long v, MenaiBigInt *a)
 
     uint32_t *digits = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
     if (digits == NULL) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     digits[0] = (uint32_t)(mag & 0xFFFFFFFFUL);
@@ -465,8 +456,7 @@ menai_bigint_from_unsigned_long_long(unsigned long long v, MenaiBigInt *a)
 
     uint32_t *digits = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
     if (digits == NULL) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     digits[0] = (uint32_t)(mag & 0xFFFFFFFFUL);
@@ -486,8 +476,7 @@ int
 menai_bigint_from_string(const char *s, int base, MenaiBigInt *a)
 {
     if (s == NULL || (base != 2 && base != 8 && base != 10 && base != 16)) {
-        PyErr_SetString(PyExc_ValueError, "invalid base");
-        return -1;
+        return MENAI_ERR_VALUE;
     }
 
     /* Skip leading whitespace. */
@@ -504,8 +493,7 @@ menai_bigint_from_string(const char *s, int base, MenaiBigInt *a)
     }
 
     if (*s == '\0') {
-        PyErr_SetString(PyExc_ValueError, "empty integer string");
-        return -1;
+        return MENAI_ERR_VALUE;
     }
 
     /* Validate and convert characters. */
@@ -520,13 +508,11 @@ menai_bigint_from_string(const char *s, int base, MenaiBigInt *a)
         } else if (c >= 'A' && c <= 'F') {
             digit = c - 'A' + 10;
         } else {
-            PyErr_Format(PyExc_ValueError, "invalid character in integer string: '%c'", c);
-            return -1;
+            return MENAI_ERR_VALUE;
         }
 
         if (digit >= base) {
-            PyErr_Format(PyExc_ValueError, "invalid character for base %d: '%c'", base, c);
-            return -1;
+            return MENAI_ERR_VALUE;
         }
 
         p++;
@@ -612,22 +598,19 @@ int
 menai_bigint_from_codepoints(const uint32_t *data, ssize_t len, int base, MenaiBigInt *a)
 {
     if (base != 2 && base != 8 && base != 10 && base != 16) {
-        PyErr_SetString(PyExc_ValueError, "invalid base");
-        return -1;
+        return MENAI_ERR_VALUE;
     }
 
     /* Allow a leading sign plus all digit characters — all ASCII. */
     char *buf = (char *)malloc((size_t)(len + 1));
     if (!buf) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     for (ssize_t i = 0; i < len; i++) {
         if (data[i] > 0x7F) {
             free(buf);
-            PyErr_SetString(PyExc_ValueError, "non-ASCII character in integer string");
-            return -1;
+            return MENAI_ERR_VALUE;
         }
 
         buf[i] = (char)data[i];
@@ -645,7 +628,7 @@ menai_bigint_from_codepoints(const uint32_t *data, ssize_t len, int base, MenaiB
  *
  * Fast path: if trunc(v) fits in a long, delegate to menai_bigint_from_long.
  * Slow path: decompose the magnitude via frexp into 32-bit limbs, then
- * set the sign.  This avoids any Python C API call.
+ * set the sign.
  */
 int
 menai_bigint_from_double(double v, MenaiBigInt *a)
@@ -653,8 +636,7 @@ menai_bigint_from_double(double v, MenaiBigInt *a)
     /* Work with the magnitude; v is already trunc()'d by the caller. */
     double t = v < 0.0 ? -v : v;
     if (!isfinite(t)) {
-        PyErr_SetString(PyExc_ValueError, "cannot convert non-finite float to integer");
-        return -1;
+        return MENAI_ERR_VALUE;
     }
 
     /* Fast path: magnitude fits in a non-negative long. */
@@ -670,8 +652,7 @@ menai_bigint_from_double(double v, MenaiBigInt *a)
     ssize_t nlimbs = (exp + 31) / 32;
     uint32_t *digits = (uint32_t *)malloc((size_t)nlimbs * sizeof(uint32_t));
     if (!digits) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     for (ssize_t i = nlimbs - 1; i >= 0; i--) {
@@ -743,8 +724,7 @@ int
 menai_bigint_to_long(const MenaiBigInt *a, long *out)
 {
     if (!menai_bigint_fits_long(a)) {
-        PyErr_SetString(PyExc_OverflowError, "integer too large to convert to C long");
-        return -1;
+        return MENAI_ERR_OVERFLOW;
     }
 
     if (a->length == 0) {
@@ -790,8 +770,7 @@ int
 menai_bigint_to_unsigned_long_long(const MenaiBigInt *a, unsigned long long *out)
 {
     if (!menai_bigint_fits_unsigned_long_long(a)) {
-        PyErr_SetString(PyExc_OverflowError, "integer too large to convert to unsigned long long");
-        return -1;
+        return MENAI_ERR_OVERFLOW;
     }
 
     if (a->length == 0) {
@@ -827,8 +806,7 @@ menai_bigint_to_double(const MenaiBigInt *a, double *out)
     }
 
     if (!isfinite(result)) {
-        PyErr_SetString(PyExc_OverflowError, "integer too large to convert to float");
-        return -1;
+        return MENAI_ERR_OVERFLOW;
     }
 
     *out = (a->sign == -1) ? -result : result;
@@ -845,7 +823,6 @@ MenaiValue *
 menai_bigint_to_menai_string(const MenaiBigInt *a, int base)
 {
     if (base != 2 && base != 8 && base != 10 && base != 16) {
-        PyErr_SetString(PyExc_ValueError, "invalid base");
         return NULL;
     }
 
@@ -884,7 +861,6 @@ menai_bigint_to_menai_string(const MenaiBigInt *a, int base)
     uint32_t *buf = (uint32_t *)malloc((size_t)max_chars * sizeof(uint32_t));
     if (buf == NULL) {
         menai_bigint_free(&tmp);
-        PyErr_NoMemory();
         return NULL;
     }
 
@@ -1078,8 +1054,7 @@ menai_bigint_mul(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
     ssize_t out_len = a->length + b->length;
     uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     memset(digits, 0, (size_t)out_len * sizeof(uint32_t));
@@ -1118,8 +1093,7 @@ menai_bigint_divmod(
     MenaiBigInt *remainder)
 {
     if (b->sign == 0) {
-        PyErr_SetString(PyExc_ZeroDivisionError, "integer division or modulo by zero");
-        return -1;
+        return MENAI_ERR_DIVZERO;
     }
 
     if (a->sign == 0) {
@@ -1217,8 +1191,7 @@ int
 menai_bigint_floordiv(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     if (b->sign == 0) {
-        PyErr_SetString(PyExc_ZeroDivisionError, "integer division or modulo by zero");
-        return -1;
+        return MENAI_ERR_DIVZERO;
     }
 
     MenaiBigInt q, r;
@@ -1239,8 +1212,7 @@ int
 menai_bigint_mod(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     if (b->sign == 0) {
-        PyErr_SetString(PyExc_ZeroDivisionError, "integer division or modulo by zero");
-        return -1;
+        return MENAI_ERR_DIVZERO;
     }
 
     MenaiBigInt q, r;
@@ -1299,8 +1271,7 @@ int
 menai_bigint_pow(const MenaiBigInt *a, const MenaiBigInt *exp, MenaiBigInt *result)
 {
     if (exp->sign == -1) {
-        PyErr_SetString(PyExc_ValueError, "negative exponent in integer pow");
-        return -1;
+        return MENAI_ERR_VALUE;
     }
 
     /* result = 1 */
@@ -1390,7 +1361,7 @@ fail:
  * For positive numbers: digits as-is, with a leading zero word to ensure
  * the sign bit is clear.
  * For negative numbers: flip bits and add 1.
- * Returns NULL on allocation failure (PyErr_NoMemory set).
+ * Returns NULL on allocation failure.
  */
 static uint32_t *
 _to_twos_complement(const MenaiBigInt *a, ssize_t *len_out)
@@ -1398,7 +1369,6 @@ _to_twos_complement(const MenaiBigInt *a, ssize_t *len_out)
     ssize_t len = a->length + 1; /* extra word for sign bit */
     uint32_t *buf = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
     if (buf == NULL) {
-        PyErr_NoMemory();
         return NULL;
     }
 
@@ -1446,8 +1416,7 @@ _from_twos_complement(const uint32_t *buf, ssize_t len, MenaiBigInt *result)
         /* Positive: copy digits directly. */
         uint32_t *digits = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
         if (digits == NULL) {
-            PyErr_NoMemory();
-            return -1;
+            return MENAI_ERR_NOMEM;
         }
 
         for (ssize_t i = 0; i < len; i++) {
@@ -1462,8 +1431,7 @@ _from_twos_complement(const uint32_t *buf, ssize_t len, MenaiBigInt *result)
         /* Negative: negate to get magnitude. */
         uint32_t *digits = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
         if (digits == NULL) {
-            PyErr_NoMemory();
-            return -1;
+            return MENAI_ERR_NOMEM;
         }
 
         uint64_t carry = 1;
@@ -1504,8 +1472,7 @@ menai_bigint_and(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
     if (out == NULL) {
         free(ta);
         free(tb);
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     /* Sign-extend: positive extends with 0, negative extends with 0xFFFFFFFF. */
@@ -1548,8 +1515,7 @@ menai_bigint_or(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
     if (out == NULL) {
         free(ta);
         free(tb);
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     uint32_t ext_a = (a->sign == -1) ? 0xFFFFFFFFU : 0U;
@@ -1591,8 +1557,7 @@ menai_bigint_xor(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
     if (out == NULL) {
         free(ta);
         free(tb);
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     uint32_t ext_a = (a->sign == -1) ? 0xFFFFFFFFU : 0U;
@@ -1645,8 +1610,7 @@ int
 menai_bigint_shift_left(const MenaiBigInt *a, ssize_t shift, MenaiBigInt *result)
 {
     if (shift < 0) {
-        PyErr_SetString(PyExc_ValueError, "negative shift count");
-        return -1;
+        return MENAI_ERR_VALUE;
     }
 
     if (a->sign == 0 || shift == 0) {
@@ -1667,8 +1631,7 @@ menai_bigint_shift_left(const MenaiBigInt *a, ssize_t shift, MenaiBigInt *result
     ssize_t out_len = a->length + word_shift + 1;
     uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     memset(digits, 0, (size_t)out_len * sizeof(uint32_t));
@@ -1701,8 +1664,7 @@ int
 menai_bigint_shift_right(const MenaiBigInt *a, ssize_t shift, MenaiBigInt *result)
 {
     if (shift < 0) {
-        PyErr_SetString(PyExc_ValueError, "negative shift count");
-        return -1;
+        return MENAI_ERR_VALUE;
     }
 
     if (a->sign == 0) {
@@ -1759,8 +1721,7 @@ menai_bigint_shift_right(const MenaiBigInt *a, ssize_t shift, MenaiBigInt *resul
     ssize_t out_len = a->length - word_shift;
     uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     if (bit_shift == 0) {
