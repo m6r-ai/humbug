@@ -16,17 +16,15 @@
 #include "menai_vm_c.h"
 
 /*
- * _build_struct_type — shared constructor body for MenaiStructType.
+ * menai_struct_type_new — native constructor for MenaiStructType.
  * name must be a MenaiString * (borrowed).  tag is a C int.
- * fn_tup must be a Python tuple of PyUnicode field name strings (borrowed).
+ * field_names must be an array of MenaiString * values (borrowed).
  * Returns a new reference, or NULL on error.
  */
-static MenaiValue *
-_build_struct_type(MenaiValue *name, int tag, PyObject *fn_tup)
+MenaiValue *
+menai_struct_type_new(MenaiValue *name, int tag, MenaiValue **field_names, ssize_t nfields)
 {
-    ssize_t n = PyTuple_GET_SIZE(fn_tup);
-
-    size_t sz = sizeof(MenaiStructType) + (size_t)n * sizeof(MenaiFieldEntry);
+    size_t sz = sizeof(MenaiStructType) + (size_t)nfields * sizeof(MenaiFieldEntry);
     MenaiStructType *self = (MenaiStructType *)menai_alloc(sz);
     if (!self) {
         return NULL;
@@ -40,59 +38,25 @@ _build_struct_type(MenaiValue *name, int tag, PyObject *fn_tup)
     self->field_ht.used = 0;
     self->name = name;
     self->tag = tag;
-    self->nfields = (int)n;
+    self->nfields = (int)nfields;
 
-    for (ssize_t i = 0; i < n; i++) {
-        PyObject *fname = PyTuple_GET_ITEM(fn_tup, i);
-        MenaiValue *fname_str = menai_string_from_pyunicode(fname);
-        if (!fname_str) {
-            /* Release fields already populated, then the object. */
-            self->nfields = (int)i;
-            menai_struct_type_dealloc((MenaiValue *)self);
-            return NULL;
-        }
-
-        self->fields[i].name = fname_str;
+    for (ssize_t i = 0; i < nfields; i++) {
+        menai_retain(field_names[i]);
+        self->fields[i].name = field_names[i];
         self->fields[i].index = (int)i;
     }
 
-    if (menai_ht_init(&self->field_ht, n) < 0) {
+    if (menai_ht_init(&self->field_ht, nfields) < 0) {
         menai_struct_type_dealloc((MenaiValue *)self);
         return NULL;
     }
 
-    for (ssize_t i = 0; i < n; i++) {
+    for (ssize_t i = 0; i < nfields; i++) {
         Py_hash_t h = menai_string_hash(self->fields[i].name);
         menai_ht_insert(&self->field_ht, self->fields[i].name, h, i);
     }
 
     return (MenaiValue *)self;
-}
-
-MenaiValue *
-menai_struct_type_new_from_args(PyObject *args)
-{
-    PyObject *py_name = NULL, *field_names = NULL;
-    int tag = 0;
-    if (!PyArg_ParseTuple(args, "UiO", &py_name, &tag, &field_names)) {
-        return NULL;
-    }
-
-    PyObject *fn_tup = PySequence_Tuple(field_names);
-    if (!fn_tup) {
-        return NULL;
-    }
-
-    MenaiValue *name = menai_string_from_pyunicode(py_name);
-    if (!name) {
-        Py_DECREF(fn_tup);
-        return NULL;
-    }
-
-    MenaiValue *result = _build_struct_type(name, tag, fn_tup);
-    menai_release(name);
-    Py_DECREF(fn_tup);
-    return result;
 }
 
 MenaiValue *

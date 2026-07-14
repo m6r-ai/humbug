@@ -471,8 +471,6 @@ menai_string_get(MenaiValue *s, ssize_t i)
 MenaiValue *menai_string_from_utf8(const char *utf8, ssize_t nbytes);
 MenaiValue *menai_string_from_codepoints(const uint32_t *cp, ssize_t len);
 MenaiValue *menai_string_from_codepoint(uint32_t cp);
-MenaiValue *menai_string_from_pyunicode(PyObject *pystr);
-PyObject *menai_string_to_pyunicode(MenaiValue *s);
 char *menai_string_to_utf8(MenaiValue *s, ssize_t *out_nbytes);
 int menai_string_compare(MenaiValue *a, MenaiValue *b);
 int menai_string_equal(MenaiValue *a, MenaiValue *b);
@@ -690,7 +688,7 @@ menai_struct_field_index(MenaiStructType *st, MenaiValue *name)
 }
 
 MenaiValue *menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, ssize_t nfields);
-MenaiValue *menai_struct_type_new_from_args(PyObject *args);
+MenaiValue *menai_struct_type_new(MenaiValue *name, int tag, MenaiValue **field_names, ssize_t nfields);
 
 static inline void
 menai_struct_type_dealloc(MenaiValue *self)

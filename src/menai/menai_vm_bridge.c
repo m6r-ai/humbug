@@ -18,6 +18,37 @@
 #include "menai_vm_c.h"
 
 /*
+ * String conversion helpers — Python boundary only.
+ * These are the sole MenaiString <-> PyUnicode conversion functions.
+ * Native VM code uses menai_string_from_utf8 / menai_string_to_utf8 instead.
+ */
+static MenaiValue *
+menai_string_from_pyunicode(PyObject *pystr)
+{
+    ssize_t nbytes;
+    const char *utf8 = PyUnicode_AsUTF8AndSize(pystr, &nbytes);
+    if (!utf8) {
+        return NULL;
+    }
+
+    return menai_string_from_utf8(utf8, nbytes);
+}
+
+static PyObject *
+menai_string_to_pyunicode(MenaiValue *s)
+{
+    ssize_t nbytes;
+    char *utf8 = menai_string_to_utf8(s, &nbytes);
+    if (!utf8) {
+        return NULL;
+    }
+
+    PyObject *result = PyUnicode_FromStringAndSize(utf8, nbytes);
+    free(utf8);
+    return result;
+}
+
+/*
  * Slow-world type objects — fetched once at module init.
  * Used by menai_convert_value to identify slow objects by type.
  * Will be removed in Phase 2 when the compiler emits fast types directly.
@@ -350,17 +381,63 @@ menai_convert_value(PyObject *src)
             return NULL;
         }
 
-        PyObject *args = PyTuple_Pack(3, name, tag, fn);
+        MenaiValue *name_str = menai_string_from_pyunicode(name);
         Py_DECREF(name);
-        Py_DECREF(tag);
-        Py_DECREF(fn);
-        if (!args) {
+        if (!name_str) {
+            Py_DECREF(tag);
+            Py_DECREF(fn);
             return NULL;
         }
 
-        MenaiValue *r = menai_struct_type_new_from_args(args);
-        Py_DECREF(args);
-        return r;
+        int tag_val = (int)PyLong_AsLong(tag);
+        Py_DECREF(tag);
+        if (PyErr_Occurred()) {
+            menai_release(name_str);
+            Py_DECREF(fn);
+            return NULL;
+        }
+
+        PyObject *fn_tup = PySequence_Tuple(fn);
+        Py_DECREF(fn);
+        if (!fn_tup) {
+            menai_release(name_str);
+            return NULL;
+        }
+
+        ssize_t nfields = PyTuple_GET_SIZE(fn_tup);
+        MenaiValue **field_names_arr = NULL;
+        if (nfields > 0) {
+            field_names_arr = (MenaiValue **)calloc((size_t)nfields, sizeof(MenaiValue *));
+            if (!field_names_arr) {
+                menai_release(name_str);
+                Py_DECREF(fn_tup);
+                return NULL;
+            }
+
+            for (ssize_t i = 0; i < nfields; i++) {
+                PyObject *fname = PyTuple_GET_ITEM(fn_tup, i);
+                MenaiValue *fname_str = menai_string_from_pyunicode(fname);
+                if (!fname_str) {
+                    for (ssize_t j = 0; j < i; j++) {
+                        menai_release(field_names_arr[j]);
+                    }
+                    free(field_names_arr);
+                    menai_release(name_str);
+                    Py_DECREF(fn_tup);
+                    return NULL;
+                }
+                field_names_arr[i] = fname_str;
+            }
+        }
+
+        MenaiValue *result = menai_struct_type_new(name_str, tag_val, field_names_arr, nfields);
+        menai_release(name_str);
+        for (ssize_t i = 0; i < nfields; i++) {
+            menai_release(field_names_arr[i]);
+        }
+        free(field_names_arr);
+        Py_DECREF(fn_tup);
+        return result;
     }
 
     if (t == Slow_StructType) {

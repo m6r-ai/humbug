@@ -3,8 +3,8 @@
  *
  * Stores text as a UTF-32 codepoint array in a single allocation immediately
  * following the object header.  All string operations work directly on
- * uint32_t arrays.  The only Python string API used is PyUnicode at the
- * conversion boundary (menai_string_from_pyunicode / menai_string_to_pyunicode).
+ * uint32_t arrays.  Python string conversion is handled in the bridge layer
+ * (menai_vm_bridge.c) via menai_string_from_utf8 / menai_string_to_utf8.
  */
 #include <stdint.h>
 #include <stdlib.h>
@@ -1188,34 +1188,6 @@ menai_string_from_codepoint(uint32_t cp)
     obj->data[0] = cp;
 
     return (MenaiValue *)obj;
-}
-
-MenaiValue *
-menai_string_from_pyunicode(PyObject *pystr)
-{
-    ssize_t nbytes;
-    const char *utf8 = PyUnicode_AsUTF8AndSize(pystr, &nbytes);
-    if (!utf8) {
-        return NULL;
-    }
-
-    return menai_string_from_utf8(utf8, nbytes);
-}
-
-PyObject *
-menai_string_to_pyunicode(MenaiValue *s)
-{
-    MenaiString *ms = (MenaiString *)s;
-    ssize_t nbytes;
-    char *utf8 = _utf8_encode(ms->data, ms->length, &nbytes);
-    if (!utf8) {
-        return NULL;
-    }
-
-    PyObject *result = PyUnicode_FromStringAndSize(utf8, nbytes);
-    free(utf8);
-
-    return result;
 }
 
 char *
