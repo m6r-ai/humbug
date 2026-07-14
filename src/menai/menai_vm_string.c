@@ -1248,7 +1248,7 @@ menai_string_equal(MenaiValue *a, MenaiValue *b)
     return memcmp(ma->data, mb->data, (size_t)la * sizeof(uint32_t)) == 0;
 }
 
-Py_hash_t
+hash_t
 menai_string_hash(MenaiValue *s)
 {
     MenaiString *ms = (MenaiString *)s;
@@ -1266,7 +1266,7 @@ menai_string_hash(MenaiValue *s)
         h *= 1099511628211ULL;
     }
 
-    Py_hash_t result = (Py_hash_t)h;
+    hash_t result = (hash_t)h;
     if (result == -1) {
         result = -2;
     }

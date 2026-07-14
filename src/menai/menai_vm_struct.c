@@ -52,7 +52,7 @@ menai_struct_type_new(MenaiValue *name, int tag, MenaiValue **field_names, ssize
     }
 
     for (ssize_t i = 0; i < nfields; i++) {
-        Py_hash_t h = menai_string_hash(self->fields[i].name);
+        hash_t h = menai_string_hash(self->fields[i].name);
         menai_ht_insert(&self->field_ht, self->fields[i].name, h, i);
     }
 

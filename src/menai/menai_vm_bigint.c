@@ -939,7 +939,7 @@ menai_bigint_to_menai_string(const MenaiBigInt *a, int base)
  * sign.  Zero always hashes to 0.  The result is never -1 (which is reserved
  * as an error sentinel by convention); -1 is remapped to -2.
  */
-Py_hash_t
+hash_t
 menai_bigint_hash(const MenaiBigInt *a)
 {
     if (a->sign == 0) {
@@ -960,7 +960,7 @@ menai_bigint_hash(const MenaiBigInt *a)
         h = ~h;
     }
 
-    Py_hash_t result = (Py_hash_t)h;
+    hash_t result = (hash_t)h;
     return (result == -1) ? -2 : result;
 }
 

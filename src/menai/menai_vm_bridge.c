@@ -686,7 +686,7 @@ menai_convert_value(PyObject *src)
         Py_ssize_t n = PyTuple_GET_SIZE(pairs);
         MenaiValue **keys = n > 0 ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
         MenaiValue **values = n > 0 ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
-        Py_hash_t *hashes = n > 0 ? (Py_hash_t *)malloc(n * sizeof(Py_hash_t)) : NULL;
+        hash_t *hashes = n > 0 ? (hash_t *)malloc(n * sizeof(hash_t)) : NULL;
         if (n > 0 && (!keys || !values || !hashes)) {
             free(keys);
             free(values);
@@ -727,7 +727,7 @@ menai_convert_value(PyObject *src)
                 return NULL;
             }
 
-            Py_hash_t h = menai_value_hash(fk);
+            hash_t h = menai_value_hash(fk);
             if (h == -1) {
                 menai_release(fk);
                 menai_release(fv);
@@ -780,7 +780,7 @@ menai_convert_value(PyObject *src)
                 return NULL;
             }
 
-            Py_hash_t h = menai_value_hash(fe);
+            hash_t h = menai_value_hash(fe);
             if (h == -1) {
                 menai_release(fe);
                 for (Py_ssize_t j = 0; j < i; j++) {

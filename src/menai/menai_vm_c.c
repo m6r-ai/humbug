@@ -552,7 +552,7 @@ menai_symbol_name(MenaiValue *o)
  * Fast path for the common case where both are small (is_big == 0): plain C
  * comparison of the long values.  Falls back to menai_bigint_* for big integers.
  *
- * op must be one of Py_EQ, Py_NE, Py_LT, Py_GT, Py_LE, Py_GE.
+ * op must be one of MENAI_EQ, MENAI_NE, MENAI_LT, MENAI_GT, MENAI_LE, MENAI_GE.
  * Never fails.
  */
 static inline int
@@ -563,12 +563,12 @@ menai_integer_compare(MenaiValue* a, MenaiValue* b, int op)
     if (!ia->is_big && !ib->is_big) {
         long la = ia->small, lb = ib->small;
         switch (op) {
-        case Py_EQ: return la == lb;
-        case Py_NE: return la != lb;
-        case Py_LT: return la < lb;
-        case Py_GT: return la > lb;
-        case Py_LE: return la <= lb;
-        case Py_GE: return la >= lb;
+        case MENAI_EQ: return la == lb;
+        case MENAI_NE: return la != lb;
+        case MENAI_LT: return la < lb;
+        case MENAI_GT: return la > lb;
+        case MENAI_LE: return la <= lb;
+        case MENAI_GE: return la >= lb;
         }
     }
 
@@ -589,12 +589,12 @@ menai_integer_compare(MenaiValue* a, MenaiValue* b, int op)
     const MenaiBigInt *pb = ib->is_big ? mb : &tmp_b;
     int result;
     switch (op) {
-    case Py_EQ: result = menai_bigint_eq(pa, pb); break;
-    case Py_NE: result = menai_bigint_ne(pa, pb); break;
-    case Py_LT: result = menai_bigint_lt(pa, pb); break;
-    case Py_GT: result = menai_bigint_gt(pa, pb); break;
-    case Py_LE: result = menai_bigint_le(pa, pb); break;
-    case Py_GE: result = menai_bigint_ge(pa, pb); break;
+    case MENAI_EQ: result = menai_bigint_eq(pa, pb); break;
+    case MENAI_NE: result = menai_bigint_ne(pa, pb); break;
+    case MENAI_LT: result = menai_bigint_lt(pa, pb); break;
+    case MENAI_GT: result = menai_bigint_gt(pa, pb); break;
+    case MENAI_LE: result = menai_bigint_le(pa, pb); break;
+    case MENAI_GE: result = menai_bigint_ge(pa, pb); break;
     default: result = 0; break;
     }
 
@@ -938,8 +938,6 @@ parse_complex_string(const char *s, double *out_real, double *out_imag)
     *out_imag = imag_coeff;
     return 1;
 }
-
-static PyTypeObject *_py_code_object_type = NULL;
 
 /*
  * Frame struct
@@ -2154,7 +2152,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_EQ));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_EQ));
             break;
         }
 
@@ -2171,7 +2169,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_NE));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_NE));
             break;
         }
 
@@ -2188,7 +2186,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_LT));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_LT));
             break;
         }
 
@@ -2205,7 +2203,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_GT));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_GT));
             break;
         }
 
@@ -2222,7 +2220,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_LE));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_LE));
             break;
         }
 
@@ -2239,7 +2237,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_GE));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_GE));
             break;
         }
 
@@ -3050,7 +3048,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            menai_reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, Py_LE) ? a : b);
+            menai_reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, MENAI_LE) ? a : b);
             break;
         }
 
@@ -3067,7 +3065,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            menai_reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, Py_GE) ? a : b);
+            menai_reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, MENAI_GE) ? a : b);
             break;
         }
 
@@ -6717,7 +6715,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t out = 0;
             for (ssize_t i = 0; i < n && !lts_err; i++) {
                 MenaiValue *elem = lst->elements[i];
-                Py_hash_t h = menai_value_hash(elem);
+                hash_t h = menai_value_hash(elem);
                 if (h == -1) {
                     lts_err = 1;
                     break;
@@ -6921,7 +6919,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiDict *d = (MenaiDict *)a;
-            Py_hash_t h = menai_value_hash(key);
+            hash_t h = menai_value_hash(key);
             if (h == -1) {
                 goto error;
             }
@@ -6944,7 +6942,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiDict *d = (MenaiDict *)a;
-            Py_hash_t h = menai_value_hash(key);
+            hash_t h = menai_value_hash(key);
             if (h == -1) {
                 goto error;
             }
@@ -6976,7 +6974,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiDict *d = (MenaiDict *)a;
-            Py_hash_t h = menai_value_hash(key);
+            hash_t h = menai_value_hash(key);
             if (h == -1) {
                 goto error;
             }
@@ -6990,7 +6988,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t new_n = (replace_idx >= 0) ? n : n + 1;
             MenaiValue **nkeys = (MenaiValue **)malloc(new_n * sizeof(MenaiValue *));
             MenaiValue **nvals = (MenaiValue **)malloc(new_n * sizeof(MenaiValue *));
-            Py_hash_t *nhashes = (Py_hash_t *)malloc(new_n * sizeof(Py_hash_t));
+            hash_t *nhashes = (hash_t *)malloc(new_n * sizeof(hash_t));
             if (!nkeys || !nvals || !nhashes) {
                 free(nkeys);
                 free(nvals);
@@ -7050,7 +7048,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiDict *d = (MenaiDict *)a;
-            Py_hash_t h = menai_value_hash(key);
+            hash_t h = menai_value_hash(key);
             if (h == -1) {
                 goto error;
             }
@@ -7069,7 +7067,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t new_n = n - 1;
             MenaiValue **nkeys = new_n > 0 ? (MenaiValue **)malloc(new_n * sizeof(MenaiValue *)) : NULL;
             MenaiValue **nvals = new_n > 0 ? (MenaiValue **)malloc(new_n * sizeof(MenaiValue *)) : NULL;
-            Py_hash_t *nhashes = new_n > 0 ? (Py_hash_t *)malloc(new_n * sizeof(Py_hash_t)) : NULL;
+            hash_t *nhashes = new_n > 0 ? (hash_t *)malloc(new_n * sizeof(hash_t)) : NULL;
             if (new_n > 0 && (!nkeys || !nvals || !nhashes)) {
                 free(nkeys);
                 free(nvals);
@@ -7119,7 +7117,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t cap = na + nb;
             MenaiValue **nkeys = cap > 0 ? (MenaiValue **)malloc(cap * sizeof(MenaiValue *)) : NULL;
             MenaiValue **nvals = cap > 0 ? (MenaiValue **)malloc(cap * sizeof(MenaiValue *)) : NULL;
-            Py_hash_t *nhashes = cap > 0 ? (Py_hash_t *)malloc(cap * sizeof(Py_hash_t)) : NULL;
+            hash_t *nhashes = cap > 0 ? (hash_t *)malloc(cap * sizeof(hash_t)) : NULL;
             if (cap > 0 && (!nkeys || !nvals || !nhashes)) {
                 free(nkeys);
                 free(nvals);
@@ -7288,7 +7286,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiSet *s = (MenaiSet *)a;
-            Py_hash_t h = menai_value_hash(item);
+            hash_t h = menai_value_hash(item);
             if (h == -1) {
                 goto error;
             }
@@ -7312,7 +7310,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiSet *s = (MenaiSet *)a;
-            Py_hash_t h = menai_value_hash(item);
+            hash_t h = menai_value_hash(item);
             if (h == -1) {
                 goto error;
             }
@@ -7365,7 +7363,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiSet *s = (MenaiSet *)a;
-            Py_hash_t h = menai_value_hash(item);
+            hash_t h = menai_value_hash(item);
             if (h == -1) {
                 goto error;
             }
@@ -7768,7 +7766,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet *s = (MenaiSet *)r;
             for (int i = 0; i < n; i++) {
                 MenaiValue *elem = regs[base + src0 + i];
-                Py_hash_t h = menai_value_hash(elem);
+                hash_t h = menai_value_hash(elem);
                 if (h == -1) {
                     menai_release(r);
                     goto error;
@@ -7813,7 +7811,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             for (int i = 0; i < n; i++) {
                 MenaiValue *k = regs[base + src0 + i * 2];
                 MenaiValue *v = regs[base + src0 + i * 2 + 1];
-                Py_hash_t h = menai_value_hash(k);
+                hash_t h = menai_value_hash(k);
                 if (h == -1) {
                     free(keys);
                     free(values);
@@ -8289,19 +8287,6 @@ menai_vm_shim_init(void)
     if (!menai_vm_bridge_init()) {
         return -1;
     }
-
-    PyObject *bytecode_mod = PyImport_ImportModule("menai.menai_bytecode");
-    if (!bytecode_mod) {
-        return -1;
-    }
-
-    PyObject *co_type = PyObject_GetAttrString(bytecode_mod, "CodeObject");
-    Py_DECREF(bytecode_mod);
-    if (!co_type) {
-        return -1;
-    }
-
-    _py_code_object_type = (PyTypeObject *)co_type;
 
     Menai_NONE = menai_none_singleton();
     Menai_TRUE = menai_boolean_true();
