@@ -1,9 +1,6 @@
 /*
  * menai_vm_bridge.c — Python boundary layer for all Menai runtime value types.
  *
- * Provides:
- *   menai_convert_value() — slow menai_value.py -> fast C type
- *
  * Also defines the boundary describe/to_python functions forward-declared in
  * menai_vm_hashtable.c.
  *
@@ -17,6 +14,8 @@
 #include <stdint.h>
 
 #include "menai_vm_c.h"
+
+static MenaiValue *menai_convert_value(PyObject *src);
 
 /*
  * Conversion helpers — Python boundary only.
@@ -515,7 +514,7 @@ fail:
  * captured_values are NOT recursively converted here — call_setup in the VM
  * does that lazily at call time to avoid cycles in letrec closures.
  */
-MenaiValue *
+static MenaiValue *
 menai_convert_value(PyObject *src)
 {
     PyTypeObject *t = Py_TYPE(src);
@@ -1014,7 +1013,7 @@ fetch_slow_type(PyObject *mod, const char *name, PyTypeObject **dst)
  *
  * Returns a new reference, or NULL on error with a Python exception set.
  */
-PyObject *
+static PyObject *
 menai_value_to_slow_value(MenaiValue *val)
 {
     MenaiType t = val->ob_type;

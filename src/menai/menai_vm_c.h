@@ -865,8 +865,6 @@ menai_set_dealloc(MenaiValue *self)
     menai_free(self);
 }
 
-MenaiValue *menai_convert_value(PyObject *src);
-PyObject *menai_value_to_slow_value(MenaiValue *raw);
 int menai_vm_bridge_init(void);
 
 MenaiValue *menai_format_float(double v);
