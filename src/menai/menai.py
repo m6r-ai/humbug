@@ -715,6 +715,104 @@ class Menai:
    (bytes-read-i24-be (lambda (b off) ($bytes-read-i24-be b off)))
    (bytes-read-i32-be (lambda (b off) ($bytes-read-i32-be b off)))
    (bytes-read-i64-be (lambda (b off) ($bytes-read-i64-be b off)))
+   (bytes-append-u16-le (lambda (b v) ($bytes-append-u16-le b v)))
+   (bytes-append-u16-be (lambda (b v) ($bytes-append-u16-be b v)))
+   (bytes-append-u24-le (lambda (b v) ($bytes-append-u24-le b v)))
+   (bytes-append-u24-be (lambda (b v) ($bytes-append-u24-be b v)))
+   (bytes-append-u32-le (lambda (b v) ($bytes-append-u32-le b v)))
+   (bytes-append-u32-be (lambda (b v) ($bytes-append-u32-be b v)))
+   (bytes-append-u64-le (lambda (b v) ($bytes-append-u64-le b v)))
+   (bytes-append-u64-be (lambda (b v) ($bytes-append-u64-be b v)))
+   (bytes-append-i8 (lambda (b v) ($bytes-append-i8 b v)))
+   (bytes-append-i16-le (lambda (b v) ($bytes-append-i16-le b v)))
+   (bytes-append-i16-be (lambda (b v) ($bytes-append-i16-be b v)))
+   (bytes-append-i24-le (lambda (b v) ($bytes-append-i24-le b v)))
+   (bytes-append-i24-be (lambda (b v) ($bytes-append-i24-be b v)))
+   (bytes-append-i32-le (lambda (b v) ($bytes-append-i32-le b v)))
+   (bytes-append-i32-be (lambda (b v) ($bytes-append-i32-be b v)))
+   (bytes-append-i64-le (lambda (b v) ($bytes-append-i64-le b v)))
+   (bytes-append-i64-be (lambda (b v) ($bytes-append-i64-be b v)))
+   (bytes-write-u8 (lambda (b off v) ($bytes-write-u8 b off v)))
+   (bytes-write-u16-le (lambda (b off v) ($bytes-write-u16-le b off v)))
+   (bytes-write-u16-be (lambda (b off v) ($bytes-write-u16-be b off v)))
+   (bytes-write-u24-le (lambda (b off v) ($bytes-write-u24-le b off v)))
+   (bytes-write-u24-be (lambda (b off v) ($bytes-write-u24-be b off v)))
+   (bytes-write-u32-le (lambda (b off v) ($bytes-write-u32-le b off v)))
+   (bytes-write-u32-be (lambda (b off v) ($bytes-write-u32-be b off v)))
+   (bytes-write-u64-le (lambda (b off v) ($bytes-write-u64-le b off v)))
+   (bytes-write-u64-be (lambda (b off v) ($bytes-write-u64-be b off v)))
+   (bytes-write-i8 (lambda (b off v) ($bytes-write-i8 b off v)))
+   (bytes-write-i16-le (lambda (b off v) ($bytes-write-i16-le b off v)))
+   (bytes-write-i16-be (lambda (b off v) ($bytes-write-i16-be b off v)))
+   (bytes-write-i24-le (lambda (b off v) ($bytes-write-i24-le b off v)))
+   (bytes-write-i24-be (lambda (b off v) ($bytes-write-i24-be b off v)))
+   (bytes-write-i32-le (lambda (b off v) ($bytes-write-i32-le b off v)))
+   (bytes-write-i32-be (lambda (b off v) ($bytes-write-i32-be b off v)))
+   (bytes-write-i64-le (lambda (b off v) ($bytes-write-i64-le b off v)))
+   (bytes-write-i64-be (lambda (b off v) ($bytes-write-i64-be b off v)))
+   (bytes-read-uleb128 (lambda (b off) ($bytes-read-uleb128 b off)))
+   (bytes-append-uleb128 (lambda (b v) ($bytes-append-uleb128 b v)))
+   (bytes-read-sleb128 (lambda (b off) ($bytes-read-sleb128 b off)))
+   (bytes-append-sleb128 (lambda (b v) ($bytes-append-sleb128 b v)))
+   (map-bytes (lambda (f b)
+                (letrec ((loop (lambda (i acc)
+                                 (if (integer=? i (bytes-length b))
+                                     acc
+                                     (loop (integer+ i 1)
+                                           (bytes-append-u8 acc (f (bytes-ref b i))))))))
+                  (loop 0 (string-hex->bytes "")))))
+   (filter-bytes (lambda (f b)
+                   (letrec ((loop (lambda (i acc)
+                                    (if (integer=? i (bytes-length b))
+                                        acc
+                                        (let ((byte (bytes-ref b i)))
+                                          (loop (integer+ i 1)
+                                                (if (f byte)
+                                                    (bytes-append-u8 acc byte)
+                                                    acc)))))))
+                     (loop 0 (string-hex->bytes "")))))
+   (fold-bytes (lambda (f init b)
+                 (letrec ((loop (lambda (i acc)
+                                  (if (integer=? i (bytes-length b))
+                                      acc
+                                      (loop (integer+ i 1)
+                                            (f acc (bytes-ref b i)))))))
+                   (loop 0 init))))
+   (zip-bytes (lambda (b1 b2)
+                (letrec ((loop (lambda (i acc)
+                                 (if (or (integer=? i (bytes-length b1))
+                                         (integer=? i (bytes-length b2)))
+                                     (list-reverse acc)
+                                     (loop (integer+ i 1)
+                                         (list-prepend acc
+                                                       (list (bytes-ref b1 i)
+                                                             (bytes-ref b2 i))))))))
+                  (loop 0 (list)))))
+   (bytes-empty? (lambda (b) (integer=? (bytes-length b) 0)))
+   (bytes-prefix? (lambda (b prefix)
+                     (and (integer<=? (bytes-length prefix) (bytes-length b))
+                          (bytes=? (bytes-slice b 0 (bytes-length prefix)) prefix))))
+   (bytes-suffix? (lambda (b suffix)
+                     (and (integer<=? (bytes-length suffix) (bytes-length b))
+                          (bytes=? (bytes-slice b (integer- (bytes-length b) (bytes-length suffix)))
+                                    suffix))))
+   (bytes-split (lambda (b delimiter)
+                  (let ((dlen (bytes-length delimiter)))
+                    (if (integer=? dlen 0)
+                        (error "bytes-split: delimiter must be non-empty")
+                        (letrec ((loop (lambda (start acc)
+                                         (match (bytes-index delimiter (bytes-slice b start (bytes-length b)))
+                                          (#none (list-reverse (list-prepend acc (bytes-slice b start (bytes-length b)))))
+                                           (pos (loop (integer+ start pos dlen)
+                                                     (list-prepend acc (bytes-slice b start (integer+ start pos)))))))))
+                          (loop 0 (list)))))))
+   (bytes-split-int (lambda (b byte)
+                      (letrec ((loop (lambda (start acc)
+                                       (match (bytes-index-int byte (bytes-slice b start (bytes-length b)))
+                                         (#none (list-reverse (list-prepend acc (bytes-slice b start (bytes-length b)))))
+                                         (pos (loop (integer+ start pos 1)
+                                                    (list-prepend acc (bytes-slice b start (integer+ start pos)))))))))
+                        (loop 0 (list)))))
    (list (lambda (. args) args))
    (list? (lambda (x) ($list? x)))
    (list=? (lambda (. args)
@@ -1234,6 +1332,54 @@ class Menai:
         "bytes-read-i24-be" bytes-read-i24-be
         "bytes-read-i32-be" bytes-read-i32-be
         "bytes-read-i64-be" bytes-read-i64-be
+        "bytes-append-u16-le" bytes-append-u16-le
+        "bytes-append-u16-be" bytes-append-u16-be
+        "bytes-append-u24-le" bytes-append-u24-le
+        "bytes-append-u24-be" bytes-append-u24-be
+        "bytes-append-u32-le" bytes-append-u32-le
+        "bytes-append-u32-be" bytes-append-u32-be
+        "bytes-append-u64-le" bytes-append-u64-le
+        "bytes-append-u64-be" bytes-append-u64-be
+        "bytes-append-i8" bytes-append-i8
+        "bytes-append-i16-le" bytes-append-i16-le
+        "bytes-append-i16-be" bytes-append-i16-be
+        "bytes-append-i24-le" bytes-append-i24-le
+        "bytes-append-i24-be" bytes-append-i24-be
+        "bytes-append-i32-le" bytes-append-i32-le
+        "bytes-append-i32-be" bytes-append-i32-be
+        "bytes-append-i64-le" bytes-append-i64-le
+        "bytes-append-i64-be" bytes-append-i64-be
+        "bytes-write-u8" bytes-write-u8
+        "bytes-write-u16-le" bytes-write-u16-le
+        "bytes-write-u16-be" bytes-write-u16-be
+        "bytes-write-u24-le" bytes-write-u24-le
+        "bytes-write-u24-be" bytes-write-u24-be
+        "bytes-write-u32-le" bytes-write-u32-le
+        "bytes-write-u32-be" bytes-write-u32-be
+        "bytes-write-u64-le" bytes-write-u64-le
+        "bytes-write-u64-be" bytes-write-u64-be
+        "bytes-write-i8" bytes-write-i8
+        "bytes-write-i16-le" bytes-write-i16-le
+        "bytes-write-i16-be" bytes-write-i16-be
+        "bytes-write-i24-le" bytes-write-i24-le
+        "bytes-write-i24-be" bytes-write-i24-be
+        "bytes-write-i32-le" bytes-write-i32-le
+        "bytes-write-i32-be" bytes-write-i32-be
+        "bytes-write-i64-le" bytes-write-i64-le
+        "bytes-write-i64-be" bytes-write-i64-be
+        "bytes-read-uleb128" bytes-read-uleb128
+        "bytes-append-uleb128" bytes-append-uleb128
+        "bytes-read-sleb128" bytes-read-sleb128
+        "bytes-append-sleb128" bytes-append-sleb128
+        "map-bytes" map-bytes
+        "filter-bytes" filter-bytes
+        "fold-bytes" fold-bytes
+        "zip-bytes" zip-bytes
+        "bytes-empty?" bytes-empty?
+        "bytes-prefix?" bytes-prefix?
+        "bytes-suffix?" bytes-suffix?
+        "bytes-split" bytes-split
+        "bytes-split-int" bytes-split-int
         "pi" pi
         "e" e))
 """

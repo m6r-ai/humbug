@@ -317,6 +317,51 @@ class Opcode(IntEnum):
     BYTES_READ_I64_BE = _op(477, 2)     # r_dest = (bytes-read-i64-be r_src0 r_src1)
 
 
+    # Bytes operations — multi-byte append
+    BYTES_APPEND_U16_LE = _op(481, 2)   # r_dest = (bytes-append-u16-le r_src0 r_src1)
+    BYTES_APPEND_U16_BE = _op(482, 2)   # r_dest = (bytes-append-u16-be r_src0 r_src1)
+    BYTES_APPEND_U24_LE = _op(483, 2)   # r_dest = (bytes-append-u24-le r_src0 r_src1)
+    BYTES_APPEND_U24_BE = _op(484, 2)   # r_dest = (bytes-append-u24-be r_src0 r_src1)
+    BYTES_APPEND_U32_LE = _op(485, 2)   # r_dest = (bytes-append-u32-le r_src0 r_src1)
+    BYTES_APPEND_U32_BE = _op(486, 2)   # r_dest = (bytes-append-u32-be r_src0 r_src1)
+    BYTES_APPEND_U64_LE = _op(487, 2)   # r_dest = (bytes-append-u64-le r_src0 r_src1)
+    BYTES_APPEND_U64_BE = _op(488, 2)   # r_dest = (bytes-append-u64-be r_src0 r_src1)
+    BYTES_APPEND_I8 = _op(489, 2)       # r_dest = (bytes-append-i8 r_src0 r_src1)
+    BYTES_APPEND_I16_LE = _op(490, 2)   # r_dest = (bytes-append-i16-le r_src0 r_src1)
+    BYTES_APPEND_I16_BE = _op(491, 2)   # r_dest = (bytes-append-i16-be r_src0 r_src1)
+    BYTES_APPEND_I24_LE = _op(492, 2)   # r_dest = (bytes-append-i24-le r_src0 r_src1)
+    BYTES_APPEND_I24_BE = _op(493, 2)   # r_dest = (bytes-append-i24-be r_src0 r_src1)
+    BYTES_APPEND_I32_LE = _op(494, 2)   # r_dest = (bytes-append-i32-le r_src0 r_src1)
+    BYTES_APPEND_I32_BE = _op(495, 2)   # r_dest = (bytes-append-i32-be r_src0 r_src1)
+    BYTES_APPEND_I64_LE = _op(496, 2)   # r_dest = (bytes-append-i64-le r_src0 r_src1)
+    BYTES_APPEND_I64_BE = _op(497, 2)   # r_dest = (bytes-append-i64-be r_src0 r_src1)
+
+    # Bytes operations — multi-byte write
+    BYTES_WRITE_U8 = _op(500, 3)        # r_dest = (bytes-write-u8 r_src0 r_src1 r_src2)
+    BYTES_WRITE_U16_LE = _op(501, 3)    # r_dest = (bytes-write-u16-le r_src0 r_src1 r_src2)
+    BYTES_WRITE_U16_BE = _op(502, 3)    # r_dest = (bytes-write-u16-be r_src0 r_src1 r_src2)
+    BYTES_WRITE_U24_LE = _op(503, 3)    # r_dest = (bytes-write-u24-le r_src0 r_src1 r_src2)
+    BYTES_WRITE_U24_BE = _op(504, 3)    # r_dest = (bytes-write-u24-be r_src0 r_src1 r_src2)
+    BYTES_WRITE_U32_LE = _op(505, 3)    # r_dest = (bytes-write-u32-le r_src0 r_src1 r_src2)
+    BYTES_WRITE_U32_BE = _op(506, 3)    # r_dest = (bytes-write-u32-be r_src0 r_src1 r_src2)
+    BYTES_WRITE_U64_LE = _op(507, 3)    # r_dest = (bytes-write-u64-le r_src0 r_src1 r_src2)
+    BYTES_WRITE_U64_BE = _op(508, 3)    # r_dest = (bytes-write-u64-be r_src0 r_src1 r_src2)
+    BYTES_WRITE_I8 = _op(509, 3)        # r_dest = (bytes-write-i8 r_src0 r_src1 r_src2)
+    BYTES_WRITE_I16_LE = _op(510, 3)    # r_dest = (bytes-write-i16-le r_src0 r_src1 r_src2)
+    BYTES_WRITE_I16_BE = _op(511, 3)    # r_dest = (bytes-write-i16-be r_src0 r_src1 r_src2)
+    BYTES_WRITE_I24_LE = _op(512, 3)    # r_dest = (bytes-write-i24-le r_src0 r_src1 r_src2)
+    BYTES_WRITE_I24_BE = _op(513, 3)    # r_dest = (bytes-write-i24-be r_src0 r_src1 r_src2)
+    BYTES_WRITE_I32_LE = _op(514, 3)    # r_dest = (bytes-write-i32-le r_src0 r_src1 r_src2)
+    BYTES_WRITE_I32_BE = _op(515, 3)    # r_dest = (bytes-write-i32-be r_src0 r_src1 r_src2)
+    BYTES_WRITE_I64_LE = _op(516, 3)    # r_dest = (bytes-write-i64-le r_src0 r_src1 r_src2)
+    BYTES_WRITE_I64_BE = _op(517, 3)    # r_dest = (bytes-write-i64-be r_src0 r_src1 r_src2)
+
+    # Bytes operations — variable-length integers (LEB128)
+    BYTES_READ_ULEB128 = _op(520, 2)    # r_dest = (bytes-read-uleb128 r_src0 r_src1)
+    BYTES_APPEND_ULEB128 = _op(521, 2)  # r_dest = (bytes-append-uleb128 r_src0 r_src1)
+    BYTES_READ_SLEB128 = _op(522, 2)    # r_dest = (bytes-read-sleb128 r_src0 r_src1)
+    BYTES_APPEND_SLEB128 = _op(523, 2)  # r_dest = (bytes-append-sleb128 r_src0 r_src1)
+
 # Maps builtin function name → (opcode, arity) for all fixed-arity builtins.
 #
 # Variadic builtins that are fold-reduced by the desugarer appear here with
@@ -557,6 +602,51 @@ BUILTIN_OPCODE_MAP: dict[str, tuple[Opcode, int]] = {
     'bytes-read-i24-be': (Opcode.BYTES_READ_I24_BE, 2),
     'bytes-read-i32-be': (Opcode.BYTES_READ_I32_BE, 2),
     'bytes-read-i64-be': (Opcode.BYTES_READ_I64_BE, 2),
+
+    # Bytes operations — multi-byte append
+    'bytes-append-u16-le': (Opcode.BYTES_APPEND_U16_LE, 2),
+    'bytes-append-u16-be': (Opcode.BYTES_APPEND_U16_BE, 2),
+    'bytes-append-u24-le': (Opcode.BYTES_APPEND_U24_LE, 2),
+    'bytes-append-u24-be': (Opcode.BYTES_APPEND_U24_BE, 2),
+    'bytes-append-u32-le': (Opcode.BYTES_APPEND_U32_LE, 2),
+    'bytes-append-u32-be': (Opcode.BYTES_APPEND_U32_BE, 2),
+    'bytes-append-u64-le': (Opcode.BYTES_APPEND_U64_LE, 2),
+    'bytes-append-u64-be': (Opcode.BYTES_APPEND_U64_BE, 2),
+    'bytes-append-i8': (Opcode.BYTES_APPEND_I8, 2),
+    'bytes-append-i16-le': (Opcode.BYTES_APPEND_I16_LE, 2),
+    'bytes-append-i16-be': (Opcode.BYTES_APPEND_I16_BE, 2),
+    'bytes-append-i24-le': (Opcode.BYTES_APPEND_I24_LE, 2),
+    'bytes-append-i24-be': (Opcode.BYTES_APPEND_I24_BE, 2),
+    'bytes-append-i32-le': (Opcode.BYTES_APPEND_I32_LE, 2),
+    'bytes-append-i32-be': (Opcode.BYTES_APPEND_I32_BE, 2),
+    'bytes-append-i64-le': (Opcode.BYTES_APPEND_I64_LE, 2),
+    'bytes-append-i64-be': (Opcode.BYTES_APPEND_I64_BE, 2),
+
+    # Bytes operations — multi-byte write
+    'bytes-write-u8': (Opcode.BYTES_WRITE_U8, 3),
+    'bytes-write-u16-le': (Opcode.BYTES_WRITE_U16_LE, 3),
+    'bytes-write-u16-be': (Opcode.BYTES_WRITE_U16_BE, 3),
+    'bytes-write-u24-le': (Opcode.BYTES_WRITE_U24_LE, 3),
+    'bytes-write-u24-be': (Opcode.BYTES_WRITE_U24_BE, 3),
+    'bytes-write-u32-le': (Opcode.BYTES_WRITE_U32_LE, 3),
+    'bytes-write-u32-be': (Opcode.BYTES_WRITE_U32_BE, 3),
+    'bytes-write-u64-le': (Opcode.BYTES_WRITE_U64_LE, 3),
+    'bytes-write-u64-be': (Opcode.BYTES_WRITE_U64_BE, 3),
+    'bytes-write-i8': (Opcode.BYTES_WRITE_I8, 3),
+    'bytes-write-i16-le': (Opcode.BYTES_WRITE_I16_LE, 3),
+    'bytes-write-i16-be': (Opcode.BYTES_WRITE_I16_BE, 3),
+    'bytes-write-i24-le': (Opcode.BYTES_WRITE_I24_LE, 3),
+    'bytes-write-i24-be': (Opcode.BYTES_WRITE_I24_BE, 3),
+    'bytes-write-i32-le': (Opcode.BYTES_WRITE_I32_LE, 3),
+    'bytes-write-i32-be': (Opcode.BYTES_WRITE_I32_BE, 3),
+    'bytes-write-i64-le': (Opcode.BYTES_WRITE_I64_LE, 3),
+    'bytes-write-i64-be': (Opcode.BYTES_WRITE_I64_BE, 3),
+
+    # Bytes operations — variable-length integers (LEB128)
+    'bytes-read-uleb128': (Opcode.BYTES_READ_ULEB128, 2),
+    'bytes-append-uleb128': (Opcode.BYTES_APPEND_ULEB128, 2),
+    'bytes-read-sleb128': (Opcode.BYTES_READ_SLEB128, 2),
+    'bytes-append-sleb128': (Opcode.BYTES_APPEND_SLEB128, 2),
 }
 
 

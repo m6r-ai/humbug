@@ -473,6 +473,51 @@ static _menai_atomic_int _cancel_requested = 0;
 #define OP_BYTES_READ_I32_BE 476
 #define OP_BYTES_READ_I64_BE 477
 
+/* Bytes multi-byte append opcodes */
+#define OP_BYTES_APPEND_U16_LE 481
+#define OP_BYTES_APPEND_U16_BE 482
+#define OP_BYTES_APPEND_U24_LE 483
+#define OP_BYTES_APPEND_U24_BE 484
+#define OP_BYTES_APPEND_U32_LE 485
+#define OP_BYTES_APPEND_U32_BE 486
+#define OP_BYTES_APPEND_U64_LE 487
+#define OP_BYTES_APPEND_U64_BE 488
+#define OP_BYTES_APPEND_I8 489
+#define OP_BYTES_APPEND_I16_LE 490
+#define OP_BYTES_APPEND_I16_BE 491
+#define OP_BYTES_APPEND_I24_LE 492
+#define OP_BYTES_APPEND_I24_BE 493
+#define OP_BYTES_APPEND_I32_LE 494
+#define OP_BYTES_APPEND_I32_BE 495
+#define OP_BYTES_APPEND_I64_LE 496
+#define OP_BYTES_APPEND_I64_BE 497
+
+/* Bytes multi-byte write opcodes */
+#define OP_BYTES_WRITE_U8 500
+#define OP_BYTES_WRITE_U16_LE 501
+#define OP_BYTES_WRITE_U16_BE 502
+#define OP_BYTES_WRITE_U24_LE 503
+#define OP_BYTES_WRITE_U24_BE 504
+#define OP_BYTES_WRITE_U32_LE 505
+#define OP_BYTES_WRITE_U32_BE 506
+#define OP_BYTES_WRITE_U64_LE 507
+#define OP_BYTES_WRITE_U64_BE 508
+#define OP_BYTES_WRITE_I8 509
+#define OP_BYTES_WRITE_I16_LE 510
+#define OP_BYTES_WRITE_I16_BE 511
+#define OP_BYTES_WRITE_I24_LE 512
+#define OP_BYTES_WRITE_I24_BE 513
+#define OP_BYTES_WRITE_I32_LE 514
+#define OP_BYTES_WRITE_I32_BE 515
+#define OP_BYTES_WRITE_I64_LE 516
+#define OP_BYTES_WRITE_I64_BE 517
+
+/* Bytes LEB128 opcodes */
+#define OP_BYTES_READ_ULEB128 520
+#define OP_BYTES_APPEND_ULEB128 521
+#define OP_BYTES_READ_SLEB128 522
+#define OP_BYTES_APPEND_SLEB128 523
+
 /*
  * Singleton values fetched from menai_vm_bridge at init time.
  */
@@ -5894,6 +5939,367 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         BYTES_READ_MULTI(OP_BYTES_READ_I64_BE, 8, 1, 0)
 
 #undef BYTES_READ_MULTI
+
+        /*
+         * Multi-byte append helpers using a shared pattern.  Each takes bytes
+         * and an integer value, encodes the value into N bytes in the specified
+         * endianness, appends them, and returns the new bytes.
+         * For signed variants the value range check uses the signed range.
+         */
+#define BYTES_APPEND_MULTI(opcode_name, width, is_signed, le) \
+        case opcode_name: { \
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK); \
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK); \
+            MenaiValue *b = regs[base + src0]; \
+            MenaiValue *v = regs[base + src1]; \
+            if (!require_bytes(b, #opcode_name)) { \
+                goto error; \
+            } \
+            if (!IS_MENAI_INTEGER(v)) { \
+                menai_raise_eval_error(#opcode_name ": value must be an integer"); \
+                goto error; \
+            } \
+            long val = integer_to_long(v); \
+            if (is_signed) { \
+                if ((width) < (int)sizeof(long)) { \
+                   long max_val = (long)((1UL << ((width) * 8 - 1)) - 1); \
+                   if (val < -max_val - 1 || val > max_val) { \
+                       menai_raise_eval_errorf(#opcode_name ": value %ld out of range", val); \
+                       goto error; \
+                   } \
+                } \
+                unsigned long uval = (unsigned long)val; \
+                MenaiValue *_r = menai_bytes_append_multi(b, uval, (width), le); \
+                if (_r == NULL) { goto error; } \
+                menai_reg_set_own(regs, base + dest, _r); \
+            } else { \
+                if (val < 0 || ((width) < (int)sizeof(long) && val > (long)((1UL << ((width) * 8)) - 1))) { \
+                    menai_raise_eval_errorf(#opcode_name ": value %ld out of range", val); \
+                    goto error; \
+                } \
+                unsigned long uval = (unsigned long)val; \
+                MenaiValue *_r = menai_bytes_append_multi(b, uval, (width), le); \
+                if (_r == NULL) { goto error; } \
+                menai_reg_set_own(regs, base + dest, _r); \
+            } \
+            break; \
+        }
+
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_U16_LE, 2, 0, 1)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_U16_BE, 2, 0, 0)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_U24_LE, 3, 0, 1)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_U24_BE, 3, 0, 0)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_U32_LE, 4, 0, 1)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_U32_BE, 4, 0, 0)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_U64_LE, 8, 0, 1)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_U64_BE, 8, 0, 0)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_I8, 1, 1, 1)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_I16_LE, 2, 1, 1)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_I16_BE, 2, 1, 0)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_I24_LE, 3, 1, 1)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_I24_BE, 3, 1, 0)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_I32_LE, 4, 1, 1)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_I32_BE, 4, 1, 0)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_I64_LE, 8, 1, 1)
+        BYTES_APPEND_MULTI(OP_BYTES_APPEND_I64_BE, 8, 1, 0)
+
+#undef BYTES_APPEND_MULTI
+
+        /*
+         * Multi-byte write helpers.  Each takes bytes, offset, and integer value,
+         * writes the encoded value at the offset, and returns the new bytes.
+         * For signed variants the value range check uses the signed range.
+         */
+#define BYTES_WRITE_MULTI(opcode_name, width, is_signed, le) \
+        case opcode_name: { \
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK); \
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK); \
+            int src2 = (int)(word & FIELD_MASK); \
+            MenaiValue *b = regs[base + src0]; \
+            MenaiValue *off_val = regs[base + src1]; \
+            MenaiValue *v = regs[base + src2]; \
+            if (!require_bytes(b, #opcode_name)) { \
+                goto error; \
+            } \
+            if (!IS_MENAI_INTEGER(off_val)) { \
+                menai_raise_eval_error(#opcode_name ": offset must be an integer"); \
+                goto error; \
+            } \
+            if (!IS_MENAI_INTEGER(v)) { \
+                menai_raise_eval_error(#opcode_name ": value must be an integer"); \
+                goto error; \
+            } \
+            ssize_t offset = integer_to_ssize_t(off_val); \
+            ssize_t blen = menai_bytes_length(b); \
+            if (offset < 0 || offset + (width) > blen) { \
+                menai_raise_eval_errorf(#opcode_name ": offset %zd out of bounds for length %zd", offset, blen); \
+                goto error; \
+            } \
+            long val = integer_to_long(v); \
+            if (is_signed) { \
+               if ((width) < (int)sizeof(long)) { \
+                   long max_val = (long)((1UL << ((width) * 8 - 1)) - 1); \
+                   if (val < -max_val - 1 || val > max_val) { \
+                       menai_raise_eval_errorf(#opcode_name ": value %ld out of range", val); \
+                       goto error; \
+                   } \
+               } \
+            } else { \
+                if (val < 0 || ((width) < (int)sizeof(long) && val > (long)((1UL << ((width) * 8)) - 1))) { \
+                    menai_raise_eval_errorf(#opcode_name ": value %ld out of range", val); \
+                    goto error; \
+                } \
+            } \
+            MenaiValue *_r = menai_bytes_write_multi(b, offset, (unsigned long)val, (width), le); \
+            if (_r == NULL) { goto error; } \
+            menai_reg_set_own(regs, base + dest, _r); \
+            break; \
+        }
+
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_U8, 1, 0, 1)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_U16_LE, 2, 0, 1)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_U16_BE, 2, 0, 0)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_U24_LE, 3, 0, 1)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_U24_BE, 3, 0, 0)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_U32_LE, 4, 0, 1)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_U32_BE, 4, 0, 0)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_U64_LE, 8, 0, 1)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_U64_BE, 8, 0, 0)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_I8, 1, 1, 1)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_I16_LE, 2, 1, 1)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_I16_BE, 2, 1, 0)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_I24_LE, 3, 1, 1)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_I24_BE, 3, 1, 0)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_I32_LE, 4, 1, 1)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_I32_BE, 4, 1, 0)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_I64_LE, 8, 1, 1)
+        BYTES_WRITE_MULTI(OP_BYTES_WRITE_I64_BE, 8, 1, 0)
+
+#undef BYTES_WRITE_MULTI
+
+        /*
+         * LEB128 read (unsigned).  Returns a two-element list (value next-offset).
+         */
+        case OP_BYTES_READ_ULEB128: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            MenaiValue *off_val = regs[base + src1];
+            if (!require_bytes(b, "bytes-read-uleb128")) {
+                goto error;
+            }
+            if (!IS_MENAI_INTEGER(off_val)) {
+                menai_raise_eval_error("bytes-read-uleb128: offset must be an integer");
+                goto error;
+            }
+            ssize_t offset = integer_to_ssize_t(off_val);
+            ssize_t blen = menai_bytes_length(b);
+            if (offset < 0 || offset >= blen) {
+                menai_raise_eval_errorf("bytes-read-uleb128: offset %zd out of bounds for length %zd", offset, blen);
+                goto error;
+            }
+            const uint8_t *d = menai_bytes_data(b);
+            unsigned long long result = 0;
+            int shift = 0;
+            ssize_t pos = offset;
+            int byte;
+            do {
+                if (pos >= blen) {
+                    menai_raise_eval_error("bytes-read-uleb128: truncated LEB128");
+                    goto error;
+                }
+                byte = d[pos];
+                result |= ((unsigned long long)(byte & 0x7F)) << shift;
+                shift += 7;
+                pos++;
+            } while (byte & 0x80);
+
+            MenaiValue *val_result;
+            if ((long long)result < 0) {
+                /* Value exceeds LONG_MAX — use bigint path */
+                PyObject *py_val = PyLong_FromUnsignedLongLong(result);
+                if (!py_val) { goto error; }
+                MenaiBigInt big;
+                menai_bigint_init(&big);
+                if (menai_bigint_from_pylong(py_val, &big) < 0) {
+                    Py_DECREF(py_val);
+                    goto error;
+                }
+                Py_DECREF(py_val);
+                val_result = menai_integer_from_bigint(big);
+                if (val_result == NULL) { goto error; }
+            } else {
+                val_result = menai_integer_from_long((long)result);
+                if (val_result == NULL) { goto error; }
+            }
+            MenaiValue *next_off = menai_integer_from_long((long)pos);
+            if (next_off == NULL) {
+                menai_release(val_result);
+                goto error;
+            }
+            MenaiValue *lst = menai_list_alloc(2);
+            if (lst == NULL) {
+                menai_release(val_result);
+                menai_release(next_off);
+                goto error;
+            }
+            MenaiValue **elems = menai_list_elements(lst);
+            elems[0] = val_result;
+            elems[1] = next_off;
+            menai_reg_set_own(regs, base + dest, lst);
+            break;
+        }
+
+        /*
+         * LEB128 append (unsigned).  Encodes value as unsigned LEB128 and appends.
+         */
+        case OP_BYTES_APPEND_ULEB128: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            MenaiValue *v = regs[base + src1];
+            if (!require_bytes(b, "bytes-append-uleb128")) {
+                goto error;
+            }
+            if (!IS_MENAI_INTEGER(v)) {
+                menai_raise_eval_error("bytes-append-uleb128: value must be an integer");
+                goto error;
+            }
+            long val = integer_to_long(v);
+            if (val < 0) {
+                menai_raise_eval_error("bytes-append-uleb128: value must be non-negative");
+                goto error;
+            }
+            unsigned long uval = (unsigned long)val;
+            uint8_t buf[10];
+            int nbytes = 0;
+            do {
+                buf[nbytes++] = (uint8_t)(uval & 0x7F);
+                uval >>= 7;
+            } while (uval != 0);
+            for (int i = 0; i < nbytes - 1; i++) {
+                buf[i] |= 0x80;
+            }
+
+            MenaiValue *result = b;
+            menai_retain(result);
+            for (int i = 0; i < nbytes; i++) {
+                MenaiValue *next = menai_bytes_append_u8(result, buf[i]);
+                menai_release(result);
+                if (next == NULL) {
+                    goto error;
+                }
+                result = next;
+            }
+            menai_reg_set_own(regs, base + dest, result);
+            break;
+        }
+
+        /*
+         * LEB128 read (signed).  Returns a two-element list (value next-offset).
+         */
+        case OP_BYTES_READ_SLEB128: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            MenaiValue *off_val = regs[base + src1];
+            if (!require_bytes(b, "bytes-read-sleb128")) {
+                goto error;
+            }
+            if (!IS_MENAI_INTEGER(off_val)) {
+                menai_raise_eval_error("bytes-read-sleb128: offset must be an integer");
+                goto error;
+            }
+            ssize_t offset = integer_to_ssize_t(off_val);
+            ssize_t blen = menai_bytes_length(b);
+            if (offset < 0 || offset >= blen) {
+                menai_raise_eval_errorf("bytes-read-sleb128: offset %zd out of bounds for length %zd", offset, blen);
+                goto error;
+            }
+            const uint8_t *d = menai_bytes_data(b);
+            long result = 0;
+            int shift = 0;
+            ssize_t pos = offset;
+            int byte;
+            do {
+                if (pos >= blen) {
+                    menai_raise_eval_error("bytes-read-sleb128: truncated LEB128");
+                    goto error;
+                }
+                byte = d[pos];
+                result |= (byte & 0x7F) << shift;
+                shift += 7;
+                pos++;
+            } while (byte & 0x80);
+
+            /* Sign extend if the sign bit is set */
+            if (shift < 64 && (byte & 0x40)) {
+                result |= -1L << shift;
+            }
+
+            MenaiValue *val_result = menai_integer_from_long(result);
+            if (val_result == NULL) { goto error; }
+            MenaiValue *next_off = menai_integer_from_long((long)pos);
+            if (next_off == NULL) {
+                menai_release(val_result);
+                goto error;
+            }
+            MenaiValue *lst = menai_list_alloc(2);
+            if (lst == NULL) {
+                menai_release(val_result);
+                menai_release(next_off);
+                goto error;
+            }
+            MenaiValue **elems = menai_list_elements(lst);
+            elems[0] = val_result;
+            elems[1] = next_off;
+            menai_reg_set_own(regs, base + dest, lst);
+            break;
+        }
+
+        /*
+         * LEB128 append (signed).  Encodes value as signed LEB128 and appends.
+         */
+        case OP_BYTES_APPEND_SLEB128: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *b = regs[base + src0];
+            MenaiValue *v = regs[base + src1];
+            if (!require_bytes(b, "bytes-append-sleb128")) {
+                goto error;
+            }
+            if (!IS_MENAI_INTEGER(v)) {
+                menai_raise_eval_error("bytes-append-sleb128: value must be an integer");
+                goto error;
+            }
+            long val = integer_to_long(v);
+            uint8_t buf[10];
+            int nbytes = 0;
+            int more = 1;
+            while (more) {
+                uint8_t byte = (uint8_t)(val & 0x7F);
+                val >>= 7;
+                if ((val == 0 && !(byte & 0x40)) || (val == -1 && (byte & 0x40))) {
+                    more = 0;
+                } else {
+                    byte |= 0x80;
+                }
+                buf[nbytes++] = byte;
+            }
+
+            MenaiValue *result = b;
+            menai_retain(result);
+            for (int i = 0; i < nbytes; i++) {
+                MenaiValue *next = menai_bytes_append_u8(result, buf[i]);
+                menai_release(result);
+                if (next == NULL) {
+                    goto error;
+                }
+                result = next;
+            }
+            menai_reg_set_own(regs, base + dest, result);
+            break;
+        }
 
         case OP_LIST_P: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);

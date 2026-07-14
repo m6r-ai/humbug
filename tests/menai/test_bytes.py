@@ -711,3 +711,515 @@ class TestBytesZipHeaderExample:
             "filename-length": 4,
             "extra-length": 0,
         }
+
+class TestBytesMultiByteAppend:
+    """Test multi-byte integer append operations."""
+
+    EMPTY = '(string-hex->bytes "")'
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0x1234, "3412"),
+        (0x0000, "0000"),
+        (0xffff, "ffff"),
+    ])
+    def test_bytes_append_u16_le_encoding(self, menai, value, expected_hex):
+        """bytes-append-u16-le produces correct byte order for little-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-u16-le {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0x1234, "1234"),
+        (0x0000, "0000"),
+        (0xffff, "ffff"),
+    ])
+    def test_bytes_append_u16_be(self, menai, value, expected_hex):
+        """bytes-append-u16-be encodes unsigned 16-bit big-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-u16-be {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0x123456, "563412"),
+        (0x000000, "000000"),
+        (0xffffff, "ffffff"),
+    ])
+    def test_bytes_append_u24_le(self, menai, value, expected_hex):
+        """bytes-append-u24-le encodes unsigned 24-bit little-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-u24-le {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0x123456, "123456"),
+        (0x000000, "000000"),
+        (0xffffff, "ffffff"),
+    ])
+    def test_bytes_append_u24_be(self, menai, value, expected_hex):
+        """bytes-append-u24-be encodes unsigned 24-bit big-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-u24-be {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0x12345678, "78563412"),
+        (0x00000000, "00000000"),
+        (0xffffffff, "ffffffff"),
+    ])
+    def test_bytes_append_u32_le(self, menai, value, expected_hex):
+        """bytes-append-u32-le encodes unsigned 32-bit little-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-u32-le {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0x12345678, "12345678"),
+        (0x00000000, "00000000"),
+        (0xffffffff, "ffffffff"),
+    ])
+    def test_bytes_append_u32_be(self, menai, value, expected_hex):
+        """bytes-append-u32-be encodes unsigned 32-bit big-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-u32-be {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0x0102030405060708, "0807060504030201"),
+        (0x0000000000000000, "0000000000000000"),
+    ])
+    def test_bytes_append_u64_le(self, menai, value, expected_hex):
+        """bytes-append-u64-le encodes unsigned 64-bit little-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-u64-le {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0x0102030405060708, "0102030405060708"),
+        (0x0000000000000000, "0000000000000000"),
+    ])
+    def test_bytes_append_u64_be(self, menai, value, expected_hex):
+        """bytes-append-u64-be encodes unsigned 64-bit big-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-u64-be {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0, "00"),
+        (127, "7f"),
+        (-1, "ff"),
+        (-128, "80"),
+    ])
+    def test_bytes_append_i8(self, menai, value, expected_hex):
+        """bytes-append-i8 encodes signed 8-bit."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-i8 {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (1, "0100"),
+        (-1, "ffff"),
+        (32767, "ff7f"),
+        (-32768, "0080"),
+    ])
+    def test_bytes_append_i16_le(self, menai, value, expected_hex):
+        """bytes-append-i16-le encodes signed 16-bit little-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-i16-le {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (1, "0001"),
+        (-1, "ffff"),
+        (32767, "7fff"),
+        (-32768, "8000"),
+    ])
+    def test_bytes_append_i16_be(self, menai, value, expected_hex):
+        """bytes-append-i16-be encodes signed 16-bit big-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-i16-be {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (1, "010000"),
+        (-1, "ffffff"),
+        (8388607, "ffff7f"),
+        (-8388608, "000080"),
+    ])
+    def test_bytes_append_i24_le(self, menai, value, expected_hex):
+        """bytes-append-i24-le encodes signed 24-bit little-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-i24-le {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (1, "000001"),
+        (-1, "ffffff"),
+        (8388607, "7fffff"),
+        (-8388608, "800000"),
+    ])
+    def test_bytes_append_i24_be(self, menai, value, expected_hex):
+        """bytes-append-i24-be encodes signed 24-bit big-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-i24-be {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (1, "01000000"),
+        (-1, "ffffffff"),
+        (2147483647, "ffffff7f"),
+        (-2147483648, "00000080"),
+    ])
+    def test_bytes_append_i32_le(self, menai, value, expected_hex):
+        """bytes-append-i32-le encodes signed 32-bit little-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-i32-le {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (1, "00000001"),
+        (-1, "ffffffff"),
+        (2147483647, "7fffffff"),
+        (-2147483648, "80000000"),
+    ])
+    def test_bytes_append_i32_be(self, menai, value, expected_hex):
+        """bytes-append-i32-be encodes signed 32-bit big-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-i32-be {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (1, "0100000000000000"),
+        (-1, "ffffffffffffffff"),
+    ])
+    def test_bytes_append_i64_le(self, menai, value, expected_hex):
+        """bytes-append-i64-le encodes signed 64-bit little-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-i64-le {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (1, "0000000000000001"),
+        (-1, "ffffffffffffffff"),
+    ])
+    def test_bytes_append_i64_be(self, menai, value, expected_hex):
+        """bytes-append-i64-be encodes signed 64-bit big-endian."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-i64-be {self.EMPTY} {value}))')
+        assert result == expected_hex
+
+    def test_append_to_non_empty(self, menai):
+        """Multi-byte append extends existing bytes."""
+        result = menai.evaluate('(bytes->string-hex (bytes-append-u16-le (string-hex->bytes "aabb") 1027))')
+        assert result == "aabb0304"
+
+    def test_append_chained(self, menai):
+        """Chaining multiple appends builds bytes incrementally."""
+        expr = '(bytes->string-hex (bytes-append-u32-be (bytes-append-u16-le (string-hex->bytes "") 1) 2))'
+        assert menai.evaluate(expr) == "010000000002"
+
+    @pytest.mark.parametrize("expr", [
+        '(bytes-append-u16-le (string-hex->bytes "") 65536)',
+        '(bytes-append-u8 (string-hex->bytes "") 256)',
+        '(bytes-append-u8 (string-hex->bytes "") -1)',
+    ])
+    def test_append_out_of_range(self, menai, expr):
+        """Append raises error on values outside the valid range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(expr)
+
+    @pytest.mark.parametrize("expr", [
+        '(bytes-append-i8 (string-hex->bytes "") 128)',
+        '(bytes-append-i8 (string-hex->bytes "") -129)',
+        '(bytes-append-i16-le (string-hex->bytes "") 32768)',
+    ])
+    def test_append_signed_out_of_range(self, menai, expr):
+        """Signed append raises error on values outside the signed range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(expr)
+
+
+class TestBytesMultiByteWrite:
+    """Test multi-byte integer write (patch at offset) operations."""
+
+    def test_write_u16_le(self, menai):
+        """bytes-write-u16-le writes unsigned 16-bit at offset, little-endian."""
+        result = menai.evaluate('(bytes->string-hex (bytes-write-u16-le (string-hex->bytes "00000000") 1 4660))')
+        assert result == "00341200"
+
+    def test_write_u16_be(self, menai):
+        """bytes-write-u16-be writes unsigned 16-bit at offset, big-endian."""
+        result = menai.evaluate('(bytes->string-hex (bytes-write-u16-be (string-hex->bytes "00000000") 1 4660))')
+        assert result == "00123400"
+
+    def test_write_u32_le(self, menai):
+        """bytes-write-u32-le writes unsigned 32-bit at offset, little-endian."""
+        result = menai.evaluate('(bytes->string-hex (bytes-write-u32-le (string-hex->bytes "0000000000") 1 305419896))')
+        assert result == "0078563412"
+
+    def test_write_u32_be(self, menai):
+        """bytes-write-u32-be writes unsigned 32-bit at offset, big-endian."""
+        result = menai.evaluate('(bytes->string-hex (bytes-write-u32-be (string-hex->bytes "0000000000") 1 305419896))')
+        assert result == "0012345678"
+
+    def test_write_i16_le_negative(self, menai):
+        """bytes-write-i16-le writes signed 16-bit at offset."""
+        result = menai.evaluate('(bytes->string-hex (bytes-write-i16-le (string-hex->bytes "0000") 0 -1))')
+        assert result == "ffff"
+
+    def test_write_u8(self, menai):
+        """bytes-write-u8 writes a single byte at offset."""
+        result = menai.evaluate('(bytes->string-hex (bytes-write-u8 (string-hex->bytes "000000") 1 255))')
+        assert result == "00ff00"
+
+    def test_write_u64_le(self, menai):
+        """bytes-write-u64-le writes unsigned 64-bit at offset, little-endian."""
+        result = menai.evaluate('(bytes->string-hex (bytes-write-u64-le (string-hex->bytes "000000000000000000") 1 72623859790382856))')
+        assert result == "000807060504030201"
+
+    def test_write_u64_be(self, menai):
+        """bytes-write-u64-be writes unsigned 64-bit at offset, big-endian."""
+        result = menai.evaluate('(bytes->string-hex (bytes-write-u64-be (string-hex->bytes "000000000000000000") 1 72623859790382856))')
+        assert result == "000102030405060708"
+
+    def test_write_immutability(self, menai):
+        """bytes-write returns new bytes; original is unchanged."""
+        original = '(string-hex->bytes "00000000")'
+        result = menai.evaluate(f'(bytes->string-hex (bytes-write-u16-le {original} 0 4660))')
+        assert result == "34120000"
+        assert menai.evaluate(f'(bytes->string-hex {original})') == "00000000"
+
+    def test_write_out_of_bounds(self, menai):
+        """Write raises error when not enough bytes from offset."""
+        with pytest.raises(MenaiEvalError, match="out of bounds"):
+            menai.evaluate('(bytes-write-u16-le (string-hex->bytes "00") 0 4660)')
+
+    def test_write_out_of_range(self, menai):
+        """Write raises error on values outside the valid range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate('(bytes-write-u8 (string-hex->bytes "00") 0 256)')
+
+
+class TestBytesLeb128:
+    """Test LEB128 variable-length integer encode/decode."""
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0, "00"),
+        (1, "01"),
+        (127, "7f"),
+        (128, "8001"),
+        (300, "ac02"),
+        (16383, "ff7f"),
+        (16384, "808001"),
+    ])
+    def test_append_uleb128(self, menai, value, expected_hex):
+        """bytes-append-uleb128 encodes unsigned LEB128."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-uleb128 (string-hex->bytes "") {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("hex_str,expected_value,expected_next", [
+        ("00", 0, 1),
+        ("01", 1, 1),
+        ("7f", 127, 1),
+        ("8001", 128, 2),
+        ("ac02", 300, 2),
+        ("ff7f", 16383, 2),
+    ])
+    def test_read_uleb128(self, menai, hex_str, expected_value, expected_next):
+        """bytes-read-uleb128 decodes unsigned LEB128 and returns (value next-offset)."""
+        expr = f'''
+            (match (bytes-read-uleb128 (string-hex->bytes "{hex_str}") 0)
+              ((val next) (list val next)))
+        '''
+        assert menai.evaluate(expr) == [expected_value, expected_next]
+
+    def test_read_uleb128_with_offset(self, menai):
+        """bytes-read-uleb128 works at non-zero offset."""
+        expr = '''
+            (match (bytes-read-uleb128 (string-hex->bytes "ffac02ff") 1)
+              ((val next) (list val next)))
+        '''
+        assert menai.evaluate(expr) == [300, 3]
+
+    def test_uleb128_round_trip(self, menai):
+        """Encode then decode recovers the original value."""
+        expr = '''
+            (match (bytes-read-uleb128 (bytes-append-uleb128 (string-hex->bytes "") 624485) 0)
+              ((val next) val))
+        '''
+        assert menai.evaluate(expr) == 624485
+
+    def test_read_uleb128_truncated(self, menai):
+        """Reading truncated ULEB128 raises error."""
+        with pytest.raises(MenaiEvalError, match="truncated"):
+            menai.evaluate('(bytes-read-uleb128 (string-hex->bytes "80") 0)')
+
+    def test_append_uleb128_negative_error(self, menai):
+        """ULEB128 append rejects negative values."""
+        with pytest.raises(MenaiEvalError, match="non-negative"):
+            menai.evaluate('(bytes-append-uleb128 (string-hex->bytes "") -1)')
+
+    @pytest.mark.parametrize("value,expected_hex", [
+        (0, "00"),
+        (1, "01"),
+        (-1, "7f"),
+        (63, "3f"),
+        (-64, "40"),
+        (64, "c000"),
+        (-65, "bf7f"),
+        (127, "ff00"),
+        (-127, "817f"),
+        (128, "8001"),
+        (-128, "807f"),
+    ])
+    def test_append_sleb128(self, menai, value, expected_hex):
+        """bytes-append-sleb128 encodes signed LEB128."""
+        result = menai.evaluate(f'(bytes->string-hex (bytes-append-sleb128 (string-hex->bytes "") {value}))')
+        assert result == expected_hex
+
+    @pytest.mark.parametrize("hex_str,expected_value", [
+        ("00", 0),
+        ("01", 1),
+        ("7f", -1),
+        ("3f", 63),
+        ("40", -64),
+        ("c000", 64),
+        ("ff00", 127),
+        ("817f", -127),
+    ])
+    def test_read_sleb128(self, menai, hex_str, expected_value):
+        """bytes-read-sleb128 decodes signed LEB128."""
+        expr = f'''
+            (match (bytes-read-sleb128 (string-hex->bytes "{hex_str}") 0)
+              ((val next) val))
+        '''
+        assert menai.evaluate(expr) == expected_value
+
+    def test_sleb128_round_trip(self, menai):
+        """Encode then decode recovers the original signed value."""
+        expr = '''
+            (match (bytes-read-sleb128 (bytes-append-sleb128 (string-hex->bytes "") -123456) 0)
+              ((val next) val))
+        '''
+        assert menai.evaluate(expr) == -123456
+
+    def test_read_sleb128_truncated(self, menai):
+        """Reading truncated SLEB128 raises error."""
+        with pytest.raises(MenaiEvalError, match="truncated"):
+            menai.evaluate('(bytes-read-sleb128 (string-hex->bytes "80") 0)')
+
+
+class TestBytesPreludeHigherOrder:
+    """Test higher-order prelude functions for bytes."""
+
+    def test_map_bytes(self, menai):
+        """map-bytes applies a function to each byte."""
+        result = menai.evaluate('(bytes->string-hex (map-bytes (lambda (b) (integer-bit-xor b 255)) (string-hex->bytes "00ff4231")))')
+        assert result == "ff00bdce"
+
+    def test_map_bytes_empty(self, menai):
+        """map-bytes on empty bytes returns empty bytes."""
+        result = menai.evaluate('(bytes->string-hex (map-bytes (lambda (b) (integer+ b 1)) (string-hex->bytes "")))')
+        assert result == ""
+
+    def test_filter_bytes(self, menai):
+        """filter-bytes keeps bytes satisfying the predicate."""
+        result = menai.evaluate('(bytes->string-hex (filter-bytes (lambda (b) (integer<? b 128)) (string-hex->bytes "41ff4280ff43")))')
+        assert result == "414243"
+
+    def test_filter_bytes_all_removed(self, menai):
+        """filter-bytes returns empty when no bytes match."""
+        result = menai.evaluate('(bytes->string-hex (filter-bytes (lambda (b) (integer>? b 255)) (string-hex->bytes "4142")))')
+        assert result == ""
+
+    def test_fold_bytes_sum(self, menai):
+        """fold-bytes accumulates a result over all bytes."""
+        result = menai.evaluate('(fold-bytes (lambda (acc b) (integer+ acc b)) 0 (string-hex->bytes "01020304"))')
+        assert result == 10
+
+    def test_fold_bytes_to_list(self, menai):
+        """fold-bytes can build a list from bytes."""
+        result = menai.evaluate('(fold-bytes (lambda (acc b) (list-append acc b)) (list) (string-hex->bytes "010203"))')
+        assert result == [1, 2, 3]
+
+    def test_zip_bytes(self, menai):
+        """zip-bytes produces a list of byte pairs."""
+        result = menai.evaluate('(zip-bytes (string-hex->bytes "0102") (string-hex->bytes "0304"))')
+        assert result == [[1, 3], [2, 4]]
+
+    def test_zip_bytes_unequal_length(self, menai):
+        """zip-bytes stops at the shorter input."""
+        result = menai.evaluate('(zip-bytes (string-hex->bytes "0102") (string-hex->bytes "030405"))')
+        assert result == [[1, 3], [2, 4]]
+
+    def test_zip_bytes_empty(self, menai):
+        """zip-bytes with an empty input returns empty list."""
+        result = menai.evaluate('(zip-bytes (string-hex->bytes "") (string-hex->bytes "0102"))')
+        assert result == []
+
+
+class TestBytesPreludePredicates:
+    """Test convenience predicate prelude functions."""
+
+    def test_bytes_empty_true(self, menai):
+        """bytes-empty? returns true for zero-length bytes."""
+        assert menai.evaluate('(bytes-empty? (string-hex->bytes ""))') is True
+
+    def test_bytes_empty_false(self, menai):
+        """bytes-empty? returns false for non-empty bytes."""
+        assert menai.evaluate('(bytes-empty? (string-hex->bytes "00"))') is False
+
+    @pytest.mark.parametrize("source_hex,prefix_hex,expected", [
+        ("504b0304", "504b", True),
+        ("504b0304", "504b0304", True),
+        ("504b0304", "504b03", True),
+        ("504b0304", "504c", False),
+        ("504b0304", "504b030400", False),
+    ])
+    def test_bytes_prefix(self, menai, source_hex, prefix_hex, expected):
+        """bytes-prefix? checks if bytes starts with the given prefix."""
+        result = menai.evaluate(f'(bytes-prefix? (string-hex->bytes "{source_hex}") (string-hex->bytes "{prefix_hex}"))')
+        assert result == expected
+
+    @pytest.mark.parametrize("source_hex,suffix_hex,expected", [
+        ("504b0304", "0304", True),
+        ("504b0304", "504b0304", True),
+        ("504b0304", "0304", True),
+        ("504b0304", "0305", False),
+        ("00504b0304", "504b0304", True),
+    ])
+    def test_bytes_suffix(self, menai, source_hex, suffix_hex, expected):
+        """bytes-suffix? checks if bytes ends with the given suffix."""
+        result = menai.evaluate(f'(bytes-suffix? (string-hex->bytes "{source_hex}") (string-hex->bytes "{suffix_hex}"))')
+        assert result == expected
+
+
+class TestBytesPreludeSplit:
+    """Test splitting prelude functions."""
+
+    def test_bytes_split_basic(self, menai):
+        """bytes-split divides bytes on a delimiter."""
+        result = menai.evaluate('(map-list bytes->string-hex (bytes-split (string-hex->bytes "41424344") (string-hex->bytes "42")))')
+        assert result == ["41", "4344"]
+
+    def test_bytes_split_multiple(self, menai):
+        """bytes-split handles multiple delimiter occurrences."""
+        result = menai.evaluate('(map-list bytes->string-hex (bytes-split (string-hex->bytes "012e342e56") (string-hex->bytes "2e")))')
+        assert result == ["01", "34", "56"]
+
+    def test_bytes_split_no_match(self, menai):
+        """bytes-split returns a single-element list when delimiter is absent."""
+        result = menai.evaluate('(map-list bytes->string-hex (bytes-split (string-hex->bytes "414243") (string-hex->bytes "ff")))')
+        assert result == ["414243"]
+
+    def test_bytes_split_consecutive(self, menai):
+        """bytes-split produces empty segments for consecutive delimiters."""
+        result = menai.evaluate('(map-list bytes->string-hex (bytes-split (string-hex->bytes "410042") (string-hex->bytes "00")))')
+        assert result == ["41", "42"]
+
+    def test_bytes_split_empty_delimiter_error(self, menai):
+        """bytes-split raises error on empty delimiter."""
+        with pytest.raises(MenaiEvalError, match="non-empty"):
+            menai.evaluate('(bytes-split (string-hex->bytes "4142") (string-hex->bytes ""))')
+
+    def test_bytes_split_int_basic(self, menai):
+        """bytes-split-int divides bytes on a single byte value."""
+        result = menai.evaluate('(map-list bytes->string-hex (bytes-split-int (string-hex->bytes "4100420043") 0))')
+        assert result == ["41", "42", "43"]
+
+    def test_bytes_split_int_no_match(self, menai):
+        """bytes-split-int returns a single-element list when byte is absent."""
+        result = menai.evaluate('(map-list bytes->string-hex (bytes-split-int (string-hex->bytes "414243") 0))')
+        assert result == ["414243"]
+
+    def test_bytes_split_int_leading_delimiter(self, menai):
+        """bytes-split-int produces an empty first segment for a leading delimiter."""
+        result = menai.evaluate('(map-list bytes->string-hex (bytes-split-int (string-hex->bytes "004142") 0))')
+        assert result == ["", "4142"]
+
+    def test_bytes_split_int_trailing_delimiter(self, menai):
+        """bytes-split-int produces an empty last segment for a trailing delimiter."""
+        result = menai.evaluate('(map-list bytes->string-hex (bytes-split-int (string-hex->bytes "414200") 0))')
+        assert result == ["4142", ""]

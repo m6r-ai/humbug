@@ -503,19 +503,25 @@ The following were considered and rejected:
 - **Integer helpers**: `integer_to_long` and `integer_to_ssize_t` added to `menai_vm_c.c`
   for extracting C integers from `MenaiInteger` in opcode handlers.
 - **Build**: `menai_vm_bytes.c` added to `setup.py`.
-- **Tests**: `tests/menai/test_bytes.py` with 196 test cases covering all implemented
-  opcodes. 192 passing, 4 failing (see Known Issues).
-  opcodes. All 196 passing.
+- **Tests**: `tests/menai/test_bytes.py` with 337 test cases covering all opcodes
+  and prelude functions. All passing.
 
 ### Not Yet Implemented
 
-- Multi-byte **append** opcodes (18): `bytes-append-u16-le`, etc.
-- Multi-byte **write** opcodes (18): `bytes-write-u16-le`, etc.
-- LEB128 encode/decode (4): `bytes-read-uleb128`, `bytes-append-uleb128`,
-  `bytes-read-sleb128`, `bytes-append-sleb128`.
-- Prelude functions: `map-bytes`, `filter-bytes`, `fold-bytes`, `zip-bytes`,
-  `bytes-empty?`, `bytes-prefix?`, `bytes-suffix?`, `bytes-split`, `bytes-split-int`.
 - Phase 5: I/O framework integration.
+
+### Also Implemented
+
+- Multi-byte **append** opcodes (18): `bytes-append-u16-le` through `bytes-append-i64-be`,
+  via a `BYTES_APPEND_MULTI` macro. Helper `menai_bytes_append_multi` in `menai_vm_bytes.c`.
+- Multi-byte **write** opcodes (18): `bytes-write-u8` through `bytes-write-i64-be`,
+  via a `BYTES_WRITE_MULTI` macro. Helper `menai_bytes_write_multi` in `menai_vm_bytes.c`.
+- **LEB128** encode/decode (4): `bytes-read-uleb128`, `bytes-append-uleb128`,
+  `bytes-read-sleb128`, `bytes-append-sleb128`. Read functions return `(value next-offset)`.
+- **Prelude functions** (9): `map-bytes`, `filter-bytes`, `fold-bytes`, `zip-bytes`,
+  `bytes-empty?`, `bytes-prefix?`, `bytes-suffix?`, `bytes-split`, `bytes-split-int`.
+- **Tests**: `tests/menai/test_bytes.py` expanded to 337 test cases covering all
+  opcodes and prelude functions. All passing.
 
 ## Example: Parsing a Zip Local File Header
 

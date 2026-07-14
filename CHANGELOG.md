@@ -2,6 +2,10 @@
 
 ## v54 (2026-07-xx)
 
+New features:
+
+- Added a new `bytes` type to Menai.  This allows for the manipulation of binary (byte object) data.
+
 ## v53 (2026-07-12)
 
 New features:

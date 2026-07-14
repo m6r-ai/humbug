@@ -163,6 +163,71 @@ menai_bytes_append_u8(MenaiValue *b, uint8_t value)
     return (MenaiValue *)obj;
 }
 
+/*
+ * menai_bytes_append_multi — append N bytes encoded from an unsigned long
+ * value in the specified endianness.  width must be 1–8.
+ */
+MenaiValue *
+menai_bytes_append_multi(MenaiValue *b, unsigned long value, int width, int le)
+{
+    MenaiBytes *mb = (MenaiBytes *)b;
+    ssize_t len = mb->length;
+    MenaiBytes *obj = _menai_bytes_alloc(len + width);
+    if (!obj) {
+        return NULL;
+    }
+
+    if (len > 0) {
+        memcpy(obj->inline_data, mb->data, (size_t)len);
+    }
+
+    uint8_t *dest = obj->inline_data + len;
+    if (le) {
+        for (int i = 0; i < width; i++) {
+            dest[i] = (uint8_t)((value >> (i * 8)) & 0xFF);
+        }
+    } else {
+        for (int i = 0; i < width; i++) {
+            dest[i] = (uint8_t)((value >> ((width - 1 - i) * 8)) & 0xFF);
+        }
+    }
+
+    return (MenaiValue *)obj;
+}
+
+/*
+ * menai_bytes_write_multi — return a copy of b with N bytes at the given
+ * offset replaced by the encoded value.  width must be 1–8.
+ */
+MenaiValue *
+menai_bytes_write_multi(MenaiValue *b, ssize_t offset,
+                        unsigned long value, int width, int le)
+{
+    MenaiBytes *mb = (MenaiBytes *)b;
+    ssize_t len = mb->length;
+    MenaiBytes *obj = _menai_bytes_alloc(len);
+    if (!obj) {
+        return NULL;
+    }
+
+    if (len > 0) {
+        memcpy(obj->inline_data, mb->data, (size_t)len);
+    }
+
+    uint8_t *dest = obj->inline_data + offset;
+    if (le) {
+        for (int i = 0; i < width; i++) {
+            dest[i] = (uint8_t)((value >> (i * 8)) & 0xFF);
+        }
+    } else {
+        for (int i = 0; i < width; i++) {
+            dest[i] = (uint8_t)((value >> ((width - 1 - i) * 8)) & 0xFF);
+        }
+    }
+
+    return (MenaiValue *)obj;
+}
+
 int
 menai_bytes_equal(MenaiValue *a, MenaiValue *b)
 {

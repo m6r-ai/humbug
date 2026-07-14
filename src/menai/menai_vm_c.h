@@ -537,6 +537,9 @@ MenaiValue *menai_bytes_slice(MenaiValue *b, ssize_t start, ssize_t end);
 MenaiValue *menai_bytes_concat(MenaiValue *a, MenaiValue *b);
 MenaiValue *menai_bytes_ref(MenaiValue *b, ssize_t i);
 MenaiValue *menai_bytes_append_u8(MenaiValue *b, uint8_t value);
+MenaiValue *menai_bytes_append_multi(MenaiValue *b, unsigned long value, int width, int le);
+MenaiValue *menai_bytes_write_multi(MenaiValue *b, ssize_t offset,
+                                    unsigned long value, int width, int le);
 int menai_bytes_equal(MenaiValue *a, MenaiValue *b);
 int menai_bytes_compare(MenaiValue *a, MenaiValue *b);
 hash_t menai_bytes_hash(MenaiValue *b);
