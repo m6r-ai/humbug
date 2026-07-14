@@ -421,8 +421,6 @@ extern _menai_atomic_int _cancel_requested;
 #define OP_BYTES_READ_I24_BE 475
 #define OP_BYTES_READ_I32_BE 476
 #define OP_BYTES_READ_I64_BE 477
-
-/* Bytes multi-byte append opcodes */
 #define OP_BYTES_APPEND_U16_LE 481
 #define OP_BYTES_APPEND_U16_BE 482
 #define OP_BYTES_APPEND_U24_LE 483
@@ -440,8 +438,6 @@ extern _menai_atomic_int _cancel_requested;
 #define OP_BYTES_APPEND_I32_BE 495
 #define OP_BYTES_APPEND_I64_LE 496
 #define OP_BYTES_APPEND_I64_BE 497
-
-/* Bytes multi-byte write opcodes */
 #define OP_BYTES_WRITE_U8 500
 #define OP_BYTES_WRITE_U16_LE 501
 #define OP_BYTES_WRITE_U16_BE 502
@@ -460,8 +456,6 @@ extern _menai_atomic_int _cancel_requested;
 #define OP_BYTES_WRITE_I32_BE 515
 #define OP_BYTES_WRITE_I64_LE 516
 #define OP_BYTES_WRITE_I64_BE 517
-
-/* Bytes LEB128 opcodes */
 #define OP_BYTES_READ_ULEB128 520
 #define OP_BYTES_APPEND_ULEB128 521
 #define OP_BYTES_READ_SLEB128 522
