@@ -1218,6 +1218,23 @@ menai_string_to_pyunicode(MenaiValue *s)
     return result;
 }
 
+char *
+menai_string_to_utf8(MenaiValue *s, ssize_t *out_nbytes)
+{
+    MenaiString *ms = (MenaiString *)s;
+    ssize_t nbytes;
+    char *utf8 = _utf8_encode(ms->data, ms->length, &nbytes);
+    if (!utf8) {
+        return NULL;
+    }
+
+    if (out_nbytes) {
+        *out_nbytes = nbytes;
+    }
+
+    return utf8;
+}
+
 int
 menai_string_compare(MenaiValue *a, MenaiValue *b)
 {

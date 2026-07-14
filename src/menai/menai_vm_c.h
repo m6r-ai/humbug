@@ -473,6 +473,7 @@ MenaiValue *menai_string_from_codepoints(const uint32_t *cp, ssize_t len);
 MenaiValue *menai_string_from_codepoint(uint32_t cp);
 MenaiValue *menai_string_from_pyunicode(PyObject *pystr);
 PyObject *menai_string_to_pyunicode(MenaiValue *s);
+char *menai_string_to_utf8(MenaiValue *s, ssize_t *out_nbytes);
 int menai_string_compare(MenaiValue *a, MenaiValue *b);
 int menai_string_equal(MenaiValue *a, MenaiValue *b);
 hash_t menai_string_hash(MenaiValue *s);

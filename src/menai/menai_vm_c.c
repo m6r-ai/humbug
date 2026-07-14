@@ -646,22 +646,6 @@ static inline MenaiValue *make_integer_from_long(long n)
 }
 
 /*
- * integer_to_long — extract a C long from a MenaiInteger.
- * Returns 0 on success, -1 on error (with Python exception set).
- */
-static inline int
-integer_to_long_checked(MenaiValue *val, long *out)
-{
-    MenaiInteger *ib = (MenaiInteger *)val;
-    if (!ib->is_big) {
-        *out = ib->small;
-        return 0;
-    }
-
-    return menai_bigint_to_long(&ib->big, out);
-}
-
-/*
  * integer_to_long — extract a C long from a MenaiInteger (assumes valid).
  * Caller must ensure val is a MenaiInteger.
  */
@@ -1195,20 +1179,10 @@ globals_get(PyObject *globals_key)
                 }
 
                 menai_retain(d->values[i]);
-                PyObject *py_key = menai_string_to_pyunicode(k);
-                if (!py_key) {
-                    menai_release(result);
-                    globals_free(&_cached_globals_gt);
-                    return NULL;
-                }
-
-                const char *utf8 = PyUnicode_AsUTF8(py_key);
-                char *name_copy = utf8 ? strdup(utf8) : NULL;
-                Py_DECREF(py_key);
+                char *name_copy = menai_string_to_utf8(k, NULL);
                 if (!name_copy) {
                     menai_release(result);
                     globals_free(&_cached_globals_gt);
-                    PyErr_NoMemory();
                     return NULL;
                 }
 
@@ -1766,13 +1740,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            PyObject *s = menai_string_to_pyunicode(msg);
-            if (s == NULL) {
+            char *cstr = menai_string_to_utf8(msg, NULL);
+            if (cstr == NULL) {
                 goto error;
             }
 
-            PyErr_SetObject(MenaiEvalError_type, s);
-            Py_DECREF(s);
+            PyErr_SetString(MenaiEvalError_type, cstr);
+            free(cstr);
             goto error;
         }
 
@@ -1831,11 +1805,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 /* Struct constructor call */
                 int n_fields = ((MenaiStructType *)raw)->nfields;
                 if (arity != (int)n_fields) {
-                    PyObject *sname = menai_string_to_pyunicode(((MenaiStructType *)raw)->name);
+                    char *sname = menai_string_to_utf8(((MenaiStructType *)raw)->name, NULL);
                     menai_raise_eval_errorf(
                         "Struct constructor '%s' called with wrong number of arguments",
-                        sname ? PyUnicode_AsUTF8(sname) : "?");
-                    Py_XDECREF(sname);
+                        sname ? sname : "?");
+                    free(sname);
                     goto error;
                 }
 
@@ -1889,11 +1863,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (IS_MENAI_STRUCTTYPE(raw)) {
                 int n_fields = ((MenaiStructType *)raw)->nfields;
                 if (n_args != (int)n_fields) {
-                    PyObject *sname = menai_string_to_pyunicode(((MenaiStructType *)raw)->name);
+                    char *sname = menai_string_to_utf8(((MenaiStructType *)raw)->name, NULL);
                     menai_raise_eval_errorf(
                         "Struct constructor '%s' called with wrong number of arguments",
-                        sname ? PyUnicode_AsUTF8(sname) : "?");
-                    Py_XDECREF(sname);
+                        sname ? sname : "?");
+                    free(sname);
                     menai_release(raw);
                     goto error;
                 }
@@ -8051,14 +8025,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *field_name = menai_symbol_name(field_sym);
             int fi = menai_struct_field_index((MenaiStructType *)stype, field_name);
             if (fi < 0) {
-                PyObject *stype_name = menai_string_to_pyunicode(((MenaiStructType *)stype)->name);
-                PyObject *fname_py = menai_string_to_pyunicode(field_name);
+                char *stype_name = menai_string_to_utf8(((MenaiStructType *)stype)->name, NULL);
+                char *fname_py = menai_string_to_utf8(field_name, NULL);
                 menai_raise_eval_errorf(
                     "'struct-get': struct '%s' has no field '%s'",
-                    stype_name ? PyUnicode_AsUTF8(stype_name) : "?",
-                    fname_py ? PyUnicode_AsUTF8(fname_py) : "?");
-                Py_XDECREF(stype_name);
-                Py_XDECREF(fname_py);
+                    stype_name ? stype_name : "?",
+                    fname_py ? fname_py : "?");
+                free(stype_name);
+                free(fname_py);
                 goto error;
             }
 
@@ -8116,14 +8090,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *field_name = menai_symbol_name(field_sym);
             int fi = menai_struct_field_index((MenaiStructType *)stype, field_name);
             if (fi < 0) {
-                PyObject *stype_name = menai_string_to_pyunicode(((MenaiStructType *)stype)->name);
-                PyObject *fname_py = menai_string_to_pyunicode(field_name);
+                char *stype_name = menai_string_to_utf8(((MenaiStructType *)stype)->name, NULL);
+                char *fname_py = menai_string_to_utf8(field_name, NULL);
                 menai_raise_eval_errorf(
                     "'struct-set': struct '%s' has no field '%s'",
-                    stype_name ? PyUnicode_AsUTF8(stype_name) : "?",
-                    fname_py ? PyUnicode_AsUTF8(fname_py) : "?");
-                Py_XDECREF(stype_name);
-                Py_XDECREF(fname_py);
+                    stype_name ? stype_name : "?",
+                    fname_py ? fname_py : "?");
+                free(stype_name);
+                free(fname_py);
                 goto error;
             }
 
