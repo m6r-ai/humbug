@@ -13,6 +13,12 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
   you want to be somewhere else.
 - Terminals will not open with a python virtual environment by default.  The venv is at `venv/` in the mindspace root.
 - If you send a command to a terminal, don't forget the newline or carriage return required (Unix, or Windows specific).
+- Do not pipe pytest output through `grep` or other filtering tools.  pytest interleaves progress dots on stderr with
+  summary lines on stdout, so filtering mangles the output and hides the pass/fail counts.  Run pytest with no flags
+  and pipe through `tail` only if the output is too long to read in full:
+  ```bash
+  python -m pytest tests/menai/ 2>&1 | tail -10
+  ```
 
 ## Menai C VM binary
 
