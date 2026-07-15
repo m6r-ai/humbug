@@ -1051,7 +1051,6 @@ _utf8_decode(const char *utf8, ssize_t nbytes, ssize_t *out_len)
 
     uint32_t *buf = (uint32_t *)malloc((size_t)n * sizeof(uint32_t));
     if (!buf) {
-        PyErr_NoMemory();
         return NULL;
     }
 
@@ -1080,7 +1079,6 @@ _utf8_decode(const char *utf8, ssize_t nbytes, ssize_t *out_len)
     return buf;
 
 bad_utf8:
-    PyErr_SetString(PyExc_ValueError, "invalid UTF-8 sequence");
     return NULL;
 }
 
@@ -1110,7 +1108,6 @@ _utf8_encode(const uint32_t *data, ssize_t len, ssize_t *out_nbytes)
 
     char *buf = (char *)malloc((size_t)(nbytes + 1));
     if (!buf) {
-        PyErr_NoMemory();
         return NULL;
     }
 

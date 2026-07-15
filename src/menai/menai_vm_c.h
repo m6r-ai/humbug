@@ -4,6 +4,8 @@
 #ifndef MENAI_VM_C_H
 #define MENAI_VM_C_H
 
+#include <memory.h>
+#include <limits.h>
 #include <sys/types.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -13,9 +15,6 @@
 typedef ptrdiff_t ssize_t;
 #define SSIZE_MAX PTRDIFF_MAX
 #endif
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 
 #if defined(__GNUC__) || defined(__clang__)
 #define MENAI_LIKELY(x) __builtin_expect(!!(x), 1)
@@ -29,7 +28,7 @@ typedef struct MenaiValue_s MenaiValue;
 
 /*
  * MenaiType — the type tag for a Menai value.  uint16_t is sufficient for
- * the 13 current types and leaves room for future additions.  The values are
+ * the current types and leaves room for future additions.  The values are
  * chosen to be distinct and non-zero so that ob_type == 0 reliably detects
  * use-after-free (the allocator poisons freed blocks with ob_type = 0).
  */
@@ -937,7 +936,5 @@ MenaiValue *menai_vm_execute_native(MenaiCodeObject *code,
                                     int *out_err);
 
 void menai_vm_clear_cancel(void);
-
-PyObject *menai_vm_c_execute(PyObject *self, PyObject *args);
 
 #endif /* MENAI_VM_C_H */

@@ -16,6 +16,9 @@
 #include <stdint.h>
 #include <string.h>
 
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include "menai_vm_c.h"
 #include "menai_vm_atomic.h"
 
@@ -1572,6 +1575,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             char *cstr = menai_string_to_utf8(msg, NULL);
             if (cstr == NULL) {
+                vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -6440,6 +6444,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiValue *r = menai_list_rest(a);
             if (r == NULL) {
+                vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -6871,7 +6876,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             hash_t *nhashes = ((MenaiSet *)r)->hashes;
             MenaiHashTable lts_seen;
             int lts_err = 0;
-            if (n > 0 && menai_ht_init(&lts_seen, n) < 0) {
+            if (n > 0 && (_rc = menai_ht_init(&lts_seen, n)) < 0) {
+                vm_err = _rc;
                 menai_release(r);
                 goto error;
             }
@@ -6910,11 +6916,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 menai_release(r);
+                vm_err = MENAI_ERR_EVAL;
+                menai_raise_eval_error("unhashable type for dict/set key");
                 goto error;
             }
 
             ((MenaiSet *)r)->length = out;
-            if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out) < 0) {
+            _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out);
+            if (_rc < 0) {
+                vm_err = MENAI_ERR_NOMEM;
                 menai_release(r);
                 goto error;
             }
@@ -7085,6 +7095,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiDict *d = (MenaiDict *)a;
             hash_t h = menai_value_hash(key);
             if (h == -1) {
+                vm_err = MENAI_ERR_EVAL;
+                menai_raise_eval_error("unhashable type for dict/set key");
                 goto error;
             }
 
@@ -7108,6 +7120,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiDict *d = (MenaiDict *)a;
             hash_t h = menai_value_hash(key);
             if (h == -1) {
+                vm_err = MENAI_ERR_EVAL;
+                menai_raise_eval_error("unhashable type for dict/set key");
                 goto error;
             }
 
@@ -7140,6 +7154,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiDict *d = (MenaiDict *)a;
             hash_t h = menai_value_hash(key);
             if (h == -1) {
+                vm_err = MENAI_ERR_EVAL;
+                menai_raise_eval_error("unhashable type for dict/set key");
                 goto error;
             }
 
@@ -7214,6 +7230,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiDict *d = (MenaiDict *)a;
             hash_t h = menai_value_hash(key);
             if (h == -1) {
+                vm_err = MENAI_ERR_EVAL;
+                menai_raise_eval_error("unhashable type for dict/set key");
                 goto error;
             }
 
@@ -7452,6 +7470,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet *s = (MenaiSet *)a;
             hash_t h = menai_value_hash(item);
             if (h == -1) {
+                vm_err = MENAI_ERR_EVAL;
+                menai_raise_eval_error("unhashable type for dict/set key");
                 goto error;
             }
 
@@ -7476,6 +7496,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet *s = (MenaiSet *)a;
             hash_t h = menai_value_hash(item);
             if (h == -1) {
+                vm_err = MENAI_ERR_EVAL;
+                menai_raise_eval_error("unhashable type for dict/set key");
                 goto error;
             }
 
@@ -7506,7 +7528,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 nelems[n] = item;
                 nhashes[n] = h;
                 ((MenaiSet *)r)->length = n + 1;
-                if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, n + 1) < 0) {
+                _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, n + 1);
+                if (_rc < 0) {
+                    vm_err = MENAI_ERR_NOMEM;
                     menai_release(r);
                     goto error;
                 }
@@ -7529,6 +7553,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet *s = (MenaiSet *)a;
             hash_t h = menai_value_hash(item);
             if (h == -1) {
+                vm_err = MENAI_ERR_EVAL;
+                menai_raise_eval_error("unhashable type for dict/set key");
                 goto error;
             }
 
@@ -7564,7 +7590,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             ((MenaiSet *)r)->length = new_n;
-            if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, new_n) < 0) {
+            _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, new_n);
+            if (_rc < 0) {
+                vm_err = MENAI_ERR_NOMEM;
                 menai_release(r);
                 goto error;
             }
@@ -7626,7 +7654,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             ((MenaiSet *)r)->length = out;
-            if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out) < 0) {
+            _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out);
+            if (_rc < 0) {
+                vm_err = MENAI_ERR_NOMEM;
                 menai_release(r);
                 goto error;
             }
@@ -7680,7 +7710,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             ((MenaiSet *)r)->length = out;
-            if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out) < 0) {
+            _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out);
+            if (_rc < 0) {
+                vm_err = MENAI_ERR_NOMEM;
                 menai_release(r);
                 goto error;
             }
@@ -7733,7 +7765,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             ((MenaiSet *)r)->length = out;
-            if (menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out) < 0) {
+            _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out);
+            if (_rc < 0) {
+                vm_err = MENAI_ERR_NOMEM;
                 menai_release(r);
                 goto error;
             }
@@ -7938,6 +7972,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 MenaiValue *elem = regs[base + src0 + i];
                 hash_t h = menai_value_hash(elem);
                 if (h == -1) {
+                    vm_err = MENAI_ERR_EVAL;
+                    menai_raise_eval_error("unhashable type for dict/set key");
                     menai_release(r);
                     goto error;
                 }
@@ -7948,9 +7984,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             s->length = n;
-            if (n > 0 && menai_ht_build(&s->ht, s->elements, s->hashes, n) < 0) {
-                menai_release(r);
-                goto error;
+            if (n > 0) {
+                _rc = menai_ht_build(&s->ht, s->elements, s->hashes, n);
+                if (_rc < 0) {
+                    vm_err = MENAI_ERR_NOMEM;
+                    menai_release(r);
+                    goto error;
+                }
             }
 
             menai_reg_set_own(regs, base + dest, r);
@@ -7983,6 +8023,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 MenaiValue *v = regs[base + src0 + i * 2 + 1];
                 hash_t h = menai_value_hash(k);
                 if (h == -1) {
+                    vm_err = MENAI_ERR_EVAL;
+                    menai_raise_eval_error("unhashable type for dict/set key");
                     free(keys);
                     free(values);
                     free(hashes);

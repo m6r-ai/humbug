@@ -14,9 +14,6 @@
 
 #include "menai_vm_c.h"
 
-/* Defined in menai_vm_c.c */
-extern PyObject *MenaiEvalError_type;
-
 static inline uhash_t
 _hash_combine(uhash_t acc, hash_t h)
 {
@@ -94,9 +91,6 @@ menai_value_hash(MenaiValue *val)
     }
     }
 
-    PyErr_Format(MenaiEvalError_type,
-        "Dict keys must be strings, numbers, booleans, or symbols, got %s",
-        menai_short_type_name(t));
     return -1;
 }
 
@@ -266,8 +260,7 @@ menai_ht_init(MenaiHashTable *ht, ssize_t n)
 
     ht->slots = (MenaiHashSlot *)malloc((size_t)sc * sizeof(MenaiHashSlot));
     if (!ht->slots) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
 
     memset(ht->slots, 0, (size_t)sc * sizeof(MenaiHashSlot));

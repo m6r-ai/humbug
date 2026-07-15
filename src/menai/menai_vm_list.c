@@ -55,9 +55,6 @@ menai_list_rest(MenaiValue *lst_val)
 {
     MenaiList *lst = (MenaiList *)lst_val;
     if (lst->length == 0) {
-        /* Error reporting still goes through Python exceptions for now. */
-        PyErr_SetString(PyExc_RuntimeError,
-            "Function 'list-rest' requires a non-empty list");
         return NULL;
     }
 

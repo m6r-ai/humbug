@@ -13,6 +13,9 @@
 #include <string.h>
 #include <stdint.h>
 
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include "menai_vm_c.h"
 #include "menai_vm_atomic.h"
 
@@ -1574,7 +1577,7 @@ fail:
  * calls menai_vm_execute_native to run the VM.  The result is converted back
  * to a slow Python MenaiValue before returning.
  */
-PyObject *
+static PyObject *
 menai_vm_c_execute(PyObject *self, PyObject *args)
 {
     PyObject *code;
