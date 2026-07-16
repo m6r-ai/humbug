@@ -778,16 +778,6 @@ class Menai:
                                       (loop (integer+ i 1)
                                             (f acc (bytes-ref b i)))))))
                    (loop 0 init))))
-   (zip-bytes (lambda (b1 b2)
-                (letrec ((loop (lambda (i acc)
-                                 (if (or (integer=? i (bytes-length b1))
-                                         (integer=? i (bytes-length b2)))
-                                     (list-reverse acc)
-                                     (loop (integer+ i 1)
-                                         (list-prepend acc
-                                                       (list (bytes-ref b1 i)
-                                                             (bytes-ref b2 i))))))))
-                  (loop 0 (list)))))
    (bytes-empty? (lambda (b) (integer=? (bytes-length b) 0)))
    (bytes-prefix? (lambda (b prefix)
                      (and (integer<=? (bytes-length prefix) (bytes-length b))
@@ -1374,7 +1364,6 @@ class Menai:
         "map-bytes" map-bytes
         "filter-bytes" filter-bytes
         "fold-bytes" fold-bytes
-        "zip-bytes" zip-bytes
         "bytes-empty?" bytes-empty?
         "bytes-prefix?" bytes-prefix?
         "bytes-suffix?" bytes-suffix?

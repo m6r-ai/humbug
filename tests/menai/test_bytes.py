@@ -1154,22 +1154,6 @@ class TestBytesPreludeHigherOrder:
         result = menai.evaluate('(fold-bytes (lambda (acc b) (list-append acc b)) (list) (string-hex->bytes "010203"))')
         assert result == [1, 2, 3]
 
-    def test_zip_bytes(self, menai):
-        """zip-bytes produces a list of byte pairs."""
-        result = menai.evaluate('(zip-bytes (string-hex->bytes "0102") (string-hex->bytes "0304"))')
-        assert result == [[1, 3], [2, 4]]
-
-    def test_zip_bytes_unequal_length(self, menai):
-        """zip-bytes stops at the shorter input."""
-        result = menai.evaluate('(zip-bytes (string-hex->bytes "0102") (string-hex->bytes "030405"))')
-        assert result == [[1, 3], [2, 4]]
-
-    def test_zip_bytes_empty(self, menai):
-        """zip-bytes with an empty input returns empty list."""
-        result = menai.evaluate('(zip-bytes (string-hex->bytes "") (string-hex->bytes "0102"))')
-        assert result == []
-
-
 class TestBytesPreludePredicates:
     """Test convenience predicate prelude functions."""
 

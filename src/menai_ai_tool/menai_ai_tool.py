@@ -356,7 +356,7 @@ Syntax: (operator arg1 arg2 ...)
 - Set algebra: (set-union s1 s2), (set-intersection s1 s2), (set-difference s1 s2) → s1 minus s2
 - Subset test: (set-subset? s1 s2) → #t if every element of s1 is in s2
 - Conversion: (set->list s) → list of elements (insertion order), (list->set lst) → set from list (deduplicates)
-- Higher-order: (map-set func s) → apply func to each element, return new set; (filter-set pred s) → new set of elements satisfying pred; (fold-set func init s) → left fold over elements
+- Higher-order: (map-set func s) → apply func to each element, return new set; (filter-set pred s) → new set of elements satisfying pred; (fold-set func init s) → left fold over elements; func signature is (lambda (acc item) result) — same argument order as fold-list
 - Predicates: (any-set? pred s) → #t if at least one element satisfies pred, #f otherwise; note: (any-set? pred (set)) → #f; (all-set? pred s) → #t if all elements satisfy pred, #f otherwise; note: (all-set? pred (set)) → #t (vacuously true)
 - Pattern matching: (match x ((? set? s) ...) (_ ...))
 - Sets have no ordering operators and no positional access; use (set->list s) then list operations for iteration
@@ -412,7 +412,7 @@ Syntax: (operator arg1 arg2 ...)
   - (bytes-append-uleb128 b value) → new bytes with unsigned LEB128 encoding; value must be non-negative
   - (bytes-read-sleb128 b offset) → (value next-offset) as a 2-element list; raises error if truncated
   - (bytes-append-sleb128 b value) → new bytes with signed LEB128 encoding
-- Higher-order: (map-bytes f b) → new bytes with f applied to each byte; (filter-bytes pred b) → bytes of bytes satisfying pred; (fold-bytes f init b) → left fold over bytes; (zip-bytes b1 b2) → list of 2-element lists, stops at shorter
+- Higher-order: (map-bytes f b) → new bytes with f applied to each byte; (filter-bytes pred b) → bytes of bytes satisfying pred; (fold-bytes f init b) → left fold over bytes; f signature is (lambda (acc byte) result) — same argument order as fold-list, where byte is an integer 0–255
 - Predicates: (bytes-empty? b) → #t if length is 0; (bytes-prefix? b prefix) → #t if b starts with prefix; (bytes-suffix? b suffix) → #t if b ends with suffix
 - Splitting: (bytes-split b delimiter) → list of bytes split on delimiter (delimiter must be non-empty); (bytes-split-int b byte) → list of bytes split on single byte value
 
@@ -443,7 +443,7 @@ Syntax: (operator arg1 arg2 ...)
 - (map-dict func dict) → applies func to each (key value) pair, returning a new dict with transformed values; func receives key and value as separate arguments: (map-dict (lambda (k v) (integer* v 2)) (dict "a" 1 "b" 2)) → {("a" 2) ("b" 4)}
 - (filter-list predicate list) → (filter-list (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
 - (filter-dict pred dict) → returns a new dict containing only entries where pred returns #t; pred receives key and value as separate arguments: (filter-dict (lambda (k v) (integer>? v 1)) (dict "a" 1 "b" 2)) → {("b" 2)}
-- (fold-list func init list) → left fold (tail-recursive); processes list left-to-right, accumulating into init: (fold-list integer+ 0 (list 1 2 3 4)) → 10, (fold-list integer- 0 (list 1 2 3)) → -6
+- (fold-list func init list) → left fold (tail-recursive); processes list left-to-right, accumulating into init; func signature is (lambda (acc item) result) where acc is the current accumulator and item is the current list element: (fold-list integer+ 0 (list 1 2 3 4)) → 10, (fold-list (lambda (acc item) (list-append acc item)) (list) (list 1 2 3)) → (1 2 3)
 - (find-list predicate list) → first element satisfying predicate, or #none if none found: (find-list (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (find-list predicate ()) → #none
 - (any-list? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (any-list? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (any-list? predicate ()) → #f
 - (all-list? predicate list) → #t if all elements satisfy predicate, #f otherwise: (all-list? (lambda (x) (integer>? x 0)) (list 1 2 3 4 5)) → #t, note: (all-list? predicate ()) → #t (vacuously true)
