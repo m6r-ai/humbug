@@ -5,6 +5,13 @@
 New features:
 
 - Added a new `bytes` type to Menai.  This allows for the manipulation of binary (byte object) data.
+- Updated the tool system so tools that use Menai must read the AI tool help before being allowed to write Menai expressions.
+
+Internal structure changes:
+
+- The Menai VM exception handling logic has been completely reworked to generate structured exceptions rather than reporting
+  error strings that in many cases were increasingly inaccurate.
+- Removed all Python-specific logic from the Menai VM except for the `menai_vm_bridge.c` file.
 
 ## v53 (2026-07-12)
 
@@ -32,7 +39,7 @@ Internal structure changes:
 
 - Renamed `src/dmarkdown` to `src/markdown_` and `src/dhtml` to `src/html_` to unify the approach for package namespace
   collisions.
-- Tightened up the dependency_checker tool so it catches unused dependencies as well as missing dependencies.
+- Tightened up the `dependency_checker` tool so it catches unused dependencies as well as missing dependencies.
 
 ## v52 (2026-07-03)
 
