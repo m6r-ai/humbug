@@ -391,7 +391,8 @@ class FileSystemAITool(AITool):
                     "'input-lines' (content split on newlines as a list of strings). "
                     "It must return a string or a list of strings. "
                     "A unified diff is shown for user approval before any write occurs. "
-                    "If dry_run is True, returns the diff without requesting authorisation or writing anything."
+                    "If dry_run is True, returns the diff without requesting authorisation or writing anything. "
+                    "You must call `help` with `get_help` for the menai tool before using this operation."
                 )
             ),
         }
@@ -2099,14 +2100,34 @@ class FileSystemAITool(AITool):
 
         return original_content, new_content
 
+    @staticmethod
+    def _require_menai_help(requester_ref: Any) -> None:
+        """
+        Raise an error if the Menai help has not been read in this conversation.
+
+        Args:
+            requester_ref: The AIConversation making the request
+
+        Raises:
+            AIToolExecutionError: If Menai help has not been read
+        """
+        if not hasattr(requester_ref, "menai_help_read") or not requester_ref.menai_help_read():
+            raise AIToolExecutionError(
+                "You must read the Menai language documentation before using this tool. "
+                "Call the help tool with operation 'get_help' and tool_name 'menai' to load it."
+            )
+
     async def _transform_file(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Apply a Menai transform program to a file."""
         arguments = tool_call.arguments
+
+        self._require_menai_help(requester_ref)
+
         path_arg = self._get_required_str_value("path", arguments)
         path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
         program = self._get_required_str_value("program", arguments)

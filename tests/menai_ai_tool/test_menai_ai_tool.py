@@ -12,6 +12,8 @@ from ai_tool import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionEr
 from menai_ai_tool.menai_ai_tool import MenaiAITool
 from menai import MenaiError
 
+from tests.conftest import MockRequester
+
 
 def get_result(content):
     """Extract result from JSON response."""
@@ -53,7 +55,7 @@ class TestMenaiAIToolExecution:
 
         for expression, expected in test_cases:
             tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": expression})
-            result = asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+            result = asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
             assert get_result(result.content) == expected
 
     def test_execute_mathematical_functions(self, menai_tool, mock_authorization, make_tool_call):
@@ -71,7 +73,7 @@ class TestMenaiAIToolExecution:
 
         for expression, expected in test_cases:
             tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": expression})
-            result = asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+            result = asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
             assert get_result(result.content) == expected
 
     def test_execute_lambda_functions(self, menai_tool, mock_authorization, make_tool_call):
@@ -84,7 +86,7 @@ class TestMenaiAIToolExecution:
 
         for expression, expected in test_cases:
             tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": expression})
-            result = asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+            result = asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
             assert get_result(result.content) == expected
 
 
@@ -95,7 +97,7 @@ class TestMenaiAIToolErrorHandling:
         """Test execution without expression argument."""
         tool_call = make_tool_call("Menai", {"operation": "evaluate"})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
 
         error = exc_info.value
         assert "expression" in str(error).lower()
@@ -104,7 +106,7 @@ class TestMenaiAIToolErrorHandling:
         """Test execution with empty expression."""
         tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": ""})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
 
         error = exc_info.value
         assert "empty expression" in str(error).lower()
@@ -113,7 +115,7 @@ class TestMenaiAIToolErrorHandling:
         """Test execution with non-string expression."""
         tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": 123})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
 
         error = exc_info.value
         assert "Expression must be a string" in str(error)
@@ -122,7 +124,7 @@ class TestMenaiAIToolErrorHandling:
         """Test execution with division by zero."""
         tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer/ 5 0)"})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
 
         error = exc_info.value
         # Fixed: Menai raises MenaiEvalError, not ZeroDivisionError
@@ -146,7 +148,7 @@ class TestMenaiAIToolErrorHandling:
         for expression in invalid_expressions:
             tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": expression})
             with pytest.raises(AIToolExecutionError):
-                asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+                asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
 
     def test_execute_menai_error_wrapping(self, menai_tool, mock_authorization, make_tool_call):
         """Test that MenaiError is properly wrapped."""
@@ -155,7 +157,7 @@ class TestMenaiAIToolErrorHandling:
 
             tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer+ 1 2)"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+                asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
 
             error = exc_info.value
             assert "Custom Menai error" in str(error)
@@ -179,7 +181,7 @@ class TestMenaiAIToolErrorHandling:
             with patch('asyncio.wait_for', side_effect=mock_wait_for):
                 tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer+ 1 2)"})
                 with pytest.raises(AIToolExecutionError) as exc_info:
-                    asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+                    asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
 
                 error = exc_info.value
                 assert "Menai calculation timed out" in str(error)
@@ -193,7 +195,7 @@ class TestMenaiAIToolErrorHandling:
 
             tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer+ 1 2)"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+                asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
 
             error = exc_info.value
             assert "Failed to evaluate Menai expression" in str(error)
@@ -228,7 +230,7 @@ class TestMenaiAIToolParametrized:
     def test_various_expressions(self, menai_tool, mock_authorization, make_tool_call, expression, expected):
         """Test various Menai expressions."""
         tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": expression})
-        result = asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
         assert get_result(result.content) == expected
 
     @pytest.mark.parametrize("invalid_expression", [
@@ -245,7 +247,35 @@ class TestMenaiAIToolParametrized:
         """Test that various invalid expressions raise AIToolExecutionError."""
         tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": invalid_expression})
         with pytest.raises(AIToolExecutionError):
+            asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
+
+
+class TestMenaiAIToolHelpGate:
+    """Test the Menai help-read gating mechanism."""
+
+    def test_evaluate_blocked_without_help(self, menai_tool, mock_authorization, make_tool_call):
+        """Evaluate raises an error when Menai help has not been read."""
+        requester = MockRequester(menai_help_read=False)
+        tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer+ 1 2)"})
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(menai_tool.execute(tool_call, requester, mock_authorization))
+
+        assert "must read the Menai language documentation" in str(exc_info.value)
+
+    def test_evaluate_allowed_after_help(self, menai_tool, mock_authorization, make_tool_call):
+        """Evaluate succeeds when Menai help has been read."""
+        requester = MockRequester(menai_help_read=True)
+        tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer+ 1 2)"})
+        result = asyncio.run(menai_tool.execute(tool_call, requester, mock_authorization))
+        assert get_result(result.content) == "3"
+
+    def test_evaluate_blocked_with_plain_requester(self, menai_tool, mock_authorization, make_tool_call):
+        """Evaluate raises an error when requester has no menai_help_read method."""
+        tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer+ 1 2)"})
+        with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+
+        assert "must read the Menai language documentation" in str(exc_info.value)
 
 
 class TestMenaiAIToolIntegration:
@@ -287,7 +317,7 @@ class TestMenaiAIToolTimeout:
             with patch('asyncio.wait_for', side_effect=mock_wait_for):
                 tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer+ 1 2)"})
                 with pytest.raises(AIToolExecutionError) as exc_info:
-                    asyncio.run(menai_tool.execute(tool_call, "", mock_authorization))
+                    asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
 
                 error = exc_info.value
                 # The timeout error is now wrapped in AIToolExecutionError

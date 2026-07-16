@@ -8,6 +8,8 @@ import pytest
 from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
 from editor_ai_tool.editor_ai_tool import EditorAITool
 
+from tests.conftest import MockRequester
+
 
 @pytest.fixture
 def mock_mindspace():
@@ -72,7 +74,7 @@ class TestEditorAIToolTransform:
             "editor",
             {"operation": "transform", "tab_id": "test-tab-id", "program": "(string-upcase input-text)"}
         )
-        result = asyncio.run(tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
         assert "save_file" in data["message"]
@@ -88,7 +90,7 @@ class TestEditorAIToolTransform:
             "editor",
             {"operation": "transform", "tab_id": "test-tab-id", "program": "(list-reverse input-lines)"}
         )
-        result = asyncio.run(tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
 
@@ -102,7 +104,7 @@ class TestEditorAIToolTransform:
             "editor",
             {"operation": "transform", "tab_id": "test-tab-id", "program": "input-text"}
         )
-        result = asyncio.run(tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "no changes" in result.content.lower()
         ctx.apply_diff.assert_not_called()
 
@@ -117,7 +119,7 @@ class TestEditorAIToolTransform:
             {"operation": "transform", "tab_id": "test-tab-id", "program": "(string-upcase input-text)"}
         )
         with pytest.raises(AIToolAuthorizationDenied):
-            asyncio.run(tool.execute(tool_call, "", mock_authorization_denied))
+            asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization_denied))
         ctx.apply_diff.assert_not_called()
 
     def test_transform_invalid_program(self, editor_tool, mock_authorization, make_tool_call):
@@ -131,7 +133,7 @@ class TestEditorAIToolTransform:
             {"operation": "transform", "tab_id": "test-tab-id", "program": "(integer+ 1 2"}
         )
         with pytest.raises(AIToolExecutionError):
-            asyncio.run(tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
 
     def test_transform_wrong_return_type(self, editor_tool, mock_authorization, make_tool_call):
         """Transform raises AIToolExecutionError when the program returns a non-text type."""
@@ -144,7 +146,7 @@ class TestEditorAIToolTransform:
             {"operation": "transform", "tab_id": "test-tab-id", "program": "42"}
         )
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "string or list of strings" in str(exc_info.value)
 
     def test_transform_empty_program(self, editor_tool, mock_authorization, make_tool_call):
@@ -158,7 +160,7 @@ class TestEditorAIToolTransform:
             {"operation": "transform", "tab_id": "test-tab-id", "program": "   "}
         )
         with pytest.raises(AIToolExecutionError):
-            asyncio.run(tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
 
     def test_transform_input_text_binding(self, editor_tool, mock_authorization, make_tool_call):
         """'input-text' is bound to the full buffer content as a single string."""
@@ -172,7 +174,7 @@ class TestEditorAIToolTransform:
             "editor",
             {"operation": "transform", "tab_id": "test-tab-id", "program": program}
         )
-        result = asyncio.run(tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
         diff_arg = ctx.apply_diff.call_args[0][0]
@@ -189,7 +191,7 @@ class TestEditorAIToolTransform:
             "editor",
             {"operation": "transform", "tab_id": "test-tab-id", "program": program}
         )
-        result = asyncio.run(tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
         diff_arg = ctx.apply_diff.call_args[0][0]
@@ -205,7 +207,7 @@ class TestEditorAIToolTransform:
             "editor",
             {"operation": "transform", "tab_id": "test-tab-id", "program": "(string-upcase input-text)"}
         )
-        asyncio.run(tool.execute(tool_call, "", mock_authorization))
+        asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         mindspace.add_interaction.assert_called_once()
 
     def test_transform_missing_tab(self, editor_tool, mock_authorization, make_tool_call):
@@ -220,7 +222,7 @@ class TestEditorAIToolTransform:
             {"operation": "transform", "tab_id": "nonexistent-tab", "program": "input-text"}
         )
         with pytest.raises(AIToolExecutionError):
-            asyncio.run(tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
 
     def test_transform_dry_run_returns_diff_without_applying(
         self, editor_tool, mock_authorization, make_tool_call
@@ -239,7 +241,7 @@ class TestEditorAIToolTransform:
                 "dry_run": True
             }
         )
-        result = asyncio.run(tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "dry run" in result.content.lower()
         assert "+" in result.content
         ctx.apply_diff.assert_not_called()
@@ -256,6 +258,23 @@ class TestEditorAIToolTransform:
             "editor",
             {"operation": "transform", "tab_id": "test-tab-id", "program": "input-text", "dry_run": True}
         )
-        result = asyncio.run(tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "no changes" in result.content.lower()
+        ctx.apply_diff.assert_not_called()
+
+    def test_transform_blocked_without_help(self, editor_tool, mock_authorization, make_tool_call):
+        """Transform raises an error when Menai help has not been read."""
+        tool, mindspace = editor_tool
+        ctx = make_editor_context("hello world")
+        _set_context(tool, mindspace, ctx)
+
+        requester = MockRequester(menai_help_read=False)
+        tool_call = make_tool_call(
+            "editor",
+            {"operation": "transform", "tab_id": "test-tab-id", "program": "(string-upcase input-text)"}
+        )
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, requester, mock_authorization))
+
+        assert "must read the Menai language documentation" in str(exc_info.value)
         ctx.apply_diff.assert_not_called()

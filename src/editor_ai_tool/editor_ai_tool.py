@@ -249,7 +249,8 @@ class EditorAITool(AITool):
                     "It must return a string or a list of strings. "
                     "A unified diff is shown for user approval before the buffer is modified. "
                     "If dry_run is True, returns the diff without requesting authorisation or applying anything. "
-                    "Use save_file afterward to persist the changes."
+                    "Use save_file afterward to persist the changes. "
+                    "You must call `help` with `get_help` for the menai tool before using this operation."
                 )
             ),
         }
@@ -754,14 +755,34 @@ class EditorAITool(AITool):
 
         return new_content
 
+    @staticmethod
+    def _require_menai_help(requester_ref: Any) -> None:
+        """
+        Raise an error if the Menai help has not been read in this conversation.
+
+        Args:
+            requester_ref: The AIConversation making the request
+
+        Raises:
+            AIToolExecutionError: If Menai help has not been read
+        """
+        if not hasattr(requester_ref, "menai_help_read") or not requester_ref.menai_help_read():
+            raise AIToolExecutionError(
+                "You must read the Menai language documentation before using this tool. "
+                "Call the help tool with operation 'get_help' and tool_name 'menai' to load it."
+            )
+
     async def _transform(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Apply a Menai transform program to the editor buffer."""
         arguments = tool_call.arguments
+
+        self._require_menai_help(requester_ref)
+
         context = self._get_editor_context(arguments)
         context_id = context.context_id()
         program = self._get_required_str_value("program", arguments)

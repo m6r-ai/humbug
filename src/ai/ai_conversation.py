@@ -73,6 +73,9 @@ class AIConversation:
         self._state = ConversationState.IDLE
         self._pending_user_messages: list[AIMessage] = []
 
+        # Menai help tracking — per-conversation flag
+        self._menai_help_read = False
+
         # Callbacks for events
         self._callbacks: dict[AIConversationEvent, set[Callable]] = {
             event: set() for event in AIConversationEvent
@@ -81,6 +84,24 @@ class AIConversation:
     def is_streaming(self) -> bool:
         """Check if the conversation is currently streaming a response."""
         return self._is_streaming
+
+    def mark_menai_help_read(self) -> None:
+        """
+        Mark that the Menai help documentation has been read in this conversation.
+
+        Called by the help tool when the AI requests Menai documentation.
+        Gates Menai-related operations (evaluate, editor transform, filesystem transform).
+        """
+        self._menai_help_read = True
+
+    def menai_help_read(self) -> bool:
+        """
+        Check whether the Menai help has been read in this conversation.
+
+        Returns:
+            True if the AI has read the Menai help in this conversation session
+        """
+        return self._menai_help_read
 
     def register_callback(self, event: AIConversationEvent, callback: Callable) -> None:
         """

@@ -11,6 +11,8 @@ from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
 from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 
+from tests.conftest import MockRequester
+
 
 @pytest.fixture
 def real_path_resolver():
@@ -79,7 +81,7 @@ class TestFileSystemAIToolTransformFile:
             "filesystem",
             {"operation": "transform_file", "path": str(target), "program": "(string-upcase input-text)"}
         )
-        result = asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
         assert target.read_text(encoding='utf-8') == "HELLO WORLD"
@@ -93,7 +95,7 @@ class TestFileSystemAIToolTransformFile:
             "filesystem",
             {"operation": "transform_file", "path": str(target), "program": "(list-reverse input-lines)"}
         )
-        result = asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
         assert target.read_text(encoding='utf-8') == "gamma\nbeta\nalpha"
@@ -109,7 +111,7 @@ class TestFileSystemAIToolTransformFile:
             "filesystem",
             {"operation": "transform_file", "path": str(target), "program": "input-text"}
         )
-        result = asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "no changes" in result.content.lower()
         assert target.read_text(encoding='utf-8') == original
         assert os.path.getmtime(str(target)) == mtime_before
@@ -124,7 +126,7 @@ class TestFileSystemAIToolTransformFile:
             {"operation": "transform_file", "path": str(target), "program": "(string-upcase input-text)"}
         )
         with pytest.raises(AIToolAuthorizationDenied):
-            asyncio.run(transform_tool.execute(tool_call, "", mock_authorization_denied))
+            asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization_denied))
 
         assert target.read_text(encoding='utf-8') == "original"
 
@@ -136,7 +138,7 @@ class TestFileSystemAIToolTransformFile:
             {"operation": "transform_file", "path": missing, "program": "input-text"}
         )
         with pytest.raises(AIToolExecutionError):
-            asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
 
     def test_transform_invalid_program(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
         """transform_file raises AIToolExecutionError for a program with a syntax error."""
@@ -148,7 +150,7 @@ class TestFileSystemAIToolTransformFile:
             {"operation": "transform_file", "path": str(target), "program": "(integer+ 1 2"}
         )
         with pytest.raises(AIToolExecutionError):
-            asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
 
     def test_transform_wrong_return_type(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
         """transform_file raises AIToolExecutionError when the program returns a non-text type."""
@@ -160,7 +162,7 @@ class TestFileSystemAIToolTransformFile:
             {"operation": "transform_file", "path": str(target), "program": "42"}
         )
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "string or list of strings" in str(exc_info.value)
 
     def test_transform_empty_program(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
@@ -173,7 +175,7 @@ class TestFileSystemAIToolTransformFile:
             {"operation": "transform_file", "path": str(target), "program": "   "}
         )
         with pytest.raises(AIToolExecutionError):
-            asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
 
     def test_transform_input_text_binding(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
         """'input-text' is bound to the full file content as a single string."""
@@ -186,7 +188,7 @@ class TestFileSystemAIToolTransformFile:
             "filesystem",
             {"operation": "transform_file", "path": str(target), "program": program}
         )
-        result = asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
         assert target.read_text(encoding='utf-8') == str(len(content))
@@ -201,7 +203,7 @@ class TestFileSystemAIToolTransformFile:
             "filesystem",
             {"operation": "transform_file", "path": str(target), "program": program}
         )
-        result = asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
         assert target.read_text(encoding='utf-8') == "3"
@@ -215,7 +217,7 @@ class TestFileSystemAIToolTransformFile:
             "filesystem",
             {"operation": "transform_file", "path": str(target), "program": "(string-upcase input-text)"}
         )
-        asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+        asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         assert target.read_text(encoding='utf-8') == "HELLO"
         tmp_files = list(tmp_path.glob("*.tmp"))
         assert len(tmp_files) == 0
@@ -237,7 +239,7 @@ class TestFileSystemAIToolTransformFile:
                 "dry_run": True
             }
         )
-        result = asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         assert target.read_text(encoding='utf-8') == original
         assert "dry run" in result.content.lower()
         assert "+" in result.content
@@ -254,6 +256,22 @@ class TestFileSystemAIToolTransformFile:
             "filesystem",
             {"operation": "transform_file", "path": str(target), "program": "input-text", "dry_run": True}
         )
-        result = asyncio.run(transform_tool.execute(tool_call, "", mock_authorization))
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "no changes" in result.content.lower()
         mock_authorization.assert_not_called()
+
+    def test_transform_blocked_without_help(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
+        """transform_file raises an error when Menai help has not been read."""
+        target = tmp_path / "hello.txt"
+        target.write_text("hello world", encoding='utf-8')
+
+        requester = MockRequester(menai_help_read=False)
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "transform_file", "path": str(target), "program": "(string-upcase input-text)"}
+        )
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(transform_tool.execute(tool_call, requester, mock_authorization))
+
+        assert "must read the Menai language documentation" in str(exc_info.value)
+        assert target.read_text(encoding='utf-8') == "hello world"

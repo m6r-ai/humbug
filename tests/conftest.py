@@ -8,6 +8,23 @@ import pytest
 from ai_tool import AIToolCall
 
 
+class MockRequester:
+    """
+    Minimal mock of AIConversation for tool tests.
+
+    Simulates a conversation where Menai help has been read.
+    """
+
+    def __init__(self, menai_help_read: bool = True) -> None:
+        self._menai_help_read = menai_help_read
+
+    def menai_help_read(self) -> bool:
+        return self._menai_help_read
+
+    def mark_menai_help_read(self) -> None:
+        self._menai_help_read = True
+
+
 @pytest.fixture
 def make_tool_call():
     """Factory for creating AIToolCall objects for testing."""
