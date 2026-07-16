@@ -1093,7 +1093,7 @@ menai_bigint_divmod(
     MenaiBigInt *remainder)
 {
     if (b->sign == 0) {
-        return MENAI_ERR_DIVZERO;
+        return MENAI_ERR_DIVISION_BY_ZERO;
     }
 
     if (a->sign == 0) {
@@ -1191,7 +1191,7 @@ int
 menai_bigint_floordiv(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     if (b->sign == 0) {
-        return MENAI_ERR_DIVZERO;
+        return MENAI_ERR_DIVISION_BY_ZERO;
     }
 
     MenaiBigInt q, r;
@@ -1212,7 +1212,7 @@ int
 menai_bigint_mod(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     if (b->sign == 0) {
-        return MENAI_ERR_DIVZERO;
+        return MENAI_ERR_DIVISION_BY_ZERO;
     }
 
     MenaiBigInt q, r;
