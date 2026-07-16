@@ -325,6 +325,15 @@ Syntax: (operator arg1 arg2 ...)
 - (list->string (list "h" "e" "l" "l" "o")) → "hello" (no separator: concatenates directly; all elements must be strings)
 - (list->string (list "a" "b" "c") ",") → "a,b,c" (separator inserted between elements; separator may be multi-character)
 - (list->set lst) → convert list to set (deduplicates, retains first occurrence order)
+- (range start end [step]) → (range 1 5) → (1 2 3 4), integers only
+- Higher-order: (map-list func list) → (map-list (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
+- Higher-order: (filter-list predicate list) → (filter-list (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
+- Higher-order: (fold-list func init list) → left fold (tail-recursive); processes list left-to-right, accumulating into init; func signature is (lambda (acc item) result) where acc is the current accumulator and item is the current list element: (fold-list integer+ 0 (list 1 2 3 4)) → 10, (fold-list (lambda (acc item) (list-append acc item)) (list) (list 1 2 3)) → (1 2 3)
+- Higher-order: (find-list predicate list) → first element satisfying predicate, or #none if none found: (find-list (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (find-list predicate ()) → #none
+- Higher-order: (any-list? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (any-list? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (any-list? predicate ()) → #f
+- Higher-order: (all-list? predicate list) → #t if all elements satisfy predicate, #f otherwise: (all-list? (lambda (x) (integer>? x 0)) (list 1 2 3 4 5)) → #t, note: (all-list? predicate ()) → #t (vacuously true)
+- (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
+- Higher-order: (sort-list comparator lst) → returns a new list sorted by comparator; comparator is a two-argument function returning #t if first arg should come before second: (sort-list integer<? (list 3 1 4 1 5)) → (1 1 3 4 5), (sort-list string<? (list "b" "a" "c")) → ("a" "b" "c"); sort is stable and preserves insertion order of equal elements
 
 ## Dictionaries (dicts):
 
@@ -341,6 +350,8 @@ Syntax: (operator arg1 arg2 ...)
 - Nested dicts: (dict "user" (dict "name" "Bob" "id" 123))
 - Pattern matching: (match data ((? dict? a) ...) (_ ...))
 - Maintains insertion order, optimized for data processing workflows
+- Higher-order: (map-dict func dict) → applies func to each (key value) pair, returning a new dict with transformed values; func receives key and value as separate arguments: (map-dict (lambda (k v) (integer* v 2)) (dict "a" 1 "b" 2)) → {("a" 2) ("b" 4)}
+- Higher-order: (filter-dict pred dict) → returns a new dict containing only entries where pred returns #t; pred receives key and value as separate arguments: (filter-dict (lambda (k v) (integer>? v 1)) (dict "a" 1 "b" 2)) → {("b" 2)}
 
 ## Sets:
 
@@ -435,20 +446,6 @@ Syntax: (operator arg1 arg2 ...)
 - (function-min-arity f) → integer: minimum number of arguments f requires, (function-min-arity integer-abs) → 1, (function-min-arity integer+) → 0, (function-min-arity (lambda (x . rest) x)) → 1
 - (function-variadic? f) → #t if f accepts more arguments than its minimum (has a rest parameter), (function-variadic? integer+) → #t, (function-variadic? integer-abs) → #f
 - (function-accepts? f n) → #t if calling f with exactly n arguments satisfies its arity requirements, (function-accepts? integer-abs 1) → #t, (function-accepts? integer-abs 2) → #f, (function-accepts? integer+ 0) → #t, (function-accepts? integer+ 99) → #t, (function-accepts? (lambda (x . rest) x) 0) → #f, (function-accepts? (lambda (x . rest) x) 3) → #t
-
-## Higher-order and other operations:
-
-- (range start end [step]) → (range 1 5) → (1 2 3 4), integers only
-- (map-list func list) → (map-list (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
-- (map-dict func dict) → applies func to each (key value) pair, returning a new dict with transformed values; func receives key and value as separate arguments: (map-dict (lambda (k v) (integer* v 2)) (dict "a" 1 "b" 2)) → {("a" 2) ("b" 4)}
-- (filter-list predicate list) → (filter-list (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
-- (filter-dict pred dict) → returns a new dict containing only entries where pred returns #t; pred receives key and value as separate arguments: (filter-dict (lambda (k v) (integer>? v 1)) (dict "a" 1 "b" 2)) → {("b" 2)}
-- (fold-list func init list) → left fold (tail-recursive); processes list left-to-right, accumulating into init; func signature is (lambda (acc item) result) where acc is the current accumulator and item is the current list element: (fold-list integer+ 0 (list 1 2 3 4)) → 10, (fold-list (lambda (acc item) (list-append acc item)) (list) (list 1 2 3)) → (1 2 3)
-- (find-list predicate list) → first element satisfying predicate, or #none if none found: (find-list (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (find-list predicate ()) → #none
-- (any-list? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (any-list? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (any-list? predicate ()) → #f
-- (all-list? predicate list) → #t if all elements satisfy predicate, #f otherwise: (all-list? (lambda (x) (integer>? x 0)) (list 1 2 3 4 5)) → #t, note: (all-list? predicate ()) → #t (vacuously true)
-- (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
-- (sort-list comparator lst) → returns a new list sorted by comparator; comparator is a two-argument function returning #t if first arg should come before second: (sort-list integer<? (list 3 1 4 1 5)) → (1 1 3 4 5), (sort-list string<? (list "b" "a" "c")) → ("a" "b" "c"); sort is stable and preserves insertion order of equal elements
 
 ## Conditionals
 
