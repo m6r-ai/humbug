@@ -1022,7 +1022,7 @@ class Menai:
                                      (helper pred ($list-rest lst))
                                      #f)))))
                   (helper pred lst))))
-   (zip-list (lambda (lst1 lst2)
+   (list-zip (lambda (lst1 lst2)
                (letrec
                  ((helper (lambda (l1 l2 acc)
                             (if (or ($list-null? l1) ($list-null? l2))
@@ -1274,7 +1274,7 @@ class Menai:
         "find-list" find-list
         "any-list?" any-list?
         "all-list?" all-list?
-        "zip-list" zip-list
+        "list-zip" list-zip
         "sort-list" sort-list
         "map-dict" map-dict
         "filter-dict" filter-dict

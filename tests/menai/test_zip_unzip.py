@@ -10,31 +10,31 @@ class TestZip:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic zip
-        ('(zip-list (list 1 2 3) (list 4 5 6))', '((1 4) (2 5) (3 6))'),
+        ('(list-zip (list 1 2 3) (list 4 5 6))', '((1 4) (2 5) (3 6))'),
 
         # Zip with strings
-        ('(zip-list (list "a" "b" "c") (list 1 2 3))', '(("a" 1) ("b" 2) ("c" 3))'),
+        ('(list-zip (list "a" "b" "c") (list 1 2 3))', '(("a" 1) ("b" 2) ("c" 3))'),
 
         # Zip with booleans
-        ('(zip-list (list #t #f) (list 1 2))', '((#t 1) (#f 2))'),
+        ('(list-zip (list #t #f) (list 1 2))', '((#t 1) (#f 2))'),
 
         # Zip stops at shorter first list
-        ('(zip-list (list 1 2) (list 4 5 6))', '((1 4) (2 5))'),
+        ('(list-zip (list 1 2) (list 4 5 6))', '((1 4) (2 5))'),
 
         # Zip stops at shorter second list
-        ('(zip-list (list 1 2 3) (list 4 5))', '((1 4) (2 5))'),
+        ('(list-zip (list 1 2 3) (list 4 5))', '((1 4) (2 5))'),
 
         # Zip with empty first list
-        ('(zip-list (list) (list 1 2 3))', '()'),
+        ('(list-zip (list) (list 1 2 3))', '()'),
 
         # Zip with empty second list
-        ('(zip-list (list 1 2 3) (list))', '()'),
+        ('(list-zip (list 1 2 3) (list))', '()'),
 
         # Zip with both empty
-        ('(zip-list (list) (list))', '()'),
+        ('(list-zip (list) (list))', '()'),
 
         # Zip with single element lists
-        ('(zip-list (list 1) (list 2))', '((1 2))'),
+        ('(list-zip (list 1) (list 2))', '((1 2))'),
     ])
     def test_zip_basic(self, menai, expression, expected):
         """Test basic zip behaviour."""
@@ -43,24 +43,24 @@ class TestZip:
     def test_zip_arity(self, menai):
         """Test that zip requires exactly 2 arguments."""
         with pytest.raises(MenaiEvalError) as exc_info:
-            menai.evaluate('(zip-list (list 1 2 3))')
+            menai.evaluate('(list-zip (list 1 2 3))')
         assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
 
         with pytest.raises(MenaiEvalError) as exc_info:
-            menai.evaluate('(zip-list (list 1 2) (list 3 4) (list 5 6))')
+            menai.evaluate('(list-zip (list 1 2) (list 3 4) (list 5 6))')
         assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
 
     def test_zip_requires_list_arguments(self, menai):
         """Test that zip requires list arguments."""
         with pytest.raises(MenaiEvalError):
-            menai.evaluate('(zip-list 42 (list 1 2))')
+            menai.evaluate('(list-zip 42 (list 1 2))')
 
         with pytest.raises(MenaiEvalError):
-            menai.evaluate('(zip-list (list 1 2) 42)')
+            menai.evaluate('(list-zip (list 1 2) 42)')
 
     def test_zip_result_is_list_of_pairs(self, menai):
         """Test that each element of the result is a 2-element list."""
-        result = menai.evaluate('(zip-list (list 1 2 3) (list 4 5 6))')
+        result = menai.evaluate('(list-zip (list 1 2 3) (list 4 5 6))')
         assert isinstance(result, list)
         assert len(result) == 3
         for pair in result:
@@ -72,7 +72,7 @@ class TestZip:
         # Sum each pair
         helpers.assert_evaluates_to(
             menai,
-            '(map-list (lambda (pair) (integer+ (list-first pair) (list-first (list-rest pair)))) (zip-list (list 1 2 3) (list 4 5 6)))',
+            '(map-list (lambda (pair) (integer+ (list-first pair) (list-first (list-rest pair)))) (list-zip (list 1 2 3) (list 4 5 6)))',
             '(5 7 9)'
         )
 
@@ -83,7 +83,7 @@ class TestZip:
             '''(fold-list (lambda (acc pair)
                             (dict-set acc (list-first pair) (list-first (list-rest pair))))
                           (dict)
-                          (zip-list (list "a" "b" "c") (list 1 2 3)))''',
+                          (list-zip (list "a" "b" "c") (list 1 2 3)))''',
             '{("a" 1) ("b" 2) ("c" 3)}'
         )
 
@@ -91,7 +91,7 @@ class TestZip:
         """Test that zip can be passed as a first-class value."""
         helpers.assert_evaluates_to(
             menai,
-            '(function? zip-list)',
+            '(function? list-zip)',
             '#t'
         )
 
@@ -103,7 +103,7 @@ class TestZip:
                         0
                         (map-list (lambda (pair)
                                     (integer* (list-first pair) (list-first (list-rest pair))))
-                                  (zip-list (list 1 2 3) (list 4 5 6))))''',
+                                  (list-zip (list 1 2 3) (list 4 5 6))))''',
             '32'  # 1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32
         )
 
@@ -111,11 +111,11 @@ class TestZip:
         """Test extracting elements from zipped pairs using map-list."""
         helpers.assert_evaluates_to(
             menai,
-            '(map-list list-first (zip-list (list 1 2 3) (list 4 5 6)))',
+            '(map-list list-first (list-zip (list 1 2 3) (list 4 5 6)))',
             '(1 2 3)'
         )
         helpers.assert_evaluates_to(
             menai,
-            '(map-list list-last (zip-list (list 1 2 3) (list 4 5 6)))',
+            '(map-list list-last (list-zip (list 1 2 3) (list 4 5 6)))',
             '(4 5 6)'
         )

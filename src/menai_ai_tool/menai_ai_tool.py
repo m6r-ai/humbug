@@ -447,7 +447,7 @@ Syntax: (operator arg1 arg2 ...)
 - (find-list predicate list) → first element satisfying predicate, or #none if none found: (find-list (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (find-list predicate ()) → #none
 - (any-list? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (any-list? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (any-list? predicate ()) → #f
 - (all-list? predicate list) → #t if all elements satisfy predicate, #f otherwise: (all-list? (lambda (x) (integer>? x 0)) (list 1 2 3 4 5)) → #t, note: (all-list? predicate ()) → #t (vacuously true)
-- (zip-list lst1 lst2) → pairs corresponding elements: (zip-list (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (zip-list lst1 lst2) stops at the shorter list: (zip-list (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
+- (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
 - (sort-list comparator lst) → returns a new list sorted by comparator; comparator is a two-argument function returning #t if first arg should come before second: (sort-list integer<? (list 3 1 4 1 5)) → (1 1 3 4 5), (sort-list string<? (list "b" "a" "c")) → ("a" "b" "c"); sort is stable and preserves insertion order of equal elements
 
 ## Conditionals
