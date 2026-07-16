@@ -126,10 +126,13 @@ class TestMenaiAIToolErrorHandling:
 
         error = exc_info.value
         # Fixed: Menai raises MenaiEvalError, not ZeroDivisionError
-        # The error message should mention division by zero
-        assert "Division by zero" in str(error) or "division by zero" in str(error).lower()
-        # The cause should be an MenaiError (or subclass)
-        assert isinstance(error.__cause__, MenaiError)
+        # The VM reports DIVISION_BY_ZERO, which maps to Python's ZeroDivisionError
+        # (a built-in, not a MenaiError subclass).  Structured VM diagnostic
+        # attributes are still attached to the exception.
+        assert "division by zero" in str(error).lower()
+        assert isinstance(error.__cause__, ZeroDivisionError)
+        assert hasattr(error.__cause__, "error_code")
+        assert hasattr(error.__cause__, "vm_opcode")
 
     def test_execute_invalid_syntax_error(self, menai_tool, mock_authorization, make_tool_call):
         """Test execution with invalid Menai syntax."""

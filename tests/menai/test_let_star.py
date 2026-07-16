@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestLetStarSemantics:
@@ -76,8 +76,10 @@ class TestLetStarSemantics:
         """Test that parallel let bindings cannot reference each other."""
         # This should raise an error because y tries to reference x
         # which is not yet in scope during parallel binding evaluation
-        with pytest.raises(MenaiEvalError, match="Undefined variable: 'x'"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(let ((x 5) (y (integer* x 2))) (integer+ x y))")
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     def test_let_parallel_bindings_all_use_outer_scope(self, menai, helpers):
         """Test that parallel let bindings all use the outer scope."""

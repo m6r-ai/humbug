@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiError, MenaiTokenError, MenaiASTBuildError, MenaiEvalError
+from menai import MenaiError, MenaiTokenError, MenaiASTBuildError, MenaiEvalError, VMErrorCode
 
 
 class TestErrors:
@@ -173,37 +173,54 @@ class TestErrors:
 
     def test_undefined_variable_eval_error(self, menai):
         """Test that undefined variables cause evaluation errors."""
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("undefined-var")
 
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(integer+ 1 undefined-var)")
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     def test_undefined_function_eval_error(self, menai):
         """Test that undefined functions cause evaluation errors."""
-        # Evaluator says "Unknown function", VM says "Undefined variable"
-        with pytest.raises(MenaiEvalError, match="(Unknown function|Undefined variable)"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(unknown-op 1 2)")
 
-        with pytest.raises(MenaiEvalError, match="(Unknown function|Undefined variable)"):
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(invalid-function)")
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     def test_division_by_zero_eval_error(self, menai):
         """Test that division by zero causes evaluation errors."""
-        with pytest.raises(MenaiEvalError, match="Division by zero"):
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate("(integer/ 1 0)")
 
-        with pytest.raises(MenaiEvalError, match="Division by zero"):
+        assert exc_info.value.error_code == VMErrorCode.DIVISION_BY_ZERO
+
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate("(integer/ 5 0)")
 
-        with pytest.raises(MenaiEvalError, match="Division by zero"):
+        assert exc_info.value.error_code == VMErrorCode.DIVISION_BY_ZERO
+
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate("(float// 1.0 0.0)")
 
-        with pytest.raises(MenaiEvalError, match="Modulo by zero"):
+        assert exc_info.value.error_code == VMErrorCode.DIVISION_BY_ZERO
+
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate("(integer% 1 0)")
 
-        with pytest.raises(MenaiEvalError, match="Modulo by zero"):
+        assert exc_info.value.error_code == VMErrorCode.MODULO_BY_ZERO
+
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate("(float% 1.0 0.0)")
+
+        assert exc_info.value.error_code == VMErrorCode.MODULO_BY_ZERO
 
     def test_type_mismatch_eval_errors(self, menai):
         """Test that type mismatches cause evaluation errors."""
@@ -219,8 +236,10 @@ class TestErrors:
 
         # Boolean operations with non-boolean conditions
         # (and/or are lowered to if-chains; only condition args are type-checked)
-        with pytest.raises(MenaiEvalError, match="must be boolean"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(or "hello" #f)')
+
+        assert exc_info.value.error_code == VMErrorCode.IF_NOT_BOOLEAN
 
         # String operations with non-strings
         with pytest.raises(MenaiEvalError):
@@ -255,16 +274,22 @@ class TestErrors:
     def test_lambda_function_arity_eval_errors(self, menai):
         """Test that lambda function arity mismatches cause evaluation errors."""
         # Too few arguments
-        with pytest.raises(MenaiEvalError, match="expects .* arguments, got .*"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("((lambda (x y) (integer+ x y)) 5)")
 
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
         # Too many arguments
-        with pytest.raises(MenaiEvalError, match="expects .* argument.*, got .*"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("((lambda (x) x) 1 2 3)")
 
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
         # No parameters but arguments provided
-        with pytest.raises(MenaiEvalError, match="expects 0 arguments, got .*"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("((lambda () 42) 5)")
+
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
 
     def test_list_operation_type_errors(self, menai):
         """Test that list operations with wrong types cause evaluation errors."""
@@ -287,11 +312,15 @@ class TestErrors:
 
     def test_empty_list_access_errors(self, menai):
         """Test that accessing empty lists causes evaluation errors."""
-        with pytest.raises(MenaiEvalError, match="list-first.*non-empty list"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(list-first (list))")
 
-        with pytest.raises(MenaiEvalError, match="list-rest.*non-empty list"):
+        assert exc_info.value.error_code == VMErrorCode.EMPTY_LIST
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(list-rest (list))")
+
+        assert exc_info.value.error_code == VMErrorCode.EMPTY_LIST
 
     def test_index_out_of_range_errors(self, menai):
         """Test that index out of range causes evaluation errors."""
@@ -362,32 +391,46 @@ class TestErrors:
     def test_higher_order_function_errors(self, menai):
         """Test that higher-order function errors are detected."""
         # Map/filter/fold predicates must return appropriate types
-        with pytest.raises(MenaiEvalError, match="condition must be boolean"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(filter-list (lambda (x) x) (list 1 2 3))')
 
-        with pytest.raises(MenaiEvalError, match="condition must be boolean"):
+        assert exc_info.value.error_code == VMErrorCode.IF_NOT_BOOLEAN
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(any-list? (lambda (x) "hello") (list 1 2 3))')
 
+        assert exc_info.value.error_code == VMErrorCode.IF_NOT_BOOLEAN
+
         # Higher-order functions require list arguments
-        with pytest.raises(MenaiEvalError, match="requires list argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(map-list (lambda (x) x) 42)')
 
-        with pytest.raises(MenaiEvalError, match="requires list argument"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(filter-list (lambda (x) #t) "hello")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_non_function_call_error(self, menai):
         """Test that trying to call non-functions causes evaluation errors."""
         # Can't call numbers
-        with pytest.raises(MenaiEvalError, match="Cannot call non-function value"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(42 1 2)")
 
+        assert exc_info.value.error_code == VMErrorCode.NOT_CALLABLE
+
         # Can't call strings
-        with pytest.raises(MenaiEvalError, match="Cannot call non-function value"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('("hello" 1 2)')
 
+        assert exc_info.value.error_code == VMErrorCode.NOT_CALLABLE
+
         # Can't call booleans
-        with pytest.raises(MenaiEvalError, match="Cannot call non-function value"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(#t 1 2)")
+
+        assert exc_info.value.error_code == VMErrorCode.NOT_CALLABLE
 
     def test_empty_list_evaluation_works(self, menai):
         """Test that empty list evaluation works correctly (no longer an error)."""
@@ -421,24 +464,19 @@ class TestErrors:
 
     def test_error_message_context_information(self, menai):
         """Test that error messages provide helpful context."""
-        # Undefined variable error should suggest available bindings
+        # Undefined variable error should be reported with the correct error code
         try:
             menai.evaluate("undefined-var")
         except MenaiEvalError as e:
-            error_msg = str(e)
-            assert "Undefined variable" in error_msg
-            # Should mention available bindings (constants, operators)
-            assert "Available variables" in error_msg or "pi" in error_msg
+            assert e.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     def test_function_call_error_context(self, menai):
         """Test that function call errors provide parameter context."""
-        # Lambda arity error should show expected vs actual
+        # Lambda arity error should be reported with the correct error code
         try:
             menai.evaluate("((lambda (x y) (integer+ x y)) 5)")
         except MenaiEvalError as e:
-            error_msg = str(e)
-            assert "expects 2 arguments" in error_msg
-            assert "got 1" in error_msg
+            assert e.error_code == VMErrorCode.ARITY_MISMATCH
 
     def test_type_error_context(self, menai):
         """Test that type errors provide helpful context about expected types."""
@@ -446,20 +484,18 @@ class TestErrors:
         try:
             menai.evaluate("(string-length 42)")
         except MenaiEvalError as e:
-            error_msg = str(e)
-            assert "string" in error_msg.lower()
+            assert e.error_code == VMErrorCode.TYPE_MISMATCH
 
         # Boolean operation with non-boolean condition
         try:
             menai.evaluate('(and "hello" #t)')
         except MenaiEvalError as e:
-            error_msg = str(e)
-            assert "boolean" in error_msg.lower()
+            assert e.error_code == VMErrorCode.IF_NOT_BOOLEAN
 
     def test_nested_error_propagation(self, menai):
         """Test that errors in nested expressions are properly propagated."""
         # Error in nested arithmetic
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("(integer+ (integer* 2 3) (integer/ 1 0))")
 
         # Error in nested function call
@@ -467,13 +503,13 @@ class TestErrors:
             menai.evaluate("(string-length (integer+ 1 2))")
 
         # Error in conditional branch (should still be caught despite lazy evaluation)
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("(if #t (integer/ 1 0) 42)")
 
     def test_error_in_higher_order_functions(self, menai):
         """Test error handling in higher-order function contexts."""
         # Error in map function
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("(map-list (lambda (x) (integer/ x 0)) (list 1 2 3))")
 
         # Error in filter predicate
@@ -481,24 +517,28 @@ class TestErrors:
             menai.evaluate("(filter-list (lambda (x) (integer+ x \"hello\")) (list 1 2 3))")
 
         # Error in fold function
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("(fold-list (lambda (acc x) (integer/ acc x)) 1 (list 1 0 2))")
 
     def test_error_in_let_binding_evaluation(self, menai):
         """Test error handling in let binding evaluation."""
         # Error in binding expression
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("(let ((x (integer/ 1 0))) x)")
 
-        # Error in sequential binding
-        with pytest.raises(MenaiEvalError):
+        # let bindings are parallel, so y's binding cannot see x from the same let
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(let ((x 5) (y (integer/ x 0))) y)")
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     def test_error_in_lambda_closure_context(self, menai):
         """Test error handling in lambda closure contexts."""
         # Error accessing undefined variable in closure
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(let ((f (lambda (x) (integer+ x undefined-var)))) (f 5))")
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
         # Type error in closure
         with pytest.raises(MenaiEvalError):
@@ -529,8 +569,8 @@ class TestErrors:
         with pytest.raises(MenaiError):
             menai.evaluate("(integer+ 1 2")
 
-        # Eval error
-        with pytest.raises(MenaiError):
+        # Eval error (division by zero is reported as a builtin ZeroDivisionError)
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("(integer/ 1 0)")
 
     def test_specific_exception_catching(self, menai):
@@ -543,8 +583,8 @@ class TestErrors:
         with pytest.raises(MenaiASTBuildError):
             menai.evaluate("(integer+ 1 2")
 
-        # Catch specific eval error
-        with pytest.raises(MenaiEvalError):
+        # Catch specific eval error (division by zero is a builtin ZeroDivisionError)
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("(integer/ 1 0)")
 
     def test_exception_chaining_preservation(self, menai):
@@ -559,7 +599,7 @@ class TestErrors:
     def test_error_recovery_not_possible(self, menai):
         """Test that errors properly terminate evaluation."""
         # After an error, the evaluator should be in a clean state for next evaluation
-        with pytest.raises(MenaiError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("(integer/ 1 0)")
 
         # Next evaluation should work normally
@@ -578,8 +618,10 @@ class TestErrors:
             (f 5)))
         '''
 
-        with pytest.raises(MenaiEvalError, match="Division by zero"):
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate(complex_expr)
+
+        assert exc_info.value.error_code == VMErrorCode.DIVISION_BY_ZERO
 
         # Error in deeply nested functional composition
         nested_functional = '''
@@ -589,5 +631,5 @@ class TestErrors:
                            (list 1 2 3))))
         '''
 
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate(nested_functional)

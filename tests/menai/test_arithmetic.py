@@ -4,7 +4,7 @@ import pytest
 import math
 import cmath
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestArithmetic:
@@ -136,11 +136,15 @@ class TestArithmetic:
 
     def test_division_by_zero(self, menai):
         """Test that division by zero raises appropriate error."""
-        with pytest.raises(MenaiEvalError, match="Division by zero"):
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate("(integer/ 1 0)")
 
-        with pytest.raises(MenaiEvalError, match="Division by zero"):
+        assert exc_info.value.error_code == VMErrorCode.DIVISION_BY_ZERO
+
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate("(float/ 1.0 0.0)")
+
+        assert exc_info.value.error_code == VMErrorCode.DIVISION_BY_ZERO
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic modulo (float->integer inputs only)
@@ -159,8 +163,10 @@ class TestArithmetic:
 
     def test_modulo_by_zero(self, menai):
         """Test that modulo by zero raises error."""
-        with pytest.raises(MenaiEvalError, match="Modulo by zero"):
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate("(integer% 1 0)")
+
+        assert exc_info.value.error_code == VMErrorCode.MODULO_BY_ZERO
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic pow (float->integer inputs)
@@ -197,11 +203,15 @@ class TestArithmetic:
 
     def test_integer_expt_negative_exponent_error(self, menai):
         """Test that integer-expn raises on negative exponent (result would not be an integer)."""
-        with pytest.raises(MenaiEvalError, match="non-negative exponent"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(integer-expn 2 -1)")
 
-        with pytest.raises(MenaiEvalError, match="non-negative exponent"):
+        assert exc_info.value.error_code == VMErrorCode.NEGATIVE_EXPONENT
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(integer-expn 10 -3)")
+
+        assert exc_info.value.error_code == VMErrorCode.NEGATIVE_EXPONENT
 
     def test_integer_expt_type_errors(self, menai):
         """Test that integer-expn rejects non-integer arguments."""

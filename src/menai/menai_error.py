@@ -18,7 +18,11 @@ class MenaiError(Exception):
         column: int | None = None,
         source: str | None = None,
         source_file: str | None = None,
-        show_context: bool = True
+        show_context: bool = True,
+        error_code: int | None = None,
+        vm_opcode: int | None = None,
+        vm_ip: int | None = None,
+        vm_call_depth: int | None = None,
     ):
         """
         Initialize detailed error.
@@ -35,6 +39,10 @@ class MenaiError(Exception):
             source: Source code for context display
             show_context: Whether to show source code context
             source_file: Source file name for location display
+            error_code: VM error code (VMErrorCode integer) if from the C VM
+            vm_opcode: Opcode that was executing when the error occurred
+            vm_ip: Instruction pointer at time of error
+            vm_call_depth: Call stack depth at time of error
         """
         self.message = message
         self.context = context
@@ -47,6 +55,10 @@ class MenaiError(Exception):
         self.source = source
         self.source_file = source_file
         self.show_context = show_context
+        self.error_code = error_code
+        self.vm_opcode = vm_opcode
+        self.vm_ip = vm_ip
+        self.vm_call_depth = vm_call_depth
 
         super().__init__(self._format_detailed_message())
 

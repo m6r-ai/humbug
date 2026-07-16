@@ -4,7 +4,7 @@ import math
 import cmath
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestFloatLog2:
@@ -121,18 +121,24 @@ class TestFloatLogn:
 
     def test_logn_zero_base_raises_error(self, menai):
         """float-logn with base 0 should raise an error."""
-        with pytest.raises(MenaiEvalError, match="positive base"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(float-logn 8.0 0.0)")
+
+        assert exc_info.value.error_code == VMErrorCode.INVALID_LOG_BASE
 
     def test_logn_negative_base_raises_error(self, menai):
         """float-logn with negative base should raise an error."""
-        with pytest.raises(MenaiEvalError, match="positive base"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(float-logn 8.0 -2.0)")
+
+        assert exc_info.value.error_code == VMErrorCode.INVALID_LOG_BASE
 
     def test_logn_base_one_raises_error(self, menai):
         """float-logn with base 1 should raise an error (log base 1 is undefined)."""
-        with pytest.raises(MenaiEvalError, match="positive base"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(float-logn 8.0 1.0)")
+
+        assert exc_info.value.error_code == VMErrorCode.INVALID_LOG_BASE
 
     def test_logn_type_errors(self, menai):
         """float-logn requires two float arguments."""
@@ -196,8 +202,10 @@ class TestComplexLogn:
 
     def test_complex_logn_zero_base_raises_error(self, menai):
         """complex-logn with zero base should raise an error."""
-        with pytest.raises(MenaiEvalError, match="non-zero base"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(complex-logn 1+0j 0+0j)")
+
+        assert exc_info.value.error_code == VMErrorCode.INVALID_LOG_BASE
 
     def test_complex_logn_type_errors(self, menai):
         """complex-logn requires two complex arguments."""

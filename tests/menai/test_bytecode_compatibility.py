@@ -10,6 +10,7 @@ This test suite validates:
 import pytest
 from menai import Menai
 from menai.menai_error import MenaiEvalError
+from menai.menai_vm_errors import VMErrorCode
 
 
 @pytest.fixture
@@ -171,28 +172,24 @@ class TestErrors:
     """Test error handling - this is critical!"""
 
     def test_division_by_zero(self, menai):
-        with pytest.raises(MenaiEvalError) as exc_info:
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate("(integer/ 1 0)")
-        assert "zero" in str(exc_info.value).lower()
+        assert exc_info.value.error_code == VMErrorCode.DIVISION_BY_ZERO
 
     def test_undefined_variable(self, menai):
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("undefined_var")
-        assert "undefined" in str(exc_info.value).lower()
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     def test_wrong_arity(self, menai):
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("((lambda (x) x) 1 2)")
-        # Should mention arity/argument mismatch
-        error_msg = str(exc_info.value).lower()
-        assert "expect" in error_msg or "argument" in error_msg
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
 
     def test_type_error(self, menai):
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer+ 1 "string")')
-        # Should mention type error
-        error_msg = str(exc_info.value).lower()
-        assert "number" in error_msg or "numeric" in error_msg or "type" in error_msg or "integer" in error_msg
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 if __name__ == "__main__":

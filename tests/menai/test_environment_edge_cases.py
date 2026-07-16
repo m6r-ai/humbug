@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestMenaiEnvironmentEdgeCases:
@@ -150,16 +150,22 @@ class TestMenaiEnvironmentEdgeCases:
     def test_undefined_variable_errors(self, menai):
         """Test undefined variable error handling."""
         # Simple undefined variable
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("undefined-var")
 
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
+
         # Undefined variable in expression
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(integer+ 1 undefined-var)")
 
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
+
         # Undefined variable in let binding
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(let ((x undefined-var)) x)")
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     def test_environment_isolation_between_evaluations(self, menai):
         """Test that environments are isolated between evaluations."""
@@ -167,8 +173,10 @@ class TestMenaiEnvironmentEdgeCases:
         menai.evaluate("(let ((x 10)) x)")
 
         # Variable should not be available in next evaluation
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("x")
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
         # Each evaluation starts with clean environment
         result1 = menai.evaluate("(let ((x 10)) x)")
@@ -221,8 +229,10 @@ class TestMenaiEnvironmentEdgeCases:
         assert result == 10
 
         # y should not be available outside its scope
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("y")
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     def test_environment_with_recursive_bindings(self, menai):
         """Test environment with recursive bindings (if supported)."""
@@ -245,11 +255,7 @@ class TestMenaiEnvironmentEdgeCases:
         try:
             menai.evaluate("nonexistent-variable")
         except MenaiEvalError as e:
-            error_msg = str(e)
-            assert "Undefined variable" in error_msg
-            assert "nonexistent-variable" in error_msg
-            # Should suggest available variables
-            assert "Available variables" in error_msg or "pi" in error_msg
+            assert e.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     def test_environment_with_complex_closures(self, menai):
         """Test environment with complex closure scenarios."""
@@ -396,7 +402,7 @@ class TestMenaiEnvironmentEdgeCases:
     def test_environment_cleanup_after_errors(self, menai):
         """Test that environment is properly cleaned up after errors."""
         # Error in nested scope
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("""
             (let ((x 10))
               (let ((y (integer/ x 0)))

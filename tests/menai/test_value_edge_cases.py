@@ -3,7 +3,7 @@
 import math
 import pytest
 
-from menai import MenaiEvalError, MenaiDict, MenaiString, MenaiSymbol
+from menai import MenaiEvalError, MenaiDict, MenaiString, MenaiSymbol, VMErrorCode
 
 
 class TestMenaiValueEdgeCases:
@@ -206,9 +206,9 @@ class TestMenaiValueEdgeCases:
             # This might raise an error or return infinity
             if not isinstance(result, Exception):
                 assert math.isinf(result)
-        except MenaiEvalError:
+        except ZeroDivisionError as exc:
             # Division by zero error is also acceptable
-            pass
+            assert exc.error_code == VMErrorCode.DIVISION_BY_ZERO
 
         # Test operations with very large numbers
         result = menai.evaluate("(float* 1e100 1e100)")

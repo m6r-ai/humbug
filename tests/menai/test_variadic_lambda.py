@@ -9,7 +9,7 @@ enabling user-defined variadic functions in pure Menai bytecode.
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestVariadicLambdaBasic:
@@ -266,13 +266,15 @@ class TestVariadicLambdaErrors:
 
     def test_too_few_args_for_fixed_prefix(self, menai):
         """Calling a variadic function with fewer args than the fixed prefix raises an error."""
-        with pytest.raises(MenaiEvalError, match=r"at least 2 argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('((lambda (a b . rest) rest) 1)')
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
 
     def test_too_few_args_single_fixed(self, menai):
         """One fixed param + rest: calling with zero args raises an error."""
-        with pytest.raises(MenaiEvalError, match=r"at least 1 argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('((lambda (x . rest) x))')
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
 
     def test_multiple_dots_rejected(self, menai):
         """Two dots in the parameter list is a syntax error."""

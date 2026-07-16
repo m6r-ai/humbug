@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestComparisonEdgeCases:
@@ -53,48 +53,70 @@ class TestComparisonEdgeCases:
 
         for op in integer_ops:
             for complex_expr in complex_expressions:
-                with pytest.raises(MenaiEvalError, match=f"{op}.*requires integer arguments.*complex"):
+                with pytest.raises(MenaiEvalError) as exc_info:
                     menai.evaluate(f"({op} {complex_expr} 5)")
 
-                with pytest.raises(MenaiEvalError, match=f"{op}.*requires integer arguments.*complex"):
+                assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+                with pytest.raises(MenaiEvalError) as exc_info:
                     menai.evaluate(f"({op} 5 {complex_expr})")
+
+                assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         for op in float_ops:
             for complex_expr in complex_expressions:
-                with pytest.raises(MenaiEvalError, match=f"{op}.*requires float arguments.*complex"):
+                with pytest.raises(MenaiEvalError) as exc_info:
                     menai.evaluate(f"({op} {complex_expr} 1.0)")
 
-                with pytest.raises(MenaiEvalError, match=f"{op}.*requires float arguments.*complex"):
+                assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+                with pytest.raises(MenaiEvalError) as exc_info:
                     menai.evaluate(f"({op} 1.0 {complex_expr})")
+
+                assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_comparison_operators_type_errors(self, menai):
         """Test that typed ordered comparison operators reject wrong types."""
         # integer ops reject floats, strings, and booleans
         for op in ("integer<?", "integer>?", "integer<=?", "integer>=?"):
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires integer arguments.*float"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f"({op} 1 2.0)")
 
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires integer arguments.*string"):
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} "hello" 5)')
 
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires integer arguments.*boolean"):
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f"({op} #t 1)")
+
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # float ops reject integers, strings, and booleans
         for op in ("float<?", "float>?", "float<=?", "float>=?"):
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires float arguments.*integer"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f"({op} 1.0 2)")
 
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires float arguments.*string"):
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} "hello" 1.0)')
+
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # string ops reject integers and booleans
         for op in ("string<?", "string>?", "string<=?", "string>=?"):
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires string arguments.*integer"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} "a" 1)')
 
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires string arguments.*boolean"):
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} #t "a")')
+
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_comparison_operators_minimum_arguments(self, menai):
         """Test that typed ordered comparison operators require at least 2 arguments."""

@@ -4,7 +4,7 @@ import re
 import pytest
 import cmath
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestMathMissingCoverage:
@@ -25,11 +25,15 @@ class TestMathMissingCoverage:
 
         for op in comparison_ops:
             for complex_val in complex_values:
-                with pytest.raises(MenaiEvalError, match=f"requires integer arguments"):
+                with pytest.raises(MenaiEvalError) as exc_info:
                     menai.evaluate(f"({op} 1 {complex_val})")
 
-                with pytest.raises(MenaiEvalError, match=f"requires integer arguments"):
+                assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+                with pytest.raises(MenaiEvalError) as exc_info:
                     menai.evaluate(f"({op} {complex_val} 2)")
+
+                assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_not_equal_all_arguments_equal_edge_case(self, menai):
         """Test != operator when all arguments are actually equal (returns False)."""
@@ -166,14 +170,18 @@ class TestMathMissingCoverage:
 
         # Test with complex numbers that have non-zero imaginary parts
         for func in rounding_functions:
-            with pytest.raises(MenaiEvalError, match=f"requires float arguments"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f"({func} (float->complex 3.5 2.1))")
+
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # Test the edge case where complex number has very small imaginary part
         # This tests lines 476, 495, 514 which handle the tolerance check
         for func in rounding_functions:
-            with pytest.raises(MenaiEvalError, match=f"requires float arguments"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f"({func} (float->complex 3.5 1e-5))")
+
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     # ========== Complex Number Functions Error Handling ==========
 
@@ -203,11 +211,15 @@ class TestMathMissingCoverage:
     def test_complex_function_with_complex_arguments(self, menai):
         """Test complex function with complex number arguments (should fail)."""
         # This tests line 632
-        with pytest.raises(MenaiEvalError, match="requires float argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(float->complex (float->complex 1 2) 3)")
 
-        with pytest.raises(MenaiEvalError, match="requires float argument"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(float->complex 1 (float->complex 2 3))")
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_real_imag_functions_with_complex_return_paths(self, menai):
         """Test real/imag functions with complex numbers to hit return paths."""
@@ -227,27 +239,39 @@ class TestMathMissingCoverage:
         # This tests line 664 in _ensure_real_number
         # We can't directly test the helper method, but we can test functions that use it
         # min/max functions use _ensure_real_number
-        with pytest.raises(MenaiEvalError, match="Function 'integer-min' requires integer arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer-min "hello" 2)')
 
-        with pytest.raises(MenaiEvalError, match="Function 'integer-max' requires integer arguments"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer-max #t 5)')
 
-        with pytest.raises(MenaiEvalError, match="Function 'float-min' requires float arguments"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float-min "hello" 2.0)')
 
-        with pytest.raises(MenaiEvalError, match="Function 'float-max' requires float arguments"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float-max #t 5.0)')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_ensure_float_with_complex_input(self, menai):
         """Test _ensure_float with complex input."""
         # This tests line 667 in _ensure_real_number
         # min/max functions use _ensure_real_number and should reject complex numbers
-        with pytest.raises(MenaiEvalError, match="requires float arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(float-min (float->complex 1 2) 5.0)")
 
-        with pytest.raises(MenaiEvalError, match="requires float arguments"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(float-max 1j 3)")
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     # ========== Additional Edge Cases ==========
 
@@ -272,11 +296,15 @@ class TestMathMissingCoverage:
             menai.evaluate("(boolean-not #t #f)")
 
         # Wrong argument type
-        with pytest.raises(MenaiEvalError, match="Function 'boolean-not' requires boolean arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(boolean-not 5)")
 
-        with pytest.raises(MenaiEvalError, match="Function 'boolean-not' requires boolean arguments"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(boolean-not "hello")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_floor_division_and_modulo_argument_validation(self, menai):
         """Test floor division and modulo argument count validation."""

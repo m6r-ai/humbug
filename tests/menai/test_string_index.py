@@ -3,6 +3,7 @@
 import pytest
 from menai.menai import Menai
 from menai.menai_error import MenaiEvalError
+from menai.menai_vm_errors import VMErrorCode
 
 def test_string_index_basic():
     """Test basic string-index usage."""
@@ -33,11 +34,11 @@ def test_string_index_types():
     
     with pytest.raises(MenaiEvalError) as excinfo:
         menai.evaluate_and_format('(string-index 1 "hello")')
-    assert "requires string arguments" in str(excinfo.value)
+    assert excinfo.value.error_code == VMErrorCode.TYPE_MISMATCH
     
     with pytest.raises(MenaiEvalError) as excinfo:
         menai.evaluate_and_format('(string-index "hello" 1)')
-    assert "requires string arguments" in str(excinfo.value)
+    assert excinfo.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 def test_string_index_unicode():
     """Test string-index with unicode characters."""

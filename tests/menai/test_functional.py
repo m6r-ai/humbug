@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestFunctional:
@@ -36,16 +36,22 @@ class TestFunctional:
     def test_lambda_arity_checking(self, menai):
         """Test that lambda functions check argument count strictly."""
         # Too few arguments
-        with pytest.raises(MenaiEvalError, match="expects 2 arguments, got 1"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('((lambda (x y) (integer+ x y)) 5)')
 
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
         # Too many arguments
-        with pytest.raises(MenaiEvalError, match="expects 2 arguments, got 3"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('((lambda (x y) (integer+ x y)) 1 2 3)')
 
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
         # No parameters but arguments provided
-        with pytest.raises(MenaiEvalError, match="expects 0 arguments, got 1"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('((lambda () 42) 5)')
+
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic let expressions
@@ -160,15 +166,21 @@ class TestFunctional:
 
     def test_map_requires_function_and_list(self, menai):
         """Test that map requires exactly 2 arguments: function and list."""
-        with pytest.raises(MenaiEvalError, match=r"expects 2 arguments, got 1"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(map-list (lambda (x) x))')
 
-        with pytest.raises(MenaiEvalError, match=r"expects 2 arguments, got 3"):
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(map-list (lambda (x) x) (list 1 2) (list 3 4))')
 
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
         # Second argument must be list
-        with pytest.raises(MenaiEvalError, match=r"requires list argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(map-list (lambda (x) x) 42)')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic filter operations
@@ -193,12 +205,16 @@ class TestFunctional:
 
     def test_filter_requires_function_and_list(self, menai):
         """Test that filter requires exactly 2 arguments: function and list."""
-        with pytest.raises(MenaiEvalError, match=r"expects 2 arguments, got 1"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(filter-list (lambda (x) #t))')
 
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
         # Second argument must be list
-        with pytest.raises(MenaiEvalError, match=r"requires list argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(filter-list (lambda (x) #t) 42)')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_filter_predicate_must_return_boolean(self, menai):
         """Test that filter predicate must return boolean."""
@@ -230,15 +246,21 @@ class TestFunctional:
 
     def test_fold_requires_three_arguments(self, menai):
         """Test that fold requires exactly 3 arguments: function, initial, list."""
-        with pytest.raises(MenaiEvalError, match=r"expects 3 arguments, got 2"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(fold-list integer+ 0)')
 
-        with pytest.raises(MenaiEvalError, match=r"expects 3 arguments, got 4"):
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(fold-list integer+ 0 (list 1 2) 99)')
 
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
         # Third argument must be list
-        with pytest.raises(MenaiEvalError, match=r"requires list argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(fold-list integer+ 0 42)')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic range generation
@@ -309,12 +331,16 @@ class TestFunctional:
 
     def test_find_requires_function_and_list(self, menai):
         """Test that find requires exactly 2 arguments."""
-        with pytest.raises(MenaiEvalError, match=r"expects 2 arguments, got 1"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(find-list (lambda (x) #t))')
 
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
         # Second argument must be list
-        with pytest.raises(MenaiEvalError, match=r"requires list argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(find-list (lambda (x) #t) 42)')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_find_predicate_must_return_boolean(self, menai):
         """Test that find predicate must return boolean."""
@@ -353,18 +379,26 @@ class TestFunctional:
 
     def test_any_all_require_function_and_list(self, menai):
         """Test that any? and all? require function and list arguments."""
-        with pytest.raises(MenaiEvalError, match=r"expects 2 arguments, got 1"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(any-list? (lambda (x) #t))')
 
-        with pytest.raises(MenaiEvalError, match=r"expects 2 arguments, got 1"):
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(all-list? (lambda (x) #t))')
 
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
+
         # Second argument must be list
-        with pytest.raises(MenaiEvalError, match=r"requires list argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(any-list? (lambda (x) #t) 42)')
 
-        with pytest.raises(MenaiEvalError, match=r"requires list argument"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(all-list? (lambda (x) #t) "hello")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_any_all_predicates_must_return_boolean(self, menai):
         """Test that any? and all? predicates must return boolean."""
@@ -518,29 +552,33 @@ class TestFunctional:
     def test_lambda_error_handling(self, menai):
         """Test error handling in lambda expressions."""
         # Undefined variable in lambda body
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('((lambda (x) (integer+ x undefined-var)) 5)')
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
         # Type error in lambda body
         with pytest.raises(MenaiEvalError):
             menai.evaluate('((lambda (x) (integer+ x "hello")) 5)')
 
         # Division by zero in lambda body
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate('((lambda (x) (integer/ x 0)) 5)')
 
     def test_let_error_handling(self, menai):
         """Test error handling in let expressions."""
         # Error in binding expression
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate('(let ((x (integer/ 1 0))) x)')
 
         # Undefined variable in binding
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(let ((x undefined-var)) x)')
 
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
+
         # Error in let body
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate('(let ((x 5)) (integer/ x 0))')
 
     def test_first_class_functions(self, menai, helpers):

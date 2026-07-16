@@ -2,7 +2,7 @@
 function=?, and function!=?."""
 
 import pytest
-from menai import Menai
+from menai import Menai, VMErrorCode
 
 
 @pytest.fixture
@@ -280,8 +280,10 @@ class TestFunctionMinArity:
         assert result is True
 
     def test_non_function_raises(self, menai):
-        with pytest.raises(Exception, match="function-min-arity"):
+        with pytest.raises(Exception) as exc_info:
             menai.evaluate("(function-min-arity 42)")
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 # ---------------------------------------------------------------------------
@@ -320,8 +322,10 @@ class TestFunctionVariadicP:
         assert result is True
 
     def test_non_function_raises(self, menai):
-        with pytest.raises(Exception, match="function-variadic"):
+        with pytest.raises(Exception) as exc_info:
             menai.evaluate('(function-variadic? "hello")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 # ---------------------------------------------------------------------------
@@ -390,12 +394,16 @@ class TestFunctionAcceptsP:
         assert result is True
 
     def test_non_function_raises(self, menai):
-        with pytest.raises(Exception, match="function-accepts"):
+        with pytest.raises(Exception) as exc_info:
             menai.evaluate("(function-accepts? 42 1)")
 
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
     def test_non_integer_n_raises(self, menai):
-        with pytest.raises(Exception, match="function-accepts"):
+        with pytest.raises(Exception) as exc_info:
             menai.evaluate('(function-accepts? integer+ "two")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 # ---------------------------------------------------------------------------
@@ -441,16 +449,22 @@ class TestFunctionEquality:
         assert result is True
 
     def test_function_eq_non_function_first_raises(self, menai):
-        with pytest.raises(Exception, match="function=\\?"):
+        with pytest.raises(Exception) as exc_info:
             menai.evaluate("(function=? 42 integer+)")
 
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
     def test_function_eq_non_function_second_raises(self, menai):
-        with pytest.raises(Exception, match="function=\\?"):
+        with pytest.raises(Exception) as exc_info:
             menai.evaluate("(function=? integer+ 42)")
 
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
     def test_function_neq_non_function_raises(self, menai):
-        with pytest.raises(Exception, match="function!=\\?"):
+        with pytest.raises(Exception) as exc_info:
             menai.evaluate("(function!=? 42 integer+)")
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 # ---------------------------------------------------------------------------

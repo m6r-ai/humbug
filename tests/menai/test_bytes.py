@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import Menai, MenaiEvalError
+from menai import Menai, MenaiEvalError, VMErrorCode
 
 
 class TestBytesTypePredicate:
@@ -646,8 +646,10 @@ class TestBytesTypeErrors:
     ])
     def test_bytes_length_type_error(self, menai, expr):
         """bytes-length raises error on non-bytes arguments."""
-        with pytest.raises(MenaiEvalError, match="bytes"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(expr)
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     @pytest.mark.parametrize("expr", [
         '(bytes-ref "hello" 0)',
@@ -655,8 +657,10 @@ class TestBytesTypeErrors:
     ])
     def test_bytes_ref_type_error(self, menai, expr):
         """bytes-ref raises error on non-bytes arguments."""
-        with pytest.raises(MenaiEvalError, match="bytes"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(expr)
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_bytes_ref_non_integer_offset(self, menai):
         """bytes-ref raises error when offset is not an integer."""

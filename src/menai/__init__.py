@@ -4,6 +4,7 @@
 from menai.menai import Menai
 
 # Exceptions (enhanced with detailed context)
+from menai.menai_vm_errors import VMErrorCode
 from menai.menai_error import (
     MenaiError, MenaiTokenError, MenaiASTBuildError, MenaiCodegenError, MenaiEvalError,
     MenaiCancelledException
@@ -30,6 +31,9 @@ from menai.menai_ast_builder import MenaiASTBuilder
 __all__ = [
     # Main API
     "Menai",
+
+    # VM error codes
+    "VMErrorCode",
 
     # Exceptions (enhanced with detailed context)
     "MenaiError", "MenaiTokenError", "MenaiASTBuildError", "MenaiCodegenError", "MenaiEvalError", "MenaiCancelledException",

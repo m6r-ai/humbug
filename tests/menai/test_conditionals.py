@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import Menai, MenaiEvalError
+from menai import Menai, MenaiEvalError, VMErrorCode
 
 
 class TestConditionals:
@@ -164,18 +164,26 @@ class TestConditionals:
         returned when all conditions are true/false) is not type-checked.
         """
         # Non-boolean used as condition always errors
-        with pytest.raises(MenaiEvalError, match=r"must be boolean"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(and "hello" #t)')
 
-        with pytest.raises(MenaiEvalError, match=r"must be boolean"):
+        assert exc_info.value.error_code == VMErrorCode.IF_NOT_BOOLEAN
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(or 1 #f)')
 
+        assert exc_info.value.error_code == VMErrorCode.IF_NOT_BOOLEAN
+
         # NOT with non-boolean arguments (boolean-not is still a typed opcode)
-        with pytest.raises(MenaiEvalError, match=r"requires boolean arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(boolean-not 1)')
 
-        with pytest.raises(MenaiEvalError, match=r"requires boolean arguments"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(boolean-not "hello")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_not_requires_exactly_one_argument(self, menai):
         """Test that NOT requires exactly one argument."""
@@ -260,31 +268,47 @@ class TestConditionals:
     def test_comparison_operations_require_numeric_arguments(self, menai):
         """Test that typed comparison operations require the correct argument types."""
         # integer ops reject floats, strings, and booleans
-        with pytest.raises(MenaiEvalError, match="integer<\\?.*requires integer arguments.*string"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer<? "hello" 1)')
 
-        with pytest.raises(MenaiEvalError, match="integer>\\?.*requires integer arguments.*boolean"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer>? #t 1)')
 
-        with pytest.raises(MenaiEvalError, match="integer<=\\?.*requires integer arguments.*float"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer<=? 1 2.0)')
 
-        with pytest.raises(MenaiEvalError, match="integer>=\\?.*requires integer arguments.*list"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer>=? (list 1) 2)')
 
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
         # float ops reject integers and strings
-        with pytest.raises(MenaiEvalError, match="float<\\?.*requires float arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float<? 1.0 2)')
 
-        with pytest.raises(MenaiEvalError, match="float>\\?.*requires float arguments.*string"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float>? "a" 1.0)')
 
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
         # string ops reject integers and booleans
-        with pytest.raises(MenaiEvalError, match="string<=\\?.*requires string arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string<=? "a" 1)')
 
-        with pytest.raises(MenaiEvalError, match="string>=\\?.*requires string arguments.*boolean"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string>=? #t "a")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_comparison_operations_require_at_least_two_arguments(self, menai):
         """Test that comparison operations require at least 2 arguments."""

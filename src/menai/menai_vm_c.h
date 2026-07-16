@@ -51,13 +51,17 @@ typedef uint16_t MenaiType;
 
 /*
  * Menai VM error codes — returned as negative values by leaf modules
- * (bigint, string, hashtable, etc.) and propagated by the VM to the bridge,
- * which translates them into the appropriate Python exception.
+ * (bigint, string, hashtable, etc.) and propagated by the VM to the bridge.
+ * The bridge translates them into the appropriate Python exception.
  *
  * Functions returning int return MENAI_OK (0) on success or a negative
  * MENAI_ERR_* code on failure.  Functions returning a pointer return NULL
  * on failure; the only failure mode for most pointer-returning functions is
  * allocation failure (MENAI_ERR_NOMEM), so the error code is implicit.
+ *
+ * The VM sets one of these codes at each error site, then jumps to the
+ * error label which assembles a MenaiVMError struct.  The bridge maps
+ * the code to the appropriate Python exception type and message.
  */
 #define MENAI_OK 0
 #define MENAI_ERR_NOMEM -1
@@ -67,6 +71,79 @@ typedef uint16_t MenaiType;
 #define MENAI_ERR_TYPE -5
 #define MENAI_ERR_EVAL -6
 #define MENAI_ERR_CANCELLED -7
+#define MENAI_ERR_TYPE_MISMATCH -100
+#define MENAI_ERR_NOT_SYMBOL -101
+#define MENAI_ERR_NOT_SYMBOL_PAIR -102
+#define MENAI_ERR_IF_NOT_BOOLEAN -103
+#define MENAI_ERR_ERROR_MSG_NOT_STRING -104
+#define MENAI_ERR_NOT_CALLABLE -105
+#define MENAI_ERR_APPLY_SECOND_NOT_LIST -106
+#define MENAI_ERR_APPLY_FIRST_NOT_FUNCTION -107
+#define MENAI_ERR_PATCH_CLOSURE_NOT_FUNCTION -108
+#define MENAI_ERR_INDEX_NOT_INTEGER -109
+#define MENAI_ERR_SLICE_INDICES_NOT_INTEGER -110
+#define MENAI_ERR_NOT_SINGLE_CHAR_STRING -111
+#define MENAI_ERR_RADIX_NOT_INTEGER -112
+#define MENAI_ERR_OFFSET_NOT_INTEGER -113
+#define MENAI_ERR_VALUE_NOT_INTEGER -114
+#define MENAI_ERR_LIST_ELEMENTS_NOT_INTEGERS -115
+#define MENAI_ERR_SLICE_START_NOT_INTEGER -116
+#define MENAI_ERR_SLICE_END_NOT_INTEGER -117
+#define MENAI_ERR_BYTE_NOT_INTEGER -118
+#define MENAI_ERR_LIST_TO_STRING_NOT_STRINGS -119
+#define MENAI_ERR_RANGE_NOT_INTEGER -120
+#define MENAI_ERR_STRUCT_FIRST_NOT_TYPE -121
+#define MENAI_ERR_INDEX_OUT_OF_RANGE -122
+#define MENAI_ERR_SLICE_START_OUT_OF_RANGE -123
+#define MENAI_ERR_SLICE_END_OUT_OF_RANGE -124
+#define MENAI_ERR_OFFSET_OUT_OF_BOUNDS -125
+#define MENAI_ERR_DIVISION_BY_ZERO -126
+#define MENAI_ERR_MODULO_BY_ZERO -127
+#define MENAI_ERR_INVALID_RADIX -128
+#define MENAI_ERR_VALUE_OUT_OF_RANGE -129
+#define MENAI_ERR_INVALID_CODEPOINT -130
+#define MENAI_ERR_NEGATIVE_SLICE_INDEX -131
+#define MENAI_ERR_NEGATIVE_EXPONENT -132
+#define MENAI_ERR_NEGATIVE_SHIFT -133
+#define MENAI_ERR_NEGATIVE_ARGUMENT -134
+#define MENAI_ERR_SHIFT_TOO_LARGE -135
+#define MENAI_ERR_INVALID_LOG_BASE -136
+#define MENAI_ERR_SLICE_START_AFTER_END -137
+#define MENAI_ERR_ARITY_MISMATCH -138
+#define MENAI_ERR_STRUCT_ARITY_MISMATCH -139
+#define MENAI_ERR_UNDEFINED_VARIABLE -140
+#define MENAI_ERR_STRUCT_FIELD_NOT_FOUND -141
+#define MENAI_ERR_EMPTY_LIST -142
+#define MENAI_ERR_CALL_DEPTH_EXCEEDED -143
+#define MENAI_ERR_UNHASHABLE_KEY -144
+#define MENAI_ERR_INVALID_UTF8 -145
+#define MENAI_ERR_HEX_EVEN_LENGTH -146
+#define MENAI_ERR_INVALID_HEX_CHAR -147
+#define MENAI_ERR_TRUNCATED_LEB128 -148
+#define MENAI_ERR_RANGE_ZERO_STEP -149
+#define MENAI_ERR_CLOSURE_INDEX_OUT_OF_RANGE -150
+#define MENAI_ERR_MISSING_RETURN -151
+#define MENAI_ERR_UNIMPLEMENTED_OPCODE -152
+#define MENAI_ERR_USER_ERROR -153
+
+/*
+ * MenaiVMError — structured error record produced by the VM.
+ *
+ * The VM fills this at the error label in execute_loop, capturing the
+ * error code and execution context (opcode, instruction pointer, call
+ * depth).  The bridge reads it after execution returns and translates
+ * it into a Python exception.
+ *
+ * user_message is only set when code == MENAI_ERR_USER_ERROR; it is
+ * a malloc'd C string that the bridge must free after use.
+ */
+typedef struct {
+    int code;               /* MENAI_ERR_* code */
+    int opcode;             /* opcode that was executing (0 if unknown) */
+    int ip;                 /* instruction pointer (0 if unknown) */
+    int call_depth;         /* call stack depth at time of error */
+    const char *user_message; /* only for MENAI_ERR_USER_ERROR */
+} MenaiVMError;
 
 /*
  * Fast type-check macros
@@ -927,14 +1004,27 @@ int globals_build_from_arrays(GlobalsTable *gt, const char **names,
  *
  * Executes code with the given cached globals table and optional extra
  * bindings (a native MenaiDict, or NULL).  Returns a new reference to
- * the result, or NULL on error.  On error, *out_err is set to a
- * MENAI_ERR_* code (out_err must not be NULL).
+ * the result, or NULL on error.  On error, *out_error is filled in
+ * with the structured error record (out_error must not be NULL).
  */
 MenaiValue *menai_vm_execute_native(MenaiCodeObject *code,
                                     const GlobalsTable *globals,
                                     MenaiValue *extra_bindings,
-                                    int *out_err);
+                                    MenaiVMError *out_error);
 
 void menai_vm_clear_cancel(void);
+
+/*
+ * MenaiVMYieldFn — bridge-provided callback for the VM's cancellation check.
+ *
+ * Called periodically by the VM during execution.  The bridge implementation
+ * should release the GIL briefly, yield to the OS scheduler, check the atomic
+ * cancellation flag, and check for pending Python signals.
+ *
+ * Returns 0 to continue execution, -1 to signal cancellation or signal
+ * interruption (the VM sets MENAI_ERR_CANCELLED and jumps to the error label).
+ */
+typedef int (*MenaiVMYieldFn)(void);
+void menai_vm_set_yield_fn(MenaiVMYieldFn fn);
 
 #endif /* MENAI_VM_C_H */

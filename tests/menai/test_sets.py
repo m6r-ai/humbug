@@ -1,7 +1,7 @@
 """Tests for Menai set operations."""
 
 import pytest
-from menai import Menai, MenaiEvalError
+from menai import Menai, MenaiEvalError, VMErrorCode
 
 
 @pytest.fixture
@@ -207,8 +207,9 @@ class TestSetMembership:
 
     def test_member_wrong_type(self, tool):
         """Test that set-member? rejects non-set first argument."""
-        with pytest.raises(MenaiEvalError, match="requires a set argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-member? (list 1 2 3) 1)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestSetLength:
@@ -231,8 +232,9 @@ class TestSetLength:
 
     def test_length_wrong_type(self, tool):
         """Test that set-length rejects non-set argument."""
-        with pytest.raises(MenaiEvalError, match="requires a set argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-length (list 1 2 3))")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestSetAdd:
@@ -262,8 +264,9 @@ class TestSetAdd:
 
     def test_add_wrong_type(self, tool):
         """Test that set-add rejects non-set first argument."""
-        with pytest.raises(MenaiEvalError, match="requires a set argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-add (list 1 2 3) 4)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestSetRemove:
@@ -291,8 +294,9 @@ class TestSetRemove:
 
     def test_remove_wrong_type(self, tool):
         """Test that set-remove rejects non-set first argument."""
-        with pytest.raises(MenaiEvalError, match="requires a set argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-remove (list 1 2 3) 1)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestSetAlgebra:
@@ -385,35 +389,43 @@ class TestSetAlgebra:
 
     def test_union_wrong_type(self, tool):
         """Test that set-union rejects non-set arguments."""
-        with pytest.raises(MenaiEvalError, match="requires set arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-union (set 1 2) (list 3))")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="requires set arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-union (list 1 2) (set 3))")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_intersection_wrong_type(self, tool):
         """Test that set-intersection rejects non-set arguments."""
-        with pytest.raises(MenaiEvalError, match="requires set arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-intersection (set 1 2) (list 3))")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="requires set arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-intersection (list 1 2) (set 3))")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_difference_wrong_type(self, tool):
         """Test that set-difference rejects non-set arguments."""
-        with pytest.raises(MenaiEvalError, match="requires set arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-difference (set 1 2) 42)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="requires set arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-difference 42 (set 1 2))")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_subset_wrong_type(self, tool):
         """Test that set-subset? rejects non-set arguments."""
-        with pytest.raises(MenaiEvalError, match="requires set arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-subset? (set 1 2) (list 1 2))")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="requires set arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set-subset? (list 1) (set 1 2))")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestSetConversion:
@@ -456,13 +468,15 @@ class TestSetConversion:
 
     def test_set_to_list_wrong_type(self, tool):
         """Test that set->list rejects non-set argument."""
-        with pytest.raises(MenaiEvalError, match="requires a set argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(set->list (list 1 2 3))")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_list_to_set_wrong_type(self, tool):
         """Test that list->set rejects non-list argument."""
-        with pytest.raises(MenaiEvalError, match="requires a list argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate("(list->set (set 1 2 3))")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestSetHigherOrder:

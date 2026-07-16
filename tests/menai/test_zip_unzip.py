@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestZip:
@@ -42,11 +42,13 @@ class TestZip:
 
     def test_zip_arity(self, menai):
         """Test that zip requires exactly 2 arguments."""
-        with pytest.raises(MenaiEvalError, match=r"expects 2 arguments, got 1"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(zip-list (list 1 2 3))')
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match=r"expects 2 arguments, got 3"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(zip-list (list 1 2) (list 3 4) (list 5 6))')
+        assert exc_info.value.error_code == VMErrorCode.ARITY_MISMATCH
 
     def test_zip_requires_list_arguments(self, menai):
         """Test that zip requires list arguments."""

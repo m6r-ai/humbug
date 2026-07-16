@@ -9,7 +9,7 @@ to be of a specific type and raise errors on type mismatches:
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestStrictEqualityPredicates:
@@ -28,25 +28,29 @@ class TestStrictEqualityPredicates:
     def test_integer_eq_rejects_floats(self, menai):
         """Test integer=? raises error on float arguments."""
         # 2-arg: always evaluated — always raises.
-        with pytest.raises(MenaiEvalError, match="integer=.*requires integer arguments.*float"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer=? 1 1.0)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # 3-arg: bad type in second pair, first pair is true → second pair is reached → raises.
-        with pytest.raises(MenaiEvalError, match="integer=.*requires integer arguments.*float"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer=? 1 1 3.0)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # 3-arg: bad type in second pair, first pair is false → short-circuits → no error.
         assert menai.evaluate('(integer=? 1 2 3.0)') is False
 
     def test_integer_eq_rejects_complex(self, menai):
         """Test integer=? raises error on complex arguments."""
-        with pytest.raises(MenaiEvalError, match="integer=.*requires integer arguments.*complex"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer=? 1 1+0j)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_integer_eq_rejects_non_numbers(self, menai):
         """Test integer=? raises error on non-numeric arguments."""
-        with pytest.raises(MenaiEvalError, match="integer=.*requires integer arguments.*string"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer=? 1 "hello")')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_integer_eq_requires_minimum_args(self, menai):
         """Test integer=? requires at least 2 arguments."""
@@ -68,12 +72,14 @@ class TestStrictEqualityPredicates:
     def test_float_eq_rejects_integers(self, menai):
         """Test float=? raises error on integer arguments."""
         # 2-arg: always evaluated — always raises.
-        with pytest.raises(MenaiEvalError, match="float=.*requires float arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float=? 1.0 1)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # 3-arg: bad type in second pair, first pair is true → second pair is reached → raises.
-        with pytest.raises(MenaiEvalError, match="float=.*requires float arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float=? 1.0 1.0 3)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # 3-arg: bad type in second pair, first pair is false → short-circuits → no error.
         assert menai.evaluate('(float=? 1.0 2.0 3)') is False
@@ -81,8 +87,9 @@ class TestStrictEqualityPredicates:
 
     def test_float_eq_rejects_complex(self, menai):
         """Test float=? raises error on complex arguments."""
-        with pytest.raises(MenaiEvalError, match="float=.*requires float arguments.*complex"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float=? 1.0 1+0j)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_float_eq_requires_minimum_args(self, menai):
         """Test float=? requires at least 2 arguments."""
@@ -103,13 +110,15 @@ class TestStrictEqualityPredicates:
 
     def test_complex_eq_rejects_integers(self, menai):
         """Test complex=? raises error on integer arguments."""
-        with pytest.raises(MenaiEvalError, match="complex=.*requires complex arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(complex=? 1+0j 1)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_complex_eq_rejects_floats(self, menai):
         """Test complex=? raises error on float arguments."""
-        with pytest.raises(MenaiEvalError, match="complex=.*requires complex arguments.*float"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(complex=? 1+0j 1.0)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_complex_eq_requires_minimum_args(self, menai):
         """Test complex=? requires at least 2 arguments."""
@@ -130,11 +139,13 @@ class TestStrictEqualityPredicates:
 
     def test_string_eq_rejects_non_strings(self, menai):
         """Test string=? raises error on non-string arguments."""
-        with pytest.raises(MenaiEvalError, match="string=.*requires string arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string=? "hello" 42)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="string=.*requires string arguments.*boolean"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string=? "hello" #t)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     # ========== boolean=? tests ==========
 
@@ -148,11 +159,13 @@ class TestStrictEqualityPredicates:
 
     def test_boolean_eq_rejects_non_booleans(self, menai):
         """Test boolean=? raises error on non-boolean arguments."""
-        with pytest.raises(MenaiEvalError, match="boolean=.*requires boolean arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(boolean=? #t 1)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="boolean=.*requires boolean arguments.*string"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(boolean=? #t "true")')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_boolean_eq_requires_minimum_args(self, menai):
         """Test boolean=? requires at least 2 arguments."""
@@ -182,11 +195,13 @@ class TestStrictEqualityPredicates:
 
     def test_list_eq_rejects_non_lists(self, menai):
         """Test list=? raises error on non-list arguments."""
-        with pytest.raises(MenaiEvalError, match="list=.*requires list arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(list=? (list 1 2) 42)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="list=.*requires list arguments.*string"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(list=? (list 1) "hello")')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_list_eq_requires_minimum_args(self, menai):
         """Test list=? requires at least 2 arguments."""
@@ -226,11 +241,13 @@ class TestStrictEqualityPredicates:
 
     def test_dict_eq_rejects_non_dicts(self, menai):
         """Test dict=? raises error on non-dict arguments."""
-        with pytest.raises(MenaiEvalError, match="dict=.*requires dict arguments.*list"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(dict=? (dict) (list 1 2))')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="dict=.*requires dict arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(dict=? (dict) 42)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_dict_eq_requires_minimum_args(self, menai):
         """Test dict=? requires at least 2 arguments."""
@@ -243,12 +260,14 @@ class TestStrictEqualityPredicates:
     def test_strict_predicates_provide_type_checking(self, menai):
         """Test that strict predicates serve as type assertions."""
         # string=? ensures all args are strings
-        with pytest.raises(MenaiEvalError, match="string=.*requires string arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string=? "hello" 123)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # boolean=? ensures all args are booleans
-        with pytest.raises(MenaiEvalError, match="boolean=.*requires boolean arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(boolean=? #t 1)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # This makes strict predicates useful for catching type errors early
 
@@ -257,16 +276,19 @@ class TestStrictEqualityPredicates:
     def test_error_messages_include_position(self, menai):
         """Test that error messages indicate which argument failed."""
         # First argument wrong type
-        with pytest.raises(MenaiEvalError, match="requires integer arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer=? 1.0 1)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # Second argument wrong type
-        with pytest.raises(MenaiEvalError, match="requires integer arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer=? 1 1.0)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # Third argument wrong type
-        with pytest.raises(MenaiEvalError, match="requires integer arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer=? 1 1 1.0)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_all_strict_predicates_with_many_args(self, menai):
         """Test all strict predicates work with more than 2 arguments."""

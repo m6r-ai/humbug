@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import Menai, MenaiEvalError
+from menai import Menai, MenaiEvalError, VMErrorCode
 
 
 class TestLists:
@@ -147,8 +147,10 @@ class TestLists:
 
     def test_first_empty_list_error(self, menai):
         """Test that first raises error on empty list."""
-        with pytest.raises(MenaiEvalError, match="list-first.*non-empty list"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(list-first (list))')
+
+        assert exc_info.value.error_code == VMErrorCode.EMPTY_LIST
 
     def test_first_requires_list_argument(self, menai):
         """Test that first requires a list argument."""
@@ -171,8 +173,10 @@ class TestLists:
 
     def test_rest_empty_list_error(self, menai):
         """Test that rest raises error on empty list."""
-        with pytest.raises(MenaiEvalError, match="list-rest.*non-empty list"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(list-rest (list))')
+
+        assert exc_info.value.error_code == VMErrorCode.EMPTY_LIST
 
     def test_rest_requires_list_argument(self, menai):
         """Test that rest requires a list argument."""

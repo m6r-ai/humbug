@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestMenaiCollectionEdgeCases:
@@ -45,14 +45,20 @@ class TestMenaiCollectionEdgeCases:
     def test_empty_collection_error_cases(self, menai):
         """Test operations that should fail on empty collections."""
         # Operations that require non-empty lists
-        with pytest.raises(MenaiEvalError, match="list-first.*non-empty list"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(list-first ())")
 
-        with pytest.raises(MenaiEvalError, match="list-rest.*non-empty list"):
+        assert exc_info.value.error_code == VMErrorCode.EMPTY_LIST
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(list-rest ())")
 
-        with pytest.raises(MenaiEvalError, match="list-last.*non-empty list"):
+        assert exc_info.value.error_code == VMErrorCode.EMPTY_LIST
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(list-last ())")
+
+        assert exc_info.value.error_code == VMErrorCode.EMPTY_LIST
 
     def test_single_element_collections(self, menai):
         """Test operations on single-element collections."""

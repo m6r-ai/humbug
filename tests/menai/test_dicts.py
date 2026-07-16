@@ -1,7 +1,7 @@
 """Tests for Menai dict (association list) operations."""
 
 import pytest
-from menai import Menai, MenaiEvalError
+from menai import Menai, MenaiEvalError, VMErrorCode
 
 
 @pytest.fixture
@@ -116,8 +116,10 @@ class TestDictGetErrors:
 
     def test_dict_get_not_dict(self, tool):
         """Test error when first argument is not a dict."""
-        with pytest.raises(MenaiEvalError, match="requires dict argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate('(dict-get (list 1 2 3) "key")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestDictSet:
@@ -159,8 +161,10 @@ class TestDictSetErrors:
 
     def test_dict_set_not_dict(self, tool):
         """Test error when first argument is not a dict."""
-        with pytest.raises(MenaiEvalError, match="requires dict argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate('(dict-set "not-dict" "key" "value")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestDictHas:
@@ -192,8 +196,10 @@ class TestDictHasErrors:
 
     def test_dict_has_not_dict(self, tool):
         """Test error when first argument is not a dict."""
-        with pytest.raises(MenaiEvalError, match="requires dict argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate('(dict-has? 42 "key")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestDictKeys:
@@ -225,8 +231,10 @@ class TestDictKeysErrors:
 
     def test_dict_keys_not_dict(self, tool):
         """Test error when argument is not a dict."""
-        with pytest.raises(MenaiEvalError, match="requires dict argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate('(dict-keys (list 1 2 3))')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestDictValues:
@@ -258,8 +266,10 @@ class TestDictValuesErrors:
 
     def test_dict_values_not_dict(self, tool):
         """Test error when argument is not a dict."""
-        with pytest.raises(MenaiEvalError, match="requires dict argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate('(dict-values #t)')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestDictRemove:
@@ -295,8 +305,10 @@ class TestDictRemoveErrors:
 
     def test_dict_remove_not_dict(self, tool):
         """Test error when first argument is not a dict."""
-        with pytest.raises(MenaiEvalError, match="requires dict argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate('(dict-remove (list 1 2) "key")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestDictMerge:
@@ -339,13 +351,17 @@ class TestDictMergeErrors:
 
     def test_dict_merge_first_not_dict(self, tool):
         """Test error when first argument is not a dict."""
-        with pytest.raises(MenaiEvalError, match="requires dict argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate('(dict-merge (list 1 2) (dict "a" 1))')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_dict_merge_second_not_dict(self, tool):
         """Test error when second argument is not a dict."""
-        with pytest.raises(MenaiEvalError, match="requires dict argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate('(dict-merge (dict "a" 1) "not-dict")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestDictPredicate:
@@ -626,13 +642,17 @@ class TestDictLengthErrors:
 
     def test_length_with_invalid_type(self, tool):
         """Test that length with invalid type raises error."""
-        with pytest.raises(MenaiEvalError, match="requires dict argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate('(dict-length 42)')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_dict_length_with_non_dict(self, tool):
         """Test that dict-length with non-dict raises error."""
-        with pytest.raises(MenaiEvalError, match="requires dict argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             tool.evaluate('(dict-length (list 1 2 3))')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestDictFirstClass:

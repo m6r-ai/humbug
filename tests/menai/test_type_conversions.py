@@ -2,6 +2,7 @@
 
 import pytest
 from menai.menai_error import MenaiEvalError
+from menai.menai_vm_errors import VMErrorCode
 
 
 class TestIntegerConversion:
@@ -42,19 +43,19 @@ class TestIntegerConversion:
         """Test that integer conversion from integer raises error (requires float argument)."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(float->integer 5)")
-        assert "requires float argument" in str(exc_info.value).lower()
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_integer_from_complex_error(self, menai):
         """Test that integer conversion from complex raises error (requires float argument)."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(float->integer (float->complex 3.0 0.0))")
-        assert "requires float argument" in str(exc_info.value).lower()
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_integer_from_string_error(self, menai):
         """Test integer conversion from string raises error."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float->integer "hello")')
-        assert "requires float argument" in str(exc_info.value).lower()
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_integer_wrong_arg_count_zero(self, menai):
         """Test integer with no arguments raises error."""
@@ -114,19 +115,19 @@ class TestFloatConversion:
         """Test that float conversion from float raises error (requires integer argument)."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(integer->float 3.14)")
-        assert "requires integer argument" in str(exc_info.value).lower()
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_float_from_complex_error(self, menai):
         """Test that float conversion from complex raises error (requires integer argument)."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(integer->float (integer->complex 3 0))")
-        assert "requires integer argument" in str(exc_info.value).lower()
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_float_from_string_error(self, menai):
         """Test float conversion from string raises error."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer->float "hello")')
-        assert "requires integer argument" in str(exc_info.value).lower()
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestConversionRoundTrip:

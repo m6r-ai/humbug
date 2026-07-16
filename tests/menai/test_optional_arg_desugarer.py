@@ -28,7 +28,7 @@ Tests are organised into three layers:
 
 import pytest
 
-from menai import Menai, MenaiEvalError
+from menai import Menai, MenaiEvalError, VMErrorCode
 from menai.menai_ast import (
     MenaiASTFloat,
     MenaiASTInteger,
@@ -524,8 +524,10 @@ class TestDictGetErrors:
             menai.evaluate('(dict-get (dict "a" 1) "a" 0 "extra")')
 
     def test_non_dict_first_arg_raises(self, menai):
-        with pytest.raises(MenaiEvalError, match="requires dict argument"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(dict-get (list 1 2 3) "key")')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 class TestRangeErrors:

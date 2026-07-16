@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 from menai.menai_value import MenaiInteger, MenaiString, MenaiBoolean
 
 
@@ -98,15 +98,15 @@ class TestMenaiCallStackEdgeCases:
     def test_call_stack_error_propagation(self, menai):
         """Test that errors propagate correctly through call stack."""
         # Error in nested arithmetic
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("(integer+ 1 (integer/ 2 0))")
 
         # Error in lambda function
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("((lambda (x) (integer/ x 0)) 5)")
 
         # Error in higher-order function
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("(map-list (lambda (x) (integer/ x 0)) (list 1 2 3))")
 
     def test_call_stack_with_recursive_functions(self, menai):
@@ -231,10 +231,9 @@ class TestMenaiCallStackEdgeCases:
                         (g x)))))
               (f 5))
             """)
-        except MenaiEvalError as e:
-            error_msg = str(e)
+        except ZeroDivisionError as e:
             # Error should provide context about where the error occurred
-            assert "Division by zero" in error_msg
+            assert e.error_code == VMErrorCode.DIVISION_BY_ZERO
 
     def test_call_stack_with_pattern_matching(self, menai):
         """Test call stack with pattern matching (if supported)."""
@@ -289,7 +288,7 @@ class TestMenaiCallStackEdgeCases:
     def test_call_stack_exception_unwinding(self, menai):
         """Test proper exception unwinding through call stack."""
         # Exception should unwind through multiple call levels
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate("""
             (let ((f (lambda (x)
                       (let ((g (lambda (y)

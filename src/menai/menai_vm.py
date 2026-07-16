@@ -6,6 +6,7 @@ from typing import cast
 from menai.menai_bytecode import CodeObject
 from menai.menai_value import MenaiValue
 from menai.menai_vm_bytecode_validator import validate_bytecode
+from menai.menai_vm_errors import _MenaiVMRuntimeError, translate_vm_error
 
 # pylint: disable=no-name-in-module
 from menai.menai_vm_c import execute as _c_vm_execute  # type: ignore[import-not-found]
@@ -28,9 +29,19 @@ class MenaiVM:
         if self.validate_bytecode:
             validate_bytecode(code)
 
-        return cast(Callable[..., MenaiValue], _c_vm_execute)(
-            code, globals_dict or {}, extra_bindings or {}
-        )
+        try:
+            return cast(Callable[..., MenaiValue], _c_vm_execute)(
+                code, globals_dict or {}, extra_bindings or {}
+            )
+
+        except _MenaiVMRuntimeError as exc:
+            raise translate_vm_error(
+                exc.code,
+                exc.opcode,
+                exc.ip,
+                exc.call_depth,
+                exc.user_message,
+            ) from None
 
     def cancel(self) -> None:
         """

@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import Menai, MenaiEvalError
+from menai import Menai, MenaiEvalError, VMErrorCode
 
 
 @pytest.fixture
@@ -96,20 +96,23 @@ class TestStructGet:
 
     def test_get_unknown_field_raises_error(self, menai):
         """struct-get raises an error for an unknown field name."""
-        with pytest.raises(MenaiEvalError, match="has no field"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
                 "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-get p 'z))"
             )
+        assert exc_info.value.error_code == VMErrorCode.STRUCT_FIELD_NOT_FOUND
 
     def test_get_on_non_struct_raises_error(self, menai):
         """struct-get raises an error when called on a non-struct."""
-        with pytest.raises(MenaiEvalError, match="struct-get"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(struct-get 42 'x)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_get_on_list_raises_error(self, menai):
         """struct-get raises an error when called on a list."""
-        with pytest.raises(MenaiEvalError, match="struct-get"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(struct-get (list 1 2) 'x)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 # ---------------------------------------------------------------------------
@@ -158,15 +161,17 @@ class TestStructSet:
 
     def test_set_unknown_field_raises_error(self, menai):
         """struct-set raises an error for an unknown field name."""
-        with pytest.raises(MenaiEvalError, match="has no field"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
                 "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-set p 'z 99))"
             )
+        assert exc_info.value.error_code == VMErrorCode.STRUCT_FIELD_NOT_FOUND
 
     def test_set_on_non_struct_raises_error(self, menai):
         """struct-set raises an error when called on a non-struct."""
-        with pytest.raises(MenaiEvalError, match="struct-set"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(struct-set 42 'x 1)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 # ---------------------------------------------------------------------------
@@ -298,10 +303,11 @@ class TestStructEquality:
 
     def test_struct_eq_on_non_struct_raises_error(self, menai):
         """struct=? raises an error when called on a non-struct."""
-        with pytest.raises(MenaiEvalError, match="struct=\\?"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
                 "(let ((Point (struct (x y))) (p (Point 1 2))) (struct=? p 42))"
             )
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 # ---------------------------------------------------------------------------
@@ -362,18 +368,21 @@ class TestStructIntrospection:
 
     def test_struct_type_name_on_non_struct_type_raises_error(self, menai):
         """struct-type-name raises an error when called on a non-struct-type."""
-        with pytest.raises(MenaiEvalError, match="struct-type-name"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(struct-type-name 42)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_struct_fields_on_non_struct_type_raises_error(self, menai):
         """struct-fields raises an error when called on a non-struct-type."""
-        with pytest.raises(MenaiEvalError, match="struct-fields"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(struct-fields 42)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_struct_type_on_non_struct_raises_error(self, menai):
         """struct-type raises an error when called on a non-struct."""
-        with pytest.raises(MenaiEvalError, match="struct-type"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(struct-type 42)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 # ---------------------------------------------------------------------------
@@ -739,41 +748,47 @@ class TestStructErrors:
 
     def test_struct_get_on_non_struct_raises_error(self, menai):
         """struct-get raises an error when the first argument is not a struct."""
-        with pytest.raises(MenaiEvalError, match="struct-get"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(struct-get 42 'x)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_struct_set_on_non_struct_raises_error(self, menai):
         """struct-set raises an error when the first argument is not a struct."""
-        with pytest.raises(MenaiEvalError, match="struct-set"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(struct-set 42 'x 1)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_struct_get_unknown_field_raises_error(self, menai):
         """struct-get raises an error for an unknown field name."""
-        with pytest.raises(MenaiEvalError, match="has no field"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
                 "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-get p 'z))"
             )
+        assert exc_info.value.error_code == VMErrorCode.STRUCT_FIELD_NOT_FOUND
 
     def test_struct_set_unknown_field_raises_error(self, menai):
         """struct-set raises an error for an unknown field name."""
-        with pytest.raises(MenaiEvalError, match="has no field"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
                 "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-set p 'z 99))"
             )
+        assert exc_info.value.error_code == VMErrorCode.STRUCT_FIELD_NOT_FOUND
 
     def test_struct_eq_on_non_struct_first_arg_raises_error(self, menai):
         """struct=? raises an error when the first argument is not a struct."""
-        with pytest.raises(MenaiEvalError, match="struct=\\?"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
                 "(let ((Point (struct (x y))) (p (Point 1 2))) (struct=? 42 p))"
             )
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_struct_eq_on_non_struct_second_arg_raises_error(self, menai):
         """struct=? raises an error when the second argument is not a struct."""
-        with pytest.raises(MenaiEvalError, match="struct=\\?"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
                 "(let ((Point (struct (x y))) (p (Point 1 2))) (struct=? p 42))"
             )
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 # ---------------------------------------------------------------------------
@@ -1002,23 +1017,25 @@ class TestStructDynamicConstruction:
 
     def test_wrong_arity_dynamic_constructor_too_few(self, menai):
         """Calling a dynamically-retrieved struct constructor with too few args raises an error."""
-        with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('''
             (let* ((point (struct (x y)))
                    (d     (dict "point" point))
                    (ctor  (dict-get d "point")))
               (ctor 1))
             ''')
+        assert exc_info.value.error_code == VMErrorCode.STRUCT_ARITY_MISMATCH
 
     def test_wrong_arity_dynamic_constructor_too_many(self, menai):
         """Calling a dynamically-retrieved struct constructor with too many args raises an error."""
-        with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('''
             (let* ((point (struct (x y)))
                    (d     (dict "point" point))
                    (ctor  (dict-get d "point")))
               (ctor 1 2 3))
             ''')
+        assert exc_info.value.error_code == VMErrorCode.STRUCT_ARITY_MISMATCH
 
 
 # ---------------------------------------------------------------------------
@@ -1064,23 +1081,25 @@ class TestStructDynamicApply:
 
     def test_apply_struct_type_wrong_arity_too_few(self, menai):
         """apply with a struct type and too few args raises an error."""
-        with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('''
             (let* ((point (struct (x y)))
                    (d     (dict "point" point))
                    (ctor  (dict-get d "point")))
               (apply ctor (list 1)))
             ''')
+        assert exc_info.value.error_code == VMErrorCode.STRUCT_ARITY_MISMATCH
 
     def test_apply_struct_type_wrong_arity_too_many(self, menai):
         """apply with a struct type and too many args raises an error."""
-        with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('''
             (let* ((point (struct (x y)))
                    (d     (dict "point" point))
                    (ctor  (dict-get d "point")))
               (apply ctor (list 1 2 3)))
             ''')
+        assert exc_info.value.error_code == VMErrorCode.STRUCT_ARITY_MISMATCH
 
 
 # ---------------------------------------------------------------------------

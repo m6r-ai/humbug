@@ -7,6 +7,7 @@ tree-walking interpreter had.
 """
 
 import pytest
+from menai import VMErrorCode
 from menai.menai_error import MenaiEvalError
 
 
@@ -183,16 +184,14 @@ class TestEvaluatorMissingCoverage:
         """Test undefined variable error in tail call context."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("((lambda () undefined_var))")
-        assert "Undefined variable" in str(exc_info.value)
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     def test_symbol_lookup_error_context(self, menai):
         """Test that symbol lookup errors include context."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("nonexistent_symbol")
 
-        error_msg = str(exc_info.value)
-        assert "Undefined variable" in error_msg
-        assert "Available variables" in error_msg
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     # ========== Environment Creation Edge Case ==========
 
@@ -270,9 +269,9 @@ class TestEvaluatorMissingCoverage:
                                   (error-func (integer- n 1))))))
           (error-func 3))
         """
-        with pytest.raises(MenaiEvalError) as exc_info:
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate(error_code)
-        assert "Division by zero" in str(exc_info.value)
+        assert exc_info.value.error_code == VMErrorCode.DIVISION_BY_ZERO
 
     def test_special_form_detection_branches(self, menai):
         """Test special form detection in various contexts."""

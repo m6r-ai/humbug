@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestMenaiDependencyAnalyzerEdgeCases:
@@ -159,12 +159,13 @@ class TestMenaiDependencyAnalyzerEdgeCases:
     def test_dependency_analysis_error_cases(self, menai):
         """Test dependency analysis error cases."""
         # Undefined variable in dependency
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("""
             (let* ((x undefined-var)
                    (y (integer+ x 1)))
               y)
             """)
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
         # Circular dependency (if detected)
         try:
@@ -432,13 +433,14 @@ class TestMenaiDependencyAnalyzerEdgeCases:
     def test_dependency_analysis_with_error_propagation(self, menai):
         """Test dependency analysis with error propagation."""
         # Error in dependency chain
-        with pytest.raises(MenaiEvalError):
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate("""
             (let* ((a 5)
                    (b (integer/ a 0))
                    (c (integer+ b 1)))
               c)
             """)
+        assert exc_info.value.error_code == VMErrorCode.DIVISION_BY_ZERO
 
         # Dead binding elimination: `bad` and `dependent` are never used by the
         # body expression (which returns `good`).  Menai is a pure functional

@@ -5,7 +5,7 @@ Symbols are produced only by quote and are a distinct runtime type.
 
 import pytest
 
-from menai import Menai, MenaiEvalError
+from menai import Menai, MenaiEvalError, VMErrorCode
 
 
 @pytest.fixture
@@ -82,16 +82,19 @@ class TestSymbolEqP:
         assert menai.evaluate("(boolean? (symbol=? 'a 'a))") is True
 
     def test_first_arg_non_symbol_raises(self, menai):
-        with pytest.raises(MenaiEvalError, match="symbol=\\?.*must be symbols"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(symbol=? "foo" \'foo)')
+        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL_PAIR
 
     def test_second_arg_non_symbol_raises(self, menai):
-        with pytest.raises(MenaiEvalError, match="symbol=\\?.*must be symbols"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(symbol=? 'foo 42)")
+        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL_PAIR
 
     def test_both_args_non_symbol_raises(self, menai):
-        with pytest.raises(MenaiEvalError, match="symbol=\\?.*must be symbols"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(symbol=? "foo" "foo")')
+        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL_PAIR
 
     def test_wrong_arity_zero(self, menai):
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
@@ -133,12 +136,14 @@ class TestSymbolNeqP:
         ) is True
 
     def test_first_arg_non_symbol_raises(self, menai):
-        with pytest.raises(MenaiEvalError, match="symbol!=\\?.*must be symbols"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(symbol!=? 42 'foo)")
+        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL_PAIR
 
     def test_second_arg_non_symbol_raises(self, menai):
-        with pytest.raises(MenaiEvalError, match="symbol!=\\?.*must be symbols"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(symbol!=? \'foo "bar")')
+        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL_PAIR
 
     def test_wrong_arity_zero(self, menai):
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
@@ -188,16 +193,19 @@ class TestSymbolToString:
         ) == ["foo", "bar", "baz"]
 
     def test_non_symbol_raises(self, menai):
-        with pytest.raises(MenaiEvalError, match="symbol->string.*must be a symbol"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(symbol->string "foo")')
+        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL
 
     def test_integer_raises(self, menai):
-        with pytest.raises(MenaiEvalError, match="symbol->string.*must be a symbol"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(symbol->string 42)")
+        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL
 
     def test_list_raises(self, menai):
-        with pytest.raises(MenaiEvalError, match="symbol->string.*must be a symbol"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(symbol->string (list 1 2))")
+        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL
 
     def test_wrong_arity_zero(self, menai):
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):

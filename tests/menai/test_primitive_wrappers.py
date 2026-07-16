@@ -1,7 +1,7 @@
 """Test variadic wrapper functions for primitive operations."""
 
 import pytest
-from menai import Menai
+from menai import Menai, VMErrorCode
 from menai.menai_error import MenaiEvalError
 
 
@@ -73,12 +73,12 @@ class TestPrimitiveWrappers:
         # Type error - should mention the operation name or "number"
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(let ((add integer+)) (add 1 "hello"))')
-        error_msg = str(exc_info.value)
-        assert "integer+" in error_msg or "number" in error_msg.lower()
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # Division by zero
-        with pytest.raises(MenaiEvalError, match="Division by zero"):
+        with pytest.raises(ZeroDivisionError) as exc_info:
             menai.evaluate("(let ((div float/)) (div 10.0 0.0))")
+        assert exc_info.value.error_code == VMErrorCode.DIVISION_BY_ZERO
 
     def test_wrapper_all_operations(self, menai):
         """Test that all primitive operations work as first-class values."""

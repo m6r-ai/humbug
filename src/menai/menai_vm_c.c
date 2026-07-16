@@ -11,13 +11,10 @@
  */
 #define _POSIX_C_SOURCE 200809L
 #include <math.h>
-#include <stdarg.h>
+#include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 
 #include "menai_vm_c.h"
 #include "menai_vm_atomic.h"
@@ -474,12 +471,6 @@ extern MenaiValue *Menai_EMPTY_LIST;
 extern MenaiValue *Menai_EMPTY_DICT;
 extern MenaiValue *Menai_EMPTY_SET;
 
-/*
- * Module-level state fetched at init
- */
-extern PyObject *MenaiEvalError_type;
-extern PyObject *MenaiCancelledException_type;
-
 static inline int
 menai_boolean_value(MenaiValue *o)
 {
@@ -591,7 +582,7 @@ integer_to_long(MenaiValue *val)
 
 /*
  * integer_to_unsigned_long_long — extract an unsigned long long from a MenaiInteger.
- * Returns 0 on success, -1 on error (with Python exception set).
+ * Returns 0 on success, -1 on error (no exception set — caller handles).
  * Caller must ensure val is a MenaiInteger.
  */
 static inline int
@@ -600,8 +591,6 @@ integer_to_unsigned_long_long(MenaiValue *val, unsigned long long *out)
     MenaiInteger *ib = (MenaiInteger *)val;
     if (!ib->is_big) {
         if (ib->small < 0) {
-            PyErr_SetString(PyExc_OverflowError,
-                            "can't convert negative integer to unsigned");
             return -1;
         }
         *out = (unsigned long long)ib->small;
@@ -636,8 +625,25 @@ static inline void bool_store(MenaiValue **regs, int slot, int cond)
     menai_reg_set_borrow(regs, slot, cond ? Menai_TRUE : Menai_FALSE);
 }
 
-static PyObject *menai_raise_eval_error(const char *message);
-static PyObject *menai_raise_eval_errorf(const char *fmt, ...);
+/*
+ * File-scope error state — set by error sites before "goto error",
+ * read by the error label in execute_loop.  Safe because the VM is
+ * single-threaded (GIL-protected); only one execute_loop runs at a time.
+ *
+ * Error sites set s_vm_err to a MENAI_ERR_* code, then jump to the
+ * error label which assembles the MenaiVMError struct with execution
+ * context (opcode, IP, call depth) that is in scope there.
+ */
+static int s_vm_err = MENAI_OK;
+static const char *s_vm_user_message = NULL;
+
+/*
+ * Yield callback — set by the bridge at init time.  When non-NULL, the VM
+ * calls it periodically to allow cancellation and signal handling.
+ */
+static MenaiVMYieldFn s_yield_fn = NULL;
+
+void menai_vm_set_yield_fn(MenaiVMYieldFn fn) { s_yield_fn = fn; }
 
 static inline int
 require_type_impl(int ok, MenaiValue *val, const char *op_name, const char *noun)
@@ -646,7 +652,10 @@ require_type_impl(int ok, MenaiValue *val, const char *op_name, const char *noun
         return 1;
     }
 
-    menai_raise_eval_errorf("Function '%s' requires %s, got %s", op_name, noun, menai_short_type_name(val->ob_type));
+    (void)op_name;
+    (void)noun;
+    (void)val;
+    s_vm_err = MENAI_ERR_TYPE_MISMATCH;
     return 0;
 }
 
@@ -731,7 +740,8 @@ static inline int require_symbol(MenaiValue *val, const char *op_name)
         return 1;
     }
 
-    menai_raise_eval_errorf("%s: argument must be a symbol", op_name);
+    (void)op_name;
+    s_vm_err = MENAI_ERR_NOT_SYMBOL;
     return 0;
 }
 
@@ -741,31 +751,9 @@ static inline int require_symbol_pair(MenaiValue *a, MenaiValue *b, const char *
         return 1;
     }
 
-    menai_raise_eval_errorf("%s: arguments must be symbols", op_name);
+    (void)op_name;
+    s_vm_err = MENAI_ERR_NOT_SYMBOL_PAIR;
     return 0;
-}
-
-static PyObject *
-menai_raise_eval_error(const char *message)
-{
-    PyErr_SetString(MenaiEvalError_type, message);
-    return NULL;
-}
-
-static PyObject *
-menai_raise_eval_errorf(const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    PyObject *msg = PyUnicode_FromFormatV(fmt, args);
-    va_end(args);
-    if (msg == NULL) {
-        return NULL;
-    }
- 
-    PyErr_SetObject(MenaiEvalError_type, msg);
-    Py_DECREF(msg);
-    return NULL;
 }
 
 /*
@@ -1017,7 +1005,7 @@ globals_alloc_slots(GlobalsTable *gt, ssize_t n)
     if (n > 0) {
         gt->entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
         if (gt->entries == NULL) {
-            return -1;
+            return MENAI_ERR_NOMEM;
         }
 
         ssize_t min_slots = (n * 3 + 1) / 2;
@@ -1030,7 +1018,7 @@ globals_alloc_slots(GlobalsTable *gt, ssize_t n)
         if (gt->slots == NULL) {
             free(gt->entries);
             gt->entries = NULL;
-            return -1;
+            return MENAI_ERR_NOMEM;
         }
 
         gt->slot_count = sc;
@@ -1043,22 +1031,22 @@ globals_alloc_slots(GlobalsTable *gt, ssize_t n)
  * Forward declaration — execute_loop is defined later in this file.
  */
 static MenaiValue *execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
-                                MenaiValue **regs, int max_locals, int *out_err);
+                                MenaiValue **regs, int max_locals, MenaiVMError *out_error);
 
 /*
  * globals_build — build a GlobalsTable from the cached globals GlobalsTable.
  *
  * All entries are already fast MenaiValue * objects retained and copied
- * directly from the cached table.  Returns 0 on success, -1 on error with a
- * Python exception set.
+ * directly from the cached table.  Returns 0 on success, MENAI_ERR_* on error.
  */
 static int
 globals_build(GlobalsTable *gt, const GlobalsTable *globals_gt)
 {
     ssize_t total = globals_gt ? globals_gt->count : 0;
 
-    if (globals_alloc_slots(gt, total) < 0) {
-        return -1;
+    int err = globals_alloc_slots(gt, total);
+    if (err < 0) {
+        return err;
     }
 
     for (ssize_t i = 0; i < total; i++) {
@@ -1081,7 +1069,7 @@ globals_build(GlobalsTable *gt, const GlobalsTable *globals_gt)
  *
  * Fills the entries array only (no hash slots).  Names are strdup'd from
  * the MenaiString keys via menai_string_to_utf8.  Sets owns_names = 1.
- * Returns 0 on success, -1 on error (Python exception set).
+ * Returns 0 on success, MENAI_ERR_* on error.
  */
 int
 globals_build_from_dict(GlobalsTable *gt, MenaiValue *dict_val)
@@ -1098,23 +1086,20 @@ globals_build_from_dict(GlobalsTable *gt, MenaiValue *dict_val)
     if (n > 0) {
         gt->entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
         if (gt->entries == NULL) {
-            PyErr_NoMemory();
-            return -1;
+            return MENAI_ERR_NOMEM;
         }
 
         for (ssize_t i = 0; i < n; i++) {
             MenaiValue *k = d->keys[i];
             if (!IS_MENAI_STRING(k)) {
                 globals_free(gt);
-                PyErr_SetString(PyExc_TypeError,
-                    "Prelude dict keys must be strings");
-                return -1;
+                return MENAI_ERR_TYPE;
             }
 
             char *name_copy = menai_string_to_utf8(k, NULL);
             if (name_copy == NULL) {
                 globals_free(gt);
-                return -1;
+                return MENAI_ERR_NOMEM;
             }
 
             menai_retain(d->values[i]);
@@ -1133,7 +1118,7 @@ globals_build_from_dict(GlobalsTable *gt, MenaiValue *dict_val)
  *
  * Fills the entries array only (no hash slots).  Names are strdup'd from
  * the input strings.  Values are retained.  Sets owns_names = 1.
- * Returns 0 on success, -1 on error (Python exception set).
+ * Returns 0 on success, MENAI_ERR_* on error.
  */
 int
 globals_build_from_arrays(GlobalsTable *gt, const char **names,
@@ -1148,16 +1133,14 @@ globals_build_from_arrays(GlobalsTable *gt, const char **names,
     if (n > 0) {
         gt->entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
         if (gt->entries == NULL) {
-            PyErr_NoMemory();
-            return -1;
+            return MENAI_ERR_NOMEM;
         }
 
         for (ssize_t i = 0; i < n; i++) {
             char *name_copy = strdup(names[i]);
             if (name_copy == NULL) {
                 globals_free(gt);
-                PyErr_NoMemory();
-                return -1;
+                return MENAI_ERR_NOMEM;
             }
 
             menai_retain(values[i]);
@@ -1180,7 +1163,7 @@ static MenaiValue *globals_lookup_h(const GlobalsTable *gt, const char *name, ha
  * If owns_names is 0, all existing borrowed names are strdup'd and
  * owns_names is set to 1 so that globals_free will free all names.
  *
- * Returns 0 on success, -1 on error (Python exception set).
+ * Returns 0 on success, MENAI_ERR_* on error.
  */
 static int
 globals_merge_extra_native(GlobalsTable *gt, MenaiValue *extra_dict_val)
@@ -1200,8 +1183,7 @@ globals_merge_extra_native(GlobalsTable *gt, MenaiValue *extra_dict_val)
         for (ssize_t i = 0; i < gt->count; i++) {
             char *name_copy = strdup(gt->entries[i].name);
             if (name_copy == NULL) {
-                PyErr_NoMemory();
-                return -1;
+                return MENAI_ERR_NOMEM;
             }
             gt->entries[i].name = name_copy;
         }
@@ -1212,8 +1194,7 @@ globals_merge_extra_native(GlobalsTable *gt, MenaiValue *extra_dict_val)
     GlobalsEntry *new_entries = (GlobalsEntry *)realloc(gt->entries,
         new_count * sizeof(GlobalsEntry));
     if (new_entries == NULL) {
-        PyErr_NoMemory();
-        return -1;
+        return MENAI_ERR_NOMEM;
     }
     gt->entries = new_entries;
 
@@ -1221,9 +1202,9 @@ globals_merge_extra_native(GlobalsTable *gt, MenaiValue *extra_dict_val)
     gt->slots = NULL;
     gt->slot_count = 0;
 
-    if (globals_alloc_slots(gt, new_count) < 0) {
-        PyErr_NoMemory();
-        return -1;
+    int err = globals_alloc_slots(gt, new_count);
+    if (err < 0) {
+        return err;
     }
 
     for (ssize_t i = 0; i < gt->count; i++) {
@@ -1234,14 +1215,12 @@ globals_merge_extra_native(GlobalsTable *gt, MenaiValue *extra_dict_val)
     for (ssize_t i = 0; i < nextra; i++) {
         MenaiValue *k = extra->keys[i];
         if (!IS_MENAI_STRING(k)) {
-            PyErr_SetString(PyExc_TypeError,
-                "Extra bindings keys must be strings");
-            return -1;
+            return MENAI_ERR_TYPE;
         }
 
         char *name_copy = menai_string_to_utf8(k, NULL);
         if (name_copy == NULL) {
-            return -1;
+            return MENAI_ERR_NOMEM;
         }
 
         MenaiValue *fast_val = extra->values[i];
@@ -1322,7 +1301,7 @@ globals_lookup_h(const GlobalsTable *gt, const char *name, hash_t h)
  *   - variadic rest-list packing
  *   - capture slot population
  *
- * Returns 0 on success, -1 on error (Python exception set).
+ * Returns 0 on success, -1 on error (sets s_vm_err).
  */
 static int
 call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee_base, int arity, int return_dest)
@@ -1335,10 +1314,7 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
     if (MENAI_UNLIKELY(is_variadic)) {
         int min_arity = param_count - 1;
         if (arity < min_arity) {
-            const char *fname = co->name ? co->name : "<lambda>";
-            menai_raise_eval_errorf(
-                "Function '%s' expects at least %d argument%s, got %d",
-                fname, min_arity, min_arity == 1 ? "" : "s", arity);
+            s_vm_err = MENAI_ERR_ARITY_MISMATCH;
             return -1;
         }
 
@@ -1346,6 +1322,7 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
         int rest_count = arity - min_arity;
         MenaiValue *rest_list = menai_list_alloc(rest_count);
         if (!rest_list) {
+            s_vm_err = MENAI_ERR_NOMEM;
             return -1;
         }
 
@@ -1356,10 +1333,7 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
 
         menai_reg_set_own(regs, callee_base + min_arity, rest_list);
     } else if (MENAI_UNLIKELY(arity != param_count)) {
-        const char *fname = co->name ? co->name : "<lambda>";
-        menai_raise_eval_errorf(
-            "Function '%s' expects %d argument%s, got %d",
-            fname, param_count, param_count == 1 ? "" : "s", arity);
+        s_vm_err = MENAI_ERR_ARITY_MISMATCH;
         return -1;
     }
 
@@ -1381,10 +1355,12 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
  */
 static MenaiValue *
 execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
-             MenaiValue **regs, int max_locals, int *out_err)
+             MenaiValue **regs, int max_locals, MenaiVMError *out_error)
 {
-    int vm_err = MENAI_OK;
     int _rc;
+
+    s_vm_err = MENAI_OK;
+    s_vm_user_message = NULL;
 
     /* Frame stack — depth 0 is the sentinel. */
     Frame frames[MAX_FRAME_DEPTH + 1];
@@ -1407,41 +1383,22 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
     int frame_depth = 1;
     Frame *frame = &frames[1];
     int instr_count = 0;
+    int cur_opcode = 0;
+    int cur_ip = 0;
 
     while (1) {
         /* Cancellation check */
         if ((++instr_count & (CANCEL_CHECK_INTERVAL - 1)) == 0) {
             instr_count = 0;
 
-            /*
-             * Release the GIL briefly and yield so another thread can
-             * call cancel() (which needs the GIL to enter Python).
-             * The microsleep ensures the OS scheduler runs the other
-             * thread, not just a theoretical GIL hand-off.
-             */
-#ifndef _MSC_VER
-            Py_BEGIN_ALLOW_THREADS
-            usleep(100);  /* 0.1 ms */
-            Py_END_ALLOW_THREADS
-#else
-            Py_BEGIN_ALLOW_THREADS
-            SwitchToThread();
-            Py_END_ALLOW_THREADS
-#endif
-
-            if (_menai_atomic_load(&_cancel_requested)) {
-                PyErr_SetObject(MenaiCancelledException_type, Py_None);
-                goto error;
-            }
-
-            if (PyErr_CheckSignals() < 0) {
+            if (s_yield_fn && s_yield_fn() < 0) {
+                s_vm_err = MENAI_ERR_CANCELLED;
                 goto error;
             }
         }
 
         if (frame->ip >= frame->code_len) {
-            menai_raise_eval_error(
-                "Frame execution ended without RETURN instruction");
+            s_vm_err = MENAI_ERR_MISSING_RETURN;
             goto error;
         }
 
@@ -1450,6 +1407,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         int opcode = (int)((word >> OPCODE_SHIFT) & OPCODE_MASK);
         int dest = (int)((word >> DEST_SHIFT) & FIELD_MASK);
         int base = frame->base;
+
+        cur_opcode = opcode;
+        cur_ip = frame->ip - 1;
 
         switch (opcode) {
         case OP_LOAD_NONE:
@@ -1511,9 +1471,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 buf[off] = '\0';
-                menai_raise_eval_errorf(
-                    "Undefined variable: '%s'\n  Available variables: %s%s",
-                    name_str, buf, nk > 10 ? "..." : "");
+                s_vm_err = MENAI_ERR_UNDEFINED_VARIABLE;
                 goto error;
             }
 
@@ -1538,7 +1496,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *cond = regs[base + src0];
             if (!IS_MENAI_BOOLEAN(cond)) {
-                menai_raise_eval_error("If condition must be boolean");
+                s_vm_err = MENAI_ERR_IF_NOT_BOOLEAN;
                 goto error;
             }
 
@@ -1554,7 +1512,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *cond = regs[base + src0];
             if (!IS_MENAI_BOOLEAN(cond)) {
-                menai_raise_eval_error("If condition must be boolean");
+                s_vm_err = MENAI_ERR_IF_NOT_BOOLEAN;
                 goto error;
             }
 
@@ -1569,18 +1527,18 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *msg = regs[base + src0];
             if (!IS_MENAI_STRING(msg)) {
-                menai_raise_eval_error("error: message must be a string");
+                s_vm_err = MENAI_ERR_ERROR_MSG_NOT_STRING;
                 goto error;
             }
 
             char *cstr = menai_string_to_utf8(msg, NULL);
             if (cstr == NULL) {
-                vm_err = MENAI_ERR_NOMEM;
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
-            PyErr_SetString(MenaiEvalError_type, cstr);
-            free(cstr);
+            s_vm_err = MENAI_ERR_USER_ERROR;
+            s_vm_user_message = cstr;
             goto error;
         }
 
@@ -1616,7 +1574,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             if (IS_MENAI_FUNCTION(raw)) {
                 if (frame_depth >= MAX_FRAME_DEPTH) {
-                    menai_raise_eval_error("Maximum call depth exceeded");
+                    s_vm_err = MENAI_ERR_CALL_DEPTH_EXCEEDED;
                     goto error;
                 }
 
@@ -1639,11 +1597,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 /* Struct constructor call */
                 int n_fields = ((MenaiStructType *)raw)->nfields;
                 if (arity != (int)n_fields) {
-                    char *sname = menai_string_to_utf8(((MenaiStructType *)raw)->name, NULL);
-                    menai_raise_eval_errorf(
-                        "Struct constructor '%s' called with wrong number of arguments",
-                        sname ? sname : "?");
-                    free(sname);
+                    s_vm_err = MENAI_ERR_STRUCT_ARITY_MISMATCH;
                     goto error;
                 }
 
@@ -1656,7 +1610,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 break;
             }
 
-            menai_raise_eval_error("Cannot call non-function value");
+            s_vm_err = MENAI_ERR_NOT_CALLABLE;
             goto error;
         }
 
@@ -1697,11 +1651,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (IS_MENAI_STRUCTTYPE(raw)) {
                 int n_fields = ((MenaiStructType *)raw)->nfields;
                 if (n_args != (int)n_fields) {
-                    char *sname = menai_string_to_utf8(((MenaiStructType *)raw)->name, NULL);
-                    menai_raise_eval_errorf(
-                        "Struct constructor '%s' called with wrong number of arguments",
-                        sname ? sname : "?");
-                    free(sname);
+                    s_vm_err = MENAI_ERR_STRUCT_ARITY_MISMATCH;
                     menai_release(raw);
                     goto error;
                 }
@@ -1730,7 +1680,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_release(raw);
-            menai_raise_eval_error("Cannot call non-function value");
+            s_vm_err = MENAI_ERR_NOT_CALLABLE;
             goto error;
         }
 
@@ -1746,7 +1696,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *raw_args = regs[base + src1];
 
             if (!IS_MENAI_LIST(raw_args)) {
-                menai_raise_eval_error("apply: second argument must be a list");
+                s_vm_err = MENAI_ERR_APPLY_SECOND_NOT_LIST;
                 goto error;
             }
 
@@ -1755,7 +1705,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             if (IS_MENAI_FUNCTION(raw_func)) {
                 if (frame_depth >= MAX_FRAME_DEPTH) {
-                    menai_raise_eval_error("Maximum call depth exceeded");
+                    s_vm_err = MENAI_ERR_CALL_DEPTH_EXCEEDED;
                     goto error;
                 }
 
@@ -1784,7 +1734,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (IS_MENAI_STRUCTTYPE(raw_func)) {
                 int n_fields = ((MenaiStructType *)raw_func)->nfields;
                 if (arity != (int)n_fields) {
-                    menai_raise_eval_error("Struct constructor called with wrong number of arguments");
+                    s_vm_err = MENAI_ERR_STRUCT_ARITY_MISMATCH;
                     goto error;
                 }
 
@@ -1797,7 +1747,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 break;
             }
 
-            menai_raise_eval_error("apply: first argument must be a function");
+            s_vm_err = MENAI_ERR_APPLY_FIRST_NOT_FUNCTION;
             goto error;
         }
 
@@ -1819,7 +1769,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!IS_MENAI_LIST(raw_args)) {
                 menai_release(raw_func);
                 menai_release(raw_args);
-                menai_raise_eval_error("apply: second argument must be a list");
+                s_vm_err = MENAI_ERR_APPLY_SECOND_NOT_LIST;
                 goto error;
             }
 
@@ -1853,7 +1803,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 if (arity != (int)n_fields) {
                     menai_release(raw_func);
                     menai_release(raw_args);
-                    menai_raise_eval_error("Struct constructor called with wrong number of arguments");
+                    s_vm_err = MENAI_ERR_STRUCT_ARITY_MISMATCH;
                     goto error;
                 }
 
@@ -1883,7 +1833,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             menai_release(raw_func);
             menai_release(raw_args);
-            menai_raise_eval_error("apply: first argument must be a function");
+            s_vm_err = MENAI_ERR_APPLY_FIRST_NOT_FUNCTION;
             goto error;
         }
 
@@ -2081,7 +2031,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&n_io->big, &n);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -2217,13 +2167,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     menai_bigint_init(&res);
                     _rc = menai_bigint_from_long(sv, &tmp);
                     if (_rc < 0) {
-                        vm_err = _rc;
+                        s_vm_err = _rc;
                         goto error;
                     }
 
                     _rc = menai_bigint_abs(&tmp, &res);
                     if (_rc < 0) {
-                        vm_err = _rc;
+                        s_vm_err = _rc;
                         menai_bigint_free(&tmp);
                         goto error;
                     }
@@ -2251,7 +2201,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_bigint_init(&res);
             _rc = menai_bigint_abs(&ia->big, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 goto error;
             }
 
@@ -2281,13 +2231,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     menai_bigint_init(&res);
                     _rc = menai_bigint_from_long(sv, &tmp);
                     if (_rc < 0) {
-                        vm_err = _rc;
+                        s_vm_err = _rc;
                         goto error;
                     }
 
                     _rc = menai_bigint_neg(&tmp, &res);
                     if (_rc < 0) {
-                        vm_err = _rc;
+                        s_vm_err = _rc;
                         menai_bigint_free(&tmp);
                         goto error;
                     }
@@ -2315,7 +2265,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_bigint_init(&res);
             _rc = menai_bigint_neg(&ia->big, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 goto error;
             }
 
@@ -2342,20 +2292,20 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!ia->is_big) {
                 _rc = menai_bigint_from_long(ia->small, &tmp);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&ia->big, &tmp);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
 
             _rc = menai_bigint_not(&tmp, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&tmp);
                 goto error;
             }
@@ -2405,13 +2355,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)a)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)a)->small, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)a)->big, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -2419,14 +2369,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)b)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)b)->small, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)b)->big, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
@@ -2434,7 +2384,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             _rc = menai_bigint_add(&av, &bv, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&av);
                 menai_bigint_free(&bv);
                 goto error;
@@ -2486,13 +2436,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)a)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)a)->small, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)a)->big, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -2500,14 +2450,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)b)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)b)->small, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)b)->big, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
@@ -2515,7 +2465,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             _rc = menai_bigint_sub(&av, &bv, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&av);
                 menai_bigint_free(&bv);
                 goto error;
@@ -2567,13 +2517,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)a)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)a)->small, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)a)->big, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -2581,14 +2531,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)b)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)b)->small, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)b)->big, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
@@ -2596,7 +2546,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             _rc = menai_bigint_mul(&av, &bv, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&av);
                 menai_bigint_free(&bv);
                 goto error;
@@ -2629,7 +2579,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiInteger *ib = (MenaiInteger *)b;
             int b_is_zero = (!ib->is_big && ib->small == 0) || (ib->is_big && ib->big.sign == 0);
             if (b_is_zero) {
-                menai_raise_eval_error("Division by zero in 'integer/'");
+                s_vm_err = MENAI_ERR_DIVISION_BY_ZERO;
                 goto error;
             }
 
@@ -2640,13 +2590,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)a)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)a)->small, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)a)->big, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -2654,14 +2604,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)b)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)b)->small, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)b)->big, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
@@ -2669,7 +2619,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             _rc = menai_bigint_floordiv(&av, &bv, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&av);
                 menai_bigint_free(&bv);
                 goto error;
@@ -2702,7 +2652,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiInteger *ib = (MenaiInteger *)b;
             int b_is_zero = (!ib->is_big && ib->small == 0) || (ib->is_big && ib->big.sign == 0);
             if (b_is_zero) {
-                menai_raise_eval_error("Modulo by zero in 'integer%'");
+                s_vm_err = MENAI_ERR_MODULO_BY_ZERO;
                 goto error;
             }
 
@@ -2713,13 +2663,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)a)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)a)->small, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)a)->big, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -2727,14 +2677,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)b)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)b)->small, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)b)->big, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
@@ -2742,7 +2692,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             _rc = menai_bigint_mod(&av, &bv, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&av);
                 menai_bigint_free(&bv);
                 goto error;
@@ -2775,7 +2725,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiInteger *ib = (MenaiInteger *)b;
             int b_is_neg = (!ib->is_big && ib->small < 0) || (ib->is_big && ib->big.sign == -1);
             if (b_is_neg) {
-                menai_raise_eval_error("Function 'integer-expn' requires a non-negative exponent");
+                s_vm_err = MENAI_ERR_NEGATIVE_EXPONENT;
                 goto error;
             }
 
@@ -2786,13 +2736,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)a)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)a)->small, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)a)->big, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -2800,14 +2750,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)b)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)b)->small, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)b)->big, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
@@ -2815,7 +2765,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             _rc = menai_bigint_pow(&av, &bv, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&av);
                 menai_bigint_free(&bv);
                 goto error;
@@ -2852,13 +2802,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)a)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)a)->small, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)a)->big, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -2866,14 +2816,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)b)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)b)->small, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)b)->big, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
@@ -2881,7 +2831,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             _rc = menai_bigint_or(&av, &bv, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&av);
                 menai_bigint_free(&bv);
                 goto error;
@@ -2918,13 +2868,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)a)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)a)->small, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)a)->big, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -2932,14 +2882,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)b)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)b)->small, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)b)->big, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
@@ -2947,7 +2897,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             _rc = menai_bigint_and(&av, &bv, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&av);
                 menai_bigint_free(&bv);
                 goto error;
@@ -2984,13 +2934,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)a)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)a)->small, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)a)->big, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -2998,14 +2948,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!((MenaiInteger *)b)->is_big) {
                 _rc = menai_bigint_from_long(((MenaiInteger *)b)->small, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&((MenaiInteger *)b)->big, &bv);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     menai_bigint_free(&av);
                     goto error;
                 }
@@ -3013,7 +2963,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             _rc = menai_bigint_xor(&av, &bv, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&av);
                 menai_bigint_free(&bv);
                 goto error;
@@ -3049,19 +2999,19 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 shift = ib->small;
             } else {
                 if (!menai_bigint_fits_long(&ib->big)) {
-                    menai_raise_eval_error("integer-bit-shift-left: shift amount too large");
+                    s_vm_err = MENAI_ERR_SHIFT_TOO_LARGE;
                     goto error;
                 }
 
                 _rc = menai_bigint_to_long(&ib->big, &shift);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
 
             if (shift < 0) {
-                menai_raise_eval_error("integer-bit-shift-left: shift amount must be non-negative");
+                s_vm_err = MENAI_ERR_NEGATIVE_SHIFT;
                 goto error;
             }
 
@@ -3072,20 +3022,20 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!ia->is_big) {
                 _rc = menai_bigint_from_long(ia->small, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&ia->big, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
 
             _rc = menai_bigint_shift_left(&av, (ssize_t)shift, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&av);
                 goto error;
             }
@@ -3119,19 +3069,19 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 shift = ib->small;
             } else {
                 if (!menai_bigint_fits_long(&ib->big)) {
-                    menai_raise_eval_error("integer-bit-shift-right: shift amount too large");
+                    s_vm_err = MENAI_ERR_SHIFT_TOO_LARGE;
                     goto error;
                 }
 
                 _rc = menai_bigint_to_long(&ib->big, &shift);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
 
             if (shift < 0) {
-                menai_raise_eval_error("integer-bit-shift-right: shift amount must be non-negative");
+                s_vm_err = MENAI_ERR_NEGATIVE_SHIFT;
                 goto error;
             }
 
@@ -3142,20 +3092,20 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!ia->is_big) {
                 _rc = menai_bigint_from_long(ia->small, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&ia->big, &av);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
 
             _rc = menai_bigint_shift_right(&av, (ssize_t)shift, &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_bigint_free(&av);
                 goto error;
             }
@@ -3218,7 +3168,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_double(&ia->big, &d);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -3253,7 +3203,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_double(&ia->big, &re);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -3263,7 +3213,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_double(&ib->big, &im);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -3297,13 +3247,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ib->big, &radix);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
 
             if (radix != 2 && radix != 8 && radix != 10 && radix != 16) {
-                menai_raise_eval_errorf("integer->string: radix must be 2, 8, 10, or 16, got %ld", radix);
+                s_vm_err = MENAI_ERR_INVALID_RADIX;
                 goto error;
             }
 
@@ -3313,13 +3263,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!ia->is_big) {
                 _rc = menai_bigint_from_long(ia->small, &tmp);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             } else {
                 _rc = menai_bigint_copy(&ia->big, &tmp);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -3327,7 +3277,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *r = menai_bigint_to_menai_string(&tmp, (int)radix);
             menai_bigint_free(&tmp);
             if (r == NULL) {
-                vm_err = MENAI_ERR_NOMEM;
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -3349,14 +3299,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ia->big, &cp);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
 
             if (cp < 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
-                menai_raise_eval_errorf(
-                    "integer-codepoint->string: invalid Unicode scalar value %ld", cp);
+                s_vm_err = MENAI_ERR_INVALID_CODEPOINT;
                 goto error;
             }
 
@@ -3594,7 +3543,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             double bv = menai_float_value(b);
             if (bv == 0.0) {
-                menai_raise_eval_error("Division by zero in 'float/'");
+                s_vm_err = MENAI_ERR_DIVISION_BY_ZERO;
                 goto error;
             }
 
@@ -3622,7 +3571,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             double bv = menai_float_value(b);
             if (bv == 0.0) {
-                menai_raise_eval_error("Division by zero in 'float//'");
+                s_vm_err = MENAI_ERR_DIVISION_BY_ZERO;
                 goto error;
             }
 
@@ -3650,7 +3599,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             double bv = menai_float_value(b);
             if (bv == 0.0) {
-                menai_raise_eval_error("Modulo by zero in 'float%'");
+                s_vm_err = MENAI_ERR_MODULO_BY_ZERO;
                 goto error;
             }
 
@@ -3710,7 +3659,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             double v = menai_float_value(a);
             if (v < 0.0) {
-                menai_raise_eval_error("float-log: argument must be non-negative");
+                s_vm_err = MENAI_ERR_NEGATIVE_ARGUMENT;
                 goto error;
             }
 
@@ -3732,7 +3681,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             double v = menai_float_value(a);
             if (v < 0.0) {
-                menai_raise_eval_error("float-log10: argument must be non-negative");
+                s_vm_err = MENAI_ERR_NEGATIVE_ARGUMENT;
                 goto error;
             }
 
@@ -3754,7 +3703,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             double v = menai_float_value(a);
             if (v < 0.0) {
-                menai_raise_eval_error("float-log2: argument must be non-negative");
+                s_vm_err = MENAI_ERR_NEGATIVE_ARGUMENT;
                 goto error;
             }
 
@@ -3782,12 +3731,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             double av = menai_float_value(a), bv = menai_float_value(b);
             if (bv <= 0.0 || bv == 1.0) {
-                menai_raise_eval_error("Function 'float-logn' requires a positive base not equal to 1");
+                s_vm_err = MENAI_ERR_INVALID_LOG_BASE;
                 goto error;
             }
 
             if (av < 0.0) {
-                menai_raise_eval_error("float-logn: argument must be non-negative");
+                s_vm_err = MENAI_ERR_NEGATIVE_ARGUMENT;
                 goto error;
             }
 
@@ -3857,7 +3806,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             double v = menai_float_value(a);
             if (v < 0.0) {
-                menai_raise_eval_error("float-sqrt: argument must be non-negative");
+                s_vm_err = MENAI_ERR_NEGATIVE_ARGUMENT;
                 goto error;
             }
 
@@ -3976,7 +3925,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_bigint_init(&res);
             _rc = menai_bigint_from_double(trunc(v), &res);
             if (_rc < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 goto error;
             }
 
@@ -4036,7 +3985,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              */
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             if (src0 >= (int)frame->nchildren) {
-                menai_raise_eval_error("MAKE_CLOSURE: child index out of range");
+                s_vm_err = MENAI_ERR_CLOSURE_INDEX_OUT_OF_RANGE;
                 goto error;
             }
 
@@ -4059,7 +4008,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src2 = (int)(word & FIELD_MASK);
             MenaiValue *closure = regs[base + src0];
             if (!IS_MENAI_FUNCTION(closure)) {
-                menai_raise_eval_error("PATCH_CLOSURE requires a function");
+                s_vm_err = MENAI_ERR_PATCH_CLOSURE_NOT_FUNCTION;
                 goto error;
             }
 
@@ -4271,7 +4220,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             double ar = ((MenaiComplex *)a)->real, ai = ((MenaiComplex *)a)->imag;
             double br = ((MenaiComplex *)b)->real, bi = ((MenaiComplex *)b)->imag;
             if (br == 0.0 && bi == 0.0) {
-                menai_raise_eval_error("Division by zero in 'complex/'");
+                s_vm_err = MENAI_ERR_DIVISION_BY_ZERO;
                 goto error;
             }
 
@@ -4454,7 +4403,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             mc_t za = mc(((MenaiComplex *)a)->real, ((MenaiComplex *)a)->imag);
             mc_t zb = mc(((MenaiComplex *)b)->real, ((MenaiComplex *)b)->imag);
             if (mc_zero(zb)) {
-                menai_raise_eval_error("Function 'complex-logn' requires a non-zero base");
+                s_vm_err = MENAI_ERR_INVALID_LOG_BASE;
                 goto error;
             }
 
@@ -4755,7 +4704,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (!IS_MENAI_INTEGER(b)) {
-                menai_raise_eval_error("string-ref: index must be integer");
+                s_vm_err = MENAI_ERR_INDEX_NOT_INTEGER;
                 goto error;
             }
 
@@ -4766,7 +4715,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ib->big, &idx_l);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -4774,7 +4723,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t idx = (ssize_t)idx_l;
             ssize_t slen = menai_string_length(a);
             if (idx < 0 || idx >= slen) {
-                menai_raise_eval_errorf("string-ref index out of range: %zd", idx);
+                s_vm_err = MENAI_ERR_INDEX_OUT_OF_RANGE;
                 goto error;
             }
 
@@ -4799,7 +4748,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (!IS_MENAI_INTEGER(b) || !IS_MENAI_INTEGER(c)) {
-                menai_raise_eval_error("string-slice: indices must be integers");
+                s_vm_err = MENAI_ERR_SLICE_INDICES_NOT_INTEGER;
                 goto error;
             }
 
@@ -4811,7 +4760,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ib->big, &start_l);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -4821,7 +4770,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ic->big, &end_l);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -4829,27 +4778,27 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t start = (ssize_t)start_l, end = (ssize_t)end_l;
             ssize_t slen = menai_string_length(a);
             if (start < 0) {
-                menai_raise_eval_errorf("string-slice start index cannot be negative: %zd", start);
+                s_vm_err = MENAI_ERR_NEGATIVE_SLICE_INDEX;
                 goto error;
             }
 
             if (end < 0) {
-                menai_raise_eval_errorf("string-slice end index cannot be negative: %zd", end);
+                s_vm_err = MENAI_ERR_NEGATIVE_SLICE_INDEX;
                 goto error;
             }
 
             if (start > slen) {
-                menai_raise_eval_errorf("string-slice start index out of range: %zd (string length: %zd)", start, slen);
+                s_vm_err = MENAI_ERR_SLICE_START_OUT_OF_RANGE;
                 goto error;
             }
 
             if (end > slen) {
-                menai_raise_eval_errorf("string-slice end index out of range: %zd (string length: %zd)", end, slen);
+                s_vm_err = MENAI_ERR_SLICE_END_OUT_OF_RANGE;
                 goto error;
             }
 
             if (start > end) {
-                menai_raise_eval_errorf("string-slice start index (%zd) cannot be greater than end index (%zd)", start, end);
+                s_vm_err = MENAI_ERR_SLICE_START_AFTER_END;
                 goto error;
             }
 
@@ -4931,7 +4880,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             ssize_t slen = menai_string_length(a);
             if (slen != 1) {
-                menai_raise_eval_error("string->integer-codepoint: requires single-character string");
+                s_vm_err = MENAI_ERR_NOT_SINGLE_CHAR_STRING;
                 goto error;
             }
 
@@ -4955,7 +4904,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (!IS_MENAI_INTEGER(b)) {
-                menai_raise_eval_error("string->integer: radix must be integer");
+                s_vm_err = MENAI_ERR_RADIX_NOT_INTEGER;
                 goto error;
             }
 
@@ -4966,13 +4915,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ib->big, &radix);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
 
             if (radix != 2 && radix != 8 && radix != 10 && radix != 16) {
-                menai_raise_eval_errorf("string->integer radix must be 2, 8, 10, or 16, got %ld", radix);
+                s_vm_err = MENAI_ERR_INVALID_RADIX;
                 goto error;
             }
 
@@ -5112,7 +5061,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 /* Split into individual codepoints */
                 MenaiValue *r_stl = menai_list_alloc(alen);
                 if (!r_stl) {
-                    PyErr_NoMemory();
+                    s_vm_err = MENAI_ERR_NOMEM;
                     goto error;
                 }
 
@@ -5145,7 +5094,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 ssize_t nparts = count + 1;
                 MenaiValue *r_parts = menai_list_alloc(nparts);
                 if (!r_parts) {
-                    PyErr_NoMemory();
+                    s_vm_err = MENAI_ERR_NOMEM;
                     goto error;
                 }
 
@@ -5253,14 +5202,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (!IS_MENAI_INTEGER(idx_val)) {
-                menai_raise_eval_error("bytes-ref: offset must be an integer");
+                s_vm_err = MENAI_ERR_OFFSET_NOT_INTEGER;
                 goto error;
             }
 
             ssize_t offset = integer_to_ssize_t(idx_val);
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
-                menai_raise_eval_errorf("bytes-ref: offset %zd out of bounds for length %zd", offset, blen);
+                s_vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
 
@@ -5283,13 +5232,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (!IS_MENAI_INTEGER(v)) {
-                menai_raise_eval_error("bytes-append-u8: value must be an integer");
+                s_vm_err = MENAI_ERR_VALUE_NOT_INTEGER;
                 goto error;
             }
 
             long val = integer_to_long(v);
             if (val < 0 || val > 255) {
-                menai_raise_eval_errorf("bytes-append-u8: value %ld out of range 0-255", val);
+                s_vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
                 goto error;
             }
 
@@ -5319,14 +5268,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             for (ssize_t i = 0; i < n; i++) {
                 MenaiValue *elem = menai_list_get((MenaiList *)lst, i);
                 if (!IS_MENAI_INTEGER(elem)) {
-                    menai_raise_eval_error("list->bytes: list elements must be integers");
+                    s_vm_err = MENAI_ERR_LIST_ELEMENTS_NOT_INTEGERS;
                     menai_release(result);
                     goto error;
                 }
 
                 long val = integer_to_long(elem);
                 if (val < 0 || val > 255) {
-                    menai_raise_eval_errorf("list->bytes: element %ld out of range 0-255", val);
+                    s_vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
                     menai_release(result);
                     goto error;
                 }
@@ -5350,12 +5299,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (!IS_MENAI_INTEGER(start_val)) {
-                menai_raise_eval_error("bytes-slice: start must be an integer");
+                s_vm_err = MENAI_ERR_SLICE_START_NOT_INTEGER;
                 goto error;
             }
 
             if (!IS_MENAI_INTEGER(end_val)) {
-                menai_raise_eval_error("bytes-slice: end must be an integer");
+                s_vm_err = MENAI_ERR_SLICE_END_NOT_INTEGER;
                 goto error;
             }
 
@@ -5457,24 +5406,24 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     i += 1;
                 } else if ((c & 0xE0) == 0xC0) {
                     if (i + 2 > nbytes || (data[i+1] & 0xC0) != 0x80) {
-                        menai_raise_eval_error("bytes->string: invalid UTF-8 sequence");
+                        s_vm_err = MENAI_ERR_INVALID_UTF8;
                         goto error;
                     }
                     i += 2;
                 } else if ((c & 0xF0) == 0xE0) {
                     if (i + 3 > nbytes || (data[i+1] & 0xC0) != 0x80 || (data[i+2] & 0xC0) != 0x80) {
-                        menai_raise_eval_error("bytes->string: invalid UTF-8 sequence");
+                        s_vm_err = MENAI_ERR_INVALID_UTF8;
                         goto error;
                     }
                     i += 3;
                 } else if ((c & 0xF8) == 0xF0) {
                     if (i + 4 > nbytes || (data[i+1] & 0xC0) != 0x80 || (data[i+2] & 0xC0) != 0x80 || (data[i+3] & 0xC0) != 0x80) {
-                        menai_raise_eval_error("bytes->string: invalid UTF-8 sequence");
+                        s_vm_err = MENAI_ERR_INVALID_UTF8;
                         goto error;
                     }
                     i += 4;
                 } else {
-                    menai_raise_eval_error("bytes->string: invalid UTF-8 sequence");
+                    s_vm_err = MENAI_ERR_INVALID_UTF8;
                     goto error;
                 }
                 ncp++;
@@ -5482,7 +5431,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             uint32_t *cp_buf = (uint32_t *)malloc((size_t)ncp * sizeof(uint32_t));
             if (!cp_buf) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -5558,7 +5507,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             uint32_t *cp_buf = (uint32_t *)malloc((size_t)(nbytes * 2) * sizeof(uint32_t));
             if (!cp_buf) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -5593,7 +5542,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             const uint32_t *cp = menai_string_data(s);
 
             if (slen % 2 != 0) {
-                menai_raise_eval_error("string-hex->bytes: hex string must have even length");
+                s_vm_err = MENAI_ERR_HEX_EVEN_LENGTH;
                 goto error;
             }
 
@@ -5626,7 +5575,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 if (hi_val < 0 || lo_val < 0) {
-                    menai_raise_eval_error("string-hex->bytes: invalid hex character");
+                    s_vm_err = MENAI_ERR_INVALID_HEX_CHAR;
                     menai_release(result);
                     goto error;
                 }
@@ -5715,7 +5664,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *byte_val = regs[base + src0];
             MenaiValue *b = regs[base + src1];
             if (!IS_MENAI_INTEGER(byte_val)) {
-                menai_raise_eval_error("bytes-index-int: byte must be an integer");
+                s_vm_err = MENAI_ERR_BYTE_NOT_INTEGER;
                 goto error;
             }
 
@@ -5725,7 +5674,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             long target = integer_to_long(byte_val);
             if (target < 0 || target > 255) {
-                menai_raise_eval_errorf("bytes-index-int: byte value %ld out of range 0-255", target);
+                s_vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
                 goto error;
             }
 
@@ -5830,14 +5779,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (!IS_MENAI_INTEGER(off_val)) {
-                menai_raise_eval_error("bytes-read-u8: offset must be an integer");
+                s_vm_err = MENAI_ERR_OFFSET_NOT_INTEGER;
                 goto error;
             }
 
             ssize_t offset = integer_to_ssize_t(off_val);
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
-                menai_raise_eval_errorf("bytes-read-u8: offset %zd out of bounds for length %zd", offset, blen);
+                s_vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
 
@@ -5860,14 +5809,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (!IS_MENAI_INTEGER(off_val)) {
-                menai_raise_eval_error("bytes-read-i8: offset must be an integer");
+                s_vm_err = MENAI_ERR_OFFSET_NOT_INTEGER;
                 goto error;
             }
 
             ssize_t offset = integer_to_ssize_t(off_val);
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
-                menai_raise_eval_errorf("bytes-read-i8: offset %zd out of bounds for length %zd", offset, blen);
+                s_vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
 
@@ -5894,13 +5843,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error; \
             } \
             if (!IS_MENAI_INTEGER(off_val)) { \
-                menai_raise_eval_error(#opcode_name ": offset must be an integer"); \
+                s_vm_err = MENAI_ERR_OFFSET_NOT_INTEGER; \
                 goto error; \
             } \
             ssize_t offset = integer_to_ssize_t(off_val); \
             ssize_t blen = menai_bytes_length(b); \
             if (offset < 0 || offset + (width) > blen) { \
-                menai_raise_eval_errorf(#opcode_name ": offset %zd out of bounds for length %zd", offset, blen); \
+                s_vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS; \
                 goto error; \
             } \
             const uint8_t *d = menai_bytes_data(b) + offset; \
@@ -5937,7 +5886,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     _rc = menai_bigint_from_unsigned_long_long( \
                             (unsigned long long)uval, &big); \
                     if (_rc < 0) { \
-                        vm_err = _rc; \
+                        s_vm_err = _rc; \
                         goto error; \
                     } \
                     MenaiValue *_r = menai_integer_from_bigint(big); \
@@ -5987,7 +5936,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error; \
             } \
             if (!IS_MENAI_INTEGER(v)) { \
-                menai_raise_eval_error(#opcode_name ": value must be an integer"); \
+                s_vm_err = MENAI_ERR_VALUE_NOT_INTEGER; \
                 goto error; \
             } \
             long val; \
@@ -5996,7 +5945,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 if ((width) < (int)sizeof(long)) { \
                    long max_val = (long)((1UL << ((width) * 8 - 1)) - 1); \
                    if (val < -max_val - 1 || val > max_val) { \
-                       menai_raise_eval_errorf(#opcode_name ": value %ld out of range", val); \
+                       s_vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                        goto error; \
                    } \
                 } \
@@ -6007,12 +5956,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else { \
                 unsigned long long uval_ull; \
                 if (integer_to_unsigned_long_long(v, &uval_ull) < 0) { \
-                    menai_raise_eval_errorf(#opcode_name ": value out of range"); \
+                    s_vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
                 if ((width) < (int)sizeof(unsigned long long) && \
                         uval_ull > ((1ULL << ((width) * 8)) - 1)) { \
-                    menai_raise_eval_errorf(#opcode_name ": value out of range"); \
+                    s_vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
                 MenaiValue *_r = menai_bytes_append_multi(b, (unsigned long)uval_ull, (width), le); \
@@ -6059,17 +6008,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error; \
             } \
             if (!IS_MENAI_INTEGER(off_val)) { \
-                menai_raise_eval_error(#opcode_name ": offset must be an integer"); \
+                s_vm_err = MENAI_ERR_OFFSET_NOT_INTEGER; \
                 goto error; \
             } \
             if (!IS_MENAI_INTEGER(v)) { \
-                menai_raise_eval_error(#opcode_name ": value must be an integer"); \
+                s_vm_err = MENAI_ERR_VALUE_NOT_INTEGER; \
                 goto error; \
             } \
             ssize_t offset = integer_to_ssize_t(off_val); \
             ssize_t blen = menai_bytes_length(b); \
             if (offset < 0 || offset + (width) > blen) { \
-                menai_raise_eval_errorf(#opcode_name ": offset %zd out of bounds for length %zd", offset, blen); \
+                s_vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS; \
                 goto error; \
             } \
             unsigned long long uval_ull; \
@@ -6078,19 +6027,19 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                if ((width) < (int)sizeof(long)) { \
                    long max_val = (long)((1UL << ((width) * 8 - 1)) - 1); \
                    if (val < -max_val - 1 || val > max_val) { \
-                       menai_raise_eval_errorf(#opcode_name ": value %ld out of range", val); \
+                       s_vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                        goto error; \
                    } \
                } \
                 uval_ull = (unsigned long long)(unsigned long)val; \
             } else { \
                 if (integer_to_unsigned_long_long(v, &uval_ull) < 0) { \
-                    menai_raise_eval_errorf(#opcode_name ": value out of range"); \
+                    s_vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
                 if ((width) < (int)sizeof(unsigned long long) && \
                         uval_ull > ((1ULL << ((width) * 8)) - 1)) { \
-                    menai_raise_eval_errorf(#opcode_name ": value out of range"); \
+                    s_vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
             } \
@@ -6133,13 +6082,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
             if (!IS_MENAI_INTEGER(off_val)) {
-                menai_raise_eval_error("bytes-read-uleb128: offset must be an integer");
+                s_vm_err = MENAI_ERR_OFFSET_NOT_INTEGER;
                 goto error;
             }
             ssize_t offset = integer_to_ssize_t(off_val);
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
-                menai_raise_eval_errorf("bytes-read-uleb128: offset %zd out of bounds for length %zd", offset, blen);
+                s_vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
             const uint8_t *d = menai_bytes_data(b);
@@ -6149,7 +6098,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int byte;
             do {
                 if (pos >= blen) {
-                    menai_raise_eval_error("bytes-read-uleb128: truncated LEB128");
+                    s_vm_err = MENAI_ERR_TRUNCATED_LEB128;
                     goto error;
                 }
                 byte = d[pos];
@@ -6165,7 +6114,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_bigint_init(&big);
                 _rc = menai_bigint_from_unsigned_long_long(result, &big);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
                 val_result = menai_integer_from_bigint(big);
@@ -6204,12 +6153,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
             if (!IS_MENAI_INTEGER(v)) {
-                menai_raise_eval_error("bytes-append-uleb128: value must be an integer");
+                s_vm_err = MENAI_ERR_VALUE_NOT_INTEGER;
                 goto error;
             }
             unsigned long long uval;
             if (integer_to_unsigned_long_long(v, &uval) < 0) {
-                menai_raise_eval_errorf("bytes-append-uleb128: value must be non-negative");
+                s_vm_err = MENAI_ERR_NEGATIVE_ARGUMENT;
                 goto error;
             }
             uint8_t buf[10];
@@ -6248,13 +6197,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
             if (!IS_MENAI_INTEGER(off_val)) {
-                menai_raise_eval_error("bytes-read-sleb128: offset must be an integer");
+                s_vm_err = MENAI_ERR_OFFSET_NOT_INTEGER;
                 goto error;
             }
             ssize_t offset = integer_to_ssize_t(off_val);
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
-                menai_raise_eval_errorf("bytes-read-sleb128: offset %zd out of bounds for length %zd", offset, blen);
+                s_vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
             const uint8_t *d = menai_bytes_data(b);
@@ -6264,7 +6213,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int byte;
             do {
                 if (pos >= blen) {
-                    menai_raise_eval_error("bytes-read-sleb128: truncated LEB128");
+                    s_vm_err = MENAI_ERR_TRUNCATED_LEB128;
                     goto error;
                 }
                 byte = d[pos];
@@ -6310,7 +6259,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
             if (!IS_MENAI_INTEGER(v)) {
-                menai_raise_eval_error("bytes-append-sleb128: value must be an integer");
+                s_vm_err = MENAI_ERR_VALUE_NOT_INTEGER;
                 goto error;
             }
             long val = integer_to_long(v);
@@ -6422,7 +6371,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiList *lst_f = (MenaiList *)a;
             if (lst_f->length == 0) {
-                menai_raise_eval_error("Function 'list-first' requires a non-empty list");
+                s_vm_err = MENAI_ERR_EMPTY_LIST;
                 goto error;
             }
 
@@ -6438,13 +6387,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (((MenaiList *)a)->length == 0) {
-                menai_raise_eval_error("Function 'list-rest' requires a non-empty list");
+                s_vm_err = MENAI_ERR_EMPTY_LIST;
                 goto error;
             }
 
             MenaiValue *r = menai_list_rest(a);
             if (r == NULL) {
-                vm_err = MENAI_ERR_NOMEM;
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -6462,7 +6411,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiList *lst_l = (MenaiList *)a;
             ssize_t n = lst_l->length;
             if (n == 0) {
-                menai_raise_eval_error("Function 'list-last' requires a non-empty list");
+                s_vm_err = MENAI_ERR_EMPTY_LIST;
                 goto error;
             }
 
@@ -6480,7 +6429,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (!IS_MENAI_INTEGER(b)) {
-                menai_raise_eval_error("list-ref: index must be integer");
+                s_vm_err = MENAI_ERR_INDEX_NOT_INTEGER;
                 goto error;
             }
 
@@ -6492,7 +6441,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ib->big, &idx_l);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -6500,7 +6449,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t idx = (ssize_t)idx_l;
             ssize_t n = lst_ref->length;
             if (idx < 0 || idx >= n) {
-                menai_raise_eval_errorf("list-ref: index out of range: %zd", idx);
+                s_vm_err = MENAI_ERR_INDEX_OUT_OF_RANGE;
                 goto error;
             }
 
@@ -6521,7 +6470,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t n = lst_pre->length;
             MenaiValue *r = menai_list_alloc(n + 1);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -6550,7 +6499,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t n = lst_app->length;
             MenaiValue *r = menai_list_alloc(n + 1);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -6577,7 +6526,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t n = lst_rev->length;
             MenaiValue *r = menai_list_alloc(n);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -6610,7 +6559,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t nc = na + nb;
             MenaiValue *r = menai_list_alloc(nc);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -6698,7 +6647,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (!IS_MENAI_INTEGER(b) || !IS_MENAI_INTEGER(c)) {
-                menai_raise_eval_error("list-slice: indices must be integers");
+                s_vm_err = MENAI_ERR_SLICE_INDICES_NOT_INTEGER;
                 goto error;
             }
 
@@ -6711,7 +6660,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ib->big, &start_l);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -6721,7 +6670,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ic->big, &end_l);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -6729,27 +6678,27 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t start = (ssize_t)start_l, end = (ssize_t)end_l;
             ssize_t n = lst_sl->length;
             if (start < 0) {
-                menai_raise_eval_errorf("list-slice start index cannot be negative: %zd", start);
+                s_vm_err = MENAI_ERR_NEGATIVE_SLICE_INDEX;
                 goto error;
             }
 
             if (end < 0) {
-                menai_raise_eval_errorf("list-slice end index cannot be negative: %zd", end);
+                s_vm_err = MENAI_ERR_NEGATIVE_SLICE_INDEX;
                 goto error;
             }
 
             if (start > n) {
-                menai_raise_eval_errorf("list-slice start index out of range: %zd (list length: %zd)", start, n);
+                s_vm_err = MENAI_ERR_SLICE_START_OUT_OF_RANGE;
                 goto error;
             }
 
             if (end > n) {
-                menai_raise_eval_errorf("list-slice end index out of range: %zd (list length: %zd)", end, n);
+                s_vm_err = MENAI_ERR_SLICE_END_OUT_OF_RANGE;
                 goto error;
             }
 
             if (start > end) {
-                menai_raise_eval_errorf("list-slice start index (%zd) cannot be greater than end index (%zd)", start, end);
+                s_vm_err = MENAI_ERR_SLICE_START_AFTER_END;
                 goto error;
             }
 
@@ -6776,7 +6725,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiValue *r = menai_list_alloc(n);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -6814,7 +6763,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             /* Validate all elements are strings first. */
             for (ssize_t i = 0; i < n; i++) {
                 if (!IS_MENAI_STRING(lst_ts->elements[i])) {
-                    menai_raise_eval_error("list->string: all elements must be strings");
+                    s_vm_err = MENAI_ERR_LIST_TO_STRING_NOT_STRINGS;
                     goto error;
                 }
             }
@@ -6868,7 +6817,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t n = lst->length;
             MenaiValue *r = menai_set_alloc(n);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -6877,7 +6826,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiHashTable lts_seen;
             int lts_err = 0;
             if (n > 0 && (_rc = menai_ht_init(&lts_seen, n)) < 0) {
-                vm_err = _rc;
+                s_vm_err = _rc;
                 menai_release(r);
                 goto error;
             }
@@ -6916,15 +6865,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 menai_release(r);
-                vm_err = MENAI_ERR_EVAL;
-                menai_raise_eval_error("unhashable type for dict/set key");
+                s_vm_err = MENAI_ERR_UNHASHABLE_KEY;
                 goto error;
             }
 
             ((MenaiSet *)r)->length = out;
             _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out);
             if (_rc < 0) {
-                vm_err = MENAI_ERR_NOMEM;
+                s_vm_err = MENAI_ERR_NOMEM;
                 menai_release(r);
                 goto error;
             }
@@ -7044,7 +6992,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t n = d->length;
             MenaiValue *r = menai_list_alloc(n);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7069,7 +7017,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t n = d->length;
             MenaiValue *r = menai_list_alloc(n);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7095,8 +7043,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiDict *d = (MenaiDict *)a;
             hash_t h = menai_value_hash(key);
             if (h == -1) {
-                vm_err = MENAI_ERR_EVAL;
-                menai_raise_eval_error("unhashable type for dict/set key");
+                s_vm_err = MENAI_ERR_UNHASHABLE_KEY;
                 goto error;
             }
 
@@ -7120,8 +7067,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiDict *d = (MenaiDict *)a;
             hash_t h = menai_value_hash(key);
             if (h == -1) {
-                vm_err = MENAI_ERR_EVAL;
-                menai_raise_eval_error("unhashable type for dict/set key");
+                s_vm_err = MENAI_ERR_UNHASHABLE_KEY;
                 goto error;
             }
 
@@ -7154,8 +7100,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiDict *d = (MenaiDict *)a;
             hash_t h = menai_value_hash(key);
             if (h == -1) {
-                vm_err = MENAI_ERR_EVAL;
-                menai_raise_eval_error("unhashable type for dict/set key");
+                s_vm_err = MENAI_ERR_UNHASHABLE_KEY;
                 goto error;
             }
 
@@ -7173,7 +7118,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 free(nkeys);
                 free(nvals);
                 free(nhashes);
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7230,8 +7175,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiDict *d = (MenaiDict *)a;
             hash_t h = menai_value_hash(key);
             if (h == -1) {
-                vm_err = MENAI_ERR_EVAL;
-                menai_raise_eval_error("unhashable type for dict/set key");
+                s_vm_err = MENAI_ERR_UNHASHABLE_KEY;
                 goto error;
             }
 
@@ -7254,7 +7198,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 free(nkeys);
                 free(nvals);
                 free(nhashes);
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7304,7 +7248,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 free(nkeys);
                 free(nvals);
                 free(nhashes);
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7470,8 +7414,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet *s = (MenaiSet *)a;
             hash_t h = menai_value_hash(item);
             if (h == -1) {
-                vm_err = MENAI_ERR_EVAL;
-                menai_raise_eval_error("unhashable type for dict/set key");
+                s_vm_err = MENAI_ERR_UNHASHABLE_KEY;
                 goto error;
             }
 
@@ -7496,8 +7439,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet *s = (MenaiSet *)a;
             hash_t h = menai_value_hash(item);
             if (h == -1) {
-                vm_err = MENAI_ERR_EVAL;
-                menai_raise_eval_error("unhashable type for dict/set key");
+                s_vm_err = MENAI_ERR_UNHASHABLE_KEY;
                 goto error;
             }
 
@@ -7512,7 +7454,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 ssize_t n = s->length;
                 MenaiValue *r = menai_set_alloc(n + 1);
                 if (!r) {
-                    PyErr_NoMemory();
+                    s_vm_err = MENAI_ERR_NOMEM;
                     goto error;
                 }
 
@@ -7530,7 +7472,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 ((MenaiSet *)r)->length = n + 1;
                 _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, n + 1);
                 if (_rc < 0) {
-                    vm_err = MENAI_ERR_NOMEM;
+                    s_vm_err = MENAI_ERR_NOMEM;
                     menai_release(r);
                     goto error;
                 }
@@ -7553,8 +7495,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet *s = (MenaiSet *)a;
             hash_t h = menai_value_hash(item);
             if (h == -1) {
-                vm_err = MENAI_ERR_EVAL;
-                menai_raise_eval_error("unhashable type for dict/set key");
+                s_vm_err = MENAI_ERR_UNHASHABLE_KEY;
                 goto error;
             }
 
@@ -7572,7 +7513,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t new_n = n - 1;
             MenaiValue *r = menai_set_alloc(new_n);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7592,7 +7533,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ((MenaiSet *)r)->length = new_n;
             _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, new_n);
             if (_rc < 0) {
-                vm_err = MENAI_ERR_NOMEM;
+                s_vm_err = MENAI_ERR_NOMEM;
                 menai_release(r);
                 goto error;
             }
@@ -7620,7 +7561,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t cap = na + nb;
             MenaiValue *r = menai_set_alloc(cap);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7656,7 +7597,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ((MenaiSet *)r)->length = out;
             _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out);
             if (_rc < 0) {
-                vm_err = MENAI_ERR_NOMEM;
+                s_vm_err = MENAI_ERR_NOMEM;
                 menai_release(r);
                 goto error;
             }
@@ -7683,7 +7624,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t na = sa->length;
             MenaiValue *r = menai_set_alloc(na);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7712,7 +7653,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ((MenaiSet *)r)->length = out;
             _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out);
             if (_rc < 0) {
-                vm_err = MENAI_ERR_NOMEM;
+                s_vm_err = MENAI_ERR_NOMEM;
                 menai_release(r);
                 goto error;
             }
@@ -7739,7 +7680,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t na = sa->length;
             MenaiValue *r = menai_set_alloc(na);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7767,7 +7708,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ((MenaiSet *)r)->length = out;
             _rc = menai_ht_build(&((MenaiSet *)r)->ht, nelems, nhashes, out);
             if (_rc < 0) {
-                vm_err = MENAI_ERR_NOMEM;
+                s_vm_err = MENAI_ERR_NOMEM;
                 menai_release(r);
                 goto error;
             }
@@ -7824,7 +7765,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t set_n = s->length;
             MenaiValue *r = menai_list_alloc(set_n);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7847,7 +7788,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *rb = regs[base + src1];
             MenaiValue *rc = regs[base + src2];
             if (!IS_MENAI_INTEGER(ra) || !IS_MENAI_INTEGER(rb) || !IS_MENAI_INTEGER(rc)) {
-                menai_raise_eval_error("range requires integer arguments");
+                s_vm_err = MENAI_ERR_RANGE_NOT_INTEGER;
                 goto error;
             }
 
@@ -7860,7 +7801,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ia->big, &start);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -7870,7 +7811,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ib->big, &end);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -7880,13 +7821,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&ic->big, &step);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
 
             if (step == 0) {
-                menai_raise_eval_error("range: step cannot be zero");
+                s_vm_err = MENAI_ERR_RANGE_ZERO_STEP;
                 goto error;
             }
 
@@ -7900,7 +7841,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiValue *r = menai_list_alloc(n);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7937,7 +7878,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int n = src1;
             MenaiValue *r = menai_list_alloc(n);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7963,7 +7904,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int n = src1;
             MenaiValue *r = menai_set_alloc(n);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -7972,8 +7913,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 MenaiValue *elem = regs[base + src0 + i];
                 hash_t h = menai_value_hash(elem);
                 if (h == -1) {
-                    vm_err = MENAI_ERR_EVAL;
-                    menai_raise_eval_error("unhashable type for dict/set key");
+                    s_vm_err = MENAI_ERR_UNHASHABLE_KEY;
                     menai_release(r);
                     goto error;
                 }
@@ -7987,7 +7927,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (n > 0) {
                 _rc = menai_ht_build(&s->ht, s->elements, s->hashes, n);
                 if (_rc < 0) {
-                    vm_err = MENAI_ERR_NOMEM;
+                    s_vm_err = MENAI_ERR_NOMEM;
                     menai_release(r);
                     goto error;
                 }
@@ -8014,7 +7954,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 free(keys);
                 free(values);
                 free(hashes);
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -8023,8 +7963,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 MenaiValue *v = regs[base + src0 + i * 2 + 1];
                 hash_t h = menai_value_hash(k);
                 if (h == -1) {
-                    vm_err = MENAI_ERR_EVAL;
-                    menai_raise_eval_error("unhashable type for dict/set key");
+                    s_vm_err = MENAI_ERR_UNHASHABLE_KEY;
                     free(keys);
                     free(values);
                     free(hashes);
@@ -8057,7 +7996,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *struct_type = regs[base + src0];
             if (!IS_MENAI_STRUCTTYPE(struct_type)) {
-                menai_raise_eval_error("struct constructor: first argument must be a struct type");
+                s_vm_err = MENAI_ERR_STRUCT_FIRST_NOT_TYPE;
                 goto error;
             }
 
@@ -8115,14 +8054,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *field_name = menai_symbol_name(field_sym);
             int fi = menai_struct_field_index((MenaiStructType *)stype, field_name);
             if (fi < 0) {
-                char *stype_name = menai_string_to_utf8(((MenaiStructType *)stype)->name, NULL);
-                char *fname_py = menai_string_to_utf8(field_name, NULL);
-                menai_raise_eval_errorf(
-                    "'struct-get': struct '%s' has no field '%s'",
-                    stype_name ? stype_name : "?",
-                    fname_py ? fname_py : "?");
-                free(stype_name);
-                free(fname_py);
+                s_vm_err = MENAI_ERR_STRUCT_FIELD_NOT_FOUND;
                 goto error;
             }
 
@@ -8152,7 +8084,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&fi_io->big, &fi_l);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -8182,21 +8114,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *field_name = menai_symbol_name(field_sym);
             int fi = menai_struct_field_index((MenaiStructType *)stype, field_name);
             if (fi < 0) {
-                char *stype_name = menai_string_to_utf8(((MenaiStructType *)stype)->name, NULL);
-                char *fname_py = menai_string_to_utf8(field_name, NULL);
-                menai_raise_eval_errorf(
-                    "'struct-set': struct '%s' has no field '%s'",
-                    stype_name ? stype_name : "?",
-                    fname_py ? fname_py : "?");
-                free(stype_name);
-                free(fname_py);
+                s_vm_err = MENAI_ERR_STRUCT_FIELD_NOT_FOUND;
                 goto error;
             }
 
             ssize_t nf = ((MenaiStruct *)val)->nfields;
             MenaiValue **tmp = (MenaiValue **)malloc(nf * sizeof(MenaiValue *));
             if (!tmp) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -8236,7 +8161,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else {
                 _rc = menai_bigint_to_long(&fi_io->big, &fi_l);
                 if (_rc < 0) {
-                    vm_err = _rc;
+                    s_vm_err = _rc;
                     goto error;
                 }
             }
@@ -8246,7 +8171,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t nf = ((MenaiStruct *)val)->nfields;
             MenaiValue **tmp = (MenaiValue **)malloc(nf * sizeof(MenaiValue *));
             if (!tmp) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -8355,7 +8280,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int n = st->nfields;
             MenaiValue *r = menai_list_alloc(n);
             if (!r) {
-                PyErr_NoMemory();
+                s_vm_err = MENAI_ERR_NOMEM;
                 goto error;
             }
 
@@ -8379,7 +8304,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         default:
-            menai_raise_eval_errorf("Unimplemented opcode: %d", opcode);
+            s_vm_err = MENAI_ERR_UNIMPLEMENTED_OPCODE;
             goto error;
         }
 
@@ -8393,7 +8318,11 @@ error:
             }
         }
 
-        *out_err = vm_err;
+        out_error->code = s_vm_err;
+        out_error->opcode = cur_opcode;
+        out_error->ip = cur_ip;
+        out_error->call_depth = frame_depth;
+        out_error->user_message = s_vm_user_message;
         return NULL;
     }
 }
@@ -8414,22 +8343,34 @@ menai_vm_clear_cancel(void)
  *
  * Executes code with the given cached globals table and optional extra
  * bindings (a native MenaiDict, or NULL).  Returns a new reference to
- * the result, or NULL on error (Python exception set).
+ * the result, or NULL on error.  On error, *out_error is filled in.
  */
 MenaiValue *
-menai_vm_execute_native(MenaiCodeObject *code, const GlobalsTable *globals_gt, MenaiValue *extra_bindings, int *out_err)
+menai_vm_execute_native(MenaiCodeObject *code, const GlobalsTable *globals_gt, MenaiValue *extra_bindings, MenaiVMError *out_error)
 {
-    if (out_err) {
-        *out_err = MENAI_OK;
+    if (out_error) {
+        out_error->code = MENAI_OK;
+        out_error->opcode = 0;
+        out_error->ip = 0;
+        out_error->call_depth = 0;
+        out_error->user_message = NULL;
     }
 
     GlobalsTable globals;
-    if (globals_build(&globals, globals_gt) < 0) {
+    int gerr = globals_build(&globals, globals_gt);
+    if (gerr < 0) {
+        if (out_error) {
+            out_error->code = gerr;
+        }
         return NULL;
     }
 
     if (extra_bindings != NULL) {
-        if (globals_merge_extra_native(&globals, extra_bindings) < 0) {
+        int merr = globals_merge_extra_native(&globals, extra_bindings);
+        if (merr < 0) {
+            if (out_error) {
+                out_error->code = merr;
+            }
             globals_free(&globals);
             return NULL;
         }
@@ -8449,11 +8390,14 @@ menai_vm_execute_native(MenaiCodeObject *code, const GlobalsTable *globals_gt, M
     MenaiValue **regs = menai_regs_alloc(
         (size_t)(MAX_FRAME_DEPTH + 1) * max_locals, Menai_NONE);
     if (regs == NULL) {
+        if (out_error) {
+            out_error->code = MENAI_ERR_NOMEM;
+        }
         globals_free(&globals);
         return NULL;
     }
 
-    MenaiValue *result = execute_loop(code, &globals, regs, max_locals, out_err);
+    MenaiValue *result = execute_loop(code, &globals, regs, max_locals, out_error);
 
     menai_regs_free(regs, (size_t)(MAX_FRAME_DEPTH + 1) * max_locals);
     globals_free(&globals);

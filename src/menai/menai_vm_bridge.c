@@ -8,10 +8,17 @@
  * Exported singletons: Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE,
  *                      Menai_LIST_EMPTY, Menai_DICT_EMPTY, Menai_SET_EMPTY
  */
+#define _POSIX_C_SOURCE 200809L
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+
+#ifndef _MSC_VER
+#include <unistd.h>
+#else
+#include <windows.h>
+#endif
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
@@ -24,8 +31,7 @@ static MenaiValue *slow_value_to_menai_value(PyObject *src);
 /*
  * Module-level state fetched at init
  */
-PyObject *MenaiEvalError_type = NULL;
-PyObject *MenaiCancelledException_type = NULL;
+static PyObject *_VMRuntimeError_type = NULL;
 
 /*
  * Singleton values fetched from menai_vm_bridge at init time.
@@ -1349,39 +1355,65 @@ static int _cached_globals_gt_valid = 0;
 static PyTypeObject *_py_code_object_type = NULL;
 
 /*
- * bridge_translate_error — translate a MENAI_ERR_* code from the native VM
- * into a Python exception.  Must only be called when no Python exception is
- * already set; VM-level errors (MENAI_ERR_EVAL, MENAI_ERR_CANCELLED) are
- * raised directly by the VM via menai_raise_eval_error / the cancellation
- * check, so this function has nothing to do for those codes.
+ * bridge_translate_error - package a MenaiVMError from the native VM
+ * into a _MenaiVMRuntimeError sentinel exception.
+ *
+ * Must only be called when no Python exception is already set.
+ *
+ * The C VM sets a granular MENAI_ERR_* code at each error site and
+ * fills a MenaiVMError struct with diagnostic context (opcode, ip,
+ * call_depth).  This function packages all of that into a
+ * _MenaiVMRuntimeError Python exception object.  The Python wrapper
+ * (MenaiVM.execute) catches this sentinel and translates it into the
+ * final user-facing exception using the error table in
+ * menai_vm_errors.py.
+ *
+ * For MENAI_ERR_USER_ERROR, the user-supplied message is carried in
+ * err->user_message (a malloc'd C string).  This function frees it
+ * after packaging it into the Python exception.
  */
 static void
-bridge_translate_error(int err)
+bridge_translate_error(const MenaiVMError *err)
 {
-    switch (err) {
-    case MENAI_ERR_NOMEM:
-        PyErr_NoMemory();
-        break;
+    /*
+     * Construct _MenaiVMRuntimeError(code, opcode, ip, call_depth,
+     * user_message).
+     */
+    PyObject *py_user_msg;
+    PyObject *args;
+    PyObject *exc;
 
-    case MENAI_ERR_OVERFLOW:
-        PyErr_SetString(PyExc_OverflowError, "integer overflow");
-        break;
-
-    case MENAI_ERR_VALUE:
-        PyErr_SetString(PyExc_ValueError, "invalid value");
-        break;
-
-    case MENAI_ERR_DIVZERO:
-        PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
-        break;
-
-    default:
-        break;
+    if (err->user_message) {
+        py_user_msg = PyUnicode_FromString(err->user_message);
+        free((void *)err->user_message);
+        if (!py_user_msg) {
+            return;
+        }
+    } else {
+        py_user_msg = Py_None;
+        Py_INCREF(py_user_msg);
     }
+
+    args = Py_BuildValue("(iiiiN)",
+        err->code, err->opcode, err->ip, err->call_depth,
+        py_user_msg);
+    if (!args) {
+        return;
+    }
+
+    exc = PyObject_CallObject(_VMRuntimeError_type, args);
+    Py_DECREF(args);
+    if (!exc) {
+        return;
+    }
+
+    PyErr_SetObject((PyObject *)Py_TYPE(exc), exc);
+    Py_DECREF(exc);
 }
 
 /*
- * bridge_globals_get — return a pointer to the cached GlobalsTable, building
+ * bridge_globals_get
+ * — return a pointer to the cached GlobalsTable, building
  * it the first time a given globals_key is seen.
  *
  * globals_key is either a Python dict of slow MenaiValue objects, or a Python
@@ -1415,12 +1447,12 @@ bridge_globals_get(PyObject *globals_key)
             return NULL;
         }
 
-        int err = MENAI_OK;
-        MenaiValue *result = menai_vm_execute_native(prelude_co, NULL, NULL, &err);
+        MenaiVMError vm_err;
+        MenaiValue *result = menai_vm_execute_native(prelude_co, NULL, NULL, &vm_err);
         menai_code_object_release(prelude_co);
         if (!result) {
             if (!PyErr_Occurred()) {
-                bridge_translate_error(err);
+                bridge_translate_error(&vm_err);
             }
 
             return NULL;
@@ -1614,15 +1646,15 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
         }
     }
 
-    int err = MENAI_OK;
-    MenaiValue *result = menai_vm_execute_native(native_code, globals_gt, native_extra, &err);
+    MenaiVMError vm_err;
+    MenaiValue *result = menai_vm_execute_native(native_code, globals_gt, native_extra, &vm_err);
 
     menai_code_object_release(native_code);
     menai_xrelease(native_extra);
 
     if (result == NULL) {
         if (!PyErr_Occurred()) {
-            bridge_translate_error(err);
+            bridge_translate_error(&vm_err);
         }
 
         return NULL;
@@ -1631,6 +1663,39 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     PyObject *slow = menai_value_to_slow_value(result);
     menai_release(result);
     return slow;
+}
+
+/*
+ * bridge_yield_fn — callback for the VM's periodic cancellation check.
+ *
+ * Releases the GIL briefly, yields to the OS scheduler, checks the atomic
+ * cancellation flag, and checks for pending Python signals.
+ *
+ * Returns 0 to continue execution, -1 to signal cancellation or signal
+ * interruption.
+ */
+static int
+bridge_yield_fn(void)
+{
+#ifndef _MSC_VER
+    Py_BEGIN_ALLOW_THREADS
+    usleep(100);
+    Py_END_ALLOW_THREADS
+#else
+    Py_BEGIN_ALLOW_THREADS
+    SwitchToThread();
+    Py_END_ALLOW_THREADS
+#endif
+
+    if (_menai_atomic_load(&_cancel_requested)) {
+        return -1;
+    }
+
+    if (PyErr_CheckSignals() < 0) {
+        return -1;
+    }
+
+    return 0;
 }
 
 int
@@ -1782,19 +1847,19 @@ menai_vm_shim_init(void)
     Menai_EMPTY_DICT = menai_dict_new_empty();
     Menai_EMPTY_SET = menai_set_new_empty();
 
-    PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
+    PyObject *err_mod = PyImport_ImportModule("menai.menai_vm_errors");
     if (err_mod == NULL) {
         return -1;
     }
 
-    MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
-    MenaiCancelledException_type = PyObject_GetAttrString(err_mod, "MenaiCancelledException");
+    _VMRuntimeError_type = PyObject_GetAttrString(err_mod, "_MenaiVMRuntimeError");
     Py_DECREF(err_mod);
-    if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL) {
-        Py_XDECREF(MenaiEvalError_type);
-        Py_XDECREF(MenaiCancelledException_type);
+    if (_VMRuntimeError_type == NULL) {
+        Py_XDECREF(_VMRuntimeError_type);
         return -1;
     }
+
+    menai_vm_set_yield_fn(bridge_yield_fn);
 
     return 0;
 }

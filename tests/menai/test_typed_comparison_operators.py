@@ -17,7 +17,7 @@ Design notes:
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 # ---------------------------------------------------------------------------
@@ -36,12 +36,14 @@ class TestBooleanNeqP:
         assert menai.evaluate('(boolean!=? #f #f)') is False
 
     def test_rejects_non_boolean_first_arg(self, menai):
-        with pytest.raises(MenaiEvalError, match="boolean!=.*requires boolean arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(boolean!=? 1 #t)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_rejects_non_boolean_second_arg(self, menai):
-        with pytest.raises(MenaiEvalError, match="boolean!=.*requires boolean arguments.*string"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(boolean!=? #t "true")')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_wrong_arity(self, menai):
         with pytest.raises(MenaiEvalError, match="boolean!=.*has wrong number of arguments"):
@@ -65,19 +67,23 @@ class TestIntegerNeqP:
         assert menai.evaluate('(integer!=? -5 -5)') is False
 
     def test_rejects_float(self, menai):
-        with pytest.raises(MenaiEvalError, match="integer!=.*requires integer arguments.*float"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer!=? 1 1.0)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="integer!=.*requires integer arguments.*float"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer!=? 1.0 1)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_rejects_complex(self, menai):
-        with pytest.raises(MenaiEvalError, match="integer!=.*requires integer arguments.*complex"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer!=? 1 1+0j)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_rejects_non_number(self, menai):
-        with pytest.raises(MenaiEvalError, match="integer!=.*requires integer arguments.*string"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer!=? 1 "1")')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_wrong_arity(self, menai):
         with pytest.raises(MenaiEvalError, match="integer!=.*has wrong number of arguments"):
@@ -99,15 +105,18 @@ class TestFloatNeqP:
         assert menai.evaluate('(float!=? 0.0 0.0)') is False
 
     def test_rejects_integer(self, menai):
-        with pytest.raises(MenaiEvalError, match="float!=.*requires float arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float!=? 1.0 1)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="float!=.*requires float arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float!=? 1 1.0)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_rejects_complex(self, menai):
-        with pytest.raises(MenaiEvalError, match="float!=.*requires float arguments.*complex"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float!=? 1.0 1+0j)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_wrong_arity(self, menai):
         with pytest.raises(MenaiEvalError, match="float!=.*has wrong number of arguments"):
@@ -129,12 +138,14 @@ class TestComplexNeqP:
         assert menai.evaluate('(complex!=? 0+0j 0+0j)') is False
 
     def test_rejects_integer(self, menai):
-        with pytest.raises(MenaiEvalError, match="complex!=.*requires complex arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(complex!=? 1+0j 1)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_rejects_float(self, menai):
-        with pytest.raises(MenaiEvalError, match="complex!=.*requires complex arguments.*float"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(complex!=? 1+0j 1.0)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_wrong_arity(self, menai):
         with pytest.raises(MenaiEvalError, match="complex!=.*has wrong number of arguments"):
@@ -157,11 +168,13 @@ class TestStringNeqP:
         assert menai.evaluate('(string!=? "" "")') is False
 
     def test_rejects_non_string(self, menai):
-        with pytest.raises(MenaiEvalError, match="string!=.*requires string arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string!=? "hello" 42)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="string!=.*requires string arguments.*boolean"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string!=? #t "true")')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_wrong_arity(self, menai):
         with pytest.raises(MenaiEvalError, match="string!=.*has wrong number of arguments"):
@@ -188,11 +201,13 @@ class TestListNeqP:
         assert menai.evaluate('(list!=? (list (list 1 2)) (list (list 1 2)))') is False
 
     def test_rejects_non_list(self, menai):
-        with pytest.raises(MenaiEvalError, match="list!=.*requires list arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(list!=? (list 1) 1)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="list!=.*requires list arguments.*string"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(list!=? "a" (list 1))')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_wrong_arity(self, menai):
         with pytest.raises(MenaiEvalError, match="list!=.*has wrong number of arguments"):
@@ -214,11 +229,13 @@ class TestAlistNeqP:
         assert menai.evaluate('(dict!=? (dict "a" 1) (dict "a" 1))') is False
 
     def test_rejects_non_dict(self, menai):
-        with pytest.raises(MenaiEvalError, match="dict!=.*requires dict arguments.*list"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(dict!=? (dict) (list 1 2))')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="dict!=.*requires dict arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(dict!=? (dict) 42)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_wrong_arity(self, menai):
         with pytest.raises(MenaiEvalError, match="dict!=.*has wrong number of arguments"):
@@ -270,24 +287,29 @@ class TestIntegerOrderedComparisons:
 
     def test_integer_comparisons_reject_float(self, menai):
         for op in ('integer<?', 'integer>?', 'integer<=?', 'integer>=?'):
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires integer arguments.*float"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} 1 2.0)')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires integer arguments.*float"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} 1.0 2)')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_integer_comparisons_reject_complex(self, menai):
         for op in ('integer<?', 'integer>?', 'integer<=?', 'integer>=?'):
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires integer arguments.*complex"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} 1 1+0j)')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_integer_comparisons_reject_non_number(self, menai):
         for op in ('integer<?', 'integer>?', 'integer<=?', 'integer>=?'):
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires integer arguments.*string"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} 1 "2")')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires integer arguments.*boolean"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} #t 1)')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_integer_comparisons_wrong_arity(self, menai):
         for op in ('integer<?', 'integer>?', 'integer<=?', 'integer>=?'):
@@ -361,21 +383,25 @@ class TestFloatOrderedComparisons:
 
     def test_float_comparisons_reject_integer(self, menai):
         for op in ('float<?', 'float>?', 'float<=?', 'float>=?'):
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires float arguments.*integer"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} 1.0 2)')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires float arguments.*integer"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} 1 2.0)')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_float_comparisons_reject_complex(self, menai):
         for op in ('float<?', 'float>?', 'float<=?', 'float>=?'):
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires float arguments.*complex"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} 1.0 1+0j)')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_float_comparisons_reject_non_number(self, menai):
         for op in ('float<?', 'float>?', 'float<=?', 'float>=?'):
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires float arguments.*string"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} 1.0 "2.0")')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_float_comparisons_wrong_arity(self, menai):
         for op in ('float<?', 'float>?', 'float<=?', 'float>=?'):
@@ -400,11 +426,13 @@ class TestFloatOrderedComparisons:
     def test_float_integer_not_interchangeable(self, menai):
         """Confirm float and integer comparisons are not interchangeable."""
         # integer<? rejects floats; float<? rejects integers
-        with pytest.raises(MenaiEvalError, match="integer.*requires integer arguments.*float"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(integer<? 1 2.0)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-        with pytest.raises(MenaiEvalError, match="float.*requires float arguments.*integer"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(float<? 1 2.0)')
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 # ---------------------------------------------------------------------------
@@ -463,14 +491,17 @@ class TestStringOrderedComparisons:
 
     def test_string_comparisons_reject_non_string(self, menai):
         for op in ('string<?', 'string>?', 'string<=?', 'string>=?'):
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires string arguments.*integer"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} "a" 1)')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires string arguments.*boolean"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} #t "a")')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-            with pytest.raises(MenaiEvalError, match=f"{op}.*requires string arguments.*list"):
+            with pytest.raises(MenaiEvalError) as exc_info:
                 menai.evaluate(f'({op} (list "a") "a")')
+            assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_string_comparisons_wrong_arity(self, menai):
         for op in ('string<?', 'string>?', 'string<=?', 'string>=?'):

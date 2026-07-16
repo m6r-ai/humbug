@@ -7,7 +7,7 @@ list structure patterns, nested patterns, and error cases.
 
 import pytest
 
-from menai import MenaiEvalError
+from menai import MenaiEvalError, VMErrorCode
 
 
 class TestPatternMatching:
@@ -85,8 +85,10 @@ class TestPatternMatching:
         )
 
         # Variable x should not be defined outside the match
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(let ((result (match 42 (x (integer* x 2))))) (integer+ result x))')
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     def test_variable_binding_shadowing(self, menai, helpers):
         """Test that pattern variables can shadow outer bindings."""
@@ -125,8 +127,10 @@ class TestPatternMatching:
     def test_wildcard_no_binding(self, menai):
         """Test that wildcard patterns don't create variable bindings."""
         # Wildcard should not create a binding for _
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(match 42 (_ (integer+ _ 1)))')
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     # ========== Type Pattern Matching ==========
 
@@ -513,7 +517,7 @@ class TestPatternMatching:
     def test_error_in_pattern_result_evaluation(self, menai):
         """Test error handling in pattern result evaluation."""
         # Division by zero in pattern result
-        with pytest.raises(MenaiEvalError, match="Division by zero"):
+        with pytest.raises(ZeroDivisionError):
             menai.evaluate('(match 42 (x (float/ (integer->float x) 0.0)) (_ "other"))')
 
         # Type error in pattern result
@@ -522,8 +526,10 @@ class TestPatternMatching:
 
     def test_undefined_variable_in_pattern_result(self, menai):
         """Test undefined variable errors in pattern results."""
-        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(match 42 (x (integer+ x undefined-var)) (_ "other"))')
+
+        assert exc_info.value.error_code == VMErrorCode.UNDEFINED_VARIABLE
 
     # ========== Practical Examples and Real-World Usage ==========
 

@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import Menai, MenaiEvalError
+from menai import Menai, MenaiEvalError, VMErrorCode
 
 
 class TestStrings:
@@ -151,44 +151,55 @@ class TestStrings:
 
     def test_string_slice_negative_end_index(self, menai):
         """Test string-slice with negative end index."""
-        with pytest.raises(MenaiEvalError, match="string-slice end index cannot be negative"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "hello" 1 -1)')
+        assert exc_info.value.error_code == VMErrorCode.NEGATIVE_SLICE_INDEX
 
-        with pytest.raises(MenaiEvalError, match="string-slice end index cannot be negative"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "test" 0 -5)')
+        assert exc_info.value.error_code == VMErrorCode.NEGATIVE_SLICE_INDEX
 
-        with pytest.raises(MenaiEvalError, match="string-slice end index cannot be negative"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "" 0 -1)')  # Empty string with negative end
+        assert exc_info.value.error_code == VMErrorCode.NEGATIVE_SLICE_INDEX
 
     def test_string_slice_start_index_out_of_range(self, menai):
         """Test string-slice with start index beyond string length."""
-        with pytest.raises(MenaiEvalError, match="string-slice start index out of range"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "hello" 10 15)')  # start_idx > string_len
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_OUT_OF_RANGE
 
-        with pytest.raises(MenaiEvalError, match="string-slice start index out of range"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "hi" 5 6)')  # start_idx > string_len
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_OUT_OF_RANGE
 
-        with pytest.raises(MenaiEvalError, match="string-slice start index out of range"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "" 1 2)')  # start_idx > empty string length
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_OUT_OF_RANGE
 
         # Test with Unicode strings
-        with pytest.raises(MenaiEvalError, match="string-slice start index out of range"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "世界" 5 6)')  # start beyond Unicode string
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_OUT_OF_RANGE
 
     def test_string_slice_start_greater_than_end(self, menai):
         """Test string-slice with start index greater than end index."""
-        with pytest.raises(MenaiEvalError, match="start index.*cannot be greater than end index"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "hello" 3 1)')  # start > end
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_AFTER_END
 
-        with pytest.raises(MenaiEvalError, match="start index.*cannot be greater than end index"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "test" 4 2)')  # start > end
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_AFTER_END
 
-        with pytest.raises(MenaiEvalError, match="start index.*cannot be greater than end index"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "world" 5 0)')  # start > end
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_AFTER_END
 
         # Test with Unicode strings
-        with pytest.raises(MenaiEvalError, match="start index.*cannot be greater than end index"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "café" 3 1)')  # start > end with Unicode
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_AFTER_END
 
     def test_string_slice_edge_cases_comprehensive(self, menai):
         """Test comprehensive edge cases for string-slice validation."""
@@ -198,32 +209,39 @@ class TestStrings:
         assert menai.evaluate_and_format('(string-slice "hello" 2 2)') == '""'  # start == end in middle
 
         # Test validation order precedence
-        with pytest.raises(MenaiEvalError, match="string-slice start index cannot be negative"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "test" -1 10)')  # start negative, end out of range
+        assert exc_info.value.error_code == VMErrorCode.NEGATIVE_SLICE_INDEX
 
-        with pytest.raises(MenaiEvalError, match="string-slice end index cannot be negative"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "test" 0 -1)')  # start valid, end negative
+        assert exc_info.value.error_code == VMErrorCode.NEGATIVE_SLICE_INDEX
 
-        with pytest.raises(MenaiEvalError, match="string-slice start index out of range"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "test" 10 15)')  # both out of range, start checked first
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_OUT_OF_RANGE
 
     def test_string_slice_with_different_string_lengths(self, menai):
         """Test error conditions with various string lengths."""
         # Empty string
-        with pytest.raises(MenaiEvalError, match="string-slice start index out of range"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "" 1 1)')
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_OUT_OF_RANGE
 
         # Single character
-        with pytest.raises(MenaiEvalError, match="string-slice start index out of range"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "a" 2 3)')
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_OUT_OF_RANGE
 
         # Long string
-        with pytest.raises(MenaiEvalError, match="start index.*cannot be greater than end index"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "abcdefghijklmnop" 10 5)')
+        assert exc_info.value.error_code == VMErrorCode.SLICE_START_AFTER_END
 
         # Multiple violations - should catch first one encountered
-        with pytest.raises(MenaiEvalError, match="string-slice start index cannot be negative"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(string-slice "hello" -1 -2)')  # Both negative, start checked first
+        assert exc_info.value.error_code == VMErrorCode.NEGATIVE_SLICE_INDEX
 
     @pytest.mark.parametrize("expression,expected", [
         # String case conversion
