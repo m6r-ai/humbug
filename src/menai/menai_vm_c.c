@@ -1202,10 +1202,23 @@ globals_merge_extra_native(GlobalsTable *gt, MenaiValue *extra_dict_val)
     gt->slots = NULL;
     gt->slot_count = 0;
 
-    int err = globals_alloc_slots(gt, new_count);
-    if (err < 0) {
-        return err;
+    /*
+     * Rebuild the hash slots for the new total size.
+     * We cannot use globals_alloc_slots here because it would zero
+     * gt->count and overwrite gt->entries (which we just realloc'd).
+     * Instead, allocate the slots array directly.
+     */
+    ssize_t min_slots = (new_count * 3 + 1) / 2;
+    ssize_t sc = 4;
+    while (sc < min_slots) {
+        sc <<= 1;
     }
+
+    gt->slots = (GlobalsSlot *)calloc(sc, sizeof(GlobalsSlot));
+    if (gt->slots == NULL) {
+        return MENAI_ERR_NOMEM;
+    }
+    gt->slot_count = sc;
 
     for (ssize_t i = 0; i < gt->count; i++) {
         hash_t h = menai_name_str_hash(gt->entries[i].name);
