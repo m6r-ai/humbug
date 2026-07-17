@@ -946,44 +946,23 @@ menai_bigint_add(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
 {
     /* Handle zero operands. */
     if (a->sign == 0) {
-        MenaiBigInt tmp;
-        menai_bigint_init(&tmp);
-        if (menai_bigint_copy(b, &tmp) < 0) {
-            return -1;
-        }
-
-        menai_bigint_free(result);
-        *result = tmp;
-        return 0;
+        return menai_bigint_copy(b, result);
     }
 
     if (b->sign == 0) {
-        MenaiBigInt tmp;
-        menai_bigint_init(&tmp);
-        if (menai_bigint_copy(a, &tmp) < 0) {
-            return -1;
-        }
-
-        menai_bigint_free(result);
-        *result = tmp;
-        return 0;
+        return menai_bigint_copy(a, result);
     }
 
     if (a->sign == b->sign) {
         /* Same sign: add magnitudes, keep sign. */
         int s = a->sign;
-        MenaiBigInt tmp;
-        menai_bigint_init(&tmp);
-        if (_menai_bigint_add_mag(a, b, &tmp) < 0) {
+        if (_menai_bigint_add_mag(a, b, result) < 0) {
             return -1;
         }
 
-        if (tmp.sign != 0) {
-            tmp.sign = s;
+        if (result->sign != 0) {
+            result->sign = s;
         }
-
-        menai_bigint_free(result);
-        *result = tmp;
         return 0;
     }
 
@@ -994,31 +973,26 @@ menai_bigint_add(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
         return 0;
     }
 
-    MenaiBigInt tmp;
-    menai_bigint_init(&tmp);
     int res_sign;
     if (cmp > 0) {
         /* |a| > |b|: result has sign of a */
-        if (_menai_bigint_sub_mag(a, b, &tmp) < 0) {
+        if (_menai_bigint_sub_mag(a, b, result) < 0) {
             return -1;
         }
 
         res_sign = a->sign;
     } else {
         /* |b| > |a|: result has sign of b */
-        if (_menai_bigint_sub_mag(b, a, &tmp) < 0) {
+        if (_menai_bigint_sub_mag(b, a, result) < 0) {
             return -1;
         }
 
         res_sign = b->sign;
     }
 
-    if (tmp.sign != 0) {
-        tmp.sign = res_sign;
+    if (result->sign != 0) {
+        result->sign = res_sign;
     }
-
-    menai_bigint_free(result);
-    *result = tmp;
     return 0;
 }
 
@@ -1249,18 +1223,13 @@ menai_bigint_mod(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
 int
 menai_bigint_neg(const MenaiBigInt *a, MenaiBigInt *result)
 {
-    MenaiBigInt tmp;
-    menai_bigint_init(&tmp);
-    if (menai_bigint_copy(a, &tmp) < 0) {
+    if (menai_bigint_copy(a, result) < 0) {
         return -1;
     }
 
-    if (tmp.sign != 0) {
-        tmp.sign = -tmp.sign;
+    if (result->sign != 0) {
+        result->sign = -result->sign;
     }
-
-    menai_bigint_free(result);
-    *result = tmp;
     return 0;
 }
 
@@ -1268,18 +1237,13 @@ menai_bigint_neg(const MenaiBigInt *a, MenaiBigInt *result)
 int
 menai_bigint_abs(const MenaiBigInt *a, MenaiBigInt *result)
 {
-    MenaiBigInt tmp;
-    menai_bigint_init(&tmp);
-    if (menai_bigint_copy(a, &tmp) < 0) {
+    if (menai_bigint_copy(a, result) < 0) {
         return -1;
     }
 
-    if (tmp.sign == -1) {
-        tmp.sign = 1;
+    if (result->sign == -1) {
+        result->sign = 1;
     }
-
-    menai_bigint_free(result);
-    *result = tmp;
     return 0;
 }
 
@@ -1598,27 +1562,56 @@ menai_bigint_xor(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
 int
 menai_bigint_not(const MenaiBigInt *a, MenaiBigInt *result)
 {
+    if (a->sign == 0) {
+        /* ~0 = -1 */
+        menai_bigint_free(result);
+        return menai_bigint_from_long(-1L, result);
+    }
+
+    if (a->sign == 1) {
+        /*
+         * Positive: ~a = -(a + 1).
+         * Increment magnitude, then negate sign.
+         */
+        MenaiBigInt one;
+        menai_bigint_init(&one);
+        if (menai_bigint_from_long(1L, &one) < 0) {
+            return -1;
+        }
+
+        int ret = _menai_bigint_add_mag(a, &one, result);
+        menai_bigint_free(&one);
+        if (ret < 0) {
+            return -1;
+        }
+
+        if (result->sign != 0) {
+            result->sign = -1;
+        }
+
+        return 0;
+    }
+
+    /*
+     * Negative: ~a = -(a + 1) = |a| - 1.
+     * Decrement magnitude, result is positive.
+     */
     MenaiBigInt one;
     menai_bigint_init(&one);
     if (menai_bigint_from_long(1L, &one) < 0) {
         return -1;
     }
 
-    MenaiBigInt sum;
-    menai_bigint_init(&sum);
-    if (menai_bigint_add(a, &one, &sum) < 0) {
-        menai_bigint_free(&one);
-        return -1;
-    }
-
+    int ret = _menai_bigint_sub_mag(a, &one, result);
     menai_bigint_free(&one);
-
-    if (menai_bigint_neg(&sum, result) < 0) {
-        menai_bigint_free(&sum);
+    if (ret < 0) {
         return -1;
     }
 
-    menai_bigint_free(&sum);
+    if (result->sign != 0) {
+        result->sign = 1;
+    }
+
     return 0;
 }
 

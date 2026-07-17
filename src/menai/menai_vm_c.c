@@ -2549,6 +2549,25 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
+            if (!((MenaiInteger *)a)->is_big && !((MenaiInteger *)b)->is_big) {
+                long la = ((MenaiInteger *)a)->small;
+                long lb = ((MenaiInteger *)b)->small;
+                /* Floor division: round toward negative infinity. */
+                long lq = la / lb;
+                long lr = la % lb;
+                if (lr != 0 && ((lr < 0) != (lb < 0))) {
+                    lq--;
+                }
+
+                MenaiValue *_r = menai_integer_from_long(lq);
+                if (!_r) {
+                    goto error;
+                }
+
+                menai_reg_set_own(regs, base + dest, _r);
+                break;
+            }
+
             MenaiBigInt av, bv, res;
             menai_bigint_init(&av);
             menai_bigint_init(&bv);
@@ -2603,6 +2622,24 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (b_is_zero) {
                 s_vm_err = MENAI_ERR_MODULO_BY_ZERO;
                 goto error;
+            }
+
+            if (!((MenaiInteger *)a)->is_big && !((MenaiInteger *)b)->is_big) {
+                long la = ((MenaiInteger *)a)->small;
+                long lb = ((MenaiInteger *)b)->small;
+                /* Floor modulo: result takes sign of divisor. */
+                long lr = la % lb;
+                if (lr != 0 && ((lr < 0) != (lb < 0))) {
+                    lr += lb;
+                }
+
+                MenaiValue *_r = menai_integer_from_long(lr);
+                if (!_r) {
+                    goto error;
+                }
+
+                menai_reg_set_own(regs, base + dest, _r);
+                break;
             }
 
             MenaiBigInt av, bv, res;

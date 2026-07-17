@@ -614,3 +614,25 @@ class TestBigintArithmetic:
     def test_bigint_divmod_multi_digit(self, menai, expr, expected):
         """Division/modulo where both operands are multi-digit bigints."""
         assert menai.evaluate_and_format(expr) == expected
+
+    @pytest.mark.parametrize("expr,expected", [
+        (f"(integer-neg {BIG})", str(-BIG)),
+        (f"(integer-neg (integer-neg {BIG}))", str(BIG)),
+        (f"(integer-abs {BIG})", str(BIG)),
+        (f"(integer-abs (integer-neg {BIG}))", str(BIG)),
+    ])
+    def test_bigint_neg_abs(self, menai, expr, expected):
+        """Negation and absolute value on bigint operands."""
+        assert menai.evaluate_and_format(expr) == expected
+
+    @pytest.mark.parametrize("expr,expected", [
+        # ~BIG = -(BIG + 1) — positive input, increment magnitude
+        (f"(integer-bit-not {BIG})", str(-(BIG + 1))),
+        # ~(neg BIG) = BIG - 1 — negative input, decrement magnitude
+        (f"(integer-bit-not (integer-neg {BIG}))", str(BIG - 1)),
+        # ~(BIG * BIG) — multi-digit positive
+        (f"(integer-bit-not (integer* {BIG} {BIG}))", str(-(BIG * BIG + 1))),
+    ])
+    def test_bigint_bit_not(self, menai, expr, expected):
+        """Bitwise NOT on bigint operands (exercises add_mag and sub_mag paths)."""
+        assert menai.evaluate_and_format(expr) == expected

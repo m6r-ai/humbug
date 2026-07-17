@@ -41,7 +41,7 @@ menai_integer_from_bigint(MenaiBigInt src)
      * If the value fits in a long, demote to small representation so the
      * inline fast path is used for subsequent operations.
      */
-    if (menai_bigint_fits_long(&src)) {
+    if (src.length <= 2 && menai_bigint_fits_long(&src)) {
         long v;
         if (menai_bigint_to_long(&src, &v) < 0) {
             menai_bigint_free(&src);
