@@ -48,8 +48,8 @@ extensions = [
         ],
         include_dirs=[_MENAI_SRC],
         extra_compile_args=(
-            ["/O2", "/std:c11"] if sys.platform == "win32"
-            else ["-O2", "-std=c11"]
+            ["/O2", "/std:c11", "/WX"] if sys.platform == "win32"
+            else ["-O2", "-std=c11", "-Werror"]
         ),
     ),
 ]
