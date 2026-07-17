@@ -638,135 +638,12 @@ static inline void bool_store(MenaiValue **regs, int slot, int cond)
 }
 
 /*
- * File-scope error state — set by error sites before "goto error",
- * read by the error label in execute_loop.  Safe because the VM is
- * single-threaded (GIL-protected); only one execute_loop runs at a time.
- *
- * Error sites set s_vm_err to a MENAI_ERR_* code, then jump to the
- * error label which assembles the MenaiVMError struct with execution
- * context (opcode, IP, call depth) that is in scope there.
- */
-static int s_vm_err = MENAI_OK;
-static const char *s_vm_user_message = NULL;
-
-/*
  * Yield callback — set by the bridge at init time.  When non-NULL, the VM
  * calls it periodically to allow cancellation and signal handling.
  */
 static MenaiVMYieldFn s_yield_fn = NULL;
 
 void menai_vm_set_yield_fn(MenaiVMYieldFn fn) { s_yield_fn = fn; }
-
-static inline int
-require_type_impl(int ok, MenaiValue *val, const char *op_name, const char *noun)
-{
-    if (ok) {
-        return 1;
-    }
-
-    (void)op_name;
-    (void)noun;
-    (void)val;
-    s_vm_err = MENAI_ERR_TYPE_MISMATCH;
-    return 0;
-}
-
-static inline int require_integer(MenaiValue *val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_INTEGER(val), val, op_name, "integer arguments");
-}
-
-static inline int require_float(MenaiValue* val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_FLOAT(val), val, op_name, "float arguments");
-}
-
-static inline int require_complex(MenaiValue* val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_COMPLEX(val), val, op_name, "complex arguments");
-}
-
-static inline int require_string(MenaiValue* val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_STRING(val), val, op_name, "string arguments");
-}
-
-static inline int require_bytes(MenaiValue *val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_BYTES(val), val, op_name, "bytes arguments");
-}
-
-static inline int require_list(MenaiValue* val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_LIST(val), val, op_name, "list arguments");
-}
-
-static inline int require_list_singular(MenaiValue *val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_LIST(val), val, op_name, "a list argument");
-}
-
-static inline int require_dict(MenaiValue *val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_DICT(val), val, op_name, "dict arguments");
-}
-
-static inline int require_set(MenaiValue *val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_SET(val), val, op_name, "set arguments");
-}
-
-static inline int require_set_singular(MenaiValue *val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_SET(val), val, op_name, "a set argument");
-}
-
-static inline int require_boolean(MenaiValue *val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_BOOLEAN(val), val, op_name, "boolean arguments");
-}
-
-static inline int require_function(MenaiValue *val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_FUNCTION(val), val, op_name, "function arguments");
-}
-
-static inline int require_function_singular(MenaiValue *val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_FUNCTION(val), val, op_name, "a function argument");
-}
-
-static inline int require_struct(MenaiValue *val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_STRUCT(val), val, op_name, "a struct argument");
-}
-
-static inline int require_structtype(MenaiValue *val, const char *op_name)
-{
-    return require_type_impl(IS_MENAI_STRUCTTYPE(val), val, op_name, "a struct type argument");
-}
-
-static inline int require_symbol(MenaiValue *val, const char *op_name)
-{
-    if (IS_MENAI_SYMBOL(val)) {
-        return 1;
-    }
-
-    (void)op_name;
-    s_vm_err = MENAI_ERR_NOT_SYMBOL;
-    return 0;
-}
-
-static inline int require_symbol_pair(MenaiValue *a, MenaiValue *b, const char *op_name)
-{
-    if (IS_MENAI_SYMBOL(a) && IS_MENAI_SYMBOL(b)) {
-        return 1;
-    }
-
-    (void)op_name;
-    s_vm_err = MENAI_ERR_NOT_SYMBOL_PAIR;
-    return 0;
-}
 
 /*
  * parse_complex_string — parse a null-terminated ASCII string as a complex
@@ -1381,8 +1258,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 {
     int _rc;
 
-    s_vm_err = MENAI_OK;
-    s_vm_user_message = NULL;
+    int s_vm_err = MENAI_OK;
+    const char *s_vm_user_message = NULL;
 
     /* Frame stack — depth 0 is the sentinel. */
     Frame frames[MAX_FRAME_DEPTH + 1];
@@ -1884,11 +1761,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_boolean(a, "boolean=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BOOLEAN(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_boolean(b, "boolean=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BOOLEAN(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -1901,11 +1780,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_boolean(a, "boolean!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BOOLEAN(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_boolean(b, "boolean!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BOOLEAN(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -1916,7 +1797,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_BOOLEAN_NOT: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_boolean(a, "boolean-not")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BOOLEAN(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -1935,7 +1817,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_symbol_pair(a, b, "symbol=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(a) || !IS_MENAI_SYMBOL(b))) {
+                s_vm_err = MENAI_ERR_NOT_SYMBOL_PAIR;
                 goto error;
             }
 
@@ -1949,7 +1832,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_symbol_pair(a, b, "symbol!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(a) || !IS_MENAI_SYMBOL(b))) {
+                s_vm_err = MENAI_ERR_NOT_SYMBOL_PAIR;
                 goto error;
             }
 
@@ -1961,7 +1845,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_SYMBOL_TO_STRING: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_symbol(a, "symbol->string")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(a))) {
+                s_vm_err = MENAI_ERR_NOT_SYMBOL;
                 goto error;
             }
 
@@ -1980,11 +1865,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_function(a, "function=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FUNCTION(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_function(b, "function=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FUNCTION(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -1997,11 +1884,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_function(a, "function!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FUNCTION(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_function(b, "function!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FUNCTION(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2012,7 +1901,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FUNCTION_MIN_ARITY: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *f = regs[base + src0];
-            if (!require_function_singular(f, "function-min-arity")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FUNCTION(f))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2030,7 +1920,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FUNCTION_VARIADIC_P: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *f = regs[base + src0];
-            if (!require_function_singular(f, "function-variadic?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FUNCTION(f))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2043,11 +1934,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *f = regs[base + src0];
             MenaiValue *n_obj = regs[base + src1];
-            if (!require_function_singular(f, "function-accepts?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FUNCTION(f))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(n_obj, "function-accepts?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(n_obj))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2082,11 +1975,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2099,11 +1994,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2116,11 +2013,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer<?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer<?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2133,11 +2032,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer>?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer>?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2150,11 +2051,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer<=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer<=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2167,11 +2070,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer>=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer>=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2182,7 +2087,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_INTEGER_ABS: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_integer(a, "integer-abs")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2247,7 +2153,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_INTEGER_NEG: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_integer(a, "integer-neg")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2311,7 +2218,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_INTEGER_BIT_NOT: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_integer(a, "integer-bit-not")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2346,11 +2254,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer+")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer+")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2410,11 +2320,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer-")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer-")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2474,11 +2386,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer*")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer*")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2538,11 +2452,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer/")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer/")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2613,11 +2529,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer%")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer%")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2687,11 +2605,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer-expn")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer-expn")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2743,11 +2663,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer-bit-or")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer-bit-or")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2792,11 +2714,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer-bit-and")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer-bit-and")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2841,11 +2765,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer-bit-xor")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer-bit-xor")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2890,11 +2816,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer-bit-shift-left")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer-bit-shift-left")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -2951,11 +2879,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer-bit-shift-right")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer-bit-shift-right")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3012,11 +2942,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer-min")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer-min")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3029,11 +2961,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer-max")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer-max")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3044,7 +2978,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_INTEGER_TO_FLOAT: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_integer(a, "integer->float")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3074,11 +3009,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer->complex")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer->complex")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3119,11 +3056,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_integer(a, "integer->string")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(b, "integer->string")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3166,7 +3105,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_INTEGER_CODEPOINT_TO_STRING: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_integer(a, "integer-codepoint->string")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3207,11 +3147,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3224,11 +3166,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3241,11 +3185,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float<?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float<?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3258,11 +3204,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float>?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float>?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3275,11 +3223,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float<=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float<=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3292,11 +3242,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float>=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float>=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3307,7 +3259,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_NEG: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-neg")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3323,7 +3276,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_ABS: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-abs")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3345,11 +3299,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float+")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float+")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3367,11 +3323,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float-")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float-")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3389,11 +3347,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float*")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float*")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3411,11 +3371,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float/")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float/")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3439,11 +3401,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float//")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float//")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3467,11 +3431,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float%")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float%")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3493,7 +3459,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_EXP: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-exp")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3511,11 +3478,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float-expn")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float-expn")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3531,7 +3500,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_LOG: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-log")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3553,7 +3523,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_LOG10: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-log10")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3575,7 +3546,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_LOG2: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-log2")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3599,11 +3571,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float-logn")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float-logn")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3630,7 +3604,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_SIN: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-sin")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3646,7 +3621,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_COS: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-cos")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3662,7 +3638,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_TAN: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-tan")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3678,7 +3655,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_SQRT: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-sqrt")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3700,7 +3678,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_FLOOR: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-floor")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3716,7 +3695,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_CEIL: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-ceil")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3732,7 +3712,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_ROUND: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float-round")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3750,11 +3731,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float-min")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float-min")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3773,11 +3756,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float-max")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float-max")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3794,7 +3779,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_TO_INTEGER: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float->integer")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3821,11 +3807,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_float(a, "float->complex")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_float(b, "float->complex")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3841,7 +3829,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FLOAT_TO_STRING: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_float(a, "float->string")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FLOAT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3910,11 +3899,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_complex(a, "complex=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_complex(b, "complex=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3929,11 +3920,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_complex(a, "complex!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_complex(b, "complex!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3946,7 +3939,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_REAL: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex-real")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3962,7 +3956,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_IMAG: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex-imag")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3978,7 +3973,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_ABS: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex-abs")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -3996,7 +3992,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_NEG: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex-neg")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4015,11 +4012,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_complex(a, "complex+")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_complex(b, "complex+")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4039,11 +4038,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_complex(a, "complex-")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_complex(b, "complex-")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4063,11 +4064,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_complex(a, "complex*")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_complex(b, "complex*")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4087,11 +4090,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_complex(a, "complex/")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_complex(b, "complex/")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4119,11 +4124,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_complex(a, "complex-expn")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_complex(b, "complex-expn")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4142,7 +4149,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_EXP: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex-exp")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4160,7 +4168,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_LOG: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex-log")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4178,7 +4187,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_LOG10: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex-log10")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4196,7 +4206,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_SIN: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex-sin")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4214,7 +4225,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_COS: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex-cos")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4232,7 +4244,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_TAN: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex-tan")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4250,7 +4263,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_SQRT: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex-sqrt")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4270,11 +4284,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_complex(a, "complex-logn")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_complex(b, "complex-logn")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4298,7 +4314,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_COMPLEX_TO_STRING: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_complex(a, "complex->string")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_COMPLEX(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4323,11 +4340,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4340,11 +4359,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4357,11 +4378,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string<?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string<?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4374,11 +4397,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string>?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string>?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4391,11 +4416,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string<=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string<=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4408,11 +4435,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string>=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string>=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4423,7 +4452,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRING_LENGTH: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_string(a, "string-length")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4439,7 +4469,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRING_UPCASE: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_string(a, "string-upcase")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4455,7 +4486,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRING_DOWNCASE: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_string(a, "string-downcase")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4471,7 +4503,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRING_TRIM: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_string(a, "string-trim")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4487,7 +4520,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRING_TRIM_LEFT: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_string(a, "string-trim-left")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4503,7 +4537,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRING_TRIM_RIGHT: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_string(a, "string-trim-right")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4521,11 +4556,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string-concat")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string-concat")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4543,11 +4580,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string-prefix?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string-prefix?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4560,11 +4599,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string-suffix?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string-suffix?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4577,7 +4618,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string-ref")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4621,7 +4663,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
             MenaiValue *c = regs[base + src2];
-            if (!require_string(a, "string-slice")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4696,15 +4739,18 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
             MenaiValue *c = regs[base + src2];
-            if (!require_string(a, "string-replace")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string-replace")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(c, "string-replace")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(c))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4722,11 +4768,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string-index")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string-index")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4752,7 +4800,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRING_TO_INTEGER_CODEPOINT: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_string(a, "string->integer-codepoint")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4777,7 +4826,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string->integer")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4832,7 +4882,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRING_TO_NUMBER: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_string(a, "string->number")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -4922,11 +4973,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_string(a, "string->list")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "string->list")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5025,11 +5078,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_bytes(a, "bytes=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_bytes(b, "bytes=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5042,11 +5097,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_bytes(a, "bytes!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_bytes(b, "bytes!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5057,7 +5114,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_BYTES_LENGTH: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_bytes(a, "bytes-length")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5075,7 +5133,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src0];
             MenaiValue *idx_val = regs[base + src1];
-            if (!require_bytes(b, "bytes-ref")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5105,7 +5164,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src0];
             MenaiValue *v = regs[base + src1];
-            if (!require_bytes(b, "bytes-append-u8")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5132,7 +5192,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_LIST_TO_BYTES: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *lst = regs[base + src0];
-            if (!require_list(lst, "list->bytes")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(lst))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5172,7 +5233,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *b = regs[base + src0];
             MenaiValue *start_val = regs[base + src1];
             MenaiValue *end_val = regs[base + src2];
-            if (!require_bytes(b, "bytes-slice")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5213,7 +5275,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRING_TO_BYTES: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *s = regs[base + src0];
-            if (!require_string(s, "string->bytes")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(s))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5268,7 +5331,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_BYTES_TO_STRING: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src0];
-            if (!require_bytes(b, "bytes->string")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5345,7 +5409,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_BYTES_TO_LIST: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src0];
-            if (!require_bytes(b, "bytes->list")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5376,7 +5441,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_BYTES_TO_STRING_HEX: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src0];
-            if (!require_bytes(b, "bytes->string-hex")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5412,7 +5478,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRING_HEX_TO_BYTES: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *s = regs[base + src0];
-            if (!require_string(s, "string-hex->bytes")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(s))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5470,11 +5537,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_bytes(a, "bytes-concat")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_bytes(b, "bytes-concat")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5492,11 +5561,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *needle = regs[base + src0];
             MenaiValue *haystack = regs[base + src1];
-            if (!require_bytes(needle, "bytes-index")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(needle))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_bytes(haystack, "bytes-index")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(haystack))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5546,7 +5617,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!require_bytes(b, "bytes-index-int")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5584,11 +5656,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_bytes(a, "bytes<?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_bytes(b, "bytes<?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5601,11 +5675,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_bytes(a, "bytes>?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_bytes(b, "bytes>?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5618,11 +5694,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_bytes(a, "bytes<=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_bytes(b, "bytes<=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5635,11 +5713,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_bytes(a, "bytes>=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_bytes(b, "bytes>=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5652,7 +5732,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src0];
             MenaiValue *off_val = regs[base + src1];
-            if (!require_bytes(b, "bytes-read-u8")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5682,7 +5763,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src0];
             MenaiValue *off_val = regs[base + src1];
-            if (!require_bytes(b, "bytes-read-i8")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -5717,7 +5799,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK); \
             MenaiValue *b = regs[base + src0]; \
             MenaiValue *off_val = regs[base + src1]; \
-            if (!require_bytes(b, #opcode_name)) { \
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) { \
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH; \
                 goto error; \
             } \
             if (!IS_MENAI_INTEGER(off_val)) { \
@@ -5810,7 +5893,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK); \
             MenaiValue *b = regs[base + src0]; \
             MenaiValue *v = regs[base + src1]; \
-            if (!require_bytes(b, #opcode_name)) { \
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) { \
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH; \
                 goto error; \
             } \
             if (!IS_MENAI_INTEGER(v)) { \
@@ -5882,7 +5966,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *b = regs[base + src0]; \
             MenaiValue *off_val = regs[base + src1]; \
             MenaiValue *v = regs[base + src2]; \
-            if (!require_bytes(b, #opcode_name)) { \
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) { \
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH; \
                 goto error; \
             } \
             if (!IS_MENAI_INTEGER(off_val)) { \
@@ -5956,7 +6041,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src0];
             MenaiValue *off_val = regs[base + src1];
-            if (!require_bytes(b, "bytes-read-uleb128")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
             if (!IS_MENAI_INTEGER(off_val)) {
@@ -6027,7 +6113,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src0];
             MenaiValue *v = regs[base + src1];
-            if (!require_bytes(b, "bytes-append-uleb128")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
             if (!IS_MENAI_INTEGER(v)) {
@@ -6071,7 +6158,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src0];
             MenaiValue *off_val = regs[base + src1];
-            if (!require_bytes(b, "bytes-read-sleb128")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
             if (!IS_MENAI_INTEGER(off_val)) {
@@ -6133,7 +6221,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src0];
             MenaiValue *v = regs[base + src1];
-            if (!require_bytes(b, "bytes-append-sleb128")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BYTES(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
             if (!IS_MENAI_INTEGER(v)) {
@@ -6180,11 +6269,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_list(a, "list=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_list(b, "list=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6198,11 +6289,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_list(a, "list!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_list(b, "list!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6214,7 +6307,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_LIST_NULL_P: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_list(a, "list-null?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6226,7 +6320,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_LIST_LENGTH: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_list(a, "list-length")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6243,7 +6338,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_LIST_FIRST: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_list(a, "list-first")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6260,7 +6356,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_LIST_REST: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_list(a, "list-rest")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6282,7 +6379,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_LIST_LAST: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_list(a, "list-last")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6302,7 +6400,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_list(a, "list-ref")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6340,7 +6439,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
-            if (!require_list(a, "list-prepend")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6369,7 +6469,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
-            if (!require_list(a, "list-append")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6396,7 +6497,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_LIST_REVERSE: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_list(a, "list-reverse")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6423,11 +6525,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_list(a, "list-concat")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_list(b, "list-concat")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6461,7 +6565,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
-            if (!require_list(a, "list-member?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6484,7 +6589,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
-            if (!require_list(a, "list-index")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6520,7 +6626,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
             MenaiValue *c = regs[base + src2];
-            if (!require_list(a, "list-slice")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6594,7 +6701,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
-            if (!require_list(a, "list-remove")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6628,11 +6736,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_list(a, "list->string")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_string(b, "list->string")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6687,7 +6797,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_LIST_TO_SET: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_list_singular(a, "list->set")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6770,11 +6881,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_dict(a, "dict=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_dict(b, "dict=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6809,11 +6922,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_dict(a, "dict!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_dict(b, "dict!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6846,7 +6961,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_DICT_LENGTH: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_dict(a, "dict-length")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6862,7 +6978,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_DICT_KEYS: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_dict(a, "dict-keys")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6887,7 +7004,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_DICT_VALUES: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_dict(a, "dict-values")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6914,7 +7032,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *key = regs[base + src1];
-            if (!require_dict(a, "dict-has?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6938,7 +7057,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *a = regs[base + src0];
             MenaiValue *key = regs[base + src1];
             MenaiValue *def = regs[base + src2];
-            if (!require_dict(a, "dict-get")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -6971,7 +7091,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *a = regs[base + src0];
             MenaiValue *key = regs[base + src1];
             MenaiValue *val = regs[base + src2];
-            if (!require_dict(a, "dict-set")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7046,7 +7167,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *key = regs[base + src1];
-            if (!require_dict(a, "dict-remove")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7107,11 +7229,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_dict(a, "dict-merge")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_dict(b, "dict-merge")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_DICT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7205,11 +7329,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_set(a, "set=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_set(b, "set=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7237,11 +7363,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_set(a, "set!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_set(b, "set!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7267,7 +7395,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_SET_LENGTH: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_set_singular(a, "set-length")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7285,7 +7414,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
-            if (!require_set_singular(a, "set-member?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7310,7 +7440,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
-            if (!require_set_singular(a, "set-add")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7366,7 +7497,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
-            if (!require_set_singular(a, "set-remove")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7425,11 +7557,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_set(a, "set-union")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_set(b, "set-union")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7489,11 +7623,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_set(a, "set-intersection")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_set(b, "set-intersection")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7545,11 +7681,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_set(a, "set-difference")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_set(b, "set-difference")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7600,11 +7738,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_set(a, "set-subset?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_set(b, "set-subset?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7635,7 +7775,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_SET_TO_LIST: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
-            if (!require_set_singular(a, "set->list")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SET(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7899,7 +8040,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *stype = regs[base + src0];
             MenaiValue *val = regs[base + src1];
-            if (!require_structtype(stype, "struct-type?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCTTYPE(stype))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7920,11 +8062,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
             MenaiValue *field_sym = regs[base + src1];
-            if (!require_struct(val, "struct-get")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_symbol(field_sym, "struct-get")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(field_sym))) {
+                s_vm_err = MENAI_ERR_NOT_SYMBOL;
                 goto error;
             }
 
@@ -7947,11 +8091,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
             MenaiValue *fidx = regs[base + src1];
-            if (!require_struct(val, "struct-get-imm")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(fidx, "struct-get-imm")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(fidx))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -7980,11 +8126,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *val = regs[base + src0];
             MenaiValue *field_sym = regs[base + src1];
             MenaiValue *new_val = regs[base + src2];
-            if (!require_struct(val, "struct-set")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_symbol(field_sym, "struct-set")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(field_sym))) {
+                s_vm_err = MENAI_ERR_NOT_SYMBOL;
                 goto error;
             }
 
@@ -8024,11 +8172,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *val = regs[base + src0];
             MenaiValue *fidx = regs[base + src1];
             MenaiValue *new_val = regs[base + src2];
-            if (!require_struct(val, "struct-set-imm")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_integer(fidx, "struct-set-imm")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(fidx))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -8072,11 +8222,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_struct(a, "struct=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_struct(b, "struct=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -8098,11 +8250,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!require_struct(a, "struct!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(a))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
-            if (!require_struct(b, "struct!=?")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(b))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -8128,7 +8282,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_TYPE: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
-            if (!require_struct(val, "struct-type")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -8139,7 +8294,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_TYPE_NAME: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
-            if (!require_structtype(val, "struct-type-name")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCTTYPE(val))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
@@ -8150,7 +8306,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_FIELDS: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
-            if (!require_structtype(val, "struct-fields")) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCTTYPE(val))) {
+                s_vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
 
