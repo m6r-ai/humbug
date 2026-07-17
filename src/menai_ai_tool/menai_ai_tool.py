@@ -171,6 +171,7 @@ Syntax: (operator arg1 arg2 ...)
 - It is designed for AIs to use, human users are secondary.
 - Operations are runtime typed but most operations will strictly only work on one specific type.
 - Pure functional: no side effects, immutable data
+- Syntax is similar to Scheme, but it is NOT Scheme.
 - Homoiconic: code and data use same representation (s-expressions)
 - Tail call optimization prevents stack overflow
 - Strict type system: no implicit coercion between numeric types; use typed operators (integer+, float*, complex/) to enforce types explicitly
