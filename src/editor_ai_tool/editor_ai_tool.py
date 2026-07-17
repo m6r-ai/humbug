@@ -121,6 +121,7 @@ class EditorAITool(AITool):
                     type="string",
                     description=(
                         "Menai expression for the transform operation. "
+                        "MUST use Menai syntax. "
                         "May reference 'input-text' (full buffer content as a string) "
                         "and 'input-lines' (buffer lines as a list of strings). "
                         "Must evaluate to a string (new content) or a list of strings (new lines). "

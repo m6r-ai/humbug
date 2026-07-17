@@ -180,6 +180,7 @@ class FileSystemAITool(AITool):
                     type="string",
                     description=(
                         "Menai expression for the transform_file operation. "
+                        "MUST use Menai syntax. "
                         "May reference 'input-text' (full file content as a string) "
                         "and 'input-lines' (file lines as a list of strings). "
                         "Must evaluate to a string (new file content) or a list of strings (new lines)."
