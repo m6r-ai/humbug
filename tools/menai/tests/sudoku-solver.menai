@@ -55,9 +55,9 @@
                 (if (integer=? (list-first cell-pair) col)
                   num
                   (list-ref cell-pair 1)))
-              (zip-list (range 0 9) row-data))
+              (list-zip (range 0 9) row-data))
             row-data)))
-      (zip-list (range 0 9) board))))
+      (list-zip (range 0 9) board))))
 
   ; Try each candidate digit for the cell at (row, col).
   ; Returns the solved board on success, or #none if all candidates fail.
@@ -89,7 +89,7 @@
     (let* ((cells (map-list
                     (lambda (pair)
                       (format-cell (list-first pair) (list-ref pair 1)))
-                    (zip-list (range 0 9) row)))
+                    (list-zip (range 0 9) row)))
            (row-str (string-concat "| " (list->string cells "")))
            (div (if (integer=? (integer% (integer+ row-idx 1) 3) 0)
                     (string-concat "\n" "+-------+-------+-------+")
@@ -101,7 +101,7 @@
     (let ((rows (map-list
                   (lambda (pair)
                     (format-row (list-first pair) (list-ref pair 1)))
-                  (zip-list (range 0 9) board))))
+                  (list-zip (range 0 9) board))))
       (string-concat "+-------+-------+-------+\n"
                      (list->string rows "\n"))))))
 
