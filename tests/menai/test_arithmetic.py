@@ -545,3 +545,72 @@ class TestArithmetic:
         result = menai.evaluate("(complex-imag (float->complex 2.0 7.0))")
         assert result == 7.0
         assert isinstance(result, float)
+
+
+class TestBigintArithmetic:
+    """Test arithmetic operations that exercise the MenaiBigInt (bignum) code paths.
+
+    Values at and beyond 2^63 force promotion from the inline-long fast path to
+    the arbitrary-precision bigint path, covering addition, subtraction,
+    multiplication, division, and modulo with both positive and negative results.
+    """
+
+    BIG = 9223372036854775808  # 2^63 — first value that does not fit in a C long
+    MOD_VAL = BIG * 2 + 7
+
+    @pytest.mark.parametrize("expr,expected", [
+        # Addition producing and consuming bigints
+        (f"(integer+ {BIG} 1)", str(BIG + 1)),
+        (f"(integer+ {BIG} {BIG})", str(BIG + BIG)),
+        (f"(integer+ (integer-neg {BIG}) 1)", str(-BIG + 1)),
+        (f"(integer+ (integer-neg {BIG}) (integer-neg {BIG}))", str(-BIG - BIG)),
+        (f"(integer- {BIG} 1)", str(BIG - 1)),
+        (f"(integer- 1 {BIG})", str(1 - BIG)),
+        (f"(integer- {BIG} {BIG})", "0"),
+        (f"(integer- (integer-neg {BIG}) (integer-neg {BIG}))", "0"),
+        (f"(integer- {BIG} (integer-neg {BIG}))", str(BIG + BIG)),
+        (f"(integer- (integer-neg {BIG}) {BIG})", str(-BIG - BIG)),
+    ])
+    def test_bigint_add_sub(self, menai, expr, expected):
+        """Addition and subtraction on values that require bigint representation."""
+        assert menai.evaluate_and_format(expr) == expected
+
+    @pytest.mark.parametrize("expr,expected", [
+        (f"(integer* {BIG} 2)", str(BIG * 2)),
+        (f"(integer* {BIG} {BIG})", str(BIG * BIG)),
+        (f"(integer* (integer-neg {BIG}) {BIG})", str(-BIG * BIG)),
+        (f"(integer* 3 {BIG})", str(3 * BIG)),
+    ])
+    def test_bigint_mul(self, menai, expr, expected):
+        """Multiplication producing bigint results."""
+        assert menai.evaluate_and_format(expr) == expected
+
+    @pytest.mark.parametrize("expr,expected", [
+        (f"(integer/ (integer* {BIG} 2) 2)", str(BIG)),
+        (f"(integer/ (integer* {BIG} 3) 3)", str(BIG)),
+        (f"(integer/ (integer+ (integer* {BIG} 2) 1) 2)", str(BIG)),
+        (f"(integer/ (integer-neg (integer+ (integer* {BIG} 2) 1)) 2)", str(-BIG - 1)),
+        (f"(integer/ (integer+ (integer* {BIG} 2) 1) -2)", str(-BIG - 1)),
+        (f"(integer/ (integer-neg (integer+ (integer* {BIG} 2) 1)) -2)", str(BIG)),
+    ])
+    def test_bigint_div(self, menai, expr, expected):
+        """Floor division on bigint operands including all sign combinations."""
+        assert menai.evaluate_and_format(expr) == expected
+
+    @pytest.mark.parametrize("expr,expected", [
+        (f"(integer% (integer+ (integer* {BIG} 2) 7) 3)", str(MOD_VAL % 3)),
+        (f"(integer% (integer-neg (integer+ (integer* {BIG} 2) 7)) 3)", str(-MOD_VAL % 3)),
+        (f"(integer% (integer+ (integer* {BIG} 2) 7) -3)", str(MOD_VAL % -3)),
+        (f"(integer% (integer-neg (integer+ (integer* {BIG} 2) 7)) -3)", str(-MOD_VAL % -3)),
+    ])
+    def test_bigint_mod(self, menai, expr, expected):
+        """Modulo on bigint operands including all sign combinations."""
+        assert menai.evaluate_and_format(expr) == expected
+
+    @pytest.mark.parametrize("expr,expected", [
+        (f"(integer/ (integer* {BIG} {BIG}) {BIG})", str(BIG)),
+        (f"(integer% (integer* {BIG} {BIG}) (integer+ {BIG} 1))", str((BIG * BIG) % (BIG + 1))),
+    ])
+    def test_bigint_divmod_multi_digit(self, menai, expr, expected):
+        """Division/modulo where both operands are multi-digit bigints."""
+        assert menai.evaluate_and_format(expr) == expected

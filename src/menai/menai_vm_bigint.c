@@ -1026,20 +1026,60 @@ menai_bigint_add(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result
 int
 menai_bigint_sub(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
-    /* Negate b and add. */
-    MenaiBigInt neg_b;
-    menai_bigint_init(&neg_b);
-    if (menai_bigint_copy(b, &neg_b) < 0) {
-        return -1;
+    /* Handle zero operands. */
+    if (a->sign == 0) {
+        /* 0 - b = -b */
+        return menai_bigint_neg(b, result);
     }
 
-    if (neg_b.sign != 0) {
-        neg_b.sign = -neg_b.sign;
+    if (b->sign == 0) {
+        /* a - 0 = a */
+        return menai_bigint_copy(a, result);
     }
 
-    int r = menai_bigint_add(a, &neg_b, result);
-    menai_bigint_free(&neg_b);
-    return r;
+    if (a->sign != b->sign) {
+        /*
+         * Different signs: subtracting is adding magnitudes.
+         * a - (-b) = a + b  (result has sign of a)
+         * (-a) - b = -(a + b)  (result has sign of a)
+         */
+        int s = a->sign;
+        if (_menai_bigint_add_mag(a, b, result) < 0) {
+            return -1;
+        }
+
+        if (result->sign != 0) {
+            result->sign = s;
+        }
+
+        return 0;
+    }
+
+    /* Same sign: subtract smaller magnitude from larger. */
+    int cmp = _menai_bigint_cmp_mag(a, b);
+    if (cmp == 0) {
+        menai_bigint_free(result);
+        return 0;
+    }
+
+    int res_sign;
+    if (cmp > 0) {
+        if (_menai_bigint_sub_mag(a, b, result) < 0) {
+            return -1;
+        }
+        res_sign = a->sign;
+    } else {
+        if (_menai_bigint_sub_mag(b, a, result) < 0) {
+            return -1;
+        }
+        res_sign = -a->sign;
+    }
+
+    if (result->sign != 0) {
+        result->sign = res_sign;
+    }
+
+    return 0;
 }
 
 /* result = a * b */
@@ -1146,39 +1186,24 @@ menai_bigint_divmod(
      * differ, quotient -= 1, remainder += b.
      */
     if (r.sign != 0 && a->sign != b->sign) {
-        /* quotient -= 1 */
+        /* quotient -= 1 (in-place) */
         MenaiBigInt one;
         menai_bigint_init(&one);
-        if (menai_bigint_from_long(1L, &one) < 0) {
-            menai_bigint_free(&q);
-            menai_bigint_free(&r);
-            return -1;
-        }
-
-        MenaiBigInt q_adj;
-        menai_bigint_init(&q_adj);
-        if (menai_bigint_sub(&q, &one, &q_adj) < 0) {
+        if (menai_bigint_from_long(1L, &one) < 0 ||
+            menai_bigint_sub(&q, &one, &q) < 0) {
             menai_bigint_free(&q);
             menai_bigint_free(&r);
             menai_bigint_free(&one);
             return -1;
         }
-
-        menai_bigint_free(&q);
-        q = q_adj;
         menai_bigint_free(&one);
 
-        /* remainder += b */
-        MenaiBigInt r_adj;
-        menai_bigint_init(&r_adj);
-        if (menai_bigint_add(&r, b, &r_adj) < 0) {
+        /* remainder += b (in-place) */
+        if (menai_bigint_add(&r, b, &r) < 0) {
             menai_bigint_free(&q);
             menai_bigint_free(&r);
             return -1;
         }
-
-        menai_bigint_free(&r);
-        r = r_adj;
     }
 
     *quotient = q;
@@ -1190,10 +1215,6 @@ menai_bigint_divmod(
 int
 menai_bigint_floordiv(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
-    if (b->sign == 0) {
-        return MENAI_ERR_DIVISION_BY_ZERO;
-    }
-
     MenaiBigInt q, r;
     menai_bigint_init(&q);
     menai_bigint_init(&r);
@@ -1211,10 +1232,6 @@ menai_bigint_floordiv(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *r
 int
 menai_bigint_mod(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
-    if (b->sign == 0) {
-        return MENAI_ERR_DIVISION_BY_ZERO;
-    }
-
     MenaiBigInt q, r;
     menai_bigint_init(&q);
     menai_bigint_init(&r);
