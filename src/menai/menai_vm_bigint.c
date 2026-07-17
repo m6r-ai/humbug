@@ -648,6 +648,7 @@ menai_bigint_from_double(double v, MenaiBigInt *a)
     /* Slow path: decompose into 32-bit base-2^32 limbs using ldexp/frexp. */
     int exp;
     double frac = frexp(t, &exp);  /* t == frac * 2^exp, 0.5 <= frac < 1.0 */
+
     /* Number of 32-bit limbs needed: ceil(exp / 32) */
     ssize_t nlimbs = (exp + 31) / 32;
     uint32_t *digits = (uint32_t *)malloc((size_t)nlimbs * sizeof(uint32_t));
@@ -926,10 +927,14 @@ menai_bigint_hash(const MenaiBigInt *a)
     uint64_t h = 14695981039346656037ULL;
     for (ssize_t i = 0; i < a->length; i++) {
         uint32_t d = a->digits[i];
-        h ^= (uint64_t)(d & 0xFF);         h *= 1099511628211ULL;
-        h ^= (uint64_t)((d >> 8) & 0xFF);  h *= 1099511628211ULL;
-        h ^= (uint64_t)((d >> 16) & 0xFF); h *= 1099511628211ULL;
-        h ^= (uint64_t)((d >> 24) & 0xFF); h *= 1099511628211ULL;
+        h ^= (uint64_t)(d & 0xFF);
+        h *= 1099511628211ULL;
+        h ^= (uint64_t)((d >> 8) & 0xFF);
+        h *= 1099511628211ULL;
+        h ^= (uint64_t)((d >> 16) & 0xFF);
+        h *= 1099511628211ULL;
+        h ^= (uint64_t)((d >> 24) & 0xFF);
+        h *= 1099511628211ULL;
     }
 
     if (a->sign == -1) {
@@ -1170,6 +1175,7 @@ menai_bigint_divmod(
             menai_bigint_free(&one);
             return -1;
         }
+
         menai_bigint_free(&one);
 
         /* remainder += b (in-place) */

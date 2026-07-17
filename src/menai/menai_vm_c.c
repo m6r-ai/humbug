@@ -1326,7 +1326,7 @@ globals_lookup_h(const GlobalsTable *gt, const char *name, hash_t h)
  *   - variadic rest-list packing
  *   - capture slot population
  *
- * Returns 0 on success, -1 on error (sets s_vm_err).
+ * Returns MENAI_OK on success, or a MENAI_ERR_* code on error.
  */
 static int
 call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee_base, int arity, int return_dest)
@@ -1339,16 +1339,14 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
     if (MENAI_UNLIKELY(is_variadic)) {
         int min_arity = param_count - 1;
         if (arity < min_arity) {
-            s_vm_err = MENAI_ERR_ARITY_MISMATCH;
-            return -1;
+            return MENAI_ERR_ARITY_MISMATCH;
         }
 
         /* Pack excess args into a MenaiList for the rest parameter. */
         int rest_count = arity - min_arity;
         MenaiValue *rest_list = menai_list_alloc(rest_count);
         if (!rest_list) {
-            s_vm_err = MENAI_ERR_NOMEM;
-            return -1;
+            return MENAI_ERR_NOMEM;
         }
 
         for (int k = 0; k < rest_count; k++) {
@@ -1358,8 +1356,7 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
 
         menai_reg_set_own(regs, callee_base + min_arity, rest_list);
     } else if (MENAI_UNLIKELY(arity != param_count)) {
-        s_vm_err = MENAI_ERR_ARITY_MISMATCH;
-        return -1;
+        return MENAI_ERR_ARITY_MISMATCH;
     }
 
     /* Populate capture slots: regs[callee_base + param_count + i] */
@@ -1371,7 +1368,7 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
     }
 
     frame_setup(new_frame, co, callee_base, return_dest);
-    return 0;
+    return MENAI_OK;
 }
 
 /*
@@ -1609,7 +1606,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 new_frame->constants_items = NULL;
                 new_frame->instrs = NULL;
 
-                if (MENAI_UNLIKELY(call_setup(new_frame, raw, regs, callee_base, arity, dest) < 0)) {
+                _rc = call_setup(new_frame, raw, regs, callee_base, arity, dest);
+                if (MENAI_UNLIKELY(_rc < 0)) {
+                    s_vm_err = _rc;
                     frame_depth--;
                     goto error;
                 }
@@ -1664,7 +1663,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 frame->code_obj = NULL;  /* frame_setup will retain the new one */
 
                 int saved_return_dest = frame->return_dest;
-                if (MENAI_UNLIKELY(call_setup(frame, raw, regs, base, n_args, saved_return_dest) < 0)) {
+                _rc = call_setup(frame, raw, regs, base, n_args, saved_return_dest);
+                if (MENAI_UNLIKELY(_rc < 0)) {
+                    s_vm_err = _rc;
                     menai_release(raw);
                     goto error;
                 }
@@ -1747,7 +1748,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 new_frame->constants_items = NULL;
                 new_frame->instrs = NULL;
 
-                if (MENAI_UNLIKELY(call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0)) {
+                _rc = call_setup(new_frame, raw_func, regs, callee_base, arity, dest);
+                if (MENAI_UNLIKELY(_rc < 0)) {
+                    s_vm_err = _rc;
                     frame_depth--;
                     goto error;
                 }
@@ -1814,7 +1817,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 frame->code_obj = NULL;  /* frame_setup will retain the new one */
 
                 int saved_return_dest = frame->return_dest;
-                if (MENAI_UNLIKELY(call_setup(frame, raw_func, regs, base, arity, saved_return_dest) < 0)) {
+                _rc = call_setup(frame, raw_func, regs, base, arity, saved_return_dest);
+                if (MENAI_UNLIKELY(_rc < 0)) {
+                    s_vm_err = _rc;
                     menai_release(raw_func);
                     goto error;
                 }
@@ -2310,7 +2315,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger *ia = (MenaiInteger *)a;
             MenaiBigInt tmp, res;
             menai_bigint_init(&tmp);
             menai_bigint_init(&res);
@@ -2916,7 +2920,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger *ia = (MenaiInteger *)a;
             MenaiBigInt av, res;
             menai_bigint_init(&av);
             menai_bigint_init(&res);
@@ -2978,7 +2981,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger *ia = (MenaiInteger *)a;
             MenaiBigInt av, res;
             menai_bigint_init(&av);
             menai_bigint_init(&res);
@@ -3142,7 +3144,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger *ia = (MenaiInteger *)a;
             MenaiBigInt tmp;
             menai_bigint_init(&tmp);
             _rc = integer_to_bigint(a, &tmp);
