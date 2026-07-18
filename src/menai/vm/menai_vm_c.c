@@ -1799,13 +1799,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(a) || !IS_MENAI_SYMBOL(b))) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(a))) {
                 vm_err = MENAI_ERR_NOT_SYMBOL_PAIR;
                 goto error;
             }
 
-            bool_store(regs, base + dest,
-                menai_string_equal(menai_symbol_name(a), menai_symbol_name(b)));
+            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(b))) {
+                vm_err = MENAI_ERR_NOT_SYMBOL_PAIR;
+                goto error;
+            }
+
+            bool_store(regs, base + dest, menai_string_equal(menai_symbol_name(a), menai_symbol_name(b)));
             break;
         }
 
@@ -1814,13 +1818,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(a) || !IS_MENAI_SYMBOL(b))) {
+            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(a))) {
                 vm_err = MENAI_ERR_NOT_SYMBOL_PAIR;
                 goto error;
             }
 
-            bool_store(regs, base + dest,
-                !menai_string_equal(menai_symbol_name(a), menai_symbol_name(b)));
+            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(b))) {
+                vm_err = MENAI_ERR_NOT_SYMBOL_PAIR;
+                goto error;
+            }
+
+            bool_store(regs, base + dest, !menai_string_equal(menai_symbol_name(a), menai_symbol_name(b)));
             break;
         }
 
@@ -4600,7 +4608,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(b) || !IS_MENAI_INTEGER(c)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                vm_err = MENAI_ERR_SLICE_INDICES_NOT_INTEGER;
+                goto error;
+            }
+
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(c))) {
                 vm_err = MENAI_ERR_SLICE_INDICES_NOT_INTEGER;
                 goto error;
             }
@@ -6682,7 +6695,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(b) || !IS_MENAI_INTEGER(c)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
+                vm_err = MENAI_ERR_SLICE_INDICES_NOT_INTEGER;
+                goto error;
+            }
+
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(c))) {
                 vm_err = MENAI_ERR_SLICE_INDICES_NOT_INTEGER;
                 goto error;
             }
@@ -7854,7 +7872,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *ra = regs[base + src0];
             MenaiValue *rb = regs[base + src1];
             MenaiValue *rc = regs[base + src2];
-            if (!IS_MENAI_INTEGER(ra) || !IS_MENAI_INTEGER(rb) || !IS_MENAI_INTEGER(rc)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(ra))) {
+                vm_err = MENAI_ERR_RANGE_NOT_INTEGER;
+                goto error;
+            }
+
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(rb))) {
+                vm_err = MENAI_ERR_RANGE_NOT_INTEGER;
+                goto error;
+            }
+
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(rc))) {
                 vm_err = MENAI_ERR_RANGE_NOT_INTEGER;
                 goto error;
             }
