@@ -10,7 +10,9 @@ from menai.menai_vm_errors import _MenaiVMRuntimeError, translate_vm_error
 
 # pylint: disable=no-name-in-module
 from menai.menai_vm_c import execute as _c_vm_execute  # type: ignore[import-not-found]
-from menai.menai_vm_c import cancel as _c_vm_cancel    # type: ignore[import-not-found]
+from menai.menai_vm_c import cancel_flag_alloc as _c_vm_cancel_flag_alloc  # type: ignore[import-not-found]
+from menai.menai_vm_c import cancel_flag_free as _c_vm_cancel_flag_free  # type: ignore[import-not-found]
+from menai.menai_vm_c import cancel_flag_set as _c_vm_cancel_flag_set  # type: ignore[import-not-found]
 
 
 class MenaiVM:
@@ -18,6 +20,11 @@ class MenaiVM:
 
     def __init__(self, validate: bool = True) -> None:
         self.validate_bytecode = validate
+        self._cancel_flag = _c_vm_cancel_flag_alloc()
+
+    def __del__(self) -> None:
+        if hasattr(self, '_cancel_flag'):
+            _c_vm_cancel_flag_free(self._cancel_flag)
 
     def execute(
         self,
@@ -31,7 +38,7 @@ class MenaiVM:
 
         try:
             return cast(Callable[..., MenaiValue], _c_vm_execute)(
-                code, globals_dict or {}, extra_bindings or {}
+                code, globals_dict or {}, extra_bindings or {}, self._cancel_flag
             )
 
         except _MenaiVMRuntimeError as exc:
@@ -51,4 +58,4 @@ class MenaiVM:
         executing the VM.  The flag is checked at the next cancellation
         check point in the C execution loop.
         """
-        _c_vm_cancel()
+        _c_vm_cancel_flag_set(self._cancel_flag)

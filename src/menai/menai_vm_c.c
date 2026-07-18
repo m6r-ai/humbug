@@ -159,15 +159,6 @@ _menai_mul_overflow(long a, long b, long *r) {
 #define MAX_FRAME_DEPTH 1024
 
 /*
- * Cancellation — an atomic flag set by cancel() from any thread.
- *
- * The execute_loop checks this every CANCEL_CHECK_INTERVAL instructions.
- * It is reset to 0 at the start of each execute call so that a stale
- * cancellation from a previous call does not affect the next one.
- */
-extern _menai_atomic_int _cancel_requested;
-
-/*
  * Cancellation check interval.
  */
 #define CANCEL_CHECK_INTERVAL (1 << 20)
@@ -635,17 +626,6 @@ static inline MenaiValue *make_complex(double real, double imag)
 static inline void bool_store(MenaiValue **regs, int slot, int cond)
 {
     menai_reg_set_borrow(regs, slot, cond ? Menai_TRUE : Menai_FALSE);
-}
-
-/*
- * Yield callback — set by the bridge at init time.  When non-NULL, the VM
- * calls it periodically to allow cancellation and signal handling.
- */
-static MenaiVMYieldFn s_yield_fn = NULL;
-
-void menai_vm_set_yield_fn(MenaiVMYieldFn fn)
-{
-    s_yield_fn = fn;
 }
 
 /*
@@ -1251,7 +1231,7 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
  */
 static MenaiValue *
 execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
-             MenaiValue **regs, int max_locals, MenaiVMError *out_error)
+             MenaiValue **regs, int max_locals, MenaiVMError *out_error, int *cancel_flag)
 {
     int vm_err = MENAI_OK;
     const char *vm_user_message = NULL;
@@ -1285,7 +1265,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         if ((++instr_count & (CANCEL_CHECK_INTERVAL - 1)) == 0) {
             instr_count = 0;
 
-            if (s_yield_fn && s_yield_fn() < 0) {
+            if (cancel_flag && _menai_atomic_load((_menai_atomic_int *)cancel_flag)) {
                 vm_err = MENAI_ERR_CANCELLED;
                 goto error;
             }
@@ -8317,14 +8297,34 @@ error:
 }
 
 /*
- * menai_vm_clear_cancel — clear the cancellation flag.
- *
- * Called by the bridge at the start of each Python-initiated execute() call.
+ * menai_vm_cancel_flag_alloc / _free / _set — per-instance cancellation flag
+ * lifecycle.  Each MenaiVM instance allocates its own flag so that
+ * cancelling one evaluation does not affect another.
  */
-void
-menai_vm_clear_cancel(void)
+int *
+menai_vm_cancel_flag_alloc(void)
 {
-    _menai_atomic_store(&_cancel_requested, 0);
+    int *flag = (int *)menai_alloc(sizeof(int));
+    if (flag) {
+        *flag = 0;
+    }
+    return flag;
+}
+
+void
+menai_vm_cancel_flag_free(int *flag)
+{
+    if (flag) {
+        menai_free(flag);
+    }
+}
+
+void
+menai_vm_cancel_flag_set(int *flag)
+{
+    if (flag) {
+        _menai_atomic_store((_menai_atomic_int *)flag, 1);
+    }
 }
 
 /*
@@ -8335,7 +8335,7 @@ menai_vm_clear_cancel(void)
  * the result, or NULL on error.  On error, *out_error is filled in.
  */
 MenaiValue *
-menai_vm_execute_native(MenaiCodeObject *code, const GlobalsTable *globals_gt, MenaiValue *extra_bindings, MenaiVMError *out_error)
+menai_vm_execute_native(MenaiCodeObject *code, const GlobalsTable *globals_gt, MenaiValue *extra_bindings, MenaiVMError *out_error, int *cancel_flag)
 {
     if (out_error) {
         out_error->code = MENAI_OK;
@@ -8386,7 +8386,7 @@ menai_vm_execute_native(MenaiCodeObject *code, const GlobalsTable *globals_gt, M
         return NULL;
     }
 
-    MenaiValue *result = execute_loop(code, &globals, regs, max_locals, out_error);
+    MenaiValue *result = execute_loop(code, &globals, regs, max_locals, out_error, cancel_flag);
 
     menai_regs_free(regs, (size_t)(MAX_FRAME_DEPTH + 1) * max_locals);
     globals_free(&globals);

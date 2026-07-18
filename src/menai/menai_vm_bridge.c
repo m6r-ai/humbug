@@ -44,15 +44,6 @@ MenaiValue *Menai_EMPTY_DICT = NULL;
 MenaiValue *Menai_EMPTY_SET = NULL;
 
 /*
- * Cancellation — an atomic flag set by cancel() from any thread.
- *
- * The execute_loop checks this every CANCEL_CHECK_INTERVAL instructions.
- * It is reset to 0 at the start of each execute call so that a stale
- * cancellation from a previous call does not affect the next one.
- */
-_menai_atomic_int _cancel_requested = 0;
-
-/*
  * Conversion helpers — Python boundary only.
  * These are the sole Menai <-> Python conversion functions for types that
  * have both a native representation and a Python representation.
@@ -1448,7 +1439,7 @@ bridge_globals_get(PyObject *globals_key)
         }
 
         MenaiVMError vm_err;
-        MenaiValue *result = menai_vm_execute_native(prelude_co, NULL, NULL, &vm_err);
+        MenaiValue *result = menai_vm_execute_native(prelude_co, NULL, NULL, &vm_err, NULL);
         menai_code_object_release(prelude_co);
         if (!result) {
             if (!PyErr_Occurred()) {
@@ -1605,8 +1596,9 @@ fail:
 /*
  * menai_vm_c_execute — the Python-callable entry point.
  *
- * Parses arguments, converts the code tree, builds the globals table, and
- * calls menai_vm_execute_native to run the VM.  The result is converted back
+ * Parses arguments (code, globals_dict, extra_bindings, cancel_flag_capsule),
+ * converts the code tree, builds the globals table, and calls
+ * menai_vm_execute_native to run the VM.  The result is converted back
  * to a slow Python MenaiValue before returning.
  */
 static PyObject *
@@ -1615,12 +1607,21 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     PyObject *code;
     PyObject *globals_dict;
     PyObject *extra_bindings = NULL;
+    PyObject *cancel_capsule = NULL;
 
-    /* Clear any stale cancellation from a previous call. */
-    menai_vm_clear_cancel();
-
-    if (!PyArg_ParseTuple(args, "OO|O", &code, &globals_dict, &extra_bindings)) {
+    if (!PyArg_ParseTuple(args, "OO|OO", &code, &globals_dict, &extra_bindings, &cancel_capsule)) {
         return NULL;
+    }
+
+    int *cancel_flag = NULL;
+    if (cancel_capsule && cancel_capsule != Py_None) {
+        cancel_flag = (int *)PyCapsule_GetPointer(cancel_capsule, "menai_cancel_flag");
+        if (!cancel_flag) {
+            return NULL;
+        }
+
+        /* Clear any stale cancellation from a previous call. */
+        *cancel_flag = 0;
     }
 
     MenaiCodeObject *native_code = menai_code_object_from_python(code);
@@ -1656,7 +1657,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
      * cancellation) to run without contention.
      */
     Py_BEGIN_ALLOW_THREADS
-    result = menai_vm_execute_native(native_code, globals_gt, native_extra, &vm_err);
+    result = menai_vm_execute_native(native_code, globals_gt, native_extra, &vm_err, cancel_flag);
     Py_END_ALLOW_THREADS
 
     menai_code_object_release(native_code);
@@ -1673,24 +1674,6 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     PyObject *slow = menai_value_to_slow_value(result);
     menai_release(result);
     return slow;
-}
-
-/*
- * bridge_yield_fn — callback for the VM's periodic cancellation check.
- *
- * Checks the atomic cancellation flag.  The GIL is not held during VM
- * execution (see menai_vm_c_execute), so no GIL release is needed here.
- * The flag is set by cancel() from another thread via an atomic store.
- *
- * Returns 0 to continue execution, -1 to signal cancellation.
- */
-static int
-bridge_yield_fn(void)
-{
-    if (_menai_atomic_load(&_cancel_requested)) {
-        return -1;
-    }
-    return 0;
 }
 
 int
@@ -1789,15 +1772,46 @@ fail:
 }
 
 /*
- * menai_vm_c_cancel — request cancellation of the currently running execute().
+ * Python-callable wrappers for the per-instance cancel flag lifecycle.
  *
- * Thread-safe: may be called from a different thread than the one in execute().
- * The flag is checked at the next cancellation check point in the execution loop.
+ * cancel_flag_alloc() returns a PyCapsule wrapping a heap-allocated int.
+ * cancel_flag_free(capsule) frees it.
+ * cancel_flag_set(capsule) sets it to 1 (non-zero = cancel requested).
+ *
  */
 static PyObject *
-menai_vm_c_cancel(PyObject *self, PyObject *args)
+menai_vm_c_cancel_flag_alloc(PyObject *self, PyObject *args)
 {
-    _menai_atomic_store(&_cancel_requested, 1);
+    int *flag = menai_vm_cancel_flag_alloc();
+    if (!flag) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    return PyCapsule_New(flag, "menai_cancel_flag", NULL);
+}
+
+static PyObject *
+menai_vm_c_cancel_flag_free(PyObject *self, PyObject *capsule)
+{
+    int *flag = (int *)PyCapsule_GetPointer(capsule, "menai_cancel_flag");
+    if (!flag) {
+        return NULL;
+    }
+
+    menai_vm_cancel_flag_free(flag);
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+menai_vm_c_cancel_flag_set(PyObject *self, PyObject *capsule)
+{
+    int *flag = (int *)PyCapsule_GetPointer(capsule, "menai_cancel_flag");
+    if (!flag) {
+        return NULL;
+    }
+
+    menai_vm_cancel_flag_set(flag);
     Py_RETURN_NONE;
 }
 
@@ -1812,10 +1826,22 @@ static PyMethodDef menai_vm_c_methods[] = {
         "Execute a Menai CodeObject and return the result."
     },
     {
-        "cancel",
-        menai_vm_c_cancel,
+        "cancel_flag_alloc",
+        menai_vm_c_cancel_flag_alloc,
         METH_NOARGS,
-        "Request cancellation of the currently running execute() call."
+        "Allocate a per-instance cancellation flag and return it as a PyCapsule."
+    },
+    {
+        "cancel_flag_free",
+        menai_vm_c_cancel_flag_free,
+        METH_O,
+        "Free a cancellation flag allocated by cancel_flag_alloc."
+    },
+    {
+        "cancel_flag_set",
+        menai_vm_c_cancel_flag_set,
+        METH_O,
+        "Set the cancellation flag to request cancellation of a running execute()."
     },
     { NULL, NULL, 0, NULL }
 };
@@ -1853,8 +1879,6 @@ menai_vm_shim_init(void)
         Py_XDECREF(_VMRuntimeError_type);
         return -1;
     }
-
-    menai_vm_set_yield_fn(bridge_yield_fn);
 
     return 0;
 }

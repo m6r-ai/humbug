@@ -1009,21 +1009,17 @@ int globals_build_from_arrays(GlobalsTable *gt, const char **names,
 MenaiValue *menai_vm_execute_native(MenaiCodeObject *code,
                                     const GlobalsTable *globals,
                                     MenaiValue *extra_bindings,
-                                    MenaiVMError *out_error);
-
-void menai_vm_clear_cancel(void);
+                                    MenaiVMError *out_error,
+                                    int *cancel_flag);
 
 /*
- * MenaiVMYieldFn — bridge-provided callback for the VM's cancellation check.
+ * menai_vm_cancel_flag_* — per-instance cancellation flag lifecycle.
  *
- * Called periodically by the VM during execution.  The bridge implementation
- * should release the GIL briefly, yield to the OS scheduler, check the atomic
- * cancellation flag, and check for pending Python signals.
- *
- * Returns 0 to continue execution, -1 to signal cancellation or signal
- * interruption (the VM sets MENAI_ERR_CANCELLED and jumps to the error label).
+ * Each MenaiVM instance allocates its own flag so that cancelling one
+ * evaluation does not affect another.
  */
-typedef int (*MenaiVMYieldFn)(void);
-void menai_vm_set_yield_fn(MenaiVMYieldFn fn);
+int *menai_vm_cancel_flag_alloc(void);
+void menai_vm_cancel_flag_free(int *flag);
+void menai_vm_cancel_flag_set(int *flag);
 
 #endif /* MENAI_VM_C_H */
