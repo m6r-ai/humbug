@@ -180,7 +180,6 @@ class FileSystemAITool(AITool):
                     type="string",
                     description=(
                         "Menai expression for the transform_file operation. "
-                        "MUST use Menai syntax. "
                         "May reference 'input-text' (full file content as a string) "
                         "and 'input-lines' (file lines as a list of strings). "
                         "Must evaluate to a string (new file content) or a list of strings (new lines)."
@@ -393,7 +392,7 @@ class FileSystemAITool(AITool):
                     "It must return a string or a list of strings. "
                     "A unified diff is shown for user approval before any write occurs. "
                     "If dry_run is True, returns the diff without requesting authorisation or writing anything. "
-                    "You must call `help` with `get_help` for the menai tool before using this operation."
+                    "program MUST use Menai syntax."
                 )
             ),
         }

@@ -121,7 +121,6 @@ class EditorAITool(AITool):
                     type="string",
                     description=(
                         "Menai expression for the transform operation. "
-                        "MUST use Menai syntax. "
                         "May reference 'input-text' (full buffer content as a string) "
                         "and 'input-lines' (buffer lines as a list of strings). "
                         "Must evaluate to a string (new content) or a list of strings (new lines). "
@@ -244,14 +243,13 @@ class EditorAITool(AITool):
                 allowed_parameters={"tab_id", "program", "dry_run"},
                 required_parameters={"tab_id", "program"},
                 description=(
-                    "Apply a Menai program to the full editor buffer content and write the result "
+                    "Use a Menai expression to modify the full editor buffer content and write the result "
                     "back to the buffer. The program may reference 'input-text' (full content as a "
                     "string) and 'input-lines' (content split on newlines as a list of strings). "
                     "It must return a string or a list of strings. "
-                    "A unified diff is shown for user approval before the buffer is modified. "
                     "If dry_run is True, returns the diff without requesting authorisation or applying anything. "
                     "Use save_file afterward to persist the changes. "
-                    "You must call `help` with `get_help` for the menai tool before using this operation."
+                    "program MUST use Menai syntax."
                 )
             ),
         }
@@ -769,7 +767,7 @@ class EditorAITool(AITool):
         """
         if not hasattr(requester_ref, "menai_help_read") or not requester_ref.menai_help_read():
             raise AIToolExecutionError(
-                "You must read the Menai language documentation before using this tool. "
+                "You must read the Menai language documentation before using this operation. "
                 "Call the help tool with operation 'get_help' and tool_name 'menai' to load it."
             )
 
