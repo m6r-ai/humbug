@@ -643,7 +643,10 @@ static inline void bool_store(MenaiValue **regs, int slot, int cond)
  */
 static MenaiVMYieldFn s_yield_fn = NULL;
 
-void menai_vm_set_yield_fn(MenaiVMYieldFn fn) { s_yield_fn = fn; }
+void menai_vm_set_yield_fn(MenaiVMYieldFn fn)
+{
+    s_yield_fn = fn;
+}
 
 /*
  * parse_complex_string — parse a null-terminated ASCII string as a complex
@@ -841,6 +844,7 @@ globals_free(GlobalsTable *gt)
         if (gt->owns_names) {
             free((char *)gt->entries[i].name);
         }
+
         menai_xrelease(gt->entries[i].value);
     }
 
@@ -915,12 +919,6 @@ globals_alloc_slots(GlobalsTable *gt, ssize_t n)
 
     return 0;
 }
-
-/*
- * Forward declaration — execute_loop is defined later in this file.
- */
-static MenaiValue *execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
-                                MenaiValue **regs, int max_locals, MenaiVMError *out_error);
 
 /*
  * globals_build — build a GlobalsTable from the cached globals GlobalsTable.
@@ -1010,8 +1008,7 @@ globals_build_from_dict(GlobalsTable *gt, MenaiValue *dict_val)
  * Returns 0 on success, MENAI_ERR_* on error.
  */
 int
-globals_build_from_arrays(GlobalsTable *gt, const char **names,
-                          MenaiValue **values, ssize_t n)
+globals_build_from_arrays(GlobalsTable *gt, const char **names, MenaiValue **values, ssize_t n)
 {
     gt->slots = NULL;
     gt->entries = NULL;
@@ -1042,7 +1039,30 @@ globals_build_from_arrays(GlobalsTable *gt, const char **names,
     return 0;
 }
 
-static MenaiValue *globals_lookup_h(const GlobalsTable *gt, const char *name, hash_t h);
+static MenaiValue *
+globals_lookup_h(const GlobalsTable *gt, const char *name, hash_t h)
+{
+    if (gt->slot_count == 0) {
+        return NULL;
+    }
+
+    ssize_t mask = gt->slot_count - 1;
+    uhash_t perturb = (uhash_t)h;
+    ssize_t slot = (ssize_t)(perturb & (uhash_t)mask);
+    for (;;) {
+        GlobalsSlot *s = &gt->slots[slot];
+        if (s->name == NULL) {
+            return NULL;
+        }
+
+        if (s->hash == h && strcmp(s->name, name) == 0) {
+            return s->value;
+        }
+
+        perturb >>= 5;
+        slot = (ssize_t)((5 * (uhash_t)slot + 1 + perturb) & (uhash_t)mask);
+    }
+}
 
 /*
  * globals_merge_extra_native — merge a native MenaiDict of extra bindings
@@ -1074,14 +1094,15 @@ globals_merge_extra_native(GlobalsTable *gt, MenaiValue *extra_dict_val)
             if (name_copy == NULL) {
                 return MENAI_ERR_NOMEM;
             }
+
             gt->entries[i].name = name_copy;
         }
+
         gt->owns_names = 1;
     }
 
     ssize_t new_count = gt->count + nextra;
-    GlobalsEntry *new_entries = (GlobalsEntry *)realloc(gt->entries,
-        new_count * sizeof(GlobalsEntry));
+    GlobalsEntry *new_entries = (GlobalsEntry *)realloc(gt->entries, new_count * sizeof(GlobalsEntry));
     if (new_entries == NULL) {
         return MENAI_ERR_NOMEM;
     }
@@ -1107,6 +1128,7 @@ globals_merge_extra_native(GlobalsTable *gt, MenaiValue *extra_dict_val)
     if (gt->slots == NULL) {
         return MENAI_ERR_NOMEM;
     }
+
     gt->slot_count = sc;
 
     for (ssize_t i = 0; i < gt->count; i++) {
@@ -1165,31 +1187,6 @@ globals_merge_extra_native(GlobalsTable *gt, MenaiValue *extra_dict_val)
     }
 
     return 0;
-}
-
-static MenaiValue *
-globals_lookup_h(const GlobalsTable *gt, const char *name, hash_t h)
-{
-    if (gt->slot_count == 0) {
-        return NULL;
-    }
-
-    ssize_t mask = gt->slot_count - 1;
-    uhash_t perturb = (uhash_t)h;
-    ssize_t slot = (ssize_t)(perturb & (uhash_t)mask);
-    for (;;) {
-        GlobalsSlot *s = &gt->slots[slot];
-        if (s->name == NULL) {
-            return NULL;
-        }
-
-        if (s->hash == h && strcmp(s->name, name) == 0) {
-            return s->value;
-        }
-
-        perturb >>= 5;
-        slot = (ssize_t)((5 * (uhash_t)slot + 1 + perturb) & (uhash_t)mask);
-    }
 }
 
 /*
