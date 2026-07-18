@@ -1326,3 +1326,153 @@ class TestBytesUleb128RoundTrip:
               ((val next) val))
         '''
         assert menai.evaluate(expr) == value
+
+
+class TestIntegerToLongOverflow:
+    """Test that bytes operations correctly handle MenaiInteger values too large for a C long.
+
+    The VM's integer_to_long helper silently discards overflow when a MenaiInteger
+    holds a bignum exceeding LONG_MAX.  These tests verify that every bytes operation
+    that extracts an integer value raises a proper error instead of returning
+    garbage or silently truncating.
+    """
+
+    BIG_POS = 9223372036854775808  # 2^63 — first value that does not fit in a C long
+    BIG_NEG = -9223372036854775809  # -(2^63) - 1
+    EMPTY = '(string-hex->bytes "")'
+
+
+class TestIntegerToLongOverflowValues(TestIntegerToLongOverflow):
+    """Value operands that are too large for a C long must raise value-out-of-range."""
+
+    def test_bytes_append_u8_bigint(self, menai):
+        """bytes-append-u8 rejects a bigint value that exceeds the 0–255 range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-append-u8 {self.EMPTY} {self.BIG_POS})')
+
+    def test_bytes_append_i8_bigint(self, menai):
+        """bytes-append-i8 rejects a bigint value that exceeds the signed 8-bit range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-append-i8 {self.EMPTY} {self.BIG_POS})')
+
+    def test_bytes_append_i16_le_bigint(self, menai):
+        """bytes-append-i16-le rejects a bigint value that exceeds the signed 16-bit range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-append-i16-le {self.EMPTY} {self.BIG_POS})')
+
+    def test_bytes_append_i16_be_bigint(self, menai):
+        """bytes-append-i16-be rejects a bigint value that exceeds the signed 16-bit range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-append-i16-be {self.EMPTY} {self.BIG_POS})')
+
+    def test_bytes_append_i32_le_bigint(self, menai):
+        """bytes-append-i32-le rejects a bigint value that exceeds the signed 32-bit range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-append-i32-le {self.EMPTY} {self.BIG_POS})')
+
+    def test_bytes_append_i32_be_bigint(self, menai):
+        """bytes-append-i32-be rejects a bigint value that exceeds the signed 32-bit range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-append-i32-be {self.EMPTY} {self.BIG_POS})')
+
+    def test_bytes_append_i64_le_bigint(self, menai):
+        """bytes-append-i64-le rejects a bigint value that exceeds the signed 64-bit range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-append-i64-le {self.EMPTY} {self.BIG_POS})')
+
+    def test_bytes_append_i64_be_bigint(self, menai):
+        """bytes-append-i64-be rejects a bigint value that exceeds the signed 64-bit range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-append-i64-be {self.EMPTY} {self.BIG_POS})')
+
+    def test_bytes_append_sleb128_bigint(self, menai):
+        """bytes-append-sleb128 rejects a bigint value that exceeds C long range."""
+        with pytest.raises((MenaiEvalError, OverflowError), match="overflow"):
+            menai.evaluate(f'(bytes-append-sleb128 {self.EMPTY} {self.BIG_POS})')
+
+    def test_list_to_bytes_bigint(self, menai):
+        """list->bytes rejects a bigint element that exceeds the 0–255 range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(list->bytes (list {self.BIG_POS}))')
+
+    def test_bytes_index_int_bigint(self, menai):
+        """bytes-index-int rejects a bigint byte value that exceeds the 0–255 range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-index-int {self.BIG_POS} {self.EMPTY})')
+
+    def test_bytes_write_i16_le_bigint(self, menai):
+        """bytes-write-i16-le rejects a bigint value that exceeds the signed 16-bit range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-write-i16-le (string-hex->bytes "0000") 0 {self.BIG_POS})')
+
+    def test_bytes_write_i64_le_bigint(self, menai):
+        """bytes-write-i64-le rejects a bigint value that exceeds the signed 64-bit range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-write-i64-le (string-hex->bytes "0000000000000000") 0 {self.BIG_POS})')
+
+    def test_bytes_append_i8_bigint_negative(self, menai):
+        """bytes-append-i8 rejects a negative bigint value that exceeds the signed 8-bit range."""
+        with pytest.raises(MenaiEvalError, match="out of range"):
+            menai.evaluate(f'(bytes-append-i8 {self.EMPTY} {self.BIG_NEG})')
+
+    def test_bytes_append_sleb128_bigint_negative(self, menai):
+        """bytes-append-sleb128 rejects a negative bigint value that exceeds C long range."""
+        with pytest.raises((MenaiEvalError, OverflowError), match="overflow"):
+            menai.evaluate(f'(bytes-append-sleb128 {self.EMPTY} {self.BIG_NEG})')
+
+
+class TestIntegerToLongOverflowOffsets(TestIntegerToLongOverflow):
+    """Offset operands that are too large for a C long must raise a proper error."""
+
+    FOUR_BYTES = '(string-hex->bytes "01020304")'
+    EIGHT_BYTES = '(string-hex->bytes "0102030405060708")'
+
+    def test_bytes_ref_bigint_offset(self, menai):
+        """bytes-ref rejects a bigint offset that does not fit in a C long."""
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(f'(bytes-ref {self.FOUR_BYTES} {self.BIG_POS})')
+
+    def test_bytes_slice_bigint_start(self, menai):
+        """bytes-slice rejects a bigint start index that does not fit in a C long."""
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(f'(bytes-slice {self.FOUR_BYTES} {self.BIG_POS} 4)')
+
+    def test_bytes_slice_bigint_end(self, menai):
+        """bytes-slice rejects a bigint end index that does not fit in a C long."""
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(f'(bytes-slice {self.FOUR_BYTES} 0 {self.BIG_POS})')
+
+    def test_bytes_read_u8_bigint_offset(self, menai):
+        """bytes-read-u8 rejects a bigint offset that does not fit in a C long."""
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(f'(bytes-read-u8 {self.FOUR_BYTES} {self.BIG_POS})')
+
+    def test_bytes_read_i8_bigint_offset(self, menai):
+        """bytes-read-i8 rejects a bigint offset that does not fit in a C long."""
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(f'(bytes-read-i8 {self.FOUR_BYTES} {self.BIG_POS})')
+
+    def test_bytes_read_u16_le_bigint_offset(self, menai):
+        """bytes-read-u16-le rejects a bigint offset that does not fit in a C long."""
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(f'(bytes-read-u16-le {self.FOUR_BYTES} {self.BIG_POS})')
+
+    def test_bytes_read_u64_le_bigint_offset(self, menai):
+        """bytes-read-u64-le rejects a bigint offset that does not fit in a C long."""
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(f'(bytes-read-u64-le {self.EIGHT_BYTES} {self.BIG_POS})')
+
+    def test_bytes_write_u16_le_bigint_offset(self, menai):
+        """bytes-write-u16-le rejects a bigint offset that does not fit in a C long."""
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(f'(bytes-write-u16-le {self.FOUR_BYTES} {self.BIG_POS} 1)')
+
+    def test_bytes_read_uleb128_bigint_offset(self, menai):
+        """bytes-read-uleb128 rejects a bigint offset that does not fit in a C long."""
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(f'(bytes-read-uleb128 {self.FOUR_BYTES} {self.BIG_POS})')
+
+    def test_bytes_read_sleb128_bigint_offset(self, menai):
+        """bytes-read-sleb128 rejects a bigint offset that does not fit in a C long."""
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(f'(bytes-read-sleb128 {self.FOUR_BYTES} {self.BIG_POS})')

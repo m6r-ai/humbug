@@ -567,20 +567,24 @@ static inline MenaiValue *make_integer_from_long(long n)
 }
 
 /*
- * integer_to_long — extract a C long from a MenaiInteger (assumes valid).
+ * integer_to_long — extract a C long from a MenaiInteger.
+ * Returns 0 on success, -1 on error (value too large for a C long).
  * Caller must ensure val is a MenaiInteger.
  */
-static inline long
-integer_to_long(MenaiValue *val)
+static inline int
+integer_to_long(MenaiValue *val, long *out)
 {
     MenaiInteger *ib = (MenaiInteger *)val;
     if (!ib->is_big) {
-        return ib->small;
+        *out = ib->small;
+        return 0;
     }
 
-    long result;
-    menai_bigint_to_long(&ib->big, &result);
-    return result;
+    if (menai_bigint_to_long(&ib->big, out) < 0) {
+        return -1;
+    }
+
+    return 0;
 }
 
 /*
@@ -604,13 +608,20 @@ integer_to_unsigned_long_long(MenaiValue *val, unsigned long long *out)
 }
 
 /*
- * integer_to_ssize_t — extract a ssize_t from a MenaiInteger (assumes valid).
+ * integer_to_ssize_t — extract a ssize_t from a MenaiInteger.
+ * Returns 0 on success, -1 on error (value too large for a ssize_t).
  * Caller must ensure val is a MenaiInteger.
  */
-static inline ssize_t
-integer_to_ssize_t(MenaiValue *val)
+static inline int
+integer_to_ssize_t(MenaiValue *val, ssize_t *out)
 {
-    return (ssize_t)integer_to_long(val);
+    long tmp;
+    if (integer_to_long(val, &tmp) < 0) {
+        return -1;
+    }
+
+    *out = (ssize_t)tmp;
+    return 0;
 }
 
 static inline MenaiValue *make_float(double v)
@@ -5061,7 +5072,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            ssize_t offset = integer_to_ssize_t(idx_val);
+            ssize_t offset;
+            if (integer_to_ssize_t(idx_val, &offset) < 0) {
+                vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
+                goto error;
+            }
+
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
@@ -5092,7 +5108,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            long val = integer_to_long(v);
+            long val;
+            if (integer_to_long(v, &val) < 0) {
+                vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
+                goto error;
+            }
+
             if (val < 0 || val > 255) {
                 vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
                 goto error;
@@ -5130,7 +5151,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     goto error;
                 }
 
-                long val = integer_to_long(elem);
+                long val;
+                if (integer_to_long(elem, &val) < 0) {
+                    vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
+                    menai_release(result);
+                    goto error;
+                }
+
                 if (val < 0 || val > 255) {
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
                     menai_release(result);
@@ -5167,8 +5194,18 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             ssize_t blen = menai_bytes_length(b);
-            ssize_t start = integer_to_ssize_t(start_val);
-            ssize_t end = integer_to_ssize_t(end_val);
+            ssize_t start;
+            if (integer_to_ssize_t(start_val, &start) < 0) {
+                vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
+                goto error;
+            }
+
+            ssize_t end;
+            if (integer_to_ssize_t(end_val, &end) < 0) {
+                vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
+                goto error;
+            }
+
             if (start < 0) {
                 start = 0;
             }
@@ -5540,7 +5577,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            long target = integer_to_long(byte_val);
+            long target;
+            if (integer_to_long(byte_val, &target) < 0) {
+                vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
+                goto error;
+            }
+
             if (target < 0 || target > 255) {
                 vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
                 goto error;
@@ -5660,7 +5702,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            ssize_t offset = integer_to_ssize_t(off_val);
+            ssize_t offset;
+            if (integer_to_ssize_t(off_val, &offset) < 0) {
+                vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
+                goto error;
+            }
+
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
@@ -5691,7 +5738,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            ssize_t offset = integer_to_ssize_t(off_val);
+            ssize_t offset;
+            if (integer_to_ssize_t(off_val, &offset) < 0) {
+                vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
+                goto error;
+            }
+
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
@@ -5721,16 +5773,24 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 vm_err = MENAI_ERR_TYPE_MISMATCH; \
                 goto error; \
             } \
+\
             if (!IS_MENAI_INTEGER(off_val)) { \
                 vm_err = MENAI_ERR_OFFSET_NOT_INTEGER; \
                 goto error; \
             } \
-            ssize_t offset = integer_to_ssize_t(off_val); \
+\
+            ssize_t offset; \
+            if (integer_to_ssize_t(off_val, &offset) < 0) { \
+                vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS; \
+                goto error; \
+            } \
+\
             ssize_t blen = menai_bytes_length(b); \
             if (offset < 0 || offset + (width) > blen) { \
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS; \
                 goto error; \
             } \
+\
             const uint8_t *d = menai_bytes_data(b) + offset; \
             unsigned long uval = 0; \
             if (le) { \
@@ -5742,6 +5802,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     uval = (uval << 8) | d[_i]; \
                 } \
             } \
+\
             if (is_signed) { \
                 unsigned long sign_bit = 1UL << ((width) * 8 - 1); \
                 long sval; \
@@ -5754,10 +5815,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 } else { \
                     sval = (long)uval; \
                 } \
+\
                 MenaiValue *_r = menai_integer_from_long(sval); \
                 if (_r == NULL) { \
                     goto error; \
                 } \
+\
                 menai_reg_set_own(regs, base + dest, _r); \
             } else { \
                 if ((width) == sizeof(unsigned long) && (long)uval < 0) { \
@@ -5768,16 +5831,19 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     if (vm_err < 0) { \
                         goto error; \
                     } \
+\
                     MenaiValue *_r = menai_integer_from_bigint(big); \
                     if (_r == NULL) { \
                         goto error; \
                     } \
+\
                     menai_reg_set_own(regs, base + dest, _r); \
                 } else { \
                     MenaiValue *_r = menai_integer_from_long((long)uval); \
                     if (_r == NULL) { \
                         goto error; \
                     } \
+\
                     menai_reg_set_own(regs, base + dest, _r); \
                 } \
             } \
@@ -5819,13 +5885,19 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 vm_err = MENAI_ERR_TYPE_MISMATCH; \
                 goto error; \
             } \
+\
             if (!IS_MENAI_INTEGER(v)) { \
                 vm_err = MENAI_ERR_VALUE_NOT_INTEGER; \
                 goto error; \
             } \
+\
             long val; \
             if (is_signed) { \
-                val = integer_to_long(v); \
+                if (integer_to_long(v, &val) < 0) { \
+                    vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
+                    goto error; \
+                } \
+\
                 if ((width) < (int)sizeof(long)) { \
                    long max_val = (long)((1UL << ((width) * 8 - 1)) - 1); \
                    if (val < -max_val - 1 || val > max_val) { \
@@ -5838,6 +5910,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 if (_r == NULL) { \
                     goto error; \
                 } \
+\
                 menai_reg_set_own(regs, base + dest, _r); \
             } else { \
                 unsigned long long uval_ull; \
@@ -5845,14 +5918,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
+\
                 if ((width) < (int)sizeof(unsigned long long) && uval_ull > ((1ULL << ((width) * 8)) - 1)) { \
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
+\
                 MenaiValue *_r = menai_bytes_append_multi(b, (unsigned long)uval_ull, (width), le); \
                 if (_r == NULL) { \
                     goto error; \
                 } \
+\
                 menai_reg_set_own(regs, base + dest, _r); \
             } \
             break; \
@@ -5895,36 +5971,51 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 vm_err = MENAI_ERR_TYPE_MISMATCH; \
                 goto error; \
             } \
+\
             if (!IS_MENAI_INTEGER(off_val)) { \
                 vm_err = MENAI_ERR_OFFSET_NOT_INTEGER; \
                 goto error; \
             } \
+\
             if (!IS_MENAI_INTEGER(v)) { \
                 vm_err = MENAI_ERR_VALUE_NOT_INTEGER; \
                 goto error; \
             } \
-            ssize_t offset = integer_to_ssize_t(off_val); \
+\
+            ssize_t offset; \
+            if (integer_to_ssize_t(off_val, &offset) < 0) { \
+                vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS; \
+                goto error; \
+            } \
+\
             ssize_t blen = menai_bytes_length(b); \
             if (offset < 0 || offset + (width) > blen) { \
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS; \
                 goto error; \
             } \
+\
             unsigned long long uval_ull; \
             if (is_signed) { \
-                long val = integer_to_long(v); \
-               if ((width) < (int)sizeof(long)) { \
-                   long max_val = (long)((1UL << ((width) * 8 - 1)) - 1); \
-                   if (val < -max_val - 1 || val > max_val) { \
-                       vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
-                       goto error; \
-                   } \
-               } \
+                long val; \
+                if (integer_to_long(v, &val) < 0) { \
+                    vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
+                    goto error; \
+                } \
+\
+                if ((width) < (int)sizeof(long)) { \
+                    long max_val = (long)((1UL << ((width) * 8 - 1)) - 1); \
+                    if (val < -max_val - 1 || val > max_val) { \
+                        vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
+                        goto error; \
+                    } \
+                } \
                 uval_ull = (unsigned long long)(unsigned long)val; \
             } else { \
                 if (integer_to_unsigned_long_long(v, &uval_ull) < 0) { \
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
+\
                 if ((width) < (int)sizeof(unsigned long long) && \
                         uval_ull > ((1ULL << ((width) * 8)) - 1)) { \
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
@@ -5935,6 +6026,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (_r == NULL) { \
                 goto error; \
             } \
+\
             menai_reg_set_own(regs, base + dest, _r); \
             break; \
         }
@@ -5978,7 +6070,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            ssize_t offset = integer_to_ssize_t(off_val);
+            ssize_t offset;
+            if (integer_to_ssize_t(off_val, &offset) < 0) {
+                vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
+                goto error;
+            }
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
@@ -6106,7 +6202,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            ssize_t offset = integer_to_ssize_t(off_val);
+            ssize_t offset;
+            if (integer_to_ssize_t(off_val, &offset) < 0) {
+                vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
+                goto error;
+            }
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
@@ -6177,7 +6277,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            long val = integer_to_long(v);
+            long val;
+            if (integer_to_long(v, &val) < 0) {
+                vm_err = MENAI_ERR_OVERFLOW;
+                goto error;
+            }
             uint8_t buf[10];
             int nbytes = 0;
             int more = 1;
