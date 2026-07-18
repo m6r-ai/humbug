@@ -13,13 +13,13 @@ PYTHON := $(shell test -f venv/bin/python && echo venv/bin/python || echo python
 #
 # Extension entry point — the single .c file that defines the Python module.
 #
-SO_CORE_SOURCES := src/menai/menai_vm_c.c
+SO_CORE_SOURCES := src/menai/vm/menai_vm_c.c
 
 #
 # All C source and header files in the menai VM directory — any change to any
 # of them triggers a rebuild.
 #
-C_SOURCES := $(wildcard src/menai/menai_vm_*.[ch])
+C_SOURCES := $(wildcard src/menai/vm/menai_vm_*.[ch])
 
 #
 # Derive the expected .so name from the Python ABI tag.
@@ -27,7 +27,7 @@ C_SOURCES := $(wildcard src/menai/menai_vm_*.[ch])
 EXT_SUFFIX := $(shell $(PYTHON) -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
 
 SO_FILES := \
-	$(patsubst src/menai/%.c, src/menai/%$(EXT_SUFFIX), $(SO_CORE_SOURCES))
+	$(patsubst src/menai/vm/%.c, src/menai/vm/%$(EXT_SUFFIX), $(SO_CORE_SOURCES))
 
 #
 # Build all extensions in-place.

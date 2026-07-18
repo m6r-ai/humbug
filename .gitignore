@@ -28,9 +28,9 @@
 /tools/aifpl_benchmark/benchmark_results.json
 /tools/aifpl_bytecode_analyzer/optimization_report.md
 
-# Ignore Cython build artefacts (compiled per-machine, not source)
-src/menai/*.so
-src/menai/*.pyd
+# Ignore binary builds
+src/menai/vm/*.so
+src/menai/vm/*.pyd
 
 # Ignore PDF and DOCX files
 *.pdf
