@@ -170,7 +170,7 @@ extern _menai_atomic_int _cancel_requested;
 /*
  * Cancellation check interval.
  */
-#define CANCEL_CHECK_INTERVAL (1 << 17)
+#define CANCEL_CHECK_INTERVAL (1 << 20)
 
 /*
  * Instruction encoding constants — must match menai_bytecode.py

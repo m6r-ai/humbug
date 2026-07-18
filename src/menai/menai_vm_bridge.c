@@ -16,6 +16,7 @@
 
 #ifndef _MSC_VER
 #include <unistd.h>
+#include <sched.h>
 #else
 #include <windows.h>
 #endif
@@ -1679,7 +1680,7 @@ bridge_yield_fn(void)
 {
 #ifndef _MSC_VER
     Py_BEGIN_ALLOW_THREADS
-    usleep(100);
+    sched_yield();
     Py_END_ALLOW_THREADS
 #else
     Py_BEGIN_ALLOW_THREADS
