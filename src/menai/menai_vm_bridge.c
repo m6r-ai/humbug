@@ -16,7 +16,6 @@
 
 #ifndef _MSC_VER
 #include <unistd.h>
-#include <sched.h>
 #else
 #include <windows.h>
 #endif
@@ -1648,7 +1647,17 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     }
 
     MenaiVMError vm_err;
-    MenaiValue *result = menai_vm_execute_native(native_code, globals_gt, native_extra, &vm_err);
+    MenaiValue *result;
+
+    /*
+     * Release the GIL for the duration of VM execution.  The execute loop is
+     * pure C operating on Menai values — it does not touch any Python objects.
+     * This allows other Python threads (e.g. the event loop requesting
+     * cancellation) to run without contention.
+     */
+    Py_BEGIN_ALLOW_THREADS
+    result = menai_vm_execute_native(native_code, globals_gt, native_extra, &vm_err);
+    Py_END_ALLOW_THREADS
 
     menai_code_object_release(native_code);
     menai_xrelease(native_extra);
@@ -1669,33 +1678,18 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
 /*
  * bridge_yield_fn — callback for the VM's periodic cancellation check.
  *
- * Releases the GIL briefly, yields to the OS scheduler, checks the atomic
- * cancellation flag, and checks for pending Python signals.
+ * Checks the atomic cancellation flag.  The GIL is not held during VM
+ * execution (see menai_vm_c_execute), so no GIL release is needed here.
+ * The flag is set by cancel() from another thread via an atomic store.
  *
- * Returns 0 to continue execution, -1 to signal cancellation or signal
- * interruption.
+ * Returns 0 to continue execution, -1 to signal cancellation.
  */
 static int
 bridge_yield_fn(void)
 {
-#ifndef _MSC_VER
-    Py_BEGIN_ALLOW_THREADS
-    sched_yield();
-    Py_END_ALLOW_THREADS
-#else
-    Py_BEGIN_ALLOW_THREADS
-    SwitchToThread();
-    Py_END_ALLOW_THREADS
-#endif
-
     if (_menai_atomic_load(&_cancel_requested)) {
         return -1;
     }
-
-    if (PyErr_CheckSignals() < 0) {
-        return -1;
-    }
-
     return 0;
 }
 
