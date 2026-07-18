@@ -6149,6 +6149,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_release(next_off);
                 goto error;
             }
+
             MenaiValue **elems = menai_list_elements(lst);
             elems[0] = val_result;
             elems[1] = next_off;
@@ -6168,10 +6169,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
+
             if (!IS_MENAI_INTEGER(v)) {
                 vm_err = MENAI_ERR_VALUE_NOT_INTEGER;
                 goto error;
             }
+
             long val = integer_to_long(v);
             uint8_t buf[10];
             int nbytes = 0;
