@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import cast
 
-from menai.menai_bytecode import CodeObject
+from menai.bytecode.menai_bytecode import CodeObject
 from menai.menai_value import MenaiValue
 from menai.vm.menai_vm_bytecode_validator import validate_bytecode
 from menai.vm.menai_vm_errors import _MenaiVMRuntimeError, translate_vm_error

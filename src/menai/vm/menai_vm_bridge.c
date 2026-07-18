@@ -1746,7 +1746,7 @@ menai_vm_bridge_init(void)
 
     /* Fetch the CodeObject type — used by bridge_globals_get to identify
      * prelude CodeObjects. */
-    PyObject *bytecode_mod = PyImport_ImportModule("menai.menai_bytecode");
+    PyObject *bytecode_mod = PyImport_ImportModule("menai.bytecode.menai_bytecode");
     if (!bytecode_mod) {
         return 0;
     }

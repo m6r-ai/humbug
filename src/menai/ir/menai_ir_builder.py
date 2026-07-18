@@ -3,15 +3,15 @@
 from typing import cast
 from dataclasses import dataclass, field
 
-from menai.menai_bytecode import BUILTIN_OPCODE_MAP
+from menai.bytecode.menai_bytecode import BUILTIN_OPCODE_MAP
 from menai.menai_error import MenaiEvalError
-from menai.menai_ir import (
+from menai.ir.menai_ir import (
     MenaiIRExpr, MenaiIRConstant, MenaiIRVariable, MenaiIRIf, MenaiIRLet, MenaiIRLetrec,
     MenaiIRLambda, MenaiIRCall, MenaiIRQuote, MenaiIRError, MenaiIREmptyList,
     MenaiIRReturn, MenaiIRBuildList, MenaiIRBuildDict, MenaiIRBuildSet,
     MenaiIRBuildStruct
 )
-from menai.menai_ast import (
+from menai.ast.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
     MenaiASTString, MenaiASTBoolean, MenaiASTNone, MenaiASTSymbol, MenaiASTList, MenaiASTListLiteral,
     MenaiASTDict, MenaiASTSet, MenaiASTStruct, MenaiASTBytes,

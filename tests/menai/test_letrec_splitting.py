@@ -242,11 +242,11 @@ class TestLetrecSplittingStructure:
 
     def _desugar(self, source: str):
         """Helper: lex, parse, analyse, then desugar the source."""
-        from menai.menai_lexer import MenaiLexer
-        from menai.menai_ast_builder import MenaiASTBuilder
-        from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
-        from menai.menai_ast_desugarer import MenaiASTDesugarer
-        from menai.menai_ast import MenaiASTList, MenaiASTSymbol
+        from menai.ast.menai_lexer import MenaiLexer
+        from menai.ast.menai_ast_builder import MenaiASTBuilder
+        from menai.ast.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
+        from menai.ast.menai_ast_desugarer import MenaiASTDesugarer
+        from menai.ast.menai_ast import MenaiASTList, MenaiASTSymbol
 
         tokens = MenaiLexer().lex(source)
         ast = MenaiASTBuilder().build(tokens, source)
@@ -255,7 +255,7 @@ class TestLetrecSplittingStructure:
 
     def _head_symbol(self, node) -> str:
         """Return the name of the first element of a list node."""
-        from menai.menai_ast import MenaiASTList, MenaiASTSymbol
+        from menai.ast.menai_ast import MenaiASTList, MenaiASTSymbol
         assert isinstance(node, MenaiASTList)
         assert isinstance(node.elements[0], MenaiASTSymbol)
         return node.elements[0].name
@@ -264,7 +264,7 @@ class TestLetrecSplittingStructure:
         """
         A letrec with only mutually recursive lambdas must remain a letrec.
         """
-        from menai.menai_ast import MenaiASTList, MenaiASTSymbol
+        from menai.ast.menai_ast import MenaiASTList, MenaiASTSymbol
 
         result = self._desugar('''
         (letrec ((even? (lambda (n) (if (integer=? n 0) #t (odd?  (integer- n 1)))))
@@ -278,7 +278,7 @@ class TestLetrecSplittingStructure:
         """
         A single non-recursive lambda binding must become a let.
         """
-        from menai.menai_ast import MenaiASTList, MenaiASTSymbol
+        from menai.ast.menai_ast import MenaiASTList, MenaiASTSymbol
 
         result = self._desugar('''
         (letrec ((square (lambda (x) (integer* x x))))
@@ -291,7 +291,7 @@ class TestLetrecSplittingStructure:
         """
         A non-lambda binding must become a let.
         """
-        from menai.menai_ast import MenaiASTList
+        from menai.ast.menai_ast import MenaiASTList
 
         result = self._desugar('''
         (letrec ((x 42))
@@ -304,7 +304,7 @@ class TestLetrecSplittingStructure:
         A non-lambda binding followed by a recursive lambda group must produce
         (let ((non-lambda ...)) (letrec ((lambda ...)) body)).
         """
-        from menai.menai_ast import MenaiASTList, MenaiASTSymbol
+        from menai.ast.menai_ast import MenaiASTList, MenaiASTSymbol
 
         result = self._desugar('''
         (letrec ((base 10)
@@ -325,7 +325,7 @@ class TestLetrecSplittingStructure:
         Two independent non-lambda bindings must produce a single flat let
         with both bindings, since neither references the other.
         """
-        from menai.menai_ast import MenaiASTList, MenaiASTSymbol
+        from menai.ast.menai_ast import MenaiASTList, MenaiASTSymbol
 
         result = self._desugar('''
         (letrec ((a 1)
@@ -349,7 +349,7 @@ class TestLetrecSplittingStructure:
         Non-lambda binding + mutually recursive group -> let wrapping letrec
         where the letrec has both lambda bindings.
         """
-        from menai.menai_ast import MenaiASTList, MenaiASTSymbol
+        from menai.ast.menai_ast import MenaiASTList, MenaiASTSymbol
 
         result = self._desugar('''
         (letrec ((zero 0)

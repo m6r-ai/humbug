@@ -15,12 +15,12 @@ This simplifies the compiler and enables better optimization.
 
 from typing import Any, cast
 
-from menai.menai_ast import (
+from menai.ast.menai_ast import (
     MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTInteger,
     MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBoolean, MenaiASTNone,
     MenaiASTStruct, MenaiASTBytes,
 )
-from menai.menai_ast_dependency_analyzer import MenaiASTDependencyAnalyzer
+from menai.ast.menai_ast_dependency_analyzer import MenaiASTDependencyAnalyzer
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_error import MenaiEvalError
 

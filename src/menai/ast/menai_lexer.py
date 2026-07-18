@@ -3,7 +3,7 @@
 from collections.abc import Callable
 
 from menai.menai_error import MenaiTokenError
-from menai.menai_token import MenaiToken, MenaiTokenType
+from menai.ast.menai_token import MenaiToken, MenaiTokenType
 
 
 class MenaiLexer:

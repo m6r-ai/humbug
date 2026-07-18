@@ -5,7 +5,7 @@ Note: This is only used for letrec, not for regular let (which uses simple seque
 
 from dataclasses import dataclass
 
-from menai.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList
+from menai.ast.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList
 
 
 @dataclass

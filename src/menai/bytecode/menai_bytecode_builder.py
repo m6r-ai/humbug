@@ -25,7 +25,7 @@ scratch slot so that the sequential bytecode MOVE instructions are correct.
 import array
 from dataclasses import dataclass, field
 
-from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Opcode, pack_instruction, make_instructions_array
+from menai.bytecode.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Opcode, pack_instruction, make_instructions_array
 from menai.menai_error import MenaiCodegenError
 from menai.menai_value import (
     MenaiBytes,
@@ -41,7 +41,7 @@ from menai.menai_value import (
     MenaiString,
     MenaiValue,
 )
-from menai.menai_vcode import (
+from menai.vcode.menai_vcode import (
     MenaiVCodeApply,
     MenaiVCodeBuiltin,
     MenaiVCodeCall,
@@ -65,10 +65,10 @@ from menai.menai_vcode import (
     MenaiVCodeTailApply,
     MenaiVCodeTailCall,
 )
-from menai.menai_vcode_allocator import SlotMap, allocate_slots
-from menai.menai_vcode_peephole import peephole
+from menai.vcode.menai_vcode_allocator import SlotMap, allocate_slots
+from menai.vcode.menai_vcode_peephole import peephole
 
-from menai.menai_bytecode import (
+from menai.bytecode.menai_bytecode import (
     _OPCODE_SHIFT, _DEST_SHIFT, _SRC0_SHIFT, _SRC1_SHIFT,
     _FIELD_MASK, _OPCODE_MASK,
 )

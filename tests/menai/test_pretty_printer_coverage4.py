@@ -251,7 +251,7 @@ class TestStandaloneCommentsWithClosingParens:
 
     def test_match_standalone_comment_closing_paren_separate(self):
         """Test that match standalone comment doesn't consume closing paren."""
-        from menai.menai_lexer import MenaiLexer
+        from menai.ast.menai_lexer import MenaiLexer
 
         printer = MenaiPrettyPrinter()
         lexer = MenaiLexer()
@@ -286,7 +286,7 @@ class TestStandaloneCommentsWithClosingParens:
 
     def test_lambda_standalone_comment_no_body_closing_paren_separate(self):
         """Test lambda with standalone comment but no body doesn't consume closing paren."""
-        from menai.menai_lexer import MenaiLexer
+        from menai.ast.menai_lexer import MenaiLexer
 
         printer = MenaiPrettyPrinter()
         lexer = MenaiLexer()
@@ -316,7 +316,7 @@ class TestStandaloneCommentsWithClosingParens:
 
     def test_if_standalone_comment_no_then_closing_paren_separate(self):
         """Test if with standalone comment but no then branch doesn't consume closing paren."""
-        from menai.menai_lexer import MenaiLexer
+        from menai.ast.menai_lexer import MenaiLexer
 
         printer = MenaiPrettyPrinter()
         lexer = MenaiLexer()

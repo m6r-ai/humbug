@@ -105,7 +105,7 @@ expressive.  Do not add `cond`.
 
 There are no cons cells and no improper lists.  On the Python side, `MenaiList`
 (defined in `menai_value.py`) stores its elements in a Python tuple.  The C VM has
-its own internal list representation (see `menai_vm_list.h`), which is an
+its own internal list representation (see `vm/menai_vm_list.c`), which is an
 implementation detail of that layer.  `cons` requires its second argument to be a
 list.  This is intentional: improper lists add complexity for minimal benefit in a
 language without pattern-matched list destructuring at the cons-cell level.

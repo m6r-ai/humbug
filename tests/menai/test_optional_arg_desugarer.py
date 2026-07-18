@@ -29,7 +29,7 @@ Tests are organised into three layers:
 import pytest
 
 from menai import Menai, MenaiEvalError, VMErrorCode
-from menai.menai_ast import (
+from menai.ast.menai_ast import (
     MenaiASTFloat,
     MenaiASTInteger,
     MenaiASTList,
@@ -38,10 +38,10 @@ from menai.menai_ast import (
     MenaiASTString,
     MenaiASTSymbol,
 )
-from menai.menai_ast_builder import MenaiASTBuilder
-from menai.menai_ast_desugarer import MenaiASTDesugarer
-from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
-from menai.menai_lexer import MenaiLexer
+from menai.ast.menai_ast_builder import MenaiASTBuilder
+from menai.ast.menai_ast_desugarer import MenaiASTDesugarer
+from menai.ast.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
+from menai.ast.menai_lexer import MenaiLexer
 
 
 # ---------------------------------------------------------------------------

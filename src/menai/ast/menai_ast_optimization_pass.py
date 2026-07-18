@@ -2,7 +2,7 @@
 Menai AST optimization pass
 """
 
-from menai.menai_ast import (MenaiASTNode)
+from menai.ast.menai_ast import (MenaiASTNode)
 
 
 class MenaiASTOptimizationPass:

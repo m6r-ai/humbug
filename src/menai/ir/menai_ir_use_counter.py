@@ -8,7 +8,7 @@ variable, producing an IRUseCounts annotation that downstream passes
 
 from dataclasses import dataclass, field
 
-from menai.menai_ir import (
+from menai.ir.menai_ir import (
     MenaiIRExpr,
     MenaiIRCall,
     MenaiIRConstant,

@@ -38,7 +38,7 @@ Menai is pure, so dead-code elimination is always safe (AGENTS.md).
 """
 
 
-from menai.menai_cfg import (
+from menai.cfg.menai_cfg import (
     MenaiCFGBlock,
     MenaiCFGFunction,
     MenaiCFGInstr,
@@ -48,7 +48,7 @@ from menai.menai_cfg import (
     value_ids_in_instr,
     value_ids_in_term,
 )
-from menai.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
+from menai.cfg.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
 
 
 class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):

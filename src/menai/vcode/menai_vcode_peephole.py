@@ -69,7 +69,7 @@ The three sub-passes are composed and iterated to a joint fixed point.
 """
 
 
-from menai.menai_vcode import (
+from menai.vcode.menai_vcode import (
     MenaiVCodeFunction,
     MenaiVCodeInstr,
     MenaiVCodeJump,
@@ -81,7 +81,7 @@ from menai.menai_vcode import (
     MenaiVCodeReturn,
 )
 from menai.menai_value import MenaiBoolean
-from menai.menai_vcode_allocator import SlotMap
+from menai.vcode.menai_vcode_allocator import SlotMap
 
 
 def peephole(func: MenaiVCodeFunction, slot_map: SlotMap) -> MenaiVCodeFunction:

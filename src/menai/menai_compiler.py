@@ -6,25 +6,25 @@ It chains together all compilation passes in the correct order.
 """
 
 
-from menai.menai_ast import MenaiASTNode
-from menai.menai_ast_builder import MenaiASTBuilder
-from menai.menai_ast_constant_folder import MenaiASTConstantFolder
-from menai.menai_ast_desugarer import MenaiASTDesugarer
-from menai.menai_ast_module_resolver import MenaiASTModuleResolver, MenaiASTModuleLoader
-from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
-from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
-from menai.menai_bytecode import CodeObject
-from menai.menai_bytecode_builder import MenaiBytecodeBuilder
-from menai.menai_cfg_builder import MenaiCFGBuilder
-from menai.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
-from menai.menai_cfg_branch_const_prop import MenaiCFGBranchConstProp
-from menai.menai_cfg_simplify_blocks import MenaiCFGSimplifyBlocks
-from menai.menai_cfg_collapse_phi_chains import MenaiCFGCollapsePhiChains
-from menai.menai_vcode_builder import MenaiVCodeBuilder
-from menai.menai_ir_builder import MenaiIRBuilder
-from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
-from menai.menai_ir_optimizer import MenaiIROptimizer
-from menai.menai_lexer import MenaiLexer
+from menai.ast.menai_ast import MenaiASTNode
+from menai.ast.menai_ast_builder import MenaiASTBuilder
+from menai.ast.menai_ast_constant_folder import MenaiASTConstantFolder
+from menai.ast.menai_ast_desugarer import MenaiASTDesugarer
+from menai.ast.menai_ast_module_resolver import MenaiASTModuleResolver, MenaiASTModuleLoader
+from menai.ast.menai_ast_optimization_pass import MenaiASTOptimizationPass
+from menai.ast.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
+from menai.bytecode.menai_bytecode import CodeObject
+from menai.bytecode.menai_bytecode_builder import MenaiBytecodeBuilder
+from menai.cfg.menai_cfg_builder import MenaiCFGBuilder
+from menai.cfg.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
+from menai.cfg.menai_cfg_branch_const_prop import MenaiCFGBranchConstProp
+from menai.cfg.menai_cfg_simplify_blocks import MenaiCFGSimplifyBlocks
+from menai.cfg.menai_cfg_collapse_phi_chains import MenaiCFGCollapsePhiChains
+from menai.vcode.menai_vcode_builder import MenaiVCodeBuilder
+from menai.ir.menai_ir_builder import MenaiIRBuilder
+from menai.ir.menai_ir_optimization_pass import MenaiIROptimizationPass
+from menai.ir.menai_ir_optimizer import MenaiIROptimizer
+from menai.ast.menai_lexer import MenaiLexer
 
 
 class MenaiCompiler:

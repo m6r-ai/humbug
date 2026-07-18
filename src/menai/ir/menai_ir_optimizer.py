@@ -8,7 +8,7 @@ IR-level optimizations that are safe because Menai is a pure functional language
 
 from typing import cast
 
-from menai.menai_ir import (
+from menai.ir.menai_ir import (
     MenaiIRExpr,
     MenaiIRCall,
     MenaiIRConstant,
@@ -27,8 +27,8 @@ from menai.menai_ir import (
     MenaiIRVariable,
 )
 from menai.menai_value import MenaiBoolean
-from menai.menai_ir_use_counter import MenaiIRUseCounter, IRUseCounts
-from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
+from menai.ir.menai_ir_use_counter import MenaiIRUseCounter, IRUseCounts
+from menai.ir.menai_ir_optimization_pass import MenaiIROptimizationPass
 
 
 class MenaiIROptimizer(MenaiIROptimizationPass):

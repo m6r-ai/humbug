@@ -3,7 +3,7 @@
 This file uses very specific techniques to hit the remaining uncovered lines.
 """
 
-from menai.menai_lexer import MenaiLexer, MenaiToken, MenaiTokenType
+from menai.ast.menai_lexer import MenaiLexer, MenaiToken, MenaiTokenType
 from menai.menai_pretty_printer import MenaiPrettyPrinter, FormatOptions
 
 

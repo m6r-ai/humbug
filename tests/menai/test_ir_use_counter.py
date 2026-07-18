@@ -27,7 +27,7 @@ from __future__ import annotations
 import pytest
 
 from menai import Menai
-from menai.menai_ir import (
+from menai.ir.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
     MenaiIRLambda,
@@ -36,8 +36,8 @@ from menai.menai_ir import (
     MenaiIRReturn,
     MenaiIRVariable,
 )
-from menai.menai_ir_optimizer import MenaiIROptimizer
-from menai.menai_ir_use_counter import MenaiIRUseCounter
+from menai.ir.menai_ir_optimizer import MenaiIROptimizer
+from menai.ir.menai_ir_use_counter import MenaiIRUseCounter
 from menai.menai_value import MenaiInteger
 
 

@@ -7,9 +7,9 @@ import os
 
 from contextlib import contextmanager
 
-from menai.menai_bytecode import CodeObject
+from menai.bytecode.menai_bytecode import CodeObject
 from menai.menai_compiler import MenaiCompiler
-from menai.menai_ast import MenaiASTNode
+from menai.ast.menai_ast import MenaiASTNode
 from menai.menai_value import MenaiFunction, MenaiValue
 from menai.vm.menai_vm import MenaiVM
 from menai.menai_error import MenaiModuleNotFoundError, MenaiModuleError, MenaiCircularImportError

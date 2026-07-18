@@ -8,7 +8,7 @@ any changes were made.  The pass manager uses that flag to drive fixed-point
 iteration.
 """
 
-from menai.menai_ir import MenaiIRExpr
+from menai.ir.menai_ir import MenaiIRExpr
 
 
 class MenaiIROptimizationPass:

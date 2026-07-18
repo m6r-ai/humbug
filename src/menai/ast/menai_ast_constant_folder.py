@@ -9,12 +9,12 @@ while preserving runtime semantics.
 import cmath
 import math
 
-from menai.menai_ast import (
+from menai.ast.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
     MenaiASTBoolean, MenaiASTSymbol, MenaiASTList, MenaiASTListLiteral, MenaiASTString,
     MenaiASTDict, MenaiASTSet, MenaiASTBytes,
 )
-from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
+from menai.ast.menai_ast_optimization_pass import MenaiASTOptimizationPass
 
 
 class MenaiASTConstantFolder(MenaiASTOptimizationPass):

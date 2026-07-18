@@ -6,7 +6,7 @@ Translates a symbolic MenaiIR tree into a MenaiCFGFunction in SSA form.
 
 from dataclasses import dataclass, field
 
-from menai.menai_cfg import (
+from menai.cfg.menai_cfg import (
     MenaiCFGApplyInstr,
     MenaiCFGBlock,
     MenaiCFGBranchTerm,
@@ -32,7 +32,7 @@ from menai.menai_cfg import (
     MenaiCFGTailCallTerm,
     MenaiCFGValue,
 )
-from menai.menai_ir import (
+from menai.ir.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
     MenaiIRBuildDict,

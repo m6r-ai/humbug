@@ -47,7 +47,7 @@ Minimal valid "load and return" sequence:
 
 import pytest
 
-from menai.menai_bytecode import CodeObject, Instruction, Opcode
+from menai.bytecode.menai_bytecode import CodeObject, Instruction, Opcode
 from menai.vm.menai_vm_bytecode_validator import ValidationError, ValidationErrorType, validate_bytecode
 from menai.menai_value import MenaiInteger
 

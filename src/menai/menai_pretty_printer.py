@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from menai.menai_lexer import MenaiLexer
-from menai.menai_token import MenaiToken, MenaiTokenType
+from menai.ast.menai_lexer import MenaiLexer
+from menai.ast.menai_token import MenaiToken, MenaiTokenType
 
 
 @dataclass

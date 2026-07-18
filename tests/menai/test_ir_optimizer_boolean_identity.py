@@ -22,14 +22,14 @@ from __future__ import annotations
 import pytest
 
 from menai import Menai, MenaiEvalError
-from menai.menai_ir import (
+from menai.ir.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
     MenaiIRIf,
     MenaiIRReturn,
     MenaiIRVariable,
 )
-from menai.menai_ir_optimizer import MenaiIROptimizer
+from menai.ir.menai_ir_optimizer import MenaiIROptimizer
 from menai.menai_value import MenaiBoolean, MenaiInteger
 
 

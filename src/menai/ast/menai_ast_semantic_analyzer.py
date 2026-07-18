@@ -15,10 +15,10 @@ before any transformations occur.
 
 from typing import cast
 
-from menai.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTString
+from menai.ast.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTString
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_error import MenaiEvalError
-from menai.menai_ast import MenaiASTStruct
+from menai.ast.menai_ast import MenaiASTStruct
 
 
 class MenaiASTSemanticAnalyzer:

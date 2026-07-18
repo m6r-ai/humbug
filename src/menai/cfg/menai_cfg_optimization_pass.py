@@ -7,7 +7,7 @@ together with a flag indicating whether any changes were made.  The pass
 manager uses that flag to drive fixed-point iteration.
 """
 
-from menai.menai_cfg import MenaiCFGFunction, MenaiCFGMakeClosureInstr
+from menai.cfg.menai_cfg import MenaiCFGFunction, MenaiCFGMakeClosureInstr
 
 
 class MenaiCFGOptimizationPass:

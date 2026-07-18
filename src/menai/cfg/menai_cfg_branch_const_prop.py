@@ -83,7 +83,7 @@ Example — return case, the (and A B) pattern:
 """
 
 
-from menai.menai_cfg import (
+from menai.cfg.menai_cfg import (
     MenaiCFGBlock,
     MenaiCFGBranchTerm,
     MenaiCFGConstInstr,
@@ -94,7 +94,7 @@ from menai.menai_cfg import (
     MenaiCFGValue,
     relink_predecessors,
 )
-from menai.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
+from menai.cfg.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
 from menai.menai_value import MenaiBoolean, MenaiValue
 
 

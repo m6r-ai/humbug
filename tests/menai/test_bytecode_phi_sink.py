@@ -16,9 +16,9 @@ Covers:
   7. End-to-end correctness: results are identical with and without the opt
 """
 
-from menai.menai_bytecode import Opcode
+from menai.bytecode.menai_bytecode import Opcode
 from menai.menai_compiler import MenaiCompiler
-from menai.menai_bytecode import unpack_instruction
+from menai.bytecode.menai_bytecode import unpack_instruction
 
 
 def _count_op(code, opcode) -> int:

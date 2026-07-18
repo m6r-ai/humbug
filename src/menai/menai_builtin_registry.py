@@ -6,7 +6,7 @@ for all builtins, used by the VM to populate the global environment.
 """
 
 
-from menai.menai_bytecode import BUILTIN_OPCODE_MAP
+from menai.bytecode.menai_bytecode import BUILTIN_OPCODE_MAP
 
 
 class MenaiBuiltinRegistry:

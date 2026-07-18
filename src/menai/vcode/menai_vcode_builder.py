@@ -43,7 +43,7 @@ in the MenaiVCodeMakeClosure instruction.
 """
 
 
-from menai.menai_cfg import (
+from menai.cfg.menai_cfg import (
     MenaiCFGApplyInstr,
     MenaiCFGBlock,
     MenaiCFGBranchTerm,
@@ -69,7 +69,7 @@ from menai.menai_cfg import (
     MenaiCFGTailCallTerm,
     MenaiCFGValue,
 )
-from menai.menai_vcode import (
+from menai.vcode.menai_vcode import (
     MenaiVCodeApply,
     MenaiVCodeBuiltin,
     MenaiVCodeCall,

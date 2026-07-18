@@ -16,16 +16,16 @@ Each argument appears in the desugared AST as a temp-variable reference
 
 import pytest
 
-from menai.menai_ast import (
+from menai.ast.menai_ast import (
     MenaiASTList,
     MenaiASTNode,
     MenaiASTSymbol,
     MenaiASTBoolean,
 )
-from menai.menai_ast_desugarer import MenaiASTDesugarer
-from menai.menai_lexer import MenaiLexer
-from menai.menai_ast_builder import MenaiASTBuilder
-from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
+from menai.ast.menai_ast_desugarer import MenaiASTDesugarer
+from menai.ast.menai_lexer import MenaiLexer
+from menai.ast.menai_ast_builder import MenaiASTBuilder
+from menai.ast.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
 
 
 # ---------------------------------------------------------------------------

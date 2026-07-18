@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from menai import Menai
 from menai.menai_compiler import MenaiCompiler
 from menai.menai_value import MenaiValue
-from menai.menai_bytecode import Opcode, CodeObject, Instruction, reg_name, unpack_instruction
+from menai.bytecode.menai_bytecode import Opcode, CodeObject, Instruction, reg_name, unpack_instruction
 
 
 _ANSI_CYAN = "\033[36m"

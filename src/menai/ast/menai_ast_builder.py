@@ -3,8 +3,8 @@
 from typing import cast
 from dataclasses import dataclass
 from menai.menai_error import MenaiASTBuildError
-from menai.menai_token import MenaiToken, MenaiTokenType
-from menai.menai_ast import (
+from menai.ast.menai_token import MenaiToken, MenaiTokenType
+from menai.ast.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex, MenaiASTString,
     MenaiASTBoolean, MenaiASTNone, MenaiASTSymbol, MenaiASTList
 )

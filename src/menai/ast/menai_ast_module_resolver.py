@@ -9,7 +9,7 @@ interface to delegate the actual module loading logic.
 from typing import Protocol, ContextManager
 
 from menai.menai_error import MenaiModuleError
-from menai.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTString
+from menai.ast.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTString
 
 
 class MenaiASTModuleLoader(Protocol):

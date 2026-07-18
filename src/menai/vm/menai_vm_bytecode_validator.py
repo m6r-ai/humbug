@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from collections import deque
 from enum import Enum
 
-from menai.menai_bytecode import CodeObject, Instruction, Opcode, unpack_instruction
+from menai.bytecode.menai_bytecode import CodeObject, Instruction, Opcode, unpack_instruction
 
 
 

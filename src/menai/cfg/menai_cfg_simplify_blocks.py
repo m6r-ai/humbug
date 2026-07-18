@@ -19,7 +19,7 @@ Two sub-passes run to a joint fixed point:
 """
 
 
-from menai.menai_cfg import (
+from menai.cfg.menai_cfg import (
     MenaiCFGBlock,
     MenaiCFGBranchTerm,
     MenaiCFGConstInstr,
@@ -33,7 +33,7 @@ from menai.menai_cfg import (
     value_ids_in_instr,
     value_ids_in_term,
 )
-from menai.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
+from menai.cfg.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
 
 
 class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):

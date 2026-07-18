@@ -17,7 +17,7 @@ import math
 import pytest
 
 from menai import Menai, MenaiEvalError, VMErrorCode
-from menai.menai_ast import (
+from menai.ast.menai_ast import (
     MenaiASTBoolean,
     MenaiASTComplex,
     MenaiASTFloat,
@@ -26,10 +26,10 @@ from menai.menai_ast import (
     MenaiASTNode,
     MenaiASTSymbol,
 )
-from menai.menai_ast_desugarer import MenaiASTDesugarer
-from menai.menai_lexer import MenaiLexer
-from menai.menai_ast_builder import MenaiASTBuilder
-from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
+from menai.ast.menai_ast_desugarer import MenaiASTDesugarer
+from menai.ast.menai_lexer import MenaiLexer
+from menai.ast.menai_ast_builder import MenaiASTBuilder
+from menai.ast.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
 
 
 # ---------------------------------------------------------------------------

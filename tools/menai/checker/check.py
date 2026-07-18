@@ -5,8 +5,8 @@ import argparse
 from pathlib import Path
 from dataclasses import dataclass
 
-from menai.menai_lexer import MenaiLexer
-from menai.menai_token import MenaiTokenType
+from menai.ast.menai_lexer import MenaiLexer
+from menai.ast.menai_token import MenaiTokenType
 from menai.menai_error import MenaiTokenError
 
 

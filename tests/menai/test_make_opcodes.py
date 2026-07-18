@@ -10,7 +10,7 @@ the correct result.
 
 import pytest
 from menai import Menai
-from menai.menai_bytecode import Opcode, unpack_instruction
+from menai.bytecode.menai_bytecode import Opcode, unpack_instruction
 from menai.menai_compiler import MenaiCompiler
 
 

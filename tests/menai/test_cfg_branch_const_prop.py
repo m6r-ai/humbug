@@ -16,7 +16,7 @@ Covers:
      correct results and fewer blocks than without the pass
 """
 
-from menai.menai_cfg import (
+from menai.cfg.menai_cfg import (
     MenaiCFGBlock,
     MenaiCFGBranchTerm,
     MenaiCFGBuiltinInstr,
@@ -29,9 +29,9 @@ from menai.menai_cfg import (
     MenaiCFGReturnTerm,
     MenaiCFGValue,
 )
-from menai.menai_cfg_branch_const_prop import MenaiCFGBranchConstProp
-from menai.menai_cfg_collapse_phi_chains import MenaiCFGCollapsePhiChains
-from menai.menai_cfg_simplify_blocks import MenaiCFGSimplifyBlocks
+from menai.cfg.menai_cfg_branch_const_prop import MenaiCFGBranchConstProp
+from menai.cfg.menai_cfg_collapse_phi_chains import MenaiCFGCollapsePhiChains
+from menai.cfg.menai_cfg_simplify_blocks import MenaiCFGSimplifyBlocks
 from menai.menai_value import MenaiBoolean, MenaiInteger
 
 
@@ -691,15 +691,15 @@ class TestNestedLambda:
 class TestEndToEnd:
 
     def _compile_cfg(self, source: str, passes):
-        from menai.menai_lexer import MenaiLexer
-        from menai.menai_ast_builder import MenaiASTBuilder
-        from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
-        from menai.menai_ast_module_resolver import MenaiASTModuleResolver
-        from menai.menai_ast_desugarer import MenaiASTDesugarer
-        from menai.menai_ast_constant_folder import MenaiASTConstantFolder
-        from menai.menai_ir_builder import MenaiIRBuilder
-        from menai.menai_ir_optimizer import MenaiIROptimizer
-        from menai.menai_cfg_builder import MenaiCFGBuilder
+        from menai.ast.menai_lexer import MenaiLexer
+        from menai.ast.menai_ast_builder import MenaiASTBuilder
+        from menai.ast.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
+        from menai.ast.menai_ast_module_resolver import MenaiASTModuleResolver
+        from menai.ast.menai_ast_desugarer import MenaiASTDesugarer
+        from menai.ast.menai_ast_constant_folder import MenaiASTConstantFolder
+        from menai.ir.menai_ir_builder import MenaiIRBuilder
+        from menai.ir.menai_ir_optimizer import MenaiIROptimizer
+        from menai.cfg.menai_cfg_builder import MenaiCFGBuilder
 
         tokens = MenaiLexer().lex(source)
         ast = MenaiASTBuilder().build(tokens, source, "")

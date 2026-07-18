@@ -47,7 +47,7 @@ register ids without needing an explicit mapping.
 
 from dataclasses import dataclass
 
-from menai.menai_vcode import (
+from menai.vcode.menai_vcode import (
     MenaiVCodeApply,
     MenaiVCodeBuiltin,
     MenaiVCodeCall,

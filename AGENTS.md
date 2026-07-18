@@ -239,6 +239,14 @@ Includes `doc_ir_to_markdown.py` for serialising a doc_ir tree to Markdown text.
 ### `src/menai/`
 Pure functional programming language designed for AI use. Includes lexer, parser, compiler, and virtual machine.
 
+**Subdirectories:**
+- `ast/` - Lexer, token types, AST nodes, AST builder, semantic analyzer, module resolver, dependency analyzer, desugarer, constant folder, optimization pass
+- `ir/` - IR nodes, IR builder, IR optimizer, IR optimization pass, IR use counter
+- `cfg/` - CFG nodes, CFG builder, CFG optimization passes (branch constant propagation, phi chain collapsing, block simplification)
+- `vcode/` - VCode nodes, VCode builder, slot allocator, peephole optimizer
+- `bytecode/` - Bytecode definitions (opcodes, CodeObject), bytecode builder
+- `vm/` - Python VM wrapper, VM error translation, bytecode validator, C VM source and compiled binary
+
 ### `src/menai_ai_tool/`
 AI tool implementation for Menai language execution.
 

@@ -11,7 +11,7 @@ from menai.menai_error import (
 )
 
 # AST types
-from menai.menai_ast import (
+from menai.ast.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
     MenaiASTString, MenaiASTBoolean, MenaiASTSymbol, MenaiASTList, MenaiASTStruct
 )
@@ -24,9 +24,9 @@ from menai.menai_value import (
 )
 
 # Lower-level components (for advanced usage)
-from menai.menai_token import MenaiToken, MenaiTokenType
-from menai.menai_lexer import MenaiLexer
-from menai.menai_ast_builder import MenaiASTBuilder
+from menai.ast.menai_token import MenaiToken, MenaiTokenType
+from menai.ast.menai_lexer import MenaiLexer
+from menai.ast.menai_ast_builder import MenaiASTBuilder
 
 __all__ = [
     # Main API
