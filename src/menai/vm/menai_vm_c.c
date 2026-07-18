@@ -11,6 +11,7 @@
  */
 #define _POSIX_C_SOURCE 200809L
 #include <math.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -507,20 +508,22 @@ integer_to_bigint(MenaiValue *val, MenaiBigInt *out)
  * Never fails.
  */
 static inline int
-menai_integer_compare(MenaiValue* a, MenaiValue* b, int op)
+menai_integer_compare(MenaiValue* a, MenaiValue* b, int op, bool *res)
 {
     MenaiInteger *ia = (MenaiInteger *)a;
     MenaiInteger *ib = (MenaiInteger *)b;
     if (!ia->is_big && !ib->is_big) {
         long la = ia->small, lb = ib->small;
         switch (op) {
-        case MENAI_EQ: return la == lb;
-        case MENAI_NE: return la != lb;
-        case MENAI_LT: return la < lb;
-        case MENAI_GT: return la > lb;
-        case MENAI_LE: return la <= lb;
-        case MENAI_GE: return la >= lb;
+        case MENAI_EQ: *res = la == lb; break;
+        case MENAI_NE: *res = la != lb; break;
+        case MENAI_LT: *res = la < lb; break;
+        case MENAI_GT: *res = la > lb; break;
+        case MENAI_LE: *res = la <= lb; break;
+        case MENAI_GE: *res = la >= lb; break;
         }
+
+        return MENAI_OK;
     }
 
     const MenaiBigInt *ma = ia->is_big ? &ia->big : NULL;
@@ -528,25 +531,32 @@ menai_integer_compare(MenaiValue* a, MenaiValue* b, int op)
     MenaiBigInt tmp_a, tmp_b;
     menai_bigint_init(&tmp_a);
     menai_bigint_init(&tmp_b);
-    integer_to_bigint(a, &tmp_a);
-    integer_to_bigint(b, &tmp_b);
+
+    int rc = integer_to_bigint(a, &tmp_a);
+    if (MENAI_UNLIKELY(rc < 0)) {
+        return rc;
+    }
+
+    rc = integer_to_bigint(b, &tmp_b);
+    if (MENAI_UNLIKELY(rc < 0)) {
+        menai_bigint_free(&tmp_a);
+        return rc;
+    }
 
     const MenaiBigInt *pa = ia->is_big ? ma : &tmp_a;
     const MenaiBigInt *pb = ib->is_big ? mb : &tmp_b;
-    int result;
     switch (op) {
-    case MENAI_EQ: result = menai_bigint_eq(pa, pb); break;
-    case MENAI_NE: result = menai_bigint_ne(pa, pb); break;
-    case MENAI_LT: result = menai_bigint_lt(pa, pb); break;
-    case MENAI_GT: result = menai_bigint_gt(pa, pb); break;
-    case MENAI_LE: result = menai_bigint_le(pa, pb); break;
-    case MENAI_GE: result = menai_bigint_ge(pa, pb); break;
-    default: result = 0; break;
+    case MENAI_EQ: *res = menai_bigint_eq(pa, pb); break;
+    case MENAI_NE: *res = menai_bigint_ne(pa, pb); break;
+    case MENAI_LT: *res = menai_bigint_lt(pa, pb); break;
+    case MENAI_GT: *res = menai_bigint_gt(pa, pb); break;
+    case MENAI_LE: *res = menai_bigint_le(pa, pb); break;
+    case MENAI_GE: *res = menai_bigint_ge(pa, pb); break;
     }
 
     menai_bigint_free(&tmp_a);
     menai_bigint_free(&tmp_b);
-    return result;
+    return MENAI_OK;
 }
 
 /*
@@ -1974,7 +1984,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_EQ));
+            bool res;
+            vm_err = menai_integer_compare(a, b, MENAI_EQ, &res);
+            if (MENAI_UNLIKELY(vm_err < 0)) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, res);
             break;
         }
 
@@ -1993,7 +2009,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_NE));
+            bool res;
+            vm_err = menai_integer_compare(a, b, MENAI_NE, &res);
+            if (MENAI_UNLIKELY(vm_err < 0)) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, res);
             break;
         }
 
@@ -2012,7 +2034,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_LT));
+            bool res;
+            vm_err = menai_integer_compare(a, b, MENAI_LT, &res);
+            if (MENAI_UNLIKELY(vm_err < 0)) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, res);
             break;
         }
 
@@ -2031,7 +2059,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_GT));
+            bool res;
+            vm_err = menai_integer_compare(a, b, MENAI_GT, &res);
+            if (MENAI_UNLIKELY(vm_err < 0)) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, res);
             break;
         }
 
@@ -2050,7 +2084,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_LE));
+            bool res;
+            vm_err = menai_integer_compare(a, b, MENAI_LE, &res);
+            if (MENAI_UNLIKELY(vm_err < 0)) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, res);
             break;
         }
 
@@ -2069,7 +2109,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, menai_integer_compare(a, b, MENAI_GE));
+            bool res;
+            vm_err = menai_integer_compare(a, b, MENAI_GE, &res);
+            if (MENAI_UNLIKELY(vm_err < 0)) {
+                goto error;
+            }
+
+            bool_store(regs, base + dest, res);
             break;
         }
 
@@ -2900,7 +2946,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            menai_reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, MENAI_LE) ? a : b);
+            bool res;
+            vm_err = menai_integer_compare(a, b, MENAI_LE, &res);
+            if (MENAI_UNLIKELY(vm_err < 0)) {
+                goto error;
+            }
+
+            menai_reg_set_borrow(regs, base + dest, res ? a : b);
             break;
         }
 
@@ -2919,7 +2971,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            menai_reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, MENAI_GE) ? a : b);
+            bool res;
+            vm_err = menai_integer_compare(a, b, MENAI_GE, &res);
+            if (MENAI_UNLIKELY(vm_err < 0)) {
+                goto error;
+            }
+
+            menai_reg_set_borrow(regs, base + dest, res ? a : b);
             break;
         }
 
