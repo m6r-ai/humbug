@@ -969,7 +969,7 @@ globals_build_from_dict(GlobalsTable *gt, MenaiValue *dict_val)
 
         for (ssize_t i = 0; i < n; i++) {
             MenaiValue *k = d->keys[i];
-            if (!IS_MENAI_STRING(k)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(k))) {
                 globals_free(gt);
                 return MENAI_ERR_TYPE;
             }
@@ -1129,7 +1129,7 @@ globals_merge_extra_native(GlobalsTable *gt, MenaiValue *extra_dict_val)
 
     for (ssize_t i = 0; i < nextra; i++) {
         MenaiValue *k = extra->keys[i];
-        if (!IS_MENAI_STRING(k)) {
+        if (MENAI_UNLIKELY(!IS_MENAI_STRING(k))) {
             return MENAI_ERR_TYPE;
         }
 
@@ -1380,7 +1380,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *cond = regs[base + src0];
-            if (!IS_MENAI_BOOLEAN(cond)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BOOLEAN(cond))) {
                 vm_err = MENAI_ERR_IF_NOT_BOOLEAN;
                 goto error;
             }
@@ -1396,7 +1396,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *cond = regs[base + src0];
-            if (!IS_MENAI_BOOLEAN(cond)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_BOOLEAN(cond))) {
                 vm_err = MENAI_ERR_IF_NOT_BOOLEAN;
                 goto error;
             }
@@ -1411,7 +1411,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_RAISE_ERROR: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *msg = regs[base + src0];
-            if (!IS_MENAI_STRING(msg)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRING(msg))) {
                 vm_err = MENAI_ERR_ERROR_MSG_NOT_STRING;
                 goto error;
             }
@@ -1582,7 +1582,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiValue *raw_func = regs[base + src0];
             MenaiValue *raw_args = regs[base + src1];
 
-            if (!IS_MENAI_LIST(raw_args)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(raw_args))) {
                 vm_err = MENAI_ERR_APPLY_SECOND_NOT_LIST;
                 goto error;
             }
@@ -1654,7 +1654,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_retain(raw_func);
             menai_retain(raw_args);
 
-            if (!IS_MENAI_LIST(raw_args)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_LIST(raw_args))) {
                 menai_release(raw_func);
                 menai_release(raw_args);
                 vm_err = MENAI_ERR_APPLY_SECOND_NOT_LIST;
@@ -3815,7 +3815,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             int src2 = (int)(word & FIELD_MASK);
             MenaiValue *closure = regs[base + src0];
-            if (!IS_MENAI_FUNCTION(closure)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_FUNCTION(closure))) {
                 vm_err = MENAI_ERR_PATCH_CLOSURE_NOT_FUNCTION;
                 goto error;
             }
@@ -4564,7 +4564,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(b)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
                 vm_err = MENAI_ERR_INDEX_NOT_INTEGER;
                 goto error;
             }
@@ -4774,7 +4774,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(b)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
                 vm_err = MENAI_ERR_RADIX_NOT_INTEGER;
                 goto error;
             }
@@ -5080,13 +5080,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(idx_val)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(idx_val))) {
                 vm_err = MENAI_ERR_OFFSET_NOT_INTEGER;
                 goto error;
             }
 
             ssize_t offset;
-            if (integer_to_ssize_t(idx_val, &offset) < 0) {
+            if (MENAI_UNLIKELY(integer_to_ssize_t(idx_val, &offset) < 0)) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
@@ -5116,13 +5116,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(v)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(v))) {
                 vm_err = MENAI_ERR_VALUE_NOT_INTEGER;
                 goto error;
             }
 
             long val;
-            if (integer_to_long(v, &val) < 0) {
+            if (MENAI_UNLIKELY(integer_to_long(v, &val) < 0)) {
                 vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
                 goto error;
             }
@@ -5158,14 +5158,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiBytes *mb = (MenaiBytes *)result;
             for (ssize_t i = 0; i < n; i++) {
                 MenaiValue *elem = menai_list_get((MenaiList *)lst, i);
-                if (!IS_MENAI_INTEGER(elem)) {
+                if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(elem))) {
                     vm_err = MENAI_ERR_LIST_ELEMENTS_NOT_INTEGERS;
                     menai_release(result);
                     goto error;
                 }
 
                 long val;
-                if (integer_to_long(elem, &val) < 0) {
+                if (MENAI_UNLIKELY(integer_to_long(elem, &val) < 0)) {
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
                     menai_release(result);
                     goto error;
@@ -5196,25 +5196,25 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(start_val)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(start_val))) {
                 vm_err = MENAI_ERR_SLICE_START_NOT_INTEGER;
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(end_val)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(end_val))) {
                 vm_err = MENAI_ERR_SLICE_END_NOT_INTEGER;
                 goto error;
             }
 
             ssize_t blen = menai_bytes_length(b);
             ssize_t start;
-            if (integer_to_ssize_t(start_val, &start) < 0) {
+            if (MENAI_UNLIKELY(integer_to_ssize_t(start_val, &start) < 0)) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
 
             ssize_t end;
-            if (integer_to_ssize_t(end_val, &end) < 0) {
+            if (MENAI_UNLIKELY(integer_to_ssize_t(end_val, &end) < 0)) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
@@ -5580,7 +5580,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *byte_val = regs[base + src0];
             MenaiValue *b = regs[base + src1];
-            if (!IS_MENAI_INTEGER(byte_val)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(byte_val))) {
                 vm_err = MENAI_ERR_BYTE_NOT_INTEGER;
                 goto error;
             }
@@ -5591,7 +5591,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             long target;
-            if (integer_to_long(byte_val, &target) < 0) {
+            if (MENAI_UNLIKELY(integer_to_long(byte_val, &target) < 0)) {
                 vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE;
                 goto error;
             }
@@ -5710,13 +5710,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(off_val)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(off_val))) {
                 vm_err = MENAI_ERR_OFFSET_NOT_INTEGER;
                 goto error;
             }
 
             ssize_t offset;
-            if (integer_to_ssize_t(off_val, &offset) < 0) {
+            if (MENAI_UNLIKELY(integer_to_ssize_t(off_val, &offset) < 0)) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
@@ -5746,13 +5746,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(off_val)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(off_val))) {
                 vm_err = MENAI_ERR_OFFSET_NOT_INTEGER;
                 goto error;
             }
 
             ssize_t offset;
-            if (integer_to_ssize_t(off_val, &offset) < 0) {
+            if (MENAI_UNLIKELY(integer_to_ssize_t(off_val, &offset) < 0)) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
@@ -5787,13 +5787,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error; \
             } \
 \
-            if (!IS_MENAI_INTEGER(off_val)) { \
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(off_val))) { \
                 vm_err = MENAI_ERR_OFFSET_NOT_INTEGER; \
                 goto error; \
             } \
 \
             ssize_t offset; \
-            if (integer_to_ssize_t(off_val, &offset) < 0) { \
+            if (MENAI_UNLIKELY(integer_to_ssize_t(off_val, &offset) < 0)) { \
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS; \
                 goto error; \
             } \
@@ -5899,14 +5899,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error; \
             } \
 \
-            if (!IS_MENAI_INTEGER(v)) { \
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(v))) { \
                 vm_err = MENAI_ERR_VALUE_NOT_INTEGER; \
                 goto error; \
             } \
 \
             long val; \
             if (is_signed) { \
-                if (integer_to_long(v, &val) < 0) { \
+                if (MENAI_UNLIKELY(integer_to_long(v, &val) < 0)) { \
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
@@ -5985,18 +5985,18 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error; \
             } \
 \
-            if (!IS_MENAI_INTEGER(off_val)) { \
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(off_val))) { \
                 vm_err = MENAI_ERR_OFFSET_NOT_INTEGER; \
                 goto error; \
             } \
 \
-            if (!IS_MENAI_INTEGER(v)) { \
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(v))) { \
                 vm_err = MENAI_ERR_VALUE_NOT_INTEGER; \
                 goto error; \
             } \
 \
             ssize_t offset; \
-            if (integer_to_ssize_t(off_val, &offset) < 0) { \
+            if (MENAI_UNLIKELY(integer_to_ssize_t(off_val, &offset) < 0)) { \
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS; \
                 goto error; \
             } \
@@ -6078,13 +6078,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(off_val)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(off_val))) {
                 vm_err = MENAI_ERR_OFFSET_NOT_INTEGER;
                 goto error;
             }
 
             ssize_t offset;
-            if (integer_to_ssize_t(off_val, &offset) < 0) {
+            if (MENAI_UNLIKELY(integer_to_ssize_t(off_val, &offset) < 0)) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
@@ -6163,13 +6163,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(v)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(v))) {
                 vm_err = MENAI_ERR_VALUE_NOT_INTEGER;
                 goto error;
             }
 
             unsigned long long uval;
-            if (integer_to_unsigned_long_long(v, &uval) < 0) {
+            if (MENAI_UNLIKELY(integer_to_unsigned_long_long(v, &uval) < 0)) {
                 vm_err = MENAI_ERR_NEGATIVE_ARGUMENT;
                 goto error;
             }
@@ -6210,16 +6210,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 vm_err = MENAI_ERR_TYPE_MISMATCH;
                 goto error;
             }
-            if (!IS_MENAI_INTEGER(off_val)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(off_val))) {
                 vm_err = MENAI_ERR_OFFSET_NOT_INTEGER;
                 goto error;
             }
 
             ssize_t offset;
-            if (integer_to_ssize_t(off_val, &offset) < 0) {
+            if (MENAI_UNLIKELY(integer_to_ssize_t(off_val, &offset) < 0)) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
+
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
@@ -6285,13 +6286,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(v)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(v))) {
                 vm_err = MENAI_ERR_VALUE_NOT_INTEGER;
                 goto error;
             }
 
             long val;
-            if (integer_to_long(v, &val) < 0) {
+            if (MENAI_UNLIKELY(integer_to_long(v, &val) < 0)) {
                 vm_err = MENAI_ERR_OVERFLOW;
                 goto error;
             }
@@ -6470,7 +6471,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_INTEGER(b)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(b))) {
                 vm_err = MENAI_ERR_INDEX_NOT_INTEGER;
                 goto error;
             }
@@ -6817,7 +6818,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             ssize_t n = lst_ts->length;
             /* Validate all elements are strings first. */
             for (ssize_t i = 0; i < n; i++) {
-                if (!IS_MENAI_STRING(lst_ts->elements[i])) {
+                if (MENAI_UNLIKELY(!IS_MENAI_STRING(lst_ts->elements[i]))) {
                     vm_err = MENAI_ERR_LIST_TO_STRING_NOT_STRINGS;
                     goto error;
                 }
@@ -8087,7 +8088,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *struct_type = regs[base + src0];
-            if (!IS_MENAI_STRUCTTYPE(struct_type)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCTTYPE(struct_type))) {
                 vm_err = MENAI_ERR_STRUCT_FIRST_NOT_TYPE;
                 goto error;
             }
@@ -8118,7 +8119,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!IS_MENAI_STRUCT(val)) {
+            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
                 bool_store(regs, base + dest, 0);
                 break;
             }
