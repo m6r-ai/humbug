@@ -8,6 +8,7 @@ import ssl
 import tempfile
 import zlib
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -1077,10 +1078,15 @@ class TestTimeouts:
 
     def test_connect_timeout_raises_server_timeout_error(self) -> None:
         """Connect timeout raises ServerTimeoutError."""
+        async def hang_forever(*args: object, **kwargs: object) -> tuple[object, object]:
+            await asyncio.sleep(10)
+            return (), ()
+
         async def run() -> None:
-            async with HttpClient(connect_timeout=0.001) as client:
-                with pytest.raises(ServerTimeoutError):
-                    await client.get("http://10.255.255.1:80/")
+            async with HttpClient(connect_timeout=0.1) as client:
+                with patch("asyncio.open_connection", hang_forever):
+                    with pytest.raises(ServerTimeoutError):
+                        await client.get("http://example.com:80/")
 
         asyncio.run(run())
 
