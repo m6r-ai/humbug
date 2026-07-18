@@ -6105,12 +6105,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 vm_err = MENAI_ERR_OFFSET_NOT_INTEGER;
                 goto error;
             }
+
             ssize_t offset = integer_to_ssize_t(off_val);
             ssize_t blen = menai_bytes_length(b);
             if (offset < 0 || offset >= blen) {
                 vm_err = MENAI_ERR_OFFSET_OUT_OF_BOUNDS;
                 goto error;
             }
+
             const uint8_t *d = menai_bytes_data(b);
             long result = 0;
             int shift = 0;
