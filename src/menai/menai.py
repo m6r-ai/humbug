@@ -11,7 +11,7 @@ from menai.menai_bytecode import CodeObject
 from menai.menai_compiler import MenaiCompiler
 from menai.menai_ast import MenaiASTNode
 from menai.menai_value import MenaiFunction, MenaiValue
-from menai.menai_vm import MenaiVM
+from menai.vm.menai_vm import MenaiVM
 from menai.menai_error import MenaiModuleNotFoundError, MenaiModuleError, MenaiCircularImportError
 
 

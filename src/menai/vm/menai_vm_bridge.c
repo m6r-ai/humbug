@@ -1868,7 +1868,7 @@ menai_vm_shim_init(void)
     Menai_EMPTY_DICT = menai_dict_new_empty();
     Menai_EMPTY_SET = menai_set_new_empty();
 
-    PyObject *err_mod = PyImport_ImportModule("menai.menai_vm_errors");
+    PyObject *err_mod = PyImport_ImportModule("menai.vm.menai_vm_errors");
     if (err_mod == NULL) {
         return -1;
     }

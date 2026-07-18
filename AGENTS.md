@@ -22,7 +22,7 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 
 ## Menai C VM binary
 
-- The Menai C VM is a compiled C extension (`src/menai/menai_vm_c*.so` / `.pyd`).
+- The Menai C VM is a compiled C extension (`src/menai/vm/menai_vm_c*.so` / `.pyd`).
 - GitHub Actions builds it for all supported platforms on push to `main`
   (see `.github/workflows/build-menai-vm.yml`).
 - If you don't have a C compiler, fetch the pre-built binary:

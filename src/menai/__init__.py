@@ -4,7 +4,7 @@
 from menai.menai import Menai
 
 # Exceptions (enhanced with detailed context)
-from menai.menai_vm_errors import VMErrorCode
+from menai.vm.menai_vm_errors import VMErrorCode
 from menai.menai_error import (
     MenaiError, MenaiTokenError, MenaiASTBuildError, MenaiCodegenError, MenaiEvalError,
     MenaiCancelledException

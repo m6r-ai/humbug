@@ -21,8 +21,8 @@ block_cipher = None
 # PyInstaller does not reliably auto-discover extensions built inplace outside
 # the main package tree, so we glob for it and pass it via binaries.
 if sys.platform == 'win32':
-    _pyd_files = glob.glob('src/menai/menai_vm_c*.pyd')
-    _extra_binaries = [(_pyd, 'menai') for _pyd in _pyd_files]
+    _pyd_files = glob.glob('src/menai/vm/menai_vm_c*.pyd')
+    _extra_binaries = [(_pyd, 'menai/vm') for _pyd in _pyd_files]
 else:
     _extra_binaries = []
 

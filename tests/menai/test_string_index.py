@@ -3,7 +3,7 @@
 import pytest
 from menai.menai import Menai
 from menai.menai_error import MenaiEvalError
-from menai.menai_vm_errors import VMErrorCode
+from menai.vm.menai_vm_errors import VMErrorCode
 
 def test_string_index_basic():
     """Test basic string-index usage."""

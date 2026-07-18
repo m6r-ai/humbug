@@ -17,36 +17,36 @@ import sys
 
 from setuptools import Extension, setup
 
-_MENAI_SRC = os.path.join("src", "menai")
+_MENAI_VM_SRC = os.path.join("src", "menai", "vm")
 
 extensions = [
     Extension(
-        name="menai.menai_vm_c",
+        name="menai.vm.menai_vm_c",
         sources=[
-            "src/menai/menai_vm_c.c",
-            "src/menai/menai_vm_alloc.c",
-            "src/menai/menai_vm_memory.c",
-            "src/menai/menai_vm_code.c",
-            "src/menai/menai_vm_string.c",
-            "src/menai/menai_vm_bigint.c",
-            "src/menai/menai_vm_hashtable.c",
-            "src/menai/menai_vm_dict.c",
-            "src/menai/menai_vm_function.c",
-            "src/menai/menai_vm_list.c",
-            "src/menai/menai_vm_set.c",
-            "src/menai/menai_vm_struct.c",
-            "src/menai/menai_vm_symbol.c",
-            "src/menai/menai_vm_complex.c",
-            "src/menai/menai_vm_float.c",
-            "src/menai/menai_vm_integer.c",
-            "src/menai/menai_vm_format.c",
-            "src/menai/menai_vm_boolean.c",
-            "src/menai/menai_vm_none.c",
-            "src/menai/menai_vm_bridge.c",
-            "src/menai/menai_vm_value.c",
-            "src/menai/menai_vm_bytes.c"
+            "src/menai/vm/menai_vm_c.c",
+            "src/menai/vm/menai_vm_alloc.c",
+            "src/menai/vm/menai_vm_memory.c",
+            "src/menai/vm/menai_vm_code.c",
+            "src/menai/vm/menai_vm_string.c",
+            "src/menai/vm/menai_vm_bigint.c",
+            "src/menai/vm/menai_vm_hashtable.c",
+            "src/menai/vm/menai_vm_dict.c",
+            "src/menai/vm/menai_vm_function.c",
+            "src/menai/vm/menai_vm_list.c",
+            "src/menai/vm/menai_vm_set.c",
+            "src/menai/vm/menai_vm_struct.c",
+            "src/menai/vm/menai_vm_symbol.c",
+            "src/menai/vm/menai_vm_complex.c",
+            "src/menai/vm/menai_vm_float.c",
+            "src/menai/vm/menai_vm_integer.c",
+            "src/menai/vm/menai_vm_format.c",
+            "src/menai/vm/menai_vm_boolean.c",
+            "src/menai/vm/menai_vm_none.c",
+            "src/menai/vm/menai_vm_bridge.c",
+            "src/menai/vm/menai_vm_value.c",
+            "src/menai/vm/menai_vm_bytes.c"
         ],
-        include_dirs=[_MENAI_SRC],
+        include_dirs=[_MENAI_VM_SRC],
         extra_compile_args=(
             ["/O2", "/std:c11", "/WX"] if sys.platform == "win32"
             else ["-O2", "-std=c11", "-Werror"]

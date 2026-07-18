@@ -116,7 +116,7 @@ jobs:
         run: |
           import sysconfig, os, glob
           suffix = sysconfig.get_config_var('EXT_SUFFIX')
-          pattern = f'src/menai/menai_vm_c*{suffix}'
+          pattern = f'src/menai/vm/menai_vm_c*{suffix}'
           matches = glob.glob(pattern)
           if not matches:
               print(f'ERROR: no file matching {pattern}')
@@ -131,14 +131,14 @@ jobs:
         run: |
           import sys
           sys.path.insert(0, 'src')
-          from menai.menai_vm_c import execute
+          from menai.vm.menai_vm_c import execute
           print('C VM OK')
 
       - name: Run Menai tests
         run: python -m pytest tests/menai/ -x -q
 
       - name: Stage binary for release
-        run: cp "src/menai/${{ steps.ext.outputs.filename }}" "${{ matrix.label }}.bin"
+        run: cp "src/menai/vm/${{ steps.ext.outputs.filename }}" "${{ matrix.label }}.bin"
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v3

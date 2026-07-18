@@ -10,7 +10,7 @@ This test suite validates:
 import pytest
 from menai import Menai
 from menai.menai_error import MenaiEvalError
-from menai.menai_vm_errors import VMErrorCode
+from menai.vm.menai_vm_errors import VMErrorCode
 
 
 @pytest.fixture

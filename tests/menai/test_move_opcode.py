@@ -4,8 +4,8 @@ import pytest
 
 from menai.menai_bytecode import CodeObject, Instruction, Opcode
 from menai.menai_value import MenaiInteger, MenaiString, MenaiBoolean, Menai_NONE
-from menai.menai_vm_c import execute as c_vm_execute
-from menai.menai_vm_bytecode_validator import BytecodeValidator, ValidationError, ValidationErrorType
+from menai.vm.menai_vm_c import execute as c_vm_execute
+from menai.vm.menai_vm_bytecode_validator import BytecodeValidator, ValidationError, ValidationErrorType
 
 
 def _make_code(instructions, local_count, constants=None, names=None, code_objects=None):

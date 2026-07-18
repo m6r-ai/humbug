@@ -5,14 +5,14 @@ from typing import cast
 
 from menai.menai_bytecode import CodeObject
 from menai.menai_value import MenaiValue
-from menai.menai_vm_bytecode_validator import validate_bytecode
-from menai.menai_vm_errors import _MenaiVMRuntimeError, translate_vm_error
+from menai.vm.menai_vm_bytecode_validator import validate_bytecode
+from menai.vm.menai_vm_errors import _MenaiVMRuntimeError, translate_vm_error
 
 # pylint: disable=no-name-in-module
-from menai.menai_vm_c import execute as _c_vm_execute  # type: ignore[import-not-found]
-from menai.menai_vm_c import cancel_flag_alloc as _c_vm_cancel_flag_alloc  # type: ignore[import-not-found]
-from menai.menai_vm_c import cancel_flag_free as _c_vm_cancel_flag_free  # type: ignore[import-not-found]
-from menai.menai_vm_c import cancel_flag_set as _c_vm_cancel_flag_set  # type: ignore[import-not-found]
+from menai.vm.menai_vm_c import execute as _c_vm_execute  # type: ignore[import-not-found]
+from menai.vm.menai_vm_c import cancel_flag_alloc as _c_vm_cancel_flag_alloc  # type: ignore[import-not-found]
+from menai.vm.menai_vm_c import cancel_flag_free as _c_vm_cancel_flag_free  # type: ignore[import-not-found]
+from menai.vm.menai_vm_c import cancel_flag_set as _c_vm_cancel_flag_set  # type: ignore[import-not-found]
 
 
 class MenaiVM:

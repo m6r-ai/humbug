@@ -3,7 +3,7 @@
 Fetch the pre-built Menai C VM binary for the current platform and Python version.
 
 Downloads the appropriate binary from the GitHub Release and places it in
-src/menai/ so that the C VM is available without a local C compiler.
+src/menai/vm/ so that the C VM is available without a local C compiler.
 
 No authentication required — release assets are publicly downloadable.
 
@@ -11,7 +11,7 @@ Usage:
     python fetch-menai-vm.py
 
 The script detects the current platform and Python version, downloads the
-matching binary from the latest release, and installs it into src/menai/.
+matching binary from the latest release, and installs it into src/menai/vm/.
 """
 
 import os
@@ -85,7 +85,7 @@ def main() -> None:
 
     ext_suffix = sysconfig.get_config_var("EXT_SUFFIX")
     expected_filename = f"menai_vm_c{ext_suffix}"
-    dest_dir = os.path.join("src", "menai")
+    dest_dir = os.path.join("src", "menai", "vm")
     dest_path = os.path.join(dest_dir, expected_filename)
 
     print(f"Target: {dest_path}")
@@ -103,10 +103,10 @@ def main() -> None:
     sys.path.insert(0, "src")
     try:
         # Force reimport in case a stale version is cached.
-        if "menai.menai_vm_c" in sys.modules:
-            del sys.modules["menai.menai_vm_c"]
+        if "menai.vm.menai_vm_c" in sys.modules:
+            del sys.modules["menai.vm.menai_vm_c"]
 
-        from menai.menai_vm_c import execute  # noqa: F401
+        from menai.vm.menai_vm_c import execute  # noqa: F401
         print("C VM loaded successfully.")
 
     except ImportError as e:

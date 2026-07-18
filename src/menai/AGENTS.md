@@ -122,7 +122,7 @@ You can find tools related to Menai in tools/menai.
 ## VM implementation
 
 The C VM (`menai_vm_c`) is the execution engine, compiled from C source and
-loaded at runtime.  `menai_vm.py` is a thin Python wrapper that exposes the C
+loaded at runtime.  `vm/menai_vm.py` is a thin Python wrapper that exposes the C
 VM's `execute` and `cancel` functions to the rest of the codebase.  Pre-built
 binaries for all supported platforms are published via GitHub Releases (use
 `python fetch-menai-vm.py` to download, or `python setup.py build_ext --inplace`
