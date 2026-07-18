@@ -226,15 +226,6 @@ typedef ssize_t hash_t;
 typedef size_t uhash_t;
 
 /*
- * Comparison op constants for menai_integer_compare and similar functions.
- * Values match CPython's Py_EQ/Py_NE/Py_LT/Py_GT/Py_LE/Py_GE so that no
- * Python header is needed for the VM to use them.
- */
-enum {
-    MENAI_EQ = 2, MENAI_NE = 3, MENAI_LT = 0, MENAI_GT = 4, MENAI_LE = 1, MENAI_GE = 5
-};
-
-/*
  * menai_hash_double — hash a C double without any Python API calls.
  *
  * Reinterprets the IEEE 754 bit pattern as a uint64_t via memcpy (safe
