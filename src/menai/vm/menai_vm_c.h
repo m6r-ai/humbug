@@ -12,8 +12,13 @@
 #include <assert.h>
 
 #ifdef _MSC_VER
+
 typedef ptrdiff_t ssize_t;
 #define SSIZE_MAX PTRDIFF_MAX
+
+/* MSVC deprecates strdup (POSIX) in favour of _strdup. */
+#define strdup _strdup
+
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
