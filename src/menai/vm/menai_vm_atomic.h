@@ -12,15 +12,13 @@
  *
  * We deliberately avoid <windows.h> because it defines a 'small' macro
  * that collides with the MenaiInteger/MenaiBigInt 'small' struct field
- * used throughout this file.  The Interlocked* functions and SwitchToThread
- * are compiler intrinsics, so we only need their declarations.
+ * used throughout this file.  The Interlocked* functions are compiler intrinsics,
+ * so we only need their declarations.
  */
 long _InterlockedCompareExchange(long volatile *Destination, long Exchange, long Comparand);
 #pragma intrinsic(_InterlockedCompareExchange)
 long _InterlockedExchange(long volatile *Target, long Value);
 #pragma intrinsic(_InterlockedExchange)
-int _SwitchToThread(void);
-#pragma intrinsic(_SwitchToThread)
 
 typedef volatile long _menai_atomic_int;
 static inline int _menai_atomic_load(_menai_atomic_int *p) {
