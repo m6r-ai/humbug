@@ -406,7 +406,7 @@ Syntax: (operator arg1 arg2 ...)
 - Slicing: (bytes-slice b start) → from start to end, (bytes-slice b start end) → from start to end (exclusive); clamps out-of-bounds to valid range
 - Concatenation: (bytes-concat b1 b2 ...) → variadic, (bytes-concat) → empty bytes
 - Append single byte: (bytes-append-u8 b 255) → new bytes with byte appended (value must be 0–255)
-- Search: (bytes-index needle haystack) → integer offset or #none, (bytes-index-int 75 b) → offset of first matching byte value or #none
+- Search: (bytes-index haystack needle) → integer offset or #none, (bytes-index-int b 75) → offset of first matching byte value or #none
 - Bytes are hashable (usable as set members or dict keys)
 - Multi-byte integer reads — all take (bytes offset) and return an integer:
   - Unsigned: bytes-read-u8, bytes-read-u16-le, bytes-read-u16-be, bytes-read-u24-le, bytes-read-u24-be, bytes-read-u32-le, bytes-read-u32-be, bytes-read-u64-le, bytes-read-u64-be

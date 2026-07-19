@@ -361,7 +361,7 @@ class TestBytesIndex:
     ])
     def test_bytes_index(self, menai, needle, haystack, expected):
         """bytes-index finds the offset of the first occurrence."""
-        result = menai.evaluate(f'(bytes-index (string-hex->bytes "{needle}") (string-hex->bytes "{haystack}"))')
+        result = menai.evaluate(f'(bytes-index (string-hex->bytes "{haystack}") (string-hex->bytes "{needle}"))')
         assert result == expected
 
     @pytest.mark.parametrize("byte_val,haystack,expected", [
@@ -373,16 +373,16 @@ class TestBytesIndex:
     ])
     def test_bytes_index_int(self, menai, byte_val, haystack, expected):
         """bytes-index-int finds the offset of the first matching byte."""
-        result = menai.evaluate(f'(bytes-index-int {byte_val} (string-hex->bytes "{haystack}"))')
+        result = menai.evaluate(f'(bytes-index-int (string-hex->bytes "{haystack}") {byte_val})')
         assert result == expected
 
     def test_bytes_index_int_out_of_range(self, menai):
         """bytes-index-int raises error on values outside 0-255."""
         with pytest.raises(MenaiEvalError, match="out of range"):
-            menai.evaluate('(bytes-index-int 256 (string-hex->bytes "504b"))')
+            menai.evaluate('(bytes-index-int (string-hex->bytes "504b") 256)')
 
         with pytest.raises(MenaiEvalError, match="out of range"):
-            menai.evaluate('(bytes-index-int -1 (string-hex->bytes "504b"))')
+            menai.evaluate('(bytes-index-int (string-hex->bytes "504b") -1)')
 
 
 class TestBytesMultiByteReads:
@@ -1398,7 +1398,7 @@ class TestIntegerToLongOverflowValues(TestIntegerToLongOverflow):
     def test_bytes_index_int_bigint(self, menai):
         """bytes-index-int rejects a bigint byte value that exceeds the 0–255 range."""
         with pytest.raises(MenaiEvalError, match="out of range"):
-            menai.evaluate(f'(bytes-index-int {self.BIG_POS} {self.EMPTY})')
+            menai.evaluate(f'(bytes-index-int {self.EMPTY} {self.BIG_POS})')
 
     def test_bytes_write_i16_le_bigint(self, menai):
         """bytes-write-i16-le rejects a bigint value that exceeds the signed 16-bit range."""
