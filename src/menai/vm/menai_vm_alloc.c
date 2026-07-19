@@ -76,7 +76,7 @@ menai_alloc(size_t size)
         _pool_depths[bucket]--;
         assert(((MenaiValue *)ptr)->ob_type == 0);
     } else {
-        ptr = malloc(1 << (bucket + MENAI_POOL_LOG_MIN_SIZE));
+        ptr = malloc((size_t)1 << (bucket + MENAI_POOL_LOG_MIN_SIZE));
         if (!ptr) {
             return NULL;
         }
