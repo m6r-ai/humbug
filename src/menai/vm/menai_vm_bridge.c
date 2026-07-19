@@ -14,12 +14,6 @@
 #include <string.h>
 #include <stdint.h>
 
-#ifndef _MSC_VER
-#include <unistd.h>
-#else
-#include <windows.h>
-#endif
-
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
