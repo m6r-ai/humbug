@@ -29,8 +29,8 @@
 /tools/aifpl_bytecode_analyzer/optimization_report.md
 
 # Ignore binary builds
-src/menai/vm/*.so
-src/menai/vm/*.pyd
+*.so
+*.pyd
 
 # Ignore PDF and DOCX files
 *.pdf
