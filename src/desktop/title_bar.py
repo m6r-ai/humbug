@@ -251,7 +251,13 @@ class MenuBarDragFilter(QWidget):
         if child is not None and child is not self._menu_bar:
             return False
 
-        self._drag_pos = event.globalPosition().toPoint() - window.frameGeometry().topLeft()
+        # Ask the compositor to handle the drag natively.  This is required on
+        # Wayland (including WSLg) where clients cannot set their own position.
+        # If the platform does not support it, fall back to manual move tracking.
+        handle = window.windowHandle()
+        if handle is None or not handle.startSystemMove():
+            self._drag_pos = event.globalPosition().toPoint() - window.frameGeometry().topLeft()
+
         return False
 
     def _handle_move(self, event: QMouseEvent) -> bool:
