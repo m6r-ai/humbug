@@ -149,7 +149,7 @@ menai_bytes_append_u8(MenaiValue *b, uint8_t value)
  * value in the specified endianness.  width must be 1–8.
  */
 MenaiValue *
-menai_bytes_append_multi(MenaiValue *b, unsigned long value, int width, int le)
+menai_bytes_append_multi(MenaiValue *b, unsigned long long value, int width, int le)
 {
     MenaiBytes *mb = (MenaiBytes *)b;
     ssize_t len = mb->length;
@@ -182,7 +182,7 @@ menai_bytes_append_multi(MenaiValue *b, unsigned long value, int width, int le)
  */
 MenaiValue *
 menai_bytes_write_multi(MenaiValue *b, ssize_t offset,
-                        unsigned long value, int width, int le)
+                        unsigned long long value, int width, int le)
 {
     MenaiBytes *mb = (MenaiBytes *)b;
     ssize_t len = mb->length;

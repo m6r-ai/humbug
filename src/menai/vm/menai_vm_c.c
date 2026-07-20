@@ -524,6 +524,27 @@ menai_integer_to_long(MenaiValue *val, long *out)
 }
 
 /*
+ * menai_integer_to_long_long — extract a C long long from a MenaiInteger.
+ * Returns 0 on success, -1 on error (value too large for a C long long).
+ * Caller must ensure val is a MenaiInteger.
+ */
+static inline int
+menai_integer_to_long_long(MenaiValue *val, long long *out)
+{
+    MenaiInteger *ib = (MenaiInteger *)val;
+    if (!ib->is_big) {
+        *out = ib->small;
+        return 0;
+    }
+
+    if (menai_bigint_to_long_long(&ib->big, out) < 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/*
  * menai_integer_to_unsigned_long_long — extract an unsigned long long from a MenaiInteger.
  * Returns 0 on success, -1 on error (no exception set — caller handles).
  * Caller must ensure val is a MenaiInteger.
@@ -6030,10 +6051,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } \
 \
             const uint8_t *d = menai_bytes_data(b) + offset; \
-            unsigned long uval = 0; \
+            unsigned long long uval = 0; \
             if (le) { \
                 for (int _i = 0; _i < (width); _i++) { \
-                    uval |= ((unsigned long)d[_i]) << (_i * 8); \
+                    uval |= ((unsigned long long)d[_i]) << (_i * 8); \
                 } \
             } else { \
                 for (int _i = 0; _i < (width); _i++) { \
@@ -6042,27 +6063,31 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } \
 \
             if (is_signed) { \
-                unsigned long sign_bit = 1UL << ((width) * 8 - 1); \
-                long sval; \
-                if (uval & sign_bit) { \
-                    if ((width) == sizeof(unsigned long)) { \
-                        sval = (long)uval; \
-                    } else { \
-                        sval = (long)(uval | ~((1UL << (width) * 8) - 1)); \
-                    } \
+                long long sval; \
+                if ((width) == 8) { \
+                    /* Full 64-bit width already occupies every bit; no \
+                     * extension mask is needed (and shifting a 64-bit \
+                     * value left by 64 would itself be undefined behavior). */ \
+                    sval = (long long)uval; \
                 } else { \
-                    sval = (long)uval; \
+                    unsigned long long sign_bit = 1ULL << ((width) * 8 - 1); \
+                    if (uval & sign_bit) { \
+                        sval = (long long)(uval | ~(~0ULL >> (64 - (width) * 8))); \
+                    } else { \
+                        sval = (long long)uval; \
+                    } \
                 } \
 \
-                MenaiValue *_r = menai_integer_from_long(sval); \
+                MenaiValue *_r = menai_integer_from_long_long(sval); \
                 if (_r == NULL) { \
                     goto error; \
                 } \
 \
                 menai_reg_set_own(regs, base + dest, _r); \
             } else { \
-                if ((width) == sizeof(unsigned long) && (long)uval < 0) { \
-                    /* Unsigned 64-bit value exceeds LONG_MAX */ \
+                if (uval > (unsigned long long)LONG_MAX) { \
+                    /* Value exceeds LONG_MAX; would misrepresent as \
+                     * negative (or wrap) if narrowed to long. */ \
                     MenaiBigInt big; \
                     menai_bigint_init(&big); \
                     vm_err = menai_bigint_from_unsigned_long_long((unsigned long long)uval, &big); \
@@ -6077,7 +6102,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 \
                     menai_reg_set_own(regs, base + dest, _r); \
                 } else { \
-                    MenaiValue *_r = menai_integer_from_long((long)uval); \
+                    MenaiValue *_r = menai_integer_from_long_long((long long)uval); \
                     if (_r == NULL) { \
                         goto error; \
                     } \
@@ -6129,21 +6154,21 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error; \
             } \
 \
-            long val; \
+            long long val; \
             if (is_signed) { \
-                if (MENAI_UNLIKELY(menai_integer_to_long(v, &val) < 0)) { \
+                if (MENAI_UNLIKELY(menai_integer_to_long_long(v, &val) < 0)) { \
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
 \
-                if ((width) < (int)sizeof(long)) { \
-                   long max_val = (long)((1UL << ((width) * 8 - 1)) - 1); \
+                if ((width) < (int)sizeof(long long)) { \
+                   long long max_val = (long long)((1ULL << ((width) * 8 - 1)) - 1); \
                    if (val < -max_val - 1 || val > max_val) { \
                        vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                        goto error; \
                    } \
                 } \
-                unsigned long uval = (unsigned long)val; \
+                unsigned long long uval = (unsigned long long)val; \
                 MenaiValue *_r = menai_bytes_append_multi(b, uval, (width), le); \
                 if (_r == NULL) { \
                     goto error; \
@@ -6157,12 +6182,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     goto error; \
                 } \
 \
-                if ((width) < (int)sizeof(unsigned long long) && uval_ull > ((1ULL << ((width) * 8)) - 1)) { \
+                if ((width) < (int)sizeof(unsigned long long) && uval_ull > (~0ULL >> (64 - (width) * 8))) { \
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
 \
-                MenaiValue *_r = menai_bytes_append_multi(b, (unsigned long)uval_ull, (width), le); \
+                MenaiValue *_r = menai_bytes_append_multi(b, uval_ull, (width), le); \
                 if (_r == NULL) { \
                     goto error; \
                 } \
@@ -6234,20 +6259,20 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 \
             unsigned long long uval_ull; \
             if (is_signed) { \
-                long val; \
-                if (menai_integer_to_long(v, &val) < 0) { \
+                long long val; \
+                if (menai_integer_to_long_long(v, &val) < 0) { \
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
 \
-                if ((width) < (int)sizeof(long)) { \
-                    long max_val = (long)((1UL << ((width) * 8 - 1)) - 1); \
+                if ((width) < (int)sizeof(long long)) { \
+                    long long max_val = (long long)((1ULL << ((width) * 8 - 1)) - 1); \
                     if (val < -max_val - 1 || val > max_val) { \
                         vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                         goto error; \
                     } \
                 } \
-                uval_ull = (unsigned long long)(unsigned long)val; \
+                uval_ull = (unsigned long long)val; \
             } else { \
                 if (menai_integer_to_unsigned_long_long(v, &uval_ull) < 0) { \
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
@@ -6255,12 +6280,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 } \
 \
                 if ((width) < (int)sizeof(unsigned long long) && \
-                        uval_ull > ((1ULL << ((width) * 8)) - 1)) { \
+                        uval_ull > (~0ULL >> (64 - (width) * 8))) { \
                     vm_err = MENAI_ERR_VALUE_OUT_OF_RANGE; \
                     goto error; \
                 } \
             } \
-            MenaiValue *_r = menai_bytes_write_multi(b, offset, (unsigned long)uval_ull, (width), le); \
+            MenaiValue *_r = menai_bytes_write_multi(b, offset, uval_ull, (width), le); \
             if (_r == NULL) { \
                 goto error; \
             } \
@@ -6349,13 +6374,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     goto error;
                 }
             } else {
-                val_result = menai_integer_from_long((long)result);
+                val_result = menai_integer_from_long_long((long long)result);
                 if (val_result == NULL) {
                     goto error;
                 }
             }
 
-            MenaiValue *next_off = menai_integer_from_long((long)pos);
+            MenaiValue *next_off = ssize_t_to_menai_integer(pos);
             if (next_off == NULL) {
                 menai_release(val_result);
                 goto error;
@@ -6454,7 +6479,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             const uint8_t *d = menai_bytes_data(b);
-            long result = 0;
+            long long result = 0;
             int shift = 0;
             ssize_t pos = offset;
             int byte;
@@ -6464,22 +6489,22 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     goto error;
                 }
                 byte = d[pos];
-                result |= (byte & 0x7F) << shift;
+                result |= ((long long)(byte & 0x7F)) << shift;
                 shift += 7;
                 pos++;
             } while (byte & 0x80);
 
             /* Sign extend if the sign bit is set */
             if (shift < 64 && (byte & 0x40)) {
-                result |= -1L << shift;
+                result |= (long long)(-1LL) << shift;
             }
 
-            MenaiValue *val_result = menai_integer_from_long(result);
+            MenaiValue *val_result = menai_integer_from_long_long(result);
             if (val_result == NULL) {
                 goto error;
             }
 
-            MenaiValue *next_off = menai_integer_from_long((long)pos);
+            MenaiValue *next_off = ssize_t_to_menai_integer(pos);
             if (next_off == NULL) {
                 menai_release(val_result);
                 goto error;
@@ -6517,8 +6542,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            long val;
-            if (MENAI_UNLIKELY(menai_integer_to_long(v, &val) < 0)) {
+            long long val;
+            if (MENAI_UNLIKELY(menai_integer_to_long_long(v, &val) < 0)) {
                 vm_err = MENAI_ERR_OVERFLOW;
                 goto error;
             }

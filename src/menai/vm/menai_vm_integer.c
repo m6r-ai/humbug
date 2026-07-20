@@ -35,6 +35,29 @@ menai_integer_from_long(long n)
 }
 
 MenaiValue *
+menai_integer_from_long_long(long long n)
+{
+    if (n >= (long long)MENAI_INT_CACHE_MIN &&
+            n <= (long long)MENAI_INT_CACHE_MAX) {
+        MenaiValue *cached = _integer_cache[(int)n - MENAI_INT_CACHE_MIN];
+        menai_retain(cached);
+        return cached;
+    }
+
+    if (n >= (long long)LONG_MIN && n <= (long long)LONG_MAX) {
+        return menai_integer_from_long((long)n);
+    }
+
+    MenaiBigInt big;
+    menai_bigint_init(&big);
+    if (menai_bigint_from_long_long(n, &big) < 0) {
+        return NULL;
+    }
+
+    return menai_integer_from_bigint(big);
+}
+
+MenaiValue *
 menai_integer_from_bigint(MenaiBigInt src)
 {
     /*

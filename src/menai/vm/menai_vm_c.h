@@ -434,12 +434,15 @@ void menai_bigint_free(MenaiBigInt *a);
 void menai_bigint_normalize(MenaiBigInt *a);
 int menai_bigint_copy(const MenaiBigInt *src, MenaiBigInt *dst);
 int menai_bigint_from_long(long v, MenaiBigInt *a);
+int menai_bigint_from_long_long(long long v, MenaiBigInt *a);
 int menai_bigint_from_unsigned_long_long(unsigned long long v, MenaiBigInt *a);
 int menai_bigint_from_string(const char *s, int base, MenaiBigInt *a);
 int menai_bigint_from_codepoints(const uint32_t *data, ssize_t len, int base, MenaiBigInt *a);
 int menai_bigint_from_double(double v, MenaiBigInt *a);
 int menai_bigint_fits_long(const MenaiBigInt *a);
 int menai_bigint_to_long(const MenaiBigInt *a, long *out);
+int menai_bigint_fits_long_long(const MenaiBigInt *a);
+int menai_bigint_to_long_long(const MenaiBigInt *a, long long *out);
 int menai_bigint_to_double(const MenaiBigInt *a, double *out);
 int menai_bigint_fits_unsigned_long_long(const MenaiBigInt *a);
 int menai_bigint_to_unsigned_long_long(const MenaiBigInt *a, unsigned long long *out);
@@ -646,9 +649,9 @@ MenaiValue *menai_bytes_slice(MenaiValue *b, ssize_t start, ssize_t end);
 MenaiValue *menai_bytes_concat(MenaiValue *a, MenaiValue *b);
 MenaiValue *menai_bytes_ref(MenaiValue *b, ssize_t i);
 MenaiValue *menai_bytes_append_u8(MenaiValue *b, uint8_t value);
-MenaiValue *menai_bytes_append_multi(MenaiValue *b, unsigned long value, int width, int le);
+MenaiValue *menai_bytes_append_multi(MenaiValue *b, unsigned long long value, int width, int le);
 MenaiValue *menai_bytes_write_multi(MenaiValue *b, ssize_t offset,
-                                    unsigned long value, int width, int le);
+                                    unsigned long long value, int width, int le);
 int menai_bytes_equal(MenaiValue *a, MenaiValue *b);
 int menai_bytes_compare(MenaiValue *a, MenaiValue *b);
 hash_t menai_bytes_hash(MenaiValue *b);
@@ -712,6 +715,7 @@ typedef struct {
 #define MENAI_INT_CACHE_SIZE (MENAI_INT_CACHE_MAX - MENAI_INT_CACHE_MIN + 1)
 
 MenaiValue *menai_integer_from_long(long n);
+MenaiValue *menai_integer_from_long_long(long long n);
 MenaiValue *menai_integer_from_bigint(MenaiBigInt src);
 
 /*

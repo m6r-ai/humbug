@@ -436,6 +436,54 @@ menai_bigint_from_long(long v, MenaiBigInt *a)
     return 0;
 }
 
+/*
+ * Set a to the signed 64-bit value v.
+ * On platforms where long is 32-bit (e.g. MSVC/Windows), this handles
+ * values that exceed the range of long.
+ */
+int
+menai_bigint_from_long_long(long long v, MenaiBigInt *a)
+{
+    menai_bigint_free(a);
+    if (v == 0) {
+        return 0;
+    }
+
+    int sign;
+    unsigned long long mag;
+    if (v < 0) {
+        sign = -1;
+        /* Avoid UB for LLONG_MIN: cast to unsigned before negating. */
+        mag = (unsigned long long)(-(v + 1)) + 1ULL;
+    } else {
+        sign = 1;
+        mag = (unsigned long long)v;
+    }
+
+    ssize_t len;
+    if (mag <= 0xFFFFFFFFULL) {
+        len = 1;
+    } else {
+        len = 2;
+    }
+
+    uint32_t *digits = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
+    if (digits == NULL) {
+        return MENAI_ERR_NOMEM;
+    }
+
+    digits[0] = (uint32_t)(mag & 0xFFFFFFFFULL);
+    if (len == 2) {
+        digits[1] = (uint32_t)(mag >> 32);
+    }
+
+    a->digits = digits;
+    a->length = len;
+    a->sign = sign;
+    menai_bigint_normalize(a);
+    return 0;
+}
+
 /* Set a to the unsigned value of v. */
 int
 menai_bigint_from_unsigned_long_long(unsigned long long v, MenaiBigInt *a)
@@ -746,6 +794,65 @@ menai_bigint_to_long(const MenaiBigInt *a, long *out)
         *out = (long)(0UL - mag);
     } else {
         *out = (long)mag;
+    }
+
+    return 0;
+}
+
+/*
+ * Return 1 if the value of a fits in a C long long, 0 otherwise.
+ * On platforms where long is already 64-bit, this is equivalent to
+ * menai_bigint_fits_long.
+ */
+int
+menai_bigint_fits_long_long(const MenaiBigInt *a)
+{
+    if (a->length == 0) {
+        return 1;
+    }
+
+    if (a->length > 2) {
+        return 0;
+    }
+
+    uint64_t mag = a->digits[0];
+    if (a->length == 2) {
+        mag |= ((uint64_t)a->digits[1] << 32);
+    }
+
+    if (a->sign == 1 && mag > (uint64_t)0x7FFFFFFFFFFFFFFFULL) {
+        return 0;
+    }
+
+    if (a->sign == -1 && mag > (uint64_t)0x8000000000000000ULL) {
+        return 0;
+    }
+
+    return 1;
+}
+
+/* Store the value of a in *out as a C long long. */
+int
+menai_bigint_to_long_long(const MenaiBigInt *a, long long *out)
+{
+    if (!menai_bigint_fits_long_long(a)) {
+        return MENAI_ERR_OVERFLOW;
+    }
+
+    if (a->length == 0) {
+        *out = 0;
+        return 0;
+    }
+
+    uint64_t mag = a->digits[0];
+    if (a->length == 2) {
+        mag |= ((uint64_t)a->digits[1] << 32);
+    }
+
+    if (a->sign == -1) {
+        *out = (long long)(0ULL - mag);
+    } else {
+        *out = (long long)mag;
     }
 
     return 0;
