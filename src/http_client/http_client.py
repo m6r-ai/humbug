@@ -299,7 +299,7 @@ class HttpClient:
     def __init__(
         self,
         ssl_context: ssl.SSLContext | None = None,
-        family: socket.AddressFamily | None = None,
+        family: int | None = None,
         connect_timeout: float = _DEFAULT_CONNECT_TIMEOUT,
         ssl_handshake_timeout: float = _DEFAULT_SSL_HANDSHAKE_TIMEOUT,
         read_timeout: float = _DEFAULT_READ_TIMEOUT,

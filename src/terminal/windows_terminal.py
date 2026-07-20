@@ -366,6 +366,8 @@ class WindowsTerminal(TerminalBase):
             if not self._running:
                 return b''
 
+            raise
+
     def _write_all(self, pipe_handle: int, data: bytes) -> None:
         """
         Write all data to pipe, handling partial writes.
