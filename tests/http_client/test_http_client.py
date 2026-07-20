@@ -1,6 +1,7 @@
 """Tests for the async HTTP client."""
 
 import asyncio
+import shutil
 import gzip
 import json
 import socket
@@ -8,6 +9,7 @@ import ssl
 import tempfile
 import zlib
 from pathlib import Path
+from typing import Awaitable, Callable
 from unittest.mock import patch
 
 import pytest
@@ -21,12 +23,18 @@ from http_client import (
 )
 
 
+requires_openssl = pytest.mark.skipif(
+    shutil.which("openssl") is None,
+    reason="openssl CLI is required to generate self-signed certificates for TLS tests",
+)
+
+
 class MockHTTPServer:
     """A minimal HTTP server for testing, built on asyncio.start_server."""
 
     def __init__(
         self,
-        handler: asyncio.Callable[[dict, asyncio.StreamWriter], asyncio.Awaitable[None]],
+        handler: Callable[[dict, asyncio.StreamWriter], Awaitable[None]],
         use_tls: bool = False,
     ) -> None:
         """
@@ -1019,6 +1027,7 @@ class TestRedirects:
 class TestTls:
     """Tests for TLS connections."""
 
+    @requires_openssl
     def test_https_get_with_ssl_context(self) -> None:
         """HTTPS GET works with a caller-supplied SSL context."""
         async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
@@ -1033,6 +1042,7 @@ class TestTls:
 
         asyncio.run(run())
 
+    @requires_openssl
     def test_https_post_with_ssl_context(self) -> None:
         """HTTPS POST works with a caller-supplied SSL context."""
         received: dict = {}
@@ -1403,7 +1413,7 @@ class MockHTTPProxyServer:
 
     def __init__(
         self,
-        target_handler: asyncio.Callable[[dict, asyncio.StreamWriter], asyncio.Awaitable[None]],
+        target_handler: Callable[[dict, asyncio.StreamWriter], Awaitable[None]],
         target_use_tls: bool = False,
     ) -> None:
         """
@@ -1546,7 +1556,7 @@ class MockSocks5ProxyServer:
 
     def __init__(
         self,
-        target_handler: asyncio.Callable[[dict, asyncio.StreamWriter], asyncio.Awaitable[None]],
+        target_handler: Callable[[dict, asyncio.StreamWriter], Awaitable[None]],
         target_use_tls: bool = False,
     ) -> None:
         """
@@ -1747,6 +1757,7 @@ class TestHttpProxy:
         assert json.loads(received["body"]) == {"key": "value"}
         assert received["method"] == "POST"
 
+    @requires_openssl
     def test_get_via_http_proxy_with_tls(self) -> None:
         """GET request through an HTTP CONNECT proxy to an HTTPS target works."""
         async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
@@ -1802,6 +1813,7 @@ class TestSocks5Proxy:
         assert json.loads(received["body"]) == {"x": 1}
         assert received["method"] == "POST"
 
+    @requires_openssl
     def test_get_via_socks5_proxy_with_tls(self) -> None:
         """GET request through a SOCKS5 proxy to an HTTPS target works."""
         async def handler(request: dict, writer: asyncio.StreamWriter) -> None:

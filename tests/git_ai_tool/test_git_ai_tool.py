@@ -327,9 +327,11 @@ class TestBranchOperation:
             _run(["git", "add", "."], cwd=mindspace_path)
             _run(["git", "commit", "-m", "init"], cwd=mindspace_path)
 
-            # Create many branches with long names to exceed 64KB
+            # Create many branches with long names to exceed 64KB.
+            # Names must stay within Windows MAX_PATH (git stores refs
+            # under <repo>/.git/refs/heads/<name>).
             for i in range(1000):
-                _run(["git", "branch", f"branch_{i:04d}_" + "x" * 200], cwd=mindspace_path)
+                _run(["git", "branch", f"branch_{i:04d}_" + "x" * 80], cwd=mindspace_path)
 
             tool = GitAITool(_make_mindspace_mock(mindspace_path))
             result = _execute_tool(tool, _make_tool_call("branch"))
@@ -425,9 +427,10 @@ class TestOutputLimits:
             _run(["git", "config", "user.email", "t@t.com"], cwd=mindspace_path)
             _run(["git", "config", "user.name", "T"], cwd=mindspace_path)
 
-            # Create many untracked files with long names to exceed 64KB
+            # Create many untracked files with long names to exceed 64KB.
+            # Names must stay within Windows MAX_PATH.
             for i in range(1000):
-                filename = f"file_{i:04d}_" + "x" * 200 + ".txt"
+                filename = f"file_{i:04d}_" + "x" * 80 + ".txt"
                 with open(os.path.join(mindspace_path, filename), "w", encoding="utf-8") as f:
                     f.write("content\n")
 
@@ -527,7 +530,7 @@ class TestOutputLimits:
 
             assert result.error is None
             assert "Wrote full git show output" in result.content
-            assert "spilled/big-at-head.txt" in result.content
+            assert os.path.join("spilled", "big-at-head.txt") in result.content
 
             written = os.path.join(mindspace_path, "spilled", "big-at-head.txt")
             with open(written, encoding="utf-8") as f:
