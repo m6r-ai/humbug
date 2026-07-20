@@ -1412,10 +1412,14 @@ class StyleManager(QObject):
     def create_menu(self, parent: QWidget) -> QMenu:
         """Create a styled QMenu with correct attributes for all platforms."""
         menu = QMenu(parent)
+        self.style_menu(menu)
+        return menu
+
+    def style_menu(self, menu: QMenu) -> None:
+        """Apply correct attributes and stylesheet to a QMenu for all platforms."""
         menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         menu.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         menu.setStyleSheet(self.get_menu_stylesheet())
-        return menu
 
     def get_menu_stylesheet(self) -> str:
         """Apply styling to a specific menu."""

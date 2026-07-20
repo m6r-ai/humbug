@@ -1919,6 +1919,12 @@ class MainWindow(QMainWindow):
         if new_stylesheet != self._menu_bar.styleSheet():
             self._menu_bar.setStyleSheet(new_stylesheet)
 
+        # Apply dropdown menu styling so menus opened from the menu bar use the
+        # correct theme colours.  Without this, Windows and Linux fall back to
+        # the platform default background instead of MENU_BACKGROUND.
+        for menu in self._menu_bar.findChildren(QMenu):
+            self._style_manager.style_menu(menu)
+
     def _apply_statusbar_style(self) -> None:
         """Apply styling to status bar."""
         style_manager = self._style_manager
