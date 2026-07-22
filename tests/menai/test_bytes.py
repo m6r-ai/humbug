@@ -664,15 +664,15 @@ class TestBytesTypeErrors:
 
     def test_bytes_ref_non_integer_offset(self, menai):
         """bytes-ref raises error when offset is not an integer."""
-        with pytest.raises(MenaiEvalError, match="offset must be"):
+        with pytest.raises(MenaiEvalError, match="type mismatch"):
             menai.evaluate('(bytes-ref (string-hex->bytes "504b") "x")')
 
     def test_bytes_slice_non_integer_args(self, menai):
         """bytes-slice raises error when start/end are not integers."""
-        with pytest.raises(MenaiEvalError, match="start must be"):
+        with pytest.raises(MenaiEvalError, match="type mismatch"):
             menai.evaluate('(bytes-slice (string-hex->bytes "504b0304") "x" 2)')
 
-        with pytest.raises(MenaiEvalError, match="end must be"):
+        with pytest.raises(MenaiEvalError, match="type mismatch"):
             menai.evaluate('(bytes-slice (string-hex->bytes "504b0304") 0 "x")')
 
 

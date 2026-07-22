@@ -241,6 +241,17 @@ class MenaiVCodeRaise:
     message: MenaiVCodeReg
 
 
+@dataclass
+class MenaiVCodeGuard:
+    """
+    Guard: assert that a register's value has a specific Menai type.
+
+    Lowered to a ASSERT_* opcode (e.g. ASSERT_INTEGER, ASSERT_STRING).
+    """
+    value: MenaiVCodeReg
+    expected_type: str
+
+
 # Union of all VCode instruction types.
 MenaiVCodeInstr = (  # pylint: disable=invalid-name
     MenaiVCodeLabel
@@ -263,6 +274,7 @@ MenaiVCodeInstr = (  # pylint: disable=invalid-name
     | MenaiVCodeJumpIfFalse
     | MenaiVCodeReturn
     | MenaiVCodeRaise
+    | MenaiVCodeGuard
 )
 
 
@@ -375,5 +387,8 @@ def _fmt_instr(instr: MenaiVCodeInstr) -> str:
 
     if isinstance(instr, MenaiVCodeRaise):
         return f"RAISE {instr.message}"
+
+    if isinstance(instr, MenaiVCodeGuard):
+        return f"GUARD {instr.value} is {instr.expected_type}"
 
     return f"<unknown instr {type(instr).__name__}>"

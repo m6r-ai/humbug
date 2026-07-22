@@ -53,6 +53,7 @@ from menai.cfg.menai_cfg import (
     MenaiCFGFreeVarInstr,
     MenaiCFGFunction,
     MenaiCFGGlobalInstr,
+    MenaiCFGGuardInstr,
     MenaiCFGJumpTerm,
     MenaiCFGMakeClosureInstr,
     MenaiCFGParamInstr,
@@ -89,6 +90,7 @@ from menai.vcode.menai_vcode import (
     MenaiVCodeMakeSet,
     MenaiVCodeMakeDict,
     MenaiVCodeRaise,
+    MenaiVCodeGuard,
     MenaiVCodeReg,
     MenaiVCodeReturn,
     MenaiVCodeTailApply,
@@ -392,6 +394,11 @@ class MenaiVCodeBuilder:
             instrs.append(MenaiVCodeMakeDict(dst=dst, pairs=pairs))
             all_regs = [r for k, v in pairs for r in (k, v)]
             return max(max_reg_id, dst.id, *(r.id for r in all_regs)) if all_regs else max(max_reg_id, dst.id)
+
+        if isinstance(instr, MenaiCFGGuardInstr):
+            value_reg = self._reg(instr.value)
+            instrs.append(MenaiVCodeGuard(value=value_reg, expected_type=instr.expected_type))
+            return max(max_reg_id, value_reg.id)
 
         raise TypeError(
             f"MenaiVCodeBuilder: unhandled instruction {type(instr).__name__}"

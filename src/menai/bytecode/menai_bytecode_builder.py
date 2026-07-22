@@ -46,6 +46,7 @@ from menai.vcode.menai_vcode import (
     MenaiVCodeBuiltin,
     MenaiVCodeCall,
     MenaiVCodeFunction,
+    MenaiVCodeGuard,
     MenaiVCodeJump,
     MenaiVCodeJumpIfFalse,
     MenaiVCodeJumpIfTrue,
@@ -53,12 +54,12 @@ from menai.vcode.menai_vcode import (
     MenaiVCodeLoadConst,
     MenaiVCodeLoadName,
     MenaiVCodeMakeClosure,
-    MenaiVCodeMove,
-    MenaiVCodePatchClosure,
-    MenaiVCodeMakeStruct,
+    MenaiVCodeMakeDict,
     MenaiVCodeMakeList,
     MenaiVCodeMakeSet,
-    MenaiVCodeMakeDict,
+    MenaiVCodeMakeStruct,
+    MenaiVCodeMove,
+    MenaiVCodePatchClosure,
     MenaiVCodeRaise,
     MenaiVCodeReg,
     MenaiVCodeReturn,
@@ -78,6 +79,25 @@ UNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if ari
 BINARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 2}
 TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 3}
 
+
+"""
+Maps Menai type names to the corresponding guard opcode.
+"""
+_GUARD_OPCODES: dict[str, Opcode] = {
+    'none': Opcode.ASSERT_NONE,
+    'boolean': Opcode.ASSERT_BOOLEAN,
+    'integer': Opcode.ASSERT_INTEGER,
+    'float': Opcode.ASSERT_FLOAT,
+    'complex': Opcode.ASSERT_COMPLEX,
+    'string': Opcode.ASSERT_STRING,
+    'symbol': Opcode.ASSERT_SYMBOL,
+    'list': Opcode.ASSERT_LIST,
+    'dict': Opcode.ASSERT_DICT,
+    'set': Opcode.ASSERT_SET,
+    'function': Opcode.ASSERT_FUNCTION,
+    'bytes': Opcode.ASSERT_BYTES,
+    'struct': Opcode.ASSERT_STRUCT,
+}
 
 _FIELD_NAMES = ('opcode', 'dest', 'src0', 'src1', 'src2')
 _SHIFTS = {
@@ -442,6 +462,17 @@ class MenaiBytecodeBuilder:
 
             if isinstance(instr, MenaiVCodeRaise):
                 ctx.emit(Opcode.RAISE_ERROR, ctx.slot_of(instr.message))
+                i += 1
+                continue
+
+            if isinstance(instr, MenaiVCodeGuard):
+                guard_opcode = _GUARD_OPCODES.get(instr.expected_type)
+                if guard_opcode is None:
+                    raise ValueError(
+                        f"MenaiBytecodeBuilder: no guard opcode for type {instr.expected_type!r}"
+                    )
+
+                ctx.emit(guard_opcode, ctx.slot_of(instr.value))
                 i += 1
                 continue
 

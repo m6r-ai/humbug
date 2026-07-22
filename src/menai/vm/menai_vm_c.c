@@ -452,6 +452,19 @@ _menai_mul_overflow(long a, long b, long *r) {
 #define OP_BYTES_APPEND_ULEB128 521
 #define OP_BYTES_READ_SLEB128 522
 #define OP_BYTES_APPEND_SLEB128 523
+#define OP_ASSERT_NONE 530
+#define OP_ASSERT_BOOLEAN 531
+#define OP_ASSERT_INTEGER 532
+#define OP_ASSERT_FLOAT 533
+#define OP_ASSERT_COMPLEX 534
+#define OP_ASSERT_STRING 535
+#define OP_ASSERT_SYMBOL 536
+#define OP_ASSERT_LIST 537
+#define OP_ASSERT_DICT 538
+#define OP_ASSERT_SET 539
+#define OP_ASSERT_FUNCTION 540
+#define OP_ASSERT_BYTES 541
+#define OP_ASSERT_STRUCT 542
 
 /*
  * Singleton values fetched from menai_vm_bridge at init time.
@@ -8660,6 +8673,41 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
+
+        /*
+         * Type guard opcodes.
+         *
+         * Each checks the type of r_src0 and raises MENAI_ERR_TYPE_MISMATCH
+         * if the type does not match.  Otherwise the instruction is a no-op.
+         * The operational opcodes below rely on these guards having verified
+         * operand types and skip their own type checks for performance.
+         */
+        #define DEFINE_ASSERT_OP(name, type_check) \
+        case OP_ASSERT_##name: { \
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK); \
+            MenaiValue *v = regs[base + src0]; \
+            if (MENAI_UNLIKELY(!(type_check))) { \
+                vm_err = MENAI_ERR_TYPE_MISMATCH; \
+                goto error; \
+            } \
+            break; \
+        }
+
+        DEFINE_ASSERT_OP(NONE, IS_MENAI_NONE(v))
+        DEFINE_ASSERT_OP(BOOLEAN, IS_MENAI_BOOLEAN(v))
+        DEFINE_ASSERT_OP(INTEGER, IS_MENAI_INTEGER(v))
+        DEFINE_ASSERT_OP(FLOAT, IS_MENAI_FLOAT(v))
+        DEFINE_ASSERT_OP(COMPLEX, IS_MENAI_COMPLEX(v))
+        DEFINE_ASSERT_OP(STRING, IS_MENAI_STRING(v))
+        DEFINE_ASSERT_OP(SYMBOL, IS_MENAI_SYMBOL(v))
+        DEFINE_ASSERT_OP(LIST, IS_MENAI_LIST(v))
+        DEFINE_ASSERT_OP(DICT, IS_MENAI_DICT(v))
+        DEFINE_ASSERT_OP(SET, IS_MENAI_SET(v))
+        DEFINE_ASSERT_OP(FUNCTION, IS_MENAI_FUNCTION(v))
+        DEFINE_ASSERT_OP(BYTES, IS_MENAI_BYTES(v))
+        DEFINE_ASSERT_OP(STRUCT, IS_MENAI_STRUCT(v))
+
+        #undef DEFINE_ASSERT_OP
 
         default:
             vm_err = MENAI_ERR_UNIMPLEMENTED_OPCODE;

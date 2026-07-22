@@ -315,9 +315,6 @@ class Opcode(IntEnum):
     BYTES_READ_I24_BE = _op(475, 2)     # r_dest = (bytes-read-i24-be r_src0 r_src1)
     BYTES_READ_I32_BE = _op(476, 2)     # r_dest = (bytes-read-i32-be r_src0 r_src1)
     BYTES_READ_I64_BE = _op(477, 2)     # r_dest = (bytes-read-i64-be r_src0 r_src1)
-
-
-    # Bytes operations — multi-byte append
     BYTES_APPEND_U16_LE = _op(481, 2)   # r_dest = (bytes-append-u16-le r_src0 r_src1)
     BYTES_APPEND_U16_BE = _op(482, 2)   # r_dest = (bytes-append-u16-be r_src0 r_src1)
     BYTES_APPEND_U24_LE = _op(483, 2)   # r_dest = (bytes-append-u24-le r_src0 r_src1)
@@ -335,8 +332,6 @@ class Opcode(IntEnum):
     BYTES_APPEND_I32_BE = _op(495, 2)   # r_dest = (bytes-append-i32-be r_src0 r_src1)
     BYTES_APPEND_I64_LE = _op(496, 2)   # r_dest = (bytes-append-i64-le r_src0 r_src1)
     BYTES_APPEND_I64_BE = _op(497, 2)   # r_dest = (bytes-append-i64-be r_src0 r_src1)
-
-    # Bytes operations — multi-byte write
     BYTES_WRITE_U8 = _op(500, 3)        # r_dest = (bytes-write-u8 r_src0 r_src1 r_src2)
     BYTES_WRITE_U16_LE = _op(501, 3)    # r_dest = (bytes-write-u16-le r_src0 r_src1 r_src2)
     BYTES_WRITE_U16_BE = _op(502, 3)    # r_dest = (bytes-write-u16-be r_src0 r_src1 r_src2)
@@ -355,12 +350,25 @@ class Opcode(IntEnum):
     BYTES_WRITE_I32_BE = _op(515, 3)    # r_dest = (bytes-write-i32-be r_src0 r_src1 r_src2)
     BYTES_WRITE_I64_LE = _op(516, 3)    # r_dest = (bytes-write-i64-le r_src0 r_src1 r_src2)
     BYTES_WRITE_I64_BE = _op(517, 3)    # r_dest = (bytes-write-i64-be r_src0 r_src1 r_src2)
-
-    # Bytes operations — variable-length integers (LEB128)
     BYTES_READ_ULEB128 = _op(520, 2)    # r_dest = (bytes-read-uleb128 r_src0 r_src1)
     BYTES_APPEND_ULEB128 = _op(521, 2)  # r_dest = (bytes-append-uleb128 r_src0 r_src1)
     BYTES_READ_SLEB128 = _op(522, 2)    # r_dest = (bytes-read-sleb128 r_src0 r_src1)
     BYTES_APPEND_SLEB128 = _op(523, 2)  # r_dest = (bytes-append-sleb128 r_src0 r_src1)
+
+    # Type guard opcodes — assert runtime type, raise MENAI_ERR_TYPE_MISMATCH if wrong.
+    ASSERT_NONE = _op(530, 1)           # Check r_src0 — assert r_src0 is none
+    ASSERT_BOOLEAN = _op(531, 1)        # Check r_src0 — assert r_src0 is boolean
+    ASSERT_INTEGER = _op(532, 1)        # Check r_src0 — assert r_src0 is integer
+    ASSERT_FLOAT = _op(533, 1)          # Check r_src0 — assert r_src0 is float
+    ASSERT_COMPLEX = _op(534, 1)        # Check r_src0 — assert r_src0 is complex
+    ASSERT_STRING = _op(535, 1)         # Check r_src0 — assert r_src0 is string
+    ASSERT_SYMBOL = _op(536, 1)         # Check r_src0 — assert r_src0 is symbol
+    ASSERT_LIST = _op(537, 1)           # Check r_src0 — assert r_src0 is list
+    ASSERT_DICT = _op(538, 1)           # Check r_src0 — assert r_src0 is dict
+    ASSERT_SET = _op(539, 1)            # Check r_src0 — assert r_src0 is set
+    ASSERT_FUNCTION = _op(540, 1)       # Check r_src0 — assert r_src0 is function
+    ASSERT_BYTES = _op(541, 1)          # Check r_src0 — assert r_src0 is bytes
+    ASSERT_STRUCT = _op(542, 1)         # Check r_src0 — assert r_src0 is struct
 
 # Maps builtin function name → (opcode, arity) for all fixed-arity builtins.
 #
@@ -546,44 +554,26 @@ BUILTIN_OPCODE_MAP: dict[str, tuple[Opcode, int]] = {
     'struct-type-name': (Opcode.STRUCT_TYPE_NAME, 1),
     'struct-fields': (Opcode.STRUCT_FIELDS, 1),
     'range': (Opcode.RANGE, 3),
-
-    # Bytes operations — type foundation
     'bytes?': (Opcode.BYTES_P, 1),
     'bytes=?': (Opcode.BYTES_EQ_P, 2),
     'bytes!=?': (Opcode.BYTES_NEQ_P, 2),
     'bytes-length': (Opcode.BYTES_LENGTH, 1),
-
-    # Bytes operations — single-byte bridge
     'bytes-ref': (Opcode.BYTES_REF, 2),
     'bytes-append-u8': (Opcode.BYTES_APPEND_U8, 2),
-
-    # Bytes operations — construction from list
     'list->bytes': (Opcode.LIST_TO_BYTES, 1),
-
-    # Bytes operations — slicing
     'bytes-slice': (Opcode.BYTES_SLICE, 3),
-
-    # Bytes operations — string, hex, and list conversions
     'string->bytes': (Opcode.STRING_TO_BYTES, 1),
     'bytes->string': (Opcode.BYTES_TO_STRING, 1),
     'bytes->list': (Opcode.BYTES_TO_LIST, 1),
     'bytes->string-hex': (Opcode.BYTES_TO_STRING_HEX, 1),
     'string-hex->bytes': (Opcode.STRING_HEX_TO_BYTES, 1),
-
-    # Bytes operations — concatenation
     'bytes-concat': (Opcode.BYTES_CONCAT, 2),
-
-    # Bytes operations — search
     'bytes-index': (Opcode.BYTES_INDEX, 2),
     'bytes-index-int': (Opcode.BYTES_INDEX_INT, 2),
-
-    # Bytes operations — lexicographic comparison
     'bytes<?': (Opcode.BYTES_LT_P, 2),
     'bytes>?': (Opcode.BYTES_GT_P, 2),
     'bytes<=?': (Opcode.BYTES_LTE_P, 2),
     'bytes>=?': (Opcode.BYTES_GTE_P, 2),
-
-    # Bytes operations — multi-byte reads
     'bytes-read-u8': (Opcode.BYTES_READ_U8, 2),
     'bytes-read-u16-le': (Opcode.BYTES_READ_U16_LE, 2),
     'bytes-read-u24-le': (Opcode.BYTES_READ_U24_LE, 2),
@@ -602,8 +592,6 @@ BUILTIN_OPCODE_MAP: dict[str, tuple[Opcode, int]] = {
     'bytes-read-i24-be': (Opcode.BYTES_READ_I24_BE, 2),
     'bytes-read-i32-be': (Opcode.BYTES_READ_I32_BE, 2),
     'bytes-read-i64-be': (Opcode.BYTES_READ_I64_BE, 2),
-
-    # Bytes operations — multi-byte append
     'bytes-append-u16-le': (Opcode.BYTES_APPEND_U16_LE, 2),
     'bytes-append-u16-be': (Opcode.BYTES_APPEND_U16_BE, 2),
     'bytes-append-u24-le': (Opcode.BYTES_APPEND_U24_LE, 2),
@@ -621,8 +609,6 @@ BUILTIN_OPCODE_MAP: dict[str, tuple[Opcode, int]] = {
     'bytes-append-i32-be': (Opcode.BYTES_APPEND_I32_BE, 2),
     'bytes-append-i64-le': (Opcode.BYTES_APPEND_I64_LE, 2),
     'bytes-append-i64-be': (Opcode.BYTES_APPEND_I64_BE, 2),
-
-    # Bytes operations — multi-byte write
     'bytes-write-u8': (Opcode.BYTES_WRITE_U8, 3),
     'bytes-write-u16-le': (Opcode.BYTES_WRITE_U16_LE, 3),
     'bytes-write-u16-be': (Opcode.BYTES_WRITE_U16_BE, 3),
@@ -641,8 +627,6 @@ BUILTIN_OPCODE_MAP: dict[str, tuple[Opcode, int]] = {
     'bytes-write-i32-be': (Opcode.BYTES_WRITE_I32_BE, 3),
     'bytes-write-i64-le': (Opcode.BYTES_WRITE_I64_LE, 3),
     'bytes-write-i64-be': (Opcode.BYTES_WRITE_I64_BE, 3),
-
-    # Bytes operations — variable-length integers (LEB128)
     'bytes-read-uleb128': (Opcode.BYTES_READ_ULEB128, 2),
     'bytes-append-uleb128': (Opcode.BYTES_APPEND_ULEB128, 2),
     'bytes-read-sleb128': (Opcode.BYTES_READ_SLEB128, 2),

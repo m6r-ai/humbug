@@ -237,6 +237,26 @@ class MenaiCFGPatchClosureInstr:
 
 
 @dataclass
+class MenaiCFGGuardInstr:
+    """
+    Guard: assert that `value` has type `expected_type` at runtime.
+
+    If the runtime type does not match, the VM raises MENAI_ERR_TYPE_MISMATCH.
+    Otherwise the instruction is a no-op — it does not produce a new value.
+
+    Inserted by the CFG type propagation pass.  The operational opcodes
+    (INTEGER_ADD, FLOAT_MUL, etc.) rely on guards having already verified
+    operand types and skip their own type checks for performance.
+
+    The guard does not define a result value — it validates the existing
+    SSA value in place.  After a guard executes, the type propagation pass
+    marks the value's type as known for subsequent instructions.
+    """
+    value: MenaiCFGValue
+    expected_type: str
+
+
+@dataclass
 class MenaiCFGPhiInstr:
     """
     %result = phi [(%value_from_block, block), ...]
@@ -271,6 +291,7 @@ MenaiCFGInstr = (  # pylint: disable=invalid-name
     | MenaiCFGMakeDictInstr
     | MenaiCFGMakeClosureInstr
     | MenaiCFGPatchClosureInstr
+    | MenaiCFGGuardInstr
     | MenaiCFGPhiInstr
 )
 
@@ -486,6 +507,12 @@ def _fmt_instr(instr: MenaiCFGInstr) -> str:
     if isinstance(instr, MenaiCFGMakeDictInstr):
         pairs_str = ", ".join(f"({k}, {v})" for k, v in instr.pairs)
         return f"{instr.result} = make_dict [{pairs_str}]"
+
+    if isinstance(instr, MenaiCFGPatchClosureInstr):
+        return f"patch_closure {instr.closure} [{instr.capture_index}] = {instr.value}"
+
+    if isinstance(instr, MenaiCFGGuardInstr):
+        return f"guard {instr.value} is {instr.expected_type}"
 
     if isinstance(instr, MenaiCFGPhiInstr):
         parts = ", ".join(f"{v} <- block{b.id}" for v, b in instr.incoming)

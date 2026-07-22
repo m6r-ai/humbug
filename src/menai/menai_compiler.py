@@ -20,6 +20,7 @@ from menai.cfg.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
 from menai.cfg.menai_cfg_branch_const_prop import MenaiCFGBranchConstProp
 from menai.cfg.menai_cfg_simplify_blocks import MenaiCFGSimplifyBlocks
 from menai.cfg.menai_cfg_collapse_phi_chains import MenaiCFGCollapsePhiChains
+from menai.cfg.menai_cfg_type_propagation import MenaiCFGTypePropagation
 from menai.vcode.menai_vcode_builder import MenaiVCodeBuilder
 from menai.ir.menai_ir_builder import MenaiIRBuilder
 from menai.ir.menai_ir_optimization_pass import MenaiIROptimizationPass
@@ -61,6 +62,7 @@ class MenaiCompiler:
             MenaiCFGCollapsePhiChains(),
             MenaiCFGBranchConstProp(),
             MenaiCFGSimplifyBlocks(),
+            MenaiCFGTypePropagation(),
         ]
         self.vcode_builder = MenaiVCodeBuilder()
         self.bytecode_builder = MenaiBytecodeBuilder()

@@ -286,13 +286,13 @@ class TestFunctional:
 
     def test_range_requires_numeric_arguments(self, menai):
         """Test that range requires numeric arguments."""
-        with pytest.raises(MenaiEvalError, match="requires integer argument"):
+        with pytest.raises(MenaiEvalError, match="type mismatch"):
             menai.evaluate('(range "hello" 5)')
 
-        with pytest.raises(MenaiEvalError, match="requires integer argument"):
+        with pytest.raises(MenaiEvalError, match="type mismatch"):
             menai.evaluate('(range 1 "world")')
 
-        with pytest.raises(MenaiEvalError, match="requires integer argument"):
+        with pytest.raises(MenaiEvalError, match="type mismatch"):
             menai.evaluate('(range 1 5 "step")')
 
     def test_range_zero_step_error(self, menai):

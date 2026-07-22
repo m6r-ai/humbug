@@ -64,31 +64,31 @@ class TestEvaluatorMissingCoverage:
         """Test 2-argument range with invalid start type."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(range "start" 10)')
-        assert "requires integer argument" in str(exc_info.value)
+        assert "type mismatch" in str(exc_info.value)
 
     def test_range_two_arg_invalid_end_type(self, menai):
         """Test 2-argument range with invalid end type."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(range 1 "end")')
-        assert "requires integer argument" in str(exc_info.value)
+        assert "type mismatch" in str(exc_info.value)
 
     def test_range_three_arg_invalid_start_type(self, menai):
         """Test 3-argument range with invalid start type."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(range "start" 10 2)')
-        assert "requires integer argument" in str(exc_info.value)
+        assert "type mismatch" in str(exc_info.value)
 
     def test_range_three_arg_invalid_end_type(self, menai):
         """Test 3-argument range with invalid end type."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(range 1 "end" 2)')
-        assert "requires integer argument" in str(exc_info.value)
+        assert "type mismatch" in str(exc_info.value)
 
     def test_range_three_arg_invalid_step_type(self, menai):
         """Test 3-argument range with invalid step type."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(range 1 10 "step")')
-        assert "requires integer argument" in str(exc_info.value)
+        assert "type mismatch" in str(exc_info.value)
 
     # ========== Integer Validation Tests ==========
 
@@ -96,13 +96,13 @@ class TestEvaluatorMissingCoverage:
         """Test range with float arguments (should require integers)."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(range 1.5 5)")
-        assert "integer" in str(exc_info.value).lower()
+        assert "type mismatch" in str(exc_info.value)
 
     def test_range_complex_arguments(self, menai):
         """Test range with complex number arguments."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(range (integer->complex 1 2) 5)")
-        assert "integer" in str(exc_info.value).lower()
+        assert "type mismatch" in str(exc_info.value)
 
     # ========== Builtin Function Display Tests ==========
 

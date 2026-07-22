@@ -84,17 +84,17 @@ class TestSymbolEqP:
     def test_first_arg_non_symbol_raises(self, menai):
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(symbol=? "foo" \'foo)')
-        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL_PAIR
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_second_arg_non_symbol_raises(self, menai):
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(symbol=? 'foo 42)")
-        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL_PAIR
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_both_args_non_symbol_raises(self, menai):
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(symbol=? "foo" "foo")')
-        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL_PAIR
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_wrong_arity_zero(self, menai):
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
@@ -138,12 +138,12 @@ class TestSymbolNeqP:
     def test_first_arg_non_symbol_raises(self, menai):
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(symbol!=? 42 'foo)")
-        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL_PAIR
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_second_arg_non_symbol_raises(self, menai):
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(symbol!=? \'foo "bar")')
-        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL_PAIR
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_wrong_arity_zero(self, menai):
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
@@ -195,17 +195,17 @@ class TestSymbolToString:
     def test_non_symbol_raises(self, menai):
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(symbol->string "foo")')
-        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_integer_raises(self, menai):
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(symbol->string 42)")
-        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_list_raises(self, menai):
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(symbol->string (list 1 2))")
-        assert exc_info.value.error_code == VMErrorCode.NOT_SYMBOL
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_wrong_arity_zero(self, menai):
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
