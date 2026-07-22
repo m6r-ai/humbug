@@ -212,7 +212,7 @@ BUILTIN_TYPE_SIGNATURES: dict[str, TypeSignature] = {
 
     # Struct operations
     'struct?': (['any'], 'boolean'),
-    'struct-type?': (['any', 'any'], 'boolean'),
+    'struct-type?': (['struct-type', 'any'], 'boolean'),
     'struct-get': (['struct', 'any'], None),
     'struct-get-imm': (['struct', 'integer'], None),
     'struct-set': (['struct', 'any', 'any'], 'struct'),
@@ -220,8 +220,8 @@ BUILTIN_TYPE_SIGNATURES: dict[str, TypeSignature] = {
     'struct=?': (['struct', 'struct'], 'boolean'),
     'struct!=?': (['struct', 'struct'], 'boolean'),
     'struct-type': (['struct'], None),
-    'struct-type-name': (['any'], 'string'),
-    'struct-fields': (['any'], 'list'),
+    'struct-type-name': (['struct-type'], 'string'),
+    'struct-fields': (['struct-type'], 'list'),
 
     # Range
     'range': (['integer', 'integer', 'integer'], 'list'),

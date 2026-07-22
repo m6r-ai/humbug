@@ -465,6 +465,7 @@ _menai_mul_overflow(long a, long b, long *r) {
 #define OP_ASSERT_FUNCTION 540
 #define OP_ASSERT_BYTES 541
 #define OP_ASSERT_STRUCT 542
+#define OP_ASSERT_STRUCT_TYPE 543
 
 /*
  * Singleton values fetched from menai_vm_bridge at init time.
@@ -6933,18 +6934,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             /* src1 holds a MenaiSymbol field name */
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *field_sym = regs[base + src1];
-            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(field_sym))) {
-                vm_err = MENAI_ERR_NOT_SYMBOL;
-                goto error;
-            }
-
             MenaiValue *stype = ((MenaiStruct *)val)->struct_type;
             MenaiValue *field_name = menai_symbol_name(field_sym);
             int fi = menai_struct_field_index((MenaiStructType *)stype, field_name);
@@ -6962,18 +6953,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             /* src1 holds a MenaiInteger field index */
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *fidx = regs[base + src1];
-            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(fidx))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             MenaiInteger *fi_io = (MenaiInteger *)fidx;
             long fi_l;
             if (!fi_io->is_big) {
@@ -6994,18 +6975,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_SET: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *field_sym = regs[base + src1];
-            if (MENAI_UNLIKELY(!IS_MENAI_SYMBOL(field_sym))) {
-                vm_err = MENAI_ERR_NOT_SYMBOL;
-                goto error;
-            }
-
             MenaiValue *stype = ((MenaiStruct *)val)->struct_type;
             MenaiValue *field_name = menai_symbol_name(field_sym);
             int fi = menai_struct_field_index((MenaiStructType *)stype, field_name);
@@ -7040,18 +7011,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_SET_IMM: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *fidx = regs[base + src1];
-            if (MENAI_UNLIKELY(!IS_MENAI_INTEGER(fidx))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             MenaiInteger *fi_io = (MenaiInteger *)fidx;
             long fi_l;
             if (!fi_io->is_big) {
@@ -7090,19 +7051,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRUCT_EQ_P: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
-            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src1];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(a))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(b))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             MenaiStruct *sa = (MenaiStruct *)a;
             MenaiStruct *sb = (MenaiStruct *)b;
             int eq = (((MenaiStructType *)sa->struct_type)->tag ==
@@ -7118,19 +7069,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRUCT_NEQ_P: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
-            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *b = regs[base + src1];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(a))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(b))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             MenaiStruct *sa = (MenaiStruct *)a;
             MenaiStruct *sb = (MenaiStruct *)b;
             int neq = (((MenaiStructType *)sa->struct_type)->tag !=
@@ -7153,11 +7094,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_TYPE: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             menai_reg_set_borrow(regs, base + dest, ((MenaiStruct *)val)->struct_type);
             break;
         }
@@ -7165,11 +7101,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_TYPE_NAME: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCTTYPE(val))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             menai_reg_set_borrow(regs, base + dest, ((MenaiStructType *)val)->name);
             break;
         }
@@ -7241,6 +7172,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         DEFINE_ASSERT_OP(FUNCTION, IS_MENAI_FUNCTION(v))
         DEFINE_ASSERT_OP(BYTES, IS_MENAI_BYTES(v))
         DEFINE_ASSERT_OP(STRUCT, IS_MENAI_STRUCT(v))
+        DEFINE_ASSERT_OP(STRUCT_TYPE, IS_MENAI_STRUCTTYPE(v))
 
         #undef DEFINE_ASSERT_OP
 

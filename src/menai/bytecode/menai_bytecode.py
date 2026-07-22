@@ -369,6 +369,7 @@ class Opcode(IntEnum):
     ASSERT_FUNCTION = _op(540, 1)       # Check r_src0 — assert r_src0 is function
     ASSERT_BYTES = _op(541, 1)          # Check r_src0 — assert r_src0 is bytes
     ASSERT_STRUCT = _op(542, 1)         # Check r_src0 — assert r_src0 is struct
+    ASSERT_STRUCT_TYPE = _op(543, 1)    # Check r_src0 — assert r_src0 is struct-type
 
 # Maps builtin function name → (opcode, arity) for all fixed-arity builtins.
 #
