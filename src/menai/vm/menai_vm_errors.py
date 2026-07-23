@@ -54,7 +54,6 @@ class VMErrorCode(IntEnum):
     BYTE_NOT_INTEGER = -26
     LIST_TO_STRING_NOT_STRINGS = -27
     RANGE_NOT_INTEGER = -28
-    STRUCT_FIRST_NOT_TYPE = -29
     INDEX_OUT_OF_RANGE = -30
     SLICE_START_OUT_OF_RANGE = -31
     SLICE_END_OUT_OF_RANGE = -32
@@ -163,9 +162,6 @@ _ERROR_TABLE: dict[VMErrorCode, _ErrorTableEntry] = {
     VMErrorCode.BYTE_NOT_INTEGER: _eval_error_entry("byte must be an integer"),
     VMErrorCode.LIST_TO_STRING_NOT_STRINGS: _eval_error_entry("list->string: all elements must be strings"),
     VMErrorCode.RANGE_NOT_INTEGER: _eval_error_entry("range requires integer arguments"),
-    VMErrorCode.STRUCT_FIRST_NOT_TYPE: _eval_error_entry(
-        "struct constructor: first argument must be a struct type"
-    ),
     VMErrorCode.INDEX_OUT_OF_RANGE: _eval_error_entry("index out of range"),
     VMErrorCode.SLICE_START_OUT_OF_RANGE: _eval_error_entry("slice start index out of range"),
     VMErrorCode.SLICE_END_OUT_OF_RANGE: _eval_error_entry("slice end index out of range"),

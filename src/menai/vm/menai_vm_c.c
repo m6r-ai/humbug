@@ -6877,11 +6877,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              */
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *struct_type = regs[base + src0];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCTTYPE(struct_type))) {
-                vm_err = MENAI_ERR_STRUCT_FIRST_NOT_TYPE;
-                goto error;
-            }
-
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             int n_fields = src1;
             MenaiValue *instance = menai_struct_alloc(struct_type, &regs[base + src0 + 1], n_fields);
@@ -6902,11 +6897,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_TYPE_P: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *stype = regs[base + src0];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCTTYPE(stype))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src1];
             if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
@@ -6957,6 +6947,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             ssize_t fi = (ssize_t)fi_l;
+            ssize_t nf = ((MenaiStruct *)val)->nfields;
+            if (fi < 0 || fi >= nf) {
+                vm_err = MENAI_ERR_INDEX_OUT_OF_RANGE;
+                goto error;
+            }
+
             MenaiValue *fv = ((MenaiStruct *)val)->items[fi];
             menai_reg_set_borrow(regs, base + dest, fv);
             break;
@@ -7015,8 +7011,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             ssize_t fi = (ssize_t)fi_l;
-            MenaiValue *stype = ((MenaiStruct *)val)->struct_type;
             ssize_t nf = ((MenaiStruct *)val)->nfields;
+            if (fi < 0 || fi >= nf) {
+                vm_err = MENAI_ERR_INDEX_OUT_OF_RANGE;
+                goto error;
+            }
+
+            MenaiValue *stype = ((MenaiStruct *)val)->struct_type;
             MenaiValue **tmp = (MenaiValue **)malloc(nf * sizeof(MenaiValue *));
             if (!tmp) {
                 vm_err = MENAI_ERR_NOMEM;
@@ -7098,11 +7099,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_FIELDS: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCTTYPE(val))) {
-                vm_err = MENAI_ERR_TYPE_MISMATCH;
-                goto error;
-            }
-
             MenaiStructType *st = (MenaiStructType *)val;
             int n = st->nfields;
             MenaiValue *r = menai_list_alloc(n);

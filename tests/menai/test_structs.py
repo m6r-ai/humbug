@@ -790,6 +790,68 @@ class TestStructErrors:
             )
         assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
+    def test_struct_get_imm_index_out_of_range_high(self, menai):
+        """struct-get-imm raises an error when the field index is beyond the last field."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-get-imm p 2))"
+            )
+        assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
+
+    def test_struct_get_imm_index_negative(self, menai):
+        """struct-get-imm raises an error when the field index is negative."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-get-imm p -1))"
+            )
+        assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
+
+    def test_struct_get_imm_index_zero_on_empty_struct(self, menai):
+        """struct-get-imm raises an error when accessing field 0 of a zero-field struct."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                "(let ((Unit (struct ())) (u (Unit))) (struct-get-imm u 0))"
+            )
+        assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
+
+    def test_struct_get_imm_valid_index_works(self, menai):
+        """struct-get-imm works correctly for valid indices."""
+        result = menai.evaluate_and_format(
+            "(let ((Point (struct (x y))) (p (Point 3 4))) (struct-get-imm p 0))"
+        )
+        assert result == '3'
+
+    def test_struct_set_imm_index_out_of_range_high(self, menai):
+        """struct-set-imm raises an error when the field index is beyond the last field."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-set-imm p 2 99))"
+            )
+        assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
+
+    def test_struct_set_imm_index_negative(self, menai):
+        """struct-set-imm raises an error when the field index is negative."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-set-imm p -1 99))"
+            )
+        assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
+
+    def test_struct_set_imm_index_zero_on_empty_struct(self, menai):
+        """struct-set-imm raises an error when accessing field 0 of a zero-field struct."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                "(let ((Unit (struct ())) (u (Unit))) (struct-set-imm u 0 99))"
+            )
+        assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
+
+    def test_struct_set_imm_valid_index_works(self, menai):
+        """struct-set-imm works correctly for valid indices."""
+        result = menai.evaluate_and_format(
+            "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-set-imm p 0 99))"
+        )
+        assert result == '(Point 99 2)'
+
 
 # ---------------------------------------------------------------------------
 # 12. First-class use of struct operations
