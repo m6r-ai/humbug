@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import pytest
 
-from menai import Menai, MenaiEvalError
+from menai import Menai, MenaiEvalError, VMErrorCode
 from menai.ir.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
@@ -434,11 +434,15 @@ class TestBooleanIdentityIntegration:
         A non-predicate expression in condition position must not be silently
         accepted just because the branches happen to be #t and #f.
         """
-        with pytest.raises(MenaiEvalError, match="must be boolean"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(if "hello" #t #f)')
 
-        with pytest.raises(MenaiEvalError, match="must be boolean"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(if 42 #t #f)')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_non_boolean_condition_in_and_preserves_type_error(self, menai):
         """(and non-boolean #t) must still raise a type error at runtime.
@@ -447,8 +451,12 @@ class TestBooleanIdentityIntegration:
         the branches are #t and #f — exactly the identity pattern.  The guard
         must prevent the rewrite because x is not known to be boolean.
         """
-        with pytest.raises(MenaiEvalError, match="must be boolean"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(and "hello" #t)')
 
-        with pytest.raises(MenaiEvalError, match="must be boolean"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(or 1 #f)')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH

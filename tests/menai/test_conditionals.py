@@ -60,16 +60,16 @@ class TestConditionals:
 
     def test_if_requires_boolean_condition(self, menai):
         """Test that if expressions require boolean conditions."""
-        with pytest.raises(MenaiEvalError, match=r"condition must be boolean"):
+        with pytest.raises(MenaiEvalError, match=r"type mismatch"):
             menai.evaluate('(if 1 "yes" "no")')
 
-        with pytest.raises(MenaiEvalError, match=r"condition must be boolean"):
+        with pytest.raises(MenaiEvalError, match=r"type mismatch"):
             menai.evaluate('(if "hello" "yes" "no")')
 
-        with pytest.raises(MenaiEvalError, match=r"condition must be boolean"):
+        with pytest.raises(MenaiEvalError, match=r"type mismatch"):
             menai.evaluate('(if (list 1 2) "yes" "no")')
 
-        with pytest.raises(MenaiEvalError, match=r"condition must be boolean"):
+        with pytest.raises(MenaiEvalError, match=r"type mismatch"):
             menai.evaluate('(if 0 "yes" "no")')  # 0 is not false in Menai
 
     def test_if_requires_exactly_three_arguments(self, menai):
@@ -159,7 +159,7 @@ class TestConditionals:
         """Test that boolean operations require boolean condition arguments.
 
         Since and/or are lowered to if-chains, only the condition arguments
-        (all but the last) are type-checked as booleans by JUMP_IF_FALSE/TRUE.
+        (all but the last) are type-checked as booleans by ASSERT_BOOLEAN guards.
         Non-boolean conditions always error. The last argument (the value
         returned when all conditions are true/false) is not type-checked.
         """
@@ -167,12 +167,12 @@ class TestConditionals:
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(and "hello" #t)')
 
-        assert exc_info.value.error_code == VMErrorCode.IF_NOT_BOOLEAN
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(or 1 #f)')
 
-        assert exc_info.value.error_code == VMErrorCode.IF_NOT_BOOLEAN
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # NOT with non-boolean arguments (boolean-not is still a typed opcode)
         with pytest.raises(MenaiEvalError) as exc_info:

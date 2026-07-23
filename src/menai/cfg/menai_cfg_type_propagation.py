@@ -2,7 +2,7 @@
 CFG pass: type propagation and guard insertion.
 
 Determines the static type of each MenaiCFGValue within a function and inserts
-MenaiCFGGuardInstr instructions where a type-specific builtin receives an
+MenaiCFGGuardInstr instructions where a type-specific operation receives an
 operand whose type is not statically known.  The operational opcodes in the C VM
 rely on guards having already verified types and omit their own runtime type
 checks for performance.
@@ -21,6 +21,8 @@ Values whose type cannot be determined (parameters, free variables, call
 results, apply results) are "unknown".  When an unknown-typed value is used
 as an argument to a builtin that expects a specific type, a guard is inserted
 before the builtin to check that type at runtime.
+Similarly, when a branch terminator's condition has an unknown type, a
+boolean guard is inserted before the branch.
 
 Algorithm
 ---------
@@ -35,8 +37,9 @@ value types.  Because phi nodes can reference values from later blocks
 Phase 2 — Guard insertion.  Walk each block in order.  For each builtin call,
 check each argument: if its type is known and matches the expected type, no
 guard is needed.  If its type is unknown but the builtin expects a specific
-type, insert a guard before the builtin call.  After a guard, the value's type
-becomes known for subsequent uses, so multiple builtins using the same
+type, insert a guard before the builtin call.  For branch terminators, guard
+the condition as a boolean.  After a guard, the value's type becomes known for
+subsequent uses, so multiple builtins (or branches) using the same
 unknown-typed value only need one guard.
 
 The pass mutates the CFG in place — it inserts MenaiCFGGuardInstr instructions
@@ -46,6 +49,8 @@ into block.instrs lists and returns the same MenaiCFGFunction.
 from menai.bytecode.menai_type_signatures import BUILTIN_TYPE_SIGNATURES
 from menai.cfg.menai_cfg import (
     MenaiCFGApplyInstr,
+    MenaiCFGBlock,
+    MenaiCFGBranchTerm,
     MenaiCFGBuiltinInstr,
     MenaiCFGCallInstr,
     MenaiCFGConstInstr,
@@ -230,6 +235,8 @@ class MenaiCFGTypePropagation(MenaiCFGOptimizationPass):
 
                 new_instrs.append(instr)
 
+            self._guard_branch(block, types, new_instrs)
+
             if len(new_instrs) != len(block.instrs):
                 block.instrs = new_instrs
                 changed = True
@@ -271,3 +278,29 @@ class MenaiCFGTypePropagation(MenaiCFGOptimizationPass):
                 expected_type=expected,
             ))
             types[arg.id] = expected
+
+    def _guard_branch(
+        self,
+        block: MenaiCFGBlock,
+        types: dict[int, str | None],
+        new_instrs: list[MenaiCFGInstr],
+    ) -> None:
+        """
+        Insert a boolean guard on a branch terminator's condition if its
+        type is not statically known to be boolean.
+
+        Appends a guard to new_instrs if needed and updates the types dict.
+        """
+        term = block.terminator
+        if not isinstance(term, MenaiCFGBranchTerm):
+            return
+
+        cond_type = types.get(term.cond.id)
+        if cond_type == 'boolean':
+            return
+
+        new_instrs.append(MenaiCFGGuardInstr(
+            value=term.cond,
+            expected_type='boolean',
+        ))
+        types[term.cond.id] = 'boolean'

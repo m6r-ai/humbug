@@ -218,11 +218,15 @@ class TestFunctional:
 
     def test_filter_predicate_must_return_boolean(self, menai):
         """Test that filter predicate must return boolean."""
-        with pytest.raises(MenaiEvalError, match="condition must be boolean"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(filter-list (lambda (x) x) (list 1 2 3))')
 
-        with pytest.raises(MenaiEvalError, match="condition must be boolean"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(filter-list (lambda (x) "hello") (list 1 2 3))')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic fold operations (left fold)
@@ -344,8 +348,10 @@ class TestFunctional:
 
     def test_find_predicate_must_return_boolean(self, menai):
         """Test that find predicate must return boolean."""
-        with pytest.raises(MenaiEvalError, match="condition must be boolean"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(find-list (lambda (x) x) (list 1 2 3))')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic any? operations
@@ -402,11 +408,15 @@ class TestFunctional:
 
     def test_any_all_predicates_must_return_boolean(self, menai):
         """Test that any? and all? predicates must return boolean."""
-        with pytest.raises(MenaiEvalError, match="condition must be boolean"):
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(any-list? (lambda (x) x) (list 1 2 3))')
 
-        with pytest.raises(MenaiEvalError, match="condition must be boolean"):
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+        with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(all-list? (lambda (x) "hello") (list 1 2 3))')
+
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_complex_functional_compositions(self, menai, helpers):
         """Test complex combinations of functional operations."""

@@ -239,7 +239,7 @@ class TestErrors:
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(or "hello" #f)')
 
-        assert exc_info.value.error_code == VMErrorCode.IF_NOT_BOOLEAN
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # String operations with non-strings
         with pytest.raises(MenaiEvalError):
@@ -340,14 +340,14 @@ class TestErrors:
 
     def test_conditional_type_errors(self, menai):
         """Test that conditional expressions with wrong types cause evaluation errors."""
-        # If condition must be boolean
-        with pytest.raises(MenaiEvalError, match="must be boolean"):
+        # If condition must be boolean (type mismatch from guard)
+        with pytest.raises(MenaiEvalError, match="type mismatch"):
             menai.evaluate('(if 1 "yes" "no")')
 
-        with pytest.raises(MenaiEvalError, match="must be boolean"):
+        with pytest.raises(MenaiEvalError, match="type mismatch"):
             menai.evaluate('(if "hello" "yes" "no")')
 
-        with pytest.raises(MenaiEvalError, match="must be boolean"):
+        with pytest.raises(MenaiEvalError, match="type mismatch"):
             menai.evaluate("(if (list 1 2) \"yes\" \"no\")")
 
     def test_string_conversion_errors(self, menai):
@@ -394,12 +394,12 @@ class TestErrors:
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(filter-list (lambda (x) x) (list 1 2 3))')
 
-        assert exc_info.value.error_code == VMErrorCode.IF_NOT_BOOLEAN
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate('(any-list? (lambda (x) "hello") (list 1 2 3))')
 
-        assert exc_info.value.error_code == VMErrorCode.IF_NOT_BOOLEAN
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
         # Higher-order functions require list arguments
         with pytest.raises(MenaiEvalError) as exc_info:
@@ -490,7 +490,7 @@ class TestErrors:
         try:
             menai.evaluate('(and "hello" #t)')
         except MenaiEvalError as e:
-            assert e.error_code == VMErrorCode.IF_NOT_BOOLEAN
+            assert e.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_nested_error_propagation(self, menai):
         """Test that errors in nested expressions are properly propagated."""

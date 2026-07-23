@@ -1362,11 +1362,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_JUMP_IF_FALSE: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *cond = regs[base + src0];
-            if (MENAI_UNLIKELY(!IS_MENAI_BOOLEAN(cond))) {
-                vm_err = MENAI_ERR_IF_NOT_BOOLEAN;
-                goto error;
-            }
-
             if (!menai_boolean_value(cond)) {
                 int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
                 frame->ip = src1;
@@ -1378,11 +1373,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_JUMP_IF_TRUE: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *cond = regs[base + src0];
-            if (MENAI_UNLIKELY(!IS_MENAI_BOOLEAN(cond))) {
-                vm_err = MENAI_ERR_IF_NOT_BOOLEAN;
-                goto error;
-            }
-
             if (menai_boolean_value(cond)) {
                 int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
                 frame->ip = src1;

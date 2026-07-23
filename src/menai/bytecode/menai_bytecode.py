@@ -822,6 +822,15 @@ class Instruction:
         if opcode == Opcode.RAISE_ERROR:
             return f"RAISE_ERROR {rn(self.src0)}"
 
+        if opcode in (Opcode.ASSERT_NONE, Opcode.ASSERT_BOOLEAN,
+                      Opcode.ASSERT_INTEGER, Opcode.ASSERT_FLOAT,
+                      Opcode.ASSERT_COMPLEX, Opcode.ASSERT_STRING,
+                      Opcode.ASSERT_SYMBOL, Opcode.ASSERT_LIST,
+                      Opcode.ASSERT_DICT, Opcode.ASSERT_SET,
+                      Opcode.ASSERT_FUNCTION, Opcode.ASSERT_BYTES,
+                      Opcode.ASSERT_STRUCT, Opcode.ASSERT_STRUCT_TYPE):
+            return f"{name} {rn(self.src0)}"
+
         n = self.arg_count()
         srcs = [rn(self.src0), rn(self.src1), rn(self.src2)][:n]
         src_str = (", ".join(srcs) + " " if srcs else "")
