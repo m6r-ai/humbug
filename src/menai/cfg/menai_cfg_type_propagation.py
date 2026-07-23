@@ -100,7 +100,7 @@ _VALUE_TYPE_MAP = {
     MenaiFunction: 'function',
     MenaiBytes: 'bytes',
     MenaiStruct: 'struct',
-    MenaiStructType: 'struct-type',
+    MenaiStructType: 'structtype',
 }
 
 

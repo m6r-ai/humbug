@@ -581,10 +581,10 @@ class MenaiStructType(MenaiValue):
         return hash(self.tag)
 
     def to_python(self) -> str:
-        return f"<struct-type {self.name}>"
+        return f"<structtype {self.name}>"
 
     def type_name(self) -> str:
-        return "struct-type"
+        return "structtype"
 
     def describe(self) -> str:
         fields = " ".join(self.field_names)
@@ -596,8 +596,8 @@ class MenaiStruct(MenaiValue):
     Represents a struct instance — the value produced by calling a struct constructor.
 
     Fields are stored as a plain tuple for O(1) indexed access.  The struct_type
-    reference allows type identity checks (struct-type?) and introspection
-    (struct-type, struct-fields) without storing redundant metadata on every instance.
+    reference allows type identity checks (struct-is-instance?) and introspection
+    (struct-type, structtype-fields) without storing redundant metadata on every instance.
     """
     __slots__ = ('struct_type', 'fields')
 

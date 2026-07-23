@@ -7,6 +7,8 @@ New features:
 - Added a new `bytes` type to Menai.  This allows for the manipulation of binary (byte object) data.
 - Updated the tool system so tools that use Menai must read the AI tool help before being allowed to write Menai expressions.
 - Added new ASSERT opcodes to Menai.
+- Improved/regularized the `structtype` operations in Menai to make them distint from `struct` operations and to add missing
+  functionality.
 
 Bug fixes:
 

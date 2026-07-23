@@ -262,16 +262,19 @@ class Opcode(IntEnum):
     # Struct operations
     MAKE_STRUCT = _op(360, 2)           # MAKE_STRUCT type_idx arity — pops arity field regs, pushes MenaiStruct
     STRUCT_P = _op(361, 1)              # r_dest = (struct? r_src0)
-    STRUCT_TYPE_P = _op(362, 2)         # r_dest = (struct-type? r_type r_src0) — tag check
+    STRUCT_IS_INSTANCE_P = _op(362, 2)  # r_dest = (struct-is-instance? r_src0 r_src1) — tag check, src0=struct, src1=structtype
     STRUCT_GET = _op(363, 2)            # r_dest = (struct-get r_src0 field_idx) — indexed field access
-    STRUCT_GET_IMM = _op(364, 2)        # r_dest = (struct-get r_src0 field_idx) — indexed field access by immediate
+    STRUCT_REF = _op(364, 2)            # r_dest = (struct-ref r_src0 field_idx) — indexed field access by immediate
     STRUCT_SET = _op(365, 3)            # r_dest = (struct-set r_src0 field_idx r_src1) — functional update
-    STRUCT_SET_IMM = _op(366, 3)        # r_dest = (struct-set r_src0 field_idx r_src1) — functional update by immediate
+    STRUCT_SET_REF = _op(366, 3)        # r_dest = (struct-set-ref r_src0 field_idx r_src1) — functional update by immediate
     STRUCT_EQ_P = _op(367, 2)           # r_dest = (struct=? r_src0 r_src1)
     STRUCT_NEQ_P = _op(368, 2)          # r_dest = (struct!=? r_src0 r_src1)
     STRUCT_TYPE = _op(369, 1)           # r_dest = (struct-type r_src0) → MenaiStructType value
-    STRUCT_TYPE_NAME = _op(370, 1)      # r_dest = (struct-type-name r_src0) → string
-    STRUCT_FIELDS = _op(371, 1)         # r_dest = (struct-fields r_src0) → list of symbols
+    STRUCTTYPE_P = _op(372, 1)          # r_dest = (structtype? r_src0)
+    STRUCTTYPE_EQ_P = _op(373, 2)       # r_dest = (structtype=? r_src0 r_src1)
+    STRUCTTYPE_NEQ_P = _op(374, 2)      # r_dest = (structtype!=? r_src0 r_src1)
+    STRUCTTYPE_NAME = _op(370, 1)       # r_dest = (structtype-name r_src0) → string
+    STRUCTTYPE_FIELDS = _op(371, 1)     # r_dest = (structtype-fields r_src0) → list of symbols
 
     # Generate integer range list
     RANGE = _op(380, 3)                 # r_dest = (range r_src0 r_src1 r_src2)
@@ -544,16 +547,19 @@ BUILTIN_OPCODE_MAP: dict[str, tuple[Opcode, int]] = {
     'set-subset?': (Opcode.SET_SUBSET_P, 2),
     'set->list': (Opcode.SET_TO_LIST, 1),
     'struct?': (Opcode.STRUCT_P, 1),
-    'struct-type?': (Opcode.STRUCT_TYPE_P, 2),
+    'struct-is-instance?': (Opcode.STRUCT_IS_INSTANCE_P, 2),
     'struct-get': (Opcode.STRUCT_GET, 2),
-    'struct-get-imm': (Opcode.STRUCT_GET_IMM, 2),
+    'struct-ref': (Opcode.STRUCT_REF, 2),
     'struct-set': (Opcode.STRUCT_SET, 3),
-    'struct-set-imm': (Opcode.STRUCT_SET_IMM, 3),
+    'struct-set-ref': (Opcode.STRUCT_SET_REF, 3),
     'struct=?': (Opcode.STRUCT_EQ_P, 2),
     'struct!=?': (Opcode.STRUCT_NEQ_P, 2),
     'struct-type': (Opcode.STRUCT_TYPE, 1),
-    'struct-type-name': (Opcode.STRUCT_TYPE_NAME, 1),
-    'struct-fields': (Opcode.STRUCT_FIELDS, 1),
+    'structtype?': (Opcode.STRUCTTYPE_P, 1),
+    'structtype=?': (Opcode.STRUCTTYPE_EQ_P, 2),
+    'structtype!=?': (Opcode.STRUCTTYPE_NEQ_P, 2),
+    'structtype-name': (Opcode.STRUCTTYPE_NAME, 1),
+    'structtype-fields': (Opcode.STRUCTTYPE_FIELDS, 1),
     'range': (Opcode.RANGE, 3),
     'bytes?': (Opcode.BYTES_P, 1),
     'bytes=?': (Opcode.BYTES_EQ_P, 2),

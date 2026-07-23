@@ -5,7 +5,7 @@ Each entry maps a builtin name (as it appears in BUILTIN_OPCODE_MAP) to a
 tuple of (arg_types, result_type), where types are represented as strings
 matching the Menai type names: 'integer', 'float', 'complex', 'string',
 'boolean', 'symbol', 'list', 'dict', 'set', 'function', 'bytes', 'none',
-'struct'.
+'struct', 'structtype'.
 
 The special value None means "unknown type" — used for builtins whose result
 type depends on operand types in ways this table does not capture, or for
@@ -212,16 +212,19 @@ BUILTIN_TYPE_SIGNATURES: dict[str, TypeSignature] = {
 
     # Struct operations
     'struct?': (['any'], 'boolean'),
-    'struct-type?': (['struct-type', 'any'], 'boolean'),
+    'struct-is-instance?': (['struct', 'structtype'], 'boolean'),
     'struct-get': (['struct', 'any'], None),
-    'struct-get-imm': (['struct', 'integer'], None),
+    'struct-ref': (['struct', 'integer'], None),
     'struct-set': (['struct', 'any', 'any'], 'struct'),
-    'struct-set-imm': (['struct', 'integer', 'any'], 'struct'),
+    'struct-set-ref': (['struct', 'integer', 'any'], 'struct'),
     'struct=?': (['struct', 'struct'], 'boolean'),
     'struct!=?': (['struct', 'struct'], 'boolean'),
-    'struct-type': (['struct'], None),
-    'struct-type-name': (['struct-type'], 'string'),
-    'struct-fields': (['struct-type'], 'list'),
+    'struct-type': (['struct'], 'structtype'),
+    'structtype?': (['any'], 'boolean'),
+    'structtype=?': (['structtype', 'structtype'], 'boolean'),
+    'structtype!=?': (['structtype', 'structtype'], 'boolean'),
+    'structtype-name': (['structtype'], 'string'),
+    'structtype-fields': (['structtype'], 'list'),
 
     # Range
     'range': (['integer', 'integer', 'integer'], 'list'),

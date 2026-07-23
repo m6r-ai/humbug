@@ -97,7 +97,7 @@ _GUARD_OPCODES: dict[str, Opcode] = {
     'function': Opcode.ASSERT_FUNCTION,
     'bytes': Opcode.ASSERT_BYTES,
     'struct': Opcode.ASSERT_STRUCT,
-    'struct-type': Opcode.ASSERT_STRUCT_TYPE,
+    'structtype': Opcode.ASSERT_STRUCT_TYPE,
 }
 
 _FIELD_NAMES = ('opcode', 'dest', 'src0', 'src1', 'src2')

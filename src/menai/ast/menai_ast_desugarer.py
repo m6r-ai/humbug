@@ -1710,9 +1710,9 @@ class MenaiASTDesugarer:
         """
         Desugar a struct destructuring pattern (TypeName field1 field2 ...).
 
-        Emits a ($struct-type? TypeName tmp) type check as the test, then
+        Emits an (and ($struct? tmp) ($struct-is-instance? tmp TypeName)) test, then
         uses the same list-pattern machinery to extract and bind each field
-        via ($struct-get tmp field_idx).
+        via ($struct-ref tmp field_idx).
 
         Args:
             pattern: The struct pattern, e.g. (Point x y)
@@ -1723,11 +1723,20 @@ class MenaiASTDesugarer:
             (test_expression, bindings) using the list-pattern marker convention
         """
         type_sym = self._make_symbol(struct_node.name, pattern)
-        type_test = MenaiASTList((
-            MenaiASTSymbol('$struct-type?'),
-            type_sym,
+
+        # Guard: check tmp is a struct before checking its type
+        struct_test = MenaiASTList((
+            MenaiASTSymbol('$struct?'),
             MenaiASTSymbol(temp_var),
         ))
+
+        type_test = MenaiASTList((
+            MenaiASTSymbol('$struct-is-instance?'),
+            MenaiASTSymbol(temp_var),
+            type_sym,
+        ))
+
+        combined_test = self._make_and([struct_test, type_test], pattern)
 
         field_patterns = list(pattern.elements[1:])
         element_info: list[tuple[MenaiASTNode, str, MenaiASTNode]] = []
@@ -1735,7 +1744,7 @@ class MenaiASTDesugarer:
         for i, field_pattern in enumerate(field_patterns):
             elem_temp = self._gen_temp()
             field_get = MenaiASTList((
-                MenaiASTSymbol('$struct-get-imm'),
+                MenaiASTSymbol('$struct-ref'),
                 MenaiASTSymbol(temp_var),
                 MenaiASTInteger(i, line=pattern.line, column=pattern.column,
                                 source_file=pattern.source_file),
@@ -1743,4 +1752,4 @@ class MenaiASTDesugarer:
             element_info.append((field_pattern, elem_temp, field_get))
 
         marker_name = f'__LIST_PATTERN_{self._gen_temp()}__'
-        return (type_test, [(marker_name, element_info)])
+        return (combined_test, [(marker_name, element_info)])

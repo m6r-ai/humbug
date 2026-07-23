@@ -364,16 +364,19 @@ _menai_mul_overflow(long a, long b, long *r) {
 #define OP_SET_TO_LIST 352
 #define OP_MAKE_STRUCT 360
 #define OP_STRUCT_P 361
-#define OP_STRUCT_TYPE_P 362
+#define OP_STRUCT_IS_INSTANCE_P 362
 #define OP_STRUCT_GET 363
-#define OP_STRUCT_GET_IMM 364
+#define OP_STRUCT_REF 364
 #define OP_STRUCT_SET 365
-#define OP_STRUCT_SET_IMM 366
+#define OP_STRUCT_SET_REF 366
 #define OP_STRUCT_EQ_P 367
 #define OP_STRUCT_NEQ_P 368
 #define OP_STRUCT_TYPE 369
-#define OP_STRUCT_TYPE_NAME 370
-#define OP_STRUCT_FIELDS 371
+#define OP_STRUCTTYPE_P 372
+#define OP_STRUCTTYPE_EQ_P 373
+#define OP_STRUCTTYPE_NEQ_P 374
+#define OP_STRUCTTYPE_NAME 370
+#define OP_STRUCTTYPE_FIELDS 371
 #define OP_RANGE 380
 #define OP_BYTES_P 400
 #define OP_BYTES_EQ_P 401
@@ -6894,18 +6897,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_STRUCT_TYPE_P: {
+        case OP_STRUCT_IS_INSTANCE_P: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
-            MenaiValue *stype = regs[base + src0];
+            MenaiStruct *sval = (MenaiStruct *)regs[base + src0];
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
-            MenaiValue *val = regs[base + src1];
-            if (MENAI_UNLIKELY(!IS_MENAI_STRUCT(val))) {
-                bool_store(regs, base + dest, 0);
-                break;
-            }
-
-            int tag_a = ((MenaiStructType *)stype)->tag;
-            int tag_b = ((MenaiStructType *)((MenaiStruct *)val)->struct_type)->tag;
+            MenaiStructType *stype = (MenaiStructType *)regs[base + src1];
+            int tag_a = ((MenaiStructType *)sval->struct_type)->tag;
+            int tag_b = stype->tag;
             bool_store(regs, base + dest, tag_a == tag_b);
             break;
         }
@@ -6929,7 +6927,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_STRUCT_GET_IMM: {
+        case OP_STRUCT_REF: {
             /* src1 holds a MenaiInteger field index */
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
@@ -6994,7 +6992,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_STRUCT_SET_IMM: {
+        case OP_STRUCT_SET_REF: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
@@ -7089,14 +7087,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_STRUCT_TYPE_NAME: {
+        case OP_STRUCTTYPE_NAME: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
             menai_reg_set_borrow(regs, base + dest, ((MenaiStructType *)val)->name);
             break;
         }
 
-        case OP_STRUCT_FIELDS: {
+        case OP_STRUCTTYPE_FIELDS: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
             MenaiStructType *st = (MenaiStructType *)val;
@@ -7123,6 +7121,34 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_reg_set_own(regs, base + dest, r);
+            break;
+        }
+
+        case OP_STRUCTTYPE_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            bool_store(regs, base + dest, IS_MENAI_STRUCTTYPE(regs[base + src0]));
+            break;
+        }
+
+        case OP_STRUCTTYPE_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            int tag_a = ((MenaiStructType *)a)->tag;
+            int tag_b = ((MenaiStructType *)b)->tag;
+            bool_store(regs, base + dest, tag_a == tag_b);
+            break;
+        }
+
+        case OP_STRUCTTYPE_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            int tag_a = ((MenaiStructType *)a)->tag;
+            int tag_b = ((MenaiStructType *)b)->tag;
+            bool_store(regs, base + dest, tag_a != tag_b);
             break;
         }
 

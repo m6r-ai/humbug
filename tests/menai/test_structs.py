@@ -179,7 +179,7 @@ class TestStructSet:
 # ---------------------------------------------------------------------------
 
 class TestStructPredicates:
-    """Test struct? and struct-type? predicates."""
+    """Test struct? and struct-is-instance? predicates."""
 
     def test_struct_predicate_true_for_instance(self, menai):
         """(struct? p) returns #t for a struct instance."""
@@ -200,36 +200,38 @@ class TestStructPredicates:
         """(struct? "hello") returns #f for a string."""
         assert menai.evaluate_and_format('(struct? "hello")') == '#f'
 
-    def test_struct_type_predicate_true_for_matching_type(self, menai):
-        """(struct-type? Point p) returns #t when p is a Point."""
+    def test_struct_is_instance_predicate_true_for_matching_type(self, menai):
+        """(struct-is-instance? p Point) returns #t when p is a Point."""
         result = menai.evaluate_and_format(
-            '(let ((Point (struct (x y))) (p (Point 1 2))) (struct-type? Point p))'
+            '(let ((Point (struct (x y))) (p (Point 1 2))) (struct-is-instance? p Point))'
         )
         assert result == '#t'
 
-    def test_struct_type_predicate_false_for_different_struct_type(self, menai):
-        """(struct-type? Point v) returns #f when v is a Vec (nominal typing)."""
+    def test_struct_is_instance_predicate_false_for_different_struct_type(self, menai):
+        """(struct-is-instance? v Point) returns #f when v is a Vec (nominal typing)."""
         result = menai.evaluate_and_format('''
         (let ((Point (struct (x y)))
               (Vec (struct (x y)))
               (v (Vec 1 2)))
-          (struct-type? Point v))
+          (struct-is-instance? v Point))
         ''')
         assert result == '#f'
 
-    def test_struct_type_predicate_false_for_non_struct(self, menai):
-        """(struct-type? Point 42) returns #f for a non-struct value."""
-        result = menai.evaluate_and_format(
-            '(let ((Point (struct (x y)))) (struct-type? Point 42))'
-        )
-        assert result == '#f'
+    def test_struct_is_instance_predicate_false_for_non_struct(self, menai):
+        """(struct-is-instance? 42 Point) raises an error for a non-struct value."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                '(let ((Point (struct (x y)))) (struct-is-instance? 42 Point))'
+            )
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-    def test_struct_type_predicate_false_for_struct_type_value(self, menai):
-        """(struct-type? Point Point) returns #f — Point is the type, not an instance."""
-        result = menai.evaluate_and_format(
-            '(let ((Point (struct (x y)))) (struct-type? Point Point))'
-        )
-        assert result == '#f'
+    def test_struct_is_instance_predicate_false_for_struct_type_value(self, menai):
+        """(struct-is-instance? Point Point) raises an error — Point is the type, not an instance."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                '(let ((Point (struct (x y)))) (struct-is-instance? Point Point))'
+            )
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
 # ---------------------------------------------------------------------------
@@ -315,26 +317,26 @@ class TestStructEquality:
 # ---------------------------------------------------------------------------
 
 class TestStructIntrospection:
-    """Test struct-type-name, struct-fields, and struct-type."""
+    """Test structtype-name, structtype-fields, and struct-type."""
 
     def test_struct_type_name(self, menai):
-        """(struct-type-name Point) returns the string \"Point\"."""
+        """(structtype-name Point) returns the string \"Point\"."""
         result = menai.evaluate_and_format(
-            '(let ((Point (struct (x y)))) (struct-type-name Point))'
+            '(let ((Point (struct (x y)))) (structtype-name Point))'
         )
         assert result == '"Point"'
 
     def test_struct_fields_returns_symbols(self, menai):
-        """(struct-fields Point) returns a list of field name symbols."""
+        """(structtype-fields Point) returns a list of field name symbols."""
         result = menai.evaluate_and_format(
-            '(let ((Point (struct (x y)))) (struct-fields Point))'
+            '(let ((Point (struct (x y)))) (structtype-fields Point))'
         )
         assert result == '(x y)'
 
     def test_struct_fields_zero_field_struct(self, menai):
-        """(struct-fields Unit) returns an empty list for a zero-field struct."""
+        """(structtype-fields Unit) returns an empty list for a zero-field struct."""
         result = menai.evaluate_and_format(
-            '(let ((Unit (struct ()))) (struct-fields Unit))'
+            '(let ((Unit (struct ()))) (structtype-fields Unit))'
         )
         assert result == '()'
 
@@ -349,11 +351,11 @@ class TestStructIntrospection:
         assert result == '#f'
 
     def test_struct_type_name_roundtrip(self, menai):
-        """(struct-type-name (struct-type p)) round-trips to the type name."""
+        """(structtype-name (struct-type p)) round-trips to the type name."""
         result = menai.evaluate_and_format('''
         (let ((Point (struct (x y)))
               (p (Point 3 4)))
-          (struct-type-name (struct-type p)))
+          (structtype-name (struct-type p)))
         ''')
         assert result == '"Point"'
 
@@ -362,26 +364,149 @@ class TestStructIntrospection:
         result = menai.evaluate_and_format('''
         (let ((Point (struct (x y)))
               (p (Point 1 2)))
-          (struct-type? Point p))
+          (struct-is-instance? p Point))
         ''')
         assert result == '#t'
 
     def test_struct_type_name_on_non_struct_type_raises_error(self, menai):
-        """struct-type-name raises an error when called on a non-struct-type."""
+        """structtype-name raises an error when called on a non-struct-type."""
         with pytest.raises(MenaiEvalError) as exc_info:
-            menai.evaluate("(struct-type-name 42)")
+            menai.evaluate("(structtype-name 42)")
         assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_struct_fields_on_non_struct_type_raises_error(self, menai):
-        """struct-fields raises an error when called on a non-struct-type."""
+        """structtype-fields raises an error when called on a non-struct-type."""
         with pytest.raises(MenaiEvalError) as exc_info:
-            menai.evaluate("(struct-fields 42)")
+            menai.evaluate("(structtype-fields 42)")
         assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
     def test_struct_type_on_non_struct_raises_error(self, menai):
         """struct-type raises an error when called on a non-struct."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate("(struct-type 42)")
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+
+# ---------------------------------------------------------------------------
+# 6b. Structtype operations
+# ---------------------------------------------------------------------------
+
+class TestStructtypeOperations:
+    """Test structtype?, structtype=?, structtype!=?, and struct-is-instance? with new argument order."""
+
+    # --- structtype? predicate ---
+
+    def test_structtype_predicate_true_for_struct_type(self, menai):
+        """(structtype? Point) returns #t for a struct type."""
+        result = menai.evaluate_and_format(
+            '(let ((Point (struct (x y)))) (structtype? Point))'
+        )
+        assert result == '#t'
+
+    def test_structtype_predicate_false_for_struct_instance(self, menai):
+        """(structtype? p) returns #f for a struct instance."""
+        result = menai.evaluate_and_format(
+            '(let ((Point (struct (x y))) (p (Point 1 2))) (structtype? p))'
+        )
+        assert result == '#f'
+
+    def test_structtype_predicate_false_for_integer(self, menai):
+        """(structtype? 42) returns #f for an integer."""
+        assert menai.evaluate_and_format('(structtype? 42)') == '#f'
+
+    def test_structtype_predicate_false_for_list(self, menai):
+        """(structtype? (list 1 2)) returns #f for a list."""
+        assert menai.evaluate_and_format('(structtype? (list 1 2))') == '#f'
+
+    def test_structtype_predicate_false_for_string(self, menai):
+        """(structtype? "hello") returns #f for a string."""
+        assert menai.evaluate_and_format('(structtype? "hello")') == '#f'
+
+    # --- structtype=? equality ---
+
+    def test_structtype_eq_true_for_same_type(self, menai):
+        """(structtype=? Point Point) returns #t when both args are the same struct type."""
+        result = menai.evaluate_and_format(
+            '(let ((Point (struct (x y)))) (structtype=? Point Point))'
+        )
+        assert result == '#t'
+
+    def test_structtype_eq_false_for_different_types(self, menai):
+        """(structtype=? Point Vec) returns #f even when fields are identical (nominal typing)."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (Vec (struct (x y))))
+          (structtype=? Point Vec))
+        ''')
+        assert result == '#f'
+
+    def test_structtype_eq_on_non_structtype_first_arg_raises_error(self, menai):
+        """structtype=? raises an error when the first argument is not a struct type."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                '(let ((Point (struct (x y)))) (structtype=? 42 Point))'
+            )
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+    def test_structtype_eq_on_non_structtype_second_arg_raises_error(self, menai):
+        """structtype=? raises an error when the second argument is not a struct type."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                '(let ((Point (struct (x y)))) (structtype=? Point 42))'
+            )
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+    # --- structtype!=? inequality ---
+
+    def test_structtype_neq_false_for_same_type(self, menai):
+        """(structtype!=? Point Point) returns #f when both args are the same struct type."""
+        result = menai.evaluate_and_format(
+            '(let ((Point (struct (x y)))) (structtype!=? Point Point))'
+        )
+        assert result == '#f'
+
+    def test_structtype_neq_true_for_different_types(self, menai):
+        """(structtype!=? Point Vec) returns #t when types differ."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (Vec (struct (x y))))
+          (structtype!=? Point Vec))
+        ''')
+        assert result == '#t'
+
+    # --- struct-is-instance? with new argument order (struct first, structtype second) ---
+
+    def test_struct_is_instance_true_for_matching_type(self, menai):
+        """(struct-is-instance? p Point) returns #t when p is a Point instance."""
+        result = menai.evaluate_and_format(
+            '(let ((Point (struct (x y))) (p (Point 1 2))) (struct-is-instance? p Point))'
+        )
+        assert result == '#t'
+
+    def test_struct_is_instance_false_for_different_type(self, menai):
+        """(struct-is-instance? v Point) returns #f when v is a Vec (nominal typing)."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (Vec (struct (x y)))
+              (v (Vec 1 2)))
+          (struct-is-instance? v Point))
+        ''')
+        assert result == '#f'
+
+    def test_struct_is_instance_raises_error_for_non_struct_first_arg(self, menai):
+        """struct-is-instance? raises an error when the first argument is not a struct."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                '(let ((Point (struct (x y)))) (struct-is-instance? 42 Point))'
+            )
+        assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
+
+    def test_struct_is_instance_raises_error_for_non_structtype_second_arg(self, menai):
+        """struct-is-instance? raises an error when the second argument is not a struct type."""
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate(
+                '(let ((Point (struct (x y))) (p (Point 1 2))) (struct-is-instance? p 42))'
+            )
         assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
 
@@ -790,65 +915,65 @@ class TestStructErrors:
             )
         assert exc_info.value.error_code == VMErrorCode.TYPE_MISMATCH
 
-    def test_struct_get_imm_index_out_of_range_high(self, menai):
-        """struct-get-imm raises an error when the field index is beyond the last field."""
+    def test_struct_ref_index_out_of_range_high(self, menai):
+        """struct-ref raises an error when the field index is beyond the last field."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
-                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-get-imm p 2))"
+                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-ref p 2))"
             )
         assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
 
-    def test_struct_get_imm_index_negative(self, menai):
-        """struct-get-imm raises an error when the field index is negative."""
+    def test_struct_ref_index_negative(self, menai):
+        """struct-ref raises an error when the field index is negative."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
-                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-get-imm p -1))"
+                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-ref p -1))"
             )
         assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
 
-    def test_struct_get_imm_index_zero_on_empty_struct(self, menai):
-        """struct-get-imm raises an error when accessing field 0 of a zero-field struct."""
+    def test_struct_ref_index_zero_on_empty_struct(self, menai):
+        """struct-ref raises an error when accessing field 0 of a zero-field struct."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
-                "(let ((Unit (struct ())) (u (Unit))) (struct-get-imm u 0))"
+                "(let ((Unit (struct ())) (u (Unit))) (struct-ref u 0))"
             )
         assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
 
-    def test_struct_get_imm_valid_index_works(self, menai):
-        """struct-get-imm works correctly for valid indices."""
+    def test_struct_ref_valid_index_works(self, menai):
+        """struct-ref works correctly for valid indices."""
         result = menai.evaluate_and_format(
-            "(let ((Point (struct (x y))) (p (Point 3 4))) (struct-get-imm p 0))"
+            "(let ((Point (struct (x y))) (p (Point 3 4))) (struct-ref p 0))"
         )
         assert result == '3'
 
-    def test_struct_set_imm_index_out_of_range_high(self, menai):
-        """struct-set-imm raises an error when the field index is beyond the last field."""
+    def test_struct_set_ref_index_out_of_range_high(self, menai):
+        """struct-set-ref raises an error when the field index is beyond the last field."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
-                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-set-imm p 2 99))"
+                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-set-ref p 2 99))"
             )
         assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
 
-    def test_struct_set_imm_index_negative(self, menai):
-        """struct-set-imm raises an error when the field index is negative."""
+    def test_struct_set_ref_index_negative(self, menai):
+        """struct-set-ref raises an error when the field index is negative."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
-                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-set-imm p -1 99))"
+                "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-set-ref p -1 99))"
             )
         assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
 
-    def test_struct_set_imm_index_zero_on_empty_struct(self, menai):
-        """struct-set-imm raises an error when accessing field 0 of a zero-field struct."""
+    def test_struct_set_ref_index_zero_on_empty_struct(self, menai):
+        """struct-set-ref raises an error when accessing field 0 of a zero-field struct."""
         with pytest.raises(MenaiEvalError) as exc_info:
             menai.evaluate(
-                "(let ((Unit (struct ())) (u (Unit))) (struct-set-imm u 0 99))"
+                "(let ((Unit (struct ())) (u (Unit))) (struct-set-ref u 0 99))"
             )
         assert exc_info.value.error_code == VMErrorCode.INDEX_OUT_OF_RANGE
 
-    def test_struct_set_imm_valid_index_works(self, menai):
-        """struct-set-imm works correctly for valid indices."""
+    def test_struct_set_ref_valid_index_works(self, menai):
+        """struct-set-ref works correctly for valid indices."""
         result = menai.evaluate_and_format(
-            "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-set-imm p 0 99))"
+            "(let ((Point (struct (x y))) (p (Point 1 2))) (struct-set-ref p 0 99))"
         )
         assert result == '(Point 99 2)'
 
@@ -879,13 +1004,13 @@ class TestStructFirstClass:
         ''')
         assert result == '#t'
 
-    def test_struct_type_predicate_as_first_class(self, menai):
-        """struct-type? used as a first-class function."""
+    def test_struct_is_instance_predicate_as_first_class(self, menai):
+        """struct-is-instance? used as a first-class function."""
         result = menai.evaluate_and_format('''
         (let ((Point (struct (x y)))
               (p (Point 1 2))
-              (check struct-type?))
-          (check Point p))
+              (check struct-is-instance?))
+          (check p Point))
         ''')
         assert result == '#t'
 
@@ -956,25 +1081,25 @@ class TestStructFirstClass:
         (let ((Point (struct (x y)))
               (p (Point 1 2))
               (get-type struct-type))
-          (struct-type-name (get-type p)))
+          (structtype-name (get-type p)))
         ''')
         assert result == '"Point"'
 
     def test_struct_type_name_as_first_class(self, menai):
-        """struct-type-name used as a first-class function."""
+        """structtype-name used as a first-class function."""
         result = menai.evaluate_and_format('''
         (let ((Point (struct (x y)))
               (Vec (struct (dx dy)))
-              (name-of struct-type-name))
+              (name-of structtype-name))
           (list (name-of Point) (name-of Vec)))
         ''')
         assert result == '("Point" "Vec")'
 
     def test_struct_fields_as_first_class(self, menai):
-        """struct-fields used as a first-class function."""
+        """structtype-fields used as a first-class function."""
         result = menai.evaluate_and_format('''
         (let ((Point (struct (x y)))
-              (get-fields struct-fields))
+              (get-fields structtype-fields))
           (get-fields Point))
         ''')
         assert result == '(x y)'
@@ -1044,13 +1169,13 @@ class TestStructDynamicConstruction:
         assert result == '20'
 
     def test_type_predicate_on_dynamically_constructed_instance(self, menai):
-        """struct-type? works correctly on an instance built via a dynamically-called constructor."""
+        """struct-is-instance? works correctly on an instance built via a dynamically-called constructor."""
         result = menai.evaluate_and_format('''
         (let* ((point (struct (x y)))
                (d     (dict "point" point))
                (ctor  (dict-get d "point"))
                (p     (ctor 1 2)))
-          (struct-type? point p))
+          (struct-is-instance? p point))
         ''')
         assert result == '#t'
 
@@ -1219,7 +1344,7 @@ class TestStructInNestedLetrec:
         result = menai.evaluate_and_format('''
         (let ((x 1))
           (letrec ((dep (struct (from-task to-task dep-type lag-days))))
-            (struct-fields dep)))
+            (structtype-fields dep)))
         ''')
         assert result == '(from-task to-task dep-type lag-days)'
 

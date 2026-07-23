@@ -958,16 +958,19 @@ class Menai:
    (set-subset? (lambda (s1 s2) ($set-subset? s1 s2)))
    (set->list (lambda (s) ($set->list s)))
    (struct? (lambda (x) ($struct? x)))
-   (struct-type? (lambda (t x) ($struct-type? t x)))
+   (struct-is-instance? (lambda (s t) ($struct-is-instance? s t)))
    (struct-get (lambda (s field) ($struct-get s field)))
-   (struct-get-imm (lambda (s field) ($struct-get-imm s field)))
+   (struct-ref (lambda (s field) ($struct-ref s field)))
    (struct-set (lambda (s field val) ($struct-set s field val)))
-   (struct-set-imm (lambda (s field val) ($struct-set-imm s field val)))
+   (struct-set-ref (lambda (s field val) ($struct-set-ref s field val)))
    (struct=? (lambda (a b) ($struct=? a b)))
    (struct!=? (lambda (a b) ($struct!=? a b)))
    (struct-type (lambda (s) ($struct-type s)))
-   (struct-type-name (lambda (t) ($struct-type-name t)))
-   (struct-fields (lambda (t) ($struct-fields t)))
+   (structtype? (lambda (x) ($structtype? x)))
+   (structtype=? (lambda (a b) ($structtype=? a b)))
+   (structtype!=? (lambda (a b) ($structtype!=? a b)))
+   (structtype-name (lambda (t) ($structtype-name t)))
+   (structtype-fields (lambda (t) ($structtype-fields t)))
    (map-list (lambda (f lst)
                (letrec
                  ((helper (lambda (f lst acc)
@@ -1258,16 +1261,19 @@ class Menai:
         "set-subset?" set-subset?
         "set->list" set->list
         "struct?" struct?
-        "struct-type?" struct-type?
+        "struct-is-instance?" struct-is-instance?
         "struct-get" struct-get
-        "struct-get-imm" struct-get-imm
+        "struct-ref" struct-ref
         "struct-set" struct-set
-        "struct-set-imm" struct-set-imm
+        "struct-set-ref" struct-set-ref
         "struct=?" struct=?
         "struct!=?" struct!=?
         "struct-type" struct-type
-        "struct-type-name" struct-type-name
-        "struct-fields" struct-fields
+        "structtype?" structtype?
+        "structtype=?" structtype=?
+        "structtype!=?" structtype!=?
+        "structtype-name" structtype-name
+        "structtype-fields" structtype-fields
         "map-list" map-list
         "filter-list" filter-list
         "fold-list" fold-list
