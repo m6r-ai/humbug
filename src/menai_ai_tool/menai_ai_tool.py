@@ -377,21 +377,29 @@ Syntax: (operator arg1 arg2 ...)
 
 - Nominal typed record values — two struct types with the same fields are distinct types
 - Declaration: (struct (field1 field2 ...)) — valid as the RHS of a let, let*, or letrec binding
-- (let ((point (struct (x y)))) ...) → binds point to a struct-type value; the binding name becomes the type name
-- Construction: call the struct-type value directly with positional field values: (point 1 2) → a point instance
+- A struct definition produces a structtype value (a type descriptor), not a struct instance
+- (let ((point (struct (x y)))) ...) → binds point to a structtype value; the binding name becomes the type name
+- Construction: call the structtype value directly with positional field values: (point 1 2) → a point instance
 - Type predicate (any struct): (struct? p) → #t for any struct instance
-- Type predicate (specific type): (struct-type? point p) → #t if p is a point instance specifically
 - Field access: (struct-get p 'x) → value of field x; field name must be a symbol
+- Indexed field access: (struct-ref p 0) → value of field at index 0 (0-based)
 - Functional update (returns new struct — pure): (struct-set p 'x 10) → new point with x=10, y unchanged
+- Indexed functional update: (struct-set-ref p 0 10) → new point with field 0 set to 10
 - Equality: (struct=? p1 p2) → #t if same type tag and all fields equal; (struct!=? p1 p2) → negation
-- Introspection: (struct-type-name point) → "point" (takes a struct-type value, not an instance)
-- Introspection: (struct-fields point) → ('x 'y) list of field name symbols (takes a struct-type value)
-- Introspection: (struct-type p) → returns the struct-type value (e.g. point) for a given instance
 - Display format: (point 1 2) — this is display-only; construction always uses (TypeName field1 field2 ...)
-- Pattern matching predicate form: (match p ((? (struct-type? point) p) (struct-get p 'x)) (_ 0))
 - Pattern matching destructuring form: (match p ((point x y) (integer+ x y)) (_ 0)) — compiler resolves field bindings at compile time
 - Hashability: structs are hashable (usable as set members or dict keys) if all their fields are hashable scalars
 - Structs are nominal: (let ((point (struct (x y))) (Vec (struct (x y)))) ...) — point and Vec are distinct types even with identical fields
+
+## Structtype operations:
+
+- A structtype is the type descriptor produced by (struct (field ...)) — distinct from struct instances
+- Type predicate: (structtype? point) → #t if point is a structtype value; (structtype? p) → #f if p is a struct instance
+- Equality: (structtype=? point point) → #t; (structtype=? point vec) → #f (different types); (structtype!=? point vec) → #t
+- Instance check: (struct-is-instance? p point) → #t if p is a point instance; first arg must be a struct, second must be a structtype
+- Name: (structtype-name point) → "point" (takes a structtype value, not an instance)
+- Fields: (structtype-fields point) → ('x 'y) list of field name symbols (takes a structtype value)
+- Get structtype from instance: (struct-type p) → returns the structtype value (e.g. point) for a given instance
 
 ## Bytes operations:
 
