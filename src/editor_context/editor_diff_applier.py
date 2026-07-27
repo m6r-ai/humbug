@@ -45,13 +45,23 @@ class EditorDiffMatcher(DiffMatcher):
         """
         Get total number of lines in Qt text document.
 
+        A document whose last line ends with a trailing newline has an empty
+        trailing block; that block is not counted as a line.
+
         Args:
             document: Qt text document
 
         Returns:
-            Number of lines in document
+            Number of content lines in document
         """
-        return document.blockCount()
+        count = document.blockCount()
+
+        # An empty trailing block represents a trailing newline, not a line
+        last_block = document.lastBlock()
+        if last_block.isValid() and last_block.text() == '' and last_block.blockNumber() > 0:
+            return count - 1
+
+        return count
 
 
 class EditorDiffApplier(DiffApplier):
@@ -118,7 +128,6 @@ class EditorDiffApplier(DiffApplier):
 
             if not match_result.success:
                 # Build detailed error information
-
                 expected_lines = [
                     line.content for line in hunk.lines
                     if line.type in (' ', '-')
@@ -171,23 +180,14 @@ class EditorDiffApplier(DiffApplier):
             hunk_locations.append((hunk, match_result))
 
         # Phase 2: Sort hunks by location (bottom to top) and check for overlaps
-        # Before sorting, identify the bottommost hunk (highest line number) to position cursor there later
-        bottommost_hunk = None
-        bottommost_location = -1
-        for hunk, match_result in hunk_locations:
-            if match_result.location > bottommost_location:
-                bottommost_location = match_result.location
-                bottommost_hunk = hunk
-
         hunk_locations.sort(key=lambda x: x[1].location, reverse=True)
         self._check_for_overlaps(hunk_locations)
 
-        # Calculate where the bottommost hunk will end after applying changes
-        final_cursor_line = None
-        if bottommost_hunk:
-            # Count the number of lines that will exist after this hunk is applied
-            lines_after_hunk = sum(1 for line in bottommost_hunk.lines if line.type in (' ', '+'))
-            final_cursor_line = bottommost_location + lines_after_hunk
+        # Identify the trailing-newline owner: the last hunk (lowest location
+        # after reverse sort, i.e. the one closest to EOF) that carries a
+        # no-newline marker.  Its new_no_newline flag determines the result's
+        # trailing block state.
+        newline_owner = self._find_newline_owner(hunk_locations)
 
         # If dry run, return success without applying
         if dry_run:
@@ -203,13 +203,12 @@ class EditorDiffApplier(DiffApplier):
             for hunk, match_result in hunk_locations:
                 self._apply_hunk(hunk, match_result.location, document, cursor)
 
-            cursor.endEditBlock()
+            # Adjust the trailing block to match the newline state specified by
+            # the EOF-touching hunk, if any.
+            if newline_owner is not None:
+                self._adjust_trailing_newline(document, cursor, newline_owner.new_no_newline)
 
-            # Move cursor to the end of the bottommost hunk
-            if final_cursor_line is not None:
-                block = document.findBlockByLineNumber(final_cursor_line - 1)
-                if block.isValid():
-                    cursor.setPosition(block.position())
+            cursor.endEditBlock()
 
             return DiffApplicationResult(
                 success=True,
@@ -222,6 +221,71 @@ class EditorDiffApplier(DiffApplier):
             self._logger.exception("Failed to apply diff: %s", str(e))
             raise DiffApplicationError(f"Failed to apply diff: {str(e)}") from e
 
+    def _find_newline_owner(
+        self,
+        hunk_locations: list[tuple[DiffHunk, Any]]
+    ) -> DiffHunk | None:
+        """
+        Find the hunk that owns the trailing newline state.
+
+        The no-newline marker only appears on hunks touching EOF, so any hunk
+        carrying the marker owns the result's trailing newline.  When multiple
+        hunks carry it, the last one (by location) wins.
+
+        Args:
+            hunk_locations: List of (hunk, match_result) tuples
+
+        Returns:
+            The owning hunk, or None if no hunk carries the marker
+        """
+        owner: DiffHunk | None = None
+        owner_location = -1
+
+        for hunk, match_result in hunk_locations:
+            if hunk.old_no_newline or hunk.new_no_newline:
+                if match_result.location >= owner_location:
+                    owner = hunk
+                    owner_location = match_result.location
+
+        return owner
+
+    def _adjust_trailing_newline(
+        self,
+        document: QTextDocument,
+        cursor: QTextCursor,
+        no_newline: bool
+    ) -> None:
+        """
+        Ensure the document's trailing block state matches the desired newline.
+
+        A document ending with a trailing newline has an empty trailing block;
+        one without does not.  Add or remove that empty block as needed.
+
+        Args:
+            document: Qt text document to modify
+            cursor: Qt text cursor for modifications
+            no_newline: True if the result should have no trailing newline
+        """
+        last_block = document.lastBlock()
+        has_trailing_empty = (
+            last_block.isValid()
+            and last_block.text() == ''
+            and last_block.blockNumber() > 0
+        )
+
+        if no_newline and has_trailing_empty:
+            # Remove the trailing empty block so the document ends with content
+            cursor.setPosition(last_block.position())
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+            cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.KeepAnchor)
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
+            cursor.removeSelectedText()
+
+        elif not no_newline and not has_trailing_empty:
+            # Add a trailing empty block so the document ends with a newline
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            cursor.insertText('\n')
+
     def _apply_hunk(
         self,
         hunk: DiffHunk,
@@ -231,6 +295,9 @@ class EditorDiffApplier(DiffApplier):
     ) -> None:
         """
         Apply a single hunk to Qt text document.
+
+        Only content lines are processed here; trailing newline state is
+        handled separately by _adjust_trailing_newline after all hunks apply.
 
         Args:
             hunk: The hunk to apply
@@ -260,39 +327,68 @@ class EditorDiffApplier(DiffApplier):
                 cursor.movePosition(QTextCursor.MoveOperation.Down)
 
             elif line.type == '-':
-                # Deletion - remove this line
-                cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-                cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
-
-                # If not at end of document, include the newline
-                if not cursor.atEnd():
-                    cursor.movePosition(QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.KeepAnchor)
-
-                # If at end of document, delete the preceding newline so the
-                # block itself is removed.  We check the cursor's current block
-                # number rather than the hunk's starting location, because the
-                # hunk may contain multiple deletions and the cursor may have
-                # moved well past the hunk start by the time we reach EOF.
-                elif cursor.blockNumber() > 0:
-                    cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-                    cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.KeepAnchor)
-                    cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
-
-                cursor.removeSelectedText()
+                self._delete_line(cursor)
 
             elif line.type == '+':
-                # Addition - insert this line
-                # At EOF there is no trailing newline to push down, so move to
-                # the end of the last block and append after it.  In all other
-                # cases insert at the start of the current block followed by a
-                # newline so the existing content is pushed down.
-                # We also exclude the case where the cursor is on a trailing
-                # empty block (the artifact of a file's trailing newline) - in
-                # that case the normal insertion fills the empty block correctly.
-                if cursor.atEnd() and not cursor.atStart() and cursor.block().text():
-                    cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
-                    cursor.insertText('\n' + line.content)
+                self._insert_line(cursor, line.content)
 
-                else:
-                    cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-                    cursor.insertText(line.content + '\n')
+    def _delete_line(self, cursor: QTextCursor) -> None:
+        """
+        Delete the line at the cursor position.
+
+        The block is removed entirely.  If it is the last block, the preceding
+        newline is removed instead so the block disappears.
+
+        Args:
+            cursor: Qt text cursor positioned at the line to delete
+        """
+        # Determine the range to remove.  We capture explicit positions rather
+        # than chaining movePosition calls with KeepAnchor, because moving Left
+        # into the preceding block changes which block EndOfBlock refers to.
+        block = cursor.block()
+        start = block.position()
+        block_end = start + block.length() - 1  # length includes the trailing newline
+
+        next_block = block.next()
+        if next_block.isValid():
+            # Not the last block: remove this block's content plus its newline
+            # so the next block moves up.
+            cursor.setPosition(start, QTextCursor.MoveMode.MoveAnchor)
+            cursor.setPosition(block_end + 1, QTextCursor.MoveMode.KeepAnchor)
+
+        elif block.blockNumber() > 0:
+            # Last block: remove the preceding newline plus this block's
+            # content so the block disappears entirely.
+            cursor.setPosition(start - 1, QTextCursor.MoveMode.MoveAnchor)
+            cursor.setPosition(block_end, QTextCursor.MoveMode.KeepAnchor)
+
+        else:
+            # Only block in the document: clear its content.
+            cursor.setPosition(start, QTextCursor.MoveMode.MoveAnchor)
+            cursor.setPosition(block_end, QTextCursor.MoveMode.KeepAnchor)
+
+        cursor.removeSelectedText()
+
+    def _insert_line(self, cursor: QTextCursor, content: str) -> None:
+        """
+        Insert a line at the cursor position.
+
+        At EOF on a non-empty final block, the line is appended after the
+        current block.  In all other cases it is inserted before the current
+        block so existing content is pushed down.
+
+        Args:
+            cursor: Qt text cursor positioned at the insertion point
+            content: Line content to insert
+        """
+        # At EOF there is no trailing newline to push down, so append after the
+        # last block.  Exclude the case where the cursor is on a trailing empty
+        # block (the artifact of a trailing newline) - normal insertion fills
+        # the empty block correctly.
+        if cursor.atEnd() and not cursor.atStart() and cursor.block().text():
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
+            cursor.insertText('\n' + content)
+
+        else:
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+            cursor.insertText(content + '\n')

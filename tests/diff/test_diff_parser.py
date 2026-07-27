@@ -202,8 +202,8 @@ class TestDiffParserEdgeCases:
         assert hunks[0].lines[1].content == ''
         assert hunks[0].lines[2].content == ''
 
-    def test_parse_no_newline_marker(self):
-        """Test parsing diff with 'No newline at end of file' marker."""
+    def test_parse_no_newline_marker_after_addition(self):
+        """Marker after a '+' line sets new_no_newline only."""
         diff_text = """@@ -1,2 +1,2 @@
  line 1
 -old line
@@ -213,9 +213,53 @@ class TestDiffParserEdgeCases:
         parser = DiffParser()
         hunks = parser.parse(diff_text)
 
-        # The marker should be ignored
         assert len(hunks) == 1
-        assert len(hunks[0].lines) == 3
+        assert hunks[0].new_no_newline is True
+        assert hunks[0].old_no_newline is False
+
+    def test_parse_no_newline_marker_after_deletion(self):
+        """Marker after a '-' line sets old_no_newline only."""
+        diff_text = """@@ -1,2 +1,2 @@
+ line 1
+-old line
+\\ No newline at end of file
++new line
+"""
+        parser = DiffParser()
+        hunks = parser.parse(diff_text)
+
+        assert len(hunks) == 1
+        assert hunks[0].old_no_newline is True
+        assert hunks[0].new_no_newline is False
+
+    def test_parse_no_newline_marker_after_context(self):
+        """Marker after a context line sets both old and new no_newline."""
+        diff_text = """@@ -1,2 +1,2 @@
+ line 1
+ line 2
+\\ No newline at end of file
+"""
+        parser = DiffParser()
+        hunks = parser.parse(diff_text)
+
+        assert len(hunks) == 1
+        assert hunks[0].old_no_newline is True
+        assert hunks[0].new_no_newline is True
+
+    def test_parse_no_newline_marker_both_sides(self):
+        """Marker after both '-' and '+' lines sets both flags."""
+        diff_text = """@@ -1,1 +1,1 @@
+-old line
+\\ No newline at end of file
++new line
+\\ No newline at end of file
+"""
+        parser = DiffParser()
+        hunks = parser.parse(diff_text)
+
+        assert len(hunks) == 1
+        assert hunks[0].old_no_newline is True
+        assert hunks[0].new_no_newline is True
 
     def test_parse_line_without_prefix(self):
         """Test parsing line without prefix (treated as context)."""

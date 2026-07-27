@@ -1,6 +1,7 @@
 """Filesystem-specific diff application."""
 
 import logging
+from typing import Any
 
 from diff import DiffApplier, DiffApplicationError, DiffApplicationResult, DiffHunk, DiffMatcher
 
@@ -82,7 +83,7 @@ class FilesystemDiffApplier(DiffApplier):
         hunk: DiffHunk,
         location: int,
         document: list[str],
-        context: dict
+        context: Any
     ) -> None:
         """
         Apply a single hunk to file content.
@@ -91,7 +92,7 @@ class FilesystemDiffApplier(DiffApplier):
             hunk: The hunk to apply
             location: Line number where to apply (1-indexed, or 0 for empty file)
             document: File content as list of lines (modified in place)
-            context: Dictionary with 'line_ending' key (unused here, for compatibility)
+            context: Unused (for compatibility with base class)
         """
         current_line = location - 1 if location > 0 else 0  # Convert to 0-indexed
 
@@ -134,19 +135,21 @@ class FilesystemDiffApplier(DiffApplier):
             Tuple of (DiffApplicationResult, modified content or None)
             Modified content is None if dry_run=True or if application failed
         """
+        # Parse the diff up front to extract trailing-newline markers.  The
+        # marker ("\ No newline at end of file") only ever appears on a hunk
+        # that touches the end of the file, so its presence tells us the
+        # result's trailing newline state.
+        hunks = self._parser.parse(diff_text)
+
         # Detect line ending from file content
         line_ending = self._detect_line_ending(file_content)
 
-        # Split into lines (preserving empty last line if present)
+        # Split into lines (stripping line endings; trailing newline state is
+        # tracked separately via the original content and the hunk markers)
         lines = file_content.splitlines(keepends=False)
 
-        # Handle empty file case
-        if not lines and file_content == '':
-            lines = []
-
-        # Apply diff
-        context = {'line_ending': line_ending}
-        result = self.apply_diff(diff_text, lines, dry_run=dry_run, context=context)
+        # Apply diff using the base class
+        result = self.apply_diff(diff_text, lines, dry_run=dry_run)
 
         if not result.success or dry_run:
             return result, None
@@ -154,11 +157,43 @@ class FilesystemDiffApplier(DiffApplier):
         # Reconstruct file content with preserved line endings
         modified_content = line_ending.join(lines)
 
-        # Add final line ending if original had one
-        if file_content and file_content.endswith(('\n', '\r\n', '\r')):
+        # Determine whether the result should end with a trailing newline.
+        # The "\ No newline" marker only appears on hunks touching EOF, so if
+        # any hunk carries one it owns the result's trailing newline state.
+        # Otherwise preserve the original file's trailing newline.
+        original_has_trailing_newline = bool(file_content) and file_content.endswith(('\n', '\r\n', '\r'))
+        result_no_newline = self._result_has_no_trailing_newline(hunks, original_has_trailing_newline)
+
+        if lines and not result_no_newline:
             modified_content += line_ending
 
         return result, modified_content
+
+    def _result_has_no_trailing_newline(
+        self,
+        hunks: list[DiffHunk],
+        original_has_trailing_newline: bool
+    ) -> bool:
+        """
+        Determine whether the result file should have no trailing newline.
+
+        The no-newline marker is only valid on a hunk that
+        touches the end of the file, so any hunk carrying the marker on its
+        new side owns the result's trailing newline state.  When no hunk has a
+        marker, the original trailing newline state is preserved.
+
+        Args:
+            hunks: Parsed diff hunks
+            original_has_trailing_newline: Whether the original had a trailing newline
+
+        Returns:
+            True if the result should have no trailing newline, False if it should
+        """
+        for hunk in hunks:
+            if hunk.new_no_newline or hunk.old_no_newline:
+                return hunk.new_no_newline
+
+        return not original_has_trailing_newline
 
     def _detect_line_ending(self, content: str) -> str:
         """

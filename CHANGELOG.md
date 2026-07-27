@@ -4,21 +4,14 @@
 
 New features:
 
-- Added a new `bytes` type to Menai.  This allows for the manipulation of binary (byte object) data.
-- Updated the tool system so tools that use Menai must read the AI tool help before being allowed to write Menai expressions.
-- Added new ASSERT opcodes to Menai.
-- Improved/regularized the `structtype` operations in Menai to make them distint from `struct` operations and to add missing
-  functionality.
+- Removed the menai codebase and tools and put them in a sibling git repo.
 
 Bug fixes:
 
 - Fixed a problem with main menu colours on Windows/Linux.
-
-Internal structure changes:
-
-- The Menai VM exception handling logic has been completely reworked to generate structured exceptions rather than reporting
-  error strings that in many cases were increasingly inaccurate.
-- Removed all Python-specific logic from the Menai VM except for the `menai_vm_bridge.c` file.
+- Fixed the diff application tools (filesystem and editor) so that the "\ No newline at end of file" marker is honoured,
+  allowing diffs to add or remove a trailing newline.  Previously the marker was discarded, causing silent no-ops or
+  garbled editor buffers.
 
 ## v53 (2026-07-12)
 

@@ -41,3 +41,91 @@ class TestFilesystemDiffApplierApplicationError:
                 applier.apply_diff(diff_text, document)
 
         assert "Cannot delete line" in str(exc_info.value)
+
+
+class TestFilesystemDiffApplierTrailingNewline:
+    """Test trailing newline handling via the no-newline marker."""
+
+    def test_add_trailing_newline(self):
+        """A marker on the old side only adds a trailing newline to the result."""
+        applier = FilesystemDiffApplier()
+
+        original = "line1\nline2\nline3"  # no trailing newline
+        diff_text = """@@ -1,3 +1,3 @@
+ line1
+ line2
+-line3
+\\ No newline at end of file
++line3
+"""
+        result, modified = applier.apply_diff_to_file(diff_text, original)
+
+        assert result.success
+        assert modified == "line1\nline2\nline3\n"
+
+    def test_remove_trailing_newline(self):
+        """A marker on the new side only removes the trailing newline from the result."""
+        applier = FilesystemDiffApplier()
+
+        original = "line1\nline2\nline3\n"  # has trailing newline
+        diff_text = """@@ -1,3 +1,3 @@
+ line1
+ line2
+-line3
++line3
+\\ No newline at end of file
+"""
+        result, modified = applier.apply_diff_to_file(diff_text, original)
+
+        assert result.success
+        assert modified == "line1\nline2\nline3"
+
+    def test_no_marker_preserves_trailing_newline(self):
+        """Without a marker, the original trailing newline state is preserved."""
+        applier = FilesystemDiffApplier()
+
+        original = "line1\nline2\nline3\n"  # has trailing newline
+        diff_text = """@@ -1,3 +1,3 @@
+ line1
+-line2
++lineX
+ line3
+"""
+        result, modified = applier.apply_diff_to_file(diff_text, original)
+
+        assert result.success
+        assert modified == "line1\nlineX\nline3\n"
+
+    def test_no_marker_preserves_absent_trailing_newline(self):
+        """Without a marker, a file with no trailing newline stays without one."""
+        applier = FilesystemDiffApplier()
+
+        original = "line1\nline2\nline3"  # no trailing newline
+        diff_text = """@@ -1,3 +1,3 @@
+ line1
+-line2
++lineX
+ line3
+"""
+        result, modified = applier.apply_diff_to_file(diff_text, original)
+
+        assert result.success
+        assert modified == "line1\nlineX\nline3"
+
+    def test_marker_both_sides_keeps_no_trailing_newline(self):
+        """A marker on both sides means the result has no trailing newline."""
+        applier = FilesystemDiffApplier()
+
+        original = "line1\nline2\nline3"  # no trailing newline
+        diff_text = """@@ -1,3 +1,3 @@
+ line1
+ line2
+-line3
+\\ No newline at end of file
++line3
+\\ No newline at end of file
+"""
+        result, modified = applier.apply_diff_to_file(diff_text, original)
+
+        assert result.success
+        assert modified == "line1\nline2\nline3"

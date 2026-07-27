@@ -60,8 +60,10 @@ class DiffParser:
             if line.startswith('@@'):
                 hunk = self._parse_hunk(lines, i)
                 hunks.append(hunk)
-                # Skip past the lines we just parsed
-                i += 1 + len(hunk.lines)
+                # Skip past the lines we just parsed.  Add 1 for the @@ header
+                # and count raw hunk body lines (including any "\ No newline"
+                # markers, which produce no DiffLine).
+                i += 1 + self._hunk_body_line_count(lines, i)
 
             else:
                 # Skip non-hunk lines (could be additional headers or context)
@@ -71,6 +73,36 @@ class DiffParser:
             raise DiffParseError("No valid hunks found in diff")
 
         return hunks
+
+    def _hunk_body_line_count(self, lines: list[str], hunk_idx: int) -> int:
+        """
+        Count the raw body lines belonging to the hunk at hunk_idx.
+
+        The body starts immediately after the @@ header and ends at the next
+        @@, file header (--- / +++), or end of diff.  This includes the
+        backslash-prefixed no-newline marker lines so the outer parse loop
+        can skip past them correctly.
+
+        Args:
+            lines: All lines from the diff
+            hunk_idx: Index of the @@ header line
+
+        Returns:
+            Number of raw body lines in this hunk
+        """
+        count = 0
+        i = hunk_idx + 1
+
+        while i < len(lines):
+            line = lines[i]
+
+            if line.startswith('@@') or line.startswith('---') or line.startswith('+++'):
+                break
+
+            count += 1
+            i += 1
+
+        return count
 
     def _parse_hunk(self, lines: list[str], start_idx: int) -> DiffHunk:
         """
@@ -110,6 +142,8 @@ class DiffParser:
 
         # Parse hunk lines
         hunk_lines: list[DiffLine] = []
+        old_no_newline = False
+        new_no_newline = False
         i = start_idx + 1
 
         while i < len(lines):
@@ -125,6 +159,27 @@ class DiffParser:
 
             # Skip empty lines
             if not line:
+                i += 1
+                continue
+
+            # "\ No newline at end of file" marker.  This applies to the line
+            # immediately preceding it: a '-' line means the old file's last
+            # line has no trailing newline, a '+' line means the new file's
+            # last line has no trailing newline, and a context line means both.
+            if line.startswith('\\'):
+                if hunk_lines:
+                    prev_type = hunk_lines[-1].type
+                    if prev_type == '-':
+                        old_no_newline = True
+
+                    elif prev_type == '+':
+                        new_no_newline = True
+
+                    else:
+                        # Context line: both sides share the same last line
+                        old_no_newline = True
+                        new_no_newline = True
+
                 i += 1
                 continue
 
@@ -146,10 +201,6 @@ class DiffParser:
             elif line.startswith('+'):
                 hunk_lines.append(DiffLine('+', line[1:]))
 
-            elif line.startswith('\\'):
-                # "\ No newline at end of file" - ignore for now
-                pass
-
             else:
                 # Treat as context line if it doesn't have a prefix
                 # This handles cases where the AI might forget the space prefix
@@ -157,4 +208,7 @@ class DiffParser:
 
             i += 1
 
-        return DiffHunk(old_start, old_count, new_start, new_count, hunk_lines)
+        return DiffHunk(
+            old_start, old_count, new_start, new_count, hunk_lines,
+            old_no_newline=old_no_newline, new_no_newline=new_no_newline
+        )

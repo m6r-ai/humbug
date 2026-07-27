@@ -20,6 +20,14 @@ class DiffHunk:
     new_start: int  # Starting line number in new file (1-indexed)
     new_count: int  # Number of lines in new file
     lines: list[DiffLine]  # The actual diff lines
+    # True when a "\ No newline at end of file" marker follows the last
+    # old-side line (a deletion or context line), meaning the original file's
+    # final line has no trailing newline.
+    old_no_newline: bool = False
+    # True when a "\ No newline at end of file" marker follows the last
+    # new-side line (an addition or context line), meaning the result file's
+    # final line should have no trailing newline.
+    new_no_newline: bool = False
 
 
 @dataclass
