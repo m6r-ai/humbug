@@ -361,6 +361,7 @@ class FileSystemAITool(AITool):
                 allowed_parameters={"path", "search_text", "case_sensitive", "regexp", "include", "max_results", "encoding"},
                 required_parameters={"path", "search_text"},
                 description="Recursively search for text or a regular expression across all files under a directory. "
+                    "The path may contain wildcards (e.g. 'src/*.py' searches .py files directly in src). "
                     "Results are grouped by file. Use include to filter by filename glob (e.g. '*.py'). "
                     "Each file encountered obeys the same external file access rules as read_file. "
                     "Note: match content is returned as JSON-encoded strings, so special characters "
@@ -374,11 +375,12 @@ class FileSystemAITool(AITool):
                 allowed_parameters={"path", "name", "max_results"},
                 required_parameters={"path"},
                 description="Recursively find files whose names match a glob pattern under a directory. "
+                    "The path may contain wildcards (e.g. 'src/*.py' searches for .py files directly "
+                    "in src, 'src/*/tests/*.py' searches nested test directories). "
                     "Use the name parameter to specify the filename pattern (e.g. 'AGENTS.md', '*.py'). "
                     "If name is omitted, all files are returned. "
                     "Returns a list of matching relative paths."
-            )
-        ,
+            ),
             "transform_file": AIToolOperationDefinition(
                 name="transform_file",
                 handler=self._transform_file,
@@ -1470,6 +1472,88 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to get info: {str(e)}") from e
 
+    async def _resolve_glob_path(
+        self,
+        path_arg: str,
+        tool_call: AIToolCall,
+        request_authorization: AIToolAuthorizationCallback,
+    ) -> tuple[Path, str, str] | None:
+        """
+        Resolve a path that may contain glob wildcard characters.
+
+        If the path contains wildcards (*, ?, [), it is split into a concrete prefix
+        (validated through the normal path resolution) and a glob suffix.  The glob
+        suffix is checked for '..' segments to prevent escaping the mindspace.
+
+        Args:
+            path_arg: The original path argument string
+            tool_call: The tool call object (for authorization)
+            request_authorization: Authorization callback
+
+        Returns:
+            Tuple of (base_directory, glob_pattern, display_path) if the path
+            contains wildcards, or None if the path has no wildcards and should
+            be handled by the caller's normal logic.
+
+        Raises:
+            AIToolExecutionError: If the concrete prefix does not exist, is not a
+                directory, or the glob suffix contains '..' segments
+            AIToolAuthorizationDenied: If access to the concrete prefix is denied
+        """
+        if not any(ch in path_arg for ch in ('*', '?', '[')):
+            return None
+
+        parts = Path(path_arg).parts
+        split_idx = 0
+        for i, part in enumerate(parts):
+            if any(ch in part for ch in ('*', '?', '[')):
+                split_idx = i
+                break
+
+        prefix_str = str(Path(*parts[:split_idx])) if split_idx > 0 else "."
+        glob_suffix = str(Path(*parts[split_idx:]))
+
+        for part in Path(glob_suffix).parts:
+            if part == "..":
+                raise AIToolExecutionError(
+                    f"Path contains '..' in a wildcard segment: '{path_arg}'. "
+                    "Parent directory references are not allowed in wildcard paths."
+                )
+
+        base_path, base_display = await self._validate_and_resolve_path(
+            "path", prefix_str, tool_call, request_authorization, allow_external=True
+        )
+
+        if not base_path.exists():
+            raise AIToolExecutionError(f"Directory does not exist: {prefix_str}")
+
+        if not base_path.is_dir():
+            raise AIToolExecutionError(f"Path is not a directory: {prefix_str}")
+
+        return base_path, glob_suffix, base_display
+
+    @staticmethod
+    def _wildcard_path_error(path_arg: str, glob_param_name: str) -> str | None:
+        """
+        Build a helpful error message for a wildcard path that could not be resolved.
+
+        Args:
+            path_arg: The original path argument string
+            glob_param_name: Name of the parameter that accepts glob patterns
+
+        Returns:
+            Error message string if the path contains wildcards, None otherwise
+        """
+        if not any(ch in path_arg for ch in ('*', '?', '[')):
+            return None
+
+        return (
+            f"Directory does not exist: '{path_arg}'. "
+            f"The path contains wildcard characters (*, ?, [). "
+            f"Use the '{glob_param_name}' parameter for filename patterns instead. "
+            f"For example, set path to the parent directory and '{glob_param_name}' to the pattern."
+        )
+
     def _compile_search_pattern(self, search_text: str, case_sensitive: bool, regexp: bool) -> re.Pattern:
         """
         Compile a search pattern from the given parameters.
@@ -1622,22 +1706,78 @@ class FileSystemAITool(AITool):
         """Recursively search for text across all files under a directory."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = await self._validate_and_resolve_path(
-            "path", path_arg, tool_call, request_authorization, allow_external=True
-        )
-
-        if not path.exists():
-            raise AIToolExecutionError(f"Directory does not exist: {path_arg}")
-
-        if not path.is_dir():
-            raise AIToolExecutionError(f"Path is not a directory: {path_arg}")
-
         search_text = self._get_required_str_value("search_text", arguments)
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
         regexp = self._get_optional_bool_value("regexp", arguments, False)
         include = self._get_optional_str_value("include", arguments, None)
         max_results = self._get_optional_int_value("max_results", arguments, 50)
         encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
+
+        try:
+            glob_result = await self._resolve_glob_path(
+                path_arg, tool_call, request_authorization
+            )
+
+        except AIToolAuthorizationDenied:
+            result: dict[str, object] = {
+                "directory": path_arg,
+                "search_text": search_text,
+                "case_sensitive": case_sensitive,
+                "regexp": regexp,
+                "include": include,
+                "total_matches": 0,
+                "truncated": False,
+                "files_with_matches": 0,
+                "results": []
+            }
+            return AIToolResult(
+                id=tool_call.id,
+                name="filesystem",
+                content=json.dumps(result, indent=2),
+                context="json"
+            )
+
+        if glob_result is not None:
+            base_path, glob_suffix, display_path = glob_result
+            candidate_files = sorted(base_path.glob(glob_suffix))
+
+        else:
+            try:
+                path, display_path = await self._validate_and_resolve_path(
+                    "path", path_arg, tool_call, request_authorization, allow_external=True
+                )
+
+            except AIToolAuthorizationDenied:
+                result = {
+                    "directory": path_arg,
+                    "search_text": search_text,
+                    "case_sensitive": case_sensitive,
+                    "regexp": regexp,
+                    "include": include,
+                    "total_matches": 0,
+                    "truncated": False,
+                    "files_with_matches": 0,
+                    "results": []
+                }
+                return AIToolResult(
+                    id=tool_call.id,
+                    name="filesystem",
+                    content=json.dumps(result, indent=2),
+                    context="json"
+                )
+
+            if not path.exists():
+                wildcard_error = self._wildcard_path_error(path_arg, "include")
+                if wildcard_error:
+                    raise AIToolExecutionError(wildcard_error)
+
+                raise AIToolExecutionError(f"Directory does not exist: {path_arg}")
+
+            if not path.is_dir():
+                raise AIToolExecutionError(f"Path is not a directory: {path_arg}")
+
+            base_path = path
+            candidate_files = sorted(path.rglob("*"))
 
         max_response_bytes = 64 * 1024
         response_bytes = 0
@@ -1647,7 +1787,7 @@ class FileSystemAITool(AITool):
         truncated = False
         files_with_matches: list[dict[str, Any]] = []
 
-        for file_path in sorted(path.rglob("*")):
+        for file_path in candidate_files:
             if not file_path.is_file():
                 continue
 
@@ -1657,7 +1797,6 @@ class FileSystemAITool(AITool):
             if file_path.stat().st_size > self._max_file_size_bytes:
                 continue
 
-            # Check access for each file individually
             try:
                 await self._validate_and_resolve_path(
                     "path", str(file_path), tool_call, request_authorization, allow_external=True
@@ -1693,7 +1832,7 @@ class FileSystemAITool(AITool):
 
             if file_matches:
                 try:
-                    rel = file_path.relative_to(path)
+                    rel = file_path.relative_to(base_path)
                     file_display_path = str(Path(display_path) / rel)
 
                 except ValueError:
@@ -1712,7 +1851,7 @@ class FileSystemAITool(AITool):
         if total_matches == 0 and regexp:
             fixed_pattern = self._fix_escaped_pipe_pattern(search_text, case_sensitive)
             if fixed_pattern is not None:
-                for file_path in sorted(path.rglob("*")):
+                for file_path in candidate_files:
                     if not file_path.is_file():
                         continue
 
@@ -1757,7 +1896,7 @@ class FileSystemAITool(AITool):
 
                     if file_matches:
                         try:
-                            rel = file_path.relative_to(path)
+                            rel = file_path.relative_to(base_path)
                             file_display_path = str(Path(display_path) / rel)
 
                         except ValueError:
@@ -1766,7 +1905,7 @@ class FileSystemAITool(AITool):
                         files_with_matches.append({
                             "path": file_display_path,
                             "match_count": len(file_matches),
-                            "matches": file_matches
+                            "matches": file_matches,
                         })
 
                     if truncated:
@@ -1814,15 +1953,18 @@ class FileSystemAITool(AITool):
         """Recursively find files whose names match a glob pattern under a directory."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
+        name = self._get_optional_str_value("name", arguments, None)
+        max_results = self._get_optional_int_value("max_results", arguments, 1000)
+
         try:
-            path, display_path = await self._validate_and_resolve_path(
-                "path", path_arg, tool_call, request_authorization, allow_external=True
+            glob_result = await self._resolve_glob_path(
+                path_arg, tool_call, request_authorization
             )
 
         except AIToolAuthorizationDenied:
             result: dict[str, object] = {
                 "directory": path_arg,
-                "name": self._get_optional_str_value("name", arguments, None),
+                "name": name,
                 "total_matches": 0,
                 "truncated": False,
                 "matches": []
@@ -1834,19 +1976,48 @@ class FileSystemAITool(AITool):
                 context="json"
             )
 
-        if not path.exists():
-            raise AIToolExecutionError(f"Directory does not exist: {path_arg}")
+        if glob_result is not None:
+            base_path, glob_suffix, display_path = glob_result
+            candidate_files = sorted(base_path.glob(glob_suffix))
 
-        if not path.is_dir():
-            raise AIToolExecutionError(f"Path is not a directory: {path_arg}")
+        else:
+            try:
+                path, display_path = await self._validate_and_resolve_path(
+                    "path", path_arg, tool_call, request_authorization, allow_external=True
+                )
 
-        name = self._get_optional_str_value("name", arguments, None)
-        max_results = self._get_optional_int_value("max_results", arguments, 1000)
+            except AIToolAuthorizationDenied:
+                result = {
+                    "directory": path_arg,
+                    "name": name,
+                    "total_matches": 0,
+                    "truncated": False,
+                    "matches": []
+                }
+                return AIToolResult(
+                    id=tool_call.id,
+                    name="filesystem",
+                    content=json.dumps(result, indent=2),
+                    context="json"
+                )
+
+            if not path.exists():
+                wildcard_error = self._wildcard_path_error(path_arg, "name")
+                if wildcard_error:
+                    raise AIToolExecutionError(wildcard_error)
+
+                raise AIToolExecutionError(f"Directory does not exist: {path_arg}")
+
+            if not path.is_dir():
+                raise AIToolExecutionError(f"Path is not a directory: {path_arg}")
+
+            base_path = path
+            candidate_files = sorted(path.rglob("*"))
 
         matches: list[str] = []
         truncated = False
 
-        for file_path in sorted(path.rglob("*")):
+        for file_path in candidate_files:
             if not file_path.is_file():
                 continue
 
@@ -1862,7 +2033,7 @@ class FileSystemAITool(AITool):
                 continue
 
             try:
-                rel = file_path.relative_to(path)
+                rel = file_path.relative_to(base_path)
                 matches.append(str(Path(display_path) / rel))
 
             except ValueError:

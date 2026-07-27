@@ -5,6 +5,7 @@
 New features:
 
 - Removed the menai codebase and tools and put them in a sibling git repo.
+- The filesystem AI tool's `search_files` operation now supports wildcard matches.
 
 Bug fixes:
 

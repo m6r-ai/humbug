@@ -906,3 +906,322 @@ class TestSearchFiles:
 
         assert "64KB" in str(exc_info.value)
         assert "response size limit" in str(exc_info.value)
+
+
+
+class TestFindFiles:
+    """Tests for the find_files operation."""
+
+    def test_find_all_files_without_name_pattern(self, tmp_path, make_tool_call):
+        """find_files returns all files under the directory when no name pattern is given."""
+        (tmp_path / "a.txt").write_text("x")
+        (tmp_path / "b.py").write_text("x")
+        (tmp_path / "sub").mkdir()
+        (tmp_path / "sub" / "c.md").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "."
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 3
+        assert data["truncated"] is False
+        assert data["name"] is None
+        paths = sorted(data["matches"])
+        assert "a.txt" in paths
+        assert "b.py" in paths
+        assert "sub/c.md" in paths
+
+    def test_find_files_with_name_pattern(self, tmp_path, make_tool_call):
+        """find_files filters by the name glob pattern."""
+        (tmp_path / "a.txt").write_text("x")
+        (tmp_path / "b.py").write_text("x")
+        (tmp_path / "c.py").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": ".",
+            "name": "*.py"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 2
+        assert data["name"] == "*.py"
+        paths = sorted(data["matches"])
+        assert "b.py" in paths
+        assert "c.py" in paths
+
+    def test_find_files_recursive(self, tmp_path, make_tool_call):
+        """find_files searches recursively through subdirectories."""
+        (tmp_path / "top.py").write_text("x")
+        (tmp_path / "sub").mkdir()
+        (tmp_path / "sub" / "deep.py").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": ".",
+            "name": "*.py"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 2
+        paths = sorted(data["matches"])
+        assert "top.py" in paths
+        assert "sub/deep.py" in paths
+
+    def test_find_files_nonexistent_directory(self, tmp_path, make_tool_call):
+        """find_files raises an error for a directory that does not exist."""
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "nonexistent"
+        })
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
+
+        assert "Directory does not exist" in str(exc_info.value)
+        assert "nonexistent" in str(exc_info.value)
+        assert "wildcard" not in str(exc_info.value).lower()
+
+    def test_find_files_wildcard_in_path_returns_matching_files(self, tmp_path, make_tool_call):
+        """find_files with a wildcard path returns files matching the glob pattern."""
+        (tmp_path / "a.py").write_text("x")
+        (tmp_path / "b.txt").write_text("x")
+        (tmp_path / "c.py").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "*.py"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 2
+        paths = sorted(data["matches"])
+        assert "a.py" in paths
+        assert "c.py" in paths
+        assert "b.txt" not in paths
+
+    def test_find_files_wildcard_in_nested_path_returns_matching_files(self, tmp_path, make_tool_call):
+        """find_files with wildcards in a nested path returns matching files."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "a.py").write_text("x")
+        (tmp_path / "src" / "b.txt").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "src/*.py"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 1
+        assert "src/a.py" in data["matches"]
+
+    def test_find_files_wildcard_with_intermediate_directories(self, tmp_path, make_tool_call):
+        """find_files with wildcards matching intermediate directories returns matching files."""
+        (tmp_path / "pkg_a").mkdir()
+        (tmp_path / "pkg_a" / "tests").mkdir()
+        (tmp_path / "pkg_a" / "tests" / "test_foo.py").write_text("x")
+        (tmp_path / "pkg_b").mkdir()
+        (tmp_path / "pkg_b" / "tests").mkdir()
+        (tmp_path / "pkg_b" / "tests" / "test_bar.py").write_text("x")
+        (tmp_path / "pkg_b" / "src").mkdir()
+        (tmp_path / "pkg_b" / "src" / "main.py").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "*/tests/*.py"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 2
+        paths = sorted(data["matches"])
+        assert "pkg_a/tests/test_foo.py" in paths
+        assert "pkg_b/tests/test_bar.py" in paths
+        assert "pkg_b/src/main.py" not in paths
+
+    def test_find_files_question_mark_in_path_returns_matching_files(self, tmp_path, make_tool_call):
+        """find_files with '?' wildcard in path returns matching files."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "a.py").write_text("x")
+        (tmp_path / "src" / "ab.py").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "src/?.py"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 1
+        assert "src/a.py" in data["matches"]
+
+    def test_find_files_bracket_in_path_returns_matching_files(self, tmp_path, make_tool_call):
+        """find_files with '[' wildcard in path returns matching files."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "a.py").write_text("x")
+        (tmp_path / "src" / "b.py").write_text("x")
+        (tmp_path / "src" / "c.py").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "src/[ab].py"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 2
+        paths = sorted(data["matches"])
+        assert "src/a.py" in paths
+        assert "src/b.py" in paths
+
+    def test_find_files_wildcard_path_with_name_filter_combines_both(self, tmp_path, make_tool_call):
+        """find_files applies the name filter on top of wildcard path results."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "a.py").write_text("x")
+        (tmp_path / "src" / "b.txt").write_text("x")
+        (tmp_path / "src" / "c.py").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "src/*",
+            "name": "*.py"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 2
+        paths = sorted(data["matches"])
+        assert "src/a.py" in paths
+        assert "src/c.py" in paths
+        assert "src/b.txt" not in paths
+
+    def test_find_files_wildcard_path_with_nonexistent_prefix_raises_error(self, tmp_path, make_tool_call):
+        """find_files with a wildcard path whose concrete prefix doesn't exist raises an error."""
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "nonexistent/*.py"
+        })
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
+
+        assert "Directory does not exist" in str(exc_info.value)
+        assert "nonexistent" in str(exc_info.value)
+
+        """find_files rejects '..' appearing after a wildcard segment in the path."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "a").mkdir()
+        (tmp_path / "src" / "a" / "file.py").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "src/*/../*.py"
+        })
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
+
+        assert "'..'" in str(exc_info.value)
+
+
+class TestSearchFilesWildcardPath:
+    """Tests for wildcard path handling in the search_files operation."""
+
+    def test_search_files_wildcard_in_path_searches_matching_files(self, tmp_path, make_tool_call):
+        """search_files with a wildcard path searches only files matching the glob pattern."""
+        (tmp_path / "a.py").write_text("needle")
+        (tmp_path / "b.txt").write_text("needle")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": "*.py",
+            "search_text": "needle"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["files_with_matches"] == 1
+        assert "a.py" in data["results"][0]["path"]
+
+    def test_search_files_wildcard_in_nested_path_searches_matching_files(self, tmp_path, make_tool_call):
+        """search_files with wildcards in a nested path searches matching files."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "a.py").write_text("needle")
+        (tmp_path / "src" / "b.txt").write_text("needle")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": "src/*.py",
+            "search_text": "needle"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["files_with_matches"] == 1
+        assert "src/a.py" in data["results"][0]["path"]
+
+    def test_search_files_wildcard_path_with_dotdot_raises_error(self, tmp_path, make_tool_call):
+        """search_files rejects '..' in the wildcard portion of the path."""
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "a").mkdir()
+        (tmp_path / "src" / "a" / "file.py").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": "src/*/../*.py",
+            "search_text": "x"
+        })
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
+
+        assert "'..'" in str(exc_info.value)
+
+    def test_search_files_nonexistent_directory_no_wildcard_error(self, tmp_path, make_tool_call):
+        """search_files with a plain nonexistent directory gives a standard error without wildcard mention."""
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": "nonexistent",
+            "search_text": "x"
+        })
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
+
+        assert "Directory does not exist" in str(exc_info.value)
+        assert "wildcard" not in str(exc_info.value).lower()
+
+    def test_search_files_wildcard_path_with_nonexistent_prefix_raises_error(self, tmp_path, make_tool_call):
+        """search_files with a wildcard path whose concrete prefix doesn't exist raises an error."""
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": "nonexistent/*.py",
+            "search_text": "x"
+        })
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
+
+        assert "Directory does not exist" in str(exc_info.value)
