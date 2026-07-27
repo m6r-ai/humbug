@@ -1554,6 +1554,23 @@ class FileSystemAITool(AITool):
             f"For example, set path to the parent directory and '{glob_param_name}' to the pattern."
         )
 
+    def _is_path_external(self, path: Path) -> bool:
+        """
+        Check whether a resolved path is outside the mindspace.
+
+        Args:
+            path: Absolute path to check
+
+        Returns:
+            True if the path is outside the mindspace, False otherwise
+        """
+        try:
+            self._resolve_path(str(path))
+            return False
+
+        except Exception:
+            return True
+
     def _compile_search_pattern(self, search_text: str, case_sensitive: bool, regexp: bool) -> re.Pattern:
         """
         Compile a search pattern from the given parameters.
@@ -1740,6 +1757,7 @@ class FileSystemAITool(AITool):
         if glob_result is not None:
             base_path, glob_suffix, display_path = glob_result
             candidate_files = sorted(base_path.glob(glob_suffix))
+            is_external = self._is_path_external(base_path)
 
         else:
             try:
@@ -1778,6 +1796,7 @@ class FileSystemAITool(AITool):
 
             base_path = path
             candidate_files = sorted(path.rglob("*"))
+            is_external = self._is_path_external(base_path)
 
         max_response_bytes = 64 * 1024
         response_bytes = 0
@@ -1797,13 +1816,19 @@ class FileSystemAITool(AITool):
             if file_path.stat().st_size > self._max_file_size_bytes:
                 continue
 
-            try:
-                await self._validate_and_resolve_path(
-                    "path", str(file_path), tool_call, request_authorization, allow_external=True
-                )
+            if is_external:
+                settings = self._get_access_settings()
+                if self._match_glob_patterns(str(file_path), settings.external_denylist):
+                    continue
 
-            except (AIToolExecutionError, AIToolAuthorizationDenied):
-                continue
+            else:
+                try:
+                    await self._validate_and_resolve_path(
+                        "path", str(file_path), tool_call, request_authorization, allow_external=True
+                    )
+
+                except (AIToolExecutionError, AIToolAuthorizationDenied):
+                    continue
 
             try:
                 with open(file_path, 'r', encoding=encoding) as f:
@@ -1861,13 +1886,19 @@ class FileSystemAITool(AITool):
                     if file_path.stat().st_size > self._max_file_size_bytes:
                         continue
 
-                    try:
-                        await self._validate_and_resolve_path(
-                            "path", str(file_path), tool_call, request_authorization, allow_external=True
-                        )
+                    if is_external:
+                        settings = self._get_access_settings()
+                        if self._match_glob_patterns(str(file_path), settings.external_denylist):
+                            continue
 
-                    except (AIToolExecutionError, AIToolAuthorizationDenied):
-                        continue
+                    else:
+                        try:
+                            await self._validate_and_resolve_path(
+                                "path", str(file_path), tool_call, request_authorization, allow_external=True
+                            )
+
+                        except (AIToolExecutionError, AIToolAuthorizationDenied):
+                            continue
 
                     try:
                         with open(file_path, 'r', encoding=encoding) as f:
@@ -1979,6 +2010,7 @@ class FileSystemAITool(AITool):
         if glob_result is not None:
             base_path, glob_suffix, display_path = glob_result
             candidate_files = sorted(base_path.glob(glob_suffix))
+            is_external = self._is_path_external(base_path)
 
         else:
             try:
@@ -2013,6 +2045,7 @@ class FileSystemAITool(AITool):
 
             base_path = path
             candidate_files = sorted(path.rglob("*"))
+            is_external = self._is_path_external(base_path)
 
         matches: list[str] = []
         truncated = False
@@ -2024,13 +2057,19 @@ class FileSystemAITool(AITool):
             if name and not fnmatch.fnmatch(file_path.name, name):
                 continue
 
-            try:
-                await self._validate_and_resolve_path(
-                    "path", str(file_path), tool_call, request_authorization, allow_external=True
-                )
+            if is_external:
+                settings = self._get_access_settings()
+                if self._match_glob_patterns(str(file_path), settings.external_denylist):
+                    continue
 
-            except (AIToolExecutionError, AIToolAuthorizationDenied):
-                continue
+            else:
+                try:
+                    await self._validate_and_resolve_path(
+                        "path", str(file_path), tool_call, request_authorization, allow_external=True
+                    )
+
+                except (AIToolExecutionError, AIToolAuthorizationDenied):
+                    continue
 
             try:
                 rel = file_path.relative_to(base_path)

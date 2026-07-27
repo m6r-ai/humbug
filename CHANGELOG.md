@@ -13,6 +13,7 @@ Bug fixes:
 - Fixed the diff application tools (filesystem and editor) so that the "\ No newline at end of file" marker is honoured,
   allowing diffs to add or remove a trailing newline.  Previously the marker was discarded, causing silent no-ops or
   garbled editor buffers.
+- Fixed a problem with `find_files` and wildcard access outside the current mindspace.
 
 ## v53 (2026-07-12)
 
