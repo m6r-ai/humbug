@@ -17,30 +17,31 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
   summary lines on stdout, so filtering mangles the output and hides the pass/fail counts.  Run pytest with no flags
   and pipe through `tail` only if the output is too long to read in full:
   ```bash
-  python -m pytest tests/menai/ 2>&1 | tail -10
+  python -m pytest tests/menai_ai_tool/ 2>&1 | tail -10
   ```
 
 ## Menai C VM binary
 
-- The Menai C VM is a compiled C extension (`src/menai/vm/menai_vm_c*.so` / `.pyd`).
-- GitHub Actions builds it for all supported platforms on push to `main`
-  (see `.github/workflows/build-menai-vm.yml`).
-- If you don't have a C compiler, fetch the pre-built binary:
+- Menai is maintained in a sibling repository (`../menai`). Install it as an editable dependency:
+  ```bash
+  pip install -e ../menai
+  ```
+- The C VM binary is built and published by the menai repository's CI.  To fetch the pre-built binary
+- into the installed menai package:
   ```bash
   python fetch-menai-vm.py
   ```
-- If you do have a C compiler, build locally:
+- If you have a C compiler you can also build the C VM locally from the menai repo:
   ```bash
-  python setup.py build_ext --inplace
+  cd ../menai && python setup.py build_ext --inplace
   ```
 
 ## App builds
 
 - GitHub Actions builds and packages the desktop app for macOS, Windows, and Linux via manual trigger
   only (see `.github/workflows/build-app.yml`).
-- This avoids building against a stale VM binary — run the VM build workflow first, then trigger the app build.
-- The workflow fetches the pre-built Menai C VM binary (py314) via `fetch-menai-vm.py`
-  rather than compiling from source.
+- The workflow checks out the menai repo, installs it as an editable package, then fetches the
+  pre-built Menai C VM binary via `fetch-menai-vm.py`.
 - macOS produces a signed/notarized `.dmg`, Windows produces an `.exe` installer via Inno Setup,
   and Linux produces an `.AppImage` for x86_64 and ARM64 via `build-appimage.sh`.
 
@@ -236,17 +237,6 @@ HTTP CONNECT/SOCKS5 proxy tunneling, and a structured exception hierarchy.
 Advanced markdown support, including converting to/from a markdown AST.
 Includes `doc_ir_to_markdown.py` for serialising a doc_ir tree to Markdown text.
 
-### `src/menai/`
-Pure functional programming language designed for AI use. Includes lexer, parser, compiler, and virtual machine.
-
-**Subdirectories:**
-- `ast/` - Lexer, token types, AST nodes, AST builder, semantic analyzer, module resolver, dependency analyzer, desugarer, constant folder, optimization pass
-- `ir/` - IR nodes, IR builder, IR optimizer, IR optimization pass, IR use counter
-- `cfg/` - CFG nodes, CFG builder, CFG optimization passes (branch constant propagation, phi chain collapsing, block simplification)
-- `vcode/` - VCode nodes, VCode builder, slot allocator, peephole optimizer
-- `bytecode/` - Bytecode definitions (opcodes, CodeObject), bytecode builder
-- `vm/` - Python VM wrapper, VM error translation, bytecode validator, C VM source and compiled binary
-
 ### `src/menai_ai_tool/`
 AI tool implementation for Menai language execution.
 
@@ -302,7 +292,6 @@ Test structure mirrors `src/` organization:
 - `git_ai_tool/` - Git AI tool tests
 - `http_client/` - HTTP client tests
 - `http_ai_tool/` - HTTP AI tool tests
-- `menai/` - Menai language tests
 - `menai_ai_tool/` - Menai AI tool tests
 - `pdf/` - PDF extraction tests
 - `syntax/` - Syntax highlighting tests
@@ -312,23 +301,14 @@ Test structure mirrors `src/` organization:
 
 Development and debugging utilities:
 - `__init__.py` — makes `tools/` a package so mypy resolves all tool subpackages as `tools.*`
-- `menai/benchmark/` - Menai performance benchmarking
-- `menai/checker/` - Static analysis
-- `menai/disassembler/` - Bytecode disassembly
-- `menai/pretty-print/` - Code formatting
-- `menai/profiler/` - Menai profiling
-- `menai/test-runner/` - Menai test runner
 - `convert_document/` - Document conversion between docx, html, and md formats
 - `code_checker/` - Runs all static analysis tools (dependency checker, mypy, pylint) in sequence
 - `dependency_checker/` - Module dependency validation
 - `style_checker/` - Pylint plugin enforcing Humbug-specific code style conventions
 - `pdf/` - PDF-related tooling
-- `pipeline-runner/` - Pipeline execution
 
 ## Key Documentation Files
 
 - `README.md` - Project overview
 - `CHANGELOG.md` - Version history
-- `src/menai/README.md` - Menai implementation overview and Python API
-- `src/menai/AGENTS.md` - Guide for AIs working on the Menai implementation
 - Component-specific README.md files in subdirectories

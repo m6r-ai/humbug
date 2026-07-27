@@ -8,6 +8,7 @@ version = "53"
 requires-python = ">=3.10"
 dependencies = [
     "certifi",
+    "menai",
     "pyside6",
     "qasync"
 ]
@@ -27,10 +28,6 @@ dev = [
 [tool.coverage.run]
 source = ["src"]
 branch = true
-omit = [
-    "src/menai/menai_value_c*",
-    "src/menai/vm/menai_vm_c*",
-]
 
 [tool.coverage.report]
 exclude_lines = [

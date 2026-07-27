@@ -1,6 +1,0 @@
-apple
-BANANA
-cherry
-DATE
-elderberry
-FIG

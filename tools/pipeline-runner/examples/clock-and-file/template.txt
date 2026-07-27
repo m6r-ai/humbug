@@ -1,6 +1,0 @@
-Report generated at: {timestamp}
-
-Items:
-- alpha
-- beta
-- gamma

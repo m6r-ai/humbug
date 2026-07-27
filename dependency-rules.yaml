@@ -125,9 +125,9 @@ modules:
     internal_dependencies:
       - ai_tool
       - editor_context
-      - menai
       - mindspace
     external_dependencies:
+      - "menai"
       - "standard_library"
 
   editor_context:
@@ -142,11 +142,11 @@ modules:
       - ai_tool
       - diff
       - docx
-      - menai
       - mindspace
       - pdf
       - syntax
     external_dependencies:
+      - "menai"
       - "standard_library"
 
   git:
@@ -196,16 +196,12 @@ modules:
     external_dependencies:
       - "standard_library"
 
-  menai:
-    external_dependencies:
-      - "standard_library"
-
   menai_ai_tool:
     internal_dependencies:
       - ai_tool
-      - menai
       - mindspace
     external_dependencies:
+      - "menai"
       - "standard_library"
 
   mindspace:

@@ -1,5 +1,6 @@
 # PyInstaller config file
 #
+import menai
 import os
 import glob
 import sys
@@ -17,12 +18,16 @@ APP_VERSION = str(_version_module.CURRENT_VERSION)
 
 block_cipher = None
 
-# On Windows, explicitly collect the in-place compiled Menai C extension (.pyd).
-# PyInstaller does not reliably auto-discover extensions built inplace outside
-# the main package tree, so we glob for it and pass it via binaries.
+# Explicitly collect the compiled Menai C VM extension.
+# PyInstaller does not reliably auto-discover extensions inside installed
+# packages, so we locate the menai package and glob for the binary.
+_menai_vm_dir = os.path.join(os.path.dirname(menai.__file__), 'vm')
 if sys.platform == 'win32':
-    _pyd_files = glob.glob('src/menai/vm/menai_vm_c*.pyd')
+    _pyd_files = glob.glob(os.path.join(_menai_vm_dir, 'menai_vm_c*.pyd'))
     _extra_binaries = [(_pyd, 'menai/vm') for _pyd in _pyd_files]
+elif sys.platform == 'darwin':
+    _so_files = glob.glob(os.path.join(_menai_vm_dir, 'menai_vm_c*.so'))
+    _extra_binaries = [(_so, 'menai/vm') for _so in _so_files]
 else:
     _extra_binaries = []
 

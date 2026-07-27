@@ -125,7 +125,7 @@ You don't need to worry about being locked into a vendor tool and can add new fe
 
 Humbug follows the pattern of most operating system kernels.
 It aims to be simple and largely self-contained.
-The code has only 3 external runtime package dependencies other than the standard Python library, so both you and your LLMs can understand almost every part from the one git repo.
+The code has only 3 third party runtime package dependencies other than the standard Python library, so both you and your LLMs can understand almost every part from the one git repo.  There is an additional dependency on menai, a sibling project under the Humbug umbrella.
 
 The minimal dependency principle serves several purposes:
 
@@ -205,26 +205,20 @@ If you plan to contribute changes, see [CONTRIBUTING.md](./CONTRIBUTING.md) for 
 ### Software requirements
 
 Most of Humbug is written in Python so you need a Python developement setup to work with it.  The Menai virtual
-machine is written in C, but there are pre-built binaries for these libraries that can be downloaded for most platforms.
+machine is written in C and lives in a [separate repository](https://github.com/m6r-ai/menai).
+Pre-built binaries are available for most platforms.
 
 - Python 3.10 or higher
-- **Windows only (for building the Menai C extension from source):**
-  [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-  (Visual C++ 14.0 or later). During installation, select the **"Desktop development with C++"** workload.
-  This is a one-time setup; once installed it is used automatically by `setup.py`.
-  Not needed if you use `python fetch-menai-vm.py` to download a pre-built binary instead.
-- **Linux only (for building the Menai C extension from source):**
-  Python development headers and gcc. Install via your package manager,
-  e.g. on Debian/Ubuntu: `sudo apt install gcc python3-dev`.
-  Not needed if you use `python fetch-menai-vm.py` to download a pre-built binary instead.
 
-Runtime dependencies (installed automatically):
+Third party runtime dependencies (installed automatically):
 - PySide6 (the GUI framework)
 - qasync (allows the GUI framework to work nicely with async Python code)
 - certifi (SSL/TLS root certificates to allow TLS network connections without any other system changes)
 
+Humbug project runtime dependencies (installed automatically):
+- menai (the Menai language engine, from the [menai repository](https://github.com/m6r-ai/menai))
+
 Developer dependencies (installed automatically with `.[dev]`):
-- setuptools (required to build the Menai C extension)
 - pytest + pytest-cov (test runner and coverage)
 - mypy (static type checking)
 - pylint (linting)
@@ -254,6 +248,12 @@ Developer dependencies (installed automatically with `.[dev]`):
    pip install -e ".[dev]"
    ```
 
+   Install the Menai language engine from the sibling repository:
+
+   ```bash
+   pip install -e ../menai
+   ```
+
 3. Launch the application:
 
    ```bash
@@ -262,8 +262,8 @@ Developer dependencies (installed automatically with `.[dev]`):
 
 4. Get the Menai C extension (optional but recommended):
 
-   Humbug includes a fast C implementation of the Menai language engine.
-   Without it, Humbug falls back to a slower Python implementation automatically.
+   The Menai package includes a fast C implementation of the language engine.
+   Without it, Menai falls back to a slower Python implementation automatically.
 
    **Option A — Download a pre-built binary (recommended, no compiler needed):**
 
@@ -271,12 +271,12 @@ Developer dependencies (installed automatically with `.[dev]`):
    python fetch-menai-vm.py
    ```
 
-   This auto-detects your platform and Python version. No C compiler, build tools, or GitHub authentication required. If no pre-built binary is available for your platform, fall back to Option B.
+   This auto-detects your platform and Python version, downloads the binary from the menai repository's GitHub Releases, and installs it into the menai package. No C compiler or build tools required. If no pre-built binary is available for your platform, fall back to Option B.
 
    **Option B — Build from source:**
 
    ```bash
-   python setup.py build_ext --inplace
+   cd ../menai && python setup.py build_ext --inplace
    ```
 
-   See the Requirements section above for the C compiler / build tools needed for your platform.
+   See the menai repository for C compiler / build tool requirements.

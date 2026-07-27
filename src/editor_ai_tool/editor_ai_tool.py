@@ -4,6 +4,8 @@ import json
 import logging
 from typing import Any, cast
 
+from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
+
 from ai_tool import (
     AITool,
     AIToolAuthorizationCallback,
@@ -16,7 +18,6 @@ from ai_tool import (
     AIToolResult,
     AIToolTimeoutError,
 )
-from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
 from editor_context.editor_context import EditorContext
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace

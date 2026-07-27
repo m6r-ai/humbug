@@ -12,6 +12,8 @@ import shutil
 import tempfile
 from typing import Any, cast
 
+from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
+
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
@@ -19,7 +21,6 @@ from ai_tool import (
 )
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
-from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
