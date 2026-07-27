@@ -248,11 +248,16 @@ Developer dependencies (installed automatically with `.[dev]`):
    pip install -e ".[dev]"
    ```
 
-   Install the Menai language engine from the sibling repository:
+   Clone the Menai language engine as a sibling repository and install it:
 
    ```bash
+   cd ..
+   git clone https://github.com/m6r-ai/menai.git
+   cd humbug
    pip install -e ../menai
    ```
+
+   The `../menai` path is expected by `fetch-menai-vm.py` and the build scripts.
 
 3. Launch the application:
 
