@@ -244,6 +244,13 @@ Developer dependencies (installed automatically with `.[dev]`):
 
 2. Install all dependencies (runtime and developer tools):
 
+   **Option A — automated:** run `./setup-dev.sh` (Linux/macOS/Git Bash) or `.\setup-dev.ps1`
+   (Windows PowerShell) from the repo root. Either creates/reuses the virtual environment,
+   clones the Menai language engine as a sibling repository, installs both packages, and
+   fetches the Menai C VM binary (step 4 below) in one go. Safe to re-run.
+
+   **Option B — manual:**
+
    ```bash
    pip install -e ".[dev]"
    ```
@@ -258,6 +265,11 @@ Developer dependencies (installed automatically with `.[dev]`):
    ```
 
    The `../menai` path is expected by `fetch-menai-vm.py` and the build scripts.
+
+   Note: `menai` isn't on PyPI, so if you run these as two separate `pip install` commands,
+   install `../menai` **before** `pip install -e ".[dev]"` (or combine them into one command,
+   `pip install -e ../menai -e ".[dev]"`) — otherwise pip will fail trying to resolve `menai`
+   from PyPI.
 
 3. Launch the application:
 
