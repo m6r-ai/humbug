@@ -466,6 +466,9 @@ class MainWindow(QMainWindow):
         self._mindspace_menu = self._menu_bar.addMenu(strings.mindspace_menu)
         self._mindspace_menu.addAction(self._new_mindspace_action)
         self._mindspace_menu.addAction(self._open_mindspace_action)
+        self._recent_mindspaces_menu = self._mindspace_menu.addMenu(strings.recent_mindspaces)
+        self._recent_mindspaces_menu.setObjectName("_recent_mindspaces_menu")
+        self._last_recent_mindspaces: list[str] | None = None
         self._mindspace_menu.addAction(self._close_mindspace_action)
         self._mindspace_menu.addSeparator()
         self._mindspace_menu.addAction(self._global_search_action)
@@ -758,6 +761,30 @@ class MainWindow(QMainWindow):
         self._canary_active = True
         self._on_style_changed()  # Refresh styles to apply canary background
 
+    def _rebuild_recent_mindspaces_menu(self) -> None:
+        """Repopulate the Recent Mindspaces submenu from the manager's recent list."""
+        recent = self._mindspace_manager.recent_mindspaces()
+        if recent == self._last_recent_mindspaces:
+            return
+
+        self._last_recent_mindspaces = recent
+
+        menu = self._recent_mindspaces_menu
+        menu.clear()
+        if not recent:
+            menu.setEnabled(False)
+            return
+
+        menu.setEnabled(True)
+        for path in recent:
+            name = os.path.basename(path.rstrip("\\/"))
+            action = QAction(name, menu)
+            action.setToolTip(path)
+            action.triggered.connect(
+                lambda checked=False, p=path: self._open_mindspace_path(p)
+            )
+            menu.addAction(action)
+
     def _update_menu_state(self) -> None:
         """Update enabled/disabled state of menu items."""
         # Update mindspace-specific actions
@@ -794,6 +821,7 @@ class MainWindow(QMainWindow):
         self._open_mindspace_log_action.setEnabled(has_mindspace)
         self._open_humbug_shell_action.setEnabled(has_mindspace)
         self._open_token_usage_action.setEnabled(has_mindspace)
+        self._rebuild_recent_mindspaces_menu()
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor()
@@ -833,6 +861,7 @@ class MainWindow(QMainWindow):
         self._edit_menu.setTitle(strings.edit_menu)
         self._file_menu.setTitle(strings.file_menu)
         self._mindspace_menu.setTitle(strings.mindspace_menu)
+        self._recent_mindspaces_menu.setTitle(strings.recent_mindspaces)
         self._view_menu.setTitle(strings.view_menu)
 
         # Update action texts

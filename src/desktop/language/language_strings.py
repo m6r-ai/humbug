@@ -37,6 +37,7 @@ class LanguageStrings:
     close_mindspace: str
     close_tab: str
     settings: str
+    recent_mindspaces: str
 
     # Tab bar context menu items
     close_tabs_to_left: str

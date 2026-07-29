@@ -46,6 +46,7 @@ def get_english_strings() -> LanguageStrings:
         close_mindspace="Close Mindspace",
         close_tab="Close Tab",
         settings="Settings",
+        recent_mindspaces="Open Recent Mindspace",
 
         # Tab bar context menu items
         close_tabs_to_left="Close Tabs to the Left",

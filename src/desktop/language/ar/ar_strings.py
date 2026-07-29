@@ -47,6 +47,7 @@ def get_arabic_strings() -> LanguageStrings:
         close_mindspace="إغلاق المساحة الذهنية",
         close_tab="إغلاق التبويب",
         settings="الإعدادات",
+        recent_mindspaces="فتح مساحة ذهنية حديثة",
 
         # Tab bar context menu items
         close_tabs_to_left="إغلاق التبويبات إلى اليسار",

@@ -46,6 +46,7 @@ def get_french_strings() -> LanguageStrings:
         close_mindspace="Fermer l'espace mental",
         close_tab="Fermer l'onglet",
         settings="Paramètres",
+        recent_mindspaces="Ouvrir un espace mental récent",
 
         # Tab bar context menu items
         close_tabs_to_left="Fermer les onglets à gauche",

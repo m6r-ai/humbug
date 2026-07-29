@@ -10,6 +10,8 @@ New features:
 - The filesystem AI tool's `search_files` operation now supports wildcard matches.
 - Added a recent-mindspaces list to the sidebar header button.  Clicking the mindspace name now shows a popup menu
   with recently used mindspaces for quick switching, plus "Open Mindspace..." and "New Mindspace..." actions.
+- Added an "Open Recent Mindspace" submenu to the Mindspace menu in the main menu bar, mirroring the sidebar's
+  recent-mindspaces quick-switch feature.
 
 Bug fixes:
 
