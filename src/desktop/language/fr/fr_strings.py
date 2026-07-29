@@ -178,7 +178,7 @@ def get_french_strings() -> LanguageStrings:
 
         # Mindspace tree
         mindspace_label_none="Aucun espace mental actif",
-        mindspace_name_tooltip="Cliquer pour ouvrir un autre espace mental",
+        mindspace_name_tooltip="Cliquer pour changer d'espace mental",
         mindspace_files="Fichiers",
         mindspace_vcs="Fichiers modifiés",
         mindspace_vcs_no_repo="Aucun dépôt trouvé",

@@ -178,7 +178,7 @@ def get_english_strings() -> LanguageStrings:
 
         # Mindspace tree
         mindspace_label_none="No mindspace active",
-        mindspace_name_tooltip="Click to open a different mindspace",
+        mindspace_name_tooltip="Click to switch mindspace",
         mindspace_files="Files",
         mindspace_vcs="Changed Files",
         mindspace_vcs_no_repo="No repository found",

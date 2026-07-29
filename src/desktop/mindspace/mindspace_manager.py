@@ -28,6 +28,8 @@ class MindspaceManager(QObject):
     interactions_updated = Signal()
     usage_updated = Signal()
 
+    MAX_RECENT_MINDSPACES = 10
+
     MINDSPACE_DIR = Mindspace.MINDSPACE_DIR
 
     _instance = None
@@ -101,12 +103,59 @@ class MindspaceManager(QObject):
 
     def get_last_mindspace(self) -> str | None:
         """Return the path of the last opened mindspace, or None."""
+        data = self._load_home_config()
+        if data is None:
+            return None
+
+        mindspace_path = data.get("lastMindspace")
+        if mindspace_path and os.path.exists(mindspace_path):
+            return mindspace_path
+
+        return None
+
+    def recent_mindspaces(self) -> list[str]:
+        """
+        Return recently used mindspace paths, most-recent first.
+
+        Stale paths (no longer existing on disk) are silently pruned.
+        The currently open mindspace is excluded from the list.
+        """
+        data = self._load_home_config()
+        if data is None:
+            return []
+
+        raw = data.get("recentMindspaces", [])
+        if not isinstance(raw, list):
+            return []
+
+        current = self._mindspace.mindspace_path()
+        seen: set[str] = set()
+        result: list[str] = []
+        for path in raw:
+            if not isinstance(path, str):
+                continue
+
+            if path == current:
+                continue
+
+            if path in seen:
+                continue
+
+            if not os.path.exists(path):
+                continue
+
+            seen.add(path)
+            result.append(path)
+
+        return result[:self.MAX_RECENT_MINDSPACES]
+
+    def _load_home_config(self) -> dict | None:
+        """Load and parse the home config file, returning None on failure."""
         try:
             with open(self._home_config, encoding='utf-8') as f:
                 data = json.load(f)
-                mindspace_path = data.get("lastMindspace")
-                if mindspace_path and os.path.exists(mindspace_path):
-                    return mindspace_path
+                if isinstance(data, dict):
+                    return data
 
         except (FileNotFoundError, json.JSONDecodeError):
             pass
@@ -166,11 +215,47 @@ class MindspaceManager(QObject):
             self._directory_tracker.save_tracking(self._mindspace.mindspace_path())
 
     def _update_home_tracking(self) -> None:
-        """Persist the last-opened mindspace path to the home config file."""
+        """Persist the last-opened mindspace path and recent list to the home config."""
+        current = self._mindspace.mindspace_path()
+
+        # Build the recent list from the existing config, promoting the previous
+        # current mindspace to the front and excluding the new current.
+        previous_data = self._load_home_config()
+        previous_recent: list[str] = []
+        if previous_data is not None:
+            raw = previous_data.get("recentMindspaces", [])
+            if isinstance(raw, list):
+                previous_recent = [p for p in raw if isinstance(p, str)]
+
+        previous_last = previous_data.get("lastMindspace") if previous_data else None
+        if not isinstance(previous_last, str):
+            previous_last = None
+
+        recent: list[str] = []
+        seen: set[str] = set()
+
+        # The mindspace we just left goes to the front of the recent list.
+        if previous_last and previous_last != current and os.path.exists(previous_last):
+            recent.append(previous_last)
+            seen.add(previous_last)
+
+        # Append remaining entries that aren't the current mindspace or duplicates.
+        for path in previous_recent:
+            if path == current or path in seen or not os.path.exists(path):
+                continue
+
+            seen.add(path)
+            recent.append(path)
+
+        recent = recent[:self.MAX_RECENT_MINDSPACES]
+
         try:
             os.makedirs(os.path.dirname(self._home_config), exist_ok=True)
             with open(self._home_config, 'w', encoding='utf-8') as f:
-                json.dump({"lastMindspace": self._mindspace.mindspace_path()}, f, indent=4)
+                json.dump({
+                    "lastMindspace": current,
+                    "recentMindspaces": recent,
+                }, f, indent=4)
 
         except OSError as e:
             self._logger.error("Failed to update home tracking: %s", str(e))

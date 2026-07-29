@@ -2,10 +2,11 @@ from collections.abc import Callable
 import os
 
 from PySide6.QtCore import Qt, Signal, QSize, QEvent, QObject
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import (
     QButtonGroup,
     QHBoxLayout,
+    QMenu,
     QPushButton,
     QSizePolicy,
     QStackedWidget,
@@ -32,6 +33,8 @@ class SidebarManager(QWidget):
     """
 
     open_mindspace_requested = Signal()
+    open_mindspace_path_requested = Signal(str)
+    new_mindspace_requested = Signal()
     update_check_requested = Signal()
     file_clicked = Signal(str, str, bool)           # panel_id, path, ephemeral
     toggle_requested = Signal()
@@ -104,7 +107,7 @@ class SidebarManager(QWidget):
 
         self._header_widget = QPushButton(self._content_widget)
         self._header_widget.setObjectName("_header_widget")
-        self._header_widget.clicked.connect(self.open_mindspace_requested.emit)
+        self._header_widget.clicked.connect(self._show_mindspace_menu)
         content_layout.addWidget(self._header_widget)
 
         self._pane_stack = QStackedWidget(self._content_widget)
@@ -401,6 +404,39 @@ class SidebarManager(QWidget):
 
         for panel in self._panel_widgets.values():
             panel.set_mindspace(path)
+
+    def _show_mindspace_menu(self) -> None:
+        """Show a popup menu for switching between recent mindspaces."""
+        strings = self._language_manager.strings()
+        menu = QMenu(self._header_widget)
+        menu.setObjectName("_mindspace_menu")
+
+        recent = self._mindspace_manager.recent_mindspaces()
+
+        if recent:
+            for path in recent:
+                name = os.path.basename(path.rstrip("\\/"))
+                action = QAction(name, menu)
+                action.setToolTip(path)
+                action.triggered.connect(
+                    lambda checked=False, p=path: self.open_mindspace_path_requested.emit(p)
+                )
+                menu.addAction(action)
+
+            menu.addSeparator()
+
+        open_action = QAction(strings.open_mindspace, menu)
+        open_action.triggered.connect(self.open_mindspace_requested.emit)
+        menu.addAction(open_action)
+
+        new_action = QAction(strings.new_mindspace, menu)
+        new_action.triggered.connect(self.new_mindspace_requested.emit)
+        menu.addAction(new_action)
+
+        self._style_manager.style_menu(menu)
+        menu.exec(self._header_widget.mapToGlobal(
+            self._header_widget.rect().bottomLeft()
+        ))
 
     def show_update_available(self, version: str, release_url: str) -> None:
         """

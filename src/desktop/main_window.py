@@ -2,7 +2,6 @@
 
 import asyncio
 from datetime import datetime, timezone
-import json
 import logging
 import os
 import sys
@@ -571,6 +570,8 @@ class MainWindow(QMainWindow):
         self._sidebar_manager.search_result_activated.connect(self._on_mindspace_search_result_activated)
         self._sidebar_manager.search_highlights_cleared.connect(self._clear_global_search_highlights)
         self._sidebar_manager.open_mindspace_requested.connect(self._on_open_mindspace)
+        self._sidebar_manager.open_mindspace_path_requested.connect(self._open_mindspace_path)
+        self._sidebar_manager.new_mindspace_requested.connect(self._on_new_mindspace)
         self._sidebar_manager.settings_requested.connect(self._on_show_settings_dialog)
         self._sidebar_manager.tab_overview_requested.connect(self._on_show_tab_overview)
         self._sidebar_manager.tab_carousel_requested.connect(self._on_show_tab_carousel)
@@ -1144,22 +1145,17 @@ class MainWindow(QMainWindow):
 
     def _restore_last_mindspace(self) -> None:
         """Restore last mindspace on startup if available."""
+        mindspace_path = self._mindspace_manager.get_last_mindspace()
+        if mindspace_path is None:
+            return
+
         try:
-            with open(os.path.expanduser("~/.humbug/mindspace.json"), encoding='utf-8') as f:
-                data = json.load(f)
-                mindspace_path = data.get("lastMindspace")
-                if mindspace_path and os.path.exists(mindspace_path):
-                    try:
-                        self._mindspace_manager.open_mindspace(mindspace_path)
-                        self._sidebar_manager.set_mindspace(mindspace_path)
-                        self._restore_mindspace_state()
+            self._mindspace_manager.open_mindspace(mindspace_path)
+            self._sidebar_manager.set_mindspace(mindspace_path)
+            self._restore_mindspace_state()
 
-                    except MindspaceError as e:
-                        self._logger.error("Failed to restore mindspace: %s", str(e))
-                        # Don't show error dialog on startup, just log it
-
-        except (FileNotFoundError, json.JSONDecodeError):
-            pass
+        except MindspaceError as e:
+            self._logger.error("Failed to restore mindspace: %s", str(e))
 
     def _load_user_ai_config(self) -> None:
         """Load user-defined AI model config from ~/.humbug/user-ai-config.json."""

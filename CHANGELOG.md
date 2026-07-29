@@ -8,6 +8,8 @@ New features:
 - Menai is now installed from PyPI (`pip install menai`) instead of requiring a local clone of the sibling repository.
   Pre-built wheels include the C VM for all supported platforms, so `fetch-menai-vm.py` is no longer needed.
 - The filesystem AI tool's `search_files` operation now supports wildcard matches.
+- Added a recent-mindspaces list to the sidebar header button.  Clicking the mindspace name now shows a popup menu
+  with recently used mindspaces for quick switching, plus "Open Mindspace..." and "New Mindspace..." actions.
 
 Bug fixes:
 
