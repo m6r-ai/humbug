@@ -54,7 +54,7 @@ traceable, and consistent with stated intent.
 Humbug follows the pattern of an OS kernel: simple, largely self-contained, and
 comprehensible from a single repository.
 Only 3 third party runtime dependencies exist beyond the Python standard library and
-menai (a sibling project of Humbug).
+menai (a sibling project of Humbug, installed from [PyPI](https://pypi.org/project/menai/)).
 Both humans and AIs should be able to understand almost every part of the system.
 
 ### Vendor independence

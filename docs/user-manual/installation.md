@@ -46,22 +46,8 @@ or, on some systems:
 python3 --version
 ```
 
-**Windows only (for building the Menai C extension from source):** You will need
-[Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (Visual
-C++ 14.0 or later) to compile the Menai language engine. During installation, select the
-**"Desktop development with C++"** workload. This is a one-time setup.
-Not needed if you use `python fetch-menai-vm.py` to download a pre-built binary instead.
-
-**Linux only (for building the Menai C extension from source):** You will need Python development headers and a C compiler. On Debian and Ubuntu:
-
-```text
-sudo apt install gcc python3-dev
-```
-
-On other distributions, install the equivalent packages for your package manager.
-Not needed if you use `python fetch-menai-vm.py` to download a pre-built binary instead.
-
-**macOS:** No additional requirements beyond Python itself.
+No additional system requirements beyond Python itself. The Menai language engine (including
+its C VM) is installed from PyPI with pre-built wheels for all supported platforms.
 
 ### 1. Get the source code
 
@@ -103,31 +89,7 @@ pip install -e ".[dev]"
 This installs Humbug along with all its dependencies. Humbug has very few external dependencies
 by design: the GUI framework (PySide6), async support (qasync), and SSL certificates (certifi).
 
-### 4. Build the Menai engine (optional but recommended)
-
-Humbug includes a fast C implementation of the Menai language engine. This is optional —
-Humbug will fall back to a slower Python implementation if it is not present — but it is
-recommended for the best experience. You have two options:
-
-**Option A — Download a pre-built binary (recommended, no compiler needed):**
-
-```text
-python fetch-menai-vm.py
-```
-
-This auto-detects your platform and Python version and downloads the matching binary.
-No C compiler, build tools, or GitHub authentication required. If no pre-built binary
-is available for your platform, fall back to Option B.
-
-**Option B — Build from source:**
-
-```text
-python setup.py build_ext --inplace
-```
-
-See the platform-specific requirements above for the C compiler / build tools needed to build from source.
-
-### 5. Launch Humbug
+### 4. Launch Humbug
 
 ```text
 python -m desktop

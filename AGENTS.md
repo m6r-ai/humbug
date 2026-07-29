@@ -22,26 +22,18 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 
 ## Menai C VM binary
 
-- Menai is maintained in a sibling repository (`../menai`). Install it as an editable dependency:
-  ```bash
-  pip install -e ../menai
-  ```
-- The C VM binary is built and published by the menai repository's CI.  To fetch the pre-built binary
-- into the installed menai package:
-  ```bash
-  python fetch-menai-vm.py
-  ```
-- If you have a C compiler you can also build the C VM locally from the menai repo:
-  ```bash
-  cd ../menai && python setup.py build_ext --inplace
-  ```
+- Menai is installed from [PyPI](https://pypi.org/project/menai/) as a dependency of Humbug (`pip install menai`).
+- Pre-built wheels include the C VM binary for all supported platforms (Linux, macOS, and Windows on x86_64 and ARM64,
+  Python 3.10–3.14), so no separate clone, build, or download step is needed.
+- Humbug's `pyproject.toml` does not pin a version, so `pip install` always fetches the latest version from PyPI.
+- For local development on Menai itself, clone the [menai repository](https://github.com/m6r-ai/menai) and install
+  it as an editable dependency: `pip install -e /path/to/menai`.
 
 ## App builds
 
 - GitHub Actions builds and packages the desktop app for macOS, Windows, and Linux via manual trigger
   only (see `.github/workflows/build-app.yml`).
-- The workflow checks out the menai repo, installs it as an editable package, then fetches the
-  pre-built Menai C VM binary via `fetch-menai-vm.py`.
+- The workflow installs menai from PyPI (including the pre-built C VM) via `pip install menai`.
 - macOS produces a signed/notarized `.dmg`, Windows produces an `.exe` installer via Inno Setup,
   and Linux produces an `.AppImage` for x86_64 and ARM64 via `build-appimage.sh`.
 

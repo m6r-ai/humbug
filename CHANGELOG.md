@@ -5,6 +5,8 @@
 New features:
 
 - Removed the menai codebase and tools and put them in a sibling git repo.
+- Menai is now installed from PyPI (`pip install menai`) instead of requiring a local clone of the sibling repository.
+  Pre-built wheels include the C VM for all supported platforms, so `fetch-menai-vm.py` is no longer needed.
 - The filesystem AI tool's `search_files` operation now supports wildcard matches.
 
 Bug fixes:
