@@ -196,7 +196,9 @@ class MarkdownParser(Parser):
         Returns:
             True if position i starts a bold marker (**text** or __text__)
         """
-        if i + 2 >= len(text) or text[i+2].isspace():
+        # Allow the marker at end of line (i + 2 == len(text)) for multi-line bold.
+        if i + 2 > len(text) or (
+                i + 2 < len(text) and text[i + 2].isspace()):
             return False
 
         is_double_asterisk = text[i:i+2] == '**'
@@ -243,9 +245,18 @@ class MarkdownParser(Parser):
 
         return text[i:i+2] == '~~'
 
-    def _parse_inline_formatting_in_text(self, text_token: Token, block_type: TokenType | None) -> list[Token]:
+    def _parse_inline_formatting_in_text(
+        self,
+        text_token: Token,
+        block_type: TokenType | None,
+        open_markers: list[str] | None = None,
+    ) -> list[Token]:
         """
         Parse a text token for inline formatting and return a list of tokens.
+
+        When a formatting marker opens but does not close on this line, the
+        marker is appended to *open_markers* (if provided) so the caller can
+        carry it across line boundaries in parser state.
 
         Args:
             text_token: The original text token to parse
@@ -382,8 +393,18 @@ class MarkdownParser(Parser):
                     current_text_start = i
                     continue
 
-                # No closing bold marker found; treat the marker as plain text
-                current_text_start = i
+                # No closing bold marker found; the bold span continues to the
+                # next line.  Emit BOLD_START, emit remaining text as bold
+                # content, and record the open marker.
+                tokens.append(Token(TokenType.BOLD_START, marker, base_position + i))
+                remaining_text = text[i + 2:]
+                if remaining_text:
+                    tokens.append(Token(TokenType.BOLD, remaining_text, base_position + i + 2))
+
+                if open_markers is not None:
+                    open_markers.append(marker)
+
+                return tokens
 
             # Check for italic (*text* or _text_)
             elif self._is_italic_marker(text, i):
@@ -446,8 +467,18 @@ class MarkdownParser(Parser):
                     current_text_start = i
                     continue
 
-                # No closing strikethrough marker; treat the ~~ as plain text
-                current_text_start = i
+                # No closing strikethrough marker found; the strikethrough span
+                # continues to the next line.  Emit STRIKETHROUGH_START, emit
+                # remaining text as strikethrough content, and record the open marker.
+                tokens.append(Token(TokenType.STRIKETHROUGH_START, '~~', base_position + i))
+                remaining_text = text[i + 2:]
+                if remaining_text:
+                    tokens.append(Token(TokenType.STRIKETHROUGH, remaining_text, base_position + i + 2))
+
+                if open_markers is not None:
+                    open_markers.append('~~')
+
+                return tokens
 
             # No formatting found, move to next character
             i += 1
@@ -456,6 +487,97 @@ class MarkdownParser(Parser):
         add_text_token(current_text_start, len(text))
 
         return tokens
+
+    def _process_open_markers(
+        self,
+        text_token: Token,
+        block_type: TokenType | None,
+        open_markers: list[str],
+    ) -> list[Token]:
+        """
+        Process a text token that starts with open inline formatting from a previous line.
+
+        Scans for the innermost open marker's closing match.  Content before the
+        close is emitted as formatted tokens; content after is processed normally.
+        If the marker is not found on this line, the entire text is formatted and
+        the marker stays open.
+
+        Args:
+            text_token: The original text token to parse.
+            block_type: The block-level type to apply to non-formatted text.
+            open_markers: The stack of open markers (innermost is last).  This list
+                is modified in place: closed markers are popped, and newly opened
+                markers may be appended.
+
+        Returns:
+            List of tokens with inline formatting applied.
+        """
+        text = text_token.value
+        base_position = text_token.start
+
+        if not open_markers:
+            return self._parse_inline_formatting_in_text(text_token, block_type, open_markers)
+
+        marker = open_markers[-1]
+        marker_len = len(marker)
+
+        # Determine the content type and end token type for this marker.
+        if marker in ('**', '__'):
+            content_type = TokenType.BOLD
+            end_type = TokenType.BOLD_END
+
+        elif marker == '~~':
+            content_type = TokenType.STRIKETHROUGH
+            end_type = TokenType.STRIKETHROUGH_END
+
+        else:
+            # Single-char markers (* or _) — italic.
+            content_type = TokenType.ITALIC
+            end_type = TokenType.ITALIC_END
+
+        # Search for the closing marker.
+        close_pos = text.find(marker)
+
+        # For single-char markers, skip positions that are part of a double marker.
+        if marker_len == 1:
+            search_from = 0
+            while True:
+                candidate = text.find(marker, search_from)
+                if candidate == -1:
+                    close_pos = -1
+                    break
+
+                if candidate + 1 >= len(text) or text[candidate + 1] != marker:
+                    close_pos = candidate
+                    break
+
+                search_from = candidate + 2
+
+        if close_pos != -1:
+            # Closing marker found — emit formatted content, close, then process the rest.
+            open_markers.pop()
+            content = text[:close_pos]
+            tokens: list[Token] = []
+            if content:
+                tokens.append(Token(content_type, content, base_position))
+
+            tokens.append(Token(end_type, marker, base_position + close_pos))
+            remaining_text = text[close_pos + marker_len:]
+            if remaining_text:
+                remaining_token = Token(
+                    block_type if block_type else TokenType.TEXT,
+                    remaining_text,
+                    base_position + close_pos + marker_len,
+                )
+                tokens.extend(self._parse_inline_formatting_in_text(remaining_token, block_type, open_markers))
+
+            return tokens
+
+        # No closing marker on this line — entire text is formatted content.
+        if text:
+            return [Token(content_type, text, base_position)]
+
+        return []
 
     def _is_list_marker(self, text: str) -> bool:
         """
@@ -532,6 +654,7 @@ class MarkdownParser(Parser):
         embedded_parser_state = None
         parsing_continuation = False
         block_stack: list[BlockContext] = []
+        open_inline_markers: list[str] = []
 
         if prev_parser_state is not None:
             assert isinstance(prev_parser_state, MarkdownParserState), \
@@ -545,6 +668,7 @@ class MarkdownParser(Parser):
             embedded_parser_state = prev_parser_state.embedded_parser_state
             parsing_continuation = prev_parser_state.parsing_continuation
             block_stack = prev_parser_state.block_stack.copy()
+            open_inline_markers = prev_parser_state.inline_formatting_stack.copy()
 
         # Step 1: strip leading blockquote prefixes and emit BLOCKQUOTE tokens.
         #
@@ -775,6 +899,7 @@ class MarkdownParser(Parser):
             if token.type == TokenType.HEADING:
                 # A heading resets any list context but preserves blockquote context.
                 block_stack = [ctx for ctx in block_stack if ctx.type != TokenType.LIST_MARKER]
+                open_inline_markers.clear()
                 self._tokens.append(token)
                 continue
 
@@ -849,6 +974,11 @@ class MarkdownParser(Parser):
         # plain text content inside a blockquote or list continuation is coloured
         # to match its container rather than appearing as unstyled TEXT.
         if not parse_embedded:
+            # Clear open inline markers when the paragraph is interrupted by a
+            # structural element (blank line, heading, etc.).
+            if not remaining.strip():
+                open_inline_markers.clear()
+
             innermost_type: TokenType | None = next(
                 (ctx.type for ctx in reversed(block_stack)),
                 None
@@ -862,7 +992,12 @@ class MarkdownParser(Parser):
                     else:
                         block_type = token.type
 
-                    inline_tokens = self._parse_inline_formatting_in_text(token, block_type)
+                    if open_inline_markers:
+                        inline_tokens = self._process_open_markers(token, block_type, open_inline_markers)
+
+                    else:
+                        inline_tokens = self._parse_inline_formatting_in_text(token, block_type, open_inline_markers)
+
                     processed_tokens.extend(inline_tokens)
 
                 else:
@@ -875,6 +1010,7 @@ class MarkdownParser(Parser):
             in_fence_block, fence_depth, nested_fence_depth, fence_blockquote_depth,
             language, block_stack, embedded_parser_state
         )
+        parser_state.inline_formatting_stack = open_inline_markers
 
         if parse_embedded and not fence_just_opened:
             new_embedded_state = self._embedded_parse(language, embedded_parser_state, remaining, content_offset)
