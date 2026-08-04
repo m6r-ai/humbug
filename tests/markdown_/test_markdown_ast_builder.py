@@ -462,7 +462,10 @@ def test_list_with_continuation1(ast_builder):
     assert first_item.__class__.__name__ == "MarkdownASTListItemNode"
     paragraph = first_item.children[0]
     assert paragraph.__class__.__name__ == "MarkdownASTParagraphNode"
-    assert len(paragraph.children) == 3
+    # Continuation text is re-parsed as a single merged paragraph, producing
+    # one text node: "Item 1 continues on this line"
+    assert len(paragraph.children) == 1
+    assert paragraph.children[0].content == "Item 1 continues on this line"
 
 
 def test_list_with_continuation2(ast_builder):
@@ -481,7 +484,9 @@ def test_list_with_continuation2(ast_builder):
     assert second_item.__class__.__name__ == "MarkdownASTListItemNode"
     paragraph = second_item.children[0]
     assert paragraph.__class__.__name__ == "MarkdownASTParagraphNode"
-    assert len(paragraph.children) == 3
+    # Continuation text is re-parsed as a single merged paragraph
+    assert len(paragraph.children) == 1
+    assert paragraph.children[0].content == "Item 2 continues on this line"
 
 
 def test_list_with_continuation3(ast_builder):
@@ -500,7 +505,9 @@ continues on this line
     assert second_item.__class__.__name__ == "MarkdownASTListItemNode"
     paragraph = second_item.children[0]
     assert paragraph.__class__.__name__ == "MarkdownASTParagraphNode"
-    assert len(paragraph.children) == 3
+    # Continuation text is re-parsed as a single merged paragraph
+    assert len(paragraph.children) == 1
+    assert paragraph.children[0].content == "Item 2 continues on this line"
 
 
 def test_list_item_multi_line_paragraph_continuation(ast_builder):
@@ -1349,7 +1356,9 @@ def test_list_continuation_and_interruption(ast_builder):
     # First item should have continued text
     first_item = list_node.children[0]
     first_paragraph = first_item.children[0]
-    assert "continues on this line" in first_paragraph.children[2].content
+    # Continuation text is merged into a single text node
+    assert len(first_paragraph.children) == 1
+    assert "continues on this line" in first_paragraph.children[0].content
 
     # List interrupted by other content
     interrupted_list = """- Item 1
@@ -1395,7 +1404,8 @@ def test_ordered_list_with_custom_start(ast_builder):
     # First item should have continued text
     first_item = list_node.children[0]
     first_paragraph = first_item.children[0]
-    assert "continues on this line" in first_paragraph.children[2].content
+    assert len(first_paragraph.children) == 1
+    assert "continues on this line" in first_paragraph.children[0].content
 
 
 def test_table_alignment_variations(ast_builder):
@@ -1609,6 +1619,104 @@ Third line continues normally"""
             break
 
     assert has_line_break
+
+
+def test_bold_spanning_multiple_lines(ast_builder):
+    """Test that bold markup spanning soft-wrapped lines is parsed correctly."""
+    markdown = """This is the **bold text that
+continues on the next line** and more text."""
+
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    paragraph = doc.children[0]
+
+    # Should contain a bold node
+    bold_nodes = [c for c in paragraph.children if c.__class__.__name__ == "MarkdownASTBoldNode"]
+    assert len(bold_nodes) == 1
+
+    # The bold node should contain both lines of text
+    bold_text = ""
+    for child in bold_nodes[0].children:
+        if child.__class__.__name__ == "MarkdownASTTextNode":
+            bold_text += child.content
+
+    assert "bold text that" in bold_text
+    assert "continues on the next line" in bold_text
+
+
+def test_italic_spanning_multiple_lines(ast_builder):
+    """Test that italic markup spanning soft-wrapped lines is parsed correctly."""
+    markdown = """Some *italic text that
+spans lines* here."""
+
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    paragraph = doc.children[0]
+
+    emphasis_nodes = [c for c in paragraph.children if c.__class__.__name__ == "MarkdownASTEmphasisNode"]
+    assert len(emphasis_nodes) == 1
+
+
+def test_bold_spanning_three_lines(ast_builder):
+    """Test bold markup that opens on one line and closes three lines later."""
+    markdown = """Text before **bold content
+that spans
+three lines** text after."""
+
+    doc = ast_builder.build_ast(markdown)
+    paragraph = doc.children[0]
+    bold_nodes = [c for c in paragraph.children if c.__class__.__name__ == "MarkdownASTBoldNode"]
+    assert len(bold_nodes) == 1
+
+
+def test_multiple_bold_spans_across_lines(ast_builder):
+    """Test multiple bold spans where some cross line boundaries and some don't."""
+    markdown = """First **bold one** text.
+Then **bold two that
+crosses lines** end."""
+
+    doc = ast_builder.build_ast(markdown)
+    paragraph = doc.children[0]
+    bold_nodes = [c for c in paragraph.children if c.__class__.__name__ == "MarkdownASTBoldNode"]
+    assert len(bold_nodes) == 2
+
+
+def test_no_literal_asterisks_after_multiline_bold(ast_builder):
+    """Test that no literal asterisk characters remain after parsing multi-line bold."""
+    markdown = """Some text **bold
+spanning** more text."""
+
+    doc = ast_builder.build_ast(markdown)
+    paragraph = doc.children[0]
+
+    for child in paragraph.children:
+        if child.__class__.__name__ == "MarkdownASTTextNode":
+            assert "*" not in child.content, f"Literal asterisk found in text: '{child.content}'"
+
+
+def test_inline_code_not_affected_by_multiline_fix(ast_builder):
+    """Test that inline code on a single line still works correctly."""
+    markdown = "Use `code` here."
+
+    doc = ast_builder.build_ast(markdown)
+    paragraph = doc.children[0]
+    code_nodes = [c for c in paragraph.children if c.__class__.__name__ == "MarkdownASTInlineCodeNode"]
+    assert len(code_nodes) == 1
+    assert code_nodes[0].content == "code"
+
+
+def test_bold_in_list_item_spanning_lines(ast_builder_no_underscores):
+    """Test bold markup spanning lines within a list item paragraph."""
+    markdown = """- Item with **bold text
+  that continues** here."""
+
+    doc = ast_builder_no_underscores.build_ast(markdown)
+    list_node = doc.children[0]
+    item = list_node.children[0]
+    paragraph = item.children[0]
+
+    bold_nodes = [c for c in paragraph.children if c.__class__.__name__ == "MarkdownASTBoldNode"]
+    assert len(bold_nodes) == 1
 
 
 def test_continuation_edge_cases(ast_builder):
@@ -3014,7 +3122,7 @@ def test_nested_blockquote_after_list_in_blockquote(ast_builder):
     # Inner blockquote should have one paragraph with both lines merged
     assert len(inner.children) == 1
     assert inner.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
-    assert inner.children[0].children[0].content == "Nested blockquote"
+    assert inner.children[0].children[0].content == "Nested blockquote second line"
 
 
 def test_fenced_code_block_in_loose_list(ast_builder):

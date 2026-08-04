@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v54 (2026-07-xx)
+## v54 (2026-08-xx)
 
 New features:
 
@@ -20,6 +20,7 @@ Bug fixes:
   allowing diffs to add or remove a trailing newline.  Previously the marker was discarded, causing silent no-ops or
   garbled editor buffers.
 - Fixed a problem with `find_files` and wildcard access outside the current mindspace.
+- Fixed a problem with parsing multi-line bold/italics in markdown processing.
 
 ## v53 (2026-07-12)
 

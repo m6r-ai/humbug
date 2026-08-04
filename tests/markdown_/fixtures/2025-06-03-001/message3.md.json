@@ -3627,11 +3627,7 @@
         },
         {
           "type": "text",
-          "content": " "
-        },
-        {
-          "type": "text",
-          "content": "A single large method with nested logic for all inline parsing."
+          "content": " A single large method with nested logic for all inline parsing."
         }
       ]
     },
@@ -3649,11 +3645,7 @@
         },
         {
           "type": "text",
-          "content": " "
-        },
-        {
-          "type": "text",
-          "content": "Break into smaller helper functions for each inline type."
+          "content": " Break into smaller helper functions for each inline type."
         }
       ]
     },

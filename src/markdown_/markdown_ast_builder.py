@@ -145,6 +145,9 @@ class MarkdownASTBuilder:
 
         # Text continuation tracking
         self._last_paragraph: MarkdownASTParagraphNode | None = None
+
+        # Raw text of the paragraph currently receiving continuation lines.
+        self._last_paragraph_text: str = ""
         self._last_processed_line_type: str = ""
         self._blank_line_count: int = 0
 
@@ -451,6 +454,25 @@ class MarkdownASTBuilder:
         current_text = ""
 
         while i < len(text):
+            # Handle newlines from multi-line paragraph text.
+            # A hard line break ("  \n") produces a LineBreakNode;
+            # a soft newline ("\n") is treated as a space.
+            if text[i] == '\n':
+                is_hard_break = len(current_text) >= 2 and current_text.endswith('  ')
+                if is_hard_break:
+                    current_text = current_text[:-2]
+                    if current_text:
+                        nodes.append(MarkdownASTTextNode(current_text))
+                        current_text = ""
+
+                    nodes.append(MarkdownASTLineBreakNode())
+
+                else:
+                    current_text += ' '
+
+                i += 1
+                continue
+
             # Handle backslash escapes
             if (text[i] == '\\' and i + 1 < len(text) and
                     text[i + 1] in ('\\', '`', '*', '_', '~', '[', ']', '(', ')', '!', '#', '+', '-', '.', '|')):
@@ -740,6 +762,8 @@ class MarkdownASTBuilder:
         for node in self._parse_inline_formatting(text):
             paragraph.add_child(node)
 
+        self._last_paragraph_text = text
+
         paragraph.line_start = line_num
         paragraph.line_end = line_num
         self._register_node_line(paragraph, line_num)
@@ -1012,6 +1036,8 @@ class MarkdownASTBuilder:
             paragraph = MarkdownASTParagraphNode()
             for node in self._parse_inline_formatting(content):
                 paragraph.add_child(node)
+
+            self._last_paragraph_text = content
 
             paragraph.line_start = line_num
             paragraph.line_end = line_num
@@ -1447,11 +1473,12 @@ class MarkdownASTBuilder:
         """
         # Case 1: Continue a paragraph
         if self._last_paragraph and self._last_processed_line_type == 'text':
-            # Add a space between the continued text as long as we didn't just have a line break
-            if not isinstance(self._last_paragraph.children[-1], MarkdownASTLineBreakNode):
-                self._last_paragraph.add_child(MarkdownASTTextNode(" "))
-
-            for node in self._parse_inline_formatting(text):
+            # Join lines with \n so that _parse_inline_formatting can distinguish
+            # hard breaks ("  \n") from soft wraps ("\n" → space).
+            self._last_paragraph_text += "\n"
+            self._last_paragraph_text += text
+            self._last_paragraph.remove_children()
+            for node in self._parse_inline_formatting(self._last_paragraph_text):
                 self._last_paragraph.add_child(node)
 
             self._last_paragraph.line_end = line_num
@@ -1524,6 +1551,8 @@ class MarkdownASTBuilder:
             for node in self._parse_inline_formatting(formatted_text):
                 paragraph.add_child(node)
 
+            self._last_paragraph_text = formatted_text
+
             paragraph.line_start = line_num
             paragraph.line_end = line_num
             last_item.add_child(paragraph)
@@ -1532,12 +1561,12 @@ class MarkdownASTBuilder:
         else:
             # Continue the existing paragraph
             paragraph = cast(MarkdownASTParagraphNode, last_item.children[-1])
-
-            # If we weren't just preceded by a line break then add a space
-            if paragraph.children and not isinstance(paragraph.children[-1], MarkdownASTLineBreakNode):
-                paragraph.add_child(MarkdownASTTextNode(" "))
-
-            for node in self._parse_inline_formatting(formatted_text):
+            # Join lines with \n so that _parse_inline_formatting can distinguish
+            # hard breaks ("  \n") from soft wraps ("\n" → space).
+            self._last_paragraph_text += "\n"
+            self._last_paragraph_text += formatted_text
+            paragraph.remove_children()
+            for node in self._parse_inline_formatting(self._last_paragraph_text):
                 paragraph.add_child(node)
 
             paragraph.line_end = line_num
@@ -1828,6 +1857,7 @@ class MarkdownASTBuilder:
         self._line_to_node_map = {}
         self._initialize_container_stack()
         self._last_paragraph = None
+        self._last_paragraph_text = ""
         self._last_processed_line_type = ""
         self._blank_line_count = 0
         self._in_code_block = False
