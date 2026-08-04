@@ -59,13 +59,13 @@ def test_strikethrough_in_sentence():
 
 
 def test_strikethrough_with_no_closing_marker():
-    """Unclosed ~~ should not produce strikethrough tokens."""
-    tokens, _ = _parse_line("~~no close")
+    """Unclosed ~~ opens a strikethrough span that continues to the next line."""
+    tokens, state = _parse_line("~~no close")
 
     types = [t.type for t in tokens]
-    assert TokenType.STRIKETHROUGH_START not in types
-    assert TokenType.STRIKETHROUGH not in types
-    assert TokenType.STRIKETHROUGH_END not in types
+    assert TokenType.STRIKETHROUGH_START in types
+    assert TokenType.STRIKETHROUGH in types
+    assert state.inline_formatting_stack == ["~~"]
 
 
 def test_strikethrough_in_heading():

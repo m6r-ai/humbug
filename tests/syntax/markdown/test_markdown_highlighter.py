@@ -462,9 +462,9 @@ class TestInlineFormatting:
 class TestInlineEdgeCases:
 
     def test_bold_at_end_of_string_not_triggered(self):
-        """'**' at the very end (i+2 >= len) does not produce bold tokens."""
+        """'**' at the very end of a line opens a multi-line bold span."""
         tokens, _ = parse_line("text**")
-        assert TokenType.BOLD_START not in types(tokens)
+        assert TokenType.BOLD_START in types(tokens)
 
     def test_bold_followed_by_space_not_triggered(self):
         """'** text' (space after **) does not produce bold tokens."""
@@ -507,10 +507,11 @@ class TestInlineEdgeCases:
         assert TokenType.STRIKETHROUGH_START not in types(tokens)
 
     def test_unclosed_bold_is_plain_text(self):
-        """'**unclosed' with no closing ** is treated as plain text."""
-        tokens, _ = parse_line("**unclosed")
-        assert TokenType.BOLD_START not in types(tokens)
-        assert TokenType.BOLD not in types(tokens)
+        """'**unclosed' opens a bold span that continues to the next line."""
+        tokens, state = parse_line("**unclosed")
+        assert TokenType.BOLD_START in types(tokens)
+        assert TokenType.BOLD in types(tokens)
+        assert state.inline_formatting_stack == ["**"]
 
     def test_unclosed_italic_is_plain_text(self):
         """'*unclosed' with no closing * is treated as plain text."""
@@ -523,9 +524,11 @@ class TestInlineEdgeCases:
         assert TokenType.INLINE_CODE_START not in types(tokens)
 
     def test_unclosed_strikethrough_is_plain_text(self):
-        """'~~unclosed' with no closing ~~ is treated as plain text."""
-        tokens, _ = parse_line("~~unclosed")
-        assert TokenType.STRIKETHROUGH_START not in types(tokens)
+        """'~~unclosed' opens a strikethrough span that continues to the next line."""
+        tokens, state = parse_line("~~unclosed")
+        assert TokenType.STRIKETHROUGH_START in types(tokens)
+        assert TokenType.STRIKETHROUGH in types(tokens)
+        assert state.inline_formatting_stack == ["~~"]
 
     def test_link_no_closing_paren_is_plain_text(self):
         """[text](url-no-close produces no link tokens.
@@ -942,12 +945,31 @@ class TestMultiLine:
         assert state.in_fence_block is True
 
     def test_inline_formatting_does_not_span_lines(self):
-        """Inline formatting (bold, italic, etc.) does not carry state across lines.
-        An unclosed ** on one line does not affect the next line."""
-        lines = ["**unclosed", "normal line"]
+        """Unclosed bold on one line closes on the next line."""
+        lines = ["**unclosed bold", "still bold** after"]
         all_tokens, _ = parse_lines(lines)
-        # Second line should be plain text
-        assert types(all_tokens[1]) == [TokenType.TEXT]
+        # First line: BOLD_START, BOLD content
+        assert TokenType.BOLD_START in types(all_tokens[0])
+        assert TokenType.BOLD in types(all_tokens[0])
+        # Second line: BOLD content, BOLD_END, then TEXT
+        assert TokenType.BOLD in types(all_tokens[1])
+        assert TokenType.BOLD_END in types(all_tokens[1])
+        assert TokenType.TEXT in types(all_tokens[1])
+
+    def test_bold_spanning_three_lines(self):
+        """Bold markup spanning three lines is highlighted correctly."""
+        lines = ["before **bold", "still bold", "end bold** after"]
+        all_tokens, state = parse_lines(lines)
+        assert TokenType.BOLD_START in types(all_tokens[0])
+        assert state.inline_formatting_stack == []
+        assert TokenType.BOLD_END in types(all_tokens[2])
+
+    def test_open_bold_closed_by_blank_line(self):
+        """Open bold is cleared by a blank line between paragraphs."""
+        lines = ["**unclosed", "", "normal text"]
+        all_tokens, state = parse_lines(lines)
+        assert state.inline_formatting_stack == []
+        assert types(all_tokens[2]) == [TokenType.TEXT]
 
     def test_empty_line_produces_no_tokens(self):
         """An empty string produces no tokens."""
