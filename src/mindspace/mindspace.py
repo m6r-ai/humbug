@@ -13,6 +13,8 @@ from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
 from mindspace.mindspace_settings import MindspaceSettings
 from mindspace.mindspace_usage import MindspaceUsage
+from mindspace.pinned_artifact import PinnedArtifact
+from mindspace.pinned_artifacts import PinnedArtifacts
 
 
 class Mindspace:
@@ -28,6 +30,7 @@ class Mindspace:
     SESSION_FILE = "session.json"
     INTERACTIONS_FILE = "system.json"
     USAGE_FILE = "usage.json"
+    PINNED_ARTIFACTS_FILE = "pinned-artifacts.json"
     CONVERSATIONS_DIR = "conversations"
 
     def __init__(
@@ -52,6 +55,7 @@ class Mindspace:
         self._settings: MindspaceSettings | None = None
         self._interactions = MindspaceInteractions()
         self._usage = MindspaceUsage()
+        self._pinned_artifacts = PinnedArtifacts()
         self._context_registry = ContextRegistry()
         self._tool_manager = AIToolManager()
         self._logger = logging.getLogger("Mindspace")
@@ -146,6 +150,7 @@ class Mindspace:
             self._settings = settings
             self._load_interactions()
             self._load_usage()
+            self._load_pinned_artifacts()
             self._apply_tool_settings(settings)
             self._on_settings_changed()
 
@@ -160,6 +165,7 @@ class Mindspace:
             self._settings = None
             self._interactions.clear()
             self._usage = MindspaceUsage()
+            self._pinned_artifacts.clear()
             self._context_registry.clear()
             self._reset_tool_manager()
             self._on_settings_changed()
@@ -445,6 +451,56 @@ class Mindspace:
         if self._on_usage_updated:
             self._on_usage_updated()
 
+    def pinned_artifacts(self) -> list[PinnedArtifact]:
+        """Return the artifacts pinned to the current mindspace."""
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._pinned_artifacts.artifacts()
+
+    def add_pinned_artifact(
+        self,
+        title: str,
+        kind: str,
+        content: str = "",
+        path: str = "",
+    ) -> PinnedArtifact:
+        """Persist a new pinned artifact and return it."""
+        assert self.has_mindspace(), "No mindspace is currently open"
+        artifact = PinnedArtifact.create(title, kind, content, path)
+        self._pinned_artifacts.add(artifact)
+        self._save_pinned_artifacts()
+        return artifact
+
+    def remove_pinned_artifact(self, artifact_id: str) -> bool:
+        """Remove a pinned artifact and persist the resulting collection."""
+        assert self.has_mindspace(), "No mindspace is currently open"
+        removed = self._pinned_artifacts.remove(artifact_id)
+        if removed:
+            self._save_pinned_artifacts()
+
+        return removed
+
+    def update_pinned_artifact(
+        self,
+        artifact_id: str,
+        title: str,
+        kind: str,
+        content: str,
+    ) -> bool:
+        """Update the editable details of a pinned artifact."""
+        assert self.has_mindspace(), "No mindspace is currently open"
+        artifact = next(
+            (item for item in self._pinned_artifacts.artifacts() if item.artifact_id == artifact_id),
+            None,
+        )
+        if artifact is None:
+            return False
+
+        updated = self._pinned_artifacts.update(artifact.updated(title, kind, content))
+        if updated:
+            self._save_pinned_artifacts()
+
+        return updated
+
     def _migrate_conversations(self) -> None:
         """
         Migrate conversations from the legacy mindspace-root location to .humbug/.
@@ -545,6 +601,17 @@ class Mindspace:
         except OSError as e:
             self._logger.error("Failed to save usage stats: %s", e)
 
+    def _save_pinned_artifacts(self) -> None:
+        """Persist pinned artifacts to the mindspace metadata directory."""
+        try:
+            mindspace_dir = os.path.join(self._path, self.MINDSPACE_DIR)
+            os.makedirs(mindspace_dir, exist_ok=True)
+            file_path = os.path.join(mindspace_dir, self.PINNED_ARTIFACTS_FILE)
+            self._pinned_artifacts.save(file_path)
+
+        except OSError as e:
+            self._logger.error("Failed to save pinned artifacts: %s", e)
+
     def _load_usage(self) -> None:
         """Load usage stats from disk, silently ignoring missing files."""
         try:
@@ -561,6 +628,16 @@ class Mindspace:
         except Exception as e:
             self._logger.info("Failed to load usage stats: %s", e)
             self._usage = MindspaceUsage()
+
+    def _load_pinned_artifacts(self) -> None:
+        """Load pinned artifacts, treating invalid data as empty."""
+        try:
+            file_path = os.path.join(self._path, self.MINDSPACE_DIR, self.PINNED_ARTIFACTS_FILE)
+            self._pinned_artifacts.load(file_path)
+
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            self._logger.info("Failed to load pinned artifacts: %s", e)
+            self._pinned_artifacts.clear()
 
     def _save_interactions(self) -> None:
         """Persist the interaction log to disk."""

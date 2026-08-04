@@ -54,6 +54,7 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.main_window_splitter import MainWindowSplitter
 from desktop.preview_sidebar.preview_sidebar import PreviewSidebar
 from desktop.preview_tab.preview_tab import PreviewTab
+from desktop.pinned_artifacts_tab.pinned_artifacts_tab import PinnedArtifactsTab
 from desktop.search_sidebar.search_sidebar import SearchSidebar
 from desktop.settings_dialog import SettingsDialog, SECTION_AI_BACKENDS
 from desktop.shell_tab.commands.shell_command_cat import ShellCommandCat
@@ -153,6 +154,13 @@ def _create_usage_tab(
 ) -> UsageTab:
     """Context factory for UsageTab."""
     return UsageTab(info.context_id, parent)
+
+
+def _create_pinned_artifacts_tab(
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+) -> PinnedArtifactsTab:
+    """Context factory for PinnedArtifactsTab."""
+    return PinnedArtifactsTab(info.context_id, parent)
 
 
 def _wire_conversation_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
@@ -412,6 +420,10 @@ class MainWindow(QMainWindow):
         self._open_token_usage_action.setShortcut(QKeySequence("Ctrl+Shift+U"))
         self._open_token_usage_action.triggered.connect(self._on_open_token_usage)
 
+        self._open_project_overview_action = QAction("Project Overview", self)
+        self._open_project_overview_action.setShortcut(QKeySequence("Ctrl+Shift+P"))
+        self._open_project_overview_action.triggered.connect(self._on_open_project_overview)
+
         self._show_tab_overview_action = QAction(strings.show_tab_overview, self)
         self._show_tab_overview_action.setShortcut(QKeySequence("Ctrl+Shift+E"))
         self._show_tab_overview_action.triggered.connect(self._on_show_tab_overview)
@@ -477,6 +489,7 @@ class MainWindow(QMainWindow):
         self._mindspace_menu.addAction(self._open_mindspace_log_action)
         self._mindspace_menu.addAction(self._open_humbug_shell_action)
         self._mindspace_menu.addAction(self._open_token_usage_action)
+        self._mindspace_menu.addAction(self._open_project_overview_action)
 
         # File menu
         self._file_menu = self._menu_bar.addMenu(strings.file_menu)
@@ -596,6 +609,7 @@ class MainWindow(QMainWindow):
         tab_manager.register_tab_factory("log", LogTab.restore_from_state)
         tab_manager.register_tab_factory("shell", ShellTab.restore_from_state)
         tab_manager.register_tab_factory("usage", UsageTab.restore_from_state)
+        tab_manager.register_tab_factory("pinned_artifacts", PinnedArtifactsTab.restore_from_state)
         tab_manager.register_tab_factory("terminal", TerminalTab.restore_from_state)
         tab_manager.register_tab_factory("preview", PreviewTab.restore_from_state)
         tab_manager.register_tab_factory("diff", DiffTab.restore_from_state)
@@ -608,6 +622,7 @@ class MainWindow(QMainWindow):
         tab_manager.register_context_factory("log", _create_log_tab)
         tab_manager.register_context_factory("shell", _create_shell_tab)
         tab_manager.register_context_factory("usage", _create_usage_tab)
+        tab_manager.register_context_factory("pinned_artifacts", _create_pinned_artifacts_tab)
 
         # Set initial sidebar width
         self._splitter.setSizes([300, self.width() - 300])
@@ -1855,6 +1870,21 @@ class MainWindow(QMainWindow):
 
         strings = self._language_manager.strings()
         contexts.open(context_type="usage", title=strings.open_token_usage)
+
+    def _on_open_project_overview(self) -> None:
+        """Open or focus the project overview tab."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = next(
+            (info for info in contexts.list_all() if info.context_type == "pinned_artifacts"), None
+        )
+        if existing:
+            contexts.focus(existing.context_id)
+            return
+
+        contexts.open(context_type="pinned_artifacts", title="Project Overview")
 
     def _on_open_humbug_shell(self) -> None:
         """Open the shell tab."""

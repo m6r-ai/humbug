@@ -8,3 +8,5 @@ from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
 from mindspace.mindspace_search_engine import MindspaceSearchEngine, MindspaceSearchMatch
 from mindspace.mindspace_settings import MindspaceSettings
+from mindspace.pinned_artifact import PinnedArtifact
+from mindspace.pinned_artifacts import PinnedArtifacts

@@ -2311,6 +2311,10 @@ class ConversationWidget(QWidget):
         copy_action.setEnabled(self.has_selection())
         copy_action.triggered.connect(self.copy)
 
+        pin_action = menu.addAction("Pin Selection to Project Overview")
+        pin_action.setEnabled(self.has_selection())
+        pin_action.triggered.connect(self._pin_selection_to_project_overview)
+
         # Paste action
         paste_action = menu.addAction(strings.paste)
         paste_action.setEnabled(True)
@@ -2319,6 +2323,25 @@ class ConversationWidget(QWidget):
 
         # Show menu at click position
         menu.exec_(self.mapToGlobal(pos))
+
+    def _pin_selection_to_project_overview(self) -> None:
+        """Save the selected conversation text as a pinned mindspace artifact."""
+        if not self._message_with_selection:
+            return
+
+        content = self._message_with_selection.get_selected_text().strip()
+        if not content or not self._mindspace_manager.has_mindspace():
+            return
+
+        first_line = content.split("\n", maxsplit=1)[0]
+        title = first_line[:80] + ("…" if len(first_line) > 80 else "")
+        self._mindspace_manager.mindspace().add_pinned_artifact(
+            title, "conversation", content, self.path()
+        )
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"Pinned conversation selection: '{title}'"
+        )
 
     def _on_message_fork_requested(self) -> None:
         """Fork the conversation from the specified message."""
