@@ -43,4 +43,3 @@ to get started and to make the most of working with Humbug day to day.
 
 22. [The Humbug Shell](humbug-shell.md)
 23. [Mindspace Log](mindspace-log.md)
-24. [Project Overview](project-overview.md)
