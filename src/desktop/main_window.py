@@ -462,6 +462,10 @@ class MainWindow(QMainWindow):
         self._previous_message_action.setShortcut(QKeySequence("Alt+Up"))
         self._previous_message_action.triggered.connect(self._on_navigate_previous_message)
 
+        self._question_navigator_action = QAction("Question Markers", self)
+        self._question_navigator_action.setCheckable(True)
+        self._question_navigator_action.toggled.connect(self._on_set_question_minimaps_visible)
+
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
 
@@ -546,6 +550,7 @@ class MainWindow(QMainWindow):
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._next_message_action)
         self._view_menu.addAction(self._previous_message_action)
+        self._view_menu.addAction(self._question_navigator_action)
 
         self.setWindowTitle("Humbug")
         self.setMinimumSize(1280, 800)
@@ -855,6 +860,7 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action.setEnabled(tab_manager.can_swap_column(not left_to_right))
         self._next_message_action.setEnabled(tab is not None and tab.can_navigate_next_message())
         self._previous_message_action.setEnabled(tab is not None and tab.can_navigate_previous_message())
+        self._question_navigator_action.setEnabled(isinstance(tab, ConversationTab))
         self._update_navigation_action_text()
 
     def _on_language_changed(self) -> None:
@@ -1197,6 +1203,7 @@ class MainWindow(QMainWindow):
             self._mindspace_manager.open_mindspace(mindspace_path)
             self._sidebar_manager.set_mindspace(mindspace_path)
             self._restore_mindspace_state()
+            self._restore_question_marker_setting()
 
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace: %s", str(e))
@@ -1310,6 +1317,7 @@ class MainWindow(QMainWindow):
 
         # Restore the state of the newly opened mindspace
         self._restore_mindspace_state()
+        self._restore_question_marker_setting()
 
     def _on_close_mindspace(self) -> None:
         """Save state, close all tabs, and clear the current mindspace."""
@@ -2255,6 +2263,24 @@ class MainWindow(QMainWindow):
         tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.navigate_previous_message()
+
+    def _on_set_question_minimaps_visible(self, visible: bool) -> None:
+        """Show or hide question markers in every open conversation tab."""
+        for tab in self._tab_manager.get_all_tabs():
+            if isinstance(tab, ConversationTab):
+                tab.set_question_minimap_visible(visible)
+
+        settings = self._mindspace_manager.settings()
+        if settings is not None:
+            settings.question_markers_visible = visible
+            self._mindspace_manager.mindspace().update_settings(settings)
+
+    def _restore_question_marker_setting(self) -> None:
+        """Restore question-marker visibility for the active mindspace."""
+        settings = self._mindspace_manager.settings()
+        self._question_navigator_action.setChecked(
+            settings.question_markers_visible if settings is not None else False
+        )
 
     def _on_show_settings_dialog(self, initial_section: str | None = None) -> None:
         """Show the unified settings dialog."""

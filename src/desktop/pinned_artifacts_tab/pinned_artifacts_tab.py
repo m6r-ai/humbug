@@ -222,6 +222,7 @@ class PinnedArtifactsTab(TabBase):
         return title.text().strip(), kind.text().strip() or "note", content.toPlainText()
 
     def _pin_file(self) -> None:
+        """Prompt for a file and add it as a pinned artifact."""
         file_path, _ = QFileDialog.getOpenFileName(self, "Pin File", self._mindspace_manager.file_dialog_directory())
         if not file_path:
             return
@@ -233,6 +234,7 @@ class PinnedArtifactsTab(TabBase):
         self.refresh()
 
     def _remove_selected(self) -> None:
+        """Remove the currently selected pinned artifact."""
         item = self._artifact_list.currentItem()
         if item is None:
             return
@@ -290,6 +292,7 @@ class PinnedArtifactsTab(TabBase):
         menu.exec(self._artifact_list.mapToGlobal(pos))
 
     def _update_remove_button(self) -> None:
+        """Enable the remove button only when an artifact is selected."""
         self._remove_button.setEnabled(self._artifact_list.currentItem() is not None)
 
     def apply_style(self) -> None:
