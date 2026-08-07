@@ -455,8 +455,26 @@ def get_french_strings() -> LanguageStrings:
         ollama_pull_not_running="Impossible de se connecter à Ollama — est-il en cours d'exécution ?",
         ollama_pull_error="Échec du téléchargement : {0}",
         ollama_update_local_models="Mettre à jour les modèles locaux",
+        update_models="Mettre à jour les modèles",
+        remove_fetched_models="Supprimer les modèles récupérés…",
+        fetching_models="Récupération…",
+        unknown_provider="Fournisseur inconnu.",
+        fetch_added_models="{0} nouveau(x) modèle(s) ajouté(s).",
+        fetch_already_up_to_date="Liste déjà à jour.",
+        ollama_no_installed_models="Aucun modèle installé trouvé.",
+        ollama_added_models="{0} modèle(s) ajouté(s).",
+        ollama_already_up_to_date="Liste des modèles locaux déjà à jour.",
 
-        # Fetch-models errors
+        # Settings dialog - AI model page
+        settings_provider="Fournisseur",
+        settings_all_providers="Tous les fournisseurs",
+
+        # Fetched model manager dialog
+        fetched_models_title="Modèles récupérés — {0}",
+        no_fetched_models="Aucun modèle récupéré pour ce fournisseur.",
+        fetched_models_close="Fermer",
+        fetched_models_remove="Supprimer",
+
         fetch_error_invalid_key="Clé API invalide — veuillez vérifier votre clé et réessayer.",
         fetch_error_access_denied="Accès refusé ({0}) — votre clé n'a peut-être pas la permission de lister les modèles.",
         fetch_error_not_found="Point de terminaison des modèles introuvable ({0}) — vérifiez l'URL de l'API.",

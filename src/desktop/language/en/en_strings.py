@@ -455,8 +455,26 @@ def get_english_strings() -> LanguageStrings:
         ollama_pull_not_running="Could not connect to Ollama — is it running?",
         ollama_pull_error="Pull failed: {0}",
         ollama_update_local_models="Update Local Models",
+        update_models="Update Models",
+        remove_fetched_models="Remove Fetched Models…",
+        fetching_models="Fetching…",
+        unknown_provider="Unknown provider.",
+        fetch_added_models="Added {0} new model(s).",
+        fetch_already_up_to_date="List already up to date.",
+        ollama_no_installed_models="No installed models found.",
+        ollama_added_models="Added {0} model(s).",
+        ollama_already_up_to_date="Local model list already up to date.",
 
-        # Fetch-models errors
+        # Settings dialog - AI model page
+        settings_provider="Provider",
+        settings_all_providers="All Providers",
+
+        # Fetched model manager dialog
+        fetched_models_title="Fetched Models — {0}",
+        no_fetched_models="No fetched models for this provider.",
+        fetched_models_close="Close",
+        fetched_models_remove="Remove",
+
         fetch_error_invalid_key="Invalid API key — please check your key and try again.",
         fetch_error_access_denied="Access denied ({0}) — your key may not have model-list permission.",
         fetch_error_not_found="Models endpoint not found ({0}) — check the API URL.",

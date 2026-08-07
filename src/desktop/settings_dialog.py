@@ -117,6 +117,7 @@ class SettingsDialog(QDialog):
         # Map section id -> (list item, stack page widget)
         self._section_items: dict[str, QListWidgetItem] = {}
         self._section_pages: dict[str, QWidget] = {}
+        self._nav_group_items: list[tuple[QListWidgetItem, str]] = []
 
         self._display_heading: SettingsPageHeading
         self._language_combo: SettingsCombo
@@ -150,6 +151,7 @@ class SettingsDialog(QDialog):
 
         self._editor_heading: SettingsPageHeading
         self._editor_tabs_section: SettingsSection
+        self._editor_backup_section: SettingsSection
         self._soft_tabs_check: SettingsSwitch
         self._tab_size_spin: SettingsSpinBox
         self._auto_backup_check: SettingsSwitch
@@ -186,7 +188,7 @@ class SettingsDialog(QDialog):
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # --- Splitter: nav list on left, content stack on right ---
+        # Splitter: nav list on left, content stack on right
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
         self._splitter.setHandleWidth(1)
         self._splitter.setChildrenCollapsible(False)
@@ -248,19 +250,19 @@ class SettingsDialog(QDialog):
         self.setLayout(main_layout)
 
         # Build nav groups and section pages
-        self._add_nav_group(strings.settings_all_mindspaces)
+        self._add_nav_group(strings.settings_all_mindspaces, "settings_all_mindspaces")
         self._build_display_page()
         self._build_file_access_page()
         self._build_ai_backends_page()
 
-        self._mindspace_group_item = self._add_nav_group(strings.settings_this_mindspace)
+        self._add_nav_group(strings.settings_this_mindspace, "settings_this_mindspace")
         self._build_ai_model_page()
         self._build_tools_page()
         self._build_editor_page()
         self._build_diff_page()
         self._build_terminal_page()
 
-    def _add_nav_group(self, label: str) -> QListWidgetItem:
+    def _add_nav_group(self, label: str, string_key: str) -> None:
         """Add a non-selectable group header to the nav list."""
         item = QListWidgetItem(label)
         item.setFlags(Qt.ItemFlag.NoItemFlags)
@@ -269,7 +271,7 @@ class SettingsDialog(QDialog):
         font.setBold(True)
         item.setFont(font)
         self._nav_list.addItem(item)
-        return item
+        self._nav_group_items.append((item, string_key))
 
     def _add_nav_section(self, section_id: str, label: str) -> QListWidgetItem:
         """Add a selectable section item to the nav list."""
@@ -419,7 +421,7 @@ class SettingsDialog(QDialog):
             accordion.add_content(fetch_row)
             fetch_row.button().setEnabled(False)
 
-            manage_row = SettingsActionRow("Remove Fetched Models…")
+            manage_row = SettingsActionRow(strings.remove_fetched_models)
             accordion.add_content(manage_row)
             manage_row.button().setEnabled(False)
 
@@ -486,7 +488,7 @@ class SettingsDialog(QDialog):
         self._ai_model_heading = SettingsFactory.create_page_heading(strings.model_settings)
         container.add_setting(self._ai_model_heading)
 
-        self._model_filter_combo = SettingsFactory.create_combo("Provider")
+        self._model_filter_combo = SettingsFactory.create_combo(strings.settings_provider)
         container.add_setting(self._model_filter_combo)
 
         self._model_combo = SettingsFactory.create_combo(strings.settings_model_label)
@@ -563,6 +565,7 @@ class SettingsDialog(QDialog):
 
         backup_section = SettingsFactory.create_section(strings.backup_settings)
         container.add_setting(backup_section)
+        self._editor_backup_section = backup_section
 
         self._auto_backup_check = SettingsFactory.create_switch(strings.auto_backup)
         container.add_setting(self._auto_backup_check)
@@ -961,12 +964,13 @@ class SettingsDialog(QDialog):
 
     def _populate_model_filter_combo(self, ai_backends: dict) -> None:
         """Populate the provider filter combo with all providers that have models."""
+        strings = self._language_manager.strings()
         provider_names = self._get_provider_display_names()
         providers_with_models = set(
             provider
             for (_, provider) in AIConversationSettings.iter_models_by_backends(ai_backends)
         )
-        items: list[tuple] = [("All Providers", None)]
+        items: list[tuple] = [(strings.settings_all_providers, None)]
         for provider_id, display in provider_names.items():
             if provider_id in providers_with_models:
                 items.append((display, provider_id))
@@ -1081,17 +1085,18 @@ class SettingsDialog(QDialog):
 
     def _on_fetch_models_clicked(self, backend_id: str) -> None:
         """Kick off an async model-list fetch for the given backend."""
+        strings = self._language_manager.strings()
         controls = self._ai_backend_controls[backend_id]
         fetch_row = cast(SettingsActionRow, controls["fetch_row"])
         fetch_row.button().setEnabled(False)
-        fetch_row.set_status("Fetching…")  # clears any previous error colour
+        fetch_row.set_status(strings.fetching_models)  # clears any previous error colour
 
         api_key = cast(SettingsTextField, controls["key"]).get_value().strip()
         url = cast(SettingsTextField, controls["url"]).get_value().strip()
 
         backend_class = self._ai_manager.get_backend_class(backend_id)
         if backend_class is None:
-            fetch_row.set_status("Unknown provider.")
+            fetch_row.set_status(strings.unknown_provider)
             return
 
         api_url = url or self._ai_manager.get_default_url(backend_id)
@@ -1118,10 +1123,10 @@ class SettingsDialog(QDialog):
                     )
                     if newly_added:
                         self._refresh_model_combo()
-                        fetch_row.set_success(f"Added {len(newly_added)} new model(s).")
+                        fetch_row.set_success(strings.fetch_added_models.format(len(newly_added)))
 
                     else:
-                        fetch_row.set_status("List already up to date.")
+                        fetch_row.set_status(strings.fetch_already_up_to_date)
 
             finally:
                 self._update_fetch_button_state(backend_id)
@@ -1145,8 +1150,9 @@ class SettingsDialog(QDialog):
         self, model_ids: list[str], fetch_row: SettingsActionRow, backend_id: str
     ) -> None:
         """Register installed Ollama models returned by /api/tags."""
+        strings = self._language_manager.strings()
         if not model_ids:
-            fetch_row.set_status("No installed models found.")
+            fetch_row.set_status(strings.ollama_no_installed_models)
             return
 
         newly_added, _ = AIConversationSettings.register_fetched_models(
@@ -1158,10 +1164,10 @@ class SettingsDialog(QDialog):
         self._refresh_model_combo()
         self._update_manage_button_state(backend_id)
         if newly_added:
-            fetch_row.set_success(f"Added {len(newly_added)} model(s).")
+            fetch_row.set_success(strings.ollama_added_models.format(len(newly_added)))
 
         else:
-            fetch_row.set_status("Local model list already up to date.")
+            fetch_row.set_status(strings.ollama_already_up_to_date)
 
     def _on_auto_backup_changed(self) -> None:
         """Enable or disable backup interval spin based on auto backup switch."""
@@ -1266,12 +1272,8 @@ class SettingsDialog(QDialog):
         self.cancel_button.setText(strings.cancel)
 
         # Update nav group labels (non-selectable items)
-        for i in range(self._nav_list.count()):
-            item = self._nav_list.item(i)
-            section_id = item.data(Qt.ItemDataRole.UserRole)
-            if section_id is None:
-                # Group header — identify by position
-                pass  # Rebuilt on next open; labels are set at build time
+        for item, string_key in self._nav_group_items:
+            item.setText(getattr(strings, string_key))
 
         # Update section nav labels
         label_map = {
@@ -1346,9 +1348,18 @@ class SettingsDialog(QDialog):
             cast(SettingsSwitch, controls["enable"]).set_label(strings.enable_backend)
             cast(SettingsTextField, controls["key"]).set_label(strings.api_key)
             cast(SettingsTextField, controls["url"]).set_label(strings.api_url)
+            is_ollama = backend_id in ("ollama", "ollama-cloud")
+            fetch_label = strings.ollama_update_local_models if is_ollama else strings.update_models
+            cast(SettingsActionRow, controls["fetch_row"]).set_button_text(fetch_label)
+            cast(SettingsActionRow, controls["manage_row"]).set_button_text(strings.remove_fetched_models)
+            pull_name_field = cast(SettingsTextField | None, controls["pull_name"])
+            pull_row = cast(SettingsActionRow | None, controls["pull_row"])
+            if pull_name_field is not None and pull_row is not None:
+                pull_name_field.set_label(strings.ollama_pull_label)
+                pull_row.set_button_text(strings.ollama_pull_button)
 
         # Update AI Model page controls
-        self._model_filter_combo.set_label("Provider")
+        self._model_filter_combo.set_label(strings.settings_provider)
         self._model_combo.set_label(strings.settings_model_label)
         self._temp_spin.set_label(strings.settings_temp_label)
         key = self._model_combo.get_value()
@@ -1374,6 +1385,7 @@ class SettingsDialog(QDialog):
         # Update Backup page controls
         self._auto_backup_check.set_label(strings.auto_backup)
         self._backup_interval_spin.set_label(strings.backup_interval)
+        self._editor_backup_section.set_label(strings.backup_settings)
 
         # Update Terminal page controls
         self._terminal_fixed_width_check.set_label(strings.terminal_fixed_width_enabled)
@@ -1508,11 +1520,14 @@ class SettingsDialog(QDialog):
 class _FetchedModelManagerDialog(QDialog):
     """Dialog for viewing and permanently removing fetched (non-built-in) models."""
 
+    _language_manager = LanguageManager()
+
     def __init__(
         self, model_keys: list[tuple], backend_id: str, provider_label: str, parent: QWidget | None = None
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle(f"Fetched Models — {provider_label}")
+        strings = self._language_manager.strings()
+        self.setWindowTitle(strings.fetched_models_title.format(provider_label))
         self.setModal(True)
         self.setMinimumWidth(460)
 
@@ -1532,7 +1547,7 @@ class _FetchedModelManagerDialog(QDialog):
         self._list_layout.setSpacing(2)
         self._list_layout.setContentsMargins(16, 12, 16, 12)
 
-        self._empty_label = QLabel("No fetched models for this provider.")
+        self._empty_label = QLabel(strings.no_fetched_models)
         self._list_layout.addWidget(self._empty_label)
         self._list_layout.addStretch()
 
@@ -1553,7 +1568,7 @@ class _FetchedModelManagerDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.setContentsMargins(16, 10, 16, 10)
         btn_layout.addStretch()
-        close_btn = QPushButton("Close")
+        close_btn = QPushButton(strings.fetched_models_close)
         close_btn.setMinimumWidth(90)
         close_btn.setMinimumHeight(36)
         close_btn.setProperty("recommended", True)
@@ -1578,7 +1593,7 @@ class _FetchedModelManagerDialog(QDialog):
         label.setSizePolicy(label.sizePolicy().horizontalPolicy(), label.sizePolicy().verticalPolicy())
         row_layout.addWidget(label, 1)
 
-        remove_btn = QPushButton("Remove")
+        remove_btn = QPushButton(self._language_manager.strings().fetched_models_remove)
         remove_btn.setFixedWidth(80)
         remove_btn.setMinimumHeight(28)
         remove_btn.clicked.connect(lambda _checked=False, mid=model_id: self._remove_model(mid, self._backend_id))

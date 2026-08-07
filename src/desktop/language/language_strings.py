@@ -430,3 +430,24 @@ class LanguageStrings:
     ollama_pull_not_running: str
     ollama_pull_error: str
     ollama_update_local_models: str
+
+    # Settings dialog - AI model page
+    settings_provider: str
+    settings_all_providers: str
+
+    # Settings dialog - AI backends page
+    update_models: str
+    remove_fetched_models: str
+    fetching_models: str
+    unknown_provider: str
+    fetch_added_models: str  # Format: "Added {0} new model(s)."
+    fetch_already_up_to_date: str
+    ollama_no_installed_models: str
+    ollama_added_models: str  # Format: "Added {0} model(s)."
+    ollama_already_up_to_date: str
+
+    # Fetched model manager dialog
+    fetched_models_title: str  # Format: "Fetched Models — {0}"
+    no_fetched_models: str
+    fetched_models_close: str
+    fetched_models_remove: str
