@@ -3,11 +3,13 @@
 import asyncio
 import json
 import logging
+import threading
 from pathlib import Path
 from typing import Any
 
 from menai import Menai, MenaiError, MenaiCancelledException
 from menai import MenaiTokenError, MenaiASTBuildError, MenaiCodegenError
+
 from ai_tool import (
     AITool, AIToolCall, AIToolDefinition, AIToolParameter, AIToolResult,
     AIToolExecutionError, AIToolTimeoutError, AIToolAuthorizationCallback,
@@ -24,13 +26,19 @@ class MenaiAITool(AITool):
         """
         Initialize the Menai tool.
 
+        A fresh Menai instance is created for each evaluation to ensure thread
+        safety when multiple conversations use the tool concurrently.  Each
+        instance gets its own VM (with its own cancel flag) and its own module
+        cache, preventing cross-talk between concurrent evaluations.
+
         Args:
-            mindspace: The active mindspace, used for audit logging
+            mindspace: Set later via set_mindspace
         """
-        self._tool = Menai()
         self._logger = logging.getLogger("MenaiAITool")
-        self._module_path: list[str] = []
+        self._expanded_module_path: list[str] = []
         self._mindspace: Mindspace | None = None
+        self._active_instances: dict[Menai, Any] = {}
+        self._instances_lock = threading.Lock()
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -88,51 +96,58 @@ class MenaiAITool(AITool):
         """
         Update the module search path.
 
-        This should be called when the base directory of the project changes, to
-        ensure modules are loaded from the correct location. The module cache will
-        be automatically cleared.
+        This stores the expanded module path for use when creating per-evaluation
+        Menai instances.
 
         Args:
             module_path: List of directories to search for modules.
                         Paths will be expanded and resolved.
         """
-
         # Expand path
         expanded_path = []
         for path in module_path:
             expanded = str(Path(path).expanduser().resolve())
             expanded_path.append(expanded)
 
-        # Update the underlying Menai instance (this also clears the cache)
-        self._tool.set_module_path(expanded_path)
-
-        # Update our own reference
-        self._module_path = module_path
+        self._expanded_module_path = expanded_path
 
     def module_path(self) -> list[str]:
         """
-        Get the current module search path.
+        Get the current expanded module search path.
 
         Returns:
-            List of directories in the module search path
+            List of expanded directories in the module search path
         """
-        return self._module_path
+        return self._expanded_module_path
 
-    def cancel(self) -> None:
+    def cancel(self, requester_ref: Any = None) -> None:
         """
         Cancel any ongoing Menai evaluation.
 
-        This signals the VM to stop execution at the next cancellation check point
-        (typically within 1ms for CPU-intensive computations).
+        When requester_ref is provided, only evaluations belonging to that
+        conversation are cancelled.  When None, all active evaluations are
+        cancelled.
+
+        Signals all active per-evaluation VM instances to stop execution at the next
+        cancellation check point (typically within 1ms for CPU-intensive computations).
+        Each evaluation runs on its own Menai instance with its own cancel flag, so
+        only the evaluations active at the time of this call are affected.
 
         This method is thread-safe and can be called while an evaluation is running
         in a thread pool.
         """
-        self._tool.vm.cancel()
+        with self._instances_lock:
+            for instance, ref in self._active_instances.items():
+                if requester_ref is None or ref is requester_ref:
+                    instance.vm.cancel()
 
-    def _evaluate_expression_sync(self, expression: str) -> str:
+    def _evaluate_expression_sync(self, expression: str, requester_ref: Any = None) -> str:
         """
         Synchronous helper for expression evaluation.
+
+        Creates a fresh Menai instance for this evaluation, ensuring complete
+        isolation of VM state (cancel flag, module cache) from concurrent
+        evaluations in other conversations.
 
         Args:
             expression: Menai expression to evaluate
@@ -143,8 +158,16 @@ class MenaiAITool(AITool):
         Raises:
             Various Menai-related exceptions
         """
-        result = self._tool.evaluate_and_format(expression)
-        return result
+        tool = Menai(self._expanded_module_path)
+        with self._instances_lock:
+            self._active_instances[tool] = requester_ref
+
+        try:
+            return tool.evaluate_and_format(expression)
+
+        finally:
+            with self._instances_lock:
+                self._active_instances.pop(tool, None)
 
     def get_brief_description(self) -> str:
         """Get brief one-line description for system prompt."""
@@ -629,7 +652,7 @@ Syntax: (operator arg1 arg2 ...)
             # We use a Task so we can cancel the thread execution via the VM's cancel() method
             # Create a task for the thread execution
             task = asyncio.create_task(
-                asyncio.to_thread(self._evaluate_expression_sync, expression)
+                asyncio.to_thread(self._evaluate_expression_sync, expression, requester_ref)
             )
 
             try:
@@ -643,7 +666,7 @@ Syntax: (operator arg1 arg2 ...)
                 # On timeout, signal the VM to cancel execution
                 # This will cause the VM to raise MenaiCancelledException at the next check point
                 self._logger.warning("Menai expression evaluation timed out, requesting cancellation: %s", expression)
-                self._tool.vm.cancel()
+                self.cancel(requester_ref)
 
                 # The task is already cancelled by wait_for, so we don't need to wait for it again
                 # Just signal the VM to cancel and let the thread finish on its own

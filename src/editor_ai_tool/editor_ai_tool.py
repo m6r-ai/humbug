@@ -1,5 +1,6 @@
 import asyncio
 import difflib
+import threading
 import json
 import logging
 from typing import Any, cast
@@ -40,7 +41,8 @@ class EditorAITool(AITool):
         """
         self._mindspace = mindspace
         self._logger = logging.getLogger("EditorAITool")
-        self._menai = Menai()
+        self._active_menai: set[Menai] = set()
+        self._menai_lock = threading.Lock()
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -711,6 +713,7 @@ class EditorAITool(AITool):
 
     def _transform_sync(
         self,
+        menai: Menai,
         content: str,
         expression: str
     ) -> str:
@@ -718,6 +721,7 @@ class EditorAITool(AITool):
         Apply a Menai transform to buffer content synchronously.
 
         Args:
+            menai: A fresh Menai instance for this evaluation (thread-safe).
             content: The current buffer text.
             expression: Menai expression referencing 'input-text' and 'input-lines'.
 
@@ -734,7 +738,7 @@ class EditorAITool(AITool):
             'input-lines': MenaiList(tuple(MenaiString(line) for line in lines)),
         }
 
-        raw_result = self._menai.evaluate_raw_with_bindings(expression, bindings)
+        raw_result = menai.evaluate_raw_with_bindings(expression, bindings)
 
         if isinstance(raw_result, MenaiString):
             new_content = raw_result.value
@@ -794,26 +798,35 @@ class EditorAITool(AITool):
         original_content = context.get_text_range(None, None)
 
         try:
-            task = asyncio.create_task(
-                asyncio.to_thread(self._transform_sync, original_content, program)
-            )
+            menai = Menai()
+            with self._menai_lock:
+                self._active_menai.add(menai)
+
             try:
-                new_content = await asyncio.wait_for(task, timeout=30.0)
+                task = asyncio.create_task(
+                    asyncio.to_thread(self._transform_sync, menai, original_content, program)
+                )
+                try:
+                    new_content = await asyncio.wait_for(task, timeout=30.0)
 
-            except asyncio.TimeoutError:
-                self._logger.warning("Menai transform timed out for tab '%s'", context_id)
-                self._menai.vm.cancel()
-                if not task.done():
-                    try:
-                        await asyncio.wait_for(task, timeout=1.0)
+                except asyncio.TimeoutError:
+                    self._logger.warning("Menai transform timed out for tab '%s'", context_id)
+                    menai.vm.cancel()
+                    if not task.done():
+                        try:
+                            await asyncio.wait_for(task, timeout=1.0)
 
-                    except (asyncio.TimeoutError, asyncio.CancelledError, MenaiCancelledException):
-                        pass
+                        except (asyncio.TimeoutError, asyncio.CancelledError, MenaiCancelledException):
+                            pass
 
-                    except Exception as e:
-                        self._logger.debug("Exception during transform cancellation: %s", e)
+                        except Exception as e:
+                            self._logger.debug("Exception during transform cancellation: %s", e)
 
-                raise AIToolTimeoutError("Menai transform timed out", 30.0)  # pylint: disable=raise-missing-from
+                    raise AIToolTimeoutError("Menai transform timed out", 30.0)  # pylint: disable=raise-missing-from
+
+            finally:
+                with self._menai_lock:
+                    self._active_menai.discard(menai)
 
         except AIToolTimeoutError:
             raise

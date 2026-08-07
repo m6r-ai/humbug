@@ -25,6 +25,7 @@ Bug fixes:
 - Fixed a problem with parsing multi-line bold/italics in markdown processing.
 - Resolved a minor label problem with Ollama model updates.
 - Resolved problems with the mindspace settings dialog where text would not correctly update on a language change.
+- Instantiate a new Menai VM per AI tool use to avoid threading race conditions.
 
 ## v53 (2026-07-12)
 

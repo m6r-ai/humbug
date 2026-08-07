@@ -74,9 +74,14 @@ class AITool(ABC):
             # Ignore errors during context extraction
             return None
 
-    def cancel(self) -> None:
+    def cancel(self, requester_ref: Any = None) -> None:
         """
         Request cancellation of any ongoing operations.
+
+        Args:
+            requester_ref: Optional reference to the requesting conversation.
+                When provided, only operations belonging to that conversation
+                are cancelled.  When None, all operations are cancelled.
 
         This is an optional method that tools can override if they support
         cancellation. The default implementation does nothing.
