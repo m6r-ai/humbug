@@ -410,9 +410,11 @@ class SettingsDialog(QDialog):
             is_ollama = backend_id in ("ollama", "ollama-cloud")
 
             fetch_label = strings.ollama_update_local_models if is_ollama else "Update Models"
-            fetch_row = SettingsActionRow(fetch_label)
+            fetch_row = SettingsActionRow("Test Connection", second_button_text=fetch_label)
             accordion.add_content(fetch_row)
             fetch_row.button().setEnabled(False)
+            fetch_row.second_button().setEnabled(False)
+            test_row = fetch_row
 
             manage_row = SettingsActionRow("Remove Fetched Models…")
             accordion.add_content(manage_row)
@@ -438,6 +440,7 @@ class SettingsDialog(QDialog):
                 "key": api_key_field,
                 "url": url_field,
                 "title": accordion,
+                "test_row": test_row,
                 "fetch_row": fetch_row,
                 "manage_row": manage_row,
                 "pull_name": pull_name_field,
@@ -450,7 +453,10 @@ class SettingsDialog(QDialog):
             api_key_field.value_changed.connect(
                 lambda _v=None, bid=backend_id: self._update_fetch_button_state(bid)
             )
-            fetch_row.button().clicked.connect(
+            test_row.button().clicked.connect(
+                lambda _checked=False, bid=backend_id: self._on_test_connection_clicked(bid)
+            )
+            fetch_row.second_button().clicked.connect(
                 lambda _checked=False, bid=backend_id: self._on_fetch_models_clicked(bid)
             )
             manage_row.button().clicked.connect(
@@ -1004,13 +1010,14 @@ class SettingsDialog(QDialog):
         self._populate_model_combo(ai_backends, filter_provider)
 
     def _update_fetch_button_state(self, backend_id: str) -> None:
-        """Enable "Update Models" only when backend is on and (for non-Ollama) has a key."""
+        """Enable "Test Connection"/"Update Models" only when backend is on and (for non-Ollama) has a key."""
         controls = self._ai_backend_controls[backend_id]
         enabled = cast(SettingsSwitch, controls["enable"]).get_value()
         api_key = cast(SettingsTextField, controls["key"]).get_value().strip()
         needs_key = backend_id not in ("ollama", "vllm")
         can_fetch = enabled and (api_key or not needs_key)
-        cast(SettingsActionRow, controls["fetch_row"]).button().setEnabled(bool(can_fetch))
+        cast(SettingsActionRow, controls["test_row"]).button().setEnabled(bool(can_fetch))
+        cast(SettingsActionRow, controls["fetch_row"]).second_button().setEnabled(bool(can_fetch))
         self._update_manage_button_state(backend_id)
 
     def _update_manage_button_state(self, backend_id: str) -> None:
@@ -1074,11 +1081,45 @@ class SettingsDialog(QDialog):
 
         asyncio.get_event_loop().create_task(_do_pull())
 
+    def _on_test_connection_clicked(self, backend_id: str) -> None:
+        """Verify a backend's URL and API key by requesting its model list."""
+        controls = self._ai_backend_controls[backend_id]
+        test_row = cast(SettingsActionRow, controls["test_row"])
+        test_row.button().setEnabled(False)
+        test_row.set_status("Testing connection…")
+
+        api_key = cast(SettingsTextField, controls["key"]).get_value().strip()
+        url = cast(SettingsTextField, controls["url"]).get_value().strip()
+
+        backend_class = self._ai_manager.get_backend_class(backend_id)
+        if backend_class is None:
+            test_row.set_error("Unknown provider.")
+            return
+
+        api_url = url or self._ai_manager.get_default_url(backend_id)
+        backend = backend_class(api_key=api_key, api_url=api_url)
+
+        async def _do_test() -> None:
+            try:
+                await backend.fetch_models()
+
+            except Exception as exc:  # pylint: disable=broad-except
+                test_row.set_error(_fetch_error_message(exc, backend_id))
+                self._logger.warning("test_connection failed for %s: %s", backend_id, exc)
+
+            else:
+                test_row.set_success("Connection successful.")
+
+            finally:
+                self._update_fetch_button_state(backend_id)
+
+        asyncio.get_event_loop().create_task(_do_test())
+
     def _on_fetch_models_clicked(self, backend_id: str) -> None:
         """Kick off an async model-list fetch for the given backend."""
         controls = self._ai_backend_controls[backend_id]
         fetch_row = cast(SettingsActionRow, controls["fetch_row"])
-        fetch_row.button().setEnabled(False)
+        fetch_row.second_button().setEnabled(False)
         fetch_row.set_status("Fetching…")  # clears any previous error colour
 
         api_key = cast(SettingsTextField, controls["key"]).get_value().strip()
