@@ -12,6 +12,7 @@ from editor_context.editor_context import EditorContext
 
 from desktop.editor_tab.editor_goto_line_dialog import EditorGotoLineDialog
 from desktop.language.language_manager import LanguageManager
+from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
 from desktop.color_role import ColorRole
@@ -172,9 +173,23 @@ class EditorTab(TabBase):
         self._find_widget.set_match_status(new_current, new_total, new_truncated)
 
     def _on_file_saved(self, path: str) -> None:
-        """Handle file being saved."""
+        """
+        Handle file being saved.
+
+        If the path changed (e.g. via Save As on an untitled file), sync the
+        context registry so that get_by_path_and_type finds this tab under the
+        new path rather than the old one.
+        """
+        old_path = self._path
         self.set_path(path)
         self._update_tab_label()
+
+        if path != old_path:
+            mindspace_manager = MindspaceManager()
+            if mindspace_manager.has_mindspace():
+                mindspace_manager.mindspace().contexts().update(
+                    self._tab_id, path=path, title=os.path.basename(path),
+                )
 
     def _on_language_changed(self) -> None:
         """Update language-specific elements."""
