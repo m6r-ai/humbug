@@ -12,6 +12,8 @@ New features:
   with recently used mindspaces for quick switching, plus "Open Mindspace..." and "New Mindspace..." actions.
 - Added an "Open Recent Mindspace" submenu to the Mindspace menu in the main menu bar, mirroring the sidebar's
   recent-mindspaces quick-switch feature.
+- Added Kimi K3 support to Ollama cloud and removed Kimi K2.6 and Kimi K2.7.
+- Added Claude Opus 5, removed Claude Opus 4.8. and Claude Sonnet 4.6.
 
 Bug fixes:
 
@@ -21,6 +23,8 @@ Bug fixes:
   garbled editor buffers.
 - Fixed a problem with `find_files` and wildcard access outside the current mindspace.
 - Fixed a problem with parsing multi-line bold/italics in markdown processing.
+- Resolved a minor label problem with Ollama model updates.
+- Resolved problems with the mindspace settings dialog where text would not correctly update on a language change.
 
 ## v53 (2026-07-12)
 

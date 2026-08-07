@@ -33,7 +33,7 @@ class AIConversationSettings:
             provider="anthropic",
             display_name="Claude Sonnet 5",
             context_window=1000000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
+            max_output_tokens=64000,  # This is actually 128k but that's too much
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
@@ -47,30 +47,12 @@ class AIConversationSettings:
             ],
             adaptive_thinking_only=True,
         ),
-        ("claude-sonnet-4-6", "anthropic"): AIModel(
-            name="claude-sonnet-4-6",
+        ("claude-opus-5", "anthropic"): AIModel(
+            name="claude-opus-5",
             provider="anthropic",
-            display_name="Claude Sonnet 4.6",
+            display_name="Claude Opus 5",
             context_window=1000000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.LOW,
-                AIReasoningEffort.MEDIUM,
-                AIReasoningEffort.HIGH,
-                AIReasoningEffort.MAX
-            ],
-            temperature_incompatible_efforts={AIReasoningEffort.HIGH},
-        ),
-        ("claude-opus-4-8", "anthropic"): AIModel(
-            name="claude-opus-4-8",
-            provider="anthropic",
-            display_name="Claude Opus 4.8",
-            context_window=1000000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
+            max_output_tokens=64000,  # This is actually 128k but that's too much
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
@@ -89,7 +71,7 @@ class AIConversationSettings:
             provider="anthropic",
             display_name="Claude Fable 5",
             context_window=1000000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
+            max_output_tokens=64000,  # This is actually 128k but that's too much
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
@@ -329,31 +311,20 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH
             ],
         ),
-        ("kimi-k2.7-code:cloud", "ollama-cloud"): AIModel(
-            name="kimi-k2.7-code:cloud",
+        ("kimi-k3:cloud", "ollama-cloud"): AIModel(
+            name="kimi-k3:cloud",
             provider="ollama-cloud",
-            display_name="Kimi K2.7 Code",
-            context_window=262144,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.HIGH
-            ],
-        ),
-        ("kimi-k2.6:cloud", "ollama-cloud"): AIModel(
-            name="kimi-k2.6:cloud",
-            provider="ollama-cloud",
-            display_name="Kimi K2.6",
-            context_window=262144,
+            display_name="Kimi K3",
+            context_window=1000000,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
             ],
         ),
         ("minimax-m3:cloud", "ollama-cloud"): AIModel(
