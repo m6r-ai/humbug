@@ -442,6 +442,9 @@ class LanguageStrings:
     unknown_provider: str
     fetch_added_models: str  # Format: "Added {0} new model(s)."
     fetch_already_up_to_date: str
+    test_connection: str
+    testing_connection: str
+    connection_successful: str
     ollama_no_installed_models: str
     ollama_added_models: str  # Format: "Added {0} model(s)."
     ollama_already_up_to_date: str

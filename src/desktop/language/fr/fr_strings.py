@@ -464,6 +464,9 @@ def get_french_strings() -> LanguageStrings:
         ollama_no_installed_models="Aucun modèle installé trouvé.",
         ollama_added_models="{0} modèle(s) ajouté(s).",
         ollama_already_up_to_date="Liste des modèles locaux déjà à jour.",
+        test_connection="Tester la connexion",
+        testing_connection="Test de connexion en cours…",
+        connection_successful="Connexion réussie.",
 
         # Settings dialog - AI model page
         settings_provider="Fournisseur",
