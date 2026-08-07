@@ -13,6 +13,7 @@ New features:
 - Added an "Open Recent Mindspace" submenu to the Mindspace menu in the main menu bar, mirroring the sidebar's
   recent-mindspaces quick-switch feature.
 - Added Kimi K3 support to Ollama cloud and removed Kimi K2.6 and Kimi K2.7.
+- Added Claude Opus 5, removed Claude Opus 4.8. and Claude Sonnet 4.6.
 
 Bug fixes:
 
