@@ -69,6 +69,15 @@ class AIBackend(ABC):
         """Fetch available model IDs from the provider API. Returns empty list by default."""
         return []
 
+    async def test_connection(self) -> None:
+        """
+        Verify that the configured URL/API key can reach the provider.
+
+        Default implementation reuses fetch_models() since most providers' model-list
+        endpoints require valid credentials. Raises on failure; the return value is unused.
+        """
+        await self.fetch_models()
+
     @abstractmethod
     def _build_request_config(
         self,
