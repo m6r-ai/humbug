@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from enum import Enum, auto
 import logging
+import os.path
 from typing import Any, TypeVar
 import uuid
 
@@ -56,6 +57,26 @@ class ContextRegistry:
         """
         self._callbacks[event].discard(callback)
 
+    @staticmethod
+    def _normalize_path(path: str) -> str:
+        """
+        Normalise a path so that string comparisons are reliable.
+
+        Uses os.path.normpath which collapses redundant separators and
+        resolves '.' and '..' components without resolving symlinks.
+        Empty paths are returned unchanged.
+
+        Args:
+            path: File path to normalise (may be empty).
+
+        Returns:
+            Normalised path, or the empty string if *path* was empty.
+        """
+        if not path:
+            return path
+
+        return os.path.normpath(path)
+
     def open(
         self,
         context_type: str,
@@ -93,7 +114,7 @@ class ContextRegistry:
         info = ContextInfo(
             context_id=context_id,
             context_type=context_type,
-            path=path,
+            path=self._normalize_path(path),
             title=title,
             is_modified=False,
         )
@@ -136,6 +157,9 @@ class ContextRegistry:
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
             return
+
+        if "path" in updates:
+            updates["path"] = self._normalize_path(updates["path"])
 
         self._contexts[context_id] = ContextInfo(
             context_id=info.context_id,
@@ -196,8 +220,9 @@ class ContextRegistry:
         Returns:
             Immutable ContextInfo snapshot, or None if not found.
         """
+        normalized = self._normalize_path(path)
         for info in self._contexts.values():
-            if info.path == path and info.context_type == context_type:
+            if info.path == normalized and info.context_type == context_type:
                 return info
 
         return None
