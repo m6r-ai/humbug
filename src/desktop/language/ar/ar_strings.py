@@ -454,8 +454,26 @@ def get_arabic_strings() -> LanguageStrings:
         ollama_pull_not_running="تعذّر الاتصال بـ Ollama — هل هو قيد التشغيل؟",
         ollama_pull_error="فشل التنزيل: {0}",
         ollama_update_local_models="تحديث النماذج المحلية",
+        update_models="تحديث النماذج",
+        remove_fetched_models="إزالة النماذج المسترجعة…",
+        fetching_models="جارٍ الاسترجاع…",
+        unknown_provider="مزود غير معروف.",
+        fetch_added_models="تمت إضافة {0} نموذج جديد.",
+        fetch_already_up_to_date="القائمة محدّثة بالفعل.",
+        ollama_no_installed_models="لم يتم العثور على نماذج مثبتة.",
+        ollama_added_models="تمت إضافة {0} نموذج.",
+        ollama_already_up_to_date="قائمة النماذج المحلية محدّثة بالفعل.",
 
-        # Fetch-models errors
+        # Settings dialog - AI model page
+        settings_provider="المزود",
+        settings_all_providers="جميع المزودين",
+
+        # Fetched model manager dialog
+        fetched_models_title="النماذج المسترجعة — {0}",
+        no_fetched_models="لا توجد نماذج مسترجعة لهذا المزود.",
+        fetched_models_close="إغلاق",
+        fetched_models_remove="إزالة",
+
         fetch_error_invalid_key="مفتاح API غير صالح — يرجى التحقق من مفتاحك والمحاولة مجدداً.",
         fetch_error_access_denied="تم رفض الوصول ({0}) — قد لا يملك مفتاحك صلاحية عرض قائمة النماذج.",
         fetch_error_not_found="نقطة نهاية النماذج غير موجودة ({0}) — تحقق من عنوان URL للواجهة البرمجية.",

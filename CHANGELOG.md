@@ -21,6 +21,8 @@ Bug fixes:
   garbled editor buffers.
 - Fixed a problem with `find_files` and wildcard access outside the current mindspace.
 - Fixed a problem with parsing multi-line bold/italics in markdown processing.
+- Resolved a minor label problem with Ollama model updates.
+- Resolved problems with the mindspace settings dialog where text would not correctly update on a language change.
 
 ## v53 (2026-07-12)
 
