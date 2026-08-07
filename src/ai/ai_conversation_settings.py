@@ -329,31 +329,20 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH
             ],
         ),
-        ("kimi-k2.7-code:cloud", "ollama-cloud"): AIModel(
-            name="kimi-k2.7-code:cloud",
+        ("kimi-k3:cloud", "ollama-cloud"): AIModel(
+            name="kimi-k3:cloud",
             provider="ollama-cloud",
-            display_name="Kimi K2.7 Code",
-            context_window=262144,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.HIGH
-            ],
-        ),
-        ("kimi-k2.6:cloud", "ollama-cloud"): AIModel(
-            name="kimi-k2.6:cloud",
-            provider="ollama-cloud",
-            display_name="Kimi K2.6",
-            context_window=262144,
+            display_name="Kimi K3",
+            context_window=1000000,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
             ],
         ),
         ("minimax-m3:cloud", "ollama-cloud"): AIModel(

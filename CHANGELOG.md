@@ -12,6 +12,7 @@ New features:
   with recently used mindspaces for quick switching, plus "Open Mindspace..." and "New Mindspace..." actions.
 - Added an "Open Recent Mindspace" submenu to the Mindspace menu in the main menu bar, mirroring the sidebar's
   recent-mindspaces quick-switch feature.
+- Added Kimi K3 support to Ollama cloud and removed Kimi K2.6 and Kimi K2.7.
 
 Bug fixes:
 
