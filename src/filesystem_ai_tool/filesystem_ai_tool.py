@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import shutil
 import tempfile
+import threading
 from typing import Any, cast
 
 from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
@@ -59,7 +60,8 @@ class FileSystemAITool(AITool):
         self._mindspace = mindspace
         self._max_file_size_bytes = max_file_size_mb * 1024 * 1024
         self._logger = logging.getLogger("FileSystemAITool")
-        self._menai = Menai()
+        self._active_menai: set[Menai] = set()
+        self._menai_lock = threading.Lock()
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -2254,6 +2256,7 @@ class FileSystemAITool(AITool):
 
     def _transform_file_sync(
         self,
+        menai: Menai,
         path: Path,
         expression: str,
         encoding: str
@@ -2262,6 +2265,7 @@ class FileSystemAITool(AITool):
         Read a file, run a Menai transform program, return results synchronously.
 
         Args:
+            menai: A fresh Menai instance for this evaluation (thread-safe).
             path: Resolved path to the file.
             expression: Menai expression referencing 'input-text' and 'input-lines'.
             encoding: File encoding to use for reading.
@@ -2288,7 +2292,7 @@ class FileSystemAITool(AITool):
             'input-lines': MenaiList(tuple(MenaiString(line) for line in lines)),
         }
 
-        raw_result = self._menai.evaluate_raw_with_bindings(expression, bindings)
+        raw_result = menai.evaluate_raw_with_bindings(expression, bindings)
 
         if isinstance(raw_result, MenaiString):
 
@@ -2360,29 +2364,38 @@ class FileSystemAITool(AITool):
             raise AIToolExecutionError("'program' must not be empty")
 
         try:
-            task = asyncio.create_task(
-                asyncio.to_thread(self._transform_file_sync, path, program, encoding)
-            )
+            menai = Menai()
+            with self._menai_lock:
+                self._active_menai.add(menai)
+
             try:
-                original_content, new_content = await asyncio.wait_for(
-                    task, timeout=30.0
-
+                task = asyncio.create_task(
+                    asyncio.to_thread(self._transform_file_sync, menai, path, program, encoding)
                 )
+                try:
+                    original_content, new_content = await asyncio.wait_for(
+                        task, timeout=30.0
 
-            except asyncio.TimeoutError:
-                self._logger.warning("Menai transform timed out for '%s'", display_path)
-                self._menai.vm.cancel()
-                if not task.done():
-                    try:
-                        await asyncio.wait_for(task, timeout=1.0)
+                    )
 
-                    except (asyncio.TimeoutError, asyncio.CancelledError, MenaiCancelledException):
-                        pass
+                except asyncio.TimeoutError:
+                    self._logger.warning("Menai transform timed out for '%s'", display_path)
+                    menai.vm.cancel()
+                    if not task.done():
+                        try:
+                            await asyncio.wait_for(task, timeout=1.0)
 
-                    except Exception as e:
-                        self._logger.debug("Exception during transform cancellation: %s", e)
+                        except (asyncio.TimeoutError, asyncio.CancelledError, MenaiCancelledException):
+                            pass
 
-                raise AIToolTimeoutError("Menai transform timed out", 30.0)  # pylint: disable=raise-missing-from
+                        except Exception as e:
+                            self._logger.debug("Exception during transform cancellation: %s", e)
+
+                    raise AIToolTimeoutError("Menai transform timed out", 30.0)  # pylint: disable=raise-missing-from
+
+            finally:
+                with self._menai_lock:
+                    self._active_menai.discard(menai)
 
         except AIToolTimeoutError:
             raise

@@ -10,7 +10,7 @@ import pytest
 
 from ai_tool import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError, AIToolTimeoutError
 from menai_ai_tool.menai_ai_tool import MenaiAITool
-from menai import MenaiError
+from menai import Menai, MenaiError
 
 from tests.conftest import MockRequester
 
@@ -152,7 +152,7 @@ class TestMenaiAIToolErrorHandling:
 
     def test_execute_menai_error_wrapping(self, menai_tool, mock_authorization, make_tool_call):
         """Test that MenaiError is properly wrapped."""
-        with patch.object(menai_tool._tool, 'evaluate_and_format') as mock_evaluate:
+        with patch.object(Menai, 'evaluate_and_format') as mock_evaluate:
             mock_evaluate.side_effect = MenaiError("Custom Menai error")
 
             tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer+ 1 2)"})
@@ -190,7 +190,7 @@ class TestMenaiAIToolErrorHandling:
 
     def test_execute_unexpected_error_handling(self, menai_tool, mock_authorization, make_tool_call):
         """Test handling of unexpected errors."""
-        with patch.object(menai_tool._tool, 'evaluate_and_format') as mock_evaluate:
+        with patch.object(Menai, 'evaluate_and_format') as mock_evaluate:
             mock_evaluate.side_effect = RuntimeError("Unexpected error")
 
             tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer+ 1 2)"})
@@ -297,7 +297,7 @@ class TestMenaiAIToolTimeout:
         """Test that timeout is configured correctly."""
         # The timeout should be 10 seconds for Menai (longer than calculator's 5)
         # This is tested indirectly through the timeout error test above
-        assert hasattr(menai_tool, '_tool')
+        assert hasattr(menai_tool, '_evaluate_expression_sync')
 
     def test_timeout_prevents_infinite_loops(self, menai_tool, mock_authorization, make_tool_call):
         """Test that timeout prevents infinite computation."""
@@ -352,25 +352,6 @@ class TestMenaiAIToolModulePath:
         assert len(tool.module_path()) == 1
         assert str(tmp_path) in tool.module_path()[0]
 
-    def test_set_module_path_clears_cache(self, tmp_path):
-        """Test that set_module_path clears the module cache."""
-        # Create a module
-        module_file = tmp_path / "test.menai"
-        module_file.write_text("(dict \"value\" 42)")
-
-        tool = MenaiAITool()
-        tool.set_module_path([str(tmp_path)])
-
-        # Load module to populate cache
-        tool._tool.evaluate('(import "test")')
-        assert "test" in tool._tool.module_cache
-
-        # Change module path
-        tool.set_module_path(["/new/path"])
-
-        # Cache should be cleared
-        assert len(tool._tool.module_cache) == 0
-
     def test_set_module_path_with_multiple_directories(self, tmp_path):
         """Test that set_module_path works with multiple directories."""
         dir1 = tmp_path / "dir1"
@@ -385,17 +366,15 @@ class TestMenaiAIToolModulePath:
         assert any(str(dir1) in path for path in tool.module_path())
         assert any(str(dir2) in path for path in tool.module_path())
 
-    def test_module_path_persists_after_evaluation(self, tmp_path):
+    def test_module_path_persists_after_evaluation(self, tmp_path, mock_authorization, make_tool_call):
         """Test that module path persists after evaluations."""
-        module_file = tmp_path / "test.menai"
-        module_file.write_text("(dict \"value\" 42)")
-
         tool = MenaiAITool()
         tool.set_module_path([str(tmp_path)])
         original_path = tool.module_path().copy()
 
-        # Evaluate something
-        tool._tool.evaluate('(import "test")')
+        # Evaluate something via the tool
+        tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer+ 1 2)"})
+        asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
 
         # Path should be unchanged
         assert tool.module_path() == original_path

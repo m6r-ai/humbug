@@ -1086,7 +1086,7 @@ class AIConversation:
             tool = self._tool_manager.get_tool(tool_name)
             if tool:
                 try:
-                    tool.cancel()
+                    tool.cancel(self)
 
                 except Exception:
                     self._logger.exception("Error cancelling tool %s", tool_name)
