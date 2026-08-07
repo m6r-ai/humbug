@@ -407,9 +407,14 @@ class SettingsDialog(QDialog):
             url_field = SettingsFactory.create_text_field(url_label, placeholder=url_placeholder)
             accordion.add_content(url_field)
 
-            is_ollama = backend_id in ("ollama", "ollama-cloud")
+            # Local Ollama runs on the user's own machine: it needs no API key, its
+            # host/port should be editable before the backend is enabled, and its
+            # "fetch" action pulls the list of models already installed locally.
+            # Ollama Cloud is a hosted service like any other cloud provider and
+            # must not be treated the same way.
+            is_local_ollama = backend_id == "ollama"
 
-            fetch_label = strings.ollama_update_local_models if is_ollama else "Update Models"
+            fetch_label = strings.ollama_update_local_models if is_local_ollama else "Update Models"
             fetch_row = SettingsActionRow(fetch_label)
             accordion.add_content(fetch_row)
             fetch_row.button().setEnabled(False)
@@ -418,7 +423,7 @@ class SettingsDialog(QDialog):
             accordion.add_content(manage_row)
             manage_row.button().setEnabled(False)
 
-            if is_ollama:
+            if is_local_ollama:
                 pull_name_field = SettingsFactory.create_text_field(
                     strings.ollama_pull_label,
                     placeholder=strings.ollama_pull_placeholder,
@@ -456,7 +461,7 @@ class SettingsDialog(QDialog):
             manage_row.button().clicked.connect(
                 lambda _checked=False, bid=backend_id: self._on_manage_models_clicked(bid)
             )
-            if is_ollama and pull_name_field and pull_row:
+            if is_local_ollama and pull_name_field and pull_row:
                 pull_name_field.value_changed.connect(
                     lambda _v=None, bid=backend_id: self._update_pull_button_state(bid)
                 )
@@ -777,7 +782,7 @@ class SettingsDialog(QDialog):
             cast(SettingsTextField, controls["url"]).set_value(backend.url)
             cast(SettingsTextField, controls["key"]).set_enabled(backend.enabled)
             cast(SettingsTextField, controls["url"]).set_enabled(
-                backend.enabled or backend_id in ("ollama", "ollama-cloud")
+                backend.enabled or backend_id == "ollama"
             )
             self._update_fetch_button_state(backend_id)
 
@@ -889,8 +894,8 @@ class SettingsDialog(QDialog):
         controls = self._ai_backend_controls[backend_id]
         enabled = cast(SettingsSwitch, controls["enable"]).get_value()
         cast(SettingsTextField, controls["key"]).set_enabled(enabled)
-        # Ollama URL is always editable so the user can set the host before enabling.
-        url_always_on = backend_id in ("ollama", "ollama-cloud")
+        # Local Ollama's URL is always editable so the user can set the host before enabling.
+        url_always_on = backend_id == "ollama"
         cast(SettingsTextField, controls["url"]).set_enabled(enabled or url_always_on)
         self._update_fetch_button_state(backend_id)
         self._update_pull_button_state(backend_id)
@@ -1101,7 +1106,7 @@ class SettingsDialog(QDialog):
                 self._logger.warning("fetch_models failed for %s: %s", backend_id, exc)
 
             else:
-                if backend_id in ("ollama", "ollama-cloud"):
+                if backend_id == "ollama":
                     self._register_ollama_models(model_ids, fetch_row, backend_id)
 
                 else:
