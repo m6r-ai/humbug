@@ -463,6 +463,9 @@ def get_arabic_strings() -> LanguageStrings:
         ollama_no_installed_models="لم يتم العثور على نماذج مثبتة.",
         ollama_added_models="تمت إضافة {0} نموذج.",
         ollama_already_up_to_date="قائمة النماذج المحلية محدّثة بالفعل.",
+        test_connection="اختبار الاتصال",
+        testing_connection="جارٍ اختبار الاتصال…",
+        connection_successful="تم الاتصال بنجاح.",
 
         # Settings dialog - AI model page
         settings_provider="المزود",

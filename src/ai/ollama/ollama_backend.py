@@ -59,6 +59,30 @@ class OllamaBackend(AIBackend):
             data = await response.json()
             return [m["name"] for m in data.get("models", [])]
 
+    def _is_cloud_host(self) -> bool:
+        """Return True if the configured URL points at Ollama's hosted cloud API."""
+        return urlsplit(self._api_url).hostname == "ollama.com"
+
+    async def test_connection(self) -> None:
+        """
+        Verify connectivity/credentials against the configured Ollama endpoint.
+
+        Ollama Cloud's /api/tags is a public model catalog that returns 200 even with a
+        missing or invalid API key, so it cannot validate cloud credentials. /api/me is the
+        hosted service's dedicated key-check endpoint (POST, no body) and is used instead for
+        the cloud host. Local installs have no auth, so /api/tags (via fetch_models) remains a
+        fine "is it running?" check there.
+        """
+        if not self._is_cloud_host():
+            await self.fetch_models()
+            return
+
+        url = self._get_api_endpoint_url("me")
+        headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
+        async with HttpClient(family=socket.AF_INET) as client:
+            response = await client.post(url, headers=headers)
+            response.raise_for_status()
+
     async def pull_model(
         self, model_name: str, on_progress: Callable[[str], None]
     ) -> None:
