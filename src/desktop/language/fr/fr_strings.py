@@ -90,6 +90,7 @@ def get_french_strings() -> LanguageStrings:
         previous_message="Message Précédent",
         next_hunk="Modification Suivante",
         previous_hunk="Modification Précédente",
+        prompt_markers="Marqueurs de prompts",
 
         # Message roles
         role_you="Vous",

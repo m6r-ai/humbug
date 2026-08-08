@@ -90,6 +90,7 @@ def get_english_strings() -> LanguageStrings:
         previous_message="Previous Message",
         next_hunk="Next Hunk",
         previous_hunk="Previous Hunk",
+        prompt_markers="Prompt Markers",
 
         # Message roles
         role_you="You",

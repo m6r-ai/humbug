@@ -28,7 +28,7 @@ from desktop.color_role import ColorRole
 from desktop.conversation_tab.conversation_error import ConversationError
 from desktop.conversation_tab.conversation_input import ConversationInput
 from desktop.conversation_tab.conversation_message import ConversationMessage
-from desktop.conversation_tab.question_minimap import QuestionMinimap
+from desktop.conversation_tab.prompt_minimap import PromptMinimap
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
@@ -234,15 +234,15 @@ class ConversationWidget(QWidget):
         self._scroll_area.viewport().setAutoFillBackground(True)
         conversation_layout.addWidget(self._scroll_area)
 
-        self._question_minimap = QuestionMinimap(self._scroll_area)
-        self._question_minimap.question_clicked.connect(self.navigate_to_question)
-        self._question_minimap_visible = False
-        self._question_minimap_margin = 0
-        self._question_minimap.hide()
-        self._question_minimap_margin_animation = QVariantAnimation(self)
-        self._question_minimap_margin_animation.setDuration(160)
-        self._question_minimap_margin_animation.valueChanged.connect(self._on_question_minimap_margin_changed)
-        self._question_minimap_margin_animation.finished.connect(self._on_question_minimap_animation_finished)
+        self._prompt_minimap = PromptMinimap(self._scroll_area)
+        self._prompt_minimap.prompt_clicked.connect(self.navigate_to_prompt)
+        self._prompt_minimap_visible = False
+        self._prompt_minimap_margin = 0
+        self._prompt_minimap.hide()
+        self._prompt_minimap_margin_animation = QVariantAnimation(self)
+        self._prompt_minimap_margin_animation.setDuration(160)
+        self._prompt_minimap_margin_animation.valueChanged.connect(self._on_prompt_minimap_margin_changed)
+        self._prompt_minimap_margin_animation.finished.connect(self._on_prompt_minimap_animation_finished)
 
         input_text_area = cast(MarkdownTextEdit, self._input._text_area)
         input_text_area.size_hint_changed.connect(self._on_input_size_hint_changed)
@@ -298,7 +298,7 @@ class ConversationWidget(QWidget):
             conversation_history.get_messages(), ai_transcript_conversation is not None,
             attachments=conversation_history.attachments()
         )
-        QTimer.singleShot(0, self._update_question_minimap)
+        QTimer.singleShot(0, self._update_prompt_minimap)
 
         # Restore parent metadata from the transcript onto the ai_conversation history.
         # load_message_history calls clear() which discards it, so we reapply it here.
@@ -1513,7 +1513,7 @@ class ConversationWidget(QWidget):
         self.has_seen_latest_update_changed.emit(at_bottom)
 
         self._update_sticky_banners()
-        self._update_question_minimap()
+        self._update_prompt_minimap()
 
     def _on_scroll_range_changed(self, _minimum: int, _maximum: int) -> None:
         """Handle the scroll range changing."""
@@ -1521,7 +1521,7 @@ class ConversationWidget(QWidget):
             self._scroll_to_bottom()
 
         self._update_sticky_banners()
-        self._update_question_minimap()
+        self._update_prompt_minimap()
 
     def _schedule_sticky_update(self) -> None:
         """
@@ -1851,8 +1851,8 @@ class ConversationWidget(QWidget):
         # If on a message, check if there are visible messages before current position
         return self._find_previous_visible_user_message(self._spotlighted_message_index) != -1
 
-    def navigate_to_question(self, message_index: int) -> None:
-        """Spotlight and scroll to a user question by its message index."""
+    def navigate_to_prompt(self, message_index: int) -> None:
+        """Spotlight and scroll to a user prompt by its message index."""
         if message_index < 0 or message_index >= len(self._messages):
             return
 
@@ -1865,17 +1865,17 @@ class ConversationWidget(QWidget):
         self._input.set_spotlighted(False)
         self._spotlighted_message_index = message_index
         self._spotlight_message()
-        self._update_question_minimap()
+        self._update_prompt_minimap()
 
-    def _update_question_minimap(self) -> None:
-        """Refresh the minimap's question positions and active marker."""
+    def _update_prompt_minimap(self) -> None:
+        """Refresh the minimap's prompt positions and active marker."""
         viewport = self._scroll_area.viewport()
-        self._question_minimap.setFixedHeight(viewport.height())
-        self._question_minimap.move(
+        self._prompt_minimap.setFixedHeight(viewport.height())
+        self._prompt_minimap.move(
             viewport.x() + viewport.width() + 2,
             viewport.y(),
         )
-        self._question_minimap.raise_()
+        self._prompt_minimap.raise_()
 
         content_height = max(1, self._messages_container.height())
         markers: list[tuple[int, float, str]] = []
@@ -1884,36 +1884,36 @@ class ConversationWidget(QWidget):
                 position = message.mapTo(self._messages_container, QPoint(0, 0)).y()
                 markers.append((index, position / content_height, message.message_content()))
 
-        self._question_minimap.set_markers(markers, self._spotlighted_message_index)
-        self._question_minimap.setVisible(
-            (self._question_minimap_visible or self._question_minimap_margin > 0) and bool(markers)
+        self._prompt_minimap.set_markers(markers, self._spotlighted_message_index)
+        self._prompt_minimap.setVisible(
+            (self._prompt_minimap_visible or self._prompt_minimap_margin > 0) and bool(markers)
         )
 
-    def set_question_minimap_visible(self, visible: bool) -> None:
-        """Show or hide the question minimap."""
-        self._question_minimap_visible = visible
+    def set_prompt_minimap_visible(self, visible: bool) -> None:
+        """Show or hide the prompt minimap."""
+        self._prompt_minimap_visible = visible
         if visible:
-            self._question_minimap.show()
+            self._prompt_minimap.show()
 
-        self._question_minimap_margin_animation.stop()
-        self._question_minimap_margin_animation.setStartValue(self._question_minimap_margin)
-        self._question_minimap_margin_animation.setEndValue(14 if visible else 0)
-        self._question_minimap_margin_animation.start()
-        self._update_question_minimap()
+        self._prompt_minimap_margin_animation.stop()
+        self._prompt_minimap_margin_animation.setStartValue(self._prompt_minimap_margin)
+        self._prompt_minimap_margin_animation.setEndValue(14 if visible else 0)
+        self._prompt_minimap_margin_animation.start()
+        self._update_prompt_minimap()
 
-    def _on_question_minimap_margin_changed(self, value: object) -> None:
+    def _on_prompt_minimap_margin_changed(self, value: object) -> None:
         """Animate the marker gutter into or out of the scroll area."""
         if not isinstance(value, int):
             return
 
-        self._question_minimap_margin = value
+        self._prompt_minimap_margin = value
         self._scroll_area.setViewportMargins(0, 0, value, 0)
-        self._update_question_minimap()
+        self._update_prompt_minimap()
 
-    def _on_question_minimap_animation_finished(self) -> None:
+    def _on_prompt_minimap_animation_finished(self) -> None:
         """Hide the minimap after its gutter finishes closing."""
-        if not self._question_minimap_visible:
-            self._question_minimap.hide()
+        if not self._prompt_minimap_visible:
+            self._prompt_minimap.hide()
 
     def _on_selection_changed(self, message_widget: ConversationMessage, has_selection: bool) -> None:
         """Handle selection changes in message widgets."""
@@ -1981,7 +1981,7 @@ class ConversationWidget(QWidget):
             self._scroll_area.viewport(), self._messages_container
         ):
             self._on_input_size_hint_changed()
-            self._update_question_minimap()
+            self._update_prompt_minimap()
             # Defer so message relayouts settle before we read geometry; the per-message
             # banner move filter keeps things pinned (flicker-free) in the meantime.
             self._schedule_sticky_update()

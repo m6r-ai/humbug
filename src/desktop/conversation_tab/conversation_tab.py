@@ -99,8 +99,8 @@ class ConversationTab(TabBase):
         self.apply_style()
 
         settings = MindspaceManager().settings()
-        if settings is not None and settings.question_markers_visible:
-            self._conversation_widget.set_question_minimap_visible(True)
+        if settings is not None and settings.prompt_markers_visible:
+            self._conversation_widget.set_prompt_minimap_visible(True)
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""
@@ -988,9 +988,9 @@ class ConversationTab(TabBase):
         """Navigate to the previous message."""
         self._conversation_widget.navigate_to_previous_message()
 
-    def set_question_minimap_visible(self, visible: bool) -> None:
-        """Show or hide the right-edge question minimap."""
-        self._conversation_widget.set_question_minimap_visible(visible)
+    def set_prompt_minimap_visible(self, visible: bool) -> None:
+        """Show or hide the right-edge prompt minimap."""
+        self._conversation_widget.set_prompt_minimap_visible(visible)
 
     def set_input_text(self, text: str) -> None:
         """Set the input text."""

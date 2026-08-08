@@ -81,6 +81,7 @@ class LanguageStrings:
     previous_message: str
     next_hunk: str
     previous_hunk: str
+    prompt_markers: str
 
     # Message roles and labels
     role_you: str

@@ -32,7 +32,7 @@ class MindspaceSettings:
     terminal_scrollback_enabled: bool = True  # Default to limited scrollback
     terminal_scrollback_lines: int = 10000  # Default 10000 lines
     terminal_close_on_exit: bool = True  # Default to native terminal behavior
-    question_markers_visible: bool = False
+    prompt_markers_visible: bool = False
 
     @classmethod
     def _safe_load_json(cls, path: str) -> dict:
@@ -340,13 +340,13 @@ class MindspaceSettings:
             )
             terminal_close_on_exit = True
 
-        question_markers_visible = conversation.get("questionMarkersVisible", False)
-        if not isinstance(question_markers_visible, bool):
+        prompt_markers_visible = conversation.get("promptMarkersVisible", False)
+        if not isinstance(prompt_markers_visible, bool):
             cls._logger.warning(
-                "Invalid questionMarkersVisible type in %s: expected bool, got %s. Using default.",
-                path, type(question_markers_visible).__name__
+                "Invalid promptMarkersVisible type in %s: expected bool, got %s. Using default.",
+                path, type(prompt_markers_visible).__name__
             )
-            question_markers_visible = False
+            prompt_markers_visible = False
 
         return cls(
             model=model,
@@ -364,7 +364,7 @@ class MindspaceSettings:
             terminal_scrollback_enabled=terminal_scrollback_enabled,
             terminal_scrollback_lines=terminal_scrollback_lines,
             terminal_close_on_exit=terminal_close_on_exit,
-            question_markers_visible=question_markers_visible,
+            prompt_markers_visible=prompt_markers_visible,
             enabled_tools=enabled_tools
         )
 
@@ -377,7 +377,7 @@ class MindspaceSettings:
                 "temperature": self.temperature,
                 "reasoning": self.reasoning.value,  # Use .value to get the integer value of the enum
                 "reasoning_effort": self.reasoning_effort,
-                "questionMarkersVisible": self.question_markers_visible,
+                "promptMarkersVisible": self.prompt_markers_visible,
             },
             "editor": {
                 "useSoftTabs": self.use_soft_tabs,
