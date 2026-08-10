@@ -18,7 +18,7 @@ class PromptMinimap(QWidget):
         self._markers: list[tuple[int, float, str]] = []
         self._active_index = -1
         self._style_manager = StyleManager()
-        self.setFixedWidth(10)
+        self.setFixedWidth(11)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMouseTracking(True)
         self._style_manager.style_changed.connect(self.update)
@@ -33,6 +33,8 @@ class PromptMinimap(QWidget):
         """Draw one filled rounded pill for each user prompt."""
         del event
         painter = QPainter(self)
+        bg = self._style_manager.get_color(ColorRole.SCROLLBAR_BACKGROUND)
+        painter.fillRect(self.rect(), bg)
         padding = 8
         usable_height = max(1, self.height() - 2 * padding)
         inactive = self._style_manager.get_color(ColorRole.TEXT_INACTIVE)

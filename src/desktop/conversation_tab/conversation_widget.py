@@ -191,7 +191,6 @@ class ConversationWidget(QWidget):
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        # self._scroll_area.setViewportMargins(0, 0, 14, 0)
 
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
@@ -1872,7 +1871,7 @@ class ConversationWidget(QWidget):
         viewport = self._scroll_area.viewport()
         self._prompt_minimap.setFixedHeight(viewport.height())
         self._prompt_minimap.move(
-            viewport.x() + viewport.width() + 2,
+            viewport.x() + viewport.width(),
             viewport.y(),
         )
         self._prompt_minimap.raise_()
@@ -1897,7 +1896,7 @@ class ConversationWidget(QWidget):
 
         self._prompt_minimap_margin_animation.stop()
         self._prompt_minimap_margin_animation.setStartValue(self._prompt_minimap_margin)
-        self._prompt_minimap_margin_animation.setEndValue(14 if visible else 0)
+        self._prompt_minimap_margin_animation.setEndValue(12 if visible else 0)
         self._prompt_minimap_margin_animation.start()
         self._update_prompt_minimap()
 
