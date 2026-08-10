@@ -123,7 +123,7 @@ class HelpAITool(AITool):
     async def _get_help(
         self,
         tool_call: AIToolCall,
-        requester_ref: Any,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
@@ -149,10 +149,6 @@ class HelpAITool(AITool):
 
         # Get detailed help from the tool
         help_text = tool.get_detailed_help(operation_name)
-
-        # Track that Menai help has been read so Menai operations are unlocked
-        if tool_name == "menai" and hasattr(requester_ref, "mark_menai_help_read"):
-            requester_ref.mark_menai_help_read()
 
         if operation_name:
             self._logger.debug(

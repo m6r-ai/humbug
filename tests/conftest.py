@@ -21,9 +21,6 @@ class MockRequester:
     def menai_help_read(self) -> bool:
         return self._menai_help_read
 
-    def mark_menai_help_read(self) -> None:
-        self._menai_help_read = True
-
 
 @pytest.fixture
 def make_tool_call():

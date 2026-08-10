@@ -73,9 +73,6 @@ class AIConversation:
         self._state = ConversationState.IDLE
         self._pending_user_messages: list[AIMessage] = []
 
-        # Menai help tracking — per-conversation flag
-        self._menai_help_read = False
-
         # Callbacks for events
         self._callbacks: dict[AIConversationEvent, set[Callable]] = {
             event: set() for event in AIConversationEvent
@@ -85,23 +82,28 @@ class AIConversation:
         """Check if the conversation is currently streaming a response."""
         return self._is_streaming
 
-    def mark_menai_help_read(self) -> None:
-        """
-        Mark that the Menai help documentation has been read in this conversation.
-
-        Called by the help tool when the AI requests Menai documentation.
-        Gates Menai-related operations (evaluate, editor transform, filesystem transform).
-        """
-        self._menai_help_read = True
-
     def menai_help_read(self) -> bool:
         """
-        Check whether the Menai help has been read in this conversation.
+        Check whether the Menai help documentation is present in the current
+        conversation history.
+
+        Scans message history for a help tool call targeting the Menai tool.
+        This ensures the flag stays accurate after truncation or reload.
 
         Returns:
-            True if the AI has read the Menai help in this conversation session
+            True if a Menai help call is present in the current history
         """
-        return self._menai_help_read
+        for message in self._conversation.get_messages():
+            if message.source != AIMessageSource.TOOL_CALL or not message.tool_calls:
+                continue
+
+            for tool_call in message.tool_calls:
+                if tool_call.name == "help":
+                    tool_name = tool_call.arguments.get("tool_name", "")
+                    if tool_name == "menai":
+                        return True
+
+        return False
 
     def register_callback(self, event: AIConversationEvent, callback: Callable) -> None:
         """

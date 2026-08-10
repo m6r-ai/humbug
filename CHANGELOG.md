@@ -26,6 +26,8 @@ Bug fixes:
 - Resolved a minor label problem with Ollama model updates.
 - Resolved problems with the mindspace settings dialog where text would not correctly update on a language change.
 - Instantiate a new Menai VM per AI tool use to avoid threading race conditions.
+- Improve the handling of detecting that Menai help has been read in a conversation.  Ensure this persists across restarts,
+  across forking, and correctly acts when messages are deleted.
 
 ## v53 (2026-07-12)
 
