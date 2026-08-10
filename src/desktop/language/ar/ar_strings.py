@@ -91,6 +91,7 @@ def get_arabic_strings() -> LanguageStrings:
         previous_message="الرسالة السابقة",
         next_hunk="التعديل التالي",
         previous_hunk="التعديل السابق",
+        prompt_markers="علامات المحث",
 
         # Message roles
         role_you="أنت",
