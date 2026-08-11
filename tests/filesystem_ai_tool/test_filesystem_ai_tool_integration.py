@@ -53,7 +53,7 @@ class TestFileSystemAIToolIntegration:
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "File written successfully: file.txt (12 bytes)" in result.content
+            assert "File written successfully: file.txt (13 bytes)" in result.content
             # Verify chmod was called
             mock_chmod.assert_called_once()
 

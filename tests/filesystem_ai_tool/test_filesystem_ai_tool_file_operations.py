@@ -199,7 +199,7 @@ class TestFileSystemAIToolWriteFile:
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "File written successfully: file.txt (12 bytes)" in result.content
+            assert "File written successfully: file.txt (13 bytes)" in result.content
             # Verify authorization was called with destructive=False for new file
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
@@ -227,7 +227,7 @@ class TestFileSystemAIToolWriteFile:
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "File written successfully: file.txt (12 bytes)" in result.content
+            assert "File written successfully: file.txt (13 bytes)" in result.content
             # Verify authorization was called with destructive=True for existing file
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
@@ -388,7 +388,7 @@ class TestFileSystemAIToolAppendFile:
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt", "content": "new content"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "Content appended successfully: file.txt (+11 bytes)" in result.content
+            assert "Content appended successfully: file.txt (+12 bytes)" in result.content
             # Verify the file was opened in append mode
             mock_file.assert_called_with(Path("/test/sandbox/file.txt"), 'a', encoding='utf-8')
 
@@ -544,3 +544,157 @@ class TestFileSystemAIToolAppendFile:
 
             error = exc_info.value
             assert "Failed to append to file" in str(error)
+
+class TestFileSystemAIToolTrailingNewline:
+    """Tests for trailing newline enforcement in write and append operations."""
+
+    def test_write_file_adds_trailing_newline(self, filesystem_tool, mock_authorization, make_tool_call):
+        """write_file appends a newline when content lacks one."""
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
+             patch('pathlib.Path.replace') as mock_replace, \
+             patch('pathlib.Path.chmod') as mock_chmod:
+
+            mock_exists.return_value = False
+
+            mock_temp_instance = MagicMock()
+            mock_temp_instance.name = "/tmp/temp_file"
+            mock_temp_instance.__enter__.return_value = mock_temp_instance
+            mock_temp_instance.__exit__.return_value = None
+            mock_temp_file.return_value = mock_temp_instance
+
+            tool_call = make_tool_call("filesystem", {
+                "operation": "write_file",
+                "path": "file.txt",
+                "content": "hello"
+            })
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+            assert "File written successfully: file.txt (6 bytes)" in result.content
+            mock_temp_instance.write.assert_called_with("hello\n")
+
+    def test_write_file_preserves_existing_trailing_newline(self, filesystem_tool, mock_authorization, make_tool_call):
+        """write_file does not add an extra newline when content already ends with one."""
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
+             patch('pathlib.Path.replace') as mock_replace, \
+             patch('pathlib.Path.chmod') as mock_chmod:
+
+            mock_exists.return_value = False
+
+            mock_temp_instance = MagicMock()
+            mock_temp_instance.name = "/tmp/temp_file"
+            mock_temp_instance.__enter__.return_value = mock_temp_instance
+            mock_temp_instance.__exit__.return_value = None
+            mock_temp_file.return_value = mock_temp_instance
+
+            tool_call = make_tool_call("filesystem", {
+                "operation": "write_file",
+                "path": "file.txt",
+                "content": "hello\n"
+            })
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+            assert "File written successfully: file.txt (6 bytes)" in result.content
+            mock_temp_instance.write.assert_called_with("hello\n")
+
+    def test_write_file_crlf_content_gets_crlf_termination(self, filesystem_tool, mock_authorization, make_tool_call):
+        """write_file appends \\r\\n when content uses Windows line endings."""
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
+             patch('pathlib.Path.replace') as mock_replace, \
+             patch('pathlib.Path.chmod') as mock_chmod:
+
+            mock_exists.return_value = False
+
+            mock_temp_instance = MagicMock()
+            mock_temp_instance.name = "/tmp/temp_file"
+            mock_temp_instance.__enter__.return_value = mock_temp_instance
+            mock_temp_instance.__exit__.return_value = None
+            mock_temp_file.return_value = mock_temp_instance
+
+            tool_call = make_tool_call("filesystem", {
+                "operation": "write_file",
+                "path": "file.txt",
+                "content": "line1\r\nline2"
+            })
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+            mock_temp_instance.write.assert_called_with("line1\r\nline2\r\n")
+
+    def test_write_file_empty_content_unchanged(self, filesystem_tool, mock_authorization, make_tool_call):
+        """write_file does not add a newline to empty content."""
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
+             patch('pathlib.Path.replace') as mock_replace, \
+             patch('pathlib.Path.chmod') as mock_chmod:
+
+            mock_exists.return_value = False
+
+            mock_temp_instance = MagicMock()
+            mock_temp_instance.name = "/tmp/temp_file"
+            mock_temp_instance.__enter__.return_value = mock_temp_instance
+            mock_temp_instance.__exit__.return_value = None
+            mock_temp_file.return_value = mock_temp_instance
+
+            tool_call = make_tool_call("filesystem", {
+                "operation": "write_file",
+                "path": "file.txt",
+                "content": ""
+            })
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+            assert "File written successfully: file.txt (0 bytes)" in result.content
+            mock_temp_instance.write.assert_called_with("")
+
+    def test_append_prepends_newline_when_file_lacks_one(self, filesystem_tool, mock_authorization, make_tool_call):
+        """append_to_file prepends a newline when the existing file does not end with one."""
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data=b'x')) as mock_file:
+
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+
+            mock_stat_result = MagicMock()
+            mock_stat_result.st_size = 5
+            mock_stat.return_value = mock_stat_result
+
+            tool_call = make_tool_call("filesystem", {
+                "operation": "append_to_file",
+                "path": "file.txt",
+                "content": "new line"
+            })
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+            assert "Content appended successfully: file.txt (+9 bytes)" in result.content
+            file_handle = mock_file()
+            file_handle.write.assert_called_with("\nnew line")
+
+    def test_append_no_prepended_newline_when_file_ends_with_newline(
+        self, filesystem_tool, mock_authorization, make_tool_call
+    ):
+        """append_to_file does not prepend a newline when the file already ends with one."""
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data=b'\n')) as mock_file:
+
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+
+            mock_stat_result = MagicMock()
+            mock_stat_result.st_size = 5
+            mock_stat.return_value = mock_stat_result
+
+            tool_call = make_tool_call("filesystem", {
+                "operation": "append_to_file",
+                "path": "file.txt",
+                "content": "new line"
+            })
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+            assert "Content appended successfully: file.txt (+8 bytes)" in result.content
+            file_handle = mock_file()
+            file_handle.write.assert_called_with("new line")
