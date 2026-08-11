@@ -487,6 +487,9 @@ def get_french_strings() -> LanguageStrings:
         fetch_error_timeout="Délai d'attente dépassé — le fournisseur a mis trop de temps à répondre.",
         fetch_error_generic="Échec : {0}",
         stream_error_interrupted="La connexion a été interrompue avant la fin de la réponse. Veuillez réessayer.",
-        stream_error_no_backend="Aucun service IA n'est configuré pour le fournisseur de ce modèle — vérifiez vos paramètres de services IA.",
+        stream_error_no_backend=(
+            "Aucun service IA n'est configuré pour le fournisseur de ce modèle — "
+            "vérifiez vos paramètres de services IA."
+        ),
         stream_error_access_denied="Accès refusé ({0}) — votre compte n'a peut-être pas accès à ce modèle."
     )
