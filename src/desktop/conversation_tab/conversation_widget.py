@@ -29,6 +29,7 @@ from desktop.conversation_tab.conversation_error import ConversationError
 from desktop.conversation_tab.conversation_input import ConversationInput
 from desktop.conversation_tab.conversation_message import ConversationMessage
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
+from desktop.fetch_error import stream_error_message as _stream_error_message
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -476,13 +477,20 @@ class ConversationWidget(QWidget):
             if resolved:
                 resolved_attachments = resolved
 
+        # SYSTEM error messages carry the raw technical error in message.content (kept
+        # intact for the transcript, logs, and _create_completion_result()) — the chat
+        # bubble itself shows a friendlier translation of the same error.
+        display_content = message.content
+        if message.source == AIMessageSource.SYSTEM and message.error:
+            display_content = _stream_error_message(message.error)
+
         msg_widget = ConversationMessage(
             message.source,
             message.timestamp,
             AIConversationSettings.get_display_name(message.model or "", message.provider or ""),
             message.id,
             message.user_name,
-            message.content,
+            display_content,
             message.tool_call_context,
             attachments=resolved_attachments,
             message_style=self._message_style if apply_style else None

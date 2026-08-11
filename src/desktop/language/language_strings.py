@@ -420,6 +420,11 @@ class LanguageStrings:
     fetch_error_timeout: str
     fetch_error_generic: str
 
+    # AI streaming error messages
+    stream_error_interrupted: str
+    stream_error_no_backend: str
+    stream_error_access_denied: str
+
     # Ollama pull model UI ({0} = model name or detail)
     ollama_pull_label: str
     ollama_pull_placeholder: str
