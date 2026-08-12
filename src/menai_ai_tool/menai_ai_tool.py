@@ -59,7 +59,8 @@ class MenaiAITool(AITool):
                 AIToolParameter(
                     name="expression",
                     type="string",
-                    description="A valid expression written in the Menai language",
+                    description="A valid expression written in the Menai language. "
+                        "Menai uses Lisp-style prefix syntax: (operator arg1 arg2 ...).",
                     required=True
                 )
             ]
@@ -597,23 +598,6 @@ Syntax: (operator arg1 arg2 ...)
         expression = arguments.get("expression", "")
         return f"`expression` is:\n```menai\n{expression}\n```"
 
-    @staticmethod
-    def _require_menai_help(requester_ref: Any) -> None:
-        """
-        Raise an error if the Menai help has not been read in this conversation.
-
-        Args:
-            requester_ref: The AIConversation making the request
-
-        Raises:
-            AIToolExecutionError: If Menai help has not been read
-        """
-        if not hasattr(requester_ref, "menai_help_read") or not requester_ref.menai_help_read():
-            raise AIToolExecutionError(
-                "You must read the Menai language documentation before using this tool. "
-                "Call the help tool with operation 'get_help' and tool_name 'menai' to load it."
-            )
-
     async def _evaluate(
         self,
         tool_call: AIToolCall,
@@ -636,7 +620,7 @@ Syntax: (operator arg1 arg2 ...)
         """
         arguments = tool_call.arguments
 
-        self._require_menai_help(requester_ref)
+        self.require_menai_help(requester_ref)
 
         expression = arguments.get("expression", "")
 

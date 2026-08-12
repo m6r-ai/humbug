@@ -183,6 +183,7 @@ class FileSystemAITool(AITool):
                     type="string",
                     description=(
                         "Menai expression for the transform_file operation. "
+                        "Menai uses Lisp-style prefix syntax: (operator arg1 arg2 ...). "
                         "May reference 'input-text' (full file content as a string) "
                         "and 'input-lines' (file lines as a list of strings). "
                         "Must evaluate to a string (new file content) or a list of strings (new lines)."
@@ -397,7 +398,7 @@ class FileSystemAITool(AITool):
                     "It must return a string or a list of strings. "
                     "A unified diff is shown for user approval before any write occurs. "
                     "If dry_run is True, returns the diff without requesting authorisation or writing anything. "
-                    "program MUST use Menai syntax."
+                    "program MUST use Menai syntax: (operator arg1 arg2 ...)."
                 )
             ),
         }
@@ -2383,23 +2384,6 @@ class FileSystemAITool(AITool):
 
         return original_content, new_content
 
-    @staticmethod
-    def _require_menai_help(requester_ref: Any) -> None:
-        """
-        Raise an error if the Menai help has not been read in this conversation.
-
-        Args:
-            requester_ref: The AIConversation making the request
-
-        Raises:
-            AIToolExecutionError: If Menai help has not been read
-        """
-        if not hasattr(requester_ref, "menai_help_read") or not requester_ref.menai_help_read():
-            raise AIToolExecutionError(
-                "You must read the Menai language documentation before using this tool. "
-                "Call the help tool with operation 'get_help' and tool_name 'menai' to load it."
-            )
-
     async def _transform_file(
         self,
         tool_call: AIToolCall,
@@ -2409,7 +2393,7 @@ class FileSystemAITool(AITool):
         """Apply a Menai transform program to a file."""
         arguments = tool_call.arguments
 
-        self._require_menai_help(requester_ref)
+        self.require_menai_help(requester_ref)
 
         path_arg = self._get_required_str_value("path", arguments)
         path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
