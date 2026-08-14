@@ -15,6 +15,8 @@ New features:
 - Added Kimi K3 support to Ollama cloud and removed Kimi K2.6 and Kimi K2.7.
 - Added Claude Opus 5, removed Claude Opus 4.8. and Claude Sonnet 4.6.
 - Added a conversation tab "prompt mini-map" feature to make navigating to user prompts easier.
+- Added paren matching in the editor to make it easier to understand and debug s-expression-based languages (Menai and Scheme
+  for now).
 
 Bug fixes:
 

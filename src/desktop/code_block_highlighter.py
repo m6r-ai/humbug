@@ -15,6 +15,7 @@ class CodeBlockHighlighterBlockData(QTextBlockUserData):
     def __init__(self) -> None:
         super().__init__()
         self.parser_state: ParserState | None = None
+        self.tokens: list[Token] = []
 
 
 class CodeBlockHighlighter(QSyntaxHighlighter):
@@ -114,6 +115,7 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
                     # Store parser state for next block
                     block_data = CodeBlockHighlighterBlockData()
                     block_data.parser_state = parser_state
+                    block_data.tokens = tokens
                     current_block.setUserData(block_data)
                     return
 
@@ -128,6 +130,7 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
             parser_state = parser.parse(prev_parser_state, text)
 
             # Apply syntax highlighting based on token types
+            block_tokens: list[Token] = []
             last_token_pos = 0
             while True:
                 token = parser.get_next_token()
@@ -146,6 +149,7 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
                 highlight_len = len(token.value) + token.start - last_token_pos
                 self.setFormat(last_token_pos, highlight_len, self._style_manager.get_highlight(token.type))
                 last_token_pos += highlight_len
+                block_tokens.append(token)
 
             # Check if we need to rehighlight everything from this block onwards
             if current_block_data is not None:
@@ -158,6 +162,7 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
 
             block_data = CodeBlockHighlighterBlockData()
             block_data.parser_state = parser_state
+            block_data.tokens = block_tokens
             current_block.setUserData(block_data)
 
         except Exception:

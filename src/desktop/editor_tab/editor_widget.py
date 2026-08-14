@@ -8,20 +8,20 @@ from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
 from PySide6.QtCore import Qt, QRect, Signal, QTimer, QRegularExpression
 from PySide6.QtGui import (
     QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
-    QResizeEvent, QPaintEvent, QTextDocument, QContextMenuEvent
+    QResizeEvent, QPaintEvent, QTextDocument, QTextBlock, QContextMenuEvent
 )
 
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from editor_context.editor_diff_applier import EditorDiffApplier
 from mindspace.mindspace_settings import MindspaceSettings
-from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
+from syntax import ProgrammingLanguage, ProgrammingLanguageUtils, Token, TokenType
 
-from desktop.code_block_highlighter import CodeBlockHighlighter
-from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
+from desktop.code_block_highlighter import CodeBlockHighlighter, CodeBlockHighlighterBlockData
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.style_manager import StyleManager
 from desktop.widgets import LineNumberArea, SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
@@ -89,6 +89,10 @@ class EditorWidget(QPlainTextEdit):
         self._matches: list[tuple[int, int]] = []  # List of (start, end) positions
         self._current_match = -1
         self._last_search: tuple = ("", False, False)
+        self._find_selections: list[QTextEdit.ExtraSelection] = []
+
+        # Paren matching
+        self._paren_selections: list[QTextEdit.ExtraSelection] = []
 
         # Smooth scrolling
         self._smooth_scroll_timer = QTimer(self)
@@ -114,8 +118,7 @@ class EditorWidget(QPlainTextEdit):
 
         # Connect text changes
         self.textChanged.connect(self._on_text_changed)
-        self.cursorPositionChanged.connect(self.status_updated)
-
+        self.cursorPositionChanged.connect(self._on_cursor_position_changed)
 
         # Load file if path provided
         if self._path:
@@ -211,6 +214,7 @@ class EditorWidget(QPlainTextEdit):
         if self._syntax != new_syntax:
             self._syntax = new_syntax
             self._highlighter.set_syntax(new_syntax)
+            self._update_paren_match()
             self.status_updated.emit()
 
     def _update_auto_backup_from_settings(self) -> None:
@@ -1064,6 +1068,7 @@ class EditorWidget(QPlainTextEdit):
         self._update_line_number_area_width()
 
         self._highlight_matches()
+        self._update_paren_match()
 
         # Re-layout from setFont() is async, so defer the scroll restoration.
         QTimer.singleShot(0, lambda: self._restore_centre_block(centre_block))
@@ -1297,9 +1302,10 @@ class EditorWidget(QPlainTextEdit):
 
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""
-        self._clear_highlights()
+        self._find_selections = []
 
         if not self._matches:
+            self._apply_extra_selections()
             return
 
         found_format = QTextCharFormat()
@@ -1331,8 +1337,8 @@ class EditorWidget(QPlainTextEdit):
 
             selections.append(extra_selection)
 
-        # Apply selections
-        self.setExtraSelections(selections)
+        self._find_selections = selections
+        self._apply_extra_selections()
 
     def _scroll_to_match(self, match_index: int) -> None:
         """
@@ -1349,7 +1355,245 @@ class EditorWidget(QPlainTextEdit):
 
     def _clear_highlights(self) -> None:
         """Clear all search highlights."""
-        self.setExtraSelections([])
+        self._find_selections = []
+        self._apply_extra_selections()
+
+    def _apply_extra_selections(self) -> None:
+        """Apply find and paren selections together as a single list."""
+        combined = self._find_selections + self._paren_selections
+        if combined:
+            self.setExtraSelections(combined)
+
+        else:
+            self.setExtraSelections([])
+
+    def _on_cursor_position_changed(self) -> None:
+        """Handle cursor movement for paren matching and status bar updates."""
+        self._update_paren_match()
+        self.status_updated.emit()
+
+    def _update_paren_match(self) -> None:
+        """Find and highlight the matching parenthesis at the current cursor position."""
+        if self._syntax not in (ProgrammingLanguage.MENAI, ProgrammingLanguage.SCHEME):
+            if self._paren_selections:
+                self._paren_selections = []
+                self._apply_extra_selections()
+
+            return
+
+        cursor = self.textCursor()
+
+        # Don't show paren match when there is an active selection
+        if cursor.hasSelection():
+            if self._paren_selections:
+                self._paren_selections = []
+                self._apply_extra_selections()
+
+            return
+
+        document = self.document()
+        pos = cursor.position()
+
+        # Try the character before the cursor first (most editors do this),
+        # then fall back to the character at the cursor position.
+        paren_pos = self._check_paren_at_pos(document, pos - 1)
+        if paren_pos is None:
+            paren_pos = self._check_paren_at_pos(document, pos)
+
+        if paren_pos is None:
+            if self._paren_selections:
+                self._paren_selections = []
+                self._apply_extra_selections()
+
+            return
+
+        match_pos = self._find_matching_paren(document, paren_pos)
+        if match_pos is None:
+            if self._paren_selections:
+                self._paren_selections = []
+                self._apply_extra_selections()
+
+            return
+
+        self._paren_selections = self._build_paren_selections(document, paren_pos, match_pos)
+        self._apply_extra_selections()
+
+    def _check_paren_at_pos(self, document: QTextDocument, pos: int) -> int | None:
+        """
+        Check if there is a parenthesis at the given document position.
+
+        Returns the position if a paren is found, None otherwise.
+        """
+        if pos < 0:
+            return None
+
+        block = document.findBlock(pos)
+        if not block.isValid():
+            return None
+
+        offset = pos - block.position()
+        text = block.text()
+        if offset >= len(text):
+            return None
+
+        ch = text[offset]
+        if ch in ('(', ')'):
+            return pos
+
+        return None
+
+    def _find_matching_paren(self, document: QTextDocument, paren_pos: int) -> int | None:
+        """
+        Find the position of the parenthesis matching the one at paren_pos.
+
+        Uses cached token data from the syntax highlighter to skip parens
+        inside strings and comments.  Returns the absolute document position
+        of the matching paren, or None if no match is found.
+        """
+        block = document.findBlock(paren_pos)
+        if not block.isValid():
+            return None
+
+        block_data = cast(CodeBlockHighlighterBlockData, block.userData())
+        if block_data is None:
+            return None
+
+        # Find the token at paren_pos within this block
+        block_start = block.position()
+        offset = paren_pos - block_start
+        paren_token = None
+        for token in block_data.tokens:
+            if token.start <= offset < token.start + len(token.value):
+                paren_token = token
+                break
+
+        if paren_token is None:
+            return None
+
+        # Only match actual paren tokens (not parens inside strings/comments)
+        if paren_token.type not in (TokenType.LPAREN, TokenType.RPAREN):
+            return None
+
+        if paren_token.type == TokenType.LPAREN:
+            return self._scan_forward_for_match(block, paren_token)
+
+        return self._scan_backward_for_match(block, paren_token)
+
+    def _scan_forward_for_match(
+        self,
+        start_block: QTextBlock,
+        paren_token: Token,
+    ) -> int | None:
+        """
+        Scan forward from an LPAREN to find its matching RPAREN.
+
+        Walks block-by-block using cached token data, skipping parens inside
+        strings and comments.  Returns the absolute position of the matching
+        RPAREN, or None if not found within the scan limit.
+        """
+        max_blocks = 500
+        depth = 0
+        block = start_block
+        skipped_start = False
+
+        while block.isValid() and max_blocks > 0:
+            block_data = cast(CodeBlockHighlighterBlockData, block.userData())
+            if block_data is None:
+                return None
+
+            current_block_start = block.position()
+            for token in block_data.tokens:
+                # On the first block, skip all tokens up to and including the
+                # starting LPAREN token before counting depth.
+                if not skipped_start:
+                    if token is paren_token:
+                        skipped_start = True
+
+                    continue
+
+                if token.type == TokenType.LPAREN:
+                    depth += 1
+
+                elif token.type == TokenType.RPAREN:
+                    if depth == 0:
+                        return current_block_start + token.start
+
+                    depth -= 1
+
+            block = block.next()
+            max_blocks -= 1
+
+        return None
+
+    def _scan_backward_for_match(
+        self,
+        start_block: QTextBlock,
+        paren_token: Token,
+    ) -> int | None:
+        """
+        Scan backward from an RPAREN to find its matching LPAREN.
+
+        Walks block-by-block in reverse using cached token data, skipping
+        parens inside strings and comments.  Returns the absolute position of
+        the matching LPAREN, or None if not found within the scan limit.
+        """
+        max_blocks = 500
+        depth = 0
+        block = start_block
+        skipped_start = False
+
+        while block.isValid() and max_blocks > 0:
+            block_data = cast(CodeBlockHighlighterBlockData, block.userData())
+            if block_data is None:
+                return None
+
+            current_block_start = block.position()
+            tokens = block_data.tokens
+            # Iterate in reverse; on the first block, skip all tokens up to and
+            # including the starting RPAREN token before counting depth.
+            for token in reversed(tokens):
+                if not skipped_start:
+                    if token is paren_token:
+                        skipped_start = True
+
+                    continue
+
+                if token.type == TokenType.RPAREN:
+                    depth += 1
+
+                elif token.type == TokenType.LPAREN:
+                    if depth == 0:
+                        return current_block_start + token.start
+
+                    depth -= 1
+
+            block = block.previous()
+            max_blocks -= 1
+
+        return None
+
+    def _build_paren_selections(
+        self,
+        document: QTextDocument,
+        pos1: int,
+        pos2: int
+    ) -> list[QTextEdit.ExtraSelection]:
+        """Build ExtraSelection list highlighting the two matched parentheses."""
+        fmt = QTextCharFormat()
+        fmt.setBackground(self._style_manager.get_color(ColorRole.PAREN_MATCH))
+
+        selections: list[QTextEdit.ExtraSelection] = []
+        for pos in (pos1, pos2):
+            cursor = QTextCursor(document)
+            cursor.setPosition(pos)
+            cursor.setPosition(pos + 1, QTextCursor.MoveMode.KeepAnchor)
+
+            sel = QTextEdit.ExtraSelection()
+            sel.cursor = cursor  # type: ignore
+            sel.format = fmt  # type: ignore
+            selections.append(sel)
+
+        return selections
 
     def _start_smooth_scroll_to_cursor(self, cursor: QTextCursor) -> None:
         """

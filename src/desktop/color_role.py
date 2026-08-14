@@ -179,6 +179,9 @@ class ColorRole(Enum):
     # Editor line numbers
     LINE_NUMBER = auto()                # Line number
 
+    # Editor paren matching
+    PAREN_MATCH = auto()                # Background highlight for matched parentheses
+
     # Diff view colours
     DIFF_REMOVED_BACKGROUND = auto()    # Background for removed lines
     DIFF_ADDED_BACKGROUND = auto()      # Background for added lines
