@@ -4,7 +4,7 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea, QWidget, QFrame
 )
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QSignalBlocker, Signal
 
 from ai import AIConversationSettings, AIReasoningCapability, AIManager
 from ai.ai_model import AIReasoningEffort
@@ -326,7 +326,10 @@ class ConversationSettingsDialog(QDialog):
 
         # Populate filter then model combo (grouped by provider)
         self._populate_model_filter_combo()
-        self._populate_model_combo(filter_provider=None)
+        with QSignalBlocker(self._model_filter_combo):
+            self._model_filter_combo.set_value(settings.provider)
+
+        self._populate_model_combo(filter_provider=settings.provider)
         self._model_combo.set_value((settings.model, settings.provider))
 
         # Set temperature

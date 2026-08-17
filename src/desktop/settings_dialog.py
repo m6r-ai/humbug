@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QWidget, QFrame, QListWidget, QListWidgetItem, QStackedWidget, QSplitter,
     QStyledItemDelegate, QStyleOptionViewItem, QLabel
 )
-from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSize, Signal, Qt
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSignalBlocker, QSize, Signal, Qt
 from PySide6.QtGui import QFont
 
 from ai import AIBackendSettings, AIConversationSettings, AIManager, AIReasoningCapability
@@ -805,7 +805,10 @@ class SettingsDialog(QDialog):
         # AI model
         ai_backends = self._ai_manager.get_backends()
         self._populate_model_filter_combo(ai_backends)
-        self._populate_model_combo(ai_backends, filter_provider=None)
+        with QSignalBlocker(self._model_filter_combo):
+            self._model_filter_combo.set_value(settings.provider)
+
+        self._populate_model_combo(ai_backends, filter_provider=settings.provider)
         self._model_combo.set_value((settings.model, settings.provider))
         self._temp_spin.set_value(settings.temperature)
         self._update_model_capabilities(settings.model, settings.provider)
