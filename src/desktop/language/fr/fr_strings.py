@@ -265,6 +265,15 @@ def get_french_strings() -> LanguageStrings:
         settings_effort_high="Élevé",
         settings_effort_xhigh="Très élevé",
         settings_effort_max="Maximum",
+        settings_apply_to_all_conversations="Définir par défaut pour cette conversation et toutes les conversations ouvertes",
+        settings_apply_to_open_conversations="Appliquer à toutes les conversations ouvertes",
+        settings_applied_to_all_conversations="Appliqué",
+        settings_apply_to_all_confirm_title="Appliquer à toutes les conversations ?",
+        settings_apply_to_all_confirm_message=(
+            "Cela modifiera le modèle, le fournisseur, la température et les paramètres de raisonnement "
+            "pour chaque conversation actuellement ouverte, et les définira comme valeurs par défaut pour "
+            "les nouvelles conversations. Cette action est irréversible. Continuer ?"
+        ),
 
         # File dialog titles
         file_dialog_open_conversation="Ouvrir une conversation",

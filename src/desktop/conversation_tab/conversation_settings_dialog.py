@@ -11,6 +11,8 @@ from ai.ai_model import AIReasoningEffort
 
 from desktop.language.language_manager import LanguageManager
 from desktop.ai_backend_display import get_all_backend_display_names, get_backend_display_name
+from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
+from desktop.settings.settings_action_row import SettingsActionRow
 from desktop.settings.settings_container import SettingsContainer
 from desktop.settings.settings_factory import SettingsFactory
 from desktop.style_manager import StyleManager
@@ -20,6 +22,7 @@ class ConversationSettingsDialog(QDialog):
     """Dialog for editing conversation settings using the settings framework."""
 
     settings_changed = Signal(AIConversationSettings)
+    apply_to_all_requested = Signal(AIConversationSettings)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the conversation settings dialog."""
@@ -85,6 +88,11 @@ class ConversationSettingsDialog(QDialog):
             strings.settings_temp_label, 0.0, 1.0, 0.1, 1
         )
         self._settings_container.add_setting(self._temp_spin)
+
+        # Apply-to-all-conversations option
+        self._apply_to_all_row = SettingsActionRow(strings.settings_apply_to_all_conversations)
+        self._apply_to_all_row.button().clicked.connect(self._on_apply_to_all_clicked)
+        self._settings_container.add_setting(self._apply_to_all_row)
 
         spacer = SettingsFactory.create_spacer(24)
         self._settings_container.add_setting(spacer)
@@ -345,7 +353,32 @@ class ConversationSettingsDialog(QDialog):
         # Set reasoning capability
         self._reasoning_combo.set_value(settings.reasoning)
 
+        # Clear any status message left over from a previous "apply to all" click
+        self._apply_to_all_row.set_status("")
+
         # Reset modified state
+        self._settings_container.reset_modified_state()
+        self.apply_button.setEnabled(False)
+
+    def _on_apply_to_all_clicked(self) -> None:
+        """Handle the "set as default" button click."""
+        strings = self._language_manager.strings()
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.QUESTION,
+            strings.settings_apply_to_all_confirm_title,
+            strings.settings_apply_to_all_confirm_message,
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            destructive=True
+        )
+        if result != MessageBoxButton.YES:
+            return
+
+        settings = self.get_settings()
+        self._current_settings = settings
+        self.settings_changed.emit(settings)
+        self.apply_to_all_requested.emit(settings)
+        self._apply_to_all_row.set_success(strings.settings_applied_to_all_conversations)
         self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
 

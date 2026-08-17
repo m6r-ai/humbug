@@ -251,6 +251,11 @@ class LanguageStrings:
     settings_effort_high: str
     settings_effort_xhigh: str
     settings_effort_max: str
+    settings_apply_to_all_conversations: str
+    settings_apply_to_open_conversations: str
+    settings_applied_to_all_conversations: str
+    settings_apply_to_all_confirm_title: str
+    settings_apply_to_all_confirm_message: str
 
     # File dialog titles
     file_dialog_open_conversation: str
