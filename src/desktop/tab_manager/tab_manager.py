@@ -2,7 +2,7 @@ from collections.abc import Callable
 import logging
 import math
 import os
-from typing import cast
+from typing import cast, TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer, QPoint
@@ -28,6 +28,9 @@ from desktop.tab_manager.tab_overview import TabOverviewEntry, TabOverviewWidget
 from desktop.tab_manager.tab_style import build_tab_manager_stylesheet, build_tab_bar_stylesheet
 from desktop.tab_manager.welcome_widget import WelcomeWidget
 from desktop.user.user_settings import UserSettings
+
+if TYPE_CHECKING:
+    from ai import AIConversationSettings
 
 TabFactory = Callable[[TabState, QWidget], "TabBase | None"]
 ContextFactory = Callable[[ContextInfo, ContextRegistry, QWidget], "TabBase | None"]
@@ -519,6 +522,26 @@ class TabManager(QWidget):
         for tab in self._tabs.values():
             tab.apply_mindspace_settings(settings)
 
+    def apply_conversation_settings_to_all_tabs(self, new_settings: "AIConversationSettings") -> None:
+        """Broadcast conversation settings to every open tab. Does not persist a mindspace default."""
+        for tab in self._tabs.values():
+            tab.apply_conversation_settings(new_settings)
+
+    def _on_conversation_settings_apply_all_requested(self, new_settings: "AIConversationSettings") -> None:
+        """Broadcast conversation settings to every open tab and save as the mindspace default."""
+        self.apply_conversation_settings_to_all_tabs(new_settings)
+
+        settings = self._mindspace_manager.settings()
+        if settings is None:
+            return
+
+        settings.model = new_settings.model
+        settings.provider = new_settings.provider
+        settings.temperature = new_settings.temperature
+        settings.reasoning = new_settings.reasoning
+        settings.reasoning_effort = new_settings.reasoning_effort
+        self._mindspace_manager.update_settings(settings)
+
     def _subscribe_to_registry(self) -> None:
         """Register TabManager as a subscriber to the active ContextRegistry."""
         if self._registry_subscribed:
@@ -627,6 +650,7 @@ class TabManager(QWidget):
         tab.tab_label_changed.connect(self._on_tab_label_changed)
         tab.close_requested.connect(lambda: self.close_tab_by_id(tab_id, force_close=True))
         tab.preferred_width_changed.connect(self._on_tab_preferred_width_changed)
+        tab.conversation_settings_apply_all_requested.connect(self._on_conversation_settings_apply_all_requested)
 
         self._tabs[tab_id] = tab
 

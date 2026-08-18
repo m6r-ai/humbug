@@ -2329,11 +2329,35 @@ class MainWindow(QMainWindow):
                     strings.error_saving_mindspace_settings.format(str(e))
                 )
 
+        def _on_apply_ai_settings_to_all_requested(new_settings: MindspaceSettings) -> None:
+            try:
+                self._mindspace_manager.update_settings(new_settings)
+                self._tab_manager.apply_conversation_settings_to_all_tabs(
+                    AIConversationSettings(
+                        model=new_settings.model,
+                        provider=new_settings.provider,
+                        temperature=new_settings.temperature,
+                        reasoning=new_settings.reasoning,
+                        reasoning_effort=new_settings.reasoning_effort,
+                    )
+                )
+
+            except MindspaceError as e:
+                self._logger.error("Failed to save mindspace settings: %s", str(e))
+                strings = self._language_manager.strings()
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    strings.settings_error_title,
+                    strings.error_saving_mindspace_settings.format(str(e))
+                )
+
         def _on_dialog_finished(_result: int) -> None:
             self._settings_dialog = None
 
         dialog.user_settings_changed.connect(_on_user_settings_changed)
         dialog.mindspace_settings_changed.connect(_on_mindspace_settings_changed)
+        dialog.apply_ai_settings_to_all_requested.connect(_on_apply_ai_settings_to_all_requested)
         dialog.finished.connect(_on_dialog_finished)
         dialog.set_settings(self._user_manager.settings(), mindspace_settings, initial_section)
         dialog.show()

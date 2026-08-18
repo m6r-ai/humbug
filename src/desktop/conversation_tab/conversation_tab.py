@@ -306,6 +306,10 @@ class ConversationTab(TabBase):
         """Update conversation settings and associated backend."""
         self._conversation_widget.update_conversation_settings(new_settings)
 
+    def apply_conversation_settings(self, settings: AIConversationSettings) -> None:
+        """Apply conversation settings broadcast from another conversation tab."""
+        self.update_conversation_settings(settings)
+
     def _on_update_label(self) -> None:
         """
         Handle label updates for the conversation tab.
@@ -967,6 +971,7 @@ class ConversationTab(TabBase):
             self._conversation_settings_dialog = None
 
         dialog.accepted.connect(_on_accepted)
+        dialog.apply_to_all_requested.connect(self.conversation_settings_apply_all_requested.emit)
         dialog.finished.connect(_on_finished)
         dialog.show()
         dialog.raise_()
