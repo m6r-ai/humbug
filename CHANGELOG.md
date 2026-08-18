@@ -17,6 +17,7 @@ New features:
 - Added a conversation tab "prompt mini-map" feature to make navigating to user prompts easier.
 - Added paren matching in the editor to make it easier to understand and debug s-expression-based languages (Menai and Scheme
   for now).
+- Added GLM 5.3 and removed GLM 5.1 for the Zai backend.
 
 Bug fixes:
 
