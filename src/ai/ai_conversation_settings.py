@@ -86,7 +86,7 @@ class AIConversationSettings:
             adaptive_thinking_only=True,
         ),
 
-        # Deepseek models
+        # DeepSeek models
         ("deepseek-v4-flash", "deepseek"): AIModel(
             name="deepseek-v4-flash",
             provider="deepseek",
@@ -250,6 +250,7 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
                 AIReasoningEffort.HIGH,
                 AIReasoningEffort.MAX
             ],
@@ -265,6 +266,7 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
                 AIReasoningEffort.HIGH,
                 AIReasoningEffort.MAX
             ],
@@ -501,11 +503,11 @@ class AIConversationSettings:
         ),
 
         # xAI models
-        ("grok-4.5", "xai"): AIModel(
-            name="grok-4.5",
+        ("grok-4.6", "xai"): AIModel(
+            name="grok-4.6",
             provider="xai",
-            display_name="Grok 4.5",
-            context_window=500000,
+            display_name="Grok 4.6",
+            context_window=1000000,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
@@ -516,17 +518,16 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH
             ],
         ),
-        ("grok-4.3", "xai"): AIModel(
-            name="grok-4.3",
+        ("grok-4.5", "xai"): AIModel(
+            name="grok-4.5",
             provider="xai",
-            display_name="Grok 4.3",
-            context_window=1000000,
+            display_name="Grok 4.5",
+            context_window=500000,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH

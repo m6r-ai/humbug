@@ -18,6 +18,7 @@ New features:
 - Added paren matching in the editor to make it easier to understand and debug s-expression-based languages (Menai and Scheme
   for now).
 - Added GLM 5.3 and removed GLM 5.1 for the Zai backend.
+- Added Grok 4.6 and removed Grok 4.3 for the X.ai backend.
 
 Bug fixes:
 
@@ -32,6 +33,7 @@ Bug fixes:
 - Instantiate a new Menai VM per AI tool use to avoid threading race conditions.
 - Improve the handling of detecting that Menai help has been read in a conversation.  Ensure this persists across restarts,
   across forking, and correctly acts when messages are deleted.
+- Updating existing conversation models did not honour the provider correctly.
 
 ## v53 (2026-07-12)
 
