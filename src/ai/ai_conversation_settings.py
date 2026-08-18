@@ -239,6 +239,36 @@ class AIConversationSettings:
         ),
 
         # Ollama Cloud models
+        ("deepseek-v4-flash", "ollama-cloud"): AIModel(
+            name="deepseek-v4-flash:cloud",
+            provider="ollama-cloud",
+            display_name="DeepSeek V4 Flash",
+            context_window=1000000,
+            max_output_tokens=384000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
+        ("deepseek-v4-pro", "ollama-cloud"): AIModel(
+            name="deepseek-v4-pro:cloud",
+            provider="ollama-cloud",
+            display_name="DeepSeek V4 Pro",
+            context_window=1000000,
+            max_output_tokens=384000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
         ("gpt-oss:20b", "ollama-cloud"): AIModel(
             name="gpt-oss:20b",
             provider="ollama-cloud",
