@@ -271,8 +271,11 @@ class Lexer(ABC):
             if self._input[self._position:].startswith(op):
                 start = self._position
                 self._position += len(op)
+                token_type = TokenType.LPAREN if op == '(' else (
+                    TokenType.RPAREN if op == ')' else TokenType.OPERATOR
+                )
                 self._tokens.append(Token(
-                    type=TokenType.OPERATOR,
+                    type=token_type,
                     value=op,
                     start=start
                 ))

@@ -190,7 +190,7 @@ class CSharpParser(Parser):
 
                 # Check if this is a method call
                 next_token = lexer.peek_next_token()
-                if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '(':
+                if next_token and next_token.type == TokenType.LPAREN:
                     token.type = TokenType.FUNCTION_OR_METHOD
                     self._tokens.append(token)
                     continue
@@ -315,7 +315,7 @@ class CSharpParser(Parser):
 
         # After the '>', we should see a '(' for a method call
         current_token = lexer.peek_next_token(offset=token_pos)
-        return current_token is not None and current_token.type == TokenType.OPERATOR and current_token.value == '('
+        return current_token is not None and current_token.type == TokenType.LPAREN
 
     def _get_linq_keywords(self) -> list[str]:
         """

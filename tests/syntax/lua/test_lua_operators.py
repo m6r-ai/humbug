@@ -90,7 +90,8 @@ class TestLuaOperators:
 
             tokens = list(lexer._tokens)
             assert len(tokens) == 1, f"Operator '{op}' should produce one token"
-            assert tokens[0].type.name == 'OPERATOR'
+            expected = 'LPAREN' if op == '(' else 'RPAREN'
+            assert tokens[0].type.name == expected
             assert tokens[0].value == op
 
     def test_braces(self):

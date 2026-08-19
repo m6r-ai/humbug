@@ -284,7 +284,12 @@ class TestCppOperators:
 
             tokens = list(lexer._tokens)
             assert len(tokens) == 1
-            assert tokens[0].type.name == 'OPERATOR'
+            if op == '(':
+                assert tokens[0].type.name == 'LPAREN'
+            elif op == ')':
+                assert tokens[0].type.name == 'RPAREN'
+            else:
+                assert tokens[0].type.name == 'OPERATOR'
             assert tokens[0].value == op
 
     def test_punctuation(self):

@@ -1374,13 +1374,6 @@ class EditorWidget(QPlainTextEdit):
 
     def _update_paren_match(self) -> None:
         """Find and highlight the matching parenthesis at the current cursor position."""
-        if self._syntax not in (ProgrammingLanguage.MENAI, ProgrammingLanguage.SCHEME):
-            if self._paren_selections:
-                self._paren_selections = []
-                self._apply_extra_selections()
-
-            return
-
         cursor = self.textCursor()
 
         # Don't show paren match when there is an active selection

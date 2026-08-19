@@ -411,7 +411,10 @@ class BashLexer(Lexer):
             if self._input[self._position:].startswith(op):
                 start = self._position
                 self._position += len(op)
-                token = Token(type=TokenType.OPERATOR, value=op, start=start)
+                token_type = TokenType.LPAREN if op == '(' else (
+                    TokenType.RPAREN if op == ')' else TokenType.OPERATOR
+                )
+                token = Token(type=token_type, value=op, start=start)
                 self._tokens.append(token)
 
                 if op in ('<<', '<<-'):

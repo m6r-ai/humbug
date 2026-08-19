@@ -222,19 +222,18 @@ class JavaParser(Parser):
             self._tokens.append(token)
             return
 
-        if next_token.type == TokenType.OPERATOR:
-            # Method call
-            if next_token.value == '(':
-                token.type = TokenType.FUNCTION_OR_METHOD
-                self._tokens.append(token)
-                return
+        # Method call
+        if next_token.type == TokenType.LPAREN:
+            token.type = TokenType.FUNCTION_OR_METHOD
+            self._tokens.append(token)
+            return
 
+        if next_token.type == TokenType.OPERATOR:
             # Generic type parameters
             if next_token.value == '<':
                 # This might be a generic type instantiation
                 after_generic = self._peek_after_generic_close(lexer)
-                if (after_generic and after_generic.type == TokenType.OPERATOR and
-                        after_generic.value == '('):
+                if after_generic and after_generic.type == TokenType.LPAREN:
                     # Generic method call
                     token.type = TokenType.GENERIC_METHOD
                     self._tokens.append(token)
