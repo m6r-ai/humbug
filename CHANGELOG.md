@@ -18,6 +18,8 @@ New features:
 - Added paren matching in the editor to make it easier to understand and debug code (especially s-expr languages).
 - Added GLM 5.3 and removed GLM 5.1 for the Zai backend.
 - Added Grok 4.6 and removed Grok 4.3 for the X.ai backend.
+- Added a `USR1` signal handler for MacOS/Linux that will terminate the app and log the current backtrace status to a new
+  logfile.
 
 Bug fixes:
 
