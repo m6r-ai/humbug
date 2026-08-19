@@ -98,6 +98,13 @@ class EditorWidget(QPlainTextEdit):
         self._smooth_scroll_timer = QTimer(self)
         self._smooth_scroll_timer.setInterval(SMOOTH_SCROLL_INTERVAL_MS)
         self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
+
+        # Zero-delay timer deferring scroll restoration after a style change until
+        # re-layout settles. Parented to self so it is torn down with the widget.
+        self._restore_centre_timer = QTimer(self)
+        self._restore_centre_timer.setSingleShot(True)
+        self._restore_centre_timer.timeout.connect(self._on_restore_centre_block)
+        self._pending_centre_block: int | None = None
         self._smooth_scroll_target: int = 0
         self._smooth_scroll_start: int = 0
         self._smooth_scroll_distance: int = 0
@@ -1071,7 +1078,15 @@ class EditorWidget(QPlainTextEdit):
         self._update_paren_match()
 
         # Re-layout from setFont() is async, so defer the scroll restoration.
-        QTimer.singleShot(0, lambda: self._restore_centre_block(centre_block))
+        self._pending_centre_block = centre_block
+        self._restore_centre_timer.start(0)
+
+    def _on_restore_centre_block(self) -> None:
+        """Apply the deferred scroll restoration scheduled by apply_style."""
+        centre_block = self._pending_centre_block
+        self._pending_centre_block = None
+        if centre_block is not None:
+            self._restore_centre_block(centre_block)
 
     def _restore_centre_block(self, centre_block: int) -> None:
         """Scroll so that centre_block sits at the vertical midpoint of the viewport."""

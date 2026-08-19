@@ -108,7 +108,12 @@ def _create_editor_tab(
     tab = EditorTab(info.context_id, info.path, None, parent)
     goto = registry.get_model(info.context_id, tuple)
     if goto is not None:
-        QTimer.singleShot(0, lambda: tab.goto_line(goto[0], goto[1]))
+        # Zero-delay timer deferring the jump until the tab is laid out. Parented to
+        # the tab so it is destroyed with it and can never fire after teardown.
+        goto_timer = QTimer(tab)
+        goto_timer.setSingleShot(True)
+        goto_timer.timeout.connect(lambda: tab.goto_line(goto[0], goto[1]))
+        goto_timer.start(0)
 
     return tab
 

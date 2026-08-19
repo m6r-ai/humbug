@@ -131,6 +131,23 @@ class TabManager(QWidget):
         self._activation_timer.timeout.connect(self._activate_current_tab)
         self._activation_timer.setInterval(1)
 
+        # Zero-delay deferral timers. Parented to self so they are torn down with the
+        # manager and can never fire after the widgets they touch are deleted.
+        self._set_active_column_timer = QTimer(self)
+        self._set_active_column_timer.setSingleShot(True)
+        self._set_active_column_timer.timeout.connect(self._on_deferred_set_active_column)
+        self._deferred_active_column_index: int = 0
+        self._deferred_active_tab_ids: list[str] = []
+
+        self._focus_restore_timer = QTimer(self)
+        self._focus_restore_timer.setSingleShot(True)
+        self._focus_restore_timer.timeout.connect(self._on_deferred_focus_restore)
+        self._deferred_focus_widget: QWidget | None = None
+
+        self._thumbnail_refresh_timer = QTimer(self)
+        self._thumbnail_refresh_timer.setSingleShot(True)
+        self._thumbnail_refresh_timer.timeout.connect(self._refresh_current_tab_thumbnails)
+
         # Set initial state
         self._stack.setCurrentWidget(self._welcome_widget)
 
@@ -673,7 +690,15 @@ class TabManager(QWidget):
         # (e.g. the sidebar).  If focus was already inside the column, let it move to the new tab.
         if focus_widget is not None and not column.isAncestorOf(focus_widget):
             self._activation_timer.stop()
-            QTimer.singleShot(0, focus_widget.setFocus)
+            self._deferred_focus_widget = focus_widget
+            self._focus_restore_timer.start(0)
+
+    def _on_deferred_focus_restore(self) -> None:
+        """Restore focus to the widget saved by the tab activation path."""
+        if self._deferred_focus_widget is not None:
+            self._deferred_focus_widget.setFocus()
+
+            self._deferred_focus_widget = None
 
     def _move_tab_between_columns(
         self,
@@ -1904,7 +1929,15 @@ class TabManager(QWidget):
                 active_tab_ids.append(active_tab_id)
 
         # Defer setting the active column to ensure it's not overridden by other UI operations
-        QTimer.singleShot(0, lambda: self._deferred_set_active_column(active_column_index, active_tab_ids))
+        self._deferred_active_column_index = active_column_index
+        self._deferred_active_tab_ids = active_tab_ids
+        self._set_active_column_timer.start(0)
+
+    def _on_deferred_set_active_column(self) -> None:
+        """Apply the active column and tab ids saved before the deferral."""
+        self._deferred_set_active_column(
+            self._deferred_active_column_index, self._deferred_active_tab_ids
+        )
 
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""
@@ -1983,7 +2016,7 @@ class TabManager(QWidget):
         if self._tab_columns:
             self.show_all_columns()
 
-        QTimer.singleShot(0, self._refresh_current_tab_thumbnails)
+        self._thumbnail_refresh_timer.start(0)
 
         if self._tab_overview is not None and self._tab_overview.isVisible():
             self.show_tab_overview()

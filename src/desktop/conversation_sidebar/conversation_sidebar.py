@@ -85,6 +85,12 @@ class ConversationSidebar(SidebarBase):
         self._bc_container = SidebarBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
 
+        # Zero-delay timer scheduling a viewport repaint after the index scan and
+        # model reset settle. Parented to self so it is torn down with the sidebar.
+        self._viewport_refresh_timer = QTimer(self)
+        self._viewport_refresh_timer.setSingleShot(True)
+        self._viewport_refresh_timer.timeout.connect(self._bc_container.refresh_viewport)
+
         # Create icon provider for styling
         self._icon_provider = SidebarTreeIconProvider()
 
@@ -1194,7 +1200,7 @@ class ConversationSidebar(SidebarBase):
         self._conversations_index.set_conversations_dir(self._conversations_path)
 
         # Schedule a repaint after the event loop processes the index scan and model reset
-        QTimer.singleShot(0, self._bc_container.refresh_viewport)
+        self._viewport_refresh_timer.start(0)
 
     def conversations_index(self) -> ConversationSidebarIndex:
         """

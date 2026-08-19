@@ -172,9 +172,37 @@ class ConversationWidget(QWidget):
         self._debounce_timer.timeout.connect(self._on_debounce_timeout)
         self._debounce_timer.setInterval(self._debounce_interval_ms)
 
+        # Single-shot timer used to coalesce sticky-banner updates. Parented to self
+        # so it is torn down with the widget: a pending update can never fire after
+        # the C++ object is deleted.
+        self._sticky_update_timer = QTimer(self)
+        self._sticky_update_timer.setSingleShot(True)
+        self._sticky_update_timer.timeout.connect(self._update_sticky_banners)
+
+        # Single-shot timer that re-enables updates on freshly rendered message
+        # widgets once the reveal pass has painted. Parented to self so it is torn
+        # down with the widget before any child message widget is deleted.
+        self._re_enable_updates_timer = QTimer(self)
+        self._re_enable_updates_timer.setSingleShot(True)
+        self._re_enable_updates_timer.timeout.connect(self._on_re_enable_updates)
+        self._pending_re_enable_widgets: list = []
+
+        # Zero-delay timers deferring work to the next event-loop turn after layout
+        # settles. Parented to self so they are torn down with the widget.
+        self._prompt_minimap_timer = QTimer(self)
+        self._prompt_minimap_timer.setSingleShot(True)
+        self._prompt_minimap_timer.timeout.connect(self._update_prompt_minimap)
+
+        self._input_position_timer = QTimer(self)
+        self._input_position_timer.setSingleShot(True)
+        self._input_position_timer.timeout.connect(self._update_input_position)
+
+        self._input_size_hint_timer = QTimer(self)
+        self._input_size_hint_timer.setSingleShot(True)
+        self._input_size_hint_timer.timeout.connect(self._on_input_size_hint_changed)
+
         # Initialize tracking variables
         self._auto_scroll = True
-        self._sticky_update_pending = False
 
         # Create layout
         conversation_layout = QVBoxLayout(self)
@@ -297,7 +325,7 @@ class ConversationWidget(QWidget):
             conversation_history.get_messages(), ai_transcript_conversation is not None,
             attachments=conversation_history.attachments()
         )
-        QTimer.singleShot(0, self._update_prompt_minimap)
+        self._deferred_minimap_update()
 
         # Restore parent metadata from the transcript onto the ai_conversation history.
         # load_message_history calls clear() which discards it, so we reapply it here.
@@ -1276,11 +1304,15 @@ class ConversationWidget(QWidget):
             self._response_reveal_timer.stop()
 
         if rendered_widgets:
-            def _re_enable_updates(widgets: list) -> None:
-                for w in widgets:
-                    w.setUpdatesEnabled(True)
+            self._pending_re_enable_widgets = rendered_widgets
+            self._re_enable_updates_timer.start(5)
 
-            QTimer.singleShot(5, lambda: _re_enable_updates(rendered_widgets))
+    def _on_re_enable_updates(self) -> None:
+        """Re-enable repaints on widgets deferred by the last render pass."""
+        for w in self._pending_re_enable_widgets:
+            w.setUpdatesEnabled(True)
+
+        self._pending_re_enable_widgets = []
 
     def _response_reveal_chunk_size(self, remaining: int, completed: bool) -> int:
         """Choose a reveal chunk size that stays smooth but catches up quickly."""
@@ -1530,16 +1562,7 @@ class ConversationWidget(QWidget):
         layout events, so recomputing immediately would read stale geometry. Deferring
         lets the layout settle first, giving precise final banner positions.
         """
-        if self._sticky_update_pending:
-            return
-
-        self._sticky_update_pending = True
-        QTimer.singleShot(0, self._run_deferred_sticky_update)
-
-    def _run_deferred_sticky_update(self) -> None:
-        """Run a coalesced sticky-banner recompute scheduled by _schedule_sticky_update."""
-        self._sticky_update_pending = False
-        self._update_sticky_banners()
+        self._sticky_update_timer.start(0)
 
     def _update_sticky_banners(self) -> None:
         """
@@ -2277,7 +2300,7 @@ class ConversationWidget(QWidget):
         if self._input_spacer is None:
             return
 
-        QTimer.singleShot(0, self._update_input_position)
+        self._input_position_timer.start(0)
 
         if self._auto_scroll:
             self._scroll_to_bottom()
@@ -2341,7 +2364,11 @@ class ConversationWidget(QWidget):
 
         self._input.apply_style(self._message_style)
         if self._input_spacer is not None:
-            QTimer.singleShot(0, self._on_input_size_hint_changed)
+            self._input_size_hint_timer.start(0)
+
+    def _deferred_minimap_update(self) -> None:
+        """Update the prompt minimap on the next event-loop turn."""
+        self._prompt_minimap_timer.start(0)
 
     def _build_message_style(self) -> ConversationMessageStyle:
         """Build the shared style object for all ConversationMessage instances."""

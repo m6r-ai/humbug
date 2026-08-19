@@ -68,6 +68,18 @@ class DiffWidget(QWidget):
         self._cached_hunks: list[tuple[int, int]] = []
         self._current_hunk_index: int = -1
         self._hunk_scroll_target: int = -1
+
+        # Zero-delay timers deferring mode switches and scroll restoration to the
+        # next event-loop turn. Parented to self so they are torn down with the widget.
+        self._mode_switch_timer = QTimer(self)
+        self._mode_switch_timer.setSingleShot(True)
+        self._mode_switch_timer.timeout.connect(self._on_deferred_mode_switch)
+        self._deferred_mode: DiffViewMode = mode
+
+        self._restore_centre_timer = QTimer(self)
+        self._restore_centre_timer.setSingleShot(True)
+        self._restore_centre_timer.timeout.connect(self._restore_centre_block)
+
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -189,11 +201,17 @@ class DiffWidget(QWidget):
 
     def _defer_switch_to_inline(self) -> None:
         """Defer the mode switch so the context menu event loop can exit first."""
-        QTimer.singleShot(0, lambda: self.set_mode(DiffViewMode.INLINE))
+        self._deferred_mode = DiffViewMode.INLINE
+        self._mode_switch_timer.start(0)
 
     def _defer_switch_to_side_by_side(self) -> None:
         """Defer the mode switch so the context menu event loop can exit first."""
-        QTimer.singleShot(0, lambda: self.set_mode(DiffViewMode.SIDE_BY_SIDE))
+        self._deferred_mode = DiffViewMode.SIDE_BY_SIDE
+        self._mode_switch_timer.start(0)
+
+    def _on_deferred_mode_switch(self) -> None:
+        """Apply the mode switch requested via a deferred timer."""
+        self.set_mode(self._deferred_mode)
 
     def mode(self) -> DiffViewMode:
         """Return the current layout mode."""
@@ -621,7 +639,7 @@ class DiffWidget(QWidget):
             pane.apply_style()
 
         # Re-layout from setFont() is async, so defer the scroll restoration.
-        QTimer.singleShot(0, self._restore_centre_block)
+        self._restore_centre_timer.start(0)
 
     def _restore_centre_block(self) -> None:
         """Scroll so that the pre-style centre block sits at the viewport midpoint."""

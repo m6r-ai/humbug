@@ -91,6 +91,19 @@ class _SettingsComboPopup(QFrame):
         self._owner = owner
         self._open = False
         self._just_closed = False
+
+        # Timer that clears the just-closed flag after a popup dismiss. Parented to
+        # self so it can never fire after the popup has been destroyed.
+        self._just_closed_timer = QTimer(self)
+        self._just_closed_timer.setSingleShot(True)
+        self._just_closed_timer.timeout.connect(self._clear_just_closed)
+
+        # Timer deferring the show-at-position sequence to the next event-loop turn.
+        # Parented to self so it can never fire after the popup has been destroyed.
+        self._show_at_pos_timer = QTimer(self)
+        self._show_at_pos_timer.setSingleShot(True)
+        self._show_at_pos_timer.timeout.connect(self._on_show_at_pos)
+        self._pending_show_pos: QPoint | None = None
         self.setObjectName("SettingsComboPopupWindow")
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
@@ -190,17 +203,24 @@ class _SettingsComboPopup(QFrame):
         # on first open.  On Linux/XCB this also avoids forcing early native
         # handle creation via winId(), which causes the compositor to disturb
         # the parent dialog's position.
-        def _show_at_pos() -> None:
-            self.move(global_pos)
-            self.show()
-            self.raise_()
-            self._open = True
-
         if sys.platform == "darwin":
             self.winId()
 
         self.hide()
-        QTimer.singleShot(0, _show_at_pos)
+        self._pending_show_pos = global_pos
+        self._show_at_pos_timer.start(0)
+
+    def _on_show_at_pos(self) -> None:
+        """Move to the saved position and show, as scheduled by show_at."""
+        pos = self._pending_show_pos
+        self._pending_show_pos = None
+        if pos is None:
+            return
+
+        self.move(pos)
+        self.show()
+        self.raise_()
+        self._open = True
 
         if self._searchable:
             self._search.setFocus(Qt.FocusReason.PopupFocusReason)
@@ -258,7 +278,7 @@ class _SettingsComboPopup(QFrame):
         if self._open:
             self._open = False
             self._just_closed = True
-            QTimer.singleShot(200, self._clear_just_closed)
+            self._just_closed_timer.start(200)
             self._owner.on_popup_hidden()
 
     def is_open(self) -> bool:
