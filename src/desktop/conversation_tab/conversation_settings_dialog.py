@@ -147,7 +147,7 @@ class ConversationSettingsDialog(QDialog):
         # Set minimum button widths and heights
         zoom_factor = style_manager.zoom_factor()
         min_button_width = int(90 * zoom_factor)
-        min_button_height = 40
+        min_button_height = int(40 * zoom_factor)
         for button in [self.ok_button, self.apply_button, self.cancel_button]:
             button.setMinimumWidth(min_button_width)
             button.setMinimumHeight(min_button_height)

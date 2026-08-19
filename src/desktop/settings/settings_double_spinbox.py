@@ -79,7 +79,7 @@ class SettingsDoubleSpinBox(SettingsField):
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
-        min_height = int(30 * zoom_factor)
+        min_height = int(36 * zoom_factor)
         self._spin.setMinimumHeight(min_height)
 
     def set_enabled(self, enabled: bool) -> None:
