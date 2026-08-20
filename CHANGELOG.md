@@ -35,6 +35,8 @@ Bug fixes:
 - Improve the handling of detecting that Menai help has been read in a conversation.  Ensure this persists across restarts,
   across forking, and correctly acts when messages are deleted.
 - Updating existing conversation models did not honour the provider correctly.
+- Fixed a usage tab problem when more than 4 models from the same provider were used.  Updated scrolling of the tab to
+  make it more consistent with other tab types.
 
 ## v53 (2026-07-12)
 
