@@ -186,6 +186,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+
       - uses: actions/download-artifact@v7
         with:
           path: dist
@@ -195,9 +197,23 @@ jobs:
         working-directory: dist
         run: sha256sum * > checksums.txt
 
+      - name: Extract changelog entry
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: awk -v ver="## v${VERSION}" '$0 ~ "^" ver {flag=1; next} /^## v/ {flag=0} flag' CHANGELOG.md > release-notes.md
+
+      - name: Verify changelog entry exists
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          if [ ! -s release-notes.md ]; then
+            echo "ERROR: No entry for v${VERSION} found in CHANGELOG.md"
+            exit 1
+          fi
+
       - uses: softprops/action-gh-release@v3
         with:
           draft: true
-          generate_release_notes: true
+          body_path: release-notes.md
           files: |
             dist/*
