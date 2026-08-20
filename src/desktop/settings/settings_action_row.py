@@ -22,6 +22,7 @@ class SettingsActionRow(SettingsItem):
 
         self._status_label = QLabel("")
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        self._status_label.setWordWrap(True)
 
         layout.addWidget(self._button)
         layout.addWidget(self._status_label, 1)

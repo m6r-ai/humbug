@@ -493,5 +493,8 @@ def get_arabic_strings() -> LanguageStrings:
         fetch_error_server_error="خطأ في خادم المزود ({0}) — حاول مجدداً لاحقاً.",
         fetch_error_connection="تعذّر الاتصال — تحقق من عنوان URL وشبكتك.",
         fetch_error_timeout="انتهت مهلة الطلب — استغرق المزود وقتاً طويلاً للاستجابة.",
-        fetch_error_generic="فشل: {0}"
+        fetch_error_generic="فشل: {0}",
+        stream_error_interrupted="انقطع الاتصال قبل اكتمال الاستجابة. يرجى إعادة المحاولة.",
+        stream_error_no_backend="لا يوجد خدمة ذكاء اصطناعي مهيأة لمزود هذا النموذج — تحقق من إعدادات خدمات الذكاء الاصطناعي.",
+        stream_error_access_denied="تم رفض الوصول ({0}) — قد لا يملك حسابك صلاحية الوصول إلى هذا النموذج."
     )

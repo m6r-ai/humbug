@@ -1,4 +1,4 @@
-"""User-friendly, localised error messages for provider model-fetch and pull failures."""
+"""User-friendly, localised error messages for provider model-fetch, pull, and streaming failures."""
 
 
 from desktop.language.language_manager import LanguageManager
@@ -19,11 +19,11 @@ def pull_error_message(exc: Exception) -> str:
         return strings.ollama_pull_error.format(str(exc)[:80])
 
     if isinstance(exc, ClientConnectorError):
-        return strings.ollama_pull_not_running
+        return f"{strings.ollama_pull_not_running} ({str(exc)[:80]})"
 
     if isinstance(exc, ClientResponseError):
         if exc.status() == 404:
-            return strings.ollama_pull_model_not_found
+            return f"{strings.ollama_pull_model_not_found} ({exc.status()})"
 
         return strings.ollama_pull_error.format(f"HTTP {exc.status()}")
 
@@ -46,13 +46,13 @@ def fetch_error_message(exc: Exception, backend_id: str = "") -> str:
     if isinstance(exc, ClientConnectorError):
         # Ollama runs locally — give the more actionable "is it running?" message.
         if backend_id == "ollama":
-            return strings.ollama_pull_not_running
+            return f"{strings.ollama_pull_not_running} ({str(exc)[:80]})"
 
-        return strings.fetch_error_connection
+        return f"{strings.fetch_error_connection} ({str(exc)[:80]})"
 
     if isinstance(exc, ClientResponseError):
         if exc.status() == 401:
-            return strings.fetch_error_invalid_key
+            return f"{strings.fetch_error_invalid_key} ({exc.status()})"
 
         if exc.status() == 403:
             return strings.fetch_error_access_denied.format(exc.status())
@@ -72,3 +72,56 @@ def fetch_error_message(exc: Exception, backend_id: str = "") -> str:
         return strings.fetch_error_timeout
 
     return strings.fetch_error_generic.format(str(exc)[:80])
+
+
+def stream_error_message(error: dict | None) -> str:
+    """
+    Return a localised, human-friendly one-line message for an AI streaming error.
+
+    ``error`` is the raw {"code", "message", "details"} dict AIConversation attaches
+    to a SYSTEM error message. This only controls what's rendered in the chat bubble —
+    the original technical message stays untouched on the message and in the saved
+    transcript, so it's still available for logs or support.
+    """
+    strings = LanguageManager().strings()
+
+    if error is None:
+        return ""
+
+    code = error.get("code", "")
+    message = error.get("message", "")
+
+    if code == "cancelled":
+        return strings.stream_error_interrupted
+
+    if code == "network_error":
+        return f"{strings.fetch_error_connection} ({message[:80]})"
+
+    if code == "backend_error":
+        return strings.stream_error_no_backend
+
+    if code == "process_error":
+        return strings.fetch_error_generic.format(message[:80])
+
+    try:
+        status = int(code)
+
+    except (TypeError, ValueError):
+        return strings.fetch_error_generic.format(message[:80])
+
+    if status == 401:
+        return f"{strings.fetch_error_invalid_key} ({status})"
+
+    if status == 403:
+        return strings.stream_error_access_denied.format(status)
+
+    if status == 404:
+        return strings.fetch_error_not_found.format(status)
+
+    if status == 429:
+        return strings.fetch_error_rate_limited.format(status)
+
+    if status >= 500:
+        return strings.fetch_error_server_error.format(status)
+
+    return strings.fetch_error_generic.format(f"HTTP {status}")

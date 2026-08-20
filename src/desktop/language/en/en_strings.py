@@ -495,5 +495,8 @@ def get_english_strings() -> LanguageStrings:
         fetch_error_server_error="Provider server error ({0}) — try again later.",
         fetch_error_connection="Could not connect — check the URL and your network.",
         fetch_error_timeout="Request timed out — the provider took too long to respond.",
-        fetch_error_generic="Failed: {0}"
+        fetch_error_generic="Failed: {0}",
+        stream_error_interrupted="The connection was interrupted before the response finished. Please try again.",
+        stream_error_no_backend="No AI backend is configured for this model's provider — check your AI Backend settings.",
+        stream_error_access_denied="Access denied ({0}) — your account may not have access to this model."
     )
