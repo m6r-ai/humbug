@@ -19,11 +19,11 @@ def pull_error_message(exc: Exception) -> str:
         return strings.ollama_pull_error.format(str(exc)[:80])
 
     if isinstance(exc, ClientConnectorError):
-        return strings.ollama_pull_not_running
+        return f"{strings.ollama_pull_not_running} ({str(exc)[:80]})"
 
     if isinstance(exc, ClientResponseError):
         if exc.status() == 404:
-            return strings.ollama_pull_model_not_found
+            return f"{strings.ollama_pull_model_not_found} ({exc.status()})"
 
         return strings.ollama_pull_error.format(f"HTTP {exc.status()}")
 
@@ -46,13 +46,13 @@ def fetch_error_message(exc: Exception, backend_id: str = "") -> str:
     if isinstance(exc, ClientConnectorError):
         # Ollama runs locally — give the more actionable "is it running?" message.
         if backend_id == "ollama":
-            return strings.ollama_pull_not_running
+            return f"{strings.ollama_pull_not_running} ({str(exc)[:80]})"
 
-        return strings.fetch_error_connection
+        return f"{strings.fetch_error_connection} ({str(exc)[:80]})"
 
     if isinstance(exc, ClientResponseError):
         if exc.status() == 401:
-            return strings.fetch_error_invalid_key
+            return f"{strings.fetch_error_invalid_key} ({exc.status()})"
 
         if exc.status() == 403:
             return strings.fetch_error_access_denied.format(exc.status())
@@ -95,7 +95,7 @@ def stream_error_message(error: dict | None) -> str:
         return strings.stream_error_interrupted
 
     if code == "network_error":
-        return strings.fetch_error_connection
+        return f"{strings.fetch_error_connection} ({message[:80]})"
 
     if code == "backend_error":
         return strings.stream_error_no_backend
@@ -110,7 +110,7 @@ def stream_error_message(error: dict | None) -> str:
         return strings.fetch_error_generic.format(message[:80])
 
     if status == 401:
-        return strings.fetch_error_invalid_key
+        return f"{strings.fetch_error_invalid_key} ({status})"
 
     if status == 403:
         return strings.stream_error_access_denied.format(status)
