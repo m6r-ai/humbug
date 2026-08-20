@@ -11,7 +11,7 @@ from typing import Any, cast
 from PySide6.QtWidgets import (
     QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QFileDialog
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QEvent, QSize, QUrl
+from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QEvent, QSize, QUrl, QVariantAnimation
 from PySide6.QtGui import QCursor, QDesktopServices, QFont, QGuiApplication, QIcon, QResizeEvent
 
 from ai import (
@@ -28,6 +28,7 @@ from desktop.color_role import ColorRole
 from desktop.conversation_tab.conversation_error import ConversationError
 from desktop.conversation_tab.conversation_input import ConversationInput
 from desktop.conversation_tab.conversation_message import ConversationMessage
+from desktop.conversation_tab.prompt_minimap import PromptMinimap
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 from desktop.fetch_error import stream_error_message as _stream_error_message
 from desktop.language.language_manager import LanguageManager
@@ -172,9 +173,37 @@ class ConversationWidget(QWidget):
         self._debounce_timer.timeout.connect(self._on_debounce_timeout)
         self._debounce_timer.setInterval(self._debounce_interval_ms)
 
+        # Single-shot timer used to coalesce sticky-banner updates. Parented to self
+        # so it is torn down with the widget: a pending update can never fire after
+        # the C++ object is deleted.
+        self._sticky_update_timer = QTimer(self)
+        self._sticky_update_timer.setSingleShot(True)
+        self._sticky_update_timer.timeout.connect(self._update_sticky_banners)
+
+        # Single-shot timer that re-enables updates on freshly rendered message
+        # widgets once the reveal pass has painted. Parented to self so it is torn
+        # down with the widget before any child message widget is deleted.
+        self._re_enable_updates_timer = QTimer(self)
+        self._re_enable_updates_timer.setSingleShot(True)
+        self._re_enable_updates_timer.timeout.connect(self._on_re_enable_updates)
+        self._pending_re_enable_widgets: list = []
+
+        # Zero-delay timers deferring work to the next event-loop turn after layout
+        # settles. Parented to self so they are torn down with the widget.
+        self._prompt_minimap_timer = QTimer(self)
+        self._prompt_minimap_timer.setSingleShot(True)
+        self._prompt_minimap_timer.timeout.connect(self._update_prompt_minimap)
+
+        self._input_position_timer = QTimer(self)
+        self._input_position_timer.setSingleShot(True)
+        self._input_position_timer.timeout.connect(self._update_input_position)
+
+        self._input_size_hint_timer = QTimer(self)
+        self._input_size_hint_timer.setSingleShot(True)
+        self._input_size_hint_timer.timeout.connect(self._on_input_size_hint_changed)
+
         # Initialize tracking variables
         self._auto_scroll = True
-        self._sticky_update_pending = False
 
         # Create layout
         conversation_layout = QVBoxLayout(self)
@@ -233,6 +262,16 @@ class ConversationWidget(QWidget):
         self._scroll_area.viewport().setAutoFillBackground(True)
         conversation_layout.addWidget(self._scroll_area)
 
+        self._prompt_minimap = PromptMinimap(self._scroll_area)
+        self._prompt_minimap.prompt_clicked.connect(self.navigate_to_prompt)
+        self._prompt_minimap_visible = False
+        self._prompt_minimap_margin = 0
+        self._prompt_minimap.hide()
+        self._prompt_minimap_margin_animation = QVariantAnimation(self)
+        self._prompt_minimap_margin_animation.setDuration(160)
+        self._prompt_minimap_margin_animation.valueChanged.connect(self._on_prompt_minimap_margin_changed)
+        self._prompt_minimap_margin_animation.finished.connect(self._on_prompt_minimap_animation_finished)
+
         input_text_area = cast(MarkdownTextEdit, self._input._text_area)
         input_text_area.size_hint_changed.connect(self._on_input_size_hint_changed)
         input_text_area.set_allow_vertical_scroll(True)
@@ -287,6 +326,7 @@ class ConversationWidget(QWidget):
             conversation_history.get_messages(), ai_transcript_conversation is not None,
             attachments=conversation_history.attachments()
         )
+        self._deferred_minimap_update()
 
         # Restore parent metadata from the transcript onto the ai_conversation history.
         # load_message_history calls clear() which discards it, so we reapply it here.
@@ -1272,11 +1312,15 @@ class ConversationWidget(QWidget):
             self._response_reveal_timer.stop()
 
         if rendered_widgets:
-            def _re_enable_updates(widgets: list) -> None:
-                for w in widgets:
-                    w.setUpdatesEnabled(True)
+            self._pending_re_enable_widgets = rendered_widgets
+            self._re_enable_updates_timer.start(5)
 
-            QTimer.singleShot(5, lambda: _re_enable_updates(rendered_widgets))
+    def _on_re_enable_updates(self) -> None:
+        """Re-enable repaints on widgets deferred by the last render pass."""
+        for w in self._pending_re_enable_widgets:
+            w.setUpdatesEnabled(True)
+
+        self._pending_re_enable_widgets = []
 
     def _response_reveal_chunk_size(self, remaining: int, completed: bool) -> int:
         """Choose a reveal chunk size that stays smooth but catches up quickly."""
@@ -1508,6 +1552,7 @@ class ConversationWidget(QWidget):
         self.has_seen_latest_update_changed.emit(at_bottom)
 
         self._update_sticky_banners()
+        self._update_prompt_minimap()
 
     def _on_scroll_range_changed(self, _minimum: int, _maximum: int) -> None:
         """Handle the scroll range changing."""
@@ -1515,6 +1560,7 @@ class ConversationWidget(QWidget):
             self._scroll_to_bottom()
 
         self._update_sticky_banners()
+        self._update_prompt_minimap()
 
     def _schedule_sticky_update(self) -> None:
         """
@@ -1524,16 +1570,7 @@ class ConversationWidget(QWidget):
         layout events, so recomputing immediately would read stale geometry. Deferring
         lets the layout settle first, giving precise final banner positions.
         """
-        if self._sticky_update_pending:
-            return
-
-        self._sticky_update_pending = True
-        QTimer.singleShot(0, self._run_deferred_sticky_update)
-
-    def _run_deferred_sticky_update(self) -> None:
-        """Run a coalesced sticky-banner recompute scheduled by _schedule_sticky_update."""
-        self._sticky_update_pending = False
-        self._update_sticky_banners()
+        self._sticky_update_timer.start(0)
 
     def _update_sticky_banners(self) -> None:
         """
@@ -1844,6 +1881,70 @@ class ConversationWidget(QWidget):
         # If on a message, check if there are visible messages before current position
         return self._find_previous_visible_user_message(self._spotlighted_message_index) != -1
 
+    def navigate_to_prompt(self, message_index: int) -> None:
+        """Spotlight and scroll to a user prompt by its message index."""
+        if message_index < 0 or message_index >= len(self._messages):
+            return
+
+        if self._messages[message_index].message_source() != AIMessageSource.USER:
+            return
+
+        if self._spotlighted_message_index != -1:
+            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+
+        self._input.set_spotlighted(False)
+        self._spotlighted_message_index = message_index
+        self._spotlight_message()
+        self._update_prompt_minimap()
+
+    def _update_prompt_minimap(self) -> None:
+        """Refresh the minimap's prompt positions and active marker."""
+        viewport = self._scroll_area.viewport()
+        self._prompt_minimap.setFixedHeight(viewport.height())
+        self._prompt_minimap.move(
+            viewport.x() + viewport.width(),
+            viewport.y(),
+        )
+        self._prompt_minimap.raise_()
+
+        content_height = max(1, self._messages_container.height())
+        markers: list[tuple[int, float, str]] = []
+        for index, message in enumerate(self._messages):
+            if message.is_rendered() and message.message_source() == AIMessageSource.USER:
+                position = message.mapTo(self._messages_container, QPoint(0, 0)).y()
+                markers.append((index, position / content_height, message.message_content()))
+
+        self._prompt_minimap.set_markers(markers, self._spotlighted_message_index)
+        self._prompt_minimap.setVisible(
+            (self._prompt_minimap_visible or self._prompt_minimap_margin > 0) and bool(markers)
+        )
+
+    def set_prompt_minimap_visible(self, visible: bool) -> None:
+        """Show or hide the prompt minimap."""
+        self._prompt_minimap_visible = visible
+        if visible:
+            self._prompt_minimap.show()
+
+        self._prompt_minimap_margin_animation.stop()
+        self._prompt_minimap_margin_animation.setStartValue(self._prompt_minimap_margin)
+        self._prompt_minimap_margin_animation.setEndValue(12 if visible else 0)
+        self._prompt_minimap_margin_animation.start()
+        self._update_prompt_minimap()
+
+    def _on_prompt_minimap_margin_changed(self, value: object) -> None:
+        """Animate the marker gutter into or out of the scroll area."""
+        if not isinstance(value, int):
+            return
+
+        self._prompt_minimap_margin = value
+        self._scroll_area.setViewportMargins(0, 0, value, 0)
+        self._update_prompt_minimap()
+
+    def _on_prompt_minimap_animation_finished(self) -> None:
+        """Hide the minimap after its gutter finishes closing."""
+        if not self._prompt_minimap_visible:
+            self._prompt_minimap.hide()
+
     def _on_selection_changed(self, message_widget: ConversationMessage, has_selection: bool) -> None:
         """Handle selection changes in message widgets."""
         if not has_selection:
@@ -1910,6 +2011,7 @@ class ConversationWidget(QWidget):
             self._scroll_area.viewport(), self._messages_container
         ):
             self._on_input_size_hint_changed()
+            self._update_prompt_minimap()
             # Defer so message relayouts settle before we read geometry; the per-message
             # banner move filter keeps things pinned (flicker-free) in the meantime.
             self._schedule_sticky_update()
@@ -2206,7 +2308,7 @@ class ConversationWidget(QWidget):
         if self._input_spacer is None:
             return
 
-        QTimer.singleShot(0, self._update_input_position)
+        self._input_position_timer.start(0)
 
         if self._auto_scroll:
             self._scroll_to_bottom()
@@ -2270,7 +2372,11 @@ class ConversationWidget(QWidget):
 
         self._input.apply_style(self._message_style)
         if self._input_spacer is not None:
-            QTimer.singleShot(0, self._on_input_size_hint_changed)
+            self._input_size_hint_timer.start(0)
+
+    def _deferred_minimap_update(self) -> None:
+        """Update the prompt minimap on the next event-loop turn."""
+        self._prompt_minimap_timer.start(0)
 
     def _build_message_style(self) -> ConversationMessageStyle:
         """Build the shared style object for all ConversationMessage instances."""

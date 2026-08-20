@@ -301,6 +301,27 @@ class AITool(ABC):
         # Return first sentence with period
         return first_sentence.strip() + '.' if not first_sentence.endswith('.') else first_sentence.strip()
 
+    @staticmethod
+    def require_menai_help(requester_ref: Any) -> None:
+        """
+        Raise an error if the Menai help has not been read in this conversation.
+
+        Menai is absent from training data and evolves rapidly.  An AI that has
+        not read the language reference will almost certainly produce invalid
+        syntax, so this gate is mandatory before any Menai evaluation.
+
+        Args:
+            requester_ref: The AIConversation making the request.
+
+        Raises:
+            AIToolExecutionError: If Menai help has not been read.
+        """
+        if not hasattr(requester_ref, "menai_help_read") or not requester_ref.menai_help_read():
+            raise AIToolExecutionError(
+                "You must read the Menai language documentation before using this operation. "
+                "Call the help tool with operation 'get_help' and tool_name 'menai' to load it."
+            )
+
     def get_operation_summary(self) -> dict[str, str]:
         """
         Get brief summary of each operation.

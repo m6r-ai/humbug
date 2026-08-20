@@ -1,5 +1,5 @@
 {
-  "source_file": "tests/syntax/fixtures/2025-06-13-001/test.html",
+  "source_file": "fixtures/2025-06-13-001/test.html",
   "language": "HTML",
   "tokens": [
     {
@@ -548,7 +548,7 @@
       "start": 33
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 37
     },
@@ -588,7 +588,7 @@
       "start": 47
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 50
     },
@@ -1268,7 +1268,7 @@
       "start": 17
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 33
     },
@@ -1288,12 +1288,12 @@
       "start": 54
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 62
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 63
     },
@@ -1333,7 +1333,7 @@
       "start": 34
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 48
     },
@@ -1343,7 +1343,7 @@
       "start": 49
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 59
     },
@@ -1383,7 +1383,7 @@
       "start": 35
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 49
     },
@@ -1393,7 +1393,7 @@
       "start": 50
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 59
     },
@@ -1418,7 +1418,7 @@
       "start": 19
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 35
     },
@@ -1438,12 +1438,12 @@
       "start": 45
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 53
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 54
     },
@@ -1568,7 +1568,7 @@
       "start": 12
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 13
     },
@@ -1588,12 +1588,12 @@
       "start": 21
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 31
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 32
     },
@@ -1628,12 +1628,12 @@
       "start": 30
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 34
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 35
     },
@@ -1673,12 +1673,12 @@
       "start": 37
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 45
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 46
     },
@@ -1713,12 +1713,12 @@
       "start": 60
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 70
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 71
     },
@@ -1753,12 +1753,12 @@
       "start": 85
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 95
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 96
     },
@@ -1818,7 +1818,7 @@
       "start": 12
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 23
     },
@@ -1838,7 +1838,7 @@
       "start": 36
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 40
     },
@@ -1963,7 +1963,7 @@
       "start": 19
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 35
     },
@@ -1983,12 +1983,12 @@
       "start": 49
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 57
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 58
     },
@@ -2063,7 +2063,7 @@
       "start": 34
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 36
     },
@@ -2083,7 +2083,7 @@
       "start": 57
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 58
     },
@@ -2118,7 +2118,7 @@
       "start": 12
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 13
     },
@@ -2143,7 +2143,7 @@
       "start": 19
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 35
     },
@@ -2163,12 +2163,12 @@
       "start": 48
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 56
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 57
     },
@@ -2263,7 +2263,7 @@
       "start": 12
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 13
     },
@@ -2278,7 +2278,7 @@
       "start": 8
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 9
     },

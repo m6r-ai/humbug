@@ -155,12 +155,11 @@ class KotlinParser(Parser):
         # Look at the next token to determine context
         next_token = lexer.peek_next_token()
 
-        if next_token and next_token.type == TokenType.OPERATOR:
-            if next_token.value == '(':
-                # Function or method call
-                token.type = TokenType.FUNCTION_OR_METHOD
-                self._tokens.append(token)
-                return
+        if next_token and next_token.type == TokenType.LPAREN:
+            # Function or method call
+            token.type = TokenType.FUNCTION_OR_METHOD
+            self._tokens.append(token)
+            return
 
         if in_element:
             # Property or element access

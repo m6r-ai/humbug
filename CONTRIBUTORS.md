@@ -28,6 +28,7 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Implemented the initial sticky conversation banner feature.
 * Implemented the initial token usage tab.
 * Added new file tree icons.
+* Added the conversation prompt mini-map option.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 

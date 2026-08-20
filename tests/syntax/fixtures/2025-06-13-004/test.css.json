@@ -1,5 +1,5 @@
 {
-  "source_file": "tests/syntax/fixtures/2025-06-13-004/test.css",
+  "source_file": "fixtures/2025-06-13-004/test.css",
   "language": "CSS",
   "tokens": [
     {
@@ -3078,7 +3078,7 @@
       "start": 8
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 11
     },
@@ -3088,7 +3088,7 @@
       "start": 12
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 42
     },
@@ -3098,7 +3098,7 @@
       "start": 44
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 50
     },
@@ -3108,7 +3108,7 @@
       "start": 51
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 56
     },
@@ -3123,7 +3123,7 @@
       "start": 8
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 11
     },
@@ -3133,7 +3133,7 @@
       "start": 12
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 41
     },
@@ -3143,7 +3143,7 @@
       "start": 43
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 49
     },
@@ -3153,7 +3153,7 @@
       "start": 50
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 54
     },
@@ -3168,7 +3168,7 @@
       "start": 8
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 11
     },
@@ -3178,7 +3178,7 @@
       "start": 12
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 40
     },
@@ -3188,7 +3188,7 @@
       "start": 42
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 48
     },
@@ -3198,7 +3198,7 @@
       "start": 49
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 52
     },
@@ -3278,7 +3278,7 @@
       "start": 8
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 11
     },
@@ -3288,7 +3288,7 @@
       "start": 12
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 48
     },
@@ -3298,7 +3298,7 @@
       "start": 50
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 56
     },
@@ -3308,7 +3308,7 @@
       "start": 57
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 62
     },
@@ -3323,7 +3323,7 @@
       "start": 8
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 11
     },
@@ -3333,7 +3333,7 @@
       "start": 12
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 47
     },
@@ -3343,7 +3343,7 @@
       "start": 49
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 55
     },
@@ -3353,7 +3353,7 @@
       "start": 56
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 60
     },
@@ -3368,7 +3368,7 @@
       "start": 8
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 11
     },
@@ -3378,7 +3378,7 @@
       "start": 12
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 46
     },
@@ -3388,7 +3388,7 @@
       "start": 48
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 54
     },
@@ -3398,7 +3398,7 @@
       "start": 55
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 58
     },
@@ -3458,7 +3458,7 @@
       "start": 17
     },
     {
-      "type": "OPERATOR",
+      "type": "LPAREN",
       "value": "(",
       "start": 21
     },
@@ -3478,7 +3478,7 @@
       "start": 30
     },
     {
-      "type": "OPERATOR",
+      "type": "RPAREN",
       "value": ")",
       "start": 34
     },

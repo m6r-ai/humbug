@@ -82,13 +82,13 @@ class SwiftParser(Parser):
             if token.type == TokenType.IDENTIFIER:
                 # Look ahead for function calls, property access, or generic parameters
                 next_token = lexer.peek_next_token()
-                if next_token and next_token.type == TokenType.OPERATOR:
-                    if next_token.value == '(':
-                        # Function or method call
-                        token.type = TokenType.FUNCTION_OR_METHOD
-                        self._tokens.append(token)
-                        continue
+                if next_token and next_token.type == TokenType.LPAREN:
+                    # Function or method call
+                    token.type = TokenType.FUNCTION_OR_METHOD
+                    self._tokens.append(token)
+                    continue
 
+                if next_token and next_token.type == TokenType.OPERATOR:
                     if next_token.value == '.':
                         # Property access
                         token.type = TokenType.ELEMENT
@@ -106,10 +106,7 @@ class SwiftParser(Parser):
                 if token.value == '{':
                     # Check for closure context
                     next_token = lexer.peek_next_token()
-                    if next_token and (
-                        next_token.type == TokenType.OPERATOR and next_token.value == '(' or
-                        next_token.type == TokenType.IDENTIFIER
-                    ):
+                    if next_token and next_token.type in (TokenType.LPAREN, TokenType.IDENTIFIER):
                         in_closure = True
                         closure_brace_count += 1
 

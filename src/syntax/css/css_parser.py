@@ -63,11 +63,10 @@ class CSSParser(Parser):
             # Look at the next token. If it's a '(' operator then we're making a
             # function call!
             next_token = lexer.peek_next_token()
-            if next_token and next_token.type == TokenType.OPERATOR:
-                if next_token.value == '(':
-                    token.type = TokenType.FUNCTION_OR_METHOD
-                    self._tokens.append(token)
-                    continue
+            if next_token and next_token.type == TokenType.LPAREN:
+                token.type = TokenType.FUNCTION_OR_METHOD
+                self._tokens.append(token)
+                continue
 
             self._tokens.append(token)
 

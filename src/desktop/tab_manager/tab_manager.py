@@ -2,7 +2,7 @@ from collections.abc import Callable
 import logging
 import math
 import os
-from typing import cast
+from typing import cast, TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer, QPoint
@@ -28,6 +28,9 @@ from desktop.tab_manager.tab_overview import TabOverviewEntry, TabOverviewWidget
 from desktop.tab_manager.tab_style import build_tab_manager_stylesheet, build_tab_bar_stylesheet
 from desktop.tab_manager.welcome_widget import WelcomeWidget
 from desktop.user.user_settings import UserSettings
+
+if TYPE_CHECKING:
+    from ai import AIConversationSettings
 
 TabFactory = Callable[[TabState, QWidget], "TabBase | None"]
 ContextFactory = Callable[[ContextInfo, ContextRegistry, QWidget], "TabBase | None"]
@@ -127,6 +130,23 @@ class TabManager(QWidget):
         self._activation_timer.setSingleShot(True)
         self._activation_timer.timeout.connect(self._activate_current_tab)
         self._activation_timer.setInterval(1)
+
+        # Zero-delay deferral timers. Parented to self so they are torn down with the
+        # manager and can never fire after the widgets they touch are deleted.
+        self._set_active_column_timer = QTimer(self)
+        self._set_active_column_timer.setSingleShot(True)
+        self._set_active_column_timer.timeout.connect(self._on_deferred_set_active_column)
+        self._deferred_active_column_index: int = 0
+        self._deferred_active_tab_ids: list[str] = []
+
+        self._focus_restore_timer = QTimer(self)
+        self._focus_restore_timer.setSingleShot(True)
+        self._focus_restore_timer.timeout.connect(self._on_deferred_focus_restore)
+        self._deferred_focus_widget: QWidget | None = None
+
+        self._thumbnail_refresh_timer = QTimer(self)
+        self._thumbnail_refresh_timer.setSingleShot(True)
+        self._thumbnail_refresh_timer.timeout.connect(self._refresh_current_tab_thumbnails)
 
         # Set initial state
         self._stack.setCurrentWidget(self._welcome_widget)
@@ -519,6 +539,26 @@ class TabManager(QWidget):
         for tab in self._tabs.values():
             tab.apply_mindspace_settings(settings)
 
+    def apply_conversation_settings_to_all_tabs(self, new_settings: "AIConversationSettings") -> None:
+        """Broadcast conversation settings to every open tab. Does not persist a mindspace default."""
+        for tab in self._tabs.values():
+            tab.apply_conversation_settings(new_settings)
+
+    def _on_conversation_settings_apply_all_requested(self, new_settings: "AIConversationSettings") -> None:
+        """Broadcast conversation settings to every open tab and save as the mindspace default."""
+        self.apply_conversation_settings_to_all_tabs(new_settings)
+
+        settings = self._mindspace_manager.settings()
+        if settings is None:
+            return
+
+        settings.model = new_settings.model
+        settings.provider = new_settings.provider
+        settings.temperature = new_settings.temperature
+        settings.reasoning = new_settings.reasoning
+        settings.reasoning_effort = new_settings.reasoning_effort
+        self._mindspace_manager.update_settings(settings)
+
     def _subscribe_to_registry(self) -> None:
         """Register TabManager as a subscriber to the active ContextRegistry."""
         if self._registry_subscribed:
@@ -627,6 +667,7 @@ class TabManager(QWidget):
         tab.tab_label_changed.connect(self._on_tab_label_changed)
         tab.close_requested.connect(lambda: self.close_tab_by_id(tab_id, force_close=True))
         tab.preferred_width_changed.connect(self._on_tab_preferred_width_changed)
+        tab.conversation_settings_apply_all_requested.connect(self._on_conversation_settings_apply_all_requested)
 
         self._tabs[tab_id] = tab
 
@@ -649,7 +690,15 @@ class TabManager(QWidget):
         # (e.g. the sidebar).  If focus was already inside the column, let it move to the new tab.
         if focus_widget is not None and not column.isAncestorOf(focus_widget):
             self._activation_timer.stop()
-            QTimer.singleShot(0, focus_widget.setFocus)
+            self._deferred_focus_widget = focus_widget
+            self._focus_restore_timer.start(0)
+
+    def _on_deferred_focus_restore(self) -> None:
+        """Restore focus to the widget saved by the tab activation path."""
+        if self._deferred_focus_widget is not None:
+            self._deferred_focus_widget.setFocus()
+
+            self._deferred_focus_widget = None
 
     def _move_tab_between_columns(
         self,
@@ -1880,7 +1929,15 @@ class TabManager(QWidget):
                 active_tab_ids.append(active_tab_id)
 
         # Defer setting the active column to ensure it's not overridden by other UI operations
-        QTimer.singleShot(0, lambda: self._deferred_set_active_column(active_column_index, active_tab_ids))
+        self._deferred_active_column_index = active_column_index
+        self._deferred_active_tab_ids = active_tab_ids
+        self._set_active_column_timer.start(0)
+
+    def _on_deferred_set_active_column(self) -> None:
+        """Apply the active column and tab ids saved before the deferral."""
+        self._deferred_set_active_column(
+            self._deferred_active_column_index, self._deferred_active_tab_ids
+        )
 
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""
@@ -1959,7 +2016,7 @@ class TabManager(QWidget):
         if self._tab_columns:
             self.show_all_columns()
 
-        QTimer.singleShot(0, self._refresh_current_tab_thumbnails)
+        self._thumbnail_refresh_timer.start(0)
 
         if self._tab_overview is not None and self._tab_overview.isVisible():
             self.show_tab_overview()

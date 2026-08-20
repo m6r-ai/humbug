@@ -123,14 +123,14 @@ class MoveParser(Parser):
             next_in_element = False
             next_in_module_access = False
 
-            if next_token and next_token.type == TokenType.OPERATOR:
-                if next_token.value == '(':
-                    in_element = False
-                    in_module_access = False
-                    token.type = TokenType.FUNCTION_OR_METHOD
-                    self._tokens.append(token)
-                    continue
+            if next_token and next_token.type == TokenType.LPAREN:
+                in_element = False
+                in_module_access = False
+                token.type = TokenType.FUNCTION_OR_METHOD
+                self._tokens.append(token)
+                continue
 
+            if next_token and next_token.type == TokenType.OPERATOR:
                 # Is the next token going to be an element?
                 if next_token.value == '::':
                     next_in_module_access = True

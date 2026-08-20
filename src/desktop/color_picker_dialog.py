@@ -802,6 +802,12 @@ class ThemeColorPickerDialog(QDialog):
         self._active_preset_name: str | None = self._style_manager.active_preset()
         self._preset_button_map: dict[str, QPushButton] = {}
 
+        # Timer that ends a preview by restoring dialog opacity. Parented to self so
+        # it can never fire after the dialog has been destroyed.
+        self._preview_restore_timer = QTimer(self)
+        self._preview_restore_timer.setSingleShot(True)
+        self._preview_restore_timer.timeout.connect(self._restore_from_preview)
+
         self.setWindowTitle("Customize Colors")
         self.setMinimumWidth(980)
         self.setMinimumHeight(700)
@@ -1453,7 +1459,7 @@ class ThemeColorPickerDialog(QDialog):
         self.setWindowOpacity(0.12)
         self._preview_btn.setText("Previewing…")
         self._preview_btn.setEnabled(False)
-        QTimer.singleShot(3000, self._restore_from_preview)
+        self._preview_restore_timer.start(3000)
 
     def _restore_from_preview(self) -> None:
         """Restore full dialog opacity and reset the preview button after a preview."""

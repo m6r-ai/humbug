@@ -210,6 +210,9 @@ _DARK_COLORS: dict[ColorRole, str] = {
     # Line numbers
     ColorRole.LINE_NUMBER: "#606060",
 
+    # Paren matching
+    ColorRole.PAREN_MATCH: "#3a3a50",
+
     # Diff view colours
     ColorRole.DIFF_REMOVED_BACKGROUND: "#402020",
     ColorRole.DIFF_ADDED_BACKGROUND: "#204020",
@@ -431,6 +434,9 @@ _COLOR_BLIND_COLORS: dict[ColorRole, str] = {
     # Line numbers
     ColorRole.LINE_NUMBER: "#8b949e",
 
+    # Paren matching
+    ColorRole.PAREN_MATCH: "#1e2d35",
+
     # Diff view colours
     ColorRole.DIFF_REMOVED_BACKGROUND: "#4a2a12",
     ColorRole.DIFF_ADDED_BACKGROUND: "#143d36",
@@ -649,6 +655,9 @@ _OCEAN_LIGHT_COLORS: dict[ColorRole, str] = {
 
     # Line numbers
     ColorRole.LINE_NUMBER: "#c0c0c0",
+
+    # Paren matching
+    ColorRole.PAREN_MATCH: "#c8c8e0",
 
     # Diff view colours
     ColorRole.DIFF_REMOVED_BACKGROUND: "#f0c8c8",
@@ -870,6 +879,9 @@ _LIGHT_COLORS: dict[ColorRole, str] = {
 
     # Line numbers
     ColorRole.LINE_NUMBER: "#c0c0c0",
+
+    # Paren matching
+    ColorRole.PAREN_MATCH: "#c8c8e0",
 
     # Diff view colours
     ColorRole.DIFF_REMOVED_BACKGROUND: "#f0c8c8",

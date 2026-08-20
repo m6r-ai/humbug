@@ -108,7 +108,12 @@ def _create_editor_tab(
     tab = EditorTab(info.context_id, info.path, None, parent)
     goto = registry.get_model(info.context_id, tuple)
     if goto is not None:
-        QTimer.singleShot(0, lambda: tab.goto_line(goto[0], goto[1]))
+        # Zero-delay timer deferring the jump until the tab is laid out. Parented to
+        # the tab so it is destroyed with it and can never fire after teardown.
+        goto_timer = QTimer(tab)
+        goto_timer.setSingleShot(True)
+        goto_timer.timeout.connect(lambda: tab.goto_line(goto[0], goto[1]))
+        goto_timer.start(0)
 
     return tab
 
@@ -450,6 +455,10 @@ class MainWindow(QMainWindow):
         self._previous_message_action.setShortcut(QKeySequence("Alt+Up"))
         self._previous_message_action.triggered.connect(self._on_navigate_previous_message)
 
+        self._prompt_navigator_action = QAction(strings.prompt_markers, self)
+        self._prompt_navigator_action.setCheckable(True)
+        self._prompt_navigator_action.toggled.connect(self._on_set_prompt_minimaps_visible)
+
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
 
@@ -533,6 +542,7 @@ class MainWindow(QMainWindow):
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._next_message_action)
         self._view_menu.addAction(self._previous_message_action)
+        self._view_menu.addAction(self._prompt_navigator_action)
 
         self.setWindowTitle("Humbug")
         self.setMinimumSize(1280, 800)
@@ -840,6 +850,7 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action.setEnabled(tab_manager.can_swap_column(not left_to_right))
         self._next_message_action.setEnabled(tab is not None and tab.can_navigate_next_message())
         self._previous_message_action.setEnabled(tab is not None and tab.can_navigate_previous_message())
+        self._prompt_navigator_action.setEnabled(isinstance(tab, ConversationTab))
         self._update_navigation_action_text()
 
     def _on_language_changed(self) -> None:
@@ -912,6 +923,7 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setText(strings.merge_column_right)
         self._swap_column_left_action.setText(strings.swap_column_left)
         self._swap_column_right_action.setText(strings.swap_column_right)
+        self._prompt_navigator_action.setText(strings.prompt_markers)
 
         # Our logic for left and right reverses for right-to-left languages
         left_to_right = self._language_manager.left_to_right()
@@ -1182,6 +1194,7 @@ class MainWindow(QMainWindow):
             self._mindspace_manager.open_mindspace(mindspace_path)
             self._sidebar_manager.set_mindspace(mindspace_path)
             self._restore_mindspace_state()
+            self._restore_prompt_marker_setting()
 
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace: %s", str(e))
@@ -1295,6 +1308,7 @@ class MainWindow(QMainWindow):
 
         # Restore the state of the newly opened mindspace
         self._restore_mindspace_state()
+        self._restore_prompt_marker_setting()
 
     def _on_close_mindspace(self) -> None:
         """Save state, close all tabs, and clear the current mindspace."""
@@ -2226,6 +2240,24 @@ class MainWindow(QMainWindow):
         if tab is not None:
             tab.navigate_previous_message()
 
+    def _on_set_prompt_minimaps_visible(self, visible: bool) -> None:
+        """Show or hide prompt markers in every open conversation tab."""
+        for tab in self._tab_manager.get_all_tabs():
+            if isinstance(tab, ConversationTab):
+                tab.set_prompt_minimap_visible(visible)
+
+        settings = self._mindspace_manager.settings()
+        if settings is not None:
+            settings.prompt_markers_visible = visible
+            self._mindspace_manager.mindspace().update_settings(settings)
+
+    def _restore_prompt_marker_setting(self) -> None:
+        """Restore prompt-marker visibility for the active mindspace."""
+        settings = self._mindspace_manager.settings()
+        self._prompt_navigator_action.setChecked(
+            settings.prompt_markers_visible if settings is not None else False
+        )
+
     def _on_show_settings_dialog(self, initial_section: str | None = None) -> None:
         """Show the unified settings dialog."""
         if self._settings_dialog and self._settings_dialog.isVisible():
@@ -2302,11 +2334,35 @@ class MainWindow(QMainWindow):
                     strings.error_saving_mindspace_settings.format(str(e))
                 )
 
+        def _on_apply_ai_settings_to_all_requested(new_settings: MindspaceSettings) -> None:
+            try:
+                self._mindspace_manager.update_settings(new_settings)
+                self._tab_manager.apply_conversation_settings_to_all_tabs(
+                    AIConversationSettings(
+                        model=new_settings.model,
+                        provider=new_settings.provider,
+                        temperature=new_settings.temperature,
+                        reasoning=new_settings.reasoning,
+                        reasoning_effort=new_settings.reasoning_effort,
+                    )
+                )
+
+            except MindspaceError as e:
+                self._logger.error("Failed to save mindspace settings: %s", str(e))
+                strings = self._language_manager.strings()
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    strings.settings_error_title,
+                    strings.error_saving_mindspace_settings.format(str(e))
+                )
+
         def _on_dialog_finished(_result: int) -> None:
             self._settings_dialog = None
 
         dialog.user_settings_changed.connect(_on_user_settings_changed)
         dialog.mindspace_settings_changed.connect(_on_mindspace_settings_changed)
+        dialog.apply_ai_settings_to_all_requested.connect(_on_apply_ai_settings_to_all_requested)
         dialog.finished.connect(_on_dialog_finished)
         dialog.set_settings(self._user_manager.settings(), mindspace_settings, initial_section)
         dialog.show()

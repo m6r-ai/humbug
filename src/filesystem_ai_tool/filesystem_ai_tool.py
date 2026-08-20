@@ -183,6 +183,7 @@ class FileSystemAITool(AITool):
                     type="string",
                     description=(
                         "Menai expression for the transform_file operation. "
+                        "Menai uses Lisp-style prefix syntax: (operator arg1 arg2 ...). "
                         "May reference 'input-text' (full file content as a string) "
                         "and 'input-lines' (file lines as a list of strings). "
                         "Must evaluate to a string (new file content) or a list of strings (new lines)."
@@ -397,7 +398,7 @@ class FileSystemAITool(AITool):
                     "It must return a string or a list of strings. "
                     "A unified diff is shown for user approval before any write occurs. "
                     "If dry_run is True, returns the diff without requesting authorisation or writing anything. "
-                    "program MUST use Menai syntax."
+                    "program MUST use Menai syntax: (operator arg1 arg2 ...)."
                 )
             ),
         }
@@ -875,6 +876,49 @@ class FileSystemAITool(AITool):
         language_str = ProgrammingLanguageUtils.get_name(language)
         return f"`content` is:\n```{language_str}\n{context}\n```"
 
+    @staticmethod
+    def _detect_line_ending(content: str) -> str:
+        """
+        Detect the dominant line ending style from content.
+
+        Args:
+            content: File content to analyse.
+
+        Returns:
+            Line ending string ('\\r\\n', '\\r', or '\\n').
+        """
+        if '\r\n' in content:
+            return '\r\n'
+
+        if '\r' in content:
+            return '\r'
+
+        return '\n'
+
+    @staticmethod
+    def _ensure_trailing_newline(content: str) -> str:
+        """
+        Ensure content ends with a trailing newline.
+
+        If the content already ends with a line terminator (\\n, \\r\\n, or \\r)
+        it is returned unchanged.  Otherwise the dominant line ending style is
+        detected from the content and a single terminator is appended.
+
+        Args:
+            content: The content to check.
+
+        Returns:
+            Content guaranteed to end with a newline.
+        """
+        if not content:
+            return content
+
+        if content.endswith('\n') or content.endswith('\r'):
+            return content
+
+        line_ending = FileSystemAITool._detect_line_ending(content)
+        return content + line_ending
+
     async def _write_file(
         self,
         tool_call: AIToolCall,
@@ -889,6 +933,9 @@ class FileSystemAITool(AITool):
         content = self._get_required_str_value("content", arguments)
         encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
         create_parents = self._get_optional_bool_value("create_parents", arguments, False)
+
+        # Ensure trailing newline
+        content = self._ensure_trailing_newline(content)
 
         # Check content size
         content_size = len(content.encode(encoding))
@@ -999,6 +1046,25 @@ class FileSystemAITool(AITool):
 
         # Check total size after append
         current_size = path.stat().st_size
+
+        # If the existing file does not end with a line terminator, prepend one
+        # so the appended content starts on its own line.
+        prepend_newline = False
+        try:
+            if current_size > 0:
+                with open(path, 'rb') as f:
+                    f.seek(-1, os.SEEK_END)
+                    last_byte = f.read(1)
+
+                if last_byte not in (b'\n', b'\r'):
+                    prepend_newline = True
+
+        except OSError:
+            pass
+
+        if prepend_newline:
+            content = '\n' + content
+
         content_size = len(content.encode(encoding))
         total_size = current_size + content_size
 
@@ -2207,6 +2273,9 @@ class FileSystemAITool(AITool):
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to apply diff to file: {arguments['path']}")
 
+        # Ensure trailing newline
+        modified_content = self._ensure_trailing_newline(cast(str, modified_content))
+
         # Write modified content to file
         try:
             # Write to temporary file first, then rename for atomicity
@@ -2315,23 +2384,6 @@ class FileSystemAITool(AITool):
 
         return original_content, new_content
 
-    @staticmethod
-    def _require_menai_help(requester_ref: Any) -> None:
-        """
-        Raise an error if the Menai help has not been read in this conversation.
-
-        Args:
-            requester_ref: The AIConversation making the request
-
-        Raises:
-            AIToolExecutionError: If Menai help has not been read
-        """
-        if not hasattr(requester_ref, "menai_help_read") or not requester_ref.menai_help_read():
-            raise AIToolExecutionError(
-                "You must read the Menai language documentation before using this tool. "
-                "Call the help tool with operation 'get_help' and tool_name 'menai' to load it."
-            )
-
     async def _transform_file(
         self,
         tool_call: AIToolCall,
@@ -2341,7 +2393,7 @@ class FileSystemAITool(AITool):
         """Apply a Menai transform program to a file."""
         arguments = tool_call.arguments
 
-        self._require_menai_help(requester_ref)
+        self.require_menai_help(requester_ref)
 
         path_arg = self._get_required_str_value("path", arguments)
         path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
@@ -2412,6 +2464,9 @@ class FileSystemAITool(AITool):
         except Exception as e:
             self._logger.error("Unexpected error in transform_file '%s': %s", display_path, str(e), exc_info=True)
             raise AIToolExecutionError(f"Transform failed: {str(e)}") from e
+
+        # Ensure trailing newline
+        new_content = self._ensure_trailing_newline(new_content)
 
         if original_content == new_content:
             return AIToolResult(

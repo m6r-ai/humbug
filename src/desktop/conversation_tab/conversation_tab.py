@@ -98,6 +98,10 @@ class ConversationTab(TabBase):
         self._start_file_watching(self._path)
         self.apply_style()
 
+        settings = MindspaceManager().settings()
+        if settings is not None and settings.prompt_markers_visible:
+            self._conversation_widget.set_prompt_minimap_visible(True)
+
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""
         return "conversation"
@@ -301,6 +305,10 @@ class ConversationTab(TabBase):
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """Update conversation settings and associated backend."""
         self._conversation_widget.update_conversation_settings(new_settings)
+
+    def apply_conversation_settings(self, settings: AIConversationSettings) -> None:
+        """Apply conversation settings broadcast from another conversation tab."""
+        self.update_conversation_settings(settings)
 
     def _on_update_label(self) -> None:
         """
@@ -963,6 +971,7 @@ class ConversationTab(TabBase):
             self._conversation_settings_dialog = None
 
         dialog.accepted.connect(_on_accepted)
+        dialog.apply_to_all_requested.connect(self.conversation_settings_apply_all_requested.emit)
         dialog.finished.connect(_on_finished)
         dialog.show()
         dialog.raise_()
@@ -983,6 +992,10 @@ class ConversationTab(TabBase):
     def navigate_previous_message(self) -> None:
         """Navigate to the previous message."""
         self._conversation_widget.navigate_to_previous_message()
+
+    def set_prompt_minimap_visible(self, visible: bool) -> None:
+        """Show or hide the right-edge prompt minimap."""
+        self._conversation_widget.set_prompt_minimap_visible(visible)
 
     def set_input_text(self, text: str) -> None:
         """Set the input text."""

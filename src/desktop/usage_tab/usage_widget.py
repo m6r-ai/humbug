@@ -67,7 +67,7 @@ class UsageWidget(QWidget):
         self._summary = QWidget()
         self._summary.setObjectName("UsageSummaryContainer")
         self._summary.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        self._summary.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._summary.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self._summary_layout = QVBoxLayout(self._summary)
         self._summary_layout.setContentsMargins(0, 0, 0, 0)
         self._summary_layout.setSpacing(0)
@@ -116,7 +116,6 @@ class UsageWidget(QWidget):
         s = int(self._style_manager.message_bubble_spacing())
         self._body.setContentsMargins(s, s, s, s)
         self._body.setSpacing(s)
-        self._summary.setFixedHeight(self._summary_height())
         self._details_container_layout.setSpacing(s)
         self._details_layout.setSpacing(s)
         self.refreshed.emit()
@@ -187,7 +186,6 @@ class UsageWidget(QWidget):
             grid.addWidget(self._stat_card(label, value, note), r, c)
 
         sl.addWidget(cards_w)
-        sl.addStretch()
 
         color_map: dict[str, str] = {}
         for i, e in enumerate(entries):
@@ -205,11 +203,6 @@ class UsageWidget(QWidget):
         self._reset_btn.setEnabled(self._mindspace_manager.has_mindspace())
 
         self.refreshed.emit()
-
-    def _summary_height(self) -> int:
-        """Return the fixed height reserved for non-details usage content."""
-        zoom = self._style_manager.zoom_factor()
-        return max(300, int(330 * zoom))
 
     def _section_label(self, text: str) -> QLabel:
         """Create an uppercased styled section label widget."""
@@ -367,8 +360,7 @@ class UsageWidget(QWidget):
         header.addWidget(tokens_lbl)
 
         body = accordion.body_layout()
-        s_pad = int(s * 0.5)
-        body.setContentsMargins(0, s_pad, 0, s_pad)
+        body.setContentsMargins(0, 0, 0, 0)
 
         for m_idx, entry in enumerate(sorted_models):
             key = f"{entry.provider}/{entry.model}"
@@ -436,29 +428,28 @@ class UsageWidget(QWidget):
         share_bar.setTextVisible(False)
         share_bar.setFixedHeight(6)
         share_bar.setStyleSheet(
-            "QProgressBar#UsageSpendBar {"
-            "  background: transparent;"
-            "  border: none;"
-            "}"
-            "QProgressBar#UsageSpendBar::chunk {"
-            f"  background-color: {color};"
-            "  border-radius: 3px;"
-            "}"
+            f"QProgressBar#UsageSpendBar::chunk {{ background-color: {color}; }}"
         )
         vl.addWidget(share_bar)
 
         return row
 
-    def _row_separator(self, indent: int = 0) -> QFrame:
+    def _row_separator(self, indent: int = 0) -> QWidget:
         """Create a thin horizontal separator frame with optional indent."""
+        container = QWidget()
+        container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        cl = QVBoxLayout(container)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(0)
+
         line = QFrame()
         line.setObjectName("UsageRowSep")
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Plain)
-        if indent:
-            line.setContentsMargins(indent, 0, 0, 0)
+        line.setContentsMargins(indent, 0, 0, 0)
+        cl.addWidget(line)
 
-        return line
+        return container
 
     def _empty_state(self, title: str, message: str) -> QFrame:
         """Create an empty-state card with a title and message."""

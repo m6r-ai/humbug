@@ -105,13 +105,13 @@ class GoParser(Parser):
             in_element = cur_in_element
 
             next_in_element = False
-            if next_token and next_token.type == TokenType.OPERATOR:
-                if next_token.value == '(':
-                    in_element = False
-                    token.type = TokenType.FUNCTION_OR_METHOD
-                    self._tokens.append(token)
-                    continue
+            if next_token and next_token.type == TokenType.LPAREN:
+                in_element = False
+                token.type = TokenType.FUNCTION_OR_METHOD
+                self._tokens.append(token)
+                continue
 
+            if next_token and next_token.type == TokenType.OPERATOR:
                 # Check for method calls or element access
                 if next_token.value == '.':
                     next_in_element = True

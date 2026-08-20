@@ -18,7 +18,7 @@ class SettingsActionRow(SettingsItem):
         layout.setSpacing(12)
 
         self._button = QPushButton(button_text)
-        self._button.setMinimumHeight(30)
+        self._button.setMinimumHeight(36)
 
         self._status_label = QLabel("")
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
@@ -59,4 +59,4 @@ class SettingsActionRow(SettingsItem):
 
     def _on_style_changed(self) -> None:
         zoom = self._style_manager.zoom_factor()
-        self._button.setMinimumHeight(int(30 * zoom))
+        self._button.setMinimumHeight(int(36 * zoom))

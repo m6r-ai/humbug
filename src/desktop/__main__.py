@@ -2,13 +2,16 @@
 
 import asyncio
 from datetime import datetime, timezone
+import faulthandler
 import glob
 import logging
 from logging.handlers import RotatingFileHandler
 import os
 from pathlib import Path
+import signal
 import sys
 import time
+import typing
 from types import TracebackType
 
 from PySide6.QtCore import QObject, QEvent
@@ -32,8 +35,31 @@ if sys.platform == 'win32':
     import ctypes
 
 
+def setup_faulthandler(fh_file: typing.TextIO) -> None:
+    """
+    Enable faulthandler for debugging hung or crashed processes.
+
+    - faulthandler.enable(): dumps traceback on segfault or fatal error to a
+      dedicated fault log file.
+    - SIGUSR1 (Unix only): dumps all thread tracebacks to the fault log file and then
+      terminates the process.  Use ``kill -USR1 <pid>`` to find out where a
+      hung process is stuck.
+    """
+    faulthandler.enable(file=fh_file)
+
+    if sys.platform != 'win32' and hasattr(signal, 'SIGUSR1'):
+        def _usr1_handler(signum: int, frame: object) -> None:  # pylint: disable=unused-argument
+            faulthandler.dump_traceback(file=fh_file, all_threads=True)
+            fh_file.flush()
+            os._exit(1)
+
+        signal.signal(signal.SIGUSR1, _usr1_handler)
+
+
 def setup_logging() -> None:
-    """Configure application logging with timestamped files and rotation."""
+    """
+    Configure application logging with timestamped files and rotation.
+    """
     # Create logs directory in user's home .humbug directory
     log_dir = os.path.expanduser("~/.humbug/logs")
     os.makedirs(log_dir, exist_ok=True)
@@ -205,35 +231,45 @@ def main() -> int:
     install_global_exception_handler()
     setup_ai_system_prompt()
 
-    # Create application
-    if sys.platform == 'win32':
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('ai.m6r.humbug')
+    # Open a dedicated fault log file for faulthandler output.  This is separate
+    # from the RotatingFileHandler log file so that log rotation does not
+    # invalidate the file descriptor.  The file must stay open for the lifetime
+    # of the process so that signal handlers can write to it.
+    log_dir = os.path.expanduser("~/.humbug/logs")
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+    fault_log = os.path.join(log_dir, f"{timestamp}-fault.log")
+    with open(fault_log, 'a', encoding='utf-8') as fh_file:
+        setup_faulthandler(fh_file)
 
-    app = HumbugApplication(sys.argv)
-    # Fusion gives a pure-Qt renderer on every platform — no OS-native popup
-    # containers, so QSS controls 100% of the appearance on Mac, Linux, Windows.
-    app.setStyle("Fusion")
-    load_fonts()
-    style_manager = StyleManager()
-    app_font = QFont(style_manager.proportional_font_families()[0], int(style_manager.base_font_size()))
-    app_font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
-    app.setFont(app_font)
-    app.setWindowIcon(QIcon(style_manager.get_app_icon_path()))
+        # Create application
+        if sys.platform == 'win32':
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('ai.m6r.humbug')
 
-    # Create and set event loop
-    loop = QEventLoop(app)
-    asyncio.set_event_loop(loop)
+        app = HumbugApplication(sys.argv)
+        # Fusion gives a pure-Qt renderer on every platform — no OS-native popup
+        # containers, so QSS controls 100% of the appearance on Mac, Linux, Windows.
+        app.setStyle("Fusion")
+        load_fonts()
+        style_manager = StyleManager()
+        app_font = QFont(style_manager.proportional_font_families()[0], int(style_manager.base_font_size()))
+        app_font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
+        app.setFont(app_font)
+        app.setWindowIcon(QIcon(style_manager.get_app_icon_path()))
 
-    window = MainWindow()
-    window.show()
+        # Create and set event loop
+        loop = QEventLoop(app)
+        asyncio.set_event_loop(loop)
 
-    # Run the main function
-    try:
-        with loop:
-            loop.run_forever()
+        window = MainWindow()
+        window.show()
 
-    except KeyboardInterrupt:
-        return 0
+        # Run the main function
+        try:
+            with loop:
+                loop.run_forever()
+
+        except KeyboardInterrupt:
+            return 0
 
     return 0
 

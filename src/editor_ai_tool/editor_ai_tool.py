@@ -124,6 +124,7 @@ class EditorAITool(AITool):
                     type="string",
                     description=(
                         "Menai expression for the transform operation. "
+                        "Menai uses Lisp-style prefix syntax: (operator arg1 arg2 ...). "
                         "May reference 'input-text' (full buffer content as a string) "
                         "and 'input-lines' (buffer lines as a list of strings). "
                         "Must evaluate to a string (new content) or a list of strings (new lines). "
@@ -252,7 +253,7 @@ class EditorAITool(AITool):
                     "It must return a string or a list of strings. "
                     "If dry_run is True, returns the diff without requesting authorisation or applying anything. "
                     "Use save_file afterward to persist the changes. "
-                    "program MUST use Menai syntax."
+                    "program MUST use Menai syntax: (operator arg1 arg2 ...)."
                 )
             ),
         }
@@ -759,23 +760,6 @@ class EditorAITool(AITool):
 
         return new_content
 
-    @staticmethod
-    def _require_menai_help(requester_ref: Any) -> None:
-        """
-        Raise an error if the Menai help has not been read in this conversation.
-
-        Args:
-            requester_ref: The AIConversation making the request
-
-        Raises:
-            AIToolExecutionError: If Menai help has not been read
-        """
-        if not hasattr(requester_ref, "menai_help_read") or not requester_ref.menai_help_read():
-            raise AIToolExecutionError(
-                "You must read the Menai language documentation before using this operation. "
-                "Call the help tool with operation 'get_help' and tool_name 'menai' to load it."
-            )
-
     async def _transform(
         self,
         tool_call: AIToolCall,
@@ -785,7 +769,7 @@ class EditorAITool(AITool):
         """Apply a Menai transform program to the editor buffer."""
         arguments = tool_call.arguments
 
-        self._require_menai_help(requester_ref)
+        self.require_menai_help(requester_ref)
 
         context = self._get_editor_context(arguments)
         context_id = context.context_id()

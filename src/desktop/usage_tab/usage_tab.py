@@ -1,7 +1,7 @@
 """Token usage tab."""
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
 
 from desktop.status_message import StatusMessage
 from desktop.color_role import ColorRole
@@ -21,16 +21,26 @@ class UsageTab(TabBase):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self._usage_widget = UsageWidget(self)
+        self._scroll_area = QScrollArea()
+        self._scroll_area.setObjectName("UsageTabScroll")
+        self._scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll_area.setWidgetResizable(True)
+        self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        layout.addWidget(self._scroll_area)
 
-        usage_container = QWidget()
-        usage_container_layout = QHBoxLayout(usage_container)
-        usage_container_layout.setContentsMargins(0, 0, 0, 0)
-        usage_container_layout.setSpacing(0)
-        usage_container_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        self._usage_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        usage_container_layout.addWidget(self._usage_widget)
-        layout.addWidget(usage_container)
+        content = QWidget()
+        content_layout = QHBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+        content_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+        self._usage_widget = UsageWidget(content)
+        self._usage_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        content_layout.addWidget(self._usage_widget)
+
+        self._scroll_area.setWidget(content)
 
         self._style_manager.style_changed.connect(self.apply_style)
         self._usage_widget.refreshed.connect(self._on_widget_refreshed)
@@ -266,11 +276,19 @@ class UsageTab(TabBase):
                 background: transparent;
             }}
 
+            #UsageWidget QProgressBar#UsageSpendBar {{
+                background: transparent;
+                border: none;
+            }}
+            #UsageWidget QProgressBar#UsageSpendBar::chunk {{
+                border-radius: 3px;
+            }}
+
             #UsageWidget QFrame#UsageRowSep {{
                 color: {sep};
                 border: none;
-                border-top: 1px solid {sep};
                 max-height: 1px;
+                border-top: 1px solid {sep};
                 background: transparent;
             }}
 
@@ -314,7 +332,7 @@ class UsageTab(TabBase):
                 border-color: {sep};
             }}
 
-            {style_manager.get_scrollbar_stylesheet("#UsageWidget QScrollBar")}
+            {style_manager.get_scrollbar_stylesheet("#UsageTabScroll QScrollBar")}
         """
 
     def get_state(self, temp_state: bool = False) -> TabState:

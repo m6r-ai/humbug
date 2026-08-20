@@ -108,7 +108,12 @@ class TestPythonOperators:
 
             tokens = list(lexer._tokens)
             assert len(tokens) == 1, f"Delimiter '{delim}' should produce one token"
-            assert tokens[0].type.name == 'OPERATOR', f"'{delim}' should be OPERATOR type"
+            if delim == '(':
+                assert tokens[0].type.name == 'LPAREN', "'(' should be LPAREN type"
+            elif delim == ')':
+                assert tokens[0].type.name == 'RPAREN', "')' should be RPAREN type"
+            else:
+                assert tokens[0].type.name == 'OPERATOR', f"'{delim}' should be OPERATOR type"
             assert tokens[0].value == delim
 
     def test_backslash_line_continuation(self):
@@ -228,7 +233,7 @@ class TestPythonOperators:
         lexer.lex(None, 'func(x, y)')
 
         tokens = list(lexer._tokens)
-        paren_tokens = [t for t in tokens if t.type.name == 'OPERATOR' and t.value in ('(', ')')]
+        paren_tokens = [t for t in tokens if t.type.name in ('LPAREN', 'RPAREN')]
         assert len(paren_tokens) == 2, "Should have 2 parentheses"
 
     def test_list_brackets(self):

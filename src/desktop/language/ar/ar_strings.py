@@ -91,6 +91,7 @@ def get_arabic_strings() -> LanguageStrings:
         previous_message="الرسالة السابقة",
         next_hunk="التعديل التالي",
         previous_hunk="التعديل السابق",
+        prompt_markers="علامات المحث",
 
         # Message roles
         role_you="أنت",
@@ -265,6 +266,14 @@ def get_arabic_strings() -> LanguageStrings:
         settings_effort_high="عالٍ",
         settings_effort_xhigh="مرتفع جداً",
         settings_effort_max="الحد الأقصى",
+        settings_apply_to_all_conversations="تعيين كافتراضي لهذه المحادثة وجميع المحادثات المفتوحة",
+        settings_apply_to_open_conversations="تطبيق على جميع المحادثات المفتوحة",
+        settings_applied_to_all_conversations="تم التطبيق",
+        settings_apply_to_all_confirm_title="التطبيق على جميع المحادثات؟",
+        settings_apply_to_all_confirm_message=(
+            "سيؤدي هذا إلى تغيير النموذج والمزوّد ودرجة الحرارة وإعدادات التفكير لكل محادثة مفتوحة حاليًا، "
+            "وتعيينها كافتراضي للمحادثات الجديدة. لا يمكن التراجع عن هذا الإجراء. هل تريد المتابعة؟"
+        ),
 
         # File dialog titles
         file_dialog_open_conversation="فتح محادثة",

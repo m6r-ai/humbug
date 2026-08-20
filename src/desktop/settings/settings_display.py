@@ -57,7 +57,7 @@ class SettingsDisplay(SettingsField):
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
-        min_height = int(30 * zoom_factor)
+        min_height = int(36 * zoom_factor)
         self._display.setMinimumHeight(min_height)
 
         value_color = self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)

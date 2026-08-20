@@ -59,7 +59,8 @@ class MenaiAITool(AITool):
                 AIToolParameter(
                     name="expression",
                     type="string",
-                    description="A valid expression written in the Menai language",
+                    description="A valid expression written in the Menai language. "
+                        "Menai uses Lisp-style prefix syntax: (operator arg1 arg2 ...).",
                     required=True
                 )
             ]
@@ -318,7 +319,7 @@ Syntax: (operator arg1 arg2 ...)
 - Basic: (string-concat "hello" " " "world"), (string-length "hello")
 - Access: (string-ref "hello" 1) → "e" (character at 0-based index)
 - Manipulation: (string-slice "hello" 1 4), (string-slice "hello" 2) → "llo", (string-upcase "hello"), (string-downcase "HELLO")
-- Utilities: (string-trim "  hello  ") → "hello",(string-trim-left "  hello  ") → "hello  ",  (string-trim-right "  hello  ") → "  hello", (string-replace "banana" "a" "o")
+- Utilities: (string-trim "  hello  ") → "hello",(string-trim-left "  hello  ") → "hello  ",  (string-trim-right "  hello  ") → "  hello", (string-replace "banana" "a" "o") → "bonono" (replaces all occurrences)
 - Search predicates: (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
 - Search index: (string-index "hello" "l") → 2, (string-index "hello" "z") → #none (not found)
 - Conversion: (string->number "42") → 42, (string->number "3.14") → 3.14, (string->number "1+2j") → 1+2j, (string->number "hello") → #none (returns #none for any unparseable string; raises a type error if argument is not a string)
@@ -350,6 +351,8 @@ Syntax: (operator arg1 arg2 ...)
 - (list->string (list "a" "b" "c") ",") → "a,b,c" (separator inserted between elements; separator may be multi-character)
 - (list->set lst) → convert list to set (deduplicates, retains first occurrence order)
 - (range start end [step]) → (range 1 5) → (1 2 3 4), integers only
+- Step may be negative: (range 10 1 -2) → (10 8 6 4 2); step of 0 is an error
+- If start > end and step is positive (or start < end and step is negative), the result is an empty list ()
 - Higher-order: (map-list func list) → (map-list (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
 - Higher-order: (filter-list predicate list) → (filter-list (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
 - Higher-order: (fold-list func init list) → left fold (tail-recursive); processes list left-to-right, accumulating into init; func signature is (lambda (acc item) result) where acc is the current accumulator and item is the current list element: (fold-list integer+ 0 (list 1 2 3 4)) → 10, (fold-list (lambda (acc item) (list-append acc item)) (list) (list 1 2 3)) → (1 2 3)
@@ -367,6 +370,7 @@ Syntax: (operator arg1 arg2 ...)
 - Output format: dicts display with curly braces: {("name" "Alice") ("age" 30)} — this is display-only; construction always uses (dict ...)
 - Construction: (dict "name" "Alice" "age" 30)
 - Access: (dict-get my-dict "key") → value or #none if missing, (dict-get my-dict "key" "default") → value or "default" if missing
+- Note: if the default is #none, a missing key is indistinguishable from a key whose value is #none; use (dict-has? my-dict "key") to differentiate
 - Modification: (dict-set my-dict "key" value), (dict-remove my-dict "key")
 - Queries: (dict-has? my-dict "key"), (dict-keys my-dict), (dict-values my-dict), (dict-length my-dict)
 - Merging: (dict-merge dict1 dict2) - second wins on conflicts
@@ -486,6 +490,10 @@ Syntax: (operator arg1 arg2 ...)
 ## And/or special forms
 
 - (and #t #f) and (or #t #f) short-circuit and are optimized at compile time; they are not builtin functions
+- All arguments must be booleans; any non-boolean argument is a type error: (and #t 42) → error
+- Always return a boolean: (and #t #t) → #t, (and #t #f) → #f, (or #f #t) → #t, (or #f #f) → #f
+- (and) → #t, (or) → #f (zero-arg identities)
+- Unlike Scheme, and/or do NOT return the last evaluated value; they only return #t or #f
 
 ## Lambda functions
 
@@ -509,6 +517,8 @@ Syntax: (operator arg1 arg2 ...)
 - (let* ((x 5) (y (integer* x 2))) (integer+ x y)) → 15 (y can reference x)
 - (let* ((x 1) (x (integer+ x 10))) x) → 11 (shadowing works in let*)
 - Use let for independent bindings, let* for sequential dependencies
+- All binding forms (let, let*, letrec) and lambda accept exactly one body expression; there is no begin or sequencing form — nest let* for multi-step computations
+- Menai has no define special form; all variable bindings use let, let*, or letrec; use letrec for self-recursive or mutually recursive functions
 
 ## Recursive bindings
 
@@ -564,7 +574,7 @@ Syntax: (operator arg1 arg2 ...)
 
 ## Raising errors
 
-- (error msg) → special form that raises a runtime error; msg must be a string expression
+- (error msg) → raises a runtime error; the msg expression is evaluated normally and must produce a string
 - msg can be a string literal, a variable, or any expression that evaluates to a string
 - Raises immediately; no value is ever returned
 - Valid in any expression position, including inside lambda bodies, let bindings, and match arms
@@ -578,6 +588,7 @@ Syntax: (operator arg1 arg2 ...)
 - float-floor, float-ceil, float-round all return float, not integer; use (float->integer (float-round x)) to get an integer
 - All comparison operators are type-specific: use integer=?, float<?, string>=? etc.
 - Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't - there is no concept of "truthiness"
+- and/or require boolean arguments and always return a boolean; unlike Scheme they do not return the last evaluated value
 - #none is not a boolean and cannot be used as a condition; use (none? x) to test for absence
 - The user CANNOT see Menai expressions or Menai results used with this tool directly; if you want to show either, you must format it as a message to the user.
 - Naming convention: direct operations are named, say, `list-X` with the list as the first argument; higher-order operations are named `X-list` with the function/predicate first and the list last. The same convention applies to dicts (`dict-X` / `X-dict`), sets (`set-X` / `X-set`), and bytes (`bytes-X` / `X-bytes`).
@@ -596,23 +607,6 @@ Syntax: (operator arg1 arg2 ...)
         """
         expression = arguments.get("expression", "")
         return f"`expression` is:\n```menai\n{expression}\n```"
-
-    @staticmethod
-    def _require_menai_help(requester_ref: Any) -> None:
-        """
-        Raise an error if the Menai help has not been read in this conversation.
-
-        Args:
-            requester_ref: The AIConversation making the request
-
-        Raises:
-            AIToolExecutionError: If Menai help has not been read
-        """
-        if not hasattr(requester_ref, "menai_help_read") or not requester_ref.menai_help_read():
-            raise AIToolExecutionError(
-                "You must read the Menai language documentation before using this tool. "
-                "Call the help tool with operation 'get_help' and tool_name 'menai' to load it."
-            )
 
     async def _evaluate(
         self,
@@ -636,7 +630,7 @@ Syntax: (operator arg1 arg2 ...)
         """
         arguments = tool_call.arguments
 
-        self._require_menai_help(requester_ref)
+        self.require_menai_help(requester_ref)
 
         expression = arguments.get("expression", "")
 

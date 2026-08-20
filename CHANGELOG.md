@@ -14,6 +14,12 @@ New features:
   recent-mindspaces quick-switch feature.
 - Added Kimi K3 support to Ollama cloud and removed Kimi K2.6 and Kimi K2.7.
 - Added Claude Opus 5, removed Claude Opus 4.8. and Claude Sonnet 4.6.
+- Added a conversation tab "prompt mini-map" feature to make navigating to user prompts easier.
+- Added paren matching in the editor to make it easier to understand and debug code (especially s-expr languages).
+- Added GLM 5.3 and removed GLM 5.1 for the Zai backend.
+- Added Grok 4.6 and removed Grok 4.3 for the X.ai backend.
+- Added a `USR1` signal handler for MacOS/Linux that will terminate the app and log the current backtrace status to a new
+  logfile.
 
 Bug fixes:
 
@@ -26,6 +32,11 @@ Bug fixes:
 - Resolved a minor label problem with Ollama model updates.
 - Resolved problems with the mindspace settings dialog where text would not correctly update on a language change.
 - Instantiate a new Menai VM per AI tool use to avoid threading race conditions.
+- Improve the handling of detecting that Menai help has been read in a conversation.  Ensure this persists across restarts,
+  across forking, and correctly acts when messages are deleted.
+- Updating existing conversation models did not honour the provider correctly.
+- Fixed a usage tab problem when more than 4 models from the same provider were used.  Updated scrolling of the tab to
+  make it more consistent with other tab types.
 
 ## v53 (2026-07-12)
 

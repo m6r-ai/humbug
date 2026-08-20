@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QWidget, QFrame, QListWidget, QListWidgetItem, QStackedWidget, QSplitter,
     QStyledItemDelegate, QStyleOptionViewItem, QLabel
 )
-from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSize, Signal, Qt
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QSignalBlocker, QSize, Signal, Qt
 from PySide6.QtGui import QFont
 
 from ai import AIBackendSettings, AIConversationSettings, AIManager, AIReasoningCapability
@@ -26,6 +26,7 @@ from desktop.color_role import ColorRole
 from desktop.fetch_error import fetch_error_message as _fetch_error_message
 from desktop.fetch_error import pull_error_message as _pull_error_message
 from desktop.language.language_manager import LanguageManager
+from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.settings.settings_accordion import SettingsAccordion
 from desktop.settings.settings_action_row import SettingsActionRow
 from desktop.settings.settings_container import SettingsContainer
@@ -83,6 +84,7 @@ class SettingsDialog(QDialog):
 
     user_settings_changed = Signal(UserSettings)
     mindspace_settings_changed = Signal(MindspaceSettings)
+    apply_ai_settings_to_all_requested = Signal(MindspaceSettings)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """
@@ -144,6 +146,7 @@ class SettingsDialog(QDialog):
         self._temp_spin: SettingsDoubleSpinBox
         self._reasoning_combo: SettingsCombo
         self._effort_combo: SettingsCombo
+        self._apply_to_all_row: SettingsActionRow
         self._ai_model_container: SettingsContainer
 
         self._tools_heading: SettingsPageHeading
@@ -514,6 +517,10 @@ class SettingsDialog(QDialog):
         )
         container.add_setting(self._temp_spin)
 
+        self._apply_to_all_row = SettingsActionRow(strings.settings_apply_to_open_conversations)
+        self._apply_to_all_row.button().clicked.connect(self._on_apply_to_all_clicked)
+        container.add_setting(self._apply_to_all_row)
+
         self._model_filter_combo.value_changed.connect(self._on_model_filter_changed)
         self._model_combo.value_changed.connect(self._on_model_value_changed)
         self._effort_combo.value_changed.connect(self._on_effort_value_changed)
@@ -762,6 +769,27 @@ class SettingsDialog(QDialog):
             enabled_tools=enabled_tools,
         )
 
+    def _on_apply_to_all_clicked(self) -> None:
+        """Handle the "apply to all open conversations" button click."""
+        strings = self._language_manager.strings()
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.QUESTION,
+            strings.settings_apply_to_all_confirm_title,
+            strings.settings_apply_to_all_confirm_message,
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            destructive=True
+        )
+        if result != MessageBoxButton.YES:
+            return
+
+        settings = self.get_mindspace_settings()
+        if settings is None:
+            return
+
+        self.apply_ai_settings_to_all_requested.emit(settings)
+        self._apply_to_all_row.set_success(strings.settings_applied_to_all_conversations)
+
     def _populate_user_settings(self, settings: UserSettings) -> None:
         """Load user settings into the dialog controls."""
         # Display
@@ -805,7 +833,10 @@ class SettingsDialog(QDialog):
         # AI model
         ai_backends = self._ai_manager.get_backends()
         self._populate_model_filter_combo(ai_backends)
-        self._populate_model_combo(ai_backends, filter_provider=None)
+        with QSignalBlocker(self._model_filter_combo):
+            self._model_filter_combo.set_value(settings.provider)
+
+        self._populate_model_combo(ai_backends, filter_provider=settings.provider)
         self._model_combo.set_value((settings.model, settings.provider))
         self._temp_spin.set_value(settings.temperature)
         self._update_model_capabilities(settings.model, settings.provider)
@@ -813,6 +844,9 @@ class SettingsDialog(QDialog):
             self._effort_combo.set_value(settings.reasoning_effort)
 
         self._reasoning_combo.set_value(settings.reasoning)
+
+        # Clear any status message left over from a previous "apply to all" click
+        self._apply_to_all_row.set_status("")
 
         # Tools
         for tool_name, switch in self._tool_switches.items():

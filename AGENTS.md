@@ -69,6 +69,13 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 - Do not use `@property`.  Simple getter methods (e.g. `def foo(self) -> T:`) are used instead.
 - Do not pad-align `=` signs in consecutive assignment statements.  Each assignment should have a single space before
   the `=`, regardless of surrounding assignments.
+- Never use `QTimer.singleShot()` in Qt desktop code.  It creates an unparented timer that keeps a
+  Python reference to its callable, so the callback can fire after the target widget's C++ object has
+  been deleted (a `RuntimeError: libshiboken` crash).  Instead create an instance timer parented to the
+  widget — `self._timer = QTimer(self)`, `setSingleShot(True)`, connect `timeout` to the handler, and
+  call `start(delay)` — so Qt destroys it with the widget and a pending callback can never fire after
+  teardown.  See `conversation_widget.py` (`_sticky_update_timer`, `_re_enable_updates_timer`) for the
+  established pattern.
 - Put a blank line after any code block.  If the code dedents then there should be a blank line before it.
 - Multi-line docstrings must have the opening `"""` and closing `"""` on their own lines, with no other text.
 - These and other style rules are enforced by the style checker pylint plugin (`tools/style_checker/`), which runs

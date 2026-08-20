@@ -156,6 +156,12 @@ class RustParser(Parser):
         """
         # Look ahead for type parameters or function calls
         next_token = lexer.peek_next_token()
+        if next_token and next_token.type == TokenType.LPAREN:
+            # Function or method call
+            token.type = TokenType.FUNCTION_OR_METHOD
+            self._tokens.append(token)
+            return
+
         if next_token and next_token.type == TokenType.OPERATOR:
             if next_token.value == '<':
                 # Possible generic type
@@ -164,12 +170,6 @@ class RustParser(Parser):
                     token.type = TokenType.TYPE
                     self._tokens.append(token)
                     return
-
-            if next_token.value == '(':
-                # Function or method call
-                token.type = TokenType.FUNCTION_OR_METHOD
-                self._tokens.append(token)
-                return
 
             if next_token.value in ('::', '.'):
                 # Path or field access

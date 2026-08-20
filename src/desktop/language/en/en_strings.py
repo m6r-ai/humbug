@@ -90,6 +90,7 @@ def get_english_strings() -> LanguageStrings:
         previous_message="Previous Message",
         next_hunk="Next Hunk",
         previous_hunk="Previous Hunk",
+        prompt_markers="Prompt Markers",
 
         # Message roles
         role_you="You",
@@ -264,6 +265,15 @@ def get_english_strings() -> LanguageStrings:
         settings_effort_high="High",
         settings_effort_xhigh="Extra High",
         settings_effort_max="Maximum",
+        settings_apply_to_all_conversations="Set as default for this and all open conversations",
+        settings_apply_to_open_conversations="Apply to all open conversations",
+        settings_applied_to_all_conversations="Applied",
+        settings_apply_to_all_confirm_title="Apply to All Conversations?",
+        settings_apply_to_all_confirm_message=(
+            "This will change the model, provider, temperature and reasoning settings for every "
+            "currently open conversation, and set them as the default for new conversations. "
+            "This cannot be undone. Continue?"
+        ),
 
         # File dialog titles
         file_dialog_open_conversation="Open Conversation",

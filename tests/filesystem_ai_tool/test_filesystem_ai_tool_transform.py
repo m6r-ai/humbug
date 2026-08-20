@@ -84,7 +84,7 @@ class TestFileSystemAIToolTransformFile:
         result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
-        assert target.read_text(encoding='utf-8') == "HELLO WORLD"
+        assert target.read_text(encoding='utf-8') == "HELLO WORLD\n"
 
     def test_transform_list_result(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
         """Transform program returning a list of strings joins with newlines."""
@@ -98,12 +98,12 @@ class TestFileSystemAIToolTransformFile:
         result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
-        assert target.read_text(encoding='utf-8') == "gamma\nbeta\nalpha"
+        assert target.read_text(encoding='utf-8') == "gamma\nbeta\nalpha\n"
 
     def test_transform_no_change(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
         """Transform producing identical content reports no changes and skips the write."""
         target = tmp_path / "same.txt"
-        original = "unchanged content"
+        original = "unchanged content\n"
         target.write_text(original, encoding='utf-8')
         mtime_before = os.path.getmtime(str(target))
 
@@ -191,7 +191,7 @@ class TestFileSystemAIToolTransformFile:
         result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
-        assert target.read_text(encoding='utf-8') == str(len(content))
+        assert target.read_text(encoding='utf-8') == str(len(content)) + "\n"
 
     def test_transform_input_lines_binding(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
         """'input-lines' is bound to a list of strings, one per line."""
@@ -206,7 +206,7 @@ class TestFileSystemAIToolTransformFile:
         result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
         assert "Transform applied" in data["message"]
-        assert target.read_text(encoding='utf-8') == "3"
+        assert target.read_text(encoding='utf-8') == "3\n"
 
     def test_transform_atomic_write(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
         """A successful transform produces the correct output and leaves no temp files."""
@@ -218,7 +218,7 @@ class TestFileSystemAIToolTransformFile:
             {"operation": "transform_file", "path": str(target), "program": "(string-upcase input-text)"}
         )
         asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
-        assert target.read_text(encoding='utf-8') == "HELLO"
+        assert target.read_text(encoding='utf-8') == "HELLO\n"
         tmp_files = list(tmp_path.glob("*.tmp"))
         assert len(tmp_files) == 0
 
@@ -250,7 +250,7 @@ class TestFileSystemAIToolTransformFile:
     ):
         """dry_run=True on an identity transform reports no changes."""
         target = tmp_path / "data.txt"
-        target.write_text("unchanged", encoding='utf-8')
+        target.write_text("unchanged\n", encoding='utf-8')
 
         tool_call = make_tool_call(
             "filesystem",
@@ -275,3 +275,17 @@ class TestFileSystemAIToolTransformFile:
 
         assert "must read the Menai language documentation" in str(exc_info.value)
         assert target.read_text(encoding='utf-8') == "hello world"
+
+    def test_transform_ensures_trailing_newline(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """A transform that produces content without a trailing newline gets one added."""
+        target = tmp_path / "data.txt"
+        target.write_text("hello world\n", encoding='utf-8')
+
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "transform_file", "path": str(target), "program": "(string-upcase input-text)"}
+        )
+        asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert target.read_text(encoding='utf-8') == "HELLO WORLD\n"

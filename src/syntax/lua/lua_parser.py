@@ -76,14 +76,14 @@ class LuaParser(Parser):
             cur_in_table_access = in_table_access
             next_in_table_access = False
 
-            if next_token and next_token.type == TokenType.OPERATOR:
-                # Function call: identifier followed by '('
-                if next_token.value == '(':
-                    in_table_access = False
-                    token.type = TokenType.FUNCTION_OR_METHOD
-                    self._tokens.append(token)
-                    continue
+            # Function call: identifier followed by '('
+            if next_token and next_token.type == TokenType.LPAREN:
+                in_table_access = False
+                token.type = TokenType.FUNCTION_OR_METHOD
+                self._tokens.append(token)
+                continue
 
+            if next_token and next_token.type == TokenType.OPERATOR:
                 # Method call: identifier followed by ':'
                 # This is for the object part: object:method()
                 if next_token.value == ':':

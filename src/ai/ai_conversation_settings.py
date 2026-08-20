@@ -86,7 +86,7 @@ class AIConversationSettings:
             adaptive_thinking_only=True,
         ),
 
-        # Deepseek models
+        # DeepSeek models
         ("deepseek-v4-flash", "deepseek"): AIModel(
             name="deepseek-v4-flash",
             provider="deepseek",
@@ -239,6 +239,38 @@ class AIConversationSettings:
         ),
 
         # Ollama Cloud models
+        ("deepseek-v4-flash", "ollama-cloud"): AIModel(
+            name="deepseek-v4-flash:cloud",
+            provider="ollama-cloud",
+            display_name="DeepSeek V4 Flash",
+            context_window=1000000,
+            max_output_tokens=384000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
+        ("deepseek-v4-pro", "ollama-cloud"): AIModel(
+            name="deepseek-v4-pro:cloud",
+            provider="ollama-cloud",
+            display_name="DeepSeek V4 Pro",
+            context_window=1000000,
+            max_output_tokens=384000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
         ("gpt-oss:20b", "ollama-cloud"): AIModel(
             name="gpt-oss:20b",
             provider="ollama-cloud",
@@ -288,20 +320,6 @@ class AIConversationSettings:
             provider="ollama-cloud",
             display_name="GLM 5.2",
             context_window=1000000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
-            ],
-        ),
-        ("glm-5.1:cloud", "ollama-cloud"): AIModel(
-            name="glm-5.1:cloud",
-            provider="ollama-cloud",
-            display_name="GLM 5.1",
-            context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
@@ -485,6 +503,21 @@ class AIConversationSettings:
         ),
 
         # xAI models
+        ("grok-4.6", "xai"): AIModel(
+            name="grok-4.6",
+            provider="xai",
+            display_name="Grok 4.6",
+            context_window=1000000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH
+            ],
+        ),
         ("grok-4.5", "xai"): AIModel(
             name="grok-4.5",
             provider="xai",
@@ -500,24 +533,24 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH
             ],
         ),
-        ("grok-4.3", "xai"): AIModel(
-            name="grok-4.3",
-            provider="xai",
-            display_name="Grok 4.3",
+
+        # Z.ai models
+        ("glm-5.3", "zai"): AIModel(
+            name="glm-5.3",
+            provider="zai",
+            display_name="GLM 5.3",
             context_window=1000000,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
-                AIReasoningEffort.HIGH
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
             ],
         ),
-
-        # Z.ai models
         ("glm-5.2", "zai"): AIModel(
             name="glm-5.2",
             provider="zai",

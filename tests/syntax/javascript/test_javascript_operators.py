@@ -189,7 +189,12 @@ class TestJavaScriptOperators:
 
             tokens = list(lexer._tokens)
             assert len(tokens) == 1, f"'{op}' should produce one token"
-            assert tokens[0].type.name == 'OPERATOR', f"'{op}' should be OPERATOR type"
+            if op == '(':
+                assert tokens[0].type.name == 'LPAREN', "'(' should be LPAREN type"
+            elif op == ')':
+                assert tokens[0].type.name == 'RPAREN', "')' should be RPAREN type"
+            else:
+                assert tokens[0].type.name == 'OPERATOR', f"'{op}' should be OPERATOR type"
             assert tokens[0].value == op
 
     def test_punctuation_operators(self):
