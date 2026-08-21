@@ -81,6 +81,17 @@ It also prevents the kind of gradual coupling that is especially risky when LLMs
 contributing code, since an AI might otherwise introduce a convenience import that silently
 creates a circular dependency between modules.
 
+### Frontend-agnostic workspace state
+All workspace layout state — which tabs are open, which column each tab is in,
+which tab is focused, and whether a tab is ephemeral — lives in the
+frontend-agnostic `ContextRegistry` within the `Mindspace` model.  The desktop
+frontend (`TabManager`) is a projection: it subscribes to registry events
+(OPENED, CLOSED, UPDATED, FOCUSED, MOVED) and renders the corresponding Qt
+widgets.  User actions (clicking a tab, dragging between columns) call back
+into the registry, which emits events that the frontend reacts to.  This
+separation is the foundation for a future remote frontend that visualises
+activities on a headless backend.
+
 ### YAGNI — no speculative code
 Humbug follows the YAGNI (You Aren't Gonna Need It) principle. Every method,
 function, class, and module must have a concrete reason to exist: it must be used

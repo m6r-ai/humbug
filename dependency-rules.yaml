@@ -83,6 +83,7 @@ modules:
       - mindspace
       - pdf
       - docx
+      - system_ai_tool
       - preview_ai_tool
       - preview_context
       - syntax
@@ -232,6 +233,16 @@ modules:
 
   syntax:
     internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  system_ai_tool:
+    internal_dependencies:
+      - ai
+      - ai_tool
+      - ai_transcript_conversation
+      - conversation_context
+      - mindspace
     external_dependencies:
       - "standard_library"
 

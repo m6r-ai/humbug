@@ -35,6 +35,7 @@ from mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_settings import MindspaceSettings
 from preview_ai_tool.preview_ai_tool import PreviewAITool
+from system_ai_tool.system_ai_tool import SystemAITool
 from terminal_ai_tool.terminal_ai_tool import TerminalAITool
 
 from desktop.about_dialog import AboutDialog
@@ -73,7 +74,6 @@ from desktop.usage_tab.usage_tab import UsageTab
 from desktop.style_manager import StyleManager
 from desktop.color_theme import ColorTheme
 from desktop.status_message import StatusMessage
-from desktop.system_ai_tool import SystemAITool
 from desktop.tab_manager import TabManager
 from desktop.terminal_tab.terminal_tab import TerminalTab
 from desktop.title_bar import MenuBarDragFilter, WindowControlsWidget
@@ -735,7 +735,7 @@ class MainWindow(QMainWindow):
             PreviewAITool(mindspace), "Preview: operations for interacting with preview tabs"
         )
         self._ai_tool_manager.register_tool(
-            SystemAITool(self._tab_manager, mindspace),
+            SystemAITool(mindspace),
             "System: manages UI tab lifecycle operations (create, open, close, organize tabs)"
         )
         self._ai_tool_manager.register_tool(
@@ -1506,7 +1506,7 @@ class MainWindow(QMainWindow):
         existing = contexts.get_by_path_and_type(path, "diff")
         if existing:
             if not ephemeral:
-                self._tab_manager.make_tab_permanent(existing.context_id)
+                contexts.make_permanent(existing.context_id)
 
             contexts.focus(existing.context_id)
 
@@ -1586,7 +1586,7 @@ class MainWindow(QMainWindow):
             existing = contexts.get_by_path_and_type(path, context_type)
             if existing:
                 if not ephemeral:
-                    self._tab_manager.make_tab_permanent(existing.context_id)
+                    contexts.make_permanent(existing.context_id)
 
                 contexts.focus(existing.context_id)
                 return existing.context_id
@@ -1711,7 +1711,7 @@ class MainWindow(QMainWindow):
             existing = contexts.get_by_path_and_type(path, "editor")
             if existing:
                 if not ephemeral:
-                    self._tab_manager.make_tab_permanent(existing.context_id)
+                    contexts.make_permanent(existing.context_id)
 
                 contexts.focus(existing.context_id)
                 context_id = existing.context_id

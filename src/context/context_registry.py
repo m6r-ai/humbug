@@ -10,10 +10,11 @@ from context.context_info import ContextInfo
 
 class ContextEvent(Enum):
     """Events emitted by the ContextRegistry."""
-    OPENED = auto()    # args: (context_info: ContextInfo, is_ephemeral: bool)
+    OPENED = auto()    # args: (context_info: ContextInfo, is_ephemeral: bool, requester_id: str)
     CLOSED = auto()    # args: (context_id: str)
     UPDATED = auto()   # args: (context_info: ContextInfo)
     FOCUSED = auto()   # args: (context_id: str)
+    MOVED = auto()     # args: (context_id: str, column: int)
 
 
 class ContextRegistry:
@@ -27,6 +28,8 @@ class ContextRegistry:
     callers should call get() again when they need a fresh view.
     """
 
+    MAX_COLUMNS = 6
+
     def __init__(self) -> None:
         """Initialise an empty registry."""
         self._contexts: dict[str, ContextInfo] = {}
@@ -34,6 +37,7 @@ class ContextRegistry:
         self._callbacks: dict[ContextEvent, set[Callable]] = {
             event: set() for event in ContextEvent
         }
+        self._current_context_id: str | None = None
         self._logger = logging.getLogger("ContextRegistry")
 
     def register_callback(self, event: ContextEvent, callback: Callable) -> None:
@@ -86,6 +90,7 @@ class ContextRegistry:
         context_id: str  = "",
         initial_model: Any = None,
         requester_id: str = "",
+        column: int = 0,
     ) -> str:
         """
         Register a new open context and emit OPENED.
@@ -104,6 +109,7 @@ class ContextRegistry:
             requester_id:  Optional ID of the context that is requesting this
                            open.  Forwarded opaquely to OPENED callbacks so the
                            frontend can use it for tab placement decisions.
+            column:        Column index (0-based) for layout.  Defaults to 0.
 
         Returns:
             The context_id for the newly registered context.
@@ -117,6 +123,8 @@ class ContextRegistry:
             path=self._normalize_path(path),
             title=title,
             is_modified=False,
+            is_ephemeral=is_ephemeral,
+            column=column,
         )
         self._contexts[context_id] = info
         if initial_model is not None:
@@ -138,22 +146,26 @@ class ContextRegistry:
 
         self._models.pop(context_id, None)
 
+        if self._current_context_id == context_id:
+            self._current_context_id = None
+
     def update(self, context_id: str, **kwargs: Any) -> None:
         """
         Update mutable fields on a context and emit UPDATED.
 
-        Only title, path, and is_modified may be updated.
+        Only title, path, is_modified, is_ephemeral, and column may be updated.
         Unknown keys are silently ignored.
 
         Args:
             context_id: ID of the context to update.
-            **kwargs:   Fields to update (title, is_modified).
+            **kwargs:   Fields to update (title, path, is_modified,
+                        is_ephemeral, column).
         """
         info = self._contexts.get(context_id)
         if info is None:
             return
 
-        allowed = {"title", "path", "is_modified"}
+        allowed = {"title", "path", "is_modified", "is_ephemeral", "column"}
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
             return
@@ -167,6 +179,8 @@ class ContextRegistry:
             path=updates.get("path", info.path),
             title=updates.get("title", info.title),
             is_modified=updates.get("is_modified", info.is_modified),
+            is_ephemeral=updates.get("is_ephemeral", info.is_ephemeral),
+            column=updates.get("column", info.column),
         )
         self._emit(ContextEvent.UPDATED, self._contexts[context_id])
 
@@ -174,15 +188,82 @@ class ContextRegistry:
         """
         Signal that a context has been brought to the front.
 
-        This is a transient intent — it does not change stored state, only
-        notifies observers.  The Qt layer scrolls to the tab; a CLI might print
-        the context title; the registry itself records nothing.
+        Stores the current context id and emits FOCUSED.  The Qt layer scrolls
+        to the tab; a CLI might print the context title.
 
         Args:
             context_id: ID of the context being focused.
         """
         if context_id in self._contexts:
+            self._current_context_id = context_id
             self._emit(ContextEvent.FOCUSED, context_id)
+
+    def move(self, context_id: str, column: int) -> None:
+        """
+        Move a context to a different column and emit MOVED.
+
+        Args:
+            context_id: ID of the context to move.
+            column:     Target column index (0-based, max 5).
+
+        Raises:
+            ValueError: If the context does not exist or column is out of range.
+        """
+        info = self._contexts.get(context_id)
+        if info is None:
+            raise ValueError(f"Context not found: {context_id}")
+
+        if not 0 <= column < self.MAX_COLUMNS:
+            raise ValueError(
+                f"Column must be 0-{self.MAX_COLUMNS - 1}, got {column}"
+            )
+
+        if info.column == column:
+            return
+
+        self._contexts[context_id] = ContextInfo(
+            context_id=info.context_id,
+            context_type=info.context_type,
+            path=info.path,
+            title=info.title,
+            is_modified=info.is_modified,
+            is_ephemeral=info.is_ephemeral,
+            column=column,
+        )
+        self._emit(ContextEvent.MOVED, context_id, column)
+
+    def make_permanent(self, context_id: str) -> None:
+        """
+        Convert an ephemeral context to permanent.
+
+        If the context is not ephemeral or does not exist, this is a no-op.
+
+        Args:
+            context_id: ID of the context to make permanent.
+        """
+        info = self._contexts.get(context_id)
+        if info is None or not info.is_ephemeral:
+            return
+
+        self._contexts[context_id] = ContextInfo(
+            context_id=info.context_id,
+            context_type=info.context_type,
+            path=info.path,
+            title=info.title,
+            is_modified=info.is_modified,
+            is_ephemeral=False,
+            column=info.column,
+        )
+        self._emit(ContextEvent.UPDATED, self._contexts[context_id])
+
+    def current_context_id(self) -> str | None:
+        """
+        Return the ID of the currently focused context, or None.
+
+        Returns:
+            The current context ID, or None if no context is focused.
+        """
+        return self._current_context_id
 
     def clear(self) -> None:
         """
@@ -193,6 +274,7 @@ class ContextRegistry:
         """
         self._contexts.clear()
         self._models.clear()
+        self._current_context_id = None
 
     def get(self, context_id: str) -> ContextInfo | None:
         """
@@ -235,6 +317,20 @@ class ContextRegistry:
             List of ContextInfo snapshots.
         """
         return list(self._contexts.values())
+
+    def num_columns(self) -> int:
+        """
+        Return the number of columns currently in use.
+
+        A column is "in use" if at least one context is assigned to it.
+
+        Returns:
+            Number of columns with at least one context.
+        """
+        if not self._contexts:
+            return 0
+
+        return max(info.column for info in self._contexts.values()) + 1
 
     T = TypeVar('T')
 

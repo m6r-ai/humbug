@@ -264,6 +264,10 @@ Language-specific syntax highlighting system.
 - `javascript/`, `json/`, `kotlin/`, `lua/`, `markdown/`, `menai/`, `metaphor/`, `move/`
 - `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `toml/`, `typescript/`, `xml/`, `yaml/`
 
+### `src/system_ai_tool/`
+AI tool implementation for system/workspace operations (tab lifecycle, layout,
+system info). Moved from `src/desktop/` to make it frontend-agnostic.
+
 ### `src/terminal/`
 Cross-platform terminal emulator with Unix and Windows implementations.
 

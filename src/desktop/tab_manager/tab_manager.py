@@ -182,10 +182,6 @@ class TabManager(QWidget):
         """
         self._context_factories[tool_name] = factory
 
-    def num_colunns(self) -> int:
-        """Get the number of columns currently in use."""
-        return len(self._tab_columns)
-
     def _get_tab_info(self, tab: TabBase) -> dict[str, str | int | bool]:
         """
         Get detailed information about a specific tab.
@@ -568,6 +564,7 @@ class TabManager(QWidget):
         registry.register_callback(ContextEvent.OPENED, self._on_context_opened)
         registry.register_callback(ContextEvent.CLOSED, self._on_context_closed)
         registry.register_callback(ContextEvent.UPDATED, self._on_context_updated)
+        registry.register_callback(ContextEvent.MOVED, self._on_context_moved)
         registry.register_callback(ContextEvent.FOCUSED, self._on_context_focused)
         self._registry_subscribed = True
 
@@ -581,6 +578,7 @@ class TabManager(QWidget):
             registry.unregister_callback(ContextEvent.OPENED, self._on_context_opened)
             registry.unregister_callback(ContextEvent.CLOSED, self._on_context_closed)
             registry.unregister_callback(ContextEvent.UPDATED, self._on_context_updated)
+            registry.unregister_callback(ContextEvent.MOVED, self._on_context_moved)
             registry.unregister_callback(ContextEvent.FOCUSED, self._on_context_focused)
 
         self._registry_subscribed = False
@@ -638,13 +636,47 @@ class TabManager(QWidget):
             self.close_tab_by_id(context_id, force_close=True)
 
     def _on_context_updated(self, info: ContextInfo) -> None:
-        """React to a context being updated — currently a no-op at the Qt layer."""
+        """
+        React to a context being updated in the registry.
+
+        Syncs the Qt tab's ephemeral state when the registry's
+        is_ephemeral field changes (e.g. via make_permanent).
+        """
+        tab = self._tabs.get(info.context_id)
+        if tab is not None and tab.is_ephemeral() != info.is_ephemeral:
+            self._make_tab_permanent(tab)
 
     def _on_context_focused(self, context_id: str) -> None:
         """React to a context focus request — bring the Qt tab to front."""
         tab = self._tabs.get(context_id)
         if tab is not None:
             self._set_current_tab(tab, False)
+
+    def _on_context_moved(self, context_id: str, column: int) -> None:
+        """
+        React to a context move request from the registry.
+
+        Moves the Qt widget to the target column.  If the target column does
+        not yet exist, it is created.  This is the handler for AI-initiated
+        moves; user-initiated moves go directly through _move_tab_between_columns
+        and then update the registry via _add_tab_to_column.
+        """
+        tab = self._tabs.get(context_id)
+        if tab is None:
+            return
+
+        source_column = self._find_column_for_tab(tab)
+        if source_column is None:
+            return
+
+        while column >= len(self._tab_columns):
+            self._create_column(len(self._tab_columns))
+
+        target_column = self._tab_columns[column]
+        if source_column == target_column:
+            return
+
+        self._move_tab_between_columns(tab, source_column, target_column)
 
     def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
         """
@@ -685,6 +717,11 @@ class TabManager(QWidget):
         self._update_tabs(change_focus=False)
         self._update_mru_order(tab, column)
         QTimer.singleShot(0, self.show_all_columns)
+
+        # Keep the registry's column state in sync with the Qt layout
+        if self._mindspace_manager.has_mindspace():
+            column_index = self._tab_columns.index(column)
+            self._mindspace_manager.mindspace().contexts().update(tab_id, column=column_index)
 
         # Only restore focus to the prior widget if it was outside the target column
         # (e.g. the sidebar).  If focus was already inside the column, let it move to the new tab.
@@ -1281,6 +1318,10 @@ class TabManager(QWidget):
         current_tab = self.get_current_tab()
         update_focus = True
         if current_tab:
+            # Keep the registry's focus state in sync with the Qt selection
+            if self._mindspace_manager.has_mindspace():
+                self._mindspace_manager.mindspace().contexts().focus(current_tab.tab_id())
+
             self._update_mru_order(current_tab, column)
             update_focus = not current_tab.is_ephemeral()
 
@@ -1494,19 +1535,6 @@ class TabManager(QWidget):
         tab_index, tab_bar = self._find_tab_bar_and_index(tab)
         if tab_bar and tab_index != -1:
             tab_bar.set_tab_ephemeral(tab_index, False)
-
-    def make_tab_permanent(self, tab_id: str) -> None:
-        """
-        Make an ephemeral tab permanent.
-
-        Args:
-            tab_id: ID of the tab to make permanent.
-        """
-        tab = self._tabs.get(tab_id)
-        if tab is None or not tab.is_ephemeral():
-            return
-
-        self._make_tab_permanent(tab)
 
     def _move_tab_to_active_column(self, tab: TabBase) -> None:
         """
@@ -1867,6 +1895,7 @@ class TabManager(QWidget):
                         path=tab.path(),
                         title=title,
                         context_id=tab.tab_id(),
+                        column=column_index,
                     )
 
             except Exception as e:

@@ -25,9 +25,6 @@ from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
 
-from desktop.tab_manager import TabManager, TabManagerError
-from desktop.version import CURRENT_VERSION
-
 
 class SystemAITool(AITool):
     """
@@ -39,15 +36,13 @@ class SystemAITool(AITool):
     tab content.
     """
 
-    def __init__(self, tab_manager: TabManager, mindspace: Mindspace):
+    def __init__(self, mindspace: Mindspace):
         """
         Initialize the system tool.
 
         Args:
-            column_manager: Column manager for layout queries and tab protection
             mindspace: The active mindspace model
         """
-        self._tab_manager = tab_manager
         self._mindspace = mindspace
         self._ai_manager = AIManager()
         self._logger = logging.getLogger("SystemAITool")
@@ -258,11 +253,36 @@ class SystemAITool(AITool):
 
         return None
 
+    def _tab_info_dict(self, info: Any) -> dict[str, Any]:
+        """
+        Build a tab info dictionary from a ContextInfo snapshot.
+
+        Args:
+            info: ContextInfo snapshot from the registry.
+
+        Returns:
+            Dictionary with tab_id, title, type, path, column_index,
+            is_modified, and is_ephemeral keys.
+        """
+        relative_path = ""
+        if info.path:
+            relative_path = self._mindspace.get_relative_path(info.path) or ""
+
+        return {
+            "tab_id": info.context_id,
+            "title": info.title,
+            "type": info.context_type,
+            "path": relative_path,
+            "column_index": info.column,
+            "is_modified": info.is_modified,
+            "is_ephemeral": info.is_ephemeral,
+        }
+
     async def _open_editor_tab(
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Open or create a file in an editor tab."""
         arguments = tool_call.arguments
@@ -272,7 +292,7 @@ class SystemAITool(AITool):
         # Return existing tab if this file is already open
         existing = self._mindspace.contexts().get_by_path_and_type(file_path, "editor")
         if existing is not None:
-            self._tab_manager.make_tab_permanent(existing.context_id)
+            self._mindspace.contexts().make_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             relative_path = self._mindspace.get_relative_path(file_path)
             return AIToolResult(
@@ -314,7 +334,7 @@ class SystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Create a new terminal tab."""
         try:
@@ -342,7 +362,7 @@ class SystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Open an existing conversation tab."""
         arguments = tool_call.arguments
@@ -352,7 +372,7 @@ class SystemAITool(AITool):
         # Return existing tab if this conversation is already open
         existing = self._mindspace.contexts().get_by_path_and_type(conversation_path, "conversation")
         if existing is not None:
-            self._tab_manager.make_tab_permanent(existing.context_id)
+            self._mindspace.contexts().make_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             return AIToolResult(
                 id=tool_call.id, name="system",
@@ -391,7 +411,7 @@ class SystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Create a new conversation tab."""
         arguments = tool_call.arguments
@@ -508,7 +528,7 @@ class SystemAITool(AITool):
                 content=", ".join(result_parts)
             )
 
-        except (MindspaceError, TabManagerError) as e:
+        except MindspaceError as e:
             raise AIToolExecutionError(f"Failed to create conversation: {str(e)}") from e
 
         except Exception as e:
@@ -518,7 +538,7 @@ class SystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Open preview view for a specific location or mindspace root."""
         arguments = tool_call.arguments
@@ -533,7 +553,7 @@ class SystemAITool(AITool):
         # Return existing tab if this path is already open in a preview
         existing = self._mindspace.contexts().get_by_path_and_type(preview_path, "preview")
         if existing is not None:
-            self._tab_manager.make_tab_permanent(existing.context_id)
+            self._mindspace.contexts().make_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             relative_path = self._mindspace.get_relative_path(preview_path)
             location = relative_path if relative_path else "."
@@ -568,9 +588,6 @@ class SystemAITool(AITool):
                 content=f"Opened preview tab for: '{location}', tab ID: {context_id}"
             )
 
-        except TabManagerError as e:
-            raise AIToolExecutionError(f"Failed to open preview: {str(e)}") from e
-
         except Exception as e:
             raise AIToolExecutionError(f"Failed to open preview: {str(e)}") from e
 
@@ -578,7 +595,7 @@ class SystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Open a side-by-side git diff tab for a file."""
         arguments = tool_call.arguments
@@ -594,7 +611,7 @@ class SystemAITool(AITool):
         # Return existing tab if this file is already open in a diff tab
         existing = self._mindspace.contexts().get_by_path_and_type(file_path, "diff")
         if existing is not None:
-            self._tab_manager.make_tab_permanent(existing.context_id)
+            self._mindspace.contexts().make_permanent(existing.context_id)
             self._mindspace.contexts().focus(existing.context_id)
             relative_path = self._mindspace.get_relative_path(file_path)
             return AIToolResult(
@@ -629,24 +646,22 @@ class SystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         _requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Get information about a specific tab by ID or the current tab."""
         arguments = tool_call.arguments
         tab_id = arguments.get("tab_id")
 
         if not tab_id:
-            current_tab = self._tab_manager.get_current_tab()
-            if not current_tab:
+            tab_id = self._mindspace.contexts().current_context_id()
+            if not tab_id:
                 raise AIToolExecutionError("No current tab is open")
-
-            tab_id = current_tab.tab_id()
 
         if not isinstance(tab_id, str):
             raise AIToolExecutionError("'tab_id' must be a string")
 
-        tab_info = self._tab_manager.get_tab_info_by_id(tab_id)
-        if not tab_info:
+        info = self._mindspace.contexts().get(tab_id)
+        if not info:
             raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
 
         self._mindspace.add_interaction(
@@ -657,7 +672,7 @@ class SystemAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="system",
-            content=json.dumps(tab_info, indent=2),
+            content=json.dumps(self._tab_info_dict(info), indent=2),
             context="json"
         )
 
@@ -665,7 +680,7 @@ class SystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         _requester_ref: Any,
-        request_authorization: AIToolAuthorizationCallback
+        request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Close an existing tab by ID."""
         arguments = tool_call.arguments
@@ -678,13 +693,12 @@ class SystemAITool(AITool):
             raise AIToolExecutionError("'tab_id' must be a string")
 
         try:
-            tab = self._tab_manager.get_tab_by_id(tab_id)
-            if not tab:
+            info = self._mindspace.contexts().get(tab_id)
+            if not info:
                 raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
 
-            if tab.is_modified():
-                tab_info = self._tab_manager.get_tab_info_by_id(tab_id)
-                tab_title = tab_info.get('title', tab_id) if tab_info else tab_id
+            if info.is_modified:
+                tab_title = info.title or tab_id
                 context = f"Close tab '{tab_title}' with unsaved changes? Unsaved modifications will be lost."
                 authorized = await request_authorization("system", arguments, context, None, True)
                 if not authorized:
@@ -692,7 +706,7 @@ class SystemAITool(AITool):
                         f"User denied permission to close modified tab '{tab_title}'"
                     )
 
-            # Close via registry — TabManager._on_context_closed will close the Qt tab
+            # Close via registry — frontend tears down its view via CLOSED event
             self._mindspace.contexts().close(tab_id)
 
             self._mindspace.add_interaction(
@@ -718,13 +732,13 @@ class SystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         _requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """List all currently open tabs across all columns."""
         try:
-            tab_info = self._tab_manager.list_all_tabs()
+            contexts = self._mindspace.contexts().list_all()
 
-            if not tab_info:
+            if not contexts:
                 self._mindspace.add_interaction(
                     MindspaceLogLevel.INFO,
                     "AI requested tab list: no tabs currently open"
@@ -735,9 +749,11 @@ class SystemAITool(AITool):
                     content="No tabs are currently open."
                 )
 
+            tab_info = [self._tab_info_dict(info) for info in contexts]
+
             result = {
                 "total_tabs": len(tab_info),
-                "total_columns": self._tab_manager.num_colunns(),
+                "total_columns": self._mindspace.contexts().num_columns(),
                 "tabs": tab_info
             }
 
@@ -759,7 +775,7 @@ class SystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         _requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Move a tab to a specific column."""
         arguments = tool_call.arguments
@@ -782,9 +798,9 @@ class SystemAITool(AITool):
             raise AIToolExecutionError(f"Target column must be non-negative, got {target_column}")
 
         try:
-            self._tab_manager.move_tab_to_column(tab_id, target_column)
+            self._mindspace.contexts().move(tab_id, target_column)
 
-        except TabManagerError as e:
+        except ValueError as e:
             raise AIToolExecutionError(str(e)) from e
 
         self._mindspace.add_interaction(
@@ -801,12 +817,12 @@ class SystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         _requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Get system and mindspace information."""
         try:
             system_info = {
-                "version": f"v{CURRENT_VERSION}",
+                "version": "v55",
                 "platform": sys.platform,
                 "platform_details": platform.platform(),
                 "architecture": platform.machine()
@@ -816,7 +832,7 @@ class SystemAITool(AITool):
             mindspace_name = os.path.basename(mindspace_path)
             mindspace_info = {
                 "name": mindspace_name,
-                "path": mindspace_path
+                "path": mindspace_path,
             }
 
             ai_backends = self._ai_manager.get_backends()
@@ -847,7 +863,7 @@ class SystemAITool(AITool):
             shell_info = {
                 "default_shell": os.path.basename(shell_env),
                 "shell_path": shell_path,
-                "cwd": mindspace_path
+                "cwd": mindspace_path,
             }
 
             result = {
