@@ -1,38 +1,36 @@
 """Editor context model."""
 
 from collections.abc import Callable
-from difflib import unified_diff
 import logging
 from typing import Any
 
-from PySide6.QtCore import QRegularExpression
-from PySide6.QtGui import QTextCursor, QTextDocument
-
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
-from editor_context.editor_diff_applier import EditorDiffApplier
+from editor_context.editor_document import EditorDocument
 
 
 class EditorContext:
     """
     Model-layer context for an open editor tab.
 
-    Owns the QTextDocument and implements the data operations the AI tool
-    layer needs: reading, searching, diffing, and applying diffs.
+    Owns an ``EditorDocument`` (a plain-Python line-based model) and
+    implements the data operations the AI tool layer needs: reading,
+    searching, diffing, and applying diffs.
 
-    Operations that depend on the widget's cursor or viewport (get_cursor_info,
-    get_selected_text, goto_line, save) are delegated to callbacks supplied by
-    EditorWidget at construction time.  A headless test harness can supply
-    stubs; a CLI would supply None for the viewport callbacks.
+    Operations that depend on a frontend widget's cursor or viewport
+    (get_cursor_info, get_selected_text, goto_line, save) are delegated to
+    optional callbacks supplied by the frontend at construction time.  A
+    headless backend supplies ``None`` for these callbacks and the methods
+    return sensible defaults or operate on the document directly.
     """
 
     def __init__(
         self,
         context_id: str,
-        document: QTextDocument,
-        get_cursor_info_cb: Callable[[], dict[str, Any]],
-        get_selected_text_cb: Callable[[], str],
-        get_editor_info_cb: Callable[[], dict[str, Any]],
-        save_cb: Callable[[], bool],
+        document: EditorDocument,
+        get_cursor_info_cb: Callable[[], dict[str, Any]] | None = None,
+        get_selected_text_cb: Callable[[], str] | None = None,
+        get_editor_info_cb: Callable[[], dict[str, Any]] | None = None,
+        save_cb: Callable[[], bool] | None = None,
         on_goto_line: Callable[[int, int], None] | None = None,
         on_apply_diff: Callable[[str], dict[str, Any]] | None = None,
     ) -> None:
@@ -41,18 +39,27 @@ class EditorContext:
 
         Args:
             context_id: Stable identifier issued by the ContextRegistry.
-            document: The shared QTextDocument.  EditorWidget calls
-                setDocument(document) so both share the same backing store.
-            get_cursor_info_cb: Callable() -> dict, provided by EditorWidget.
-            get_selected_text_cb: Callable() -> str, provided by EditorWidget.
-            get_editor_info_cb: Callable() -> dict, provided by EditorWidget.
-            save_cb: Callable() -> bool, provided by EditorWidget.
-            on_goto_line: Optional callable(line, column) that scrolls the Qt
-                viewport to the target position.  The Qt EditorWidget supplies
-                this; a CLI would pass None.
+            document: The ``EditorDocument`` model that owns the text content
+                and file state.
+            get_cursor_info_cb: Optional callable returning cursor position
+                and selection info.  Provided by the Qt EditorWidget; a
+                headless backend leaves this ``None``.
+            get_selected_text_cb: Optional callable returning the currently
+                selected text.  Provided by the Qt EditorWidget.
+            get_editor_info_cb: Optional callable returning editor metadata
+                (language, untitled_number, etc.).  Provided by the Qt
+                EditorWidget.  When ``None``, a minimal dict is built from the
+                document.
+            save_cb: Optional callable that saves the document to disk and
+                returns ``True`` on success.  When ``None``, the document's
+                ``save_to_disk`` is used directly.
+            on_goto_line: Optional callable(line, column) that scrolls the
+                viewport to the target position.  A headless backend leaves
+                this ``None`` and the method validates only.
             on_apply_diff: Optional callable(diff_text) -> result dict that
-                applies the diff via the Qt EditorWidget (which also handles
-                scrolling).  The Qt EditorWidget supplies this; a CLI would pass None.
+                applies the diff via the frontend widget (which also handles
+                cursor and scroll).  When ``None``, the diff is applied
+                directly to the ``EditorDocument``.
         """
         self._context_id = context_id
         self._document = document
@@ -88,70 +95,51 @@ class EditorContext:
         Raises:
             ValueError: If the line numbers are invalid.
         """
-        if start_line is None and end_line is None:
-            return self._document.toPlainText()
-
-        total_lines = self._document.blockCount()
-
-        if start_line is None:
-            start_line = 1
-
-        if end_line is None:
-            end_line = total_lines
-
-        if start_line < 1:
-            raise ValueError(f"start_line must be >= 1, got {start_line}")
-
-        if end_line < start_line:
-            raise ValueError(f"end_line ({end_line}) must be >= start_line ({start_line})")
-
-        if start_line > total_lines:
-            raise ValueError(
-                f"start_line ({start_line}) exceeds document length ({total_lines} lines)"
-            )
-
-        end_line = min(end_line, total_lines)
-
-        start_block = self._document.findBlockByLineNumber(start_line - 1)
-        end_block = self._document.findBlockByLineNumber(end_line - 1)
-
-        if not start_block.isValid() or not end_block.isValid():
-            raise ValueError("Invalid line range")
-
-        cursor = QTextCursor(start_block)
-        cursor.setPosition(
-            end_block.position() + end_block.length() - 1,
-            QTextCursor.MoveMode.KeepAnchor,
-        )
-
-        text = cursor.selectedText()
-        return text.replace('\u2029', '\n')
+        return self._document.get_text_range(start_line, end_line)
 
     def get_cursor_info(self) -> dict[str, Any]:
         """
         Return current cursor position and selection information.
 
-        Delegates to the EditorWidget callback so the live cursor state is
-        reflected.
+        Delegates to the frontend callback if supplied.  In headless mode,
+        returns a default cursor state (line 1, column 1, no selection).
 
         Returns:
             Dictionary with line, column, has_selection, and optional
             selection_start/end and selected_text keys.
         """
-        return self._get_cursor_info_cb()
+        if self._get_cursor_info_cb is not None:
+            return self._get_cursor_info_cb()
+
+        return {
+            'line': 1,
+            'column': 1,
+            'has_selection': False,
+        }
 
     def get_editor_info(self) -> dict[str, Any]:
         """
         Return editor metadata and document information.
 
-        Delegates to the EditorWidget callback so live state (is_modified,
-        file_path, syntax) is reflected.
+        Delegates to the frontend callback if supplied.  In headless mode,
+        builds a minimal dict from the ``EditorDocument``.
 
         Returns:
             Dictionary with line_count, language, language_id, encoding,
             is_modified, file_path, and untitled_number.
         """
-        return self._get_editor_info_cb()
+        if self._get_editor_info_cb is not None:
+            return self._get_editor_info_cb()
+
+        return {
+            'line_count': self._document.block_count(),
+            'language': '',
+            'language_id': '',
+            'encoding': 'UTF-8',
+            'is_modified': self._document.is_modified(),
+            'file_path': self._document.path(),
+            'untitled_number': None,
+        }
 
     def find_all_occurrences(
         self,
@@ -174,70 +162,29 @@ class EditorContext:
         Raises:
             ValueError: If regexp is True and search_text is not a valid regex.
         """
-        if not search_text:
-            return []
-
-        matches: list[dict[str, Any]] = []
-        find_flags = QTextDocument.FindFlag(0)
-        if case_sensitive:
-            find_flags |= QTextDocument.FindFlag.FindCaseSensitively
-
-        if regexp:
-            pattern_flags = QRegularExpression.PatternOption(0)
-            if not case_sensitive:
-                pattern_flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
-
-            pattern = QRegularExpression(search_text, pattern_flags)
-            if not pattern.isValid():
-                raise ValueError(f"Invalid regular expression: {pattern.errorString()}")
-
-            cursor = QTextCursor(self._document)
-            while True:
-                cursor = self._document.find(pattern, cursor, find_flags)
-                if cursor.isNull():
-                    break
-
-                matches.append({
-                    'line': cursor.blockNumber() + 1,
-                    'column': cursor.columnNumber() + 1,
-                    'match_text': cursor.selectedText(),
-                    'context': cursor.block().text(),
-                })
-
-        else:
-            cursor = QTextCursor(self._document)
-            while True:
-                cursor = self._document.find(search_text, cursor, find_flags)
-                if cursor.isNull():
-                    break
-
-                matches.append({
-                    'line': cursor.blockNumber() + 1,
-                    'column': cursor.columnNumber() + 1,
-                    'match_text': cursor.selectedText(),
-                    'context': cursor.block().text(),
-                })
-
-        return matches
+        return self._document.find_all_occurrences(search_text, case_sensitive, regexp)
 
     def get_selected_text(self) -> str:
         """
         Return the currently selected text.
 
-        Delegates to the EditorWidget callback so the live selection is
-        reflected.
+        Delegates to the frontend callback if supplied.  In headless mode,
+        returns an empty string.
 
         Returns:
             Selected text, or empty string if no selection.
         """
-        return self._get_selected_text_cb()
+        if self._get_selected_text_cb is not None:
+            return self._get_selected_text_cb()
+
+        return ''
 
     def get_diff(self, context_lines: int = 3) -> str:
         """
         Generate a unified diff between the saved file and the current buffer.
 
-        Delegates to the EditorWidget callback for live state (path,
-        last_save_content, is_modified).
+        Reads ``is_modified`` and ``file_path`` from the ``EditorDocument``
+        so this works without a frontend callback.
 
         Args:
             context_lines: Number of context lines to include (default 3).
@@ -246,39 +193,10 @@ class EditorContext:
             Unified diff string, or empty string if there are no changes or
             the file has never been saved.
         """
-        info = self._get_editor_info_cb()
-        file_path = info.get('file_path', '')
-        is_modified = info.get('is_modified', False)
-
-        if not is_modified:
+        if not self._document.is_modified():
             return ''
 
-        current_content = self._document.toPlainText()
-
-        # Read the saved content from disk to diff against
-        if not file_path:
-            return ''
-
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                saved_content = f.read()
-
-        except OSError:
-            return ''
-
-        if current_content == saved_content:
-            return ''
-
-        saved_lines = saved_content.splitlines(keepends=True)
-        current_lines = current_content.splitlines(keepends=True)
-        diff_lines = unified_diff(
-            saved_lines,
-            current_lines,
-            fromfile=f"a/{file_path}",
-            tofile=f"b/{file_path}",
-            n=context_lines,
-        )
-        return ''.join(diff_lines)
+        return self._document.get_diff(context_lines)
 
     def apply_diff(self, diff_text: str) -> dict[str, Any]:
         """
@@ -286,6 +204,11 @@ class EditorContext:
 
         This operation is atomic — either all hunks apply successfully or
         none do.
+
+        If an ``on_apply_diff`` callback is supplied (frontend path), the
+        callback applies the diff via the frontend widget and returns a
+        result dict.  Otherwise the diff is applied directly to the
+        ``EditorDocument`` (headless path).
 
         Args:
             diff_text: Unified diff format text.
@@ -297,11 +220,8 @@ class EditorContext:
         if self._on_apply_diff is not None:
             return self._on_apply_diff(diff_text)
 
-        diff_applier = EditorDiffApplier(confidence_threshold=0.75, search_window=50)
-        cursor = QTextCursor(self._document)
-
         try:
-            result = diff_applier.apply_diff(diff_text, self._document, cursor=cursor)
+            result = self._document.apply_diff(diff_text)
 
         except (DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError) as e:
             error_details = getattr(e, 'error_details', None) or {
@@ -325,19 +245,29 @@ class EditorContext:
         """
         Save the current editor content to file.
 
-        Delegates to the EditorWidget save callback.
+        Delegates to the frontend save callback if supplied.  In headless
+        mode, saves directly via ``EditorDocument.save_to_disk``.
 
         Returns:
             True if the save was successful.
         """
-        return self._save_cb()
+        if self._save_cb is not None:
+            return self._save_cb()
+
+        try:
+            self._document.save_to_disk()
+            return True
+
+        except OSError:
+            return False
 
     def goto_line(self, line: int, column: int = 1) -> None:
         """
         Request that the frontend move the cursor to a specific line and column.
 
-        Fires the on_goto_line callback if one was supplied.  A CLI frontend
-        would supply None and this becomes a no-op.
+        Validates the position against the document, then fires the
+        ``on_goto_line`` callback if one was supplied.  A headless backend
+        leaves the callback as ``None`` and this method validates only.
 
         Args:
             line:   Target line number (1-indexed).
@@ -346,7 +276,7 @@ class EditorContext:
         Raises:
             ValueError: If the line or column is out of range.
         """
-        total_lines = self._document.blockCount()
+        total_lines = self._document.block_count()
 
         if line < 1:
             raise ValueError(f"line must be >= 1, got {line}")
@@ -357,11 +287,9 @@ class EditorContext:
         if column < 1:
             raise ValueError(f"column must be >= 1, got {column}")
 
-        target_block = self._document.findBlockByLineNumber(line - 1)
-        if not target_block.isValid():
-            raise ValueError(f"Invalid line number: {line}")
+        line_text = self._document.get_line(line)
+        line_length = len(line_text)
 
-        line_length = target_block.length() - 1
         if column > line_length + 1:
             raise ValueError(f"column ({column}) exceeds line length ({line_length})")
 

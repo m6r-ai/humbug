@@ -83,10 +83,10 @@ class EditorTab(TabBase):
         editor_container_layout.addWidget(self._editor_widget)
         layout.addWidget(editor_container)
 
-        # Build the EditorContext backed by the widget's document
+        # Build the EditorContext backed by the widget's EditorDocument model
         self._editor_context: EditorContext | None = EditorContext(
             context_id=tab_id,
-            document=self._editor_widget.document(),
+            document=self._editor_widget.editor_document(),
             get_cursor_info_cb=self._editor_widget.get_cursor_info,
             get_selected_text_cb=self._editor_widget.get_selected_text,
             get_editor_info_cb=self._editor_widget.get_editor_info,

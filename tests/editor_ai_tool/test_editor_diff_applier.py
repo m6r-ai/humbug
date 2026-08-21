@@ -1,7 +1,7 @@
 """Tests for EditorDiffApplier trailing newline and diff application."""
 from PySide6.QtGui import QTextCursor, QTextDocument
 
-from editor_context.editor_diff_applier import EditorDiffApplier
+from desktop.editor_tab.editor_diff_applier import EditorDiffApplier
 
 
 def blocks_to_text(document: QTextDocument) -> str:

@@ -181,4 +181,3 @@ interrupting the human collaborator.
 Menai supports higher-order functions, tail-call optimisation, strict numeric typing,
 and a rich standard library. It is compiled to bytecode and executed by a C VM for
 performance.
-
