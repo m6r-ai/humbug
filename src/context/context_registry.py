@@ -10,11 +10,14 @@ from context.context_info import ContextInfo
 
 class ContextEvent(Enum):
     """Events emitted by the ContextRegistry."""
-    OPENED = auto()    # args: (context_info: ContextInfo, is_ephemeral: bool, requester_id: str)
-    CLOSED = auto()    # args: (context_id: str)
-    UPDATED = auto()   # args: (context_info: ContextInfo)
-    FOCUSED = auto()   # args: (context_id: str)
-    MOVED = auto()     # args: (context_id: str, column: int)
+    OPENED = auto()        # args: (context_info: ContextInfo, is_ephemeral: bool, requester_id: str)
+    CLOSED = auto()        # args: (context_id: str)
+    UPDATED = auto()       # args: (context_info: ContextInfo)
+    FOCUSED = auto()       # args: (context_id: str)
+    MOVED = auto()         # args: (context_id: str, column: int)
+    COLUMN_SPLIT = auto()  # args: (context_id: str, split_left: bool)
+    COLUMN_MERGE = auto()  # args: (column: int, merge_left: bool)
+    COLUMN_SWAP = auto()   # args: (column: int, swap_left: bool)
 
 
 class ContextRegistry:
@@ -231,6 +234,135 @@ class ContextRegistry:
             column=column,
         )
         self._emit(ContextEvent.MOVED, context_id, column)
+
+    def split_column(self, context_id: str, split_left: bool) -> None:
+        """
+        Split the column containing a context, moving that context to a new column.
+
+        The context is moved to a newly inserted column.  When ``split_left`` is
+        True the new column is inserted at the current column's index and the
+        context stays at that index; otherwise the new column is inserted to the
+        right and the context moves to the new index.  All other contexts at or
+        beyond the insertion point shift right by one.  Emits COLUMN_SPLIT.
+
+        Args:
+            context_id: ID of the context to move into the new column.
+            split_left: Whether the new column is inserted to the left.
+
+        Raises:
+            ValueError: If the context does not exist or the split would exceed
+                the maximum number of columns.
+        """
+        info = self._contexts.get(context_id)
+        if info is None:
+            raise ValueError(f"Context not found: {context_id}")
+
+        current = info.column
+        if self.num_columns() >= self.MAX_COLUMNS:
+            raise ValueError(
+                f"Cannot split: maximum {self.MAX_COLUMNS} columns reached"
+            )
+
+        if split_left:
+            for cid, other in list(self._contexts.items()):
+                if cid != context_id and other.column >= current:
+                    self._set_column(cid, other.column + 1)
+
+            self._set_column(context_id, current)
+
+        else:
+            for cid, other in list(self._contexts.items()):
+                if cid != context_id and other.column > current:
+                    self._set_column(cid, other.column + 1)
+
+            self._set_column(context_id, current + 1)
+
+        self._emit(ContextEvent.COLUMN_SPLIT, context_id, split_left)
+
+    def merge_column(self, column: int, merge_left: bool) -> None:
+        """
+        Merge the column at ``column`` into the adjacent column.
+
+        All contexts in the merged column move to the adjacent column and the
+        column is removed, shifting any columns to the right left by one.
+        Emits COLUMN_MERGE.
+
+        Args:
+            column:     Index of the column to merge away.
+            merge_left: True to merge into the left neighbour, False for the right.
+
+        Raises:
+            ValueError: If the column is out of range or there is no adjacent
+                column to merge into.
+        """
+        if not 0 <= column < self.num_columns():
+            raise ValueError(f"Column out of range: {column}")
+
+        target = column + (-1 if merge_left else 1)
+        if not 0 <= target < self.MAX_COLUMNS:
+            raise ValueError(f"No adjacent column to merge into for column {column}")
+
+        for cid, other in list(self._contexts.items()):
+            if other.column == column:
+                self._set_column(cid, target)
+
+            elif other.column > column:
+                self._set_column(cid, other.column - 1)
+
+        self._emit(ContextEvent.COLUMN_MERGE, column, merge_left)
+
+    def swap_column(self, column: int, swap_left: bool) -> None:
+        """
+        Swap the column at ``column`` with the adjacent column.
+
+        All contexts in the two columns exchange column indices.  Emits
+        COLUMN_SWAP.
+
+        Args:
+            column:     Index of the column to swap.
+            swap_left:  True if swapping with the left column, False for the right.
+
+        Raises:
+            ValueError: If the column is out of range or there is no adjacent
+                column to swap with.
+        """
+        if not 0 <= column < self.num_columns():
+            raise ValueError(f"Column out of range: {column}")
+
+        target = column + (-1 if swap_left else 1)
+        if not 0 <= target < self.MAX_COLUMNS:
+            raise ValueError(f"No adjacent column to swap with for column {column}")
+
+        for cid, other in list(self._contexts.items()):
+            if other.column == column:
+                self._set_column(cid, target)
+
+            elif other.column == target:
+                self._set_column(cid, column)
+
+        self._emit(ContextEvent.COLUMN_SWAP, column, swap_left)
+
+    def _set_column(self, context_id: str, column: int) -> None:
+        """
+        Update a context's column index without emitting an event.
+
+        Used internally by the column operations, which emit a single
+        high-level event after updating all affected contexts.
+
+        Args:
+            context_id: ID of the context to update.
+            column:     New column index.
+        """
+        info = self._contexts[context_id]
+        self._contexts[context_id] = ContextInfo(
+            context_id=info.context_id,
+            context_type=info.context_type,
+            path=info.path,
+            title=info.title,
+            is_modified=info.is_modified,
+            is_ephemeral=info.is_ephemeral,
+            column=column,
+        )
 
     def make_permanent(self, context_id: str) -> None:
         """
