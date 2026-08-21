@@ -2,6 +2,14 @@
 
 ## v55 (2026-08-xx)
 
+Internal structure changes:
+
+- The System AI tool has now been moved to being generic and not Qt-specific.  Updated the context registry to support
+  this change.
+- The editor context no longer depends on Qt.  Instead there is an abstract editor concept and the Qt editor reacts
+  to changes made in the context document.
+- The main window UI updatest the context registry and the UI then reacts to that, rather than the UI driving the change.
+
 ## v54 (2026-08-20)
 
 New features:
