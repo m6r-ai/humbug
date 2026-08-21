@@ -1,6 +1,5 @@
-"""Tests for the EditorContextDocument line-based text model.
-
-These tests use stdlib only — no Qt dependencies.
+"""
+Tests for the EditorContextDocument line-based text model.
 """
 
 import os
@@ -8,7 +7,7 @@ import tempfile
 
 import pytest
 
-from editor_context.editor_document import EditorContextDocument
+from editor_context.editor_context_document import EditorContextDocument
 
 
 class TestEditorContextDocumentBasic:

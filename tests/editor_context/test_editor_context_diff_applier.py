@@ -1,24 +1,21 @@
-"""Tests for ListDiffMatcher and ListDiffApplier.
-
-These tests use stdlib only — no Qt dependencies.  They verify that
-diff application on a ``list[str]`` document produces the same results
-as the Qt-based applier, including trailing newline handling.
+"""
+Tests for EditorContextDiffMatcher and EditorContextDiffApplier.
 """
 
 import pytest
 
 from diff import DiffMatchError, DiffValidationError
-from editor_context.editor_diff_applier import ListDiffApplier
+from editor_context.editor_context_diff_applier import EditorContextDiffApplier, EditorContextDiffMatcher
 
 
 def apply_diff(document: list[str], diff_text: str) -> list[str]:
     """Apply a diff to a list[str] document and return the result."""
-    applier = ListDiffApplier(confidence_threshold=0.75, search_window=50)
+    applier = EditorContextDiffApplier(confidence_threshold=0.75, search_window=50)
     applier.apply_diff(diff_text, document)
     return document
 
 
-class TestListDiffApplierBasic:
+class TestEditorContextDiffApplierBasic:
     """Test basic diff application."""
 
     def test_apply_simple_addition(self):
@@ -70,7 +67,7 @@ class TestListDiffApplierBasic:
         assert result == ["a", "B", "c", "d", "e", "F"]
 
 
-class TestListDiffApplierTrailingNewline:
+class TestEditorContextDiffApplierTrailingNewline:
     """Test trailing newline handling, mirroring the Qt tests."""
 
     def test_add_trailing_newline(self):
@@ -138,7 +135,7 @@ class TestListDiffApplierTrailingNewline:
         assert '\n'.join(result) == "line1\nline2\nline3"
 
 
-class TestListDiffApplierDryRun:
+class TestEditorContextDiffApplierDryRun:
     """Test dry-run mode."""
 
     def test_dry_run_does_not_modify(self):
@@ -150,14 +147,14 @@ class TestListDiffApplierDryRun:
 +B
  c
 """
-        applier = ListDiffApplier()
+        applier = EditorContextDiffApplier()
         result = applier.apply_diff(diff, doc, dry_run=True)
         assert result.success
         assert result.hunks_applied == 1
         assert doc == list("abc")  # unchanged
 
 
-class TestListDiffApplierEmptyFile:
+class TestEditorContextDiffApplierEmptyFile:
     """Test diffing against an empty document."""
 
     def test_apply_to_empty_file(self):
@@ -171,7 +168,7 @@ class TestListDiffApplierEmptyFile:
         assert '\n'.join(result) == "line1\nline2"
 
 
-class TestListDiffApplierOverlapping:
+class TestEditorContextDiffApplierOverlapping:
     """Test overlap detection."""
 
     def test_overlapping_hunks_raise(self):
@@ -188,55 +185,43 @@ class TestListDiffApplierOverlapping:
 +C
  d
 """
-        applier = ListDiffApplier()
+        applier = EditorContextDiffApplier()
         with pytest.raises(DiffValidationError):
             applier.apply_diff(diff, doc)
 
 
-class TestListDiffMatcher:
-    """Test ListDiffMatcher line counting."""
+class TestEditorContextDiffMatcher:
+    """Test EditorContextDiffMatcher line counting."""
 
     def test_line_count_no_trailing_newline(self):
         """Line count excludes trailing newline sentinel."""
-        from editor_context.editor_diff_applier import ListDiffMatcher
-
-        matcher = ListDiffMatcher()
+        matcher = EditorContextDiffMatcher()
         assert matcher._get_document_line_count(["a", "b", "c"]) == 3
 
     def test_line_count_with_trailing_newline(self):
         """Trailing empty string is not counted as a line."""
-        from editor_context.editor_diff_applier import ListDiffMatcher
-
-        matcher = ListDiffMatcher()
+        matcher = EditorContextDiffMatcher()
         assert matcher._get_document_line_count(["a", "b", "c", ""]) == 3
 
     def test_line_count_empty(self):
         """Empty list has zero lines."""
-        from editor_context.editor_diff_applier import ListDiffMatcher
-
-        matcher = ListDiffMatcher()
+        matcher = EditorContextDiffMatcher()
         assert matcher._get_document_line_count([]) == 0
 
     def test_line_count_single_empty_line(self):
         """A single empty string is one line."""
-        from editor_context.editor_diff_applier import ListDiffMatcher
-
-        matcher = ListDiffMatcher()
+        matcher = EditorContextDiffMatcher()
         assert matcher._get_document_line_count([""]) == 1
 
     def test_get_document_lines(self):
         """_get_document_lines returns a slice of the list."""
-        from editor_context.editor_diff_applier import ListDiffMatcher
-
-        matcher = ListDiffMatcher()
+        matcher = EditorContextDiffMatcher()
         doc = ["a", "b", "c", "d", "e"]
         assert matcher._get_document_lines(doc, 1, 3) == ["a", "b", "c"]
         assert matcher._get_document_lines(doc, 3, 2) == ["c", "d"]
 
     def test_get_document_lines_out_of_range(self):
         """_get_document_lines returns fewer lines if document is shorter."""
-        from editor_context.editor_diff_applier import ListDiffMatcher
-
-        matcher = ListDiffMatcher()
+        matcher = EditorContextDiffMatcher()
         doc = ["a", "b"]
         assert matcher._get_document_lines(doc, 1, 10) == ["a", "b"]
