@@ -6,7 +6,7 @@ from typing import Any
 from diff import DiffApplicationError, DiffApplicationResult, DiffHunk, DiffMatcher, DiffApplier
 
 
-class ListDiffMatcher(DiffMatcher):
+class EditorContextDiffMatcher(DiffMatcher):
     """Diff matcher for line-list documents (``list[str]``)."""
 
     def _get_document_lines(
@@ -50,7 +50,7 @@ class ListDiffMatcher(DiffMatcher):
         return len(document)
 
 
-class ListDiffApplier(DiffApplier):
+class EditorContextDiffApplier(DiffApplier):
     """Diff applier for line-list documents (``list[str]``)."""
 
     def __init__(
@@ -66,11 +66,11 @@ class ListDiffApplier(DiffApplier):
             search_window: Lines to search above/below expected position.
         """
         super().__init__(confidence_threshold, search_window)
-        self._logger = logging.getLogger("ListDiffApplier")
+        self._logger = logging.getLogger("EditorContextDiffApplier")
 
     def _create_matcher(self) -> DiffMatcher:
         """Create a line-list matcher."""
-        return ListDiffMatcher(self._confidence_threshold, self._search_window)
+        return EditorContextDiffMatcher(self._confidence_threshold, self._search_window)
 
     def _apply_hunk(
         self,

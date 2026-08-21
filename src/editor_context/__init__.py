@@ -1,2 +1,2 @@
 from editor_context.editor_context import EditorContext
-from editor_context.editor_document import EditorDocument
+from editor_context.editor_context_document import EditorContextDocument

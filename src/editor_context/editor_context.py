@@ -5,14 +5,14 @@ import logging
 from typing import Any
 
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
-from editor_context.editor_document import EditorDocument
+from editor_context.editor_context_document import EditorContextDocument
 
 
 class EditorContext:
     """
     Model-layer context for an open editor tab.
 
-    Owns an ``EditorDocument`` (a plain-Python line-based model) and
+    Owns an ``EditorContextDocument`` (a plain-Python line-based model) and
     implements the data operations the AI tool layer needs: reading,
     searching, diffing, and applying diffs.
 
@@ -26,7 +26,7 @@ class EditorContext:
     def __init__(
         self,
         context_id: str,
-        document: EditorDocument,
+        document: EditorContextDocument,
         get_cursor_info_cb: Callable[[], dict[str, Any]] | None = None,
         get_selected_text_cb: Callable[[], str] | None = None,
         get_editor_info_cb: Callable[[], dict[str, Any]] | None = None,
@@ -39,7 +39,7 @@ class EditorContext:
 
         Args:
             context_id: Stable identifier issued by the ContextRegistry.
-            document: The ``EditorDocument`` model that owns the text content
+            document: The ``EditorContextDocument`` model that owns the text content
                 and file state.
             get_cursor_info_cb: Optional callable returning cursor position
                 and selection info.  Provided by the Qt EditorWidget; a
@@ -59,7 +59,7 @@ class EditorContext:
             on_apply_diff: Optional callable(diff_text) -> result dict that
                 applies the diff via the frontend widget (which also handles
                 cursor and scroll).  When ``None``, the diff is applied
-                directly to the ``EditorDocument``.
+                directly to the ``EditorContextDocument``.
         """
         self._context_id = context_id
         self._document = document
@@ -122,7 +122,7 @@ class EditorContext:
         Return editor metadata and document information.
 
         Delegates to the frontend callback if supplied.  In headless mode,
-        builds a minimal dict from the ``EditorDocument``.
+        builds a minimal dict from the ``EditorContextDocument``.
 
         Returns:
             Dictionary with line_count, language, language_id, encoding,
@@ -183,7 +183,7 @@ class EditorContext:
         """
         Generate a unified diff between the saved file and the current buffer.
 
-        Reads ``is_modified`` and ``file_path`` from the ``EditorDocument``
+        Reads ``is_modified`` and ``file_path`` from the ``EditorContextDocument``
         so this works without a frontend callback.
 
         Args:
@@ -208,7 +208,7 @@ class EditorContext:
         If an ``on_apply_diff`` callback is supplied (frontend path), the
         callback applies the diff via the frontend widget and returns a
         result dict.  Otherwise the diff is applied directly to the
-        ``EditorDocument`` (headless path).
+        ``EditorContextDocument`` (headless path).
 
         Args:
             diff_text: Unified diff format text.
@@ -246,7 +246,7 @@ class EditorContext:
         Save the current editor content to file.
 
         Delegates to the frontend save callback if supplied.  In headless
-        mode, saves directly via ``EditorDocument.save_to_disk``.
+        mode, saves directly via ``EditorContextDocument.save_to_disk``.
 
         Returns:
             True if the save was successful.

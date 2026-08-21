@@ -83,7 +83,7 @@ class EditorTab(TabBase):
         editor_container_layout.addWidget(self._editor_widget)
         layout.addWidget(editor_container)
 
-        # Build the EditorContext backed by the widget's EditorDocument model
+        # Build the EditorContext backed by the widget's EditorContextDocument model
         self._editor_context: EditorContext | None = EditorContext(
             context_id=tab_id,
             document=self._editor_widget.editor_document(),

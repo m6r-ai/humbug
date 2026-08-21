@@ -12,17 +12,17 @@ from PySide6.QtGui import (
 )
 
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
-from editor_context.editor_document import EditorDocument
+from editor_context.editor_context_document import EditorContextDocument
 from mindspace.mindspace_settings import MindspaceSettings
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils, Token, TokenType
 
 from desktop.code_block_highlighter import CodeBlockHighlighter, CodeBlockHighlighterBlockData
 from desktop.color_role import ColorRole
+from desktop.editor_tab.editor_diff_applier import EditorDiffApplier
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
-from desktop.editor_tab.editor_diff_applier import EditorDiffApplier
 from desktop.style_manager import StyleManager
 from desktop.widgets import LineNumberArea, SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
@@ -56,7 +56,7 @@ class EditorWidget(QPlainTextEdit):
         self._is_modified = False
 
         # Plain-Python model (source of truth for the backend)
-        self._editor_document = EditorDocument(path=path)
+        self._editor_document = EditorContextDocument(path=path)
 
         # Editor settings
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)  # No word wrap for code
@@ -1902,12 +1902,12 @@ class EditorWidget(QPlainTextEdit):
 
         return info
 
-    def editor_document(self) -> EditorDocument:
+    def editor_document(self) -> EditorContextDocument:
         """
         Return the plain-Python document model.
 
         Returns:
-            The EditorDocument owned by this widget.
+            The EditorContextDocument owned by this widget.
         """
         return self._editor_document
 

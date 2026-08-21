@@ -7,10 +7,10 @@ import re
 from typing import Any
 
 from diff import DiffApplicationResult
-from editor_context.editor_diff_applier import ListDiffApplier
+from editor_context.editor_context_diff_applier import EditorContextDiffApplier
 
 
-class EditorDocument:
+class EditorContextDocument:
     """
     Line-based text model using stdlib only.
 
@@ -38,7 +38,7 @@ class EditorDocument:
         self._path: str = path
         self._saved_content: str = ""
         self._listeners: list[Callable[[], None]] = []
-        self._logger = logging.getLogger("EditorDocument")
+        self._logger = logging.getLogger("EditorContextDocument")
 
     def to_plain_text(self) -> str:
         """Return the full document content as a single string."""
@@ -49,9 +49,7 @@ class EditorDocument:
         Return the number of content lines.
 
         A trailing empty string represents a trailing newline, not a
-        content line, and is excluded from the count.  This mirrors
-        ``QTextDocument.blockCount()`` as interpreted by
-        ``EditorDiffMatcher._get_document_line_count``.
+        content line, and is excluded from the count.
         """
         if not self._lines:
             return 0
@@ -245,7 +243,7 @@ class EditorDocument:
             DiffParseError, DiffMatchError, DiffValidationError,
             DiffApplicationError: On diff processing failures.
         """
-        applier = ListDiffApplier(confidence_threshold=0.75, search_window=50)
+        applier = EditorContextDiffApplier(confidence_threshold=0.75, search_window=50)
         original_lines = list(self._lines)
 
         try:
@@ -358,4 +356,4 @@ class EditorDocument:
                 callback()
 
             except Exception:
-                self._logger.exception("Error in EditorDocument listener")
+                self._logger.exception("Error in EditorContextDocument listener")
