@@ -14,7 +14,10 @@ class TestStreamErrorMessage:
 
     def test_network_error_reuses_connection_message(self):
         error = {"code": "network_error", "message": "Network error: [Errno 61] Connection refused"}
-        assert stream_error_message(error) == LanguageManager().strings().fetch_error_connection
+        assert stream_error_message(error) == (
+            f"{LanguageManager().strings().fetch_error_connection} "
+            "(Network error: [Errno 61] Connection refused)"
+        )
 
     def test_backend_error_is_actionable(self):
         error = {"code": "backend_error", "message": "No backend available for provider: foo"}
@@ -26,7 +29,7 @@ class TestStreamErrorMessage:
 
     def test_http_401_maps_to_invalid_key(self):
         error = {"code": "401", "message": "API error 401: {...}"}
-        assert stream_error_message(error) == LanguageManager().strings().fetch_error_invalid_key
+        assert stream_error_message(error) == f"{LanguageManager().strings().fetch_error_invalid_key} (401)"
 
     def test_http_403_uses_streaming_specific_wording_not_fetch_wording(self):
         error = {"code": "403", "message": "API error 403: {...}"}
