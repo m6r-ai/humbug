@@ -22,7 +22,7 @@ class ContextEvent(Enum):
 
 class ContextRegistry:
     """
-    Tracks all open contexts within a mindspace.
+    Tracks all open contexts.
 
     Frontend-agnostic: notifies observers via registered callbacks.  A UI can
     subscribe to these events and create or destroys visualizations accordingly.
@@ -400,9 +400,6 @@ class ContextRegistry:
     def clear(self) -> None:
         """
         Remove all contexts without emitting events.
-
-        Used when a mindspace is closed — the Qt layer tears down tabs through
-        its own mechanisms, so events are not needed.
         """
         self._contexts.clear()
         self._models.clear()

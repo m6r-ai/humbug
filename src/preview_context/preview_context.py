@@ -10,10 +10,10 @@ class PreviewContext:
     Model-layer context for a preview tab.
 
     Owns the raw content strings from PreviewContent and implements search
-    against them directly, without any Qt dependency.
+    against them directly.
 
     The visualisation side-effect (scrolling the viewport to a position) is
-    emitted as a callback so the Qt PreviewWidget can react without the context
+    emitted as a callback so the front end can react without the context
     needing to know about widgets.
     """
 
@@ -36,7 +36,7 @@ class PreviewContext:
                 PreviewContent.get_preview_content().
             on_scroll_to_position: Optional callable(block_index, section_index,
                 text_position, viewport_position) invoked when the AI requests a
-                scroll.  The Qt widget supplies this; a CLI would leave it None.
+                scroll.
         """
         self._context_id = context_id
         self._path = path

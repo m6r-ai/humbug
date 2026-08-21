@@ -42,14 +42,13 @@ class EditorContext:
             document: The ``EditorContextDocument`` model that owns the text content
                 and file state.
             get_cursor_info_cb: Optional callable returning cursor position
-                and selection info.  Provided by the Qt EditorWidget; a
+                and selection info.  Provided by the front end; a
                 headless backend leaves this ``None``.
             get_selected_text_cb: Optional callable returning the currently
-                selected text.  Provided by the Qt EditorWidget.
+                selected text.  Provided by the front end.
             get_editor_info_cb: Optional callable returning editor metadata
-                (language, untitled_number, etc.).  Provided by the Qt
-                EditorWidget.  When ``None``, a minimal dict is built from the
-                document.
+                (language, untitled_number, etc.).  Provided by the front end.
+                When ``None``, a minimal dict is built from the document.
             save_cb: Optional callable that saves the document to disk and
                 returns ``True`` on success.  When ``None``, the document's
                 ``save_to_disk`` is used directly.

@@ -20,7 +20,6 @@ class Mindspace:
     Core mindspace model.
 
     Owns settings, the interaction log, path resolution, and session persistence.
-    Has no Qt dependency — notifies observers via plain callbacks.
     """
 
     MINDSPACE_DIR = ".humbug"
