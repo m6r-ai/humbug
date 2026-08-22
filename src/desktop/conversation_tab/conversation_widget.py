@@ -1258,11 +1258,14 @@ class ConversationWidget(QWidget):
 
                 # Snap the cut point back to the nearest word boundary so we
                 # never expose a lone block marker like "# " or "* " at the
-                # trailing edge of the revealed text.
+                # trailing edge of the revealed text.  Only snap when the
+                # boundary is near the end of the chunk; if the new portion
+                # has no boundary at all, keep the raw cut point rather than
+                # stalling on dense text.
                 if next_text != target:
                     new_portion = next_text[len(rendered):]
                     last_break = max(new_portion.rfind('\n'), new_portion.rfind(' '))
-                    if last_break > 0:
+                    if last_break > 0 and len(new_portion) - last_break <= 20:
                         next_text = rendered + new_portion[:last_break + 1]
 
             widget.set_content(next_text)
@@ -1325,9 +1328,9 @@ class ConversationWidget(QWidget):
     def _response_reveal_chunk_size(self, remaining: int, completed: bool) -> int:
         """Choose a reveal chunk size that stays smooth but catches up quickly."""
         if completed:
-            return min(200, max(20, remaining // 5))
+            return remaining
 
-        return min(20, max(2, remaining // 18))
+        return max(2, min(60, remaining // 4))
 
     def _remove_response_reveal(self, widget: ConversationMessage) -> None:
         """Remove pending reveal state for a widget that is leaving the layout."""
