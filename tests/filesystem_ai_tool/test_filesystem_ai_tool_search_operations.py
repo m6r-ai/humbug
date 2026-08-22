@@ -47,7 +47,6 @@ class TestSearchFile:
         assert data["match_count"] == 2
         assert data["case_sensitive"] is False
         assert data["regexp"] is False
-        assert data["truncated"] is False
         assert len(data["matches"]) == 2
         assert data["matches"][0]["line"] == 1
         assert data["matches"][0]["content"] == "Hello World"
@@ -129,7 +128,6 @@ class TestSearchFile:
 
         assert data["match_count"] == 0
         assert data["matches"] == []
-        assert data["truncated"] is False
 
     def test_invalid_regexp_raises_execution_error(self, tmp_path, make_tool_call):
         """An invalid regular expression raises AIToolExecutionError."""
@@ -148,8 +146,8 @@ class TestSearchFile:
 
         assert "Invalid regular expression" in str(exc_info.value)
 
-    def test_max_results_truncates_and_sets_truncated_flag(self, tmp_path, make_tool_call):
-        """When max_results is reached, results are capped and truncated=True is set."""
+    def test_max_results_exceeded_raises_error(self, tmp_path, make_tool_call):
+        """When max_results is exceeded, an AIToolExecutionError is raised."""
         f = tmp_path / "many.txt"
         f.write_text("\n".join(["match"] * 10) + "\n")
         tool = make_tool_with_tmp(tmp_path)
@@ -160,15 +158,14 @@ class TestSearchFile:
             "search_text": "match",
             "max_results": 3
         })
-        result = asyncio.run(tool.execute(tool_call, "", None))
-        data = json.loads(result.content)
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
 
-        assert data["truncated"] is True
-        assert data["match_count"] == 3
-        assert len(data["matches"]) == 3
+        assert "max_results limit" in str(exc_info.value)
+        assert "3" in str(exc_info.value)
 
-    def test_max_results_not_exceeded_leaves_truncated_false(self, tmp_path, make_tool_call):
-        """When fewer matches than max_results exist, truncated remains False."""
+    def test_max_results_not_exceeded_returns_all_matches(self, tmp_path, make_tool_call):
+        """When fewer matches than max_results exist, all matches are returned."""
         f = tmp_path / "few.txt"
         f.write_text("match\nnope\nmatch\n")
         tool = make_tool_with_tmp(tmp_path)
@@ -182,8 +179,26 @@ class TestSearchFile:
         result = asyncio.run(tool.execute(tool_call, "", None))
         data = json.loads(result.content)
 
-        assert data["truncated"] is False
         assert data["match_count"] == 2
+
+    def test_response_size_limit_raises_error_when_exceeded(self, tmp_path, make_tool_call):
+        """search_file raises AIToolExecutionError when match content exceeds 64 KB."""
+        long_line = "needle " + "x" * 2000 + "\n"
+        f = tmp_path / "big.txt"
+        f.write_text(long_line * 40)
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_file",
+            "path": "big.txt",
+            "search_text": "needle",
+            "max_results": 1000
+        })
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
+
+        assert "64 KB" in str(exc_info.value)
+        assert "response size limit" in str(exc_info.value)
 
     def test_file_not_found_raises_execution_error(self, tmp_path, make_tool_call):
         """Searching a non-existent file raises AIToolExecutionError."""
@@ -303,7 +318,7 @@ class TestSearchFile:
         data = json.loads(result.content)
 
         for key in ("path", "search_text", "case_sensitive", "regexp",
-                    "match_count", "truncated", "matches"):
+                    "match_count", "matches"):
             assert key in data, f"Missing top-level key: {key}"
 
         assert isinstance(data["matches"], list)
@@ -519,7 +534,6 @@ class TestSearchFiles:
 
         assert data["total_matches"] == 2
         assert data["files_with_matches"] == 2
-        assert data["truncated"] is False
         paths = [r["path"] for r in data["results"]]
         assert any("a.txt" in p for p in paths)
         assert any("b.txt" in p for p in paths)
@@ -627,8 +641,8 @@ class TestSearchFiles:
 
         assert "Invalid regular expression" in str(exc_info.value)
 
-    def test_max_results_truncates_across_files(self, tmp_path, make_tool_call):
-        """When total_matches reaches max_results, truncated is True and collection stops."""
+    def test_max_results_exceeded_across_files_raises_error(self, tmp_path, make_tool_call):
+        """When total_matches reaches max_results across files, an AIToolExecutionError is raised."""
         for i in range(5):
             (tmp_path / f"f{i}.txt").write_text("match\nmatch\n")
         tool = make_tool_with_tmp(tmp_path)
@@ -639,11 +653,11 @@ class TestSearchFiles:
             "search_text": "match",
             "max_results": 3
         })
-        result = asyncio.run(tool.execute(tool_call, "", None))
-        data = json.loads(result.content)
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
 
-        assert data["truncated"] is True
-        assert data["total_matches"] == 3
+        assert "max_results limit" in str(exc_info.value)
+        assert "3" in str(exc_info.value)
 
     def test_directory_not_found_raises_execution_error(self, tmp_path, make_tool_call):
         """Searching a non-existent directory raises AIToolExecutionError."""
@@ -736,7 +750,7 @@ class TestSearchFiles:
         data = json.loads(result.content)
 
         for key in ("directory", "search_text", "case_sensitive", "regexp", "include",
-                    "total_matches", "truncated", "files_with_matches", "results"):
+                    "total_matches", "files_with_matches", "results"):
             assert key in data, f"Missing top-level key: {key}"
 
         assert isinstance(data["results"], list)
@@ -819,7 +833,6 @@ class TestSearchFiles:
         assert data["total_matches"] == 0
         assert data["files_with_matches"] == 0
         assert data["results"] == []
-        assert data["truncated"] is False
 
     def test_include_none_reflected_in_result(self, tmp_path, make_tool_call):
         """When no include glob is given, the result contains include=null."""
@@ -869,7 +882,7 @@ class TestSearchFiles:
         assert data["total_matches"] == 3
 
     def test_response_size_limit_raises_error_when_exceeded(self, tmp_path, make_tool_call):
-        """search_files raises AIToolExecutionError when match content exceeds 64KB."""
+        """search_files raises AIToolExecutionError when match content exceeds 64 KB."""
         long_line = "needle " + "x" * 2000 + "\n"
         for i in range(40):
             (tmp_path / f"file_{i:02d}.txt").write_text(long_line)
@@ -884,11 +897,11 @@ class TestSearchFiles:
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(tool.execute(tool_call, "", None))
 
-        assert "64KB" in str(exc_info.value)
+        assert "64 KB" in str(exc_info.value)
         assert "response size limit" in str(exc_info.value)
 
     def test_response_size_limit_raises_error_in_escaped_pipe_fallback(self, tmp_path, make_tool_call):
-        """search_files raises AIToolExecutionError when the escaped-pipe fallback exceeds 64KB."""
+        """search_files raises AIToolExecutionError when the escaped-pipe fallback exceeds 64 KB."""
         long_line = "needle\\|mark " + "x" * 2000 + "\n"
         for i in range(40):
             (tmp_path / f"file_{i:02d}.txt").write_text(long_line)
@@ -904,7 +917,7 @@ class TestSearchFiles:
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(tool.execute(tool_call, "", None))
 
-        assert "64KB" in str(exc_info.value)
+        assert "64 KB" in str(exc_info.value)
         assert "response size limit" in str(exc_info.value)
 
 
@@ -928,7 +941,6 @@ class TestFindFiles:
         data = json.loads(result.content)
 
         assert data["total_matches"] == 3
-        assert data["truncated"] is False
         assert data["name"] is None
         paths = sorted(data["matches"])
         assert "a.txt" in paths
@@ -1140,6 +1152,40 @@ class TestFindFiles:
             asyncio.run(tool.execute(tool_call, "", None))
 
         assert "'..'" in str(exc_info.value)
+
+    def test_find_files_max_results_exceeded_raises_error(self, tmp_path, make_tool_call):
+        """find_files raises AIToolExecutionError when the number of matches exceeds max_results."""
+        for i in range(5):
+            (tmp_path / f"file_{i}.txt").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": ".",
+            "max_results": 3
+        })
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
+
+        assert "max_results limit" in str(exc_info.value)
+        assert "3" in str(exc_info.value)
+
+    def test_find_files_response_size_limit_raises_error_when_exceeded(self, tmp_path, make_tool_call):
+        """find_files raises AIToolExecutionError when the response exceeds 64 KB."""
+        for i in range(2000):
+            (tmp_path / f"file_with_a_very_long_name_to_exceed_the_64kb_limit_{i:04d}.txt").write_text("x")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": ".",
+            "max_results": 2000
+        })
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
+
+        assert "64 KB" in str(exc_info.value)
+        assert "response size limit" in str(exc_info.value)
 
 
 class TestSearchFilesWildcardPath:
