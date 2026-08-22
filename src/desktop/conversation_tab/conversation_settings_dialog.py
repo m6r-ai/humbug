@@ -298,6 +298,7 @@ class ConversationSettingsDialog(QDialog):
         if not self._current_settings:
             return
 
+        self._apply_to_all_row.set_status("")
         self.apply_button.setEnabled(self._settings_container.is_modified())
 
     def get_settings(self) -> AIConversationSettings:
