@@ -2,7 +2,6 @@
 import os
 
 from context.context_registry import ContextRegistry
-from conversation_context.conversation_context import ConversationContext
 
 
 class TestPathNormalization:
@@ -246,53 +245,3 @@ class TestColumnOperations:
             return
 
         raise AssertionError("Expected ValueError")
-
-
-class _FakeTranscript:
-    """Minimal stand-in for AITranscriptConversation that records settings updates."""
-
-    def __init__(self) -> None:
-        self.applied: list[object] = []
-
-    def update_conversation_settings(self, settings: object) -> None:
-        self.applied.append(settings)
-
-
-class TestBroadcastConversationSettings:
-    """Tests for broadcasting conversation settings via the registry."""
-
-    def _register_conversation(self, registry: ContextRegistry, transcript: _FakeTranscript) -> str:
-        """Open a conversation context registered with the given transcript."""
-        cid = registry.open(context_type="conversation")
-        context = ConversationContext(
-            context_id=cid,
-            ai_transcript_conversation=transcript,  # type: ignore[arg-type]
-        )
-        registry.register_model(cid, context)
-        return cid
-
-    def test_broadcast_updates_all_conversation_contexts(self) -> None:
-        """Broadcasting settings updates every registered conversation context."""
-        registry = ContextRegistry()
-        transcripts = [_FakeTranscript(), _FakeTranscript()]
-        settings = object()
-
-        for transcript in transcripts:
-            self._register_conversation(registry, transcript)
-
-        registry.broadcast_conversation_settings(settings)
-
-        for transcript in transcripts:
-            assert transcript.applied == [settings]
-
-    def test_broadcast_skips_non_conversation_contexts(self) -> None:
-        """Broadcasting settings leaves non-conversation contexts untouched."""
-        registry = ContextRegistry()
-        registry.open(context_type="editor")
-        transcript = _FakeTranscript()
-        settings = object()
-        self._register_conversation(registry, transcript)
-
-        registry.broadcast_conversation_settings(settings)
-
-        assert transcript.applied == [settings]

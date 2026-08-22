@@ -4,8 +4,10 @@ import logging
 import os
 import shutil
 
+from ai import AIConversationSettings
 from ai_tool import AIToolManager
 from context.context_registry import ContextRegistry
+from conversation_context.conversation_context import ConversationContext
 
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
 from mindspace.mindspace_interactions import MindspaceInteractions
@@ -183,6 +185,31 @@ class Mindspace:
 
         except OSError as e:
             raise MindspaceError(f"Failed to save mindspace settings: {str(e)}") from e
+
+    def apply_ai_settings_to_all(self, settings: AIConversationSettings) -> None:
+        """
+        Persist AI settings as the mindspace default and apply them to every open conversation.
+
+        Updates the mindspace default's AI fields, then broadcasts the settings to
+        each open conversation context.  The UI reacts through each context's
+        on_settings_applied callback, so the mindspace remains the source of truth.
+
+        Args:
+            settings: The AIConversationSettings to apply to all conversations.
+        """
+        current = self._settings
+        if current is not None:
+            current.model = settings.model
+            current.provider = settings.provider
+            current.temperature = settings.temperature
+            current.reasoning = settings.reasoning
+            current.reasoning_effort = settings.reasoning_effort
+            self.update_settings(current)
+
+        for info in self._context_registry.list_all():
+            model = self._context_registry.get_model(info.context_id, ConversationContext)
+            if model is not None:
+                model.update_conversation_settings(settings)
 
     def conversations_dir(self) -> str:
         """

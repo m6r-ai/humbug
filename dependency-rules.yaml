@@ -28,8 +28,7 @@ modules:
       - "standard_library"
 
   context:
-    internal_dependencies:
-      - conversation_context
+    internal_dependencies: []
     external_dependencies:
       - "standard_library"
 
@@ -210,6 +209,7 @@ modules:
       - ai
       - ai_tool
       - context
+      - conversation_context
     external_dependencies:
       - "standard_library"
 

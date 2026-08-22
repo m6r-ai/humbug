@@ -978,18 +978,7 @@ class ConversationTab(TabBase):
         """Broadcast conversation settings to all conversations and save as the mindspace default."""
         mindspace_manager = MindspaceManager()
         if mindspace_manager.has_mindspace():
-            mindspace_manager.mindspace().contexts().broadcast_conversation_settings(new_settings)
-
-        settings = mindspace_manager.settings()
-        if settings is None:
-            return
-
-        settings.model = new_settings.model
-        settings.provider = new_settings.provider
-        settings.temperature = new_settings.temperature
-        settings.reasoning = new_settings.reasoning
-        settings.reasoning_effort = new_settings.reasoning_effort
-        mindspace_manager.update_settings(settings)
+            mindspace_manager.mindspace().apply_ai_settings_to_all(new_settings)
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""

@@ -2377,7 +2377,7 @@ class MainWindow(QMainWindow):
         def _on_apply_ai_settings_to_all_requested(new_settings: MindspaceSettings) -> None:
             try:
                 self._mindspace_manager.update_settings(new_settings)
-                self._mindspace_manager.mindspace().contexts().broadcast_conversation_settings(
+                self._mindspace_manager.mindspace().apply_ai_settings_to_all(
                     AIConversationSettings(
                         model=new_settings.model,
                         provider=new_settings.provider,
