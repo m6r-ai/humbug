@@ -1,7 +1,6 @@
 from collections.abc import Callable
 import logging
 import math
-import os
 from typing import cast, TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
