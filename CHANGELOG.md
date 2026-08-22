@@ -2,6 +2,16 @@
 
 ## v55 (2026-08-xx)
 
+New features:
+
+- Added Gemini 3.7 Flash, and removed Gemini 3.5 Flash.
+- Added Gemini 3.5 Flash lite, and removed Gemini 3.1 Flash lite.
+
+Bug fixes:
+
+- Implemented hard limits on results for the filesystem AI tool.  Any limit exceeded generates an error, not a truncated
+  response.  This prevents context window explosions.
+
 Internal structure changes:
 
 - The System AI tool has now been moved to being generic and not Qt-specific.  Updated the context registry to support

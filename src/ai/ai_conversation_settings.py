@@ -117,10 +117,10 @@ class AIConversationSettings:
         ),
 
         # Google models
-        ("gemini-3.1-flash-lite", "google"): AIModel(
-            name="gemini-3.1-flash-lite",
+        ("gemini-3.5-flash-lite", "google"): AIModel(
+            name="gemini-3.5-flash-lite",
             provider="google",
-            display_name="Gemini 3.1 Flash Lite",
+            display_name="Gemini 3.5 Flash Lite",
             context_window=1048576,
             max_output_tokens=65536,
             supports_temperature=True,
@@ -133,17 +133,16 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH,
             ],
         ),
-        ("gemini-3.5-flash", "google"): AIModel(
-            name="gemini-3.5-flash",
+        ("gemini-3.7-flash", "google"): AIModel(
+            name="gemini-3.7-flash",
             provider="google",
-            display_name="Gemini 3.5 Flash",
+            display_name="Gemini 3.7 Flash",
             context_window=1048576,
             max_output_tokens=65536,
-            supports_temperature=True,
+            supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.MINIMAL,
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
