@@ -28,7 +28,8 @@ modules:
       - "standard_library"
 
   context:
-    internal_dependencies: []
+    internal_dependencies:
+      - conversation_context
     external_dependencies:
       - "standard_library"
 

@@ -1,7 +1,6 @@
 import uuid
 import os
 import logging
-from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QFrame, QWidget
 from PySide6.QtCore import Signal
@@ -13,10 +12,6 @@ from mindspace.mindspace_settings import MindspaceSettings
 from desktop.file_watcher import FileWatcher
 from desktop.status_message import StatusMessage
 from desktop.tab.tab_state import TabState
-
-if TYPE_CHECKING:
-    from ai import AIConversationSettings
-
 
 class TabBase(QFrame):
     """Base class for all tab content."""
@@ -30,7 +25,6 @@ class TabBase(QFrame):
     tab_label_changed = Signal(str, str)  # Emits (tab_id, new_title) when the tab bar label should change
     close_requested = Signal()  # Emits when tab requests to be closed
     preferred_width_changed = Signal()  # Emits when preferred_width() may return a different value
-    conversation_settings_apply_all_requested = Signal(object)  # Emits AIConversationSettings to broadcast to all tabs
 
     def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
         """
@@ -630,13 +624,4 @@ class TabBase(QFrame):
         default implementation is a no-op.  Override in tabs that need to react
         to runtime settings changes (e.g. TerminalTab reacts to terminal width
         changes).
-        """
-
-    def apply_conversation_settings(self, settings: "AIConversationSettings") -> None:
-        """
-        Apply broadcasted conversation settings to this tab.
-
-        Called by TabManager when a conversation tab's settings are applied to
-        all open conversations.  The default implementation is a no-op.
-        Override in tabs that hold a conversation (e.g. ConversationTab).
         """

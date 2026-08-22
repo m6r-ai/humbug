@@ -6,6 +6,7 @@ from typing import Any, TypeVar
 import uuid
 
 from context.context_info import ContextInfo
+from conversation_context.conversation_context import ConversationContext
 
 
 class ContextEvent(Enum):
@@ -496,6 +497,22 @@ class ContextRegistry:
             return None
 
         return model
+
+    def broadcast_conversation_settings(self, settings: Any) -> None:
+        """
+        Apply conversation settings to every open conversation context.
+
+        Iterates the registered conversation contexts and updates each one's
+        settings.  The UI reacts through each context's on_settings_applied
+        callback, so the registry remains the source of truth.
+
+        Args:
+            settings: The AIConversationSettings to apply to all conversations.
+        """
+        for context_id in list(self._contexts.keys()):
+            model = self.get_model(context_id, ConversationContext)
+            if model is not None:
+                model.update_conversation_settings(settings)
 
     def __len__(self) -> int:
         """Return the number of open contexts."""
