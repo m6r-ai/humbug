@@ -1188,6 +1188,113 @@ class TestFindFiles:
         assert "response size limit" in str(exc_info.value)
 
 
+class TestSearchFilesSymlinks:
+    """Tests for symlink handling in search_files and find_files operations."""
+
+    def test_search_files_does_not_follow_symlinked_directories(self, tmp_path, make_tool_call):
+        """search_files does not descend into symlinked directories, preventing escape via symlinks."""
+        # Create a real directory outside the search root with a matching file
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "leaked.txt").write_text("needle in symlinked dir\n")
+
+        # Create the search root with a normal file and a symlink to the outside dir
+        root = tmp_path / "root"
+        root.mkdir()
+        (root / "normal.txt").write_text("needle in root\n")
+        (root / "link_to_outside").symlink_to(outside)
+
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": "root",
+            "search_text": "needle"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 1
+        assert data["files_with_matches"] == 1
+        assert "normal.txt" in data["results"][0]["path"]
+        assert not any("leaked" in r["path"] for r in data["results"])
+
+    def test_search_files_skips_symlinked_files(self, tmp_path, make_tool_call):
+        """search_files skips individual symlinked files within the search tree."""
+        # Create a real file outside the search root
+        outside_file = tmp_path / "outside_target.txt"
+        outside_file.write_text("needle via symlink\n")
+
+        root = tmp_path / "root"
+        root.mkdir()
+        (root / "normal.txt").write_text("needle in root\n")
+        (root / "link_to_file.txt").symlink_to(outside_file)
+
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": "root",
+            "search_text": "needle"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 1
+        assert data["files_with_matches"] == 1
+        assert "normal.txt" in data["results"][0]["path"]
+        assert not any("link_to_file" in r["path"] for r in data["results"])
+
+    def test_find_files_does_not_follow_symlinked_directories(self, tmp_path, make_tool_call):
+        """find_files does not descend into symlinked directories."""
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "leaked.py").write_text("x")
+
+        root = tmp_path / "root"
+        root.mkdir()
+        (root / "normal.py").write_text("x")
+        (root / "link_to_outside").symlink_to(outside)
+
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "root",
+            "name": "*.py"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 1
+        assert "normal.py" in data["matches"][0]
+        assert not any("leaked" in p for p in data["matches"])
+
+    def test_find_files_skips_symlinked_files(self, tmp_path, make_tool_call):
+        """find_files skips individual symlinked files."""
+        outside_file = tmp_path / "outside_target.py"
+        outside_file.write_text("x")
+
+        root = tmp_path / "root"
+        root.mkdir()
+        (root / "normal.py").write_text("x")
+        (root / "link_to_file.py").symlink_to(outside_file)
+
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": "root",
+            "name": "*.py"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 1
+        assert "normal.py" in data["matches"][0]
+        assert not any("link_to_file" in p for p in data["matches"])
+
+
 class TestSearchFilesWildcardPath:
     """Tests for wildcard path handling in the search_files operation."""
 

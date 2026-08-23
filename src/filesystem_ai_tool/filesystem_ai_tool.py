@@ -179,7 +179,12 @@ class FileSystemAITool(AITool):
                 AIToolParameter(
                     name="max_results",
                     type="integer",
-                    description=f"Maximum number of matches to return. An error is raised if the limit is exceeded (search_file, search_files, and find_files operations). Defaults: {self._DEFAULT_MAX_RESULTS} for search_file and find_files, {self._DEFAULT_SEARCH_FILES_MAX_RESULTS} for search_files.",
+                    description=(
+                        "Maximum number of matches to return. An error is raised if the limit is exceeded "
+                        "(search_file, search_files, and find_files operations). "
+                        f"Defaults: {self._DEFAULT_MAX_RESULTS} for search_file and find_files, "
+                        f"{self._DEFAULT_SEARCH_FILES_MAX_RESULTS} for search_files."
+                    ),
                     required=False
                 ),
                 AIToolParameter(
@@ -357,7 +362,9 @@ class FileSystemAITool(AITool):
                 required_parameters={"path", "search_text"},
                 description="Search for text or a regular expression within a single file. "
                     "Returns matching lines with line numbers. Supports case_sensitive and regexp flags. "
-                    f"An error is raised if the number of matches exceeds max_results (default {self._DEFAULT_MAX_RESULTS}) or the response exceeds {self._MAX_RESPONSE_BYTES // 1024} KB. "
+                    f"An error is raised if the number of matches exceeds max_results "
+                    f"(default {self._DEFAULT_MAX_RESULTS}) or the response exceeds "
+                    f"{self._MAX_RESPONSE_BYTES // 1024} KB. "
                     "Obeys the same external file access rules as read_file. "
                     "Note: match content is returned as JSON-encoded strings, so special characters "
                     "(double quotes, backslashes, etc.) will appear escaped — these escape sequences "
@@ -372,7 +379,9 @@ class FileSystemAITool(AITool):
                 description="Recursively search for text or a regular expression across all files under a directory. "
                     "The path may contain wildcards (e.g. 'src/*.py' searches .py files directly in src). "
                     "Results are grouped by file. Use include to filter by filename glob (e.g. '*.py'). "
-                    f"An error is raised if the number of matches exceeds max_results (default {self._DEFAULT_SEARCH_FILES_MAX_RESULTS}) or the response exceeds {self._MAX_RESPONSE_BYTES // 1024} KB. "
+                    f"An error is raised if the number of matches exceeds max_results "
+                    f"(default {self._DEFAULT_SEARCH_FILES_MAX_RESULTS}) or the response exceeds "
+                    f"{self._MAX_RESPONSE_BYTES // 1024} KB. "
                     "Each file encountered obeys the same external file access rules as read_file. "
                     "Note: match content is returned as JSON-encoded strings, so special characters "
                     "(double quotes, backslashes, etc.) will appear escaped — these escape sequences "
@@ -389,7 +398,9 @@ class FileSystemAITool(AITool):
                     "in src, 'src/*/tests/*.py' searches nested test directories). "
                     "Use the name parameter to specify the filename pattern (e.g. 'AGENTS.md', '*.py'). "
                     "If name is omitted, all files are returned. "
-                    f"An error is raised if the number of matches exceeds max_results (default {self._DEFAULT_MAX_RESULTS}) or the response exceeds {self._MAX_RESPONSE_BYTES // 1024} KB. "
+                    f"An error is raised if the number of matches exceeds max_results "
+                    f"(default {self._DEFAULT_MAX_RESULTS}) or the response exceeds "
+                    f"{self._MAX_RESPONSE_BYTES // 1024} KB. "
                     "Returns a list of matching relative paths."
             ),
             "transform_file": AIToolOperationDefinition(
@@ -1647,6 +1658,49 @@ class FileSystemAITool(AITool):
         except Exception:
             return True
 
+    @staticmethod
+    def _collect_files_recursive(base_path: Path) -> list[Path]:
+        """
+        Recursively collect all files under base_path without following symlinks.
+
+        Uses os.walk with followlinks=False so that symlinked directories are not
+        traversed.  This prevents the search from escaping the mindspace boundary
+        via symlinks (e.g. venv symlinks to system Python installations).
+
+        Args:
+            base_path: Directory to walk
+
+        Returns:
+            Sorted list of file paths under base_path, excluding symlinks
+        """
+        files: list[Path] = []
+        for root, dirs, filenames in os.walk(base_path, followlinks=False):
+            # Skip symlinked directories in-place so os.walk does not descend into them
+            dirs[:] = [d for d in dirs if not (Path(root) / d).is_symlink()]
+            for filename in filenames:
+                file_path = Path(root) / filename
+                if not file_path.is_symlink():
+                    files.append(file_path)
+
+        return sorted(files)
+
+    @staticmethod
+    def _collect_files_glob(base_path: Path, glob_suffix: str) -> list[Path]:
+        """
+        Collect files matching a glob pattern without following symlinks.
+
+        Args:
+            base_path: Directory to search in
+            glob_suffix: Glob pattern (non-recursive, e.g. '*.py')
+
+        Returns:
+            Sorted list of matching file paths, excluding symlinks
+        """
+        return sorted(
+            p for p in base_path.glob(glob_suffix)
+            if p.is_file() and not p.is_symlink()
+        )
+
     def _compile_search_pattern(self, search_text: str, case_sensitive: bool, regexp: bool) -> re.Pattern:
         """
         Compile a search pattern from the given parameters.
@@ -1856,7 +1910,7 @@ class FileSystemAITool(AITool):
 
         if glob_result is not None:
             base_path, glob_suffix, display_path = glob_result
-            candidate_files = sorted(base_path.glob(glob_suffix))
+            candidate_files = self._collect_files_glob(base_path, glob_suffix)
             is_external = self._is_path_external(base_path)
 
         else:
@@ -1894,7 +1948,7 @@ class FileSystemAITool(AITool):
                 raise AIToolExecutionError(f"Path is not a directory: {path_arg}")
 
             base_path = path
-            candidate_files = sorted(path.rglob("*"))
+            candidate_files = self._collect_files_recursive(base_path)
             is_external = self._is_path_external(base_path)
 
         max_response_bytes = self._MAX_RESPONSE_BYTES
@@ -2103,7 +2157,7 @@ class FileSystemAITool(AITool):
 
         if glob_result is not None:
             base_path, glob_suffix, display_path = glob_result
-            candidate_files = sorted(base_path.glob(glob_suffix))
+            candidate_files = self._collect_files_glob(base_path, glob_suffix)
             is_external = self._is_path_external(base_path)
 
         else:
@@ -2137,7 +2191,7 @@ class FileSystemAITool(AITool):
                 raise AIToolExecutionError(f"Path is not a directory: {path_arg}")
 
             base_path = path
-            candidate_files = sorted(path.rglob("*"))
+            candidate_files = self._collect_files_recursive(base_path)
             is_external = self._is_path_external(base_path)
 
         matches: list[str] = []
