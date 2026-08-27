@@ -2,6 +2,34 @@
 
 ## v55 (2026-08-xx)
 
+New features:
+
+- Added Gemini 3.7 Flash, and removed Gemini 3.5 Flash.
+- Added Gemini 3.5 Flash lite, and removed Gemini 3.1 Flash lite.
+- Removed GPT-5.4 and GPT-5.5.
+- Added GLM 5.3 Flash (Z.ai backend).
+- Removed GLM 4.5 series models and GLM 5.1.
+- Removed MiniMax M2.7.
+- Removed GPT-OSS models from the Ollama cloud backend.
+- Border animation now applies to all messages with pending or ongoing content, not just the last visible one.  This
+  ensures the correct message boxes are highlighted after scrolling and deferred content is revealed.
+
+Bug fixes:
+
+- Implemented hard limits on results for the filesystem AI tool.  Any limit exceeded generates an error, not a truncated
+  response.  This prevents context window explosions.
+- Fixed conversation tab "bouncing" when scrolled away from the bottom during streaming.  Content is no longer rendered
+  while the user is scrolled up.  Deferred content is rendered in one pass when the user scrolls at all (preserving
+  their scroll position), or when they scroll back to the bottom (snapping to the bottom).
+
+Internal structure changes:
+
+- The System AI tool has now been moved to being generic and not Qt-specific.  Updated the context registry to support
+  this change.
+- The editor context no longer depends on Qt.  Instead there is an abstract editor concept and the Qt editor reacts
+  to changes made in the context document.
+- The main window UI updatest the context registry and the UI then reacts to that, rather than the UI driving the change.
+
 ## v54 (2026-08-20)
 
 New features:

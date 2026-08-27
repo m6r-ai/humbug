@@ -177,6 +177,7 @@ class ConversationTab(TabBase):
             context_id=self._tab_id,
             ai_transcript_conversation=self.ai_conversation(),
             on_scroll_to_message=self.scroll_to_message,
+            on_settings_applied=self.update_conversation_settings,
         )
         registry.register_model(self._tab_id, conv_context)
 
@@ -305,10 +306,6 @@ class ConversationTab(TabBase):
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """Update conversation settings and associated backend."""
         self._conversation_widget.update_conversation_settings(new_settings)
-
-    def apply_conversation_settings(self, settings: AIConversationSettings) -> None:
-        """Apply conversation settings broadcast from another conversation tab."""
-        self.update_conversation_settings(settings)
 
     def _on_update_label(self) -> None:
         """
@@ -971,11 +968,17 @@ class ConversationTab(TabBase):
             self._conversation_settings_dialog = None
 
         dialog.accepted.connect(_on_accepted)
-        dialog.apply_to_all_requested.connect(self.conversation_settings_apply_all_requested.emit)
+        dialog.apply_to_all_requested.connect(self._on_apply_settings_to_all)
         dialog.finished.connect(_on_finished)
         dialog.show()
         dialog.raise_()
         dialog.activateWindow()
+
+    def _on_apply_settings_to_all(self, new_settings: AIConversationSettings) -> None:
+        """Broadcast conversation settings to all conversations and save as the mindspace default."""
+        mindspace_manager = MindspaceManager()
+        if mindspace_manager.has_mindspace():
+            mindspace_manager.mindspace().apply_ai_settings_to_all(new_settings)
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""

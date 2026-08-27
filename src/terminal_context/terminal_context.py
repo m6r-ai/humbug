@@ -9,8 +9,6 @@ class TerminalContext:
     Model for an open terminal context.
 
     Owns the terminal process (TerminalBase) and buffer state (TerminalState).
-    The Qt TerminalWidget is a view of the TerminalState; this class provides
-    the data interface the AI tool layer needs without any Qt dependency.
     """
 
     def __init__(

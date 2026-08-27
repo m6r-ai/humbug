@@ -122,3 +122,126 @@ class TestPathNormalization:
 
         # Lookup with a normalised path finds it
         assert registry.get_by_path_and_type("/tmp/new/file.py", "editor") is not None
+
+
+class TestColumnOperations:
+    """Tests for the column-level operations on the context registry."""
+
+    def test_split_column_right_moves_context_and_shifts(self) -> None:
+        """Splitting right moves the context to a new column and shifts later ones."""
+        registry = ContextRegistry()
+        c0, c1, c2 = self._split_many(registry)
+
+        registry.split_column(c0, split_left=False)
+
+        assert registry.get(c0) is not None and registry.get(c0).column == 1
+        assert registry.get(c1) is not None and registry.get(c1).column == 0
+        assert registry.get(c2) is not None and registry.get(c2).column == 2
+
+    def _split_many(self, registry: ContextRegistry) -> list[str]:
+        """Open three contexts in two columns and return their IDs."""
+        c0 = registry.open(context_type="editor", column=0)
+        c1 = registry.open(context_type="editor", column=0)
+        c2 = registry.open(context_type="terminal", column=1)
+        return [c0, c1, c2]
+
+    def test_split_column_left_keeps_context_index_and_shifts_others(self) -> None:
+        """Splitting left keeps the context at its index and shifts others right."""
+        registry = ContextRegistry()
+        c0, c1, c2 = self._split_many(registry)
+
+        registry.split_column(c0, split_left=True)
+
+        assert registry.get(c0) is not None and registry.get(c0).column == 0
+        assert registry.get(c1) is not None and registry.get(c1).column == 1
+        assert registry.get(c2) is not None and registry.get(c2).column == 2
+
+    def test_split_column_emits_event(self) -> None:
+        """Splitting a column emits a COLUMN_SPLIT event."""
+        from context.context_registry import ContextEvent
+        registry = ContextRegistry()
+        c0, _, _ = self._split_many(registry)
+
+        events: list[tuple[str, bool]] = []
+        registry.register_callback(
+            ContextEvent.COLUMN_SPLIT,
+            lambda cid, sl: events.append((cid, sl)),
+        )
+
+        registry.split_column(c0, split_left=False)
+
+        assert len(events) == 1
+        assert events[0] == (c0, False)
+
+    def test_merge_column_moves_contexts_and_shifts(self) -> None:
+        """Merging a column moves its contexts left and shifts later columns."""
+        registry = ContextRegistry()
+        c0 = registry.open(context_type="editor", column=0)
+        c1 = registry.open(context_type="terminal", column=1)
+        c2 = registry.open(context_type="preview", column=2)
+
+        registry.merge_column(1, merge_left=True)
+
+        assert registry.get(c0) is not None and registry.get(c0).column == 0
+        assert registry.get(c1) is not None and registry.get(c1).column == 0
+        assert registry.get(c2) is not None and registry.get(c2).column == 1
+
+    def test_merge_column_emits_event(self) -> None:
+        """Merging a column emits a COLUMN_MERGE event."""
+        from context.context_registry import ContextEvent
+        registry = ContextRegistry()
+        registry.open(context_type="editor", column=0)
+        registry.open(context_type="terminal", column=1)
+
+        events: list[tuple[int, bool]] = []
+        registry.register_callback(
+            ContextEvent.COLUMN_MERGE,
+            lambda col, ml: events.append((col, ml)),
+        )
+
+        registry.merge_column(1, merge_left=True)
+
+        assert len(events) == 1
+        assert events[0] == (1, True)
+
+    def test_swap_column_exchanges_columns(self) -> None:
+        """Swapping two columns exchanges their contexts' column indices."""
+        registry = ContextRegistry()
+        c0 = registry.open(context_type="editor", column=0)
+        c1 = registry.open(context_type="editor", column=0)
+        c2 = registry.open(context_type="terminal", column=1)
+
+        registry.swap_column(1, swap_left=True)
+
+        assert registry.get(c0) is not None and registry.get(c0).column == 1
+        assert registry.get(c1) is not None and registry.get(c1).column == 1
+        assert registry.get(c2) is not None and registry.get(c2).column == 0
+
+    def test_swap_column_emits_event(self) -> None:
+        """Swapping a column emits a COLUMN_SWAP event."""
+        from context.context_registry import ContextEvent
+        registry = ContextRegistry()
+        registry.open(context_type="editor", column=0)
+        registry.open(context_type="terminal", column=1)
+
+        events: list[tuple[int, bool]] = []
+        registry.register_callback(
+            ContextEvent.COLUMN_SWAP,
+            lambda col, sl: events.append((col, sl)),
+        )
+
+        registry.swap_column(1, swap_left=True)
+
+        assert len(events) == 1
+        assert events[0] == (1, True)
+
+    def test_split_column_raises_for_missing_context(self) -> None:
+        """Splitting a column for a missing context raises ValueError."""
+        registry = ContextRegistry()
+
+        try:
+            registry.split_column("missing", split_left=False)
+        except ValueError:
+            return
+
+        raise AssertionError("Expected ValueError")

@@ -117,10 +117,10 @@ class AIConversationSettings:
         ),
 
         # Google models
-        ("gemini-3.1-flash-lite", "google"): AIModel(
-            name="gemini-3.1-flash-lite",
+        ("gemini-3.5-flash-lite", "google"): AIModel(
+            name="gemini-3.5-flash-lite",
             provider="google",
-            display_name="Gemini 3.1 Flash Lite",
+            display_name="Gemini 3.5 Flash Lite",
             context_window=1048576,
             max_output_tokens=65536,
             supports_temperature=True,
@@ -133,17 +133,16 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH,
             ],
         ),
-        ("gemini-3.5-flash", "google"): AIModel(
-            name="gemini-3.5-flash",
+        ("gemini-3.7-flash", "google"): AIModel(
+            name="gemini-3.7-flash",
             provider="google",
-            display_name="Gemini 3.5 Flash",
+            display_name="Gemini 3.7 Flash",
             context_window=1048576,
             max_output_tokens=65536,
-            supports_temperature=True,
+            supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.MINIMAL,
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
@@ -208,7 +207,7 @@ class AIConversationSettings:
         ),
 
         # Ollama local models
-        ("gpt-oss:20b", "ollama-cloud"): AIModel(
+        ("gpt-oss:20b", "ollama"): AIModel(
             name="gpt-oss:20b",
             provider="ollama",
             display_name="GPT-OSS (20B)",
@@ -271,36 +270,6 @@ class AIConversationSettings:
                 AIReasoningEffort.MAX
             ],
         ),
-        ("gpt-oss:20b", "ollama-cloud"): AIModel(
-            name="gpt-oss:20b",
-            provider="ollama-cloud",
-            display_name="GPT-OSS (20B)",
-            context_window=131072,
-            max_output_tokens=32768,  # This is actually 131072 but that's too much
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.LOW,
-                AIReasoningEffort.MEDIUM,
-                AIReasoningEffort.HIGH
-            ],
-        ),
-        ("gpt-oss:120b", "ollama-cloud"): AIModel(
-            name="gpt-oss:120b",
-            provider="ollama-cloud",
-            display_name="GPT-OSS (120B)",
-            context_window=131072,
-            max_output_tokens=32768,  # This is actually 131072 but that's too much
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.LOW,
-                AIReasoningEffort.MEDIUM,
-                AIReasoningEffort.HIGH
-            ],
-        ),
         ("gemma4:31b-cloud", "ollama-cloud"): AIModel(
             name="gemma4:31b-cloud",
             provider="ollama-cloud",
@@ -313,6 +282,22 @@ class AIConversationSettings:
             supported_reasoning_efforts=[
                 AIReasoningEffort.NONE,
                 AIReasoningEffort.HIGH
+            ],
+        ),
+        ("glm-5.3-flash", "ollama-cloud"): AIModel(
+            name="glm-5.3-flash:cloud",
+            provider="ollama-cloud",
+            display_name="GLM 5.3 Flash",
+            context_window=1048576,
+            max_output_tokens=131072,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
             ],
         ),
         ("glm-5.2:cloud", "ollama-cloud"): AIModel(
@@ -350,19 +335,6 @@ class AIConversationSettings:
             provider="ollama-cloud",
             display_name="MiniMax M3",
             context_window=512000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.HIGH
-            ],
-        ),
-        ("minimax-m2.7:cloud", "ollama-cloud"): AIModel(
-            name="minimax-m2.7:cloud",
-            provider="ollama-cloud",
-            display_name="MiniMax M2.7",
-            context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
@@ -462,33 +434,6 @@ class AIConversationSettings:
                 AIReasoningEffort.MEDIUM
             ],
         ),
-        ("gpt-5.5", "openai"): AIModel(
-            name="gpt-5.5",
-            provider="openai",
-            display_name="GPT 5.5",
-            context_window=1000000,
-            max_output_tokens=128000,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.MEDIUM,
-            ],
-        ),
-        ("gpt-5.4", "openai"): AIModel(
-            name="gpt-5.4",
-            provider="openai",
-            display_name="GPT 5.4",
-            context_window=1000000,
-            max_output_tokens=128000,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.MEDIUM
-            ],
-        ),
 
         # vLLM models
         ("gemma3:27b", "vllm"): AIModel(
@@ -535,12 +480,28 @@ class AIConversationSettings:
         ),
 
         # Z.ai models
+        ("glm-5.3-flash", "zai"): AIModel(
+            name="glm-5.3-flash",
+            provider="zai",
+            display_name="GLM 5.3 Flash",
+            context_window=1048576,
+            max_output_tokens=131072,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
         ("glm-5.3", "zai"): AIModel(
             name="glm-5.3",
             provider="zai",
             display_name="GLM 5.3",
-            context_window=1000000,
-            max_output_tokens=32768,
+            context_window=1048576,
+            max_output_tokens=131072,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
@@ -555,8 +516,8 @@ class AIConversationSettings:
             name="glm-5.2",
             provider="zai",
             display_name="GLM 5.2",
-            context_window=1000000,
-            max_output_tokens=32768,
+            context_window=1048576,
+            max_output_tokens=131072,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
@@ -564,62 +525,6 @@ class AIConversationSettings:
                 AIReasoningEffort.NONE,
                 AIReasoningEffort.HIGH,
                 AIReasoningEffort.MAX
-            ],
-        ),
-        ("glm-5.1", "zai"): AIModel(
-            name="glm-5.1",
-            provider="zai",
-            display_name="GLM 5.1",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
-            ],
-        ),
-        ("glm-4.5-x", "zai"): AIModel(
-            name="glm-4.5-x",
-            provider="zai",
-            display_name="GLM 4.5-X",
-            context_window=128000,
-            max_output_tokens=8192,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
-            ],
-        ),
-        ("glm-4.5-air", "zai"): AIModel(
-            name="glm-4.5-air",
-            provider="zai",
-            display_name="GLM 4.5 Air",
-            context_window=128000,
-            max_output_tokens=8192,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
-            ],
-        ),
-        ("glm-4.5-airx", "zai"): AIModel(
-            name="glm-4.5-airx",
-            provider="zai",
-            display_name="GLM 4.5 AirX",
-            context_window=128000,
-            max_output_tokens=8192,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
             ],
         ),
     }

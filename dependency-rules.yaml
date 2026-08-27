@@ -136,7 +136,6 @@ modules:
       - diff
     external_dependencies:
       - "standard_library"
-      - "PySide6"
 
   filesystem_ai_tool:
     internal_dependencies:
@@ -210,6 +209,7 @@ modules:
       - ai
       - ai_tool
       - context
+      - conversation_context
     external_dependencies:
       - "standard_library"
 

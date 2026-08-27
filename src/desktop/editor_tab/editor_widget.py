@@ -12,12 +12,13 @@ from PySide6.QtGui import (
 )
 
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
-from editor_context.editor_diff_applier import EditorDiffApplier
+from editor_context.editor_context_document import EditorContextDocument
 from mindspace.mindspace_settings import MindspaceSettings
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils, Token, TokenType
 
 from desktop.code_block_highlighter import CodeBlockHighlighter, CodeBlockHighlighterBlockData
 from desktop.color_role import ColorRole
+from desktop.editor_tab.editor_diff_applier import EditorDiffApplier
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -53,6 +54,9 @@ class EditorWidget(QPlainTextEdit):
         self._untitled_number = untitled_number
         self._last_save_content = ""
         self._is_modified = False
+
+        # Plain-Python model (source of truth for the backend)
+        self._editor_document = EditorContextDocument(path=path)
 
         # Editor settings
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)  # No word wrap for code
@@ -145,6 +149,8 @@ class EditorWidget(QPlainTextEdit):
         with open(self._path, 'r', encoding='utf-8') as f:
             content = f.read()
 
+        self._editor_document.set_text(content)
+        self._editor_document.mark_saved()
         self.setPlainText(content)
         self._last_save_content = self.toPlainText()
         self._set_modified(False)
@@ -171,6 +177,8 @@ class EditorWidget(QPlainTextEdit):
                     content = f.read()
 
                 self._logger.debug("Refreshing content from file: %s", self._path)
+                self._editor_document.set_text(content)
+                self._editor_document.mark_saved()
                 self.setPlainText(content)
                 self._last_save_content = self.toPlainText()
                 self._set_modified(False)
@@ -182,6 +190,8 @@ class EditorWidget(QPlainTextEdit):
 
             else:
                 self._logger.debug("File no longer exists, clearing content: %s", self._path)
+                self._editor_document.set_text("")
+                self._editor_document.mark_saved()
                 self.setPlainText("")
                 self._last_save_content = ""
                 self._set_modified(False)
@@ -193,6 +203,8 @@ class EditorWidget(QPlainTextEdit):
         except Exception as e:
             self._logger.error("Failed to refresh content from file '%s': %s", self._path, str(e))
             # If file is unreadable, leave empty editor view
+            self._editor_document.set_text("")
+            self._editor_document.mark_saved()
             self.setPlainText("")
             self._last_save_content = ""
 
@@ -277,6 +289,7 @@ class EditorWidget(QPlainTextEdit):
 
     def _on_text_changed(self) -> None:
         """Handle changes to editor content."""
+        self._editor_document.set_text(self.toPlainText())
         current_content = self.toPlainText()
         is_modified = current_content != self._last_save_content
         self._set_modified(is_modified)
@@ -405,6 +418,7 @@ class EditorWidget(QPlainTextEdit):
         """
         self._path = path
         self._untitled_number = None
+        self._editor_document.set_path(path)
         self._update_syntax_from_path()
 
     def is_modified(self) -> bool:
@@ -465,6 +479,8 @@ class EditorWidget(QPlainTextEdit):
         with open(self._path, 'w', encoding='utf-8') as f:
             f.write(content)
 
+        self._editor_document.set_text(content)
+        self._editor_document.mark_saved()
         self._last_save_content = content
         self._set_modified(False)
 
@@ -1886,6 +1902,15 @@ class EditorWidget(QPlainTextEdit):
 
         return info
 
+    def editor_document(self) -> EditorContextDocument:
+        """
+        Return the plain-Python document model.
+
+        Returns:
+            The EditorContextDocument owned by this widget.
+        """
+        return self._editor_document
+
     def get_editor_info(self) -> dict[str, Any]:
         """
         Get editor metadata and document information.
@@ -2122,6 +2147,8 @@ class EditorWidget(QPlainTextEdit):
             self.setTextCursor(cursor)
             self._start_smooth_scroll_to_cursor(cursor)
 
+            # Sync the Qt document state to the plain-Python model
+            self._editor_document.set_text(self.toPlainText())
             self._set_modified(True)
 
         # Convert DiffApplicationResult to dict format

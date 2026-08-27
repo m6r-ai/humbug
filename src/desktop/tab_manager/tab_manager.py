@@ -1,8 +1,7 @@
 from collections.abc import Callable
 import logging
 import math
-import os
-from typing import cast, TYPE_CHECKING
+from typing import cast
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer, QPoint
@@ -28,9 +27,6 @@ from desktop.tab_manager.tab_overview import TabOverviewEntry, TabOverviewWidget
 from desktop.tab_manager.tab_style import build_tab_manager_stylesheet, build_tab_bar_stylesheet
 from desktop.tab_manager.welcome_widget import WelcomeWidget
 from desktop.user.user_settings import UserSettings
-
-if TYPE_CHECKING:
-    from ai import AIConversationSettings
 
 TabFactory = Callable[[TabState, QWidget], "TabBase | None"]
 ContextFactory = Callable[[ContextInfo, ContextRegistry, QWidget], "TabBase | None"]
@@ -535,26 +531,6 @@ class TabManager(QWidget):
         for tab in self._tabs.values():
             tab.apply_mindspace_settings(settings)
 
-    def apply_conversation_settings_to_all_tabs(self, new_settings: "AIConversationSettings") -> None:
-        """Broadcast conversation settings to every open tab. Does not persist a mindspace default."""
-        for tab in self._tabs.values():
-            tab.apply_conversation_settings(new_settings)
-
-    def _on_conversation_settings_apply_all_requested(self, new_settings: "AIConversationSettings") -> None:
-        """Broadcast conversation settings to every open tab and save as the mindspace default."""
-        self.apply_conversation_settings_to_all_tabs(new_settings)
-
-        settings = self._mindspace_manager.settings()
-        if settings is None:
-            return
-
-        settings.model = new_settings.model
-        settings.provider = new_settings.provider
-        settings.temperature = new_settings.temperature
-        settings.reasoning = new_settings.reasoning
-        settings.reasoning_effort = new_settings.reasoning_effort
-        self._mindspace_manager.update_settings(settings)
-
     def _subscribe_to_registry(self) -> None:
         """Register TabManager as a subscriber to the active ContextRegistry."""
         if self._registry_subscribed:
@@ -566,6 +542,9 @@ class TabManager(QWidget):
         registry.register_callback(ContextEvent.UPDATED, self._on_context_updated)
         registry.register_callback(ContextEvent.MOVED, self._on_context_moved)
         registry.register_callback(ContextEvent.FOCUSED, self._on_context_focused)
+        registry.register_callback(ContextEvent.COLUMN_SPLIT, self._on_column_split)
+        registry.register_callback(ContextEvent.COLUMN_MERGE, self._on_column_merge)
+        registry.register_callback(ContextEvent.COLUMN_SWAP, self._on_column_swap)
         self._registry_subscribed = True
 
     def _unsubscribe_from_registry(self) -> None:
@@ -580,6 +559,9 @@ class TabManager(QWidget):
             registry.unregister_callback(ContextEvent.UPDATED, self._on_context_updated)
             registry.unregister_callback(ContextEvent.MOVED, self._on_context_moved)
             registry.unregister_callback(ContextEvent.FOCUSED, self._on_context_focused)
+            registry.unregister_callback(ContextEvent.COLUMN_SPLIT, self._on_column_split)
+            registry.unregister_callback(ContextEvent.COLUMN_MERGE, self._on_column_merge)
+            registry.unregister_callback(ContextEvent.COLUMN_SWAP, self._on_column_swap)
 
         self._registry_subscribed = False
 
@@ -640,11 +622,18 @@ class TabManager(QWidget):
         React to a context being updated in the registry.
 
         Syncs the Qt tab's ephemeral state when the registry's
-        is_ephemeral field changes (e.g. via make_permanent).
+        is_ephemeral field changes (e.g. via make_permanent), and
+        forwards path changes (e.g. file rename) to the tab.
         """
         tab = self._tabs.get(info.context_id)
-        if tab is not None and tab.is_ephemeral() != info.is_ephemeral:
+        if tab is None:
+            return
+
+        if tab.is_ephemeral() != info.is_ephemeral:
             self._make_tab_permanent(tab)
+
+        if tab.path() != info.path:
+            tab.on_path_renamed(info.path)
 
     def _on_context_focused(self, context_id: str) -> None:
         """React to a context focus request — bring the Qt tab to front."""
@@ -678,6 +667,114 @@ class TabManager(QWidget):
 
         self._move_tab_between_columns(tab, source_column, target_column)
 
+    def _on_column_split(self, context_id: str, split_left: bool) -> None:
+        """
+        React to a column split request from the registry.
+
+        Creates a new column beside the context's current column and moves the
+        context into it.  The registry has already updated column assignments;
+        this handler performs the corresponding Qt layout.
+        """
+        tab = self._tabs.get(context_id)
+        if tab is None:
+            return
+
+        source_column = self._find_column_for_tab(tab)
+        if source_column is None:
+            return
+
+        if len(self._tab_columns) >= 6:
+            return
+
+        if source_column.count() <= 1:
+            return
+
+        current_column_number = self._tab_columns.index(source_column)
+        target_column_number = current_column_number + (0 if split_left else 1)
+        target_column = self._create_column(target_column_number)
+
+        self._move_tab_between_columns(tab, source_column, target_column)
+        self.show_all_columns()
+        self._active_column = target_column
+        self._update_tabs()
+
+    def _on_column_merge(self, column: int, merge_left: bool) -> None:
+        """
+        React to a column merge request from the registry.
+
+        Moves all tabs from the merged column into the adjacent column and
+        removes the now-empty column. The registry has already updated column
+        assignments; this method performs the corresponding Qt layout.
+        """
+        if len(self._tab_columns) <= 1:
+            return
+
+        if not 0 <= column < len(self._tab_columns):
+            return
+
+        current_column = self._tab_columns[column]
+        target_column_number = column + (-1 if merge_left else 1)
+        if not 0 <= target_column_number < len(self._tab_columns):
+            return
+
+        target_column = self._tab_columns[target_column_number]
+        while current_column.count() > 0:
+            tab = cast(TabBase, current_column.widget(0))
+            self._move_tab_between_columns(
+                tab, current_column, target_column, remove_if_empty=False
+            )
+
+        self._active_column = target_column
+        column_number = self._tab_columns.index(current_column)
+        self._remove_column_and_resize(column_number, current_column)
+        self._update_tabs()
+
+    def _on_column_swap(self, column: int, swap_left: bool) -> None:
+        """
+        React to a column swap request from the registry.
+
+        Swaps the two adjacent column widgets in the splitter. The registry has
+        already updated column assignments; this method performs the
+        corresponding Qt layout.
+        """
+        if len(self._tab_columns) <= 1:
+            return
+
+        if not 0 <= column < len(self._tab_columns):
+            return
+
+        target_column_number = column + (-1 if swap_left else 1)
+        if not 0 <= target_column_number < len(self._tab_columns):
+            return
+
+        source_column = self._tab_columns[column]
+        target_column = self._tab_columns[target_column_number]
+
+        temp_source = QWidget()
+        temp_target = QWidget()
+
+        index_source = self._column_splitter.indexOf(source_column)
+        index_target = self._column_splitter.indexOf(target_column)
+
+        self._column_splitter.replaceWidget(index_source, temp_source)
+        self._column_splitter.replaceWidget(index_target, temp_target)
+        self._column_splitter.replaceWidget(index_source, target_column)
+        self._column_splitter.replaceWidget(index_target, source_column)
+
+        self._tab_columns[column], self._tab_columns[target_column_number] = (
+            self._tab_columns[target_column_number], self._tab_columns[column]
+        )
+
+        if self._user_column_widths is not None and len(self._user_column_widths) == len(self._tab_columns):
+            self._user_column_widths[column], self._user_column_widths[target_column_number] = (
+                self._user_column_widths[target_column_number], self._user_column_widths[column]
+            )
+
+        temp_source.deleteLater()
+        temp_target.deleteLater()
+
+        self._update_tabs()
+
     def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
         """
         Add a tab to a column and set up associated data.
@@ -699,7 +796,6 @@ class TabManager(QWidget):
         tab.tab_label_changed.connect(self._on_tab_label_changed)
         tab.close_requested.connect(lambda: self.close_tab_by_id(tab_id, force_close=True))
         tab.preferred_width_changed.connect(self._on_tab_preferred_width_changed)
-        tab.conversation_settings_apply_all_requested.connect(self._on_conversation_settings_apply_all_requested)
 
         self._tabs[tab_id] = tab
 
@@ -776,6 +872,20 @@ class TabManager(QWidget):
 
         self._add_tab_to_column(new_tab, tab_title, target_column)
         self._apply_context_models(new_tab)
+
+        # _remove_tab_from_column closes the context; re-open it in the target
+        # column so the registry stays the source of truth across a move.
+        if self._mindspace_manager.has_mindspace():
+            column_index = self._tab_columns.index(target_column)
+            contexts = self._mindspace_manager.mindspace().contexts()
+            if contexts.get(tab_id) is None:
+                contexts.open(
+                    context_type=new_tab.tool_name(),
+                    path=new_tab.path(),
+                    title=tab_title,
+                    context_id=tab_id,
+                    column=column_index,
+                )
 
         if remove_if_empty and source_column.count() == 0 and len(self._tab_columns) > 1:
             source_column_index = self._tab_columns.index(source_column)
@@ -1158,24 +1268,6 @@ class TabManager(QWidget):
         tab_bar = cast(TabBar, column.tabBar())
         tab_bar.updateGeometry()
 
-    def handle_file_rename(self, old_path: str, new_path: str) -> None:
-        """
-        Handle renaming of files by updating any open tabs.
-
-        Args:
-            old_path: Original path of renamed file
-            new_path: New path after renaming
-        """
-        for tab in self._tabs.values():
-            if tab.path() == old_path:
-                tab.on_path_renamed(new_path)
-                contexts = self._mindspace_manager.mindspace().contexts()
-                contexts.update(
-                    tab.tab_id(),
-                    path=new_path,
-                    title=os.path.basename(new_path),
-                )
-
     def _create_column(self, index: int) -> ColumnWidget:
         """Create a new tab column."""
         column_widget = ColumnWidget()
@@ -1203,6 +1295,7 @@ class TabManager(QWidget):
             tab_bar.double_clicked.connect(self._on_tab_label_double_clicked)
             tab_bar.context_menu_requested.connect(self._on_tab_label_context_menu)
 
+        self._sync_registry_columns()
         self.show_all_columns()
         return column_widget
 
@@ -1227,8 +1320,33 @@ class TabManager(QWidget):
         del self._tab_columns[column_number]
         column.deleteLater()
 
+        self._sync_registry_columns()
+
         # Defer resizing to allow the column to be removed first.
         QTimer.singleShot(0, self.show_all_columns)
+
+    def _sync_registry_columns(self) -> None:
+        """
+        Reconcile the registry's column assignments with the actual Qt layout.
+
+        Creating or removing a column shifts the indices of columns to the
+        right, which can leave the registry's per-context column values stale.
+        This method re-reads each tab's actual Qt column and updates the
+        registry so it stays the source of truth.
+        """
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        for tab in self._tabs.values():
+            column = self._find_column_for_tab(tab)
+            if column is None:
+                continue
+
+            column_index = self._tab_columns.index(column)
+            info = contexts.get(tab.tab_id())
+            if info is not None and info.column != column_index:
+                contexts.update(tab.tab_id(), column=column_index)
 
     def _update_tabs(self, change_focus: bool=True) -> None:
         """ Update the state of all tabs and their labels. """
@@ -1611,29 +1729,6 @@ class TabManager(QWidget):
         current_column = self._tab_columns[current_column_number]
         return current_column.count() > 1
 
-    def split_column(self, split_left: bool) -> None:
-        """Split the current column in two."""
-        if len(self._tab_columns) >= 6:
-            return
-
-        current_column_number = self._get_current_column()
-        current_column = self._tab_columns[current_column_number]
-        if current_column.count() <= 1:
-            return
-
-        target_column_number = current_column_number + (0 if split_left else 1)
-        target_column = self._create_column(target_column_number)
-
-        current_tab = self.get_current_tab()
-        if not current_tab:
-            return
-
-        self._move_tab_between_columns(current_tab, current_column, target_column)
-        self.show_all_columns()
-
-        self._active_column = target_column
-        self._update_tabs()
-
     def can_merge_column(self, merge_left: bool) -> bool:
         """Can the current column be merged?"""
         if len(self._tab_columns) <= 1:
@@ -1644,29 +1739,6 @@ class TabManager(QWidget):
             return False
 
         return True
-
-    def merge_column(self, merge_left: bool) -> None:
-        """Merge with adjacent column."""
-        if len(self._tab_columns) <= 1:
-            return
-
-        current_column_number = self._get_current_column()
-        if (merge_left and current_column_number == 0) or (not merge_left and current_column_number == len(self._tab_columns) -1):
-            return
-
-        target_column_number = current_column_number + (-1 if merge_left else 1)
-        target_column = self._tab_columns[target_column_number]
-        current_column = self._active_column
-
-        while current_column.count() > 0:
-            tab = cast(TabBase, current_column.widget(0))
-            self._move_tab_between_columns(tab, current_column, target_column, remove_if_empty=False)
-
-        self._active_column = target_column
-        column_number = self._tab_columns.index(current_column)
-        self._remove_column_and_resize(column_number, current_column)
-
-        self._update_tabs()
 
     def can_swap_column(self, swap_left: bool) -> bool:
         """
@@ -1691,58 +1763,6 @@ class TabManager(QWidget):
             return False
 
         return True
-
-    def swap_column(self, swap_left: bool) -> None:
-        """
-        Swap the current column with the column to its left or right.
-
-        Args:
-            swap_left: If True, swap with the column to the left.
-                    If False, swap with the column to the right.
-        """
-        if len(self._tab_columns) <= 1:
-            return
-
-        current_column_number = self._get_current_column()
-
-        if swap_left and current_column_number == 0:
-            return
-
-        if not swap_left and current_column_number == len(self._tab_columns) - 1:
-            return
-
-        target_column_number = current_column_number + (-1 if swap_left else 1)
-
-        source_column = self._tab_columns[current_column_number]
-        target_column = self._tab_columns[target_column_number]
-
-        # Create temporary widgets to help with swapping
-        temp_source = QWidget()
-        temp_target = QWidget()
-
-        # Replace the source and target columns with temporary widgets
-        index_source = self._column_splitter.indexOf(source_column)
-        index_target = self._column_splitter.indexOf(target_column)
-
-        self._column_splitter.replaceWidget(index_source, temp_source)
-        self._column_splitter.replaceWidget(index_target, temp_target)
-
-        # Now swap the actual columns in the splitter
-        self._column_splitter.replaceWidget(index_source, target_column)
-        self._column_splitter.replaceWidget(index_target, source_column)
-
-        self._tab_columns[current_column_number], self._tab_columns[target_column_number] = \
-            self._tab_columns[target_column_number], self._tab_columns[current_column_number]
-
-        # Swap user-customised widths to follow their columns.
-        if self._user_column_widths is not None and len(self._user_column_widths) == len(self._tab_columns):
-            self._user_column_widths[current_column_number], self._user_column_widths[target_column_number] = \
-                self._user_column_widths[target_column_number], self._user_column_widths[current_column_number]
-
-        temp_source.deleteLater()
-        temp_target.deleteLater()
-
-        self._update_tabs()
 
     def _get_current_column(self) -> int:
         """Get index of currently active column."""
@@ -2002,17 +2022,6 @@ class TabManager(QWidget):
             user_settings: Current user settings
         """
         self._welcome_widget.set_user_settings(user_settings)
-
-    def close_deleted_file(self, path: str) -> None:
-        """
-        Close any open tabs related to a file being deleted.
-
-        Args:
-            path: Path of file being deleted
-        """
-        for tab in list(self._tabs.values()):
-            if tab.path() == path:
-                self.close_tab_by_id(tab.tab_id(), True)
 
     def close_all_tabs(self) -> bool:
         """

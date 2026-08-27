@@ -1,7 +1,7 @@
 import re
 from typing import Any
 
-from ai import AIConversationHistory, AIMessage
+from ai import AIConversationHistory, AIConversationSettings, AIMessage
 from ai_transcript_conversation import AITranscriptConversation
 
 
@@ -24,6 +24,7 @@ class ConversationContext:
         context_id: str,
         ai_transcript_conversation: AITranscriptConversation,
         on_scroll_to_message: Any = None,
+        on_settings_applied: Any = None,
     ) -> None:
         """
         Initialise the conversation context.
@@ -34,10 +35,14 @@ class ConversationContext:
             on_scroll_to_message: Optional callable(message_id, message_index)
                 invoked when the AI requests a scroll.  The Qt widget supplies
                 this; a CLI would leave it None.
+            on_settings_applied: Optional callable(settings) invoked when
+                conversation settings are broadcast to this context.  The Qt
+                widget supplies this; a CLI would leave it None.
         """
         self._context_id = context_id
         self._transcript = ai_transcript_conversation
         self._on_scroll_to_message = on_scroll_to_message
+        self._on_settings_applied = on_settings_applied
 
     def context_id(self) -> str:
         """Return the stable context identifier."""
@@ -46,6 +51,20 @@ class ConversationContext:
     def ai_transcript_conversation(self) -> AITranscriptConversation:
         """Return the backing AITranscriptConversation."""
         return self._transcript
+
+    def update_conversation_settings(self, settings: AIConversationSettings) -> None:
+        """
+        Update conversation settings on the backing transcript.
+
+        Broadcasts the new settings to the backing conversation and, if a
+        callback was supplied, notifies the UI so it can refresh its display.
+
+        Args:
+            settings: New settings to apply.
+        """
+        self._transcript.update_conversation_settings(settings)
+        if self._on_settings_applied is not None:
+            self._on_settings_applied(settings)
 
     def get_conversation_info(self) -> dict[str, Any]:
         """

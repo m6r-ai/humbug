@@ -47,7 +47,7 @@ You get to see potential problems and apply course-corrections before they lead 
 Other software doesn't do this, but this approach keeps you aware of the decisions being made, and what's being created.
 
 Human oversight is also a key mitigation against AIs doing strange and dangerous things.
-If an AI wants to do something that might have dangerous consequencs it has to seek approval first.
+If an AI wants to do something that might have dangerous consequences it has to seek approval first.
 If you say no, or aren't sure then that operation will not happen (no need to hope the AI will do the right thing).
 
 ### LLMs, lots of LLMs
@@ -83,7 +83,7 @@ This is an incredibly powerful forensic tool.
 Every project lives in its own mindspace: a persistent, context-rich environment with isolated files, settings, and conversations.
 
 Within each mindspace your AIs can automatically manage `AGENTS.md` files that tell new AI sessions how to navigate the code.
-The can also manage `blueprint.md` files that allow AI sessions to understand important what the mindspace is for, and important decisions that have been made about it.
+They can also manage `blueprint.md` files that allow AI sessions to understand what the mindspace is for, and important decisions that have been made about it.
 
 ### OS-agnostic
 
@@ -162,6 +162,16 @@ The tireless ability of LLMs to morph software into new forms also means the sof
 
 The `conversations` directory in the Humbug git repository includes a lot of discussions with AIs about improvements to itself.
 
+## What Humbug is NOT
+
+It can help to say what Humbug is *not*, because a platform like this is easy to mistake for something simpler.
+
+- **Not a chatbot wrapper.** Humbug isn't a thin shell around an AI API. It's a full collaboration environment where both you and your AIs are first-class actors, with equal access to the same tools and UI.
+- **Not a replacement for your operating system.** Humbug provides OS-like ideas — mindspaces, tools, tabs, a filesystem — but runs *on top of* Windows, macOS, or Linux rather than replacing them.
+- **Not just a developer tool.** Although it has strong support for software development, it's designed for any activity where you and your AIs need to work together — writing, research, analysis, and more.
+- **Not a walled garden.** Humbug is open source and designed to be extended. You can add new AI backends, tools, and integrations, and you're never locked into a single provider.
+- **Not a single-AI system.** Multiple AI conversations can run at the same time, and AIs can delegate tasks to other AI instances.
+
 ## Getting Humbug
 
 You can either run Humbug as a developer (see the notes below) or by downloading an executable.
@@ -204,7 +214,7 @@ If you plan to contribute changes, see [CONTRIBUTING.md](./CONTRIBUTING.md) for 
 
 ### Software requirements
 
-Most of Humbug is written in Python so you need a Python developement setup to work with it.
+Most of Humbug is written in Python so you need a Python development setup to work with it.
 
 - Python 3.10 or higher
 

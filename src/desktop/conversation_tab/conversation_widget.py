@@ -5,7 +5,6 @@ from collections.abc import Callable
 import logging
 import os
 import re
-import time
 from typing import Any, cast
 
 from PySide6.QtWidgets import (
@@ -118,7 +117,6 @@ class ConversationWidget(QWidget):
         self._response_reveal_rendered: dict[str, str] = {}
         self._response_reveal_widgets: dict[str, ConversationMessage] = {}
         self._response_reveal_completed: set[str] = set()
-        self._response_reveal_last_render: dict[str, float] = {}
 
         # Widget tracking
         self._messages: list[ConversationMessage] = []
@@ -145,7 +143,7 @@ class ConversationWidget(QWidget):
         self._deferred_scroll_timer_slot: Callable[..., Any] | None = None
 
         # Message border animation state (moved from ConversationInput)
-        self._animated_message: ConversationMessage | None = None
+        self._animated_messages: set[ConversationMessage] = set()
         self._animation_frame = 0
         self._fade_direction = 1
         self._is_animating = False
@@ -180,13 +178,12 @@ class ConversationWidget(QWidget):
         self._sticky_update_timer.setSingleShot(True)
         self._sticky_update_timer.timeout.connect(self._update_sticky_banners)
 
-        # Single-shot timer that re-enables updates on freshly rendered message
-        # widgets once the reveal pass has painted. Parented to self so it is torn
-        # down with the widget before any child message widget is deleted.
-        self._re_enable_updates_timer = QTimer(self)
-        self._re_enable_updates_timer.setSingleShot(True)
-        self._re_enable_updates_timer.timeout.connect(self._on_re_enable_updates)
-        self._pending_re_enable_widgets: list = []
+        # Single-shot timer used to debounce deferred-reveal flushes triggered by
+        # user scrolling.  Parented to self so it is torn down with the widget.
+        self._flush_reveal_timer = QTimer(self)
+        self._flush_reveal_timer.setSingleShot(True)
+        self._flush_reveal_timer.setInterval(150)
+        self._flush_reveal_timer.timeout.connect(self._on_flush_reveal_timeout)
 
         # Zero-delay timers deferring work to the next event-loop turn after layout
         # settles. Parented to self so they are torn down with the widget.
@@ -304,6 +301,11 @@ class ConversationWidget(QWidget):
         self._smooth_scroll_distance: int = 0
         self._smooth_scroll_duration: int = SMOOTH_SCROLL_DURATION_MS
         self._smooth_scroll_time: int = 0
+
+        # Flag set while a programmatic (timer-driven) scroll is in progress so
+        # that _on_scroll_value_changed can distinguish user-initiated scrolls
+        # from animation-driven ones and only flush deferred reveals on the former.
+        self._programmatic_scroll: bool = False
 
         # Setup context menu
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -583,8 +585,8 @@ class ConversationWidget(QWidget):
         if not self._is_animating:
             return
 
-        # Ensure animation is always on the last rendered message.
-        self._update_animated_message()
+        # Ensure animation is on the correct messages.
+        self._update_animated_messages()
 
     def _hide_last_ai_connected_message(self) -> None:
         """
@@ -606,9 +608,8 @@ class ConversationWidget(QWidget):
         if self._message_with_selection == last_message_widget:
             self._message_with_selection = None
 
-        # If this was the animated message, stop animation (new message will start it)
-        if self._animated_message == last_message_widget:
-            self._animated_message = None
+        # If this was an animated message, remove it (new message will start it)
+        self._animated_messages.discard(last_message_widget)
 
     def _delete_user_queued_messages(self) -> None:
         """
@@ -656,7 +657,7 @@ class ConversationWidget(QWidget):
 
         # If we're animating and the animated message visibility changed, update animation
         if self._is_animating:
-            self._update_animated_message()
+            self._update_animated_messages()
 
     def _unregister_ai_conversation_callbacks(self) -> None:
         """Unregister all UI callbacks from the inner AIConversation."""
@@ -828,42 +829,39 @@ class ConversationWidget(QWidget):
         self._debounce_timer.start()
 
     def _start_message_border_animation(self) -> None:
-        """Start animating the last visible message."""
+        """
+        Start animating messages that are streaming or have pending reveals.
+        """
         last_message = self._find_last_visible_message_widget()
         if not last_message:
             return
 
-        self._animated_message = last_message
+        self._animated_messages = {last_message}
         self._animation_frame = 0
         self._fade_direction = 1
         self._is_animating = True
         self._pending_animation_message = False
         self._no_message_counter = 0
 
-        # Start animation on the message
+        # Start animation on the messages
         last_message.set_border_animation(True, self._animation_frame, self._animation_steps)
 
         # Start the slow timer - this runs continuously
         self._slow_timer.start()
 
-    def _transfer_animation_to_message(self, new_message: ConversationMessage) -> None:
-        """Transfer animation to a new message."""
-        # Stop current animation
-        if self._animated_message:
-            self._animated_message.set_border_animation(False)
+    def _update_animated_messages(self) -> None:
+        """
+        Rebuild the set of messages that should be animated.
 
-        # Start new animation (reset frame)
-        self._animated_message = new_message
-        self._animation_frame = 0
-        self._fade_direction = 1
-        new_message.set_border_animation(True, self._animation_frame, self._animation_steps)
-
-    def _update_animated_message(self) -> None:
-        """Update which message is being animated based on visibility."""
+        A message is animated if it is the last visible message while streaming
+        is active, or if it is being tracked by the response-reveal system and
+        has not yet completed (i.e. it still has content being revealed or may
+        receive more content).
+        """
         if not self._is_animating:
             return
 
-        # Find the last visible message
+        # Build the desired set of animated messages.
         last_visible = self._find_last_visible_message_widget()
 
         # If no visible messages, leave animation state as-is.  Messages may
@@ -872,15 +870,30 @@ class ConversationWidget(QWidget):
         if not last_visible:
             return
 
-        # If the currently animated message is different from last visible, transfer
-        if self._animated_message != last_visible:
-            self._transfer_animation_to_message(last_visible)
+        desired: set[ConversationMessage] = {last_visible}
+
+        # Add any rendered message that is still being tracked by the reveal
+        # system (ongoing stream, content not yet fully revealed).
+        for widget in self._response_reveal_widgets.values():
+            if widget.is_rendered():
+                desired.add(widget)
+
+        # Turn off animation for messages that are no longer in the desired set.
+        for msg in self._animated_messages - desired:
+            msg.set_border_animation(False)
+
+        # Turn on animation for messages that are newly in the desired set.
+        for msg in desired - self._animated_messages:
+            msg.set_border_animation(True, self._animation_frame, self._animation_steps)
+
+        self._animated_messages = desired
 
     def _stop_message_border_animation(self) -> None:
         """Stop all message border animation."""
-        if self._animated_message:
-            self._animated_message.set_border_animation(False)
-            self._animated_message = None
+        for msg in self._animated_messages:
+            msg.set_border_animation(False)
+
+        self._animated_messages = set()
 
         self._is_animating = False
         self._slow_timer.stop()
@@ -899,12 +912,12 @@ class ConversationWidget(QWidget):
 
     def _update_border_animation(self) -> None:
         """Update the border animation frame."""
-        if not self._is_animating or not self._animated_message:
+        if not self._is_animating or not self._animated_messages:
             return
 
-        # Check if animated message is still visible
-        if not self._animated_message.is_rendered():
-            self._update_animated_message()
+        # Check if any animated message is no longer visible
+        if any(not msg.is_rendered() for msg in self._animated_messages):
+            self._update_animated_messages()
             return
 
         # Update animation frame with direction
@@ -919,8 +932,9 @@ class ConversationWidget(QWidget):
             self._animation_frame = 1
             self._fade_direction = 1
 
-        # Update the animated message
-        self._animated_message.set_border_animation(True, self._animation_frame, self._animation_steps)
+        # Update all animated messages
+        for msg in self._animated_messages:
+            msg.set_border_animation(True, self._animation_frame, self._animation_steps)
 
     async def _on_request_error(self, retries_exhausted: bool, message: AIMessage) -> None:
         """
@@ -1065,8 +1079,7 @@ class ConversationWidget(QWidget):
             if self._message_with_selection == widget:
                 self._message_with_selection = None
 
-            if self._animated_message == widget:
-                self._animated_message = None
+            self._animated_messages.discard(widget)
 
             self._remove_response_reveal(widget)
             self._messages_layout.removeWidget(widget)
@@ -1103,7 +1116,7 @@ class ConversationWidget(QWidget):
 
         # Update animation target if visibility changed
         if self._is_animating:
-            self._update_animated_message()
+            self._update_animated_messages()
 
     @staticmethod
     def _is_placeholder_ai_content(source: AIMessageSource | None, content: str) -> bool:
@@ -1222,11 +1235,18 @@ class ConversationWidget(QWidget):
             self._response_reveal_timer.stop()
             return
 
+        # When the user is scrolled away from the bottom, defer all rendering.
+        # Targets are kept in memory and flushed in one pass when the user scrolls
+        # back to the bottom (see _flush_pending_reveals).  This avoids repeated
+        # layout reflows that cause visible bouncing while the user is reading
+        # older content.
+        if not self._auto_scroll:
+            return
+
         caught_up_ids: list[str] = []
         final_render_ids: list[str] = []
         did_render = False
         newly_visible_widget: ConversationMessage | None = None
-        rendered_widgets: list[ConversationMessage] = []
         for message_id, target in list(self._response_reveal_targets.items()):
             widget = self._response_reveal_widgets.get(message_id)
             if widget is None:
@@ -1241,15 +1261,8 @@ class ConversationWidget(QWidget):
                 caught_up_ids.append(message_id)
                 continue
 
-            # When scrolled away, throttle renders to ~500ms intervals to reduce
-            # layout churn, but always render immediately when the stream completes.
-            if not self._auto_scroll and message_id not in self._response_reveal_completed:
-                last_render = self._response_reveal_last_render.get(message_id, 0.0)
-                if time.monotonic() - last_render < 0.5:
-                    continue
-
             remaining = len(target) - len(rendered)
-            if remaining <= 0 or not target.startswith(rendered) or not self._auto_scroll:
+            if remaining <= 0 or not target.startswith(rendered):
                 next_text = target
 
             else:
@@ -1258,18 +1271,17 @@ class ConversationWidget(QWidget):
 
                 # Snap the cut point back to the nearest word boundary so we
                 # never expose a lone block marker like "# " or "* " at the
-                # trailing edge of the revealed text.
+                # trailing edge of the revealed text.  Only snap when the
+                # boundary is near the end of the chunk; if the new portion
+                # has no boundary at all, keep the raw cut point rather than
+                # stalling on dense text.
                 if next_text != target:
                     new_portion = next_text[len(rendered):]
                     last_break = max(new_portion.rfind('\n'), new_portion.rfind(' '))
-                    if last_break > 0:
+                    if last_break > 0 and len(new_portion) - last_break <= 20:
                         next_text = rendered + new_portion[:last_break + 1]
 
             widget.set_content(next_text)
-            if not self._auto_scroll:
-                rendered_widgets.append(widget)
-
-            self._response_reveal_last_render[message_id] = time.monotonic()
             if next_text and not rendered and widget.is_rendered():
                 newly_visible_widget = widget
 
@@ -1284,10 +1296,6 @@ class ConversationWidget(QWidget):
             widget = self._response_reveal_widgets.get(message_id)
             final_target = self._response_reveal_targets.get(message_id)
             if widget is not None and final_target is not None:
-                if not self._auto_scroll and widget not in rendered_widgets:
-                    rendered_widgets.append(widget)
-                    widget.setUpdatesEnabled(False)
-
                 widget.set_content(final_target)
 
         for message_id in caught_up_ids:
@@ -1296,14 +1304,13 @@ class ConversationWidget(QWidget):
                 self._response_reveal_rendered.pop(message_id, None)
                 self._response_reveal_widgets.pop(message_id, None)
                 self._response_reveal_completed.discard(message_id)
-                self._response_reveal_last_render.pop(message_id, None)
 
-        if did_render and self._auto_scroll:
+        if did_render:
             self._scroll_to_bottom()
 
         # Ensure animation is always on the last rendered message.
         if newly_visible_widget is not None and self._is_animating:
-            self._update_animated_message()
+            self._update_animated_messages()
 
         if did_render:
             self.trigger_message_animation()
@@ -1311,23 +1318,64 @@ class ConversationWidget(QWidget):
         if not self._response_reveal_targets:
             self._response_reveal_timer.stop()
 
-        if rendered_widgets:
-            self._pending_re_enable_widgets = rendered_widgets
-            self._re_enable_updates_timer.start(5)
+    def _flush_pending_reveals(self, scroll_to_bottom: bool = True) -> None:
+        """
+        Render all deferred response-reveal targets in one pass.
 
-    def _on_re_enable_updates(self) -> None:
-        """Re-enable repaints on widgets deferred by the last render pass."""
-        for w in self._pending_re_enable_widgets:
-            w.setUpdatesEnabled(True)
+        Called when the user scrolls (or submits a new message) while scrolled
+        away from the bottom.  While scrolled away, _advance_response_reveal
+        skips all rendering to avoid layout churn.  This method catches up by
+        writing the full target text to each pending widget.
 
-        self._pending_re_enable_widgets = []
+        When scroll_to_bottom is True the view is snapped to the bottom after
+        rendering; when False the user's current scroll position is preserved
+        so they can read newly-appeared content in place.
+
+        For messages whose stream is still ongoing, the rendered state is
+        preserved so that subsequent _queue_response_reveal calls can incrementally
+        reveal only the new content rather than re-rendering from scratch.
+        Completed messages have all reveal state cleared since no more updates
+        will arrive for them.
+        """
+        if not self._response_reveal_targets:
+            return
+
+        completed_ids: list[str] = []
+        for message_id, target in list(self._response_reveal_targets.items()):
+            widget = self._response_reveal_widgets.get(message_id)
+            if widget is not None:
+                widget.set_content(target)
+
+            # Record what we've rendered so that subsequent updates for ongoing
+            # streams only reveal the new delta, not the full text from scratch.
+            self._response_reveal_rendered[message_id] = target
+            self._response_reveal_targets.pop(message_id, None)
+
+            if message_id in self._response_reveal_completed:
+                completed_ids.append(message_id)
+
+        # Clean up state for completed messages — no more updates will arrive.
+        for message_id in completed_ids:
+            self._response_reveal_rendered.pop(message_id, None)
+            self._response_reveal_widgets.pop(message_id, None)
+            self._response_reveal_completed.discard(message_id)
+
+        self._response_reveal_timer.stop()
+
+        # Newly-rendered messages may need animation.  Update the set so any
+        # message with pending or ongoing reveals gets the border pulse.
+        if self._is_animating:
+            self._update_animated_messages()
+
+        if scroll_to_bottom:
+            self._scroll_to_bottom()
 
     def _response_reveal_chunk_size(self, remaining: int, completed: bool) -> int:
         """Choose a reveal chunk size that stays smooth but catches up quickly."""
         if completed:
-            return min(200, max(20, remaining // 5))
+            return remaining
 
-        return min(20, max(2, remaining // 18))
+        return max(2, min(60, remaining // 4))
 
     def _remove_response_reveal(self, widget: ConversationMessage) -> None:
         """Remove pending reveal state for a widget that is leaving the layout."""
@@ -1339,7 +1387,6 @@ class ConversationWidget(QWidget):
         self._response_reveal_rendered.pop(message_id, None)
         self._response_reveal_widgets.pop(message_id, None)
         self._response_reveal_completed.discard(message_id)
-        self._response_reveal_last_render.pop(message_id, None)
 
         if not self._response_reveal_targets:
             self._response_reveal_timer.stop()
@@ -1428,6 +1475,8 @@ class ConversationWidget(QWidget):
             self._scroll_timer.stop()
             return
 
+        self._programmatic_scroll = True
+
         viewport = self._scroll_area.viewport()
         scrollbar = self._scroll_area.verticalScrollBar()
         current_val = scrollbar.value()
@@ -1467,6 +1516,8 @@ class ConversationWidget(QWidget):
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
+        self._programmatic_scroll = False
+
     def _start_smooth_scroll(self, target_value: int) -> None:
         """
         Start smooth scrolling animation to target value.
@@ -1491,6 +1542,7 @@ class ConversationWidget(QWidget):
 
     def _update_smooth_scroll(self) -> None:
         """Update the smooth scrolling animation."""
+        self._programmatic_scroll = True
         self._smooth_scroll_time += self._smooth_scroll_timer.interval()
         progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
         t = 1 - (1 - progress) ** 3
@@ -1508,6 +1560,7 @@ class ConversationWidget(QWidget):
         )
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(new_position)
+        self._programmatic_scroll = False
         if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
@@ -1547,6 +1600,22 @@ class ConversationWidget(QWidget):
 
         # Check if we're at the bottom
         at_bottom = value == vbar.maximum()
+
+        # When the user manually scrolls while scrolled away from the bottom,
+        # flush any deferred response-reveal content so it appears in place.
+        # Scrolling to the bottom flushes immediately (resuming streaming);
+        # scrolling elsewhere debounces the flush so a steady scroll doesn't
+        # cause repeated layout reflows.  Programmatic scrolls (smooth-scroll
+        # animation, selection-drag auto-scroll) are excluded entirely.
+        if not self._programmatic_scroll:
+            if at_bottom:
+                self._flush_reveal_timer.stop()
+                if not self._auto_scroll:
+                    self._flush_pending_reveals(scroll_to_bottom=True)
+
+            elif not self._auto_scroll:
+                self._flush_reveal_timer.start()
+
         self._auto_scroll = at_bottom
 
         self.has_seen_latest_update_changed.emit(at_bottom)
@@ -1561,6 +1630,16 @@ class ConversationWidget(QWidget):
 
         self._update_sticky_banners()
         self._update_prompt_minimap()
+
+    def _on_flush_reveal_timeout(self) -> None:
+        """
+        Flush deferred reveals after the user's scroll has settled.
+
+        This is debounced by _flush_reveal_timer so that a continuous scroll
+        (e.g. dragging the scrollbar or a trackpad gesture) only triggers one
+        flush after the scroll settles, rather than one per scroll event.
+        """
+        self._flush_pending_reveals(scroll_to_bottom=False)
 
     def _schedule_sticky_update(self) -> None:
         """
@@ -2498,7 +2577,7 @@ class ConversationWidget(QWidget):
         conversation_settings = self._ai_conversation.conversation_settings()
         self._input.set_model(AIConversationSettings.get_display_name(conversation_settings.model, conversation_settings.provider))
 
-        if self._animated_message and self._animated_message not in preserved_messages:
+        if self._animated_messages and not self._animated_messages.issubset(preserved_messages):
             self._stop_message_border_animation()
 
         self.status_updated.emit()
@@ -2560,7 +2639,7 @@ class ConversationWidget(QWidget):
         conversation_settings = self._ai_conversation.conversation_settings()
         self._input.set_model(AIConversationSettings.get_display_name(conversation_settings.model, conversation_settings.provider))
 
-        if self._animated_message and self._animated_message not in preserved_messages:
+        if self._animated_messages and not self._animated_messages.issubset(preserved_messages):
             self._stop_message_border_animation()
 
         self.status_updated.emit()
@@ -2659,6 +2738,10 @@ class ConversationWidget(QWidget):
             self._last_submitted_message = content
 
             # Scroll to the bottom and restore auto-scrolling
+            if not self._auto_scroll:
+                self._flush_reveal_timer.stop()
+                self._flush_pending_reveals()
+
             self._auto_scroll = True
             self._scroll_to_bottom()
 

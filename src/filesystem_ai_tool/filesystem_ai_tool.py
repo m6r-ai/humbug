@@ -39,6 +39,10 @@ class FileSystemAITool(AITool):
     Provides secure file and directory operations with proper error handling and logging.
     """
 
+    _MAX_RESPONSE_BYTES = 64 * 1024
+    _DEFAULT_MAX_RESULTS = 100
+    _DEFAULT_SEARCH_FILES_MAX_RESULTS = 50
+
     def __init__(
         self,
         resolve_path: Callable[[str], tuple[Path, str]],
@@ -175,7 +179,12 @@ class FileSystemAITool(AITool):
                 AIToolParameter(
                     name="max_results",
                     type="integer",
-                    description="Maximum number of matching lines to return (search_file and search_files operations)",
+                    description=(
+                        "Maximum number of matches to return. An error is raised if the limit is exceeded "
+                        "(search_file, search_files, and find_files operations). "
+                        f"Defaults: {self._DEFAULT_MAX_RESULTS} for search_file and find_files, "
+                        f"{self._DEFAULT_SEARCH_FILES_MAX_RESULTS} for search_files."
+                    ),
                     required=False
                 ),
                 AIToolParameter(
@@ -353,6 +362,9 @@ class FileSystemAITool(AITool):
                 required_parameters={"path", "search_text"},
                 description="Search for text or a regular expression within a single file. "
                     "Returns matching lines with line numbers. Supports case_sensitive and regexp flags. "
+                    f"An error is raised if the number of matches exceeds max_results "
+                    f"(default {self._DEFAULT_MAX_RESULTS}) or the response exceeds "
+                    f"{self._MAX_RESPONSE_BYTES // 1024} KB. "
                     "Obeys the same external file access rules as read_file. "
                     "Note: match content is returned as JSON-encoded strings, so special characters "
                     "(double quotes, backslashes, etc.) will appear escaped — these escape sequences "
@@ -367,6 +379,9 @@ class FileSystemAITool(AITool):
                 description="Recursively search for text or a regular expression across all files under a directory. "
                     "The path may contain wildcards (e.g. 'src/*.py' searches .py files directly in src). "
                     "Results are grouped by file. Use include to filter by filename glob (e.g. '*.py'). "
+                    f"An error is raised if the number of matches exceeds max_results "
+                    f"(default {self._DEFAULT_SEARCH_FILES_MAX_RESULTS}) or the response exceeds "
+                    f"{self._MAX_RESPONSE_BYTES // 1024} KB. "
                     "Each file encountered obeys the same external file access rules as read_file. "
                     "Note: match content is returned as JSON-encoded strings, so special characters "
                     "(double quotes, backslashes, etc.) will appear escaped — these escape sequences "
@@ -383,6 +398,9 @@ class FileSystemAITool(AITool):
                     "in src, 'src/*/tests/*.py' searches nested test directories). "
                     "Use the name parameter to specify the filename pattern (e.g. 'AGENTS.md', '*.py'). "
                     "If name is omitted, all files are returned. "
+                    f"An error is raised if the number of matches exceeds max_results "
+                    f"(default {self._DEFAULT_MAX_RESULTS}) or the response exceeds "
+                    f"{self._MAX_RESPONSE_BYTES // 1024} KB. "
                     "Returns a list of matching relative paths."
             ),
             "transform_file": AIToolOperationDefinition(
@@ -1640,6 +1658,49 @@ class FileSystemAITool(AITool):
         except Exception:
             return True
 
+    @staticmethod
+    def _collect_files_recursive(base_path: Path) -> list[Path]:
+        """
+        Recursively collect all files under base_path without following symlinks.
+
+        Uses os.walk with followlinks=False so that symlinked directories are not
+        traversed.  This prevents the search from escaping the mindspace boundary
+        via symlinks (e.g. venv symlinks to system Python installations).
+
+        Args:
+            base_path: Directory to walk
+
+        Returns:
+            Sorted list of file paths under base_path, excluding symlinks
+        """
+        files: list[Path] = []
+        for root, dirs, filenames in os.walk(base_path, followlinks=False):
+            # Skip symlinked directories in-place so os.walk does not descend into them
+            dirs[:] = [d for d in dirs if not (Path(root) / d).is_symlink()]
+            for filename in filenames:
+                file_path = Path(root) / filename
+                if not file_path.is_symlink():
+                    files.append(file_path)
+
+        return sorted(files)
+
+    @staticmethod
+    def _collect_files_glob(base_path: Path, glob_suffix: str) -> list[Path]:
+        """
+        Collect files matching a glob pattern without following symlinks.
+
+        Args:
+            base_path: Directory to search in
+            glob_suffix: Glob pattern (non-recursive, e.g. '*.py')
+
+        Returns:
+            Sorted list of matching file paths, excluding symlinks
+        """
+        return sorted(
+            p for p in base_path.glob(glob_suffix)
+            if p.is_file() and not p.is_symlink()
+        )
+
     def _compile_search_pattern(self, search_text: str, case_sensitive: bool, regexp: bool) -> re.Pattern:
         """
         Compile a search pattern from the given parameters.
@@ -1716,7 +1777,7 @@ class FileSystemAITool(AITool):
         search_text = self._get_required_str_value("search_text", arguments)
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
         regexp = self._get_optional_bool_value("regexp", arguments, False)
-        max_results = self._get_optional_int_value("max_results", arguments, 100)
+        max_results = self._get_optional_int_value("max_results", arguments, self._DEFAULT_MAX_RESULTS)
         encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
 
         pattern = self._compile_search_pattern(search_text, case_sensitive, regexp)
@@ -1737,11 +1798,25 @@ class FileSystemAITool(AITool):
             raise AIToolExecutionError(f"Failed to read file: {str(e)}") from e
 
         matches = []
+        max_response_bytes = self._MAX_RESPONSE_BYTES
+        response_bytes = 0
         for line_num, line in enumerate(lines, 1):
             if pattern.search(line):
-                matches.append({"line": line_num, "content": line.rstrip("\n")})
+                content = line.rstrip("\n")
+                match_bytes = len(json.dumps({"line": line_num, "content": content}).encode("utf-8"))
+                if response_bytes + match_bytes > max_response_bytes:
+                    raise AIToolExecutionError(
+                        f"Search results exceed the {max_response_bytes // 1024} KB response size limit. "
+                        "Use a more specific search pattern or reduce max_results."
+                    )
+
+                response_bytes += match_bytes
+                matches.append({"line": line_num, "content": content})
                 if len(matches) >= cast(int, max_results):
-                    break
+                    raise AIToolExecutionError(
+                        f"Search results exceed the max_results limit of {max_results}. "
+                        "Use a more specific search pattern or increase max_results."
+                    )
 
         warning = None
         if not matches and regexp:
@@ -1749,9 +1824,21 @@ class FileSystemAITool(AITool):
             if fixed_pattern is not None:
                 for line_num, line in enumerate(lines, 1):
                     if fixed_pattern.search(line):
-                        matches.append({"line": line_num, "content": line.rstrip("\n")})
+                        content = line.rstrip("\n")
+                        match_bytes = len(json.dumps({"line": line_num, "content": content}).encode("utf-8"))
+                        if response_bytes + match_bytes > max_response_bytes:
+                            raise AIToolExecutionError(
+                                f"Search results exceed the {max_response_bytes // 1024} KB response size limit. "
+                                "Use a more specific search pattern or reduce max_results."
+                            )
+
+                        response_bytes += match_bytes
+                        matches.append({"line": line_num, "content": content})
                         if len(matches) >= cast(int, max_results):
-                            break
+                            raise AIToolExecutionError(
+                                f"Search results exceed the max_results limit of {max_results}. "
+                                "Use a more specific search pattern or increase max_results."
+                            )
 
                 if matches:
                     warning = (
@@ -1766,7 +1853,6 @@ class FileSystemAITool(AITool):
             "case_sensitive": case_sensitive,
             "regexp": regexp,
             "match_count": len(matches),
-            "truncated": len(matches) >= cast(int, max_results),
             "matches": matches
         }
         if warning is not None:
@@ -1796,7 +1882,7 @@ class FileSystemAITool(AITool):
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
         regexp = self._get_optional_bool_value("regexp", arguments, False)
         include = self._get_optional_str_value("include", arguments, None)
-        max_results = self._get_optional_int_value("max_results", arguments, 50)
+        max_results = self._get_optional_int_value("max_results", arguments, self._DEFAULT_SEARCH_FILES_MAX_RESULTS)
         encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
 
         try:
@@ -1812,7 +1898,6 @@ class FileSystemAITool(AITool):
                 "regexp": regexp,
                 "include": include,
                 "total_matches": 0,
-                "truncated": False,
                 "files_with_matches": 0,
                 "results": []
             }
@@ -1825,7 +1910,7 @@ class FileSystemAITool(AITool):
 
         if glob_result is not None:
             base_path, glob_suffix, display_path = glob_result
-            candidate_files = sorted(base_path.glob(glob_suffix))
+            candidate_files = self._collect_files_glob(base_path, glob_suffix)
             is_external = self._is_path_external(base_path)
 
         else:
@@ -1842,7 +1927,6 @@ class FileSystemAITool(AITool):
                     "regexp": regexp,
                     "include": include,
                     "total_matches": 0,
-                    "truncated": False,
                     "files_with_matches": 0,
                     "results": []
                 }
@@ -1864,15 +1948,14 @@ class FileSystemAITool(AITool):
                 raise AIToolExecutionError(f"Path is not a directory: {path_arg}")
 
             base_path = path
-            candidate_files = sorted(path.rglob("*"))
+            candidate_files = self._collect_files_recursive(base_path)
             is_external = self._is_path_external(base_path)
 
-        max_response_bytes = 64 * 1024
+        max_response_bytes = self._MAX_RESPONSE_BYTES
         response_bytes = 0
         pattern = self._compile_search_pattern(search_text, case_sensitive, regexp)
 
         total_matches = 0
-        truncated = False
         files_with_matches: list[dict[str, Any]] = []
 
         for file_path in candidate_files:
@@ -1913,7 +1996,7 @@ class FileSystemAITool(AITool):
                     match_bytes = len(json.dumps({"line": line_num, "content": content}).encode("utf-8"))
                     if response_bytes + match_bytes > max_response_bytes:
                         raise AIToolExecutionError(
-                            f"Search results exceed the {max_response_bytes // 1024}KB response size limit. "
+                            f"Search results exceed the {max_response_bytes // 1024} KB response size limit. "
                             "Use a more specific search pattern, the include filter, or reduce max_results."
                         )
 
@@ -1921,8 +2004,10 @@ class FileSystemAITool(AITool):
                     file_matches.append({"line": line_num, "content": content})
                     total_matches += 1
                     if total_matches >= cast(int, max_results):
-                        truncated = True
-                        break
+                        raise AIToolExecutionError(
+                            f"Search results exceed the max_results limit of {max_results}. "
+                            "Use a more specific search pattern, the include filter, or reduce max_results."
+                        )
 
             if file_matches:
                 try:
@@ -1937,9 +2022,6 @@ class FileSystemAITool(AITool):
                     "match_count": len(file_matches),
                     "matches": file_matches
                 })
-
-            if truncated:
-                break
 
         warning = None
         if total_matches == 0 and regexp:
@@ -1983,7 +2065,7 @@ class FileSystemAITool(AITool):
                             match_bytes = len(json.dumps({"line": line_num, "content": content}).encode("utf-8"))
                             if response_bytes + match_bytes > max_response_bytes:
                                 raise AIToolExecutionError(
-                                    f"Search results exceed the {max_response_bytes // 1024}KB response size limit. "
+                                    f"Search results exceed the {max_response_bytes // 1024} KB response size limit. "
                                     "Use a more specific search pattern, the include filter, or reduce max_results."
                                 )
 
@@ -1991,8 +2073,10 @@ class FileSystemAITool(AITool):
                             file_matches.append({"line": line_num, "content": content})
                             total_matches += 1
                             if total_matches >= cast(int, max_results):
-                                truncated = True
-                                break
+                                raise AIToolExecutionError(
+                                    f"Search results exceed the max_results limit of {max_results}. "
+                                    "Use a more specific search pattern, the include filter, or reduce max_results."
+                                )
 
                     if file_matches:
                         try:
@@ -2008,9 +2092,6 @@ class FileSystemAITool(AITool):
                             "matches": file_matches,
                         })
 
-                    if truncated:
-                        break
-
                 if total_matches > 0:
                     warning = (
                         "Pattern contained '\\|' which matches a literal '|' character, not alternation. "
@@ -2025,7 +2106,6 @@ class FileSystemAITool(AITool):
             "regexp": regexp,
             "include": include,
             "total_matches": total_matches,
-            "truncated": truncated,
             "files_with_matches": len(files_with_matches),
             "results": files_with_matches
         }
@@ -2054,7 +2134,7 @@ class FileSystemAITool(AITool):
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
         name = self._get_optional_str_value("name", arguments, None)
-        max_results = self._get_optional_int_value("max_results", arguments, 1000)
+        max_results = self._get_optional_int_value("max_results", arguments, self._DEFAULT_MAX_RESULTS)
 
         try:
             glob_result = await self._resolve_glob_path(
@@ -2066,7 +2146,6 @@ class FileSystemAITool(AITool):
                 "directory": path_arg,
                 "name": name,
                 "total_matches": 0,
-                "truncated": False,
                 "matches": []
             }
             return AIToolResult(
@@ -2078,7 +2157,7 @@ class FileSystemAITool(AITool):
 
         if glob_result is not None:
             base_path, glob_suffix, display_path = glob_result
-            candidate_files = sorted(base_path.glob(glob_suffix))
+            candidate_files = self._collect_files_glob(base_path, glob_suffix)
             is_external = self._is_path_external(base_path)
 
         else:
@@ -2092,7 +2171,6 @@ class FileSystemAITool(AITool):
                     "directory": path_arg,
                     "name": name,
                     "total_matches": 0,
-                    "truncated": False,
                     "matches": []
                 }
                 return AIToolResult(
@@ -2113,11 +2191,12 @@ class FileSystemAITool(AITool):
                 raise AIToolExecutionError(f"Path is not a directory: {path_arg}")
 
             base_path = path
-            candidate_files = sorted(path.rglob("*"))
+            candidate_files = self._collect_files_recursive(base_path)
             is_external = self._is_path_external(base_path)
 
         matches: list[str] = []
-        truncated = False
+        max_response_bytes = self._MAX_RESPONSE_BYTES
+        response_bytes = 0
 
         for file_path in candidate_files:
             if not file_path.is_file():
@@ -2142,20 +2221,30 @@ class FileSystemAITool(AITool):
 
             try:
                 rel = file_path.relative_to(base_path)
-                matches.append(str(Path(display_path) / rel))
+                match_path = str(Path(display_path) / rel)
 
             except ValueError:
-                matches.append(str(file_path))
+                match_path = str(file_path)
 
+            match_bytes = len(json.dumps(match_path).encode("utf-8"))
+            if response_bytes + match_bytes > max_response_bytes:
+                raise AIToolExecutionError(
+                    f"Search results exceed the {max_response_bytes // 1024} KB response size limit. "
+                    "Use a more specific name pattern, a narrower path, or reduce max_results."
+                )
+
+            response_bytes += match_bytes
+            matches.append(match_path)
             if len(matches) >= cast(int, max_results):
-                truncated = True
-                break
+                raise AIToolExecutionError(
+                    f"Search results exceed the max_results limit of {max_results}. "
+                    "Use a more specific name pattern, a narrower path, or increase max_results."
+                )
 
         result = {
             "directory": display_path,
             "name": name,
             "total_matches": len(matches),
-            "truncated": truncated,
             "matches": matches
         }
 

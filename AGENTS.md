@@ -4,6 +4,11 @@
 
 Humbug is a platform for human-AI collaboration, written in Python. This document describes how AI agents should navigate the codebase.
 
+## Architecture decisions
+
+Significant architectural and design decisions are recorded as ADRs in [`docs/adr/`](docs/adr/README.md), which holds the definitive index and the conventions for writing new ADRs.
+Consult it before proposing changes that touch established decisions.
+
 ## Tool use
 
 - If you want to use the terminal you will require user authorization every time you send keystrokes.  If you load files into

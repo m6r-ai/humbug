@@ -1621,12 +1621,13 @@ class MainWindow(QMainWindow):
         Args:
             path: Path of file being deleted
         """
-        tabs = [t for t in self._tab_manager.get_all_tabs() if t.path() == path]
-        self._tab_manager.close_deleted_file(path)
-        for tab in tabs:
+        contexts = self._mindspace_manager.mindspace().contexts()
+        matching = [info for info in contexts.list_all() if info.path == path]
+        for info in matching:
+            contexts.close(info.context_id)
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"Deleted '{path}' - closed {tab.tool_name()} tab\ntab ID: {tab.tab_id()}"
+                f"Deleted '{path}' - closed {info.context_type} tab\ntab ID: {info.context_id}"
             )
 
     def _on_sidebar_file_renamed(self, old_path: str, new_path: str) -> None:
@@ -1637,7 +1638,15 @@ class MainWindow(QMainWindow):
             old_path: Original path of renamed file
             new_path: New path after renaming
         """
-        self._tab_manager.handle_file_rename(old_path, new_path)
+        contexts = self._mindspace_manager.mindspace().contexts()
+        for info in contexts.list_all():
+            if info.path == old_path:
+                contexts.update(
+                    info.context_id,
+                    path=new_path,
+                    title=os.path.basename(new_path),
+                )
+
         if self._mindspace_manager.has_mindspace():
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -1652,7 +1661,15 @@ class MainWindow(QMainWindow):
             old_path: Original path of moved file
             new_path: New path after moving
         """
-        self._tab_manager.handle_file_rename(old_path, new_path)
+        contexts = self._mindspace_manager.mindspace().contexts()
+        for info in contexts.list_all():
+            if info.path == old_path:
+                contexts.update(
+                    info.context_id,
+                    path=new_path,
+                    title=os.path.basename(new_path),
+                )
+
         if self._mindspace_manager.has_mindspace():
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -1894,15 +1911,38 @@ class MainWindow(QMainWindow):
 
     def _on_split_column(self, split_left: bool) -> None:
         """Split the current column."""
-        self._tab_manager.split_column(split_left)
+        current_tab = self._tab_manager.get_current_tab()
+        if current_tab is None:
+            return
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        contexts.split_column(current_tab.tab_id(), split_left)
 
     def _on_merge_column(self, merge_left: bool) -> None:
         """Merge the current column."""
-        self._tab_manager.merge_column(merge_left)
+        current_tab = self._tab_manager.get_current_tab()
+        if current_tab is None:
+            return
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        info = contexts.get(current_tab.tab_id())
+        if info is None:
+            return
+
+        contexts.merge_column(info.column, merge_left)
 
     def _on_swap_column(self, swap_left: bool) -> None:
         """Swap the current column."""
-        self._tab_manager.swap_column(swap_left)
+        current_tab = self._tab_manager.get_current_tab()
+        if current_tab is None:
+            return
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        info = contexts.get(current_tab.tab_id())
+        if info is None:
+            return
+
+        contexts.swap_column(info.column, swap_left)
 
     def _on_style_changed(self) -> None:
         """Handle style changes by updating all styled widgets."""
@@ -2209,7 +2249,7 @@ class MainWindow(QMainWindow):
             self._logger.error("No current tab to close")
             return
 
-        self._tab_manager.close_tab_by_id(tab.tab_id())
+        self._mindspace_manager.mindspace().contexts().close(tab.tab_id())
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
             f"User closed tab\nTab ID: {tab.tab_id()}"
@@ -2337,7 +2377,7 @@ class MainWindow(QMainWindow):
         def _on_apply_ai_settings_to_all_requested(new_settings: MindspaceSettings) -> None:
             try:
                 self._mindspace_manager.update_settings(new_settings)
-                self._tab_manager.apply_conversation_settings_to_all_tabs(
+                self._mindspace_manager.mindspace().apply_ai_settings_to_all(
                     AIConversationSettings(
                         model=new_settings.model,
                         provider=new_settings.provider,
