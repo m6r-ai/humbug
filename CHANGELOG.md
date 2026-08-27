@@ -6,6 +6,11 @@ New features:
 
 - Added Gemini 3.7 Flash, and removed Gemini 3.5 Flash.
 - Added Gemini 3.5 Flash lite, and removed Gemini 3.1 Flash lite.
+- Removed GPT-5.4 and GPT-5.5.
+- Added GLM 5.3 Flash (Z.ai backend).
+- Removed GLM 4.5 series models and GLM 5.1.
+- Removed MiniMax M2.7.
+- Removed GPT-OSS models from the Ollama cloud backend.
 
 Bug fixes:
 
