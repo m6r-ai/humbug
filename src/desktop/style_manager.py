@@ -284,7 +284,7 @@ class StyleManager(QObject):
             update_color = palette.resolve(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
 
             for icon_name in (
-                "arrow-right", "arrow-left", "arrow-up", "arrow-down", "close", "check",
+                "arrow-right", "arrow-left", "arrow-up", "arrow-down", "close", "check", "add",
                 "expand-right", "expand-left", "expand-down", "info", "warning", "critical",
                 "question", "save", "floppy", "cog", "copy", "fork", "delete", "edit", "submit",
                 "stop", "paperclip", "minimize", "maximize", "restore"

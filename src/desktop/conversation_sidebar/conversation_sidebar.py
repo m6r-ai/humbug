@@ -4,7 +4,8 @@ import logging
 import os
 import shutil
 
-from PySide6.QtCore import Signal, QModelIndex, Qt, QPoint, QTimer
+from PySide6.QtCore import Signal, QModelIndex, QSize, Qt, QPoint, QTimer
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QMenu
 )
@@ -65,6 +66,10 @@ class ConversationSidebar(SidebarBase):
         self._header = SidebarSectionHeader(
             self._language_manager.strings().mindspace_conversations,
             self
+        )
+        self._new_conversation_button = self._header.add_action_button()
+        self._new_conversation_button.clicked.connect(
+            lambda: self.new_conversation_requested.emit(self._conversations_path or "")
         )
         layout.addWidget(self._header)
 
@@ -131,6 +136,8 @@ class ConversationSidebar(SidebarBase):
 
         # Auto-scroll state for drag operations
         self._auto_scroll_active = False
+
+        self._on_language_changed()
 
     def _is_conversation_file(self, file_path: str) -> bool:
         """Check if a file is a conversation file (.conv or .json)."""
@@ -1229,7 +1236,10 @@ class ConversationSidebar(SidebarBase):
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
-        self._header.set_title(self._language_manager.strings().mindspace_conversations)
+        strings = self._language_manager.strings()
+        self._header.set_title(strings.mindspace_conversations)
+        self._new_conversation_button.setToolTip(strings.new_conversation)
+        self._new_conversation_button.setAccessibleName(strings.new_conversation)
         self.apply_style()
 
     def apply_style(self) -> None:
@@ -1247,6 +1257,8 @@ class ConversationSidebar(SidebarBase):
         self._dag_model.beginResetModel()
         self._dag_model.endResetModel()
         file_icon_size = round(16 * zoom_factor)
+        self._new_conversation_button.setIcon(QIcon(self._style_manager.scale_icon("add", 16)))
+        self._new_conversation_button.setIconSize(QSize(file_icon_size, file_icon_size))
         # Update font size for tree
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)

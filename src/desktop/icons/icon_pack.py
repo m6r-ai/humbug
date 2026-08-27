@@ -85,6 +85,12 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
                 d="M16,16 L48,48 M48,16 L16,48"/>
         </svg>
     ''',
+    "add": '''
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <path stroke="{color}" stroke-width="6" fill="none" stroke-linecap="round"
+                d="M32,16 L32,48 M16,32 L48,32"/>
+        </svg>
+    ''',
     "check": '''
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
             <path stroke="{color}" stroke-width="6" fill="none"

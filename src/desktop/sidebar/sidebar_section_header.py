@@ -1,7 +1,7 @@
 """Section header widget for sidebar panes."""
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QToolButton, QWidget
 
 from desktop.color_role import ColorRole
 from desktop.style_manager import StyleManager
@@ -31,12 +31,29 @@ class SidebarSectionHeader(QWidget):
         """Set the header title text."""
         self._title_label.setText(title)
 
+    def add_action_button(self) -> QToolButton:
+        """
+        Create and append a right-aligned icon action button to the header.
+
+        Returns:
+            The new QToolButton, for the caller to set its icon, tooltip, and
+            clicked handler.
+        """
+        button = QToolButton(self)
+        button.setObjectName("SidebarSectionHeaderButton")
+        button.setAutoRaise(True)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.layout().addWidget(button)
+        return button
+
     def apply_style(self) -> None:
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
         background = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
         text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
+        button_hover = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
+        button_pressed = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)
 
         font = self._title_label.font()
         font.setPointSizeF(base_font_size * zoom_factor)
@@ -50,5 +67,16 @@ class SidebarSectionHeader(QWidget):
             QWidget#SidebarSectionHeader QLabel {{
                 color: {text};
                 background: transparent;
+            }}
+            QWidget#SidebarSectionHeader QToolButton#SidebarSectionHeaderButton {{
+                background-color: transparent;
+                border: none;
+                padding: 2px;
+            }}
+            QWidget#SidebarSectionHeader QToolButton#SidebarSectionHeaderButton:hover {{
+                background-color: {button_hover};
+            }}
+            QWidget#SidebarSectionHeader QToolButton#SidebarSectionHeaderButton:pressed {{
+                background-color: {button_pressed};
             }}
         """)
