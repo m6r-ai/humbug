@@ -11,6 +11,8 @@ New features:
 - Removed GLM 4.5 series models and GLM 5.1.
 - Removed MiniMax M2.7.
 - Removed GPT-OSS models from the Ollama cloud backend.
+- Border animation now applies to all messages with pending or ongoing content, not just the last visible one.  This
+  ensures the correct message boxes are highlighted after scrolling and deferred content is revealed.
 
 Bug fixes:
 

@@ -143,7 +143,7 @@ class ConversationWidget(QWidget):
         self._deferred_scroll_timer_slot: Callable[..., Any] | None = None
 
         # Message border animation state (moved from ConversationInput)
-        self._animated_message: ConversationMessage | None = None
+        self._animated_messages: set[ConversationMessage] = set()
         self._animation_frame = 0
         self._fade_direction = 1
         self._is_animating = False
@@ -578,8 +578,8 @@ class ConversationWidget(QWidget):
         if not self._is_animating:
             return
 
-        # Ensure animation is always on the last rendered message.
-        self._update_animated_message()
+        # Ensure animation is on the correct messages.
+        self._update_animated_messages()
 
     def _hide_last_ai_connected_message(self) -> None:
         """
@@ -601,9 +601,8 @@ class ConversationWidget(QWidget):
         if self._message_with_selection == last_message_widget:
             self._message_with_selection = None
 
-        # If this was the animated message, stop animation (new message will start it)
-        if self._animated_message == last_message_widget:
-            self._animated_message = None
+        # If this was an animated message, remove it (new message will start it)
+        self._animated_messages.discard(last_message_widget)
 
     def _delete_user_queued_messages(self) -> None:
         """
@@ -651,7 +650,7 @@ class ConversationWidget(QWidget):
 
         # If we're animating and the animated message visibility changed, update animation
         if self._is_animating:
-            self._update_animated_message()
+            self._update_animated_messages()
 
     def _unregister_ai_conversation_callbacks(self) -> None:
         """Unregister all UI callbacks from the inner AIConversation."""
@@ -823,42 +822,39 @@ class ConversationWidget(QWidget):
         self._debounce_timer.start()
 
     def _start_message_border_animation(self) -> None:
-        """Start animating the last visible message."""
+        """
+        Start animating messages that are streaming or have pending reveals.
+        """
         last_message = self._find_last_visible_message_widget()
         if not last_message:
             return
 
-        self._animated_message = last_message
+        self._animated_messages = {last_message}
         self._animation_frame = 0
         self._fade_direction = 1
         self._is_animating = True
         self._pending_animation_message = False
         self._no_message_counter = 0
 
-        # Start animation on the message
+        # Start animation on the messages
         last_message.set_border_animation(True, self._animation_frame, self._animation_steps)
 
         # Start the slow timer - this runs continuously
         self._slow_timer.start()
 
-    def _transfer_animation_to_message(self, new_message: ConversationMessage) -> None:
-        """Transfer animation to a new message."""
-        # Stop current animation
-        if self._animated_message:
-            self._animated_message.set_border_animation(False)
+    def _update_animated_messages(self) -> None:
+        """
+        Rebuild the set of messages that should be animated.
 
-        # Start new animation (reset frame)
-        self._animated_message = new_message
-        self._animation_frame = 0
-        self._fade_direction = 1
-        new_message.set_border_animation(True, self._animation_frame, self._animation_steps)
-
-    def _update_animated_message(self) -> None:
-        """Update which message is being animated based on visibility."""
+        A message is animated if it is the last visible message while streaming
+        is active, or if it is being tracked by the response-reveal system and
+        has not yet completed (i.e. it still has content being revealed or may
+        receive more content).
+        """
         if not self._is_animating:
             return
 
-        # Find the last visible message
+        # Build the desired set of animated messages.
         last_visible = self._find_last_visible_message_widget()
 
         # If no visible messages, leave animation state as-is.  Messages may
@@ -867,15 +863,30 @@ class ConversationWidget(QWidget):
         if not last_visible:
             return
 
-        # If the currently animated message is different from last visible, transfer
-        if self._animated_message != last_visible:
-            self._transfer_animation_to_message(last_visible)
+        desired: set[ConversationMessage] = {last_visible}
+
+        # Add any rendered message that is still being tracked by the reveal
+        # system (ongoing stream, content not yet fully revealed).
+        for widget in self._response_reveal_widgets.values():
+            if widget.is_rendered():
+                desired.add(widget)
+
+        # Turn off animation for messages that are no longer in the desired set.
+        for msg in self._animated_messages - desired:
+            msg.set_border_animation(False)
+
+        # Turn on animation for messages that are newly in the desired set.
+        for msg in desired - self._animated_messages:
+            msg.set_border_animation(True, self._animation_frame, self._animation_steps)
+
+        self._animated_messages = desired
 
     def _stop_message_border_animation(self) -> None:
         """Stop all message border animation."""
-        if self._animated_message:
-            self._animated_message.set_border_animation(False)
-            self._animated_message = None
+        for msg in self._animated_messages:
+            msg.set_border_animation(False)
+
+        self._animated_messages = set()
 
         self._is_animating = False
         self._slow_timer.stop()
@@ -894,12 +905,12 @@ class ConversationWidget(QWidget):
 
     def _update_border_animation(self) -> None:
         """Update the border animation frame."""
-        if not self._is_animating or not self._animated_message:
+        if not self._is_animating or not self._animated_messages:
             return
 
-        # Check if animated message is still visible
-        if not self._animated_message.is_rendered():
-            self._update_animated_message()
+        # Check if any animated message is no longer visible
+        if any(not msg.is_rendered() for msg in self._animated_messages):
+            self._update_animated_messages()
             return
 
         # Update animation frame with direction
@@ -914,8 +925,9 @@ class ConversationWidget(QWidget):
             self._animation_frame = 1
             self._fade_direction = 1
 
-        # Update the animated message
-        self._animated_message.set_border_animation(True, self._animation_frame, self._animation_steps)
+        # Update all animated messages
+        for msg in self._animated_messages:
+            msg.set_border_animation(True, self._animation_frame, self._animation_steps)
 
     async def _on_request_error(self, retries_exhausted: bool, message: AIMessage) -> None:
         """
@@ -1060,8 +1072,7 @@ class ConversationWidget(QWidget):
             if self._message_with_selection == widget:
                 self._message_with_selection = None
 
-            if self._animated_message == widget:
-                self._animated_message = None
+            self._animated_messages.discard(widget)
 
             self._remove_response_reveal(widget)
             self._messages_layout.removeWidget(widget)
@@ -1098,7 +1109,7 @@ class ConversationWidget(QWidget):
 
         # Update animation target if visibility changed
         if self._is_animating:
-            self._update_animated_message()
+            self._update_animated_messages()
 
     @staticmethod
     def _is_placeholder_ai_content(source: AIMessageSource | None, content: str) -> bool:
@@ -1292,7 +1303,7 @@ class ConversationWidget(QWidget):
 
         # Ensure animation is always on the last rendered message.
         if newly_visible_widget is not None and self._is_animating:
-            self._update_animated_message()
+            self._update_animated_messages()
 
         if did_render:
             self.trigger_message_animation()
@@ -1343,6 +1354,11 @@ class ConversationWidget(QWidget):
             self._response_reveal_completed.discard(message_id)
 
         self._response_reveal_timer.stop()
+
+        # Newly-rendered messages may need animation.  Update the set so any
+        # message with pending or ongoing reveals gets the border pulse.
+        if self._is_animating:
+            self._update_animated_messages()
 
         if scroll_to_bottom:
             self._scroll_to_bottom()
@@ -2540,7 +2556,7 @@ class ConversationWidget(QWidget):
         conversation_settings = self._ai_conversation.conversation_settings()
         self._input.set_model(AIConversationSettings.get_display_name(conversation_settings.model, conversation_settings.provider))
 
-        if self._animated_message and self._animated_message not in preserved_messages:
+        if self._animated_messages and not self._animated_messages.issubset(preserved_messages):
             self._stop_message_border_animation()
 
         self.status_updated.emit()
@@ -2602,7 +2618,7 @@ class ConversationWidget(QWidget):
         conversation_settings = self._ai_conversation.conversation_settings()
         self._input.set_model(AIConversationSettings.get_display_name(conversation_settings.model, conversation_settings.provider))
 
-        if self._animated_message and self._animated_message not in preserved_messages:
+        if self._animated_messages and not self._animated_messages.issubset(preserved_messages):
             self._stop_message_border_animation()
 
         self.status_updated.emit()
