@@ -420,8 +420,8 @@ class TerminalWidget(QAbstractScrollArea):
 
             if 0 <= visible_cursor_row < terminal_rows:
                 # Only update the cursor region
-                h_offset = self.horizontalScrollBar().value()
-                cursor_x = self._center_offset + cursor.col * self._char_width - h_offset
+                h_offset = self.horizontalScrollBar().value() * self._char_width - self._center_offset
+                cursor_x = cursor.col * self._char_width - h_offset
                 cursor_y = visible_cursor_row * self._char_height
 
                 # Create QRectF for precise cursor region, but convert to QRect for update
@@ -448,8 +448,8 @@ class TerminalWidget(QAbstractScrollArea):
         terminal_rows, terminal_cols = self._state.get_terminal_size()
 
         # Convert pixel position to viewport row/col
-        h_offset = self.horizontalScrollBar().value()
-        viewport_col = max(0, min(int((pos.x() - self._center_offset + h_offset) / self._char_width), terminal_cols - 1))
+        h_offset = self.horizontalScrollBar().value() * self._char_width - self._center_offset
+        viewport_col = max(0, min(int((pos.x() + h_offset) / self._char_width), terminal_cols - 1))
         viewport_row = max(0, min(int(pos.y() / self._char_height), terminal_rows - 1))
 
         # Adjust row for scroll position

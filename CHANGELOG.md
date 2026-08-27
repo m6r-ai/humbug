@@ -22,6 +22,7 @@ Bug fixes:
 - Fixed conversation tab "bouncing" when scrolled away from the bottom during streaming.  Content is no longer rendered
   while the user is scrolled up.  Deferred content is rendered in one pass when the user scrolls at all (preserving
   their scroll position), or when they scroll back to the bottom (snapping to the bottom).
+- Fixed a problem with text highlighting in terminal tabs that have a horizontal scrollbar.
 
 Internal structure changes:
 
