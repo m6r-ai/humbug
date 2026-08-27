@@ -4,6 +4,15 @@
 
 Humbug is a platform for human-AI collaboration, written in Python. This document describes how AI agents should navigate the codebase.
 
+## Architecture decisions
+
+Significant architectural decisions are recorded as ADRs in `docs/adr/`. The foundations:
+
+- [ADR-0001: Conversation as the primary mode of operation](docs/adr/0001-conversation-as-primary-mode.md) — all agentic work happens from within conversations; there is no separate orchestration layer.
+- [ADR-0002: OS neutrality](docs/adr/0002-os-neutrality.md) — one codebase, one experience on Windows, macOS, and Linux; platform differences are contained behind abstractions.
+- [ADR-0003: Local-first data ownership](docs/adr/0003-local-first-data-ownership.md) — all data lives in the mindspace on the user's machine; no accounts, no cloud requirement.
+- [ADR-0004: Minimal dependencies](docs/adr/0004-minimal-dependencies.md) — three third-party runtime packages plus menai; everything else is in-house, enforced by `dependency_checker`.
+
 ## Tool use
 
 - If you want to use the terminal you will require user authorization every time you send keystrokes.  If you load files into
