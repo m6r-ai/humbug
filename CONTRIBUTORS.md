@@ -29,6 +29,7 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Implemented the initial token usage tab.
 * Added new file tree icons.
 * Added the conversation prompt mini-map option.
+* Added pinning of conversations.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 

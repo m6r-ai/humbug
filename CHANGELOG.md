@@ -13,6 +13,7 @@ New features:
 - Removed GPT-OSS models from the Ollama cloud backend.
 - Border animation now applies to all messages with pending or ongoing content, not just the last visible one.  This
   ensures the correct message boxes are highlighted after scrolling and deferred content is revealed.
+- Added pinning of conversations within the mindspace sidebar.
 
 Bug fixes:
 
