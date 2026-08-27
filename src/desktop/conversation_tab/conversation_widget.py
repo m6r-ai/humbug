@@ -178,6 +178,13 @@ class ConversationWidget(QWidget):
         self._sticky_update_timer.setSingleShot(True)
         self._sticky_update_timer.timeout.connect(self._update_sticky_banners)
 
+        # Single-shot timer used to debounce deferred-reveal flushes triggered by
+        # user scrolling.  Parented to self so it is torn down with the widget.
+        self._flush_reveal_timer = QTimer(self)
+        self._flush_reveal_timer.setSingleShot(True)
+        self._flush_reveal_timer.setInterval(150)
+        self._flush_reveal_timer.timeout.connect(self._on_flush_reveal_timeout)
+
         # Zero-delay timers deferring work to the next event-loop turn after layout
         # settles. Parented to self so they are torn down with the widget.
         self._prompt_minimap_timer = QTimer(self)
@@ -1595,15 +1602,19 @@ class ConversationWidget(QWidget):
         at_bottom = value == vbar.maximum()
 
         # When the user manually scrolls while scrolled away from the bottom,
-        # flush any deferred response-reveal content so it appears in place as
-        # they scroll rather than being held back until they reach the bottom.
-        # When they are at the bottom we snap to the bottom after rendering;
-        # otherwise we preserve their scroll position so they can read the new
-        # content where they are.  Programmatic scrolls (smooth-scroll animation,
-        # selection-drag auto-scroll) are excluded so that only the first
-        # user-initiated move triggers the flush, not subsequent timer ticks.
-        if not self._auto_scroll and not self._programmatic_scroll:
-            self._flush_pending_reveals(scroll_to_bottom=at_bottom)
+        # flush any deferred response-reveal content so it appears in place.
+        # Scrolling to the bottom flushes immediately (resuming streaming);
+        # scrolling elsewhere debounces the flush so a steady scroll doesn't
+        # cause repeated layout reflows.  Programmatic scrolls (smooth-scroll
+        # animation, selection-drag auto-scroll) are excluded entirely.
+        if not self._programmatic_scroll:
+            if at_bottom:
+                self._flush_reveal_timer.stop()
+                if not self._auto_scroll:
+                    self._flush_pending_reveals(scroll_to_bottom=True)
+
+            elif not self._auto_scroll:
+                self._flush_reveal_timer.start()
 
         self._auto_scroll = at_bottom
 
@@ -1619,6 +1630,16 @@ class ConversationWidget(QWidget):
 
         self._update_sticky_banners()
         self._update_prompt_minimap()
+
+    def _on_flush_reveal_timeout(self) -> None:
+        """
+        Flush deferred reveals after the user's scroll has settled.
+
+        This is debounced by _flush_reveal_timer so that a continuous scroll
+        (e.g. dragging the scrollbar or a trackpad gesture) only triggers one
+        flush after the scroll settles, rather than one per scroll event.
+        """
+        self._flush_pending_reveals(scroll_to_bottom=False)
 
     def _schedule_sticky_update(self) -> None:
         """
@@ -2718,6 +2739,7 @@ class ConversationWidget(QWidget):
 
             # Scroll to the bottom and restore auto-scrolling
             if not self._auto_scroll:
+                self._flush_reveal_timer.stop()
                 self._flush_pending_reveals()
 
             self._auto_scroll = True
