@@ -16,6 +16,8 @@ Bug fixes:
 
 - Implemented hard limits on results for the filesystem AI tool.  Any limit exceeded generates an error, not a truncated
   response.  This prevents context window explosions.
+- Fixed conversation tab "bouncing" when scrolled away from the bottom during streaming.  Content is no longer rendered
+  while the user is scrolled up and, instead, is rendered in one pass when the user scrolls back to the bottom.
 
 Internal structure changes:
 

@@ -5,7 +5,6 @@ from collections.abc import Callable
 import logging
 import os
 import re
-import time
 from typing import Any, cast
 
 from PySide6.QtWidgets import (
@@ -118,7 +117,6 @@ class ConversationWidget(QWidget):
         self._response_reveal_rendered: dict[str, str] = {}
         self._response_reveal_widgets: dict[str, ConversationMessage] = {}
         self._response_reveal_completed: set[str] = set()
-        self._response_reveal_last_render: dict[str, float] = {}
 
         # Widget tracking
         self._messages: list[ConversationMessage] = []
@@ -179,14 +177,6 @@ class ConversationWidget(QWidget):
         self._sticky_update_timer = QTimer(self)
         self._sticky_update_timer.setSingleShot(True)
         self._sticky_update_timer.timeout.connect(self._update_sticky_banners)
-
-        # Single-shot timer that re-enables updates on freshly rendered message
-        # widgets once the reveal pass has painted. Parented to self so it is torn
-        # down with the widget before any child message widget is deleted.
-        self._re_enable_updates_timer = QTimer(self)
-        self._re_enable_updates_timer.setSingleShot(True)
-        self._re_enable_updates_timer.timeout.connect(self._on_re_enable_updates)
-        self._pending_re_enable_widgets: list = []
 
         # Zero-delay timers deferring work to the next event-loop turn after layout
         # settles. Parented to self so they are torn down with the widget.
@@ -1222,11 +1212,18 @@ class ConversationWidget(QWidget):
             self._response_reveal_timer.stop()
             return
 
+        # When the user is scrolled away from the bottom, defer all rendering.
+        # Targets are kept in memory and flushed in one pass when the user scrolls
+        # back to the bottom (see _flush_pending_reveals).  This avoids repeated
+        # layout reflows that cause visible bouncing while the user is reading
+        # older content.
+        if not self._auto_scroll:
+            return
+
         caught_up_ids: list[str] = []
         final_render_ids: list[str] = []
         did_render = False
         newly_visible_widget: ConversationMessage | None = None
-        rendered_widgets: list[ConversationMessage] = []
         for message_id, target in list(self._response_reveal_targets.items()):
             widget = self._response_reveal_widgets.get(message_id)
             if widget is None:
@@ -1241,15 +1238,8 @@ class ConversationWidget(QWidget):
                 caught_up_ids.append(message_id)
                 continue
 
-            # When scrolled away, throttle renders to ~500ms intervals to reduce
-            # layout churn, but always render immediately when the stream completes.
-            if not self._auto_scroll and message_id not in self._response_reveal_completed:
-                last_render = self._response_reveal_last_render.get(message_id, 0.0)
-                if time.monotonic() - last_render < 0.5:
-                    continue
-
             remaining = len(target) - len(rendered)
-            if remaining <= 0 or not target.startswith(rendered) or not self._auto_scroll:
+            if remaining <= 0 or not target.startswith(rendered):
                 next_text = target
 
             else:
@@ -1269,10 +1259,6 @@ class ConversationWidget(QWidget):
                         next_text = rendered + new_portion[:last_break + 1]
 
             widget.set_content(next_text)
-            if not self._auto_scroll:
-                rendered_widgets.append(widget)
-
-            self._response_reveal_last_render[message_id] = time.monotonic()
             if next_text and not rendered and widget.is_rendered():
                 newly_visible_widget = widget
 
@@ -1287,10 +1273,6 @@ class ConversationWidget(QWidget):
             widget = self._response_reveal_widgets.get(message_id)
             final_target = self._response_reveal_targets.get(message_id)
             if widget is not None and final_target is not None:
-                if not self._auto_scroll and widget not in rendered_widgets:
-                    rendered_widgets.append(widget)
-                    widget.setUpdatesEnabled(False)
-
                 widget.set_content(final_target)
 
         for message_id in caught_up_ids:
@@ -1299,9 +1281,8 @@ class ConversationWidget(QWidget):
                 self._response_reveal_rendered.pop(message_id, None)
                 self._response_reveal_widgets.pop(message_id, None)
                 self._response_reveal_completed.discard(message_id)
-                self._response_reveal_last_render.pop(message_id, None)
 
-        if did_render and self._auto_scroll:
+        if did_render:
             self._scroll_to_bottom()
 
         # Ensure animation is always on the last rendered message.
@@ -1314,16 +1295,47 @@ class ConversationWidget(QWidget):
         if not self._response_reveal_targets:
             self._response_reveal_timer.stop()
 
-        if rendered_widgets:
-            self._pending_re_enable_widgets = rendered_widgets
-            self._re_enable_updates_timer.start(5)
+    def _flush_pending_reveals(self) -> None:
+        """
+        Render all deferred response-reveal targets in one pass.
 
-    def _on_re_enable_updates(self) -> None:
-        """Re-enable repaints on widgets deferred by the last render pass."""
-        for w in self._pending_re_enable_widgets:
-            w.setUpdatesEnabled(True)
+        Called when the user scrolls back to the bottom (or submits a new message)
+        after being scrolled away.  While scrolled away, _advance_response_reveal
+        skips all rendering to avoid layout churn.  This method catches up by
+        writing the full target text to each pending widget, then scrolls to the
+        bottom so the latest content is visible.
 
-        self._pending_re_enable_widgets = []
+        For messages whose stream is still ongoing, the rendered state is
+        preserved so that subsequent _queue_response_reveal calls can incrementally
+        reveal only the new content rather than re-rendering from scratch.
+        Completed messages have all reveal state cleared since no more updates
+        will arrive for them.
+        """
+        if not self._response_reveal_targets:
+            return
+
+        completed_ids: list[str] = []
+        for message_id, target in list(self._response_reveal_targets.items()):
+            widget = self._response_reveal_widgets.get(message_id)
+            if widget is not None:
+                widget.set_content(target)
+
+            # Record what we've rendered so that subsequent updates for ongoing
+            # streams only reveal the new delta, not the full text from scratch.
+            self._response_reveal_rendered[message_id] = target
+            self._response_reveal_targets.pop(message_id, None)
+
+            if message_id in self._response_reveal_completed:
+                completed_ids.append(message_id)
+
+        # Clean up state for completed messages — no more updates will arrive.
+        for message_id in completed_ids:
+            self._response_reveal_rendered.pop(message_id, None)
+            self._response_reveal_widgets.pop(message_id, None)
+            self._response_reveal_completed.discard(message_id)
+
+        self._response_reveal_timer.stop()
+        self._scroll_to_bottom()
 
     def _response_reveal_chunk_size(self, remaining: int, completed: bool) -> int:
         """Choose a reveal chunk size that stays smooth but catches up quickly."""
@@ -1342,7 +1354,6 @@ class ConversationWidget(QWidget):
         self._response_reveal_rendered.pop(message_id, None)
         self._response_reveal_widgets.pop(message_id, None)
         self._response_reveal_completed.discard(message_id)
-        self._response_reveal_last_render.pop(message_id, None)
 
         if not self._response_reveal_targets:
             self._response_reveal_timer.stop()
@@ -1550,6 +1561,13 @@ class ConversationWidget(QWidget):
 
         # Check if we're at the bottom
         at_bottom = value == vbar.maximum()
+
+        # When the user scrolls back to the bottom after being scrolled away,
+        # flush any deferred response-reveal content that was held back to avoid
+        # layout churn while they were reading older messages.
+        if at_bottom and not self._auto_scroll:
+            self._flush_pending_reveals()
+
         self._auto_scroll = at_bottom
 
         self.has_seen_latest_update_changed.emit(at_bottom)
@@ -2662,6 +2680,9 @@ class ConversationWidget(QWidget):
             self._last_submitted_message = content
 
             # Scroll to the bottom and restore auto-scrolling
+            if not self._auto_scroll:
+                self._flush_pending_reveals()
+
             self._auto_scroll = True
             self._scroll_to_bottom()
 
