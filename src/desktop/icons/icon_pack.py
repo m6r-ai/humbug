@@ -751,6 +751,15 @@ MINDSPACE_ICON_PACK: Final[dict[str, str]] = {
             <path d="M18 33 L50 50 L82 33 M50 50 L50 84" fill="none" stroke="accentColor" stroke-width="4"/>
         </svg>
     ''',
+    "pin": '''
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+            <g transform="rotate(45 12 12)">
+                <path stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 17v5M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2
+                        0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
+            </g>
+        </svg>
+    ''',
     "pdf": '''
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
             <path d="M20 10 L60 10 C60 10 60 30 60 30 C60 30 80 30 80 30 L80 90 L20 90 Z"

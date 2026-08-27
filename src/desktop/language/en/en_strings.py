@@ -185,6 +185,7 @@ def get_english_strings() -> LanguageStrings:
         mindspace_vcs="Changed Files",
         mindspace_vcs_no_repo="No repository found",
         mindspace_conversations="Conversations",
+        pinned_section="Pinned",
         mindspace_preview="Preview",
         mindspace_expand_sidebar="Expand sidebar",
         mindspace_collapse_sidebar="Collapse sidebar",
@@ -346,6 +347,8 @@ def get_english_strings() -> LanguageStrings:
         diff_status="Diff: {path} | {rows} changed rows",
 
         # Mindspace File Tree Edit Menu Errors and Options
+        pin="Pin",
+        unpin="Unpin",
         rename="Rename",
         delete="Delete",
         open_in_editor="Open In Editor",

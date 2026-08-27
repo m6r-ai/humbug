@@ -185,6 +185,7 @@ def get_french_strings() -> LanguageStrings:
         mindspace_vcs="Fichiers modifiés",
         mindspace_vcs_no_repo="Aucun dépôt trouvé",
         mindspace_conversations="Conversations",
+        pinned_section="Épinglés",
         mindspace_preview="Aperçu",
         mindspace_expand_sidebar="Développer la barre latérale",
         mindspace_collapse_sidebar="Réduire la barre latérale",
@@ -346,6 +347,8 @@ def get_french_strings() -> LanguageStrings:
         diff_status="Diff : {path} | {rows} lignes modifiées",
 
         # Mindspace File Tree Edit Menu Errors and Options
+        pin="Épingler",
+        unpin="Détacher",
         rename="Renommer",
         delete="Supprimer",
         open_in_editor="Ouvrir dans l'éditeur",

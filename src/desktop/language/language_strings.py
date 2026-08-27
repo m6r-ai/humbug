@@ -176,6 +176,7 @@ class LanguageStrings:
     mindspace_vcs: str
     mindspace_vcs_no_repo: str
     mindspace_conversations: str
+    pinned_section: str
     mindspace_preview: str
     mindspace_expand_sidebar: str
     mindspace_collapse_sidebar: str
@@ -321,6 +322,8 @@ class LanguageStrings:
     diff_status: str
 
     # Mindspace File Tree Edit Menu Errors and Options
+    pin: str
+    unpin: str
     rename: str
     delete: str
     open_in_editor: str

@@ -7,6 +7,7 @@ import pytest
 
 # pylint: disable=wrong-import-position
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from mindspace.mindspace_settings import MindspaceSettings
 
 
 @pytest.fixture
@@ -41,6 +42,12 @@ def _create_mindspace_dir(base: str, name: str) -> str:
 def _set_current(mgr: MindspaceManager, path: str, monkeypatch) -> None:
     """Set the current mindspace path on the underlying Mindspace model."""
     monkeypatch.setattr(mgr._mindspace, "_path", path)
+
+
+def _write_conv_file(path: str, parent: dict | None) -> None:
+    """Write a minimal .conv file, optionally with a delegate parent reference."""
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump({"metadata": {"version": "0.1", "parent": parent}, "conversation": []}, f)
 
 
 class TestRecentMindspaces:
@@ -349,3 +356,601 @@ class TestGetLastMindspace:
             f.write("not json")
 
         assert manager.get_last_mindspace() is None
+
+
+class TestPinnedPaths:
+    """Tests for is_path_pinned() / set_path_pinned() / migrate_pinned_path() / unpin_path_tree()."""
+
+    @pytest.fixture
+    def opened(self, manager, tmp_path):
+        """Create and open a real mindspace, returning (manager, conversations_dir)."""
+        ms_path = str(tmp_path / "mindspace")
+        manager.create_mindspace(ms_path, [])
+        manager.open_mindspace(ms_path)
+        conv_dir = manager.mindspace().conversations_dir()
+        return manager, conv_dir
+
+    def test_not_pinned_by_default(self, opened):
+        """A path with no pin entry is not pinned."""
+        mgr, conv_dir = opened
+        chat = os.path.join(conv_dir, "chat.conv")
+
+        assert mgr.is_path_pinned(chat) is False
+
+    def test_pin_then_unpin(self, opened):
+        """set_path_pinned() toggles pin state and persists it."""
+        mgr, conv_dir = opened
+        chat = os.path.join(conv_dir, "chat.conv")
+
+        mgr.set_path_pinned(chat, True)
+        assert mgr.is_path_pinned(chat) is True
+
+        mgr.set_path_pinned(chat, False)
+        assert mgr.is_path_pinned(chat) is False
+
+    def test_pin_persists_to_settings_file(self, opened):
+        """Pinning a path writes it to settings.json under conversation.pinned."""
+        mgr, conv_dir = opened
+        chat = os.path.join(conv_dir, "chat.conv")
+
+        mgr.set_path_pinned(chat, True)
+
+        settings_path = os.path.join(mgr.mindspace_path(), ".humbug", "settings.json")
+        with open(settings_path, encoding='utf-8') as f:
+            data = json.load(f)
+
+        assert data["conversation"]["pinned"] == [mgr.get_mindspace_relative_path(chat)]
+
+    def test_pin_is_idempotent(self, opened):
+        """Pinning an already-pinned path does not duplicate the entry."""
+        mgr, conv_dir = opened
+        chat = os.path.join(conv_dir, "chat.conv")
+
+        mgr.set_path_pinned(chat, True)
+        mgr.set_path_pinned(chat, True)
+
+        assert mgr.settings().pinned_paths.count(mgr.get_mindspace_relative_path(chat)) == 1
+
+    def test_pinned_paths_survive_reload(self, opened):
+        """Pin state is still present after reloading settings from disk."""
+        mgr, conv_dir = opened
+        chat = os.path.join(conv_dir, "chat.conv")
+        mgr.set_path_pinned(chat, True)
+
+        settings_path = os.path.join(mgr.mindspace_path(), ".humbug", "settings.json")
+        reloaded = MindspaceSettings.load(settings_path)
+
+        assert mgr.get_mindspace_relative_path(chat) in reloaded.pinned_paths
+
+    def test_migrate_pinned_path_on_rename(self, opened):
+        """migrate_pinned_path() moves a pinned entry from old path to new path."""
+        mgr, conv_dir = opened
+        old_chat = os.path.join(conv_dir, "old.conv")
+        new_chat = os.path.join(conv_dir, "new.conv")
+        mgr.set_path_pinned(old_chat, True)
+
+        mgr.migrate_pinned_path(old_chat, new_chat)
+
+        assert mgr.is_path_pinned(old_chat) is False
+        assert mgr.is_path_pinned(new_chat) is True
+
+    def test_migrate_pinned_path_for_nested_child(self, opened):
+        """migrate_pinned_path() rewrites pinned entries nested under a renamed folder."""
+        mgr, conv_dir = opened
+        old_folder = os.path.join(conv_dir, "old_folder")
+        new_folder = os.path.join(conv_dir, "new_folder")
+        # Folders (unlike conversation files) can be pinned at any depth.
+        nested_subfolder_old = os.path.join(old_folder, "pinned_subfolder")
+        nested_subfolder_new = os.path.join(new_folder, "pinned_subfolder")
+        os.makedirs(nested_subfolder_old)
+        mgr.set_path_pinned(nested_subfolder_old, True)
+
+        mgr.migrate_pinned_path(old_folder, new_folder)
+
+        assert mgr.is_path_pinned(nested_subfolder_old) is False
+        assert mgr.is_path_pinned(nested_subfolder_new) is True
+
+    def test_migrate_pinned_path_noop_when_unrelated(self, opened):
+        """migrate_pinned_path() does not touch unrelated pinned entries."""
+        mgr, conv_dir = opened
+        pinned_chat = os.path.join(conv_dir, "pinned.conv")
+        other_old = os.path.join(conv_dir, "other_old.conv")
+        other_new = os.path.join(conv_dir, "other_new.conv")
+        mgr.set_path_pinned(pinned_chat, True)
+
+        mgr.migrate_pinned_path(other_old, other_new)
+
+        assert mgr.is_path_pinned(pinned_chat) is True
+
+    def test_unpin_path_tree_removes_pinned_file(self, opened):
+        """unpin_path_tree() removes the pin entry for a deleted file."""
+        mgr, conv_dir = opened
+        chat = os.path.join(conv_dir, "chat.conv")
+        mgr.set_path_pinned(chat, True)
+
+        mgr.unpin_path_tree(chat)
+
+        assert mgr.is_path_pinned(chat) is False
+
+    def test_unpin_path_tree_removes_nested_children(self, opened):
+        """unpin_path_tree() removes pinned entries nested under a deleted folder."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        # Folders (unlike conversation files) can be pinned at any depth.
+        nested_subfolder = os.path.join(folder, "pinned_subfolder")
+        os.makedirs(nested_subfolder)
+        mgr.set_path_pinned(nested_subfolder, True)
+
+        mgr.unpin_path_tree(folder)
+
+        assert mgr.is_path_pinned(nested_subfolder) is False
+
+    def test_unpin_path_tree_noop_when_nothing_pinned(self, opened):
+        """unpin_path_tree() does not rewrite settings when nothing is pinned there."""
+        mgr, conv_dir = opened
+        chat = os.path.join(conv_dir, "chat.conv")
+        settings_before = mgr.settings()
+
+        mgr.unpin_path_tree(chat)
+
+        # Same settings object — update_settings() was never called.
+        assert mgr.settings() is settings_before
+
+    def test_can_pin_path_true_for_top_level_conversation(self, opened):
+        """A conversation directly in the conversations root can be pinned."""
+        mgr, conv_dir = opened
+        chat = os.path.join(conv_dir, "chat.conv")
+
+        assert mgr.can_pin_path(chat) is True
+
+    def test_can_pin_path_true_for_nested_conversation(self, opened):
+        """A conversation nested inside a folder can be pinned — it moves with the section."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        nested_chat = os.path.join(folder, "chat.conv")
+
+        assert mgr.can_pin_path(nested_chat) is True
+
+    def test_can_pin_path_true_for_folder_at_any_depth(self, opened):
+        """Folders can be pinned regardless of nesting depth."""
+        mgr, conv_dir = opened
+        top_folder = os.path.join(conv_dir, "top_folder")
+        nested_folder = os.path.join(top_folder, "nested_folder")
+        os.makedirs(nested_folder)
+
+        assert mgr.can_pin_path(top_folder) is True
+        assert mgr.can_pin_path(nested_folder) is True
+
+    def test_can_pin_path_false_for_delegate_child(self, opened):
+        """A fork/delegate child conversation cannot be pinned."""
+        mgr, conv_dir = opened
+        child = os.path.join(conv_dir, "child.conv")
+        _write_conv_file(child, parent={"message_id": "m1", "tool_call_id": None})
+
+        assert mgr.can_pin_path(child) is False
+
+    def test_can_pin_path_true_for_root_conversation_file(self, opened):
+        """A root conversation (no delegate parent) can be pinned."""
+        mgr, conv_dir = opened
+        root = os.path.join(conv_dir, "root.conv")
+        _write_conv_file(root, parent=None)
+
+        assert mgr.can_pin_path(root) is True
+
+    def test_set_path_pinned_ignores_delegate_child(self, opened):
+        """set_path_pinned() silently refuses to pin a delegate/fork child."""
+        mgr, conv_dir = opened
+        child = os.path.join(conv_dir, "child.conv")
+        _write_conv_file(child, parent={"message_id": "m1", "tool_call_id": None})
+
+        mgr.set_path_pinned(child, True)
+
+        assert mgr.is_path_pinned(child) is False
+
+    def test_set_path_pinned_allows_unpinning_delegate_child(self, opened):
+        """Unpinning a delegate child is always allowed, even though pinning it is not."""
+        mgr, conv_dir = opened
+        child = os.path.join(conv_dir, "child.conv")
+        _write_conv_file(child, parent={"message_id": "m1", "tool_call_id": None})
+        # Simulate a legacy pinned entry that predates the delegate-child restriction.
+        mgr.settings().pinned_paths.append(mgr.get_mindspace_relative_path(child))
+
+        mgr.set_path_pinned(child, False)
+
+        assert mgr.is_path_pinned(child) is False
+
+
+class TestSoleConversationFolderPromotion:
+    """Tests for set_path_pinned()'s sole-child-folder promotion."""
+
+    @pytest.fixture
+    def opened(self, manager, tmp_path):
+        """Create and open a real mindspace, returning (manager, conversations_dir)."""
+        ms_path = str(tmp_path / "mindspace")
+        manager.create_mindspace(ms_path, [])
+        manager.open_mindspace(ms_path)
+        conv_dir = manager.mindspace().conversations_dir()
+        return manager, conv_dir
+
+    def test_pinning_sole_conversation_promotes_to_folder(self, opened):
+        """Pinning the only conversation in a folder pins the folder instead."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat = os.path.join(folder, "chat.conv")
+        _write_conv_file(chat, parent=None)
+
+        mgr.set_path_pinned(chat, True)
+
+        assert mgr.is_path_pinned(folder) is True
+        assert mgr.is_path_pinned(chat) is False
+        assert mgr.pinned_root_paths() == [folder]
+
+    def test_pinning_one_of_several_conversations_does_not_promote(self, opened):
+        """Pinning one of several conversations in a folder pins only that file."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat_a = os.path.join(folder, "a.conv")
+        chat_b = os.path.join(folder, "b.conv")
+        _write_conv_file(chat_a, parent=None)
+        _write_conv_file(chat_b, parent=None)
+
+        mgr.set_path_pinned(chat_a, True)
+
+        assert mgr.is_path_pinned(chat_a) is True
+        assert mgr.is_path_pinned(folder) is False
+
+    def test_no_promotion_for_top_level_conversation(self, opened):
+        """A conversation directly in the conversations root is never promoted."""
+        mgr, conv_dir = opened
+        chat = os.path.join(conv_dir, "chat.conv")
+        _write_conv_file(chat, parent=None)
+
+        mgr.set_path_pinned(chat, True)
+
+        assert mgr.is_path_pinned(chat) is True
+
+    def test_promotion_is_decided_once_at_pin_time(self, opened):
+        """Adding a sibling later does not retroactively un-promote the folder."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat = os.path.join(folder, "chat.conv")
+        _write_conv_file(chat, parent=None)
+        mgr.set_path_pinned(chat, True)
+
+        # A sibling conversation appears in the folder after the fact.
+        _write_conv_file(os.path.join(folder, "sibling.conv"), parent=None)
+
+        assert mgr.is_path_pinned(folder) is True
+
+
+class TestFolderPinCompletionAndCascade:
+    """Tests for promoting on completion, and cascading unpin to a folder's children."""
+
+    @pytest.fixture
+    def opened(self, manager, tmp_path):
+        """Create and open a real mindspace, returning (manager, conversations_dir)."""
+        ms_path = str(tmp_path / "mindspace")
+        manager.create_mindspace(ms_path, [])
+        manager.open_mindspace(ms_path)
+        conv_dir = manager.mindspace().conversations_dir()
+        return manager, conv_dir
+
+    def test_pinning_the_last_unpinned_conversation_promotes_the_folder(self, opened):
+        """Pinning every conversation in a folder, one by one, promotes it on the last pin."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat_a = os.path.join(folder, "a.conv")
+        chat_b = os.path.join(folder, "b.conv")
+        _write_conv_file(chat_a, parent=None)
+        _write_conv_file(chat_b, parent=None)
+
+        mgr.set_path_pinned(chat_a, True)
+        assert mgr.is_path_pinned(folder) is False  # not yet — b is still unpinned
+
+        mgr.set_path_pinned(chat_b, True)
+
+        assert mgr.is_path_pinned(folder) is True
+        assert mgr.pinned_root_paths() == [folder]
+
+    def test_promotion_drops_the_now_redundant_individual_entries(self, opened):
+        """Promoting to a folder pin removes the individual conversation entries."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat_a = os.path.join(folder, "a.conv")
+        chat_b = os.path.join(folder, "b.conv")
+        _write_conv_file(chat_a, parent=None)
+        _write_conv_file(chat_b, parent=None)
+        mgr.set_path_pinned(chat_a, True)
+        mgr.set_path_pinned(chat_b, True)
+
+        pinned = mgr.settings().pinned_paths
+        assert mgr.get_mindspace_relative_path(folder) in pinned
+        assert mgr.get_mindspace_relative_path(chat_a) not in pinned
+        assert mgr.get_mindspace_relative_path(chat_b) not in pinned
+
+    def test_unpinning_a_folder_also_unpins_its_conversations(self, opened):
+        """Unpinning a folder cascades to unpin any of its still-individually-pinned children."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat_a = os.path.join(folder, "a.conv")
+        chat_b = os.path.join(folder, "b.conv")
+        _write_conv_file(chat_a, parent=None)
+        _write_conv_file(chat_b, parent=None)
+        # Simulate stale/redundant state: folder and a child both marked pinned.
+        mgr.set_path_pinned(chat_a, True)
+        mgr.settings().pinned_paths.append(mgr.get_mindspace_relative_path(folder))
+
+        mgr.set_path_pinned(folder, False)
+
+        assert mgr.is_path_pinned(folder) is False
+        assert mgr.is_path_pinned(chat_a) is False
+        assert mgr.settings().pinned_paths == []
+
+    def test_pinning_a_folder_directly_prunes_stale_child_entries(self, opened):
+        """Directly pinning a folder also cleans up any redundant individual child pins."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat_a = os.path.join(folder, "a.conv")
+        _write_conv_file(chat_a, parent=None)
+        mgr.set_path_pinned(chat_a, True)
+
+        mgr.set_path_pinned(folder, True)
+
+        assert mgr.settings().pinned_paths == [mgr.get_mindspace_relative_path(folder)]
+
+    def test_unpinning_folder_does_not_touch_unrelated_pins(self, opened):
+        """Unpinning a folder leaves pins outside that folder untouched."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat_a = os.path.join(folder, "a.conv")
+        _write_conv_file(chat_a, parent=None)
+        other = os.path.join(conv_dir, "other.conv")
+        _write_conv_file(other, parent=None)
+        mgr.set_path_pinned(folder, True)
+        mgr.set_path_pinned(other, True)
+
+        mgr.set_path_pinned(folder, False)
+
+        assert mgr.is_path_pinned(other) is True
+
+
+class TestFolderPinDepromotion:
+    """Tests for de-promotion: unpinning one chat out of an already-pinned folder."""
+
+    @pytest.fixture
+    def opened(self, manager, tmp_path):
+        """Create and open a real mindspace, returning (manager, conversations_dir)."""
+        ms_path = str(tmp_path / "mindspace")
+        manager.create_mindspace(ms_path, [])
+        manager.open_mindspace(ms_path)
+        conv_dir = manager.mindspace().conversations_dir()
+        return manager, conv_dir
+
+    def test_unpinning_one_chat_depromotes_the_folder(self, opened):
+        """Unpinning one chat from a pinned folder unpins the folder and re-pins the rest."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat_a = os.path.join(folder, "a.conv")
+        chat_b = os.path.join(folder, "b.conv")
+        chat_c = os.path.join(folder, "c.conv")
+        for chat in (chat_a, chat_b, chat_c):
+            _write_conv_file(chat, parent=None)
+        mgr.set_path_pinned(folder, True)
+
+        mgr.set_path_pinned(chat_a, False)
+
+        assert mgr.is_path_pinned(folder) is False
+        assert mgr.is_path_pinned(chat_a) is False
+        assert mgr.is_path_pinned(chat_b) is True
+        assert mgr.is_path_pinned(chat_c) is True
+
+    def test_effectively_pinned_chat_shows_as_unpin_before_depromotion(self, opened):
+        """A chat covered only by its folder's pin is effectively pinned, even though its own path isn't stored."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat = os.path.join(folder, "chat.conv")
+        _write_conv_file(chat, parent=None)
+        mgr.set_path_pinned(folder, True)
+
+        assert mgr.is_path_pinned(chat) is False
+        assert mgr.is_effectively_pinned(chat) is True
+
+    def test_unpinning_the_last_covered_chat_leaves_nothing_pinned(self, opened):
+        """Unpinning the only chat under a pinned folder leaves the folder unpinned with nothing re-added."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat = os.path.join(folder, "chat.conv")
+        _write_conv_file(chat, parent=None)
+        mgr.set_path_pinned(folder, True)
+
+        mgr.set_path_pinned(chat, False)
+
+        assert mgr.settings().pinned_paths == []
+
+    def test_unpinning_every_chat_one_at_a_time_ends_with_nothing_pinned(self, opened):
+        """Unpinning every chat in a pinned folder one by one ends with the folder unpinned."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat_a = os.path.join(folder, "a.conv")
+        chat_b = os.path.join(folder, "b.conv")
+        _write_conv_file(chat_a, parent=None)
+        _write_conv_file(chat_b, parent=None)
+        mgr.set_path_pinned(folder, True)
+
+        mgr.set_path_pinned(chat_a, False)
+        assert mgr.is_effectively_pinned(chat_b) is True
+
+        mgr.set_path_pinned(chat_b, False)
+
+        assert mgr.settings().pinned_paths == []
+        assert mgr.is_effectively_pinned(chat_a) is False
+        assert mgr.is_effectively_pinned(chat_b) is False
+
+    def test_depromotion_ignores_delegate_children(self, opened):
+        """De-promotion never re-pins a delegate/fork child conversation."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat_a = os.path.join(folder, "a.conv")
+        delegate_chat = os.path.join(folder, "delegate.conv")
+        _write_conv_file(chat_a, parent=None)
+        _write_conv_file(delegate_chat, parent={"message_id": "m1", "tool_call_id": None})
+        mgr.set_path_pinned(folder, True)
+
+        mgr.set_path_pinned(chat_a, False)
+
+        assert mgr.is_path_pinned(delegate_chat) is False
+        assert mgr.settings().pinned_paths == []
+
+    def test_unpinning_an_unrelated_chat_does_not_depromote(self, opened):
+        """Unpinning a conversation with no pinned ancestor is a plain no-op, not a de-promotion."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat = os.path.join(folder, "chat.conv")
+        _write_conv_file(chat, parent=None)
+        other = os.path.join(conv_dir, "other.conv")
+        _write_conv_file(other, parent=None)
+        mgr.set_path_pinned(other, True)
+        settings_before = mgr.settings()
+
+        mgr.set_path_pinned(chat, False)
+
+        assert mgr.settings() is settings_before
+
+
+class TestFolderHasPinnedContent:
+    """Tests for folder_has_pinned_content()."""
+
+    @pytest.fixture
+    def opened(self, manager, tmp_path):
+        """Create and open a real mindspace, returning (manager, conversations_dir)."""
+        ms_path = str(tmp_path / "mindspace")
+        manager.create_mindspace(ms_path, [])
+        manager.open_mindspace(ms_path)
+        conv_dir = manager.mindspace().conversations_dir()
+        return manager, conv_dir
+
+    def test_false_when_nothing_pinned(self, opened):
+        """folder_has_pinned_content() is False for an untouched folder."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+
+        assert mgr.folder_has_pinned_content(folder) is False
+
+    def test_true_when_the_folder_itself_is_pinned(self, opened):
+        """folder_has_pinned_content() is True when the folder's own path is pinned."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        mgr.set_path_pinned(folder, True)
+
+        assert mgr.folder_has_pinned_content(folder) is True
+
+    def test_true_when_only_a_child_conversation_is_pinned(self, opened):
+        """folder_has_pinned_content() is True when just one conversation inside is pinned."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat_a = os.path.join(folder, "a.conv")
+        chat_b = os.path.join(folder, "b.conv")
+        _write_conv_file(chat_a, parent=None)
+        _write_conv_file(chat_b, parent=None)
+        mgr.set_path_pinned(chat_a, True)
+
+        assert mgr.folder_has_pinned_content(folder) is True
+
+    def test_false_after_full_unpin(self, opened):
+        """folder_has_pinned_content() returns to False once nothing inside is pinned any more."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat = os.path.join(folder, "chat.conv")
+        _write_conv_file(chat, parent=None)
+        mgr.set_path_pinned(chat, True)
+        mgr.set_path_pinned(chat, False)
+
+        assert mgr.folder_has_pinned_content(folder) is False
+
+
+class TestPinnedRootPaths:
+    """Tests for pinned_root_paths()."""
+
+    @pytest.fixture
+    def opened(self, manager, tmp_path):
+        """Create and open a real mindspace, returning (manager, conversations_dir)."""
+        ms_path = str(tmp_path / "mindspace")
+        manager.create_mindspace(ms_path, [])
+        manager.open_mindspace(ms_path)
+        conv_dir = manager.mindspace().conversations_dir()
+        return manager, conv_dir
+
+    def test_empty_when_nothing_pinned(self, opened):
+        """pinned_root_paths() returns [] when nothing is pinned."""
+        mgr, _conv_dir = opened
+
+        assert mgr.pinned_root_paths() == []
+
+    def test_returns_pinned_folder_and_file(self, opened):
+        """pinned_root_paths() returns both pinned folders and pinned files."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+        chat = os.path.join(conv_dir, "chat.conv")
+        _write_conv_file(chat, parent=None)
+        mgr.set_path_pinned(folder, True)
+        mgr.set_path_pinned(chat, True)
+
+        roots = set(mgr.pinned_root_paths())
+
+        assert roots == {folder, chat}
+
+    def test_nested_pinned_entry_is_not_a_second_root(self, opened):
+        """A pinned entry nested under another pinned entry is not its own root."""
+        mgr, conv_dir = opened
+        folder = os.path.join(conv_dir, "folder")
+        nested_chat = os.path.join(folder, "chat.conv")
+        os.makedirs(folder)
+        _write_conv_file(nested_chat, parent=None)
+        mgr.set_path_pinned(folder, True)
+        mgr.set_path_pinned(nested_chat, True)
+
+        roots = mgr.pinned_root_paths()
+
+        assert roots == [folder]
+
+    def test_skips_stale_entries(self, opened):
+        """pinned_root_paths() skips pinned entries that no longer exist on disk."""
+        mgr, conv_dir = opened
+        chat = os.path.join(conv_dir, "chat.conv")
+        _write_conv_file(chat, parent=None)
+        mgr.set_path_pinned(chat, True)
+        os.remove(chat)
+
+        assert mgr.pinned_root_paths() == []
+
+    def test_returns_absolute_paths(self, opened):
+        """pinned_root_paths() returns absolute filesystem paths."""
+        mgr, conv_dir = opened
+        chat = os.path.join(conv_dir, "chat.conv")
+        _write_conv_file(chat, parent=None)
+        mgr.set_path_pinned(chat, True)
+
+        roots = mgr.pinned_root_paths()
+
+        assert roots == [chat]
+        assert os.path.isabs(roots[0])

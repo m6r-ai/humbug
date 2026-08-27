@@ -162,6 +162,38 @@ class MindspaceManager(QObject):
 
         return None
 
+    def can_pin_path(self, abs_path: str) -> bool:
+        """Return True if the given absolute path is allowed to be pinned."""
+        return self._mindspace.can_pin_path(abs_path)
+
+    def is_path_pinned(self, abs_path: str) -> bool:
+        """Return True if the given absolute path is pinned."""
+        return self._mindspace.is_path_pinned(abs_path)
+
+    def is_effectively_pinned(self, abs_path: str) -> bool:
+        """Return True if the given absolute path is pinned directly or via an ancestor folder."""
+        return self._mindspace.is_effectively_pinned(abs_path)
+
+    def folder_has_pinned_content(self, folder_abs_path: str) -> bool:
+        """Return True if the folder is pinned, or has any pinned conversation inside it."""
+        return self._mindspace.folder_has_pinned_content(folder_abs_path)
+
+    def set_path_pinned(self, abs_path: str, pinned: bool) -> None:
+        """Pin or unpin an absolute path, persisting the change."""
+        self._mindspace.set_path_pinned(abs_path, pinned)
+
+    def migrate_pinned_path(self, old_abs_path: str, new_abs_path: str) -> None:
+        """Update pinned entries after a path is renamed or moved."""
+        self._mindspace.migrate_pinned_path(old_abs_path, new_abs_path)
+
+    def unpin_path_tree(self, abs_path: str) -> None:
+        """Remove pinned entries for a path and anything nested under it."""
+        self._mindspace.unpin_path_tree(abs_path)
+
+    def pinned_root_paths(self) -> list[str]:
+        """Return absolute paths for pinned entries to lift into the Pinned section."""
+        return self._mindspace.pinned_root_paths()
+
     def get_absolute_path(self, path: str) -> str:
         """Convert a mindspace-relative path to an absolute path."""
         return self._mindspace.get_absolute_path(path)

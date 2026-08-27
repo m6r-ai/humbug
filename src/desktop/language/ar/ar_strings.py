@@ -186,6 +186,7 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_vcs="الملفات المتغيرة",
         mindspace_vcs_no_repo="لم يتم العثور على مستودع",
         mindspace_conversations="محادثات",
+        pinned_section="مثبت",
         mindspace_preview="معاينة",
         mindspace_expand_sidebar="توسيع الشريط الجانبي",
         mindspace_collapse_sidebar="طي الشريط الجانبي",
@@ -346,6 +347,8 @@ def get_arabic_strings() -> LanguageStrings:
         diff_status="فرق: {path} | {rows} صفوف متغيرة",
 
         # Mindspace File Tree Edit Menu Errors and Options
+        pin="تثبيت",
+        unpin="إلغاء التثبيت",
         rename="إعادة التسمية",
         delete="حذف",
         open_in_editor="فتح في المحرر",
