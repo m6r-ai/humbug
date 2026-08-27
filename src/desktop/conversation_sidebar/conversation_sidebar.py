@@ -4,7 +4,7 @@ import logging
 import os
 import shutil
 
-from PySide6.QtCore import Signal, QModelIndex, Qt, QPoint, QTimer
+from PySide6.QtCore import Signal, QModelIndex, QRect, Qt, QPoint, QTimer
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QMenu
 )
@@ -16,6 +16,7 @@ from desktop.conversation_sidebar.conversation_sidebar_tree_delegate import Conv
 from desktop.conversation_sidebar.conversation_sidebar_tree_view import ConversationSidebarTreeView
 from desktop.conversation_sidebar.conversation_sidebar_dag_model import ConversationSidebarDAGModel
 from desktop.conversation_sidebar.conversation_sidebar_index import ConversationSidebarIndex
+from desktop.conversation_sidebar.conversation_sidebar_pin_animator import PinSlideOverlay
 from desktop.file_utils import is_binary_image_file, is_conversation_file
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
@@ -52,6 +53,12 @@ class ConversationSidebar(SidebarBase):
         self._logger = logging.getLogger("ConversationSidebar")
         self._mindspace_manager = MindspaceManager()
         self._vcs_poller = MindspaceVCSPoller()
+        self._pin_overlay: PinSlideOverlay | None = None
+
+        # Keep pinned entries in settings consistent with the filesystem
+        self.file_renamed.connect(self._mindspace_manager.migrate_pinned_path)
+        self.file_moved.connect(self._mindspace_manager.migrate_pinned_path)
+        self.file_deleted.connect(self._mindspace_manager.unpin_path_tree)
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -100,8 +107,12 @@ class ConversationSidebar(SidebarBase):
         self._dag_model.about_to_rebuild.connect(self._save_expanded_state)
         self._dag_model.rebuilt.connect(self._restore_expanded_state)
         self._conversations_index.changed.connect(self._bc_container.refresh_viewport)
-        self._expanded_paths: set[str] = set()
+        # (path, is_pinned_section_copy) — a pinned folder can have two nodes
+        # sharing the same path, so the copy must be tracked alongside it.
+        self._expanded_paths: set[tuple[str, bool]] = set()
         self._suppress_save_expanded: bool = False
+        self._pinned_section_expanded: bool = True
+        self._collapsed_pinned_groups: set[str] = set()
 
         # Create and set the specialized conversations delegate
         self._delegate = ConversationSidebarTreeDelegate(self._tree_view, self._style_manager)
@@ -123,6 +134,7 @@ class ConversationSidebar(SidebarBase):
         self._mindspace_path: str | None = None
         self._conversations_path: str | None = None
         self._selected_path: str | None = None
+        self._selected_is_pinned_copy: bool = False
 
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
@@ -526,7 +538,13 @@ class ConversationSidebar(SidebarBase):
             self._expanded_paths.clear()
             self._collect_expanded_paths(QModelIndex())
             current = self._tree_view.currentIndex()
-            self._selected_path = self._dag_model.path_for_index(current) if current.isValid() else None
+            if current.isValid():
+                self._selected_path = self._dag_model.path_for_index(current)
+                self._selected_is_pinned_copy = self._dag_model.is_pinned_section_copy(current)
+
+            else:
+                self._selected_path = None
+                self._selected_is_pinned_copy = False
 
             # Perform the rename
             os.rename(current_path, new_path)
@@ -534,9 +552,13 @@ class ConversationSidebar(SidebarBase):
 
             # Update saved expansion state so the renamed node stays expanded
             # after the model rebuilds in response to the file watcher firing.
-            if current_path in self._expanded_paths:
-                self._expanded_paths.discard(current_path)
-                self._expanded_paths.add(new_path)
+            # A rename retargets the real file both duplicate copies point at,
+            # so every recorded entry for current_path is updated regardless
+            # of which copy it came from.
+            self._expanded_paths = {
+                (new_path, is_pinned_copy) if p == current_path else (p, is_pinned_copy)
+                for p, is_pinned_copy in self._expanded_paths
+            }
 
             # Update saved selection if the renamed item was selected
             if self._selected_path == current_path:
@@ -547,9 +569,11 @@ class ConversationSidebar(SidebarBase):
                 old_prefix = current_path + os.sep
                 new_prefix = new_path + os.sep
                 updated = {
-                    new_prefix + p[len(old_prefix):]
-                    if p.startswith(old_prefix) else p
-                    for p in self._expanded_paths
+                    (
+                        (new_prefix + p[len(old_prefix):]) if p.startswith(old_prefix) else p,
+                        is_pinned_copy
+                    )
+                    for p, is_pinned_copy in self._expanded_paths
                 }
                 self._expanded_paths = updated
 
@@ -774,12 +798,27 @@ class ConversationSidebar(SidebarBase):
             if self._tree_view.isExpanded(index):
                 path = self._dag_model.path_for_index(index)
                 if path:
-                    self._expanded_paths.add(path)
+                    self._expanded_paths.add((path, self._dag_model.is_pinned_section_copy(index)))
 
                 self._collect_expanded_paths(index)
 
     def _save_expanded_state(self) -> None:
         """Save the set of expanded node paths and current selection before a model rebuild."""
+        pinned_section_index = self._dag_model.pinned_section_index()
+        if pinned_section_index.isValid():
+            self._pinned_section_expanded = self._tree_view.isExpanded(pinned_section_index)
+
+        for group_path in self._dag_model.pinned_group_paths():
+            group_index = self._dag_model.pinned_group_index_for_path(group_path)
+            if not group_index.isValid():
+                continue
+
+            if self._tree_view.isExpanded(group_index):
+                self._collapsed_pinned_groups.discard(group_path)
+
+            else:
+                self._collapsed_pinned_groups.add(group_path)
+
         if self._suppress_save_expanded:
             # Paths already updated for a rename — don't overwrite with stale tree state
             self._suppress_save_expanded = False
@@ -791,19 +830,42 @@ class ConversationSidebar(SidebarBase):
         current = self._tree_view.currentIndex()
         if current.isValid():
             self._selected_path = self._dag_model.path_for_index(current)
+            self._selected_is_pinned_copy = self._dag_model.is_pinned_section_copy(current)
 
         else:
             self._selected_path = None
+            self._selected_is_pinned_copy = False
 
     def _restore_expanded_state(self) -> None:
         """Restore expanded nodes and selection after a model rebuild."""
-        for path in self._expanded_paths:
-            index = self._dag_model.index_for_path(path)
+        pinned_section_index = self._dag_model.pinned_section_index()
+        if pinned_section_index.isValid() and self._pinned_section_expanded:
+            self._tree_view.expand(pinned_section_index)
+
+        # Pinned folder-group labels default to expanded — a newly pinned
+        # conversation should be immediately visible — unless the user has
+        # explicitly collapsed that specific group before.
+        for group_path in self._dag_model.pinned_group_paths():
+            if group_path in self._collapsed_pinned_groups:
+                continue
+
+            group_index = self._dag_model.pinned_group_index_for_path(group_path)
+            if group_index.isValid():
+                self._tree_view.expand(group_index)
+
+        for path, is_pinned_copy in self._expanded_paths:
+            index = (
+                self._dag_model.pinned_index_for_path(path) if is_pinned_copy
+                else self._dag_model.natural_index_for_path(path)
+            )
             if index.isValid():
                 self._tree_view.expand(index)
 
         if self._selected_path:
-            index = self._dag_model.index_for_path(self._selected_path)
+            index = (
+                self._dag_model.pinned_index_for_path(self._selected_path) if self._selected_is_pinned_copy
+                else self._dag_model.natural_index_for_path(self._selected_path)
+            )
             if index.isValid():
                 self._tree_view.setCurrentIndex(index)
 
@@ -867,6 +929,9 @@ class ConversationSidebar(SidebarBase):
 
         else:
             menu = self._style_manager.create_menu(self)
+            pin_label = strings.unpin if self._mindspace_manager.is_effectively_pinned(path) else strings.pin
+            menu.addAction(pin_label).triggered.connect(lambda: self._toggle_pin(path))
+            menu.addSeparator()
             menu.addAction(strings.open_in_preview).triggered.connect(lambda: self._handle_preview_view_file(path))
             menu.addAction(strings.new_conversation).triggered.connect(lambda: self.new_conversation_requested.emit(path))
             menu.addAction(strings.new_folder).triggered.connect(lambda: self._start_new_folder_creation(path))
@@ -899,6 +964,11 @@ class ConversationSidebar(SidebarBase):
 
             is_dir = os.path.isdir(path)
             strings = self._language_manager.strings()
+
+            if self._mindspace_manager.can_pin_path(path):
+                pin_label = strings.unpin if self._mindspace_manager.is_effectively_pinned(path) else strings.pin
+                menu.addAction(pin_label).triggered.connect(lambda: self._toggle_pin(path))
+                menu.addSeparator()
 
             # Create actions based on item type
             if is_dir:
@@ -940,6 +1010,37 @@ class ConversationSidebar(SidebarBase):
                 delete_action.triggered.connect(lambda: self._handle_delete_file(path))
 
         menu.exec_(self._tree_view.viewport().mapToGlobal(position))
+
+    def _toggle_pin(self, path: str) -> None:
+        """
+        Pin or unpin the item at path, sliding it to its new position.
+
+        Args:
+            path: Absolute path of the item to pin or unpin.
+        """
+        old_index = self._dag_model.index_for_path(path)
+        old_rect = self._tree_view.visualRect(old_index) if old_index.isValid() else QRect()
+        snapshot = (
+            self._tree_view.viewport().grab(old_rect)
+            if old_index.isValid() and not old_rect.isEmpty() else None
+        )
+
+        was_pinned = self._mindspace_manager.is_effectively_pinned(path)
+        self._mindspace_manager.set_path_pinned(path, not was_pinned)
+
+        if snapshot is None:
+            return
+
+        new_index = self._dag_model.index_for_path(path)
+        if not new_index.isValid():
+            return
+
+        self._tree_view.scrollTo(new_index, self._tree_view.ScrollHint.EnsureVisible)
+        new_rect = self._tree_view.visualRect(new_index)
+        if new_rect == old_rect or new_rect.isEmpty():
+            return
+
+        self._pin_overlay = PinSlideOverlay(self._tree_view.viewport(), snapshot, old_rect, new_rect)
 
     def _start_new_folder_creation(self, parent_path: str) -> None:
         """

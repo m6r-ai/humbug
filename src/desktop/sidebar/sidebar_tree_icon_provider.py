@@ -395,3 +395,12 @@ class SidebarTreeIconProvider(QFileIconProvider):
             self._cached_icons[cache_key] = self._create_svg_icon(svg_data, accent_color if accent_color is not None else "")
 
         return self._cached_icons[cache_key]
+
+    def pinned_section_icon(self) -> QIcon:
+        """Return the plain pin icon used for the Pinned section header."""
+        text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        cache_key = f"pinned_section_{text_color}"
+        if cache_key not in self._cached_icons:
+            self._cached_icons[cache_key] = self._create_svg_icon(self._svg_paths['pin'])
+
+        return self._cached_icons[cache_key]

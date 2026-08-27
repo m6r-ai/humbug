@@ -218,6 +218,447 @@ class Mindspace:
         """
         return os.path.join(self.MINDSPACE_DIR, self.CONVERSATIONS_DIR)
 
+    def can_pin_path(self, abs_path: str) -> bool:
+        """
+        Return True if abs_path is allowed to be pinned.
+
+        Folders and root conversations can be pinned at any depth — pinning
+        a folder shows it in the sidebar's Pinned section as well as its
+        normal location.  Delegate/fork children are excluded: pulling a
+        single fork branch out of its parent conversation while leaving the
+        rest behind would be a structural oddity.
+
+        Args:
+            abs_path: Absolute filesystem path to check.
+
+        Returns:
+            True if the path may be pinned.
+        """
+        if os.path.isdir(abs_path):
+            return True
+
+        return not self._has_delegate_parent(abs_path)
+
+    def _has_delegate_parent(self, abs_path: str) -> bool:
+        """
+        Return True if the conversation file at abs_path is a fork/delegate
+        child (its metadata.parent field is set).
+
+        Args:
+            abs_path: Absolute path to a .conv file.
+
+        Returns:
+            True if the file has a delegate parent.
+        """
+        try:
+            with open(abs_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+        except (OSError, json.JSONDecodeError):
+            return False
+
+        if not isinstance(data, dict):
+            return False
+
+        metadata = data.get('metadata')
+        return isinstance(metadata, dict) and metadata.get('parent') is not None
+
+    def is_path_pinned(self, abs_path: str) -> bool:
+        """
+        Return True if the given absolute path is directly pinned.
+
+        This is an exact match against pinned_paths — it does not consider
+        whether an ancestor folder is pinned.  Used internally by tree
+        building and root de-duplication, which need exact semantics.  For
+        UI decisions (e.g. a context-menu label), use is_effectively_pinned().
+
+        Args:
+            abs_path: Absolute filesystem path to check.
+
+        Returns:
+            True if the path is pinned, False otherwise.
+        """
+        if not self.has_mindspace() or self._settings is None:
+            return False
+
+        rel_path = self.get_mindspace_relative_path(abs_path)
+        return rel_path is not None and rel_path in self._settings.pinned_paths
+
+    def is_effectively_pinned(self, abs_path: str) -> bool:
+        """
+        Return True if abs_path is pinned, either directly or via an ancestor folder.
+
+        A conversation inside a pinned folder is effectively pinned even
+        though its own path was never added to pinned_paths — the folder's
+        pin covers it.  Intended for UI decisions, such as whether a
+        context menu should offer "Pin" or "Unpin".
+
+        Args:
+            abs_path: Absolute filesystem path to check.
+
+        Returns:
+            True if the path is pinned directly or through an ancestor.
+        """
+        if self.is_path_pinned(abs_path):
+            return True
+
+        if not self.has_mindspace() or self._settings is None:
+            return False
+
+        return self._find_pinned_ancestor_dir(abs_path, self._settings.pinned_paths) is not None
+
+    def folder_has_pinned_content(self, folder_abs_path: str) -> bool:
+        """
+        Return True if folder_abs_path is pinned, or has any pinned conversation inside it.
+
+        Covers both the fully-pinned case (the folder's own path is in
+        pinned_paths) and the partially-pinned case (some conversation
+        nested inside it is individually pinned).  Used to decide whether
+        the folder's natural-location copy should show a pin indicator.
+
+        Args:
+            folder_abs_path: Absolute path to the folder to check.
+
+        Returns:
+            True if the folder or anything inside it is pinned.
+        """
+        if not self.has_mindspace() or self._settings is None:
+            return False
+
+        folder_rel = self.get_mindspace_relative_path(folder_abs_path)
+        if folder_rel is None:
+            return False
+
+        prefix = folder_rel + os.sep
+        return any(p == folder_rel or p.startswith(prefix) for p in self._settings.pinned_paths)
+
+    def set_path_pinned(self, abs_path: str, pinned: bool) -> None:
+        """
+        Pin or unpin an absolute path, persisting the change.
+
+        Pinning a conversation that completes the set of pinned conversations
+        in its folder — either because it's the only conversation there, or
+        because every other conversation in that folder is already pinned —
+        promotes the pin to the folder itself, and any now-redundant
+        individual pins for its conversations are dropped.
+
+        Unpinning is symmetric in both directions: unpinning a folder also
+        unpins any conversations inside it that are still individually
+        pinned, so a folder never leaves stale or contradictory pin state
+        behind.  Unpinning a conversation that is only *effectively* pinned
+        (its own path isn't in pinned_paths, but an ancestor folder's is) is
+        the inverse of promotion: the ancestor's pin is replaced with
+        individual pins for every other conversation it covered, so the rest
+        of the folder stays pinned.  If there's nothing left to cover, the
+        ancestor simply ends up unpinned — so unpinning every conversation
+        in a folder one at a time ends with the folder itself unpinned.
+
+        Args:
+            abs_path: Absolute filesystem path to pin or unpin.
+            pinned: True to pin, False to unpin.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        assert self._settings is not None
+
+        target = abs_path
+        if pinned and not os.path.isdir(abs_path):
+            promoted = self._folder_pin_promotion(abs_path)
+            if promoted is not None:
+                target = promoted
+
+        if pinned and not self.can_pin_path(target):
+            return
+
+        rel_path = self.get_mindspace_relative_path(target)
+        if rel_path is None:
+            return
+
+        pinned_paths = self._settings.pinned_paths
+        changed = False
+
+        if pinned and rel_path not in pinned_paths:
+            pinned_paths.append(rel_path)
+            changed = True
+
+        elif not pinned and rel_path in pinned_paths:
+            pinned_paths.remove(rel_path)
+            changed = True
+
+        elif not pinned and not os.path.isdir(target) and self._depromote_ancestor(target, pinned_paths):
+            changed = True
+
+        if os.path.isdir(target) and self._prune_pinned_descendants(target, pinned_paths):
+            changed = True
+
+        if not changed:
+            return
+
+        self.update_settings(self._settings)
+
+    def _find_pinned_ancestor_dir(self, abs_path: str, pinned_paths: list[str]) -> str | None:
+        """
+        Find the nearest ancestor folder of abs_path that is directly pinned.
+
+        Args:
+            abs_path: Absolute path to start searching upward from.
+            pinned_paths: The pinned_paths list to search against.
+
+        Returns:
+            The pinned ancestor folder's absolute path, or None if there
+            isn't one (including if abs_path itself is outside the mindspace).
+        """
+        pinned_set = set(pinned_paths)
+        conversations_root = os.path.normpath(self.conversations_dir())
+        parent_dir = os.path.normpath(os.path.dirname(abs_path))
+
+        while True:
+            parent_rel = self.get_mindspace_relative_path(parent_dir)
+            if parent_rel is not None and parent_rel in pinned_set:
+                return parent_dir
+
+            if parent_dir == conversations_root:
+                return None
+
+            next_parent = os.path.normpath(os.path.dirname(parent_dir))
+            if next_parent == parent_dir:
+                return None
+
+            parent_dir = next_parent
+
+    def _collect_conv_files(self, dir_path: str) -> list[str]:
+        """
+        Recursively collect every .conv file under dir_path.
+
+        Args:
+            dir_path: Absolute path to the directory to walk.
+
+        Returns:
+            Absolute paths of all .conv files found, in no particular order.
+        """
+        found = []
+        for root, _dirs, files in os.walk(dir_path):
+            for filename in files:
+                if filename.lower().endswith('.conv'):
+                    found.append(os.path.normpath(os.path.join(root, filename)))
+
+        return found
+
+    def _depromote_ancestor(self, abs_path: str, pinned_paths: list[str]) -> bool:
+        """
+        Undo a pinned ancestor folder's coverage of abs_path, in place.
+
+        Removes the pinned ancestor's own entry and replaces it with
+        individual entries for every other conversation it covered (skipping
+        delegate children, which can never be individually pinned).  If
+        abs_path was the only conversation the ancestor covered, nothing is
+        added back and the ancestor ends up simply unpinned.
+
+        Args:
+            abs_path: Absolute path to the conversation being unpinned.
+            pinned_paths: The pinned_paths list to mutate in place.
+
+        Returns:
+            True if a pinned ancestor was found and de-promoted.
+        """
+        ancestor_dir = self._find_pinned_ancestor_dir(abs_path, pinned_paths)
+        if ancestor_dir is None:
+            return False
+
+        ancestor_rel = self.get_mindspace_relative_path(ancestor_dir)
+        if ancestor_rel is None:
+            return False
+
+        pinned_paths.remove(ancestor_rel)
+
+        abs_path_norm = os.path.normpath(abs_path)
+        for conv_path in self._collect_conv_files(ancestor_dir):
+            if conv_path == abs_path_norm:
+                continue
+
+            if self._has_delegate_parent(conv_path):
+                continue
+
+            conv_rel = self.get_mindspace_relative_path(conv_path)
+            if conv_rel is not None and conv_rel not in pinned_paths:
+                pinned_paths.append(conv_rel)
+
+        return True
+
+    def _folder_pin_promotion(self, abs_path: str) -> str | None:
+        """
+        Return abs_path's parent folder if pinning abs_path completes that folder.
+
+        "Completes" means every pinnable conversation in the folder —
+        including abs_path itself — is now individually pinned, whether
+        because it's the only one or because pinning this one was the last
+        of several.  Delegate/fork children are ignored for this check since
+        they can never be individually pinned in the first place.
+
+        Args:
+            abs_path: Absolute path to a conversation file about to be pinned.
+
+        Returns:
+            The parent folder's absolute path, or None if the parent is the
+            conversations root, or some other conversation there isn't pinned.
+        """
+        assert self._settings is not None
+
+        parent_dir = os.path.dirname(abs_path)
+        if os.path.normpath(parent_dir) == os.path.normpath(self.conversations_dir()):
+            return None
+
+        try:
+            entries = os.listdir(parent_dir)
+
+        except OSError:
+            return None
+
+        pinned_set = set(self._settings.pinned_paths)
+        abs_path_norm = os.path.normpath(abs_path)
+        for entry in entries:
+            if not entry.lower().endswith('.conv'):
+                continue
+
+            sibling = os.path.normpath(os.path.join(parent_dir, entry))
+            if sibling == abs_path_norm:
+                continue
+
+            if self._has_delegate_parent(sibling):
+                continue
+
+            sibling_rel = self.get_mindspace_relative_path(sibling)
+            if sibling_rel is None or sibling_rel not in pinned_set:
+                return None
+
+        return parent_dir
+
+    def _prune_pinned_descendants(self, folder_abs_path: str, pinned_paths: list[str]) -> bool:
+        """
+        Remove pinned entries nested under folder_abs_path, in place.
+
+        Leaves the folder's own entry (if present) untouched — only entries
+        strictly inside it are considered redundant or stale.
+
+        Args:
+            folder_abs_path: Absolute path to the folder whose pinned or
+                unpinned state is being applied.
+            pinned_paths: The pinned_paths list to prune, mutated in place.
+
+        Returns:
+            True if any entries were removed.
+        """
+        folder_rel = self.get_mindspace_relative_path(folder_abs_path)
+        if folder_rel is None:
+            return False
+
+        prefix = folder_rel + os.sep
+        remaining = [p for p in pinned_paths if p == folder_rel or not p.startswith(prefix)]
+        if len(remaining) == len(pinned_paths):
+            return False
+
+        pinned_paths[:] = remaining
+        return True
+
+    def migrate_pinned_path(self, old_abs_path: str, new_abs_path: str) -> None:
+        """
+        Update pinned entries after a path is renamed or moved.
+
+        Rewrites any pinned entry equal to, or nested under, old_abs_path so
+        it points at new_abs_path instead.  No-op if nothing pinned is affected.
+
+        Args:
+            old_abs_path: Absolute path before the rename/move.
+            new_abs_path: Absolute path after the rename/move.
+        """
+        if not self.has_mindspace() or self._settings is None:
+            return
+
+        old_rel = self.get_mindspace_relative_path(old_abs_path)
+        new_rel = self.get_mindspace_relative_path(new_abs_path)
+        if old_rel is None or new_rel is None:
+            return
+
+        old_prefix = old_rel + os.sep
+        changed = False
+        updated_paths = []
+        for pinned_path in self._settings.pinned_paths:
+            if pinned_path == old_rel:
+                updated_paths.append(new_rel)
+                changed = True
+
+            elif pinned_path.startswith(old_prefix):
+                updated_paths.append(new_rel + os.sep + pinned_path[len(old_prefix):])
+                changed = True
+
+            else:
+                updated_paths.append(pinned_path)
+
+        if not changed:
+            return
+
+        self._settings.pinned_paths = updated_paths
+        self.update_settings(self._settings)
+
+    def unpin_path_tree(self, abs_path: str) -> None:
+        """
+        Remove pinned entries for a path and anything nested under it.
+
+        Intended to be called after a file or folder is deleted, to avoid
+        leaving stale entries in settings.  No-op if nothing pinned is affected.
+
+        Args:
+            abs_path: Absolute path that was deleted.
+        """
+        if not self.has_mindspace() or self._settings is None:
+            return
+
+        rel_path = self.get_mindspace_relative_path(abs_path)
+        if rel_path is None:
+            return
+
+        prefix = rel_path + os.sep
+        remaining = [
+            p for p in self._settings.pinned_paths
+            if p != rel_path and not p.startswith(prefix)
+        ]
+        if len(remaining) == len(self._settings.pinned_paths):
+            return
+
+        self._settings.pinned_paths = remaining
+        self.update_settings(self._settings)
+
+    def pinned_root_paths(self) -> list[str]:
+        """
+        Return absolute paths for pinned entries that should be lifted into
+        the sidebar's Pinned section.
+
+        A pinned entry nested under another pinned entry is not a root of
+        its own — it comes along for free as part of its ancestor's subtree.
+        Entries that no longer exist on disk are silently skipped.
+
+        Returns:
+            Absolute paths of pinned roots, shallowest first.
+        """
+        if not self.has_mindspace() or self._settings is None:
+            return []
+
+        candidates = sorted(self._settings.pinned_paths, key=lambda p: p.count(os.sep))
+        roots: list[str] = []
+        for rel_path in candidates:
+            abs_path = self.get_absolute_path(rel_path)
+            if not os.path.exists(abs_path):
+                continue
+
+            if any(
+                abs_path == root or abs_path.startswith(root + os.sep)
+                for root in roots
+            ):
+                continue
+
+            roots.append(abs_path)
+
+        return roots
+
     def get_absolute_path(self, path: str) -> str:
         """
         Convert a mindspace-relative path to an absolute path.

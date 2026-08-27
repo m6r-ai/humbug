@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 import logging
 
@@ -33,6 +33,7 @@ class MindspaceSettings:
     terminal_scrollback_lines: int = 10000  # Default 10000 lines
     terminal_close_on_exit: bool = True  # Default to native terminal behavior
     prompt_markers_visible: bool = False
+    pinned_paths: list[str] = field(default_factory=list)
 
     @classmethod
     def _safe_load_json(cls, path: str) -> dict:
@@ -348,6 +349,16 @@ class MindspaceSettings:
             )
             prompt_markers_visible = False
 
+        pinned_paths_raw = conversation.get("pinned", [])
+        if not isinstance(pinned_paths_raw, list):
+            cls._logger.warning(
+                "Invalid pinned type in %s: expected list, got %s. Using default.",
+                path, type(pinned_paths_raw).__name__
+            )
+            pinned_paths_raw = []
+
+        pinned_paths = [p for p in pinned_paths_raw if isinstance(p, str)]
+
         return cls(
             model=model,
             provider=provider,
@@ -365,7 +376,8 @@ class MindspaceSettings:
             terminal_scrollback_lines=terminal_scrollback_lines,
             terminal_close_on_exit=terminal_close_on_exit,
             prompt_markers_visible=prompt_markers_visible,
-            enabled_tools=enabled_tools
+            enabled_tools=enabled_tools,
+            pinned_paths=pinned_paths
         )
 
     def save(self, path: str) -> None:
@@ -378,6 +390,7 @@ class MindspaceSettings:
                 "reasoning": self.reasoning.value,  # Use .value to get the integer value of the enum
                 "reasoning_effort": self.reasoning_effort,
                 "promptMarkersVisible": self.prompt_markers_visible,
+                "pinned": self.pinned_paths,
             },
             "editor": {
                 "useSoftTabs": self.use_soft_tabs,

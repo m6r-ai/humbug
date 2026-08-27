@@ -3,11 +3,15 @@
 from collections.abc import Callable
 import os
 
-from PySide6.QtCore import QModelIndex, QTimer
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, Qt, QTimer
+from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPaintEvent, QPainter, QPen
+from PySide6.QtWidgets import QStyleOptionViewItem, QWidget
 
+from desktop.color_role import ColorRole
 from desktop.conversation_sidebar.conversation_sidebar_dag_model import ConversationSidebarDAGModel
+from desktop.conversation_sidebar.conversation_sidebar_tree_delegate import ConversationSidebarTreeDelegate
 from desktop.sidebar.sidebar_tree_view import SidebarTreeView
+from desktop.style_manager import StyleManager
 
 
 class ConversationSidebarTreeView(SidebarTreeView):
@@ -17,12 +21,112 @@ class ConversationSidebarTreeView(SidebarTreeView):
         """Initialize the conversations tree view."""
         super().__init__(parent)
         self._conversations_path: str = ""
+        self._style_manager = StyleManager()
 
         self._deferred_scroll_timer = QTimer(self)
         self._deferred_scroll_timer.setSingleShot(True)
         self._deferred_scroll_timer.timeout.connect(self._on_deferred_scroll)
         self._deferred_scroll_index: QModelIndex = QModelIndex()
         self._deferred_scroll_callback: Callable | None = None
+
+    def drawRow(
+        self,
+        painter: QPainter,
+        option: QStyleOptionViewItem,
+        index: QModelIndex | QPersistentModelIndex
+    ) -> None:
+        """
+        Shrink the boundary row's paint rect so nothing paints into the space
+        reserved for the Pinned-section divider.
+
+        drawRow() is the single place Qt paints an entire tree row — branch
+        / expand-arrow background included, not just the delegate's own
+        icon/text area.  ConversationSidebarTreeDelegate.sizeHint() reserves
+        extra height on this row for the divider, but shrinking the rect
+        only inside the delegate's paint() (as an earlier version of this
+        did) left Qt's own branch/selection background painting the full,
+        unshrunk row — which is why a selected or hovered boundary row could
+        still show a highlight bleeding into the divider's space.  Shrinking
+        here instead covers the whole row in one place.
+        """
+        model = self.model()
+        if not isinstance(model, ConversationSidebarDAGModel) or not model.is_first_row_after_pinned_section(index):
+            super().drawRow(painter, option, index)
+            return
+
+        zoom = self._style_manager.zoom_factor()
+        pad = round(ConversationSidebarTreeDelegate.DIVIDER_PADDING * zoom)
+        shrunk_option = QStyleOptionViewItem(option)
+        shrunk_option.rect = option.rect.adjusted(0, pad, 0, 0)  # type: ignore
+        super().drawRow(painter, shrunk_option, index)
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """Paint the tree, then an independent divider marking the end of the Pinned section."""
+        super().paintEvent(event)
+        self._paint_pinned_divider()
+
+    def _paint_pinned_divider(self) -> None:
+        """
+        Draw a line marking the boundary between the Pinned section and the
+        rest of the tree, directly on the viewport.
+
+        Deliberately painted here — at the view level, after every row has
+        already been painted — rather than by the delegate for one specific
+        row.  Combined with drawRow() shrinking that row's entire paint area
+        (see above), the space this line is drawn into is always genuinely
+        empty, regardless of hover or selection state on either neighbour.
+        """
+        model = self.model()
+        if not isinstance(model, ConversationSidebarDAGModel):
+            return
+
+        if not model.pinned_section_index().isValid():
+            return
+
+        # Row 1 at the root is always the first item after the Pinned
+        # section, however many rows are currently visible inside it.
+        boundary_index = model.index(1, 0)
+        if not boundary_index.isValid():
+            return
+
+        rect = self.visualRect(boundary_index)
+        if rect.isEmpty():
+            return
+
+        viewport = self.viewport()
+        if rect.top() < 0 or rect.top() > viewport.height():
+            return
+
+        zoom = self._style_manager.zoom_factor()
+        pad = round(ConversationSidebarTreeDelegate.DIVIDER_PADDING * zoom)
+
+        painter = QPainter(viewport)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        right_inset = round(10 * zoom)
+        y = rect.top() + pad // 2
+        x_start = 0
+        x_end = viewport.width() - right_inset
+
+        # Fade out at both ends instead of a flat line — a soft accent
+        # rather than a hard rule, peaking a little past full-line opacity
+        # right at the centre for a subtle "glow".
+        color = self._style_manager.get_color(ColorRole.EDIT_BOX_BORDER)
+        gradient = QLinearGradient(x_start, y, x_end, y)
+        transparent = QColor(color)
+        transparent.setAlpha(0)
+        peak = QColor(color)
+        peak.setAlpha(150)
+        gradient.setColorAt(0.0, transparent)
+        gradient.setColorAt(0.5, peak)
+        gradient.setColorAt(1.0, transparent)
+
+        pen = QPen(QBrush(gradient), max(1.0, 1.5 * zoom))
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+
+        painter.drawLine(x_start, y, x_end, y)
+        painter.end()
 
     def get_root_path(self) -> str:
         """
