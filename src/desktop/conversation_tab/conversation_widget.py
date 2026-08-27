@@ -295,6 +295,11 @@ class ConversationWidget(QWidget):
         self._smooth_scroll_duration: int = SMOOTH_SCROLL_DURATION_MS
         self._smooth_scroll_time: int = 0
 
+        # Flag set while a programmatic (timer-driven) scroll is in progress so
+        # that _on_scroll_value_changed can distinguish user-initiated scrolls
+        # from animation-driven ones and only flush deferred reveals on the former.
+        self._programmatic_scroll: bool = False
+
         # Setup context menu
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_conversation_context_menu)
@@ -1295,15 +1300,18 @@ class ConversationWidget(QWidget):
         if not self._response_reveal_targets:
             self._response_reveal_timer.stop()
 
-    def _flush_pending_reveals(self) -> None:
+    def _flush_pending_reveals(self, scroll_to_bottom: bool = True) -> None:
         """
         Render all deferred response-reveal targets in one pass.
 
-        Called when the user scrolls back to the bottom (or submits a new message)
-        after being scrolled away.  While scrolled away, _advance_response_reveal
+        Called when the user scrolls (or submits a new message) while scrolled
+        away from the bottom.  While scrolled away, _advance_response_reveal
         skips all rendering to avoid layout churn.  This method catches up by
-        writing the full target text to each pending widget, then scrolls to the
-        bottom so the latest content is visible.
+        writing the full target text to each pending widget.
+
+        When scroll_to_bottom is True the view is snapped to the bottom after
+        rendering; when False the user's current scroll position is preserved
+        so they can read newly-appeared content in place.
 
         For messages whose stream is still ongoing, the rendered state is
         preserved so that subsequent _queue_response_reveal calls can incrementally
@@ -1335,7 +1343,9 @@ class ConversationWidget(QWidget):
             self._response_reveal_completed.discard(message_id)
 
         self._response_reveal_timer.stop()
-        self._scroll_to_bottom()
+
+        if scroll_to_bottom:
+            self._scroll_to_bottom()
 
     def _response_reveal_chunk_size(self, remaining: int, completed: bool) -> int:
         """Choose a reveal chunk size that stays smooth but catches up quickly."""
@@ -1442,6 +1452,8 @@ class ConversationWidget(QWidget):
             self._scroll_timer.stop()
             return
 
+        self._programmatic_scroll = True
+
         viewport = self._scroll_area.viewport()
         scrollbar = self._scroll_area.verticalScrollBar()
         current_val = scrollbar.value()
@@ -1481,6 +1493,8 @@ class ConversationWidget(QWidget):
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
+        self._programmatic_scroll = False
+
     def _start_smooth_scroll(self, target_value: int) -> None:
         """
         Start smooth scrolling animation to target value.
@@ -1505,6 +1519,7 @@ class ConversationWidget(QWidget):
 
     def _update_smooth_scroll(self) -> None:
         """Update the smooth scrolling animation."""
+        self._programmatic_scroll = True
         self._smooth_scroll_time += self._smooth_scroll_timer.interval()
         progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
         t = 1 - (1 - progress) ** 3
@@ -1522,6 +1537,7 @@ class ConversationWidget(QWidget):
         )
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(new_position)
+        self._programmatic_scroll = False
         if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
@@ -1562,11 +1578,16 @@ class ConversationWidget(QWidget):
         # Check if we're at the bottom
         at_bottom = value == vbar.maximum()
 
-        # When the user scrolls back to the bottom after being scrolled away,
-        # flush any deferred response-reveal content that was held back to avoid
-        # layout churn while they were reading older messages.
-        if at_bottom and not self._auto_scroll:
-            self._flush_pending_reveals()
+        # When the user manually scrolls while scrolled away from the bottom,
+        # flush any deferred response-reveal content so it appears in place as
+        # they scroll rather than being held back until they reach the bottom.
+        # When they are at the bottom we snap to the bottom after rendering;
+        # otherwise we preserve their scroll position so they can read the new
+        # content where they are.  Programmatic scrolls (smooth-scroll animation,
+        # selection-drag auto-scroll) are excluded so that only the first
+        # user-initiated move triggers the flush, not subsequent timer ticks.
+        if not self._auto_scroll and not self._programmatic_scroll:
+            self._flush_pending_reveals(scroll_to_bottom=at_bottom)
 
         self._auto_scroll = at_bottom
 
