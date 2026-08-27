@@ -6,8 +6,8 @@ were considered, and the consequences.
 
 ## Relationship to other documents
 
-- **AGENTS.md** — contains short summaries of each decision as guardrails for
-  contributors. Each summary links to the full ADR here.
+- **AGENTS.md** — points contributors here for the definitive index of decisions
+  and the conventions for writing new ADRs.
 - **blueprint.md** — captures the project's purpose and core principles. ADRs
   record specific decisions that follow from those principles.
 - **CONTRIBUTING.md** — points contributors here for design context before
@@ -72,3 +72,5 @@ What costs, risks, or constraints does this decision impose?
 | [0002](0002-os-neutrality.md) | OS neutrality — one experience on Windows, macOS, and Linux | Accepted |
 | [0003](0003-local-first-data-ownership.md) | Local-first data ownership | Accepted |
 | [0004](0004-minimal-dependencies.md) | Minimal dependencies | Accepted |
+| [0005](0005-desktop-ui-toolkit-qt.md) | Desktop UI toolkit — Qt | Accepted |
+| [0006](0006-humans-and-ais-are-equal-actors.md) | Humans and AIs are equal actors | Accepted |

@@ -6,12 +6,8 @@ Humbug is a platform for human-AI collaboration, written in Python. This documen
 
 ## Architecture decisions
 
-Significant architectural decisions are recorded as ADRs in `docs/adr/`. The foundations:
-
-- [ADR-0001: Conversation as the primary mode of operation](docs/adr/0001-conversation-as-primary-mode.md) — all agentic work happens from within conversations; there is no separate orchestration layer.
-- [ADR-0002: OS neutrality](docs/adr/0002-os-neutrality.md) — one codebase, one experience on Windows, macOS, and Linux; platform differences are contained behind abstractions.
-- [ADR-0003: Local-first data ownership](docs/adr/0003-local-first-data-ownership.md) — all data lives in the mindspace on the user's machine; no accounts, no cloud requirement.
-- [ADR-0004: Minimal dependencies](docs/adr/0004-minimal-dependencies.md) — three third-party runtime packages plus menai; everything else is in-house, enforced by `dependency_checker`.
+Significant architectural and design decisions are recorded as ADRs in [`docs/adr/`](docs/adr/README.md), which holds the definitive index and the conventions for writing new ADRs.
+Consult it before proposing changes that touch established decisions.
 
 ## Tool use
 
