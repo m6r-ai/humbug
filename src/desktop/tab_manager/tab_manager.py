@@ -3,7 +3,7 @@ import logging
 import math
 from typing import cast
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
+from PySide6.QtWidgets import QAbstractItemView, QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer, QPoint
 from PySide6.QtGui import QPixmap, QResizeEvent
 
@@ -808,6 +808,20 @@ class TabManager(QWidget):
             is_file_missing=tab.is_path_missing(),
         )
         focus_widget = QApplication.focusWidget()
+
+        # If focus is on a transient delegate editor (e.g. the sidebar inline rename
+        # editor), walk up to the persistent QAbstractItemView ancestor.  The editor
+        # widget is destroyed by Qt when editing ends, so storing a reference to it
+        # and calling setFocus() later would crash with "Internal C++ object already
+        # deleted".
+        if focus_widget is not None:
+            view = focus_widget.parent()
+            while view is not None and not isinstance(view, QAbstractItemView):
+                view = view.parent()
+
+            if view is not None:
+                focus_widget = view
+
         column.setCurrentWidget(tab)
 
         self._update_tabs(change_focus=False)
