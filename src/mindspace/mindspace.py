@@ -30,6 +30,7 @@ class Mindspace:
     INTERACTIONS_FILE = "system.json"
     USAGE_FILE = "usage.json"
     CONVERSATIONS_DIR = "conversations"
+    TRASH_DIR = "trash"
 
     def __init__(
         self,
@@ -243,6 +244,30 @@ class Mindspace:
             Path relative to the mindspace root, e.g. '.humbug/conversations'.
         """
         return os.path.join(self.MINDSPACE_DIR, self.CONVERSATIONS_DIR)
+
+    def trash_dir(self) -> str:
+        """
+        Return the absolute path to the trash directory, creating it if needed.
+
+        The trash directory lives inside .humbug, alongside but outside of
+        conversations/, so trashed items never appear in the conversations
+        tree.  Used to support undoing a delete.
+
+        Returns:
+            Absolute path to the trash directory.
+
+        Raises:
+            MindspaceError: No mindspace is open or directory could not be created.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        path = os.path.join(self._path, self.MINDSPACE_DIR, self.TRASH_DIR)
+        try:
+            os.makedirs(path, exist_ok=True)
+
+        except OSError as e:
+            raise MindspaceError(f"Failed to create trash directory: {str(e)}") from e
+
+        return path
 
     def can_pin_path(self, abs_path: str) -> bool:
         """

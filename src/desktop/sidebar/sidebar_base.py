@@ -1,8 +1,13 @@
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QApplication, QWidget
 
 
 class SidebarBase(QWidget):
     """Abstract base class for sidebar widgets."""
+
+    def has_focus(self) -> bool:
+        """Return True if this panel or one of its descendants currently has keyboard focus."""
+        focus_widget = QApplication.focusWidget()
+        return focus_widget is not None and self.isAncestorOf(focus_widget)
 
     def set_mindspace(self, path: str) -> None:
         """

@@ -814,8 +814,16 @@ class MainWindow(QMainWindow):
         self._save_action.setEnabled(tab is not None and tab.can_save())
         self._save_as_action.setEnabled(tab is not None and tab.can_save_as())
         self._close_tab_action.setEnabled(tab is not None)
-        self._undo_action.setEnabled(tab is not None and tab.can_undo())
-        self._redo_action.setEnabled(tab is not None and tab.can_redo())
+
+        conversation_sidebar = self._focused_conversation_sidebar()
+        if conversation_sidebar is not None:
+            self._undo_action.setEnabled(conversation_sidebar.can_undo())
+            self._redo_action.setEnabled(conversation_sidebar.can_redo())
+
+        else:
+            self._undo_action.setEnabled(tab is not None and tab.can_undo())
+            self._redo_action.setEnabled(tab is not None and tab.can_redo())
+
         self._cut_action.setEnabled(tab is not None and tab.can_cut())
         self._copy_action.setEnabled(tab is not None and tab.can_copy())
         self._paste_action.setEnabled(tab is not None and tab.can_paste())
@@ -1374,14 +1382,32 @@ class MainWindow(QMainWindow):
         """Close all open tabs, returning True if all were closed."""
         return self._tab_manager.close_all_tabs()
 
+    def _focused_conversation_sidebar(self) -> ConversationSidebar | None:
+        """Return the conversation sidebar panel if it currently has keyboard focus, else None."""
+        panel = self._sidebar_manager.get_panel("conversations")
+        if isinstance(panel, ConversationSidebar) and panel.has_focus():
+            return panel
+
+        return None
+
     def _undo(self) -> None:
-        """Trigger undo on the current tab."""
+        """Trigger undo on the conversation sidebar if it has focus, otherwise the current tab."""
+        conversation_sidebar = self._focused_conversation_sidebar()
+        if conversation_sidebar is not None:
+            conversation_sidebar.undo()
+            return
+
         tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.undo()
 
     def _redo(self) -> None:
-        """Trigger redo on the current tab."""
+        """Trigger redo on the conversation sidebar if it has focus, otherwise the current tab."""
+        conversation_sidebar = self._focused_conversation_sidebar()
+        if conversation_sidebar is not None:
+            conversation_sidebar.redo()
+            return
+
         tab = self._tab_manager.get_current_tab()
         if tab is not None:
             tab.redo()

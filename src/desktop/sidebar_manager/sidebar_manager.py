@@ -268,6 +268,15 @@ class SidebarManager(QWidget):
             if panel is not None:
                 on_activated(panel)
 
+    def get_panel(self, panel_id: str) -> SidebarBase | None:
+        """
+        Return the registered panel widget for panel_id, or None if not registered.
+
+        Args:
+            panel_id: The panel to look up.
+        """
+        return self._panel_widgets.get(panel_id)
+
     def _set_active_panel(self, panel_id: str) -> None:
         """
         Make the given panel current in the stacked pane.

@@ -3,6 +3,7 @@
 import logging
 import os
 import shutil
+import uuid
 
 from PySide6.QtCore import Signal, QModelIndex, QRect, Qt, QPoint, QTimer
 from PySide6.QtWidgets import (
@@ -24,6 +25,7 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_breadcrumb_bar import SidebarBreadcrumbBar
+from desktop.sidebar.sidebar_operation_stack import ReversibleOperation, SidebarOperationStack
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.sidebar.sidebar_breadcrumb_container import SidebarBreadcrumbContainer
 from desktop.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
@@ -54,6 +56,7 @@ class ConversationSidebar(SidebarBase):
         self._mindspace_manager = MindspaceManager()
         self._vcs_poller = MindspaceVCSPoller()
         self._pin_overlay: PinSlideOverlay | None = None
+        self._operation_stack = SidebarOperationStack()
 
         # Keep pinned entries in settings consistent with the filesystem
         self.file_renamed.connect(self._mindspace_manager.migrate_pinned_path)
@@ -305,6 +308,120 @@ class ConversationSidebar(SidebarBase):
                 strings.move_error_failed.format(str(e))
             )
 
+    def _trash_path_for(self, original_path: str) -> str:
+        """
+        Return a unique trash location for original_path, creating the trash directory if needed.
+
+        The trash directory lives alongside conversations/ inside .humbug, so
+        trashed items never appear in the conversations tree.
+
+        Args:
+            original_path: Absolute path of the item about to be trashed.
+
+        Returns:
+            Absolute path within the mindspace's trash directory to move it to.
+        """
+        trash_dir = os.path.join(self._mindspace_path or "", Mindspace.MINDSPACE_DIR, Mindspace.TRASH_DIR)
+        os.makedirs(trash_dir, exist_ok=True)
+        unique_name = f"{uuid.uuid4().hex[:8]}_{os.path.basename(original_path)}"
+        return os.path.join(trash_dir, unique_name)
+
+    def _build_delete_operation(self, trashed: list[tuple[str, str]]) -> ReversibleOperation:
+        """
+        Build an undo/redo entry that restores or re-trashes a set of deleted items.
+
+        Undoing a delete only restores the file/folder to its original
+        location — it does not reopen any tab that was closed on delete, or
+        restore pin status that was cleared on delete. Those are deliberate,
+        separate teardowns triggered by file_deleted; this only reverses the
+        filesystem move.
+
+        Args:
+            trashed: (original_path, trash_path) pairs for everything trashed
+                by one logical delete action.
+        """
+        strings = self._language_manager.strings()
+
+        def restore() -> None:
+            try:
+                for original_path, trash_path in trashed:
+                    os.makedirs(os.path.dirname(original_path), exist_ok=True)
+                    shutil.move(trash_path, original_path)
+
+            except OSError as e:
+                self._report_operation_error(strings.error_deleting_file.format(str(e)))
+
+        def re_delete() -> None:
+            try:
+                for original_path, trash_path in trashed:
+                    shutil.move(original_path, trash_path)
+
+            except OSError as e:
+                self._report_operation_error(strings.error_deleting_file.format(str(e)))
+
+        def purge() -> None:
+            for _original_path, trash_path in trashed:
+                if os.path.isdir(trash_path):
+                    shutil.rmtree(trash_path, ignore_errors=True)
+
+                elif os.path.exists(trash_path):
+                    os.remove(trash_path)
+
+        return ReversibleOperation(undo=restore, redo=re_delete, on_discard=purge)
+
+    def _report_operation_error(self, message: str) -> None:
+        """Show a critical message box for a failed undo/redo of a sidebar operation."""
+        strings = self._language_manager.strings()
+        MessageBox.show_message(
+            self,
+            MessageBoxType.CRITICAL,
+            strings.file_error_title,
+            message,
+            [MessageBoxButton.OK]
+        )
+
+    def _move_and_announce(self, old_path: str, new_path: str) -> None:
+        """
+        Move a single file/folder and announce it via file_moved.
+
+        Shared by the forward move flow and by undo/redo of a move, so pin
+        migration and tab retargeting (both wired to file_moved) run
+        consistently in either direction.
+
+        Args:
+            old_path: Current path of the item.
+            new_path: Destination path.
+
+        Raises:
+            OSError: If the move operation fails.
+        """
+        shutil.move(old_path, new_path)
+        self.file_moved.emit(old_path, new_path)
+        self._logger.info("Successfully moved '%s' to '%s'", old_path, new_path)
+
+    def _build_move_operation(self, pairs: list[tuple[str, str]]) -> ReversibleOperation:
+        """Build an undo/redo entry that replays a set of (old_path, new_path) moves in either direction."""
+        strings = self._language_manager.strings()
+
+        def undo() -> None:
+            try:
+                for old_path, new_path in reversed(pairs):
+                    # Deliberately swapped: undo moves new_path back to old_path.
+                    self._move_and_announce(new_path, old_path)  # pylint: disable=arguments-out-of-order
+
+            except OSError as e:
+                self._report_operation_error(strings.move_error_failed.format(str(e)))
+
+        def redo() -> None:
+            try:
+                for old_path, new_path in pairs:
+                    self._move_and_announce(old_path, new_path)
+
+            except OSError as e:
+                self._report_operation_error(strings.move_error_failed.format(str(e)))
+
+        return ReversibleOperation(undo=undo, redo=redo)
+
     def _perform_move_operation(
         self,
         source_path: str,
@@ -324,11 +441,10 @@ class ConversationSidebar(SidebarBase):
             OSError: If the move operation fails
         """
         try:
-            # Perform the actual move first, then notify on success
-            shutil.move(source_path, destination_path)
+            pairs = [(source_path, destination_path)]
 
-            self.file_moved.emit(source_path, destination_path)
-            self._logger.info("Successfully moved '%s' to '%s'", source_path, destination_path)
+            # Perform the actual move first, then notify on success
+            self._move_and_announce(source_path, destination_path)
 
             # Move any exclusively-owned children to the same target directory
             if included:
@@ -338,9 +454,10 @@ class ConversationSidebar(SidebarBase):
                         continue
 
                     child_dest = os.path.join(target_dir, os.path.basename(child_path))
-                    shutil.move(child_path, child_dest)
-                    self.file_moved.emit(child_path, child_dest)
-                    self._logger.info("Successfully moved '%s' to '%s'", child_path, child_dest)
+                    self._move_and_announce(child_path, child_dest)
+                    pairs.append((child_path, child_dest))
+
+            self._operation_stack.push(self._build_move_operation(pairs))
 
         except OSError as e:
             self._logger.error("Failed to move '%s' to '%s': %s", source_path, destination_path, str(e))
@@ -504,6 +621,94 @@ class ConversationSidebar(SidebarBase):
             self._logger.warning("Failed to clean up temporary %s '%s': %s",
                                "folder" if is_folder else "file", temp_path, str(e))
 
+    def _rename_and_announce(self, current_path: str, new_path: str) -> None:
+        """
+        Rename a single file/folder, keeping expand/selection state in sync, and announce it.
+
+        Shared by the forward rename flow and by undo/redo of a rename, so pin
+        migration and tab retargeting (both wired to file_renamed) run
+        consistently in either direction.
+
+        Args:
+            current_path: Current path of the item.
+            new_path: Destination path.
+
+        Raises:
+            OSError: If the rename operation fails.
+        """
+        # Save expansion state now with current paths, before the rename triggers
+        # a file watcher event.  The flag prevents _save_expanded_state from
+        # overwriting this with stale paths from the tree view.
+        self._expanded_paths.clear()
+        self._collect_expanded_paths(QModelIndex())
+        current = self._tree_view.currentIndex()
+        if current.isValid():
+            self._selected_path = self._dag_model.path_for_index(current)
+            self._selected_is_pinned_copy = self._dag_model.is_pinned_section_copy(current)
+
+        else:
+            self._selected_path = None
+            self._selected_is_pinned_copy = False
+
+        # Perform the rename
+        os.rename(current_path, new_path)
+        self.file_renamed.emit(current_path, new_path)
+
+        # Update saved expansion state so the renamed node stays expanded
+        # after the model rebuilds in response to the file watcher firing.
+        # A rename retargets the real file both duplicate copies point at,
+        # so every recorded entry for current_path is updated regardless
+        # of which copy it came from.
+        self._expanded_paths = {
+            (new_path, is_pinned_copy) if p == current_path else (p, is_pinned_copy)
+            for p, is_pinned_copy in self._expanded_paths
+        }
+
+        # Update saved selection if the renamed item was selected
+        if self._selected_path == current_path:
+            self._selected_path = new_path
+
+        # For directory renames, update any child paths that were expanded
+        if os.path.isdir(new_path):
+            old_prefix = current_path + os.sep
+            new_prefix = new_path + os.sep
+            updated = {
+                (
+                    (new_prefix + p[len(old_prefix):]) if p.startswith(old_prefix) else p,
+                    is_pinned_copy
+                )
+                for p, is_pinned_copy in self._expanded_paths
+            }
+            self._expanded_paths = updated
+
+            # Also update selected path if it was under the renamed directory
+            if self._selected_path and self._selected_path.startswith(current_path + os.sep):
+                self._selected_path = new_path + os.sep + self._selected_path[len(current_path + os.sep):]
+
+        self._suppress_save_expanded = True
+
+        self._logger.info("Successfully renamed '%s' to '%s'", current_path, new_path)
+
+    def _build_rename_operation(self, old_path: str, new_path: str) -> ReversibleOperation:
+        """Build an undo/redo entry that replays a rename in either direction."""
+        strings = self._language_manager.strings()
+
+        def undo() -> None:
+            try:
+                self._rename_and_announce(new_path, old_path)
+
+            except OSError as e:
+                self._report_operation_error(strings.rename_error_generic.format(str(e)))
+
+        def redo() -> None:
+            try:
+                self._rename_and_announce(old_path, new_path)
+
+            except OSError as e:
+                self._report_operation_error(strings.rename_error_generic.format(str(e)))
+
+        return ReversibleOperation(undo=undo, redo=redo)
+
     def _complete_rename_operation(self, index: QModelIndex, new_name: str) -> None:
         """
         Complete a rename operation with conversation file extension preservation.
@@ -532,58 +737,8 @@ class ConversationSidebar(SidebarBase):
         new_path = os.path.join(directory, final_name)
 
         try:
-            # Save expansion state now with current paths, before the rename triggers
-            # a file watcher event.  The flag prevents _save_expanded_state from
-            # overwriting this with stale paths from the tree view.
-            self._expanded_paths.clear()
-            self._collect_expanded_paths(QModelIndex())
-            current = self._tree_view.currentIndex()
-            if current.isValid():
-                self._selected_path = self._dag_model.path_for_index(current)
-                self._selected_is_pinned_copy = self._dag_model.is_pinned_section_copy(current)
-
-            else:
-                self._selected_path = None
-                self._selected_is_pinned_copy = False
-
-            # Perform the rename
-            os.rename(current_path, new_path)
-            self.file_renamed.emit(current_path, new_path)
-
-            # Update saved expansion state so the renamed node stays expanded
-            # after the model rebuilds in response to the file watcher firing.
-            # A rename retargets the real file both duplicate copies point at,
-            # so every recorded entry for current_path is updated regardless
-            # of which copy it came from.
-            self._expanded_paths = {
-                (new_path, is_pinned_copy) if p == current_path else (p, is_pinned_copy)
-                for p, is_pinned_copy in self._expanded_paths
-            }
-
-            # Update saved selection if the renamed item was selected
-            if self._selected_path == current_path:
-                self._selected_path = new_path
-
-            # For directory renames, update any child paths that were expanded
-            if os.path.isdir(new_path):
-                old_prefix = current_path + os.sep
-                new_prefix = new_path + os.sep
-                updated = {
-                    (
-                        (new_prefix + p[len(old_prefix):]) if p.startswith(old_prefix) else p,
-                        is_pinned_copy
-                    )
-                    for p, is_pinned_copy in self._expanded_paths
-                }
-                self._expanded_paths = updated
-
-                # Also update selected path if it was under the renamed directory
-                if self._selected_path and self._selected_path.startswith(current_path + os.sep):
-                    self._selected_path = new_path + os.sep + self._selected_path[len(current_path + os.sep):]
-
-            self._suppress_save_expanded = True
-
-            self._logger.info("Successfully renamed '%s' to '%s'", current_path, new_path)
+            self._rename_and_announce(current_path, new_path)
+            self._operation_stack.push(self._build_rename_operation(current_path, new_path))
 
         except OSError as e:
             self._logger.error("Failed to rename '%s' to '%s': %s", current_path, new_path, str(e))
@@ -1154,12 +1309,16 @@ class ConversationSidebar(SidebarBase):
         )
 
         if result == MessageBoxButton.YES:
+            trashed: list[tuple[str, str]] = []
+
             # Delete all included files — deepest paths first to avoid
             # trying to delete a parent before its children are gone
             for file_path in sorted(included, key=len, reverse=True):
                 try:
+                    trash_path = self._trash_path_for(file_path)
                     self.file_deleted.emit(file_path)
-                    os.remove(file_path)
+                    shutil.move(file_path, trash_path)
+                    trashed.append((file_path, trash_path))
                     self._mindspace_manager.add_interaction(
                         MindspaceLogLevel.INFO,
                         f"User deleted file '{file_path}'"
@@ -1178,6 +1337,9 @@ class ConversationSidebar(SidebarBase):
                         strings.error_deleting_file.format(str(e)),
                         [MessageBoxButton.OK]
                     )
+
+            if trashed:
+                self._operation_stack.push(self._build_delete_operation(trashed))
 
     def _handle_delete_folder(self, path: str) -> None:
         """
@@ -1223,8 +1385,10 @@ class ConversationSidebar(SidebarBase):
 
         if result == MessageBoxButton.YES:
             try:
-                # Delete the empty folder
-                os.rmdir(path)
+                # Move the empty folder to trash rather than removing it outright
+                trash_path = self._trash_path_for(path)
+                shutil.move(path, trash_path)
+                self._operation_stack.push(self._build_delete_operation([(path, trash_path)]))
                 self._mindspace_manager.add_interaction(
                     MindspaceLogLevel.INFO,
                     f"User deleted empty folder '{path}'"
@@ -1261,8 +1425,27 @@ class ConversationSidebar(SidebarBase):
         else:
             self._handle_delete_file(path)
 
+    def can_undo(self) -> bool:
+        """Return True if a delete, move, or rename can be undone."""
+        return self._operation_stack.can_undo()
+
+    def undo(self) -> None:
+        """Undo the most recent delete, move, or rename."""
+        self._operation_stack.undo()
+
+    def can_redo(self) -> bool:
+        """Return True if an undone delete, move, or rename can be redone."""
+        return self._operation_stack.can_redo()
+
+    def redo(self) -> None:
+        """Redo the most recently undone delete, move, or rename."""
+        self._operation_stack.redo()
+
     def set_mindspace(self, path: str) -> None:
         """Set the mindspace root directory and configure for conversations."""
+        # Undo history (and any still-trashed deletes) belongs to the
+        # mindspace that's being left — it doesn't carry over.
+        self._operation_stack.clear()
         self._mindspace_path = path
 
         if not path:
