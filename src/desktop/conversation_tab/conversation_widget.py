@@ -1175,9 +1175,14 @@ class ConversationWidget(QWidget):
         elif is_placeholder and self._messages:
             self._messages[-1].set_rendered(False)
 
-        # Start animation if not already animating
+        # Start animation if not already animating, otherwise re-evaluate which
+        # messages should be animated since the new message may have become the
+        # last visible one, displacing a now-completed message from the desired set.
         if not self._is_animating:
             self._start_message_border_animation()
+
+        else:
+            self._update_animated_messages()
 
         # Scroll to bottom if in auto-scroll mode, otherwise mark tab as updated
         if self._auto_scroll:
@@ -1304,6 +1309,11 @@ class ConversationWidget(QWidget):
                 self._response_reveal_rendered.pop(message_id, None)
                 self._response_reveal_widgets.pop(message_id, None)
                 self._response_reveal_completed.discard(message_id)
+
+        # A completed message may have just been removed from the reveal system.
+        # Re-evaluate which messages should be animated so it stops pulsing.
+        if self._is_animating:
+            self._update_animated_messages()
 
         if did_render:
             self._scroll_to_bottom()
