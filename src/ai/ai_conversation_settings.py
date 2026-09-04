@@ -133,10 +133,10 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH,
             ],
         ),
-        ("gemini-3.7-flash", "google"): AIModel(
-            name="gemini-3.7-flash",
+        ("gemini-3.8-flash", "google"): AIModel(
+            name="gemini-3.8-flash",
             provider="google",
-            display_name="Gemini 3.7 Flash",
+            display_name="Gemini 3.8 Flash",
             context_window=1048576,
             max_output_tokens=65536,
             supports_temperature=False,
@@ -288,6 +288,22 @@ class AIConversationSettings:
             name="glm-5.3-flash:cloud",
             provider="ollama-cloud",
             display_name="GLM 5.3 Flash",
+            context_window=1048576,
+            max_output_tokens=131072,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
+        ("glm-5.3", "ollama-cloud"): AIModel(
+            name="glm-5.3",
+            provider="ollama-cloud",
+            display_name="GLM 5.3",
             context_window=1048576,
             max_output_tokens=131072,
             supports_temperature=True,

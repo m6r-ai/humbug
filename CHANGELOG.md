@@ -4,7 +4,7 @@
 
 New features:
 
-- Added Gemini 3.7 Flash, and removed Gemini 3.5 Flash.
+- Added Gemini 3.8 Flash, and removed Gemini 3.5 Flash.
 - Added Gemini 3.5 Flash lite, and removed Gemini 3.1 Flash lite.
 - Removed GPT-5.4 and GPT-5.5.
 - Added GLM 5.3 Flash (Z.ai backend).
@@ -23,6 +23,8 @@ Bug fixes:
   while the user is scrolled up.  Deferred content is rendered in one pass when the user scrolls at all (preserving
   their scroll position), or when they scroll back to the bottom (snapping to the bottom).
 - Fixed a problem with text highlighting in terminal tabs that have a horizontal scrollbar.
+- Fixed a problem that could cause diff views to finish prematurely.
+- Fixed a problem where closing a tab might leave mouse-over hover effects not working afterwards.
 
 Internal structure changes:
 
