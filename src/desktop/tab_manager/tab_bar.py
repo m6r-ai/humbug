@@ -110,7 +110,15 @@ class TabBar(QTabBar):
 
     def remove_tab_data(self, tab_id: str) -> None:
         """Remove display data for a tab that has been removed."""
+        hovered_index = self._current_hovered_tab
+
         self._tab_data.pop(tab_id, None)
+
+        if hovered_index != -1:
+            self._current_hovered_tab = -1
+            self._close_hovered = False
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            self.update(self.tabRect(hovered_index))
 
     def get_tab_text(self, index: int) -> str:
         """Return the current display text for the tab at index."""
