@@ -80,6 +80,7 @@ def get_arabic_strings() -> LanguageStrings:
         open_token_usage="استخدام الرموز",
         show_tab_overview="عرض التبويبات المفتوحة",
         show_tab_carousel="عرض دوّار التبويبات",
+        show_trash="عرض سلة المهملات",
         show_all_columns="عرض كل الأعمدة",
         split_column_left="تقسيم العمود لليسار",
         split_column_right="تقسيم العمود لليمين",
@@ -373,6 +374,25 @@ def get_arabic_strings() -> LanguageStrings:
         confirm_delete_item_message="هل أنت متأكد من حذف {0}؟",
         error_folder_not_empty="لا يمكن حذف المجلد: المجلد ليس فارغاً.",
         error_creating_folder="تعذر إنشاء المجلد: {0}",
+
+        # Trash operations
+        trash="سلة المهملات",
+        trash_empty_message="سلة المهملات فارغة.",
+        trash_no_mindspace_message="لا توجد مساحة عمل مفتوحة.",
+        trash_unknown_location="موقع غير معروف",
+        trash_restore="استعادة",
+        trash_delete_forever="حذف نهائي",
+        trash_empty_trash_action="إفراغ سلة المهملات",
+        trash_confirm_delete_forever_title="حذف نهائي",
+        trash_confirm_delete_forever_message="هل أنت متأكد من الحذف النهائي لـ {0}؟ لا يمكن التراجع عن هذا الإجراء.",
+        trash_confirm_empty_title="إفراغ سلة المهملات",
+        trash_confirm_empty_message="هل أنت متأكد من الحذف النهائي لكل ما في سلة المهملات؟ لا يمكن التراجع عن هذا الإجراء.",
+        trash_restore_failed_title="فشلت الاستعادة",
+        trash_restore_failed_message="فشلت استعادة {0}: {1}",
+        trash_time_just_now="الآن",
+        trash_time_minutes_ago="منذ {0} د",
+        trash_time_hours_ago="منذ {0} س",
+        trash_time_days_ago="منذ {0} ي",
 
         # Tool tips
         tooltip_copy_contents="نسخ جميع المحتويات",

@@ -3,7 +3,6 @@
 import logging
 import os
 import shutil
-import uuid
 
 from PySide6.QtCore import Signal, QModelIndex, QRect, Qt, QPoint, QTimer
 from PySide6.QtWidgets import (
@@ -312,19 +311,13 @@ class ConversationSidebar(SidebarBase):
         """
         Return a unique trash location for original_path, creating the trash directory if needed.
 
-        The trash directory lives alongside conversations/ inside .humbug, so
-        trashed items never appear in the conversations tree.
-
         Args:
             original_path: Absolute path of the item about to be trashed.
 
         Returns:
             Absolute path within the mindspace's trash directory to move it to.
         """
-        trash_dir = os.path.join(self._mindspace_path or "", Mindspace.MINDSPACE_DIR, Mindspace.TRASH_DIR)
-        os.makedirs(trash_dir, exist_ok=True)
-        unique_name = f"{uuid.uuid4().hex[:8]}_{os.path.basename(original_path)}"
-        return os.path.join(trash_dir, unique_name)
+        return self._mindspace_manager.mindspace().new_trash_path(original_path)
 
     def _build_delete_operation(self, trashed: list[tuple[str, str]]) -> ReversibleOperation:
         """
@@ -341,12 +334,14 @@ class ConversationSidebar(SidebarBase):
                 by one logical delete action.
         """
         strings = self._language_manager.strings()
+        mindspace = self._mindspace_manager.mindspace()
 
         def restore() -> None:
             try:
                 for original_path, trash_path in trashed:
                     os.makedirs(os.path.dirname(original_path), exist_ok=True)
                     shutil.move(trash_path, original_path)
+                    mindspace.forget_trashed(trash_path)
 
             except OSError as e:
                 self._report_operation_error(strings.error_deleting_file.format(str(e)))
@@ -355,17 +350,14 @@ class ConversationSidebar(SidebarBase):
             try:
                 for original_path, trash_path in trashed:
                     shutil.move(original_path, trash_path)
+                    mindspace.record_trashed(original_path, trash_path)
 
             except OSError as e:
                 self._report_operation_error(strings.error_deleting_file.format(str(e)))
 
         def purge() -> None:
             for _original_path, trash_path in trashed:
-                if os.path.isdir(trash_path):
-                    shutil.rmtree(trash_path, ignore_errors=True)
-
-                elif os.path.exists(trash_path):
-                    os.remove(trash_path)
+                mindspace.purge_trashed(trash_path)
 
         return ReversibleOperation(undo=restore, redo=re_delete, on_discard=purge)
 
@@ -1318,6 +1310,7 @@ class ConversationSidebar(SidebarBase):
                     trash_path = self._trash_path_for(file_path)
                     self.file_deleted.emit(file_path)
                     shutil.move(file_path, trash_path)
+                    self._mindspace_manager.mindspace().record_trashed(file_path, trash_path)
                     trashed.append((file_path, trash_path))
                     self._mindspace_manager.add_interaction(
                         MindspaceLogLevel.INFO,
@@ -1388,6 +1381,7 @@ class ConversationSidebar(SidebarBase):
                 # Move the empty folder to trash rather than removing it outright
                 trash_path = self._trash_path_for(path)
                 shutil.move(path, trash_path)
+                self._mindspace_manager.mindspace().record_trashed(path, trash_path)
                 self._operation_stack.push(self._build_delete_operation([(path, trash_path)]))
                 self._mindspace_manager.add_interaction(
                     MindspaceLogLevel.INFO,

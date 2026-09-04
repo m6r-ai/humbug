@@ -79,6 +79,7 @@ def get_french_strings() -> LanguageStrings:
         open_token_usage="Utilisation des tokens",
         show_tab_overview="Afficher les onglets ouverts",
         show_tab_carousel="Afficher le carrousel d'onglets",
+        show_trash="Afficher la corbeille",
         show_all_columns="Afficher toutes les colonnes",
         split_column_left="Diviser la colonne à gauche",
         split_column_right="Diviser la colonne à droite",
@@ -373,6 +374,30 @@ def get_french_strings() -> LanguageStrings:
         confirm_delete_item_message="Êtes-vous sûr de vouloir supprimer {0} ?",
         error_folder_not_empty="Impossible de supprimer le dossier : le dossier n'est pas vide.",
         error_creating_folder="Impossible de créer le dossier : {0}",
+
+        # Trash operations
+        trash="Corbeille",
+        trash_empty_message="La corbeille est vide.",
+        trash_no_mindspace_message="Aucun espace de travail ouvert.",
+        trash_unknown_location="Emplacement inconnu",
+        trash_restore="Restaurer",
+        trash_delete_forever="Supprimer définitivement",
+        trash_empty_trash_action="Vider la corbeille",
+        trash_confirm_delete_forever_title="Supprimer définitivement",
+        trash_confirm_delete_forever_message=(
+            "Êtes-vous sûr de vouloir supprimer définitivement {0} ? Cette action est irréversible."
+        ),
+        trash_confirm_empty_title="Vider la corbeille",
+        trash_confirm_empty_message=(
+            "Êtes-vous sûr de vouloir supprimer définitivement tout le contenu de la corbeille ? "
+            "Cette action est irréversible."
+        ),
+        trash_restore_failed_title="Échec de la restauration",
+        trash_restore_failed_message="Échec de la restauration de {0} : {1}",
+        trash_time_just_now="À l'instant",
+        trash_time_minutes_ago="il y a {0} min",
+        trash_time_hours_ago="il y a {0} h",
+        trash_time_days_ago="il y a {0} j",
 
         # Tool tips
         tooltip_copy_contents="Copier tout le contenu",

@@ -70,6 +70,7 @@ class LanguageStrings:
     open_token_usage: str
     show_tab_overview: str
     show_tab_carousel: str
+    show_trash: str
     show_all_columns: str
     split_column_left: str
     split_column_right: str
@@ -348,6 +349,25 @@ class LanguageStrings:
     confirm_delete_item_message: str  # Generic message for file/folder deletion
     error_folder_not_empty: str
     error_creating_folder: str
+
+    # Trash operations
+    trash: str
+    trash_empty_message: str
+    trash_no_mindspace_message: str
+    trash_unknown_location: str
+    trash_restore: str
+    trash_delete_forever: str
+    trash_empty_trash_action: str
+    trash_confirm_delete_forever_title: str
+    trash_confirm_delete_forever_message: str
+    trash_confirm_empty_title: str
+    trash_confirm_empty_message: str
+    trash_restore_failed_title: str
+    trash_restore_failed_message: str
+    trash_time_just_now: str
+    trash_time_minutes_ago: str
+    trash_time_hours_ago: str
+    trash_time_days_ago: str
 
     # Tool tips
     tooltip_copy_contents: str

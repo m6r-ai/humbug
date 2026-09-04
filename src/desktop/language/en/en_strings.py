@@ -79,6 +79,7 @@ def get_english_strings() -> LanguageStrings:
         open_token_usage="Token Usage",
         show_tab_overview="Show Open Tabs",
         show_tab_carousel="Show Tab Carousel",
+        show_trash="Show Trash",
         show_all_columns="Show All Columns",
         split_column_left="Split Column Left",
         split_column_right="Split Column Right",
@@ -373,6 +374,27 @@ def get_english_strings() -> LanguageStrings:
         confirm_delete_item_message="Are you sure you want to delete {0}?",
         error_folder_not_empty="Cannot delete folder: folder is not empty.",
         error_creating_folder="Could not create folder: {0}",
+
+        # Trash operations
+        trash="Trash",
+        trash_empty_message="Trash is empty.",
+        trash_no_mindspace_message="No mindspace open.",
+        trash_unknown_location="Unknown location",
+        trash_restore="Restore",
+        trash_delete_forever="Delete Forever",
+        trash_empty_trash_action="Empty Trash",
+        trash_confirm_delete_forever_title="Delete Forever",
+        trash_confirm_delete_forever_message="Are you sure you want to permanently delete {0}? This cannot be undone.",
+        trash_confirm_empty_title="Empty Trash",
+        trash_confirm_empty_message=(
+            "Are you sure you want to permanently delete everything in the trash? This cannot be undone."
+        ),
+        trash_restore_failed_title="Restore Failed",
+        trash_restore_failed_message="Failed to restore {0}: {1}",
+        trash_time_just_now="Just now",
+        trash_time_minutes_ago="{0}m ago",
+        trash_time_hours_ago="{0}h ago",
+        trash_time_days_ago="{0}d ago",
 
         # Tool tips
         tooltip_copy_contents="Copy all contents",

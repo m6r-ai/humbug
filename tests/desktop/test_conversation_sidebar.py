@@ -59,6 +59,11 @@ def _trash_dir(ms_path: str) -> str:
     return os.path.join(ms_path, Mindspace.MINDSPACE_DIR, Mindspace.TRASH_DIR)
 
 
+def _trashed_names(ms_path: str) -> list[str]:
+    """List trash directory entries, excluding the manifest file itself."""
+    return [name for name in os.listdir(_trash_dir(ms_path)) if name != "manifest.json"]
+
+
 class TestDeleteUndoRedo:
     """Deleting moves items to trash rather than removing them, and is reversible."""
 
@@ -71,7 +76,7 @@ class TestDeleteUndoRedo:
 
         assert not os.path.exists(chat)
         assert os.path.isdir(_trash_dir(ms_path))
-        assert len(os.listdir(_trash_dir(ms_path))) == 1
+        assert len(_trashed_names(ms_path)) == 1
 
     def test_undo_restores_deleted_file(self, sidebar_env, sidebar):
         _mgr, _ms_path, conv_dir = sidebar_env
@@ -185,6 +190,47 @@ class TestRenameUndoRedo:
 
         assert os.path.exists(new_path)
         assert not os.path.exists(chat)
+
+
+class TestTrashManifestSync:
+    """The trash manifest tracks original locations through delete/undo/redo."""
+
+    def test_manifest_records_original_location_on_delete(self, sidebar_env, sidebar):
+        mgr, _ms_path, conv_dir = sidebar_env
+        folder = os.path.join(conv_dir, "Work")
+        os.makedirs(folder)
+        chat = os.path.join(folder, "chat.conv")
+        _write_conv_file(chat)
+
+        sidebar._handle_delete_file(chat)  # pylint: disable=protected-access
+
+        entries = mgr.mindspace().list_trashed()
+        assert len(entries) == 1
+        assert entries[0].original_path == os.path.join(mgr.mindspace().conversations_rel_path(), "Work", "chat.conv")
+        assert not entries[0].is_dir
+
+    def test_manifest_entry_removed_on_undo(self, sidebar_env, sidebar):
+        mgr, _ms_path, conv_dir = sidebar_env
+        chat = os.path.join(conv_dir, "chat.conv")
+        _write_conv_file(chat)
+
+        sidebar._handle_delete_file(chat)  # pylint: disable=protected-access
+        sidebar.undo()
+
+        assert not mgr.mindspace().list_trashed()
+
+    def test_manifest_entry_restored_on_redo(self, sidebar_env, sidebar):
+        mgr, _ms_path, conv_dir = sidebar_env
+        chat = os.path.join(conv_dir, "chat.conv")
+        _write_conv_file(chat)
+
+        sidebar._handle_delete_file(chat)  # pylint: disable=protected-access
+        sidebar.undo()
+        sidebar.redo()
+
+        entries = mgr.mindspace().list_trashed()
+        assert len(entries) == 1
+        assert entries[0].original_path == os.path.join(mgr.mindspace().conversations_rel_path(), "chat.conv")
 
 
 class TestUndoHistoryScopedToMindspace:
