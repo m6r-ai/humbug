@@ -402,6 +402,66 @@ class TestDiffParserComplexScenarios:
         assert hunks[0].lines[2].content == 'Emoji: 😀🎉'
 
 
+
+class TestDiffParserContentStartingWithFileHeaderPrefix:
+    """Test that content lines starting with --- or +++ are not mistaken for
+    file headers when the hunk header counts have not yet been consumed."""
+
+    def test_added_line_starting_with_triple_plus(self):
+        """An added line whose content starts with '++' produces a raw diff
+        line starting with '+++'.  The parser must not treat this as a file
+        header as long as the hunk's line counts have not been consumed."""
+        diff_text = """@@ -0,0 +1,3 @@
++line one
++++ b/src/file.menai
++line three
+"""
+        parser = DiffParser()
+        hunks = parser.parse(diff_text)
+
+        assert len(hunks) == 1
+        assert len(hunks[0].lines) == 3
+        assert hunks[0].lines[0].content == 'line one'
+        assert hunks[0].lines[1].content == '++ b/src/file.menai'
+        assert hunks[0].lines[2].content == 'line three'
+
+    def test_added_line_starting_with_triple_dash(self):
+        """An added line whose content starts with '--' produces a raw diff
+        line starting with '+--'.  This does not collide with the '---'
+        file-header check but is verified for completeness."""
+        diff_text = """@@ -0,0 +1,2 @@
++line one
++--- a/src/file.menai
+"""
+        parser = DiffParser()
+        hunks = parser.parse(diff_text)
+
+        assert len(hunks) == 1
+        assert len(hunks[0].lines) == 2
+        assert hunks[0].lines[0].content == 'line one'
+        assert hunks[0].lines[1].content == '--- a/src/file.menai'
+
+    def test_multiple_hunks_with_plus_plus_plus_content(self):
+        """Content lines starting with '++' should not interfere with parsing
+        subsequent hunks."""
+        diff_text = """@@ -0,0 +1,2 @@
++first hunk line
++++ b/file.txt
+@@ -5,1 +5,1 @@
+-old
++new
+"""
+        parser = DiffParser()
+        hunks = parser.parse(diff_text)
+
+        assert len(hunks) == 2
+        assert len(hunks[0].lines) == 2
+        assert hunks[0].lines[0].content == 'first hunk line'
+        assert hunks[0].lines[1].content == '++ b/file.txt'
+        assert len(hunks[1].lines) == 2
+        assert hunks[1].lines[0].content == 'old'
+        assert hunks[1].lines[1].content == 'new'
+
 class TestDiffParserHunkHeaderVariations:
     """Test various hunk header format variations."""
 

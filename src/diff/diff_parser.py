@@ -78,10 +78,15 @@ class DiffParser:
         """
         Count the raw body lines belonging to the hunk at hunk_idx.
 
-        The body starts immediately after the @@ header and ends at the next
-        @@, file header (--- / +++), or end of diff.  This includes the
-        backslash-prefixed no-newline marker lines so the outer parse loop
-        can skip past them correctly.
+        The body starts immediately after the @@ header.  When the hunk
+        header specifies line counts, --- and +++ lines are treated as
+        content (not file headers) until both old and new line quotas are
+        consumed — only then do they act as terminators.  This prevents
+        content lines that happen to start with --- or +++ from being
+        mistaken for file headers.  For a bare @@ header (no counts), the
+        body ends at the next @@, file header (--- / +++), or end of diff.
+        Backslash-prefixed no-newline markers are included in the count so
+        the outer parse loop can skip past them correctly.
 
         Args:
             lines: All lines from the diff
@@ -90,14 +95,65 @@ class DiffParser:
         Returns:
             Number of raw body lines in this hunk
         """
+        header = lines[hunk_idx]
+        match = re.match(r'^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@', header)
+
+        if not match:
+            # Bare @@ header: no counts to guide us, use terminators.
+            count = 0
+            i = hunk_idx + 1
+
+            while i < len(lines):
+                line = lines[i]
+
+                if line.startswith('@@') or line.startswith('---') or line.startswith('+++'):
+                    break
+
+                count += 1
+                i += 1
+
+            return count
+
+        old_count = int(match.group(2)) if match.group(2) else 1
+        new_count = int(match.group(4)) if match.group(4) else 1
+
         count = 0
+        old_consumed = 0
+        new_consumed = 0
         i = hunk_idx + 1
 
         while i < len(lines):
             line = lines[i]
 
-            if line.startswith('@@') or line.startswith('---') or line.startswith('+++'):
+            if line.startswith('@@'):
                 break
+
+            # --- and +++ are treated as file headers (terminators) only after
+            # both line quotas are consumed.  Before that, they are content lines.
+            if (line.startswith('---') or line.startswith('+++')) and old_consumed >= old_count and new_consumed >= new_count:
+                break
+
+            if not line:
+                # Empty lines don't count toward either quota.
+                count += 1
+                i += 1
+                continue
+
+            if line.startswith('\\'):
+                # No-newline marker: counts as a raw line but not toward quotas.
+                count += 1
+                i += 1
+                continue
+
+            if line.startswith(' '):
+                old_consumed += 1
+                new_consumed += 1
+
+            elif line.startswith('-'):
+                old_consumed += 1
+
+            elif line.startswith('+'):
+                new_consumed += 1
 
             count += 1
             i += 1
@@ -121,6 +177,7 @@ class DiffParser:
         header = lines[start_idx]
 
         # Parse hunk header: @@ -old_start,old_count +new_start,new_count @@
+        has_counts = True
         match = re.match(r'^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@', header)
         if not match:
             # A bare @@ with no line numbers is treated as "location unknown".
@@ -129,6 +186,7 @@ class DiffParser:
             if not re.match(r'^@@\s*$', header):
                 raise DiffParseError(f"Invalid hunk header format: {header}")
 
+            has_counts = False
             old_start = 1
             old_count = 0
             new_start = 1
@@ -144,17 +202,24 @@ class DiffParser:
         hunk_lines: list[DiffLine] = []
         old_no_newline = False
         new_no_newline = False
+        old_consumed = 0
+        new_consumed = 0
         i = start_idx + 1
 
         while i < len(lines):
             line = lines[i]
 
-            # Stop at next hunk or end of diff
+            # Stop at next hunk header.
             if line.startswith('@@'):
                 break
 
-            # Stop at next file header (--- or +++)
-            if line.startswith('---') or line.startswith('+++'):
+            # Stop at file header (--- or +++) only after both line quotas are
+            # consumed.  Before that, such lines are content lines — this
+            # prevents lines like "+++ b/file" inside a hunk body from being
+            # mistaken for a file header.  For bare @@ headers (has_counts is
+            # False, quotas are 0), this always terminates as before.
+            if ((line.startswith('---') or line.startswith('+++')) and
+                    (not has_counts or (old_consumed >= old_count and new_consumed >= new_count))):
                 break
 
             # Skip empty lines
@@ -194,17 +259,23 @@ class DiffParser:
             # Parse diff line
             if line.startswith(' '):
                 hunk_lines.append(DiffLine(' ', line[1:]))
+                old_consumed += 1
+                new_consumed += 1
 
             elif line.startswith('-'):
                 hunk_lines.append(DiffLine('-', line[1:]))
+                old_consumed += 1
 
             elif line.startswith('+'):
                 hunk_lines.append(DiffLine('+', line[1:]))
+                new_consumed += 1
 
             else:
                 # Treat as context line if it doesn't have a prefix
                 # This handles cases where the AI might forget the space prefix
                 hunk_lines.append(DiffLine(' ', line))
+                old_consumed += 1
+                new_consumed += 1
 
             i += 1
 
