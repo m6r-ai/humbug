@@ -25,6 +25,8 @@ Bug fixes:
 - Fixed a problem with text highlighting in terminal tabs that have a horizontal scrollbar.
 - Fixed a problem that could cause diff views to finish prematurely.
 - Fixed a problem where closing a tab might leave mouse-over hover effects not working afterwards.
+- The editor `transform` operation no longer requests user authorization.  It modifies the in-memory
+  editor buffer, consistent with `apply_diff`.  Use `save_file` to persist changes to disk.
 
 Internal structure changes:
 

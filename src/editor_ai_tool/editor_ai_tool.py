@@ -251,7 +251,7 @@ class EditorAITool(AITool):
                     "back to the buffer. The program may reference 'input-text' (full content as a "
                     "string) and 'input-lines' (content split on newlines as a list of strings). "
                     "It must return a string or a list of strings. "
-                    "If dry_run is True, returns the diff without requesting authorisation or applying anything. "
+                    "If dry_run is True, returns the diff without applying anything. "
                     "Use save_file afterward to persist the changes. "
                     "program MUST use Menai syntax: (operator arg1 arg2 ...)."
                 )
@@ -764,7 +764,7 @@ class EditorAITool(AITool):
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
-        request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Apply a Menai transform program to the editor buffer."""
         arguments = tool_call.arguments
@@ -851,13 +851,6 @@ class EditorAITool(AITool):
                     f"({len(diff_lines)} diff lines). No changes applied.\n\n{diff_str}"
                 )
             )
-
-        editor_info = context.get_editor_info()
-        file_path = editor_info.get('file_path', f'tab {context_id}')
-        context_str = f"Apply Menai transform to editor buffer: {file_path} (tab {context_id})"
-        authorized = await request_authorization("editor", arguments, context_str, diff_str, True)
-        if not authorized:
-            raise AIToolAuthorizationDenied("User denied permission to apply Menai transform")
 
         result = context.apply_diff(diff_str)
         if not result['success']:
