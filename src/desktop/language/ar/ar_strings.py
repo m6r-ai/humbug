@@ -246,6 +246,7 @@ def get_arabic_strings() -> LanguageStrings:
         settings_editor="المحرر",
         settings_diff="الفروقات",
         settings_terminal="الطرفية",
+        settings_conversation="المحادثة",
         settings_tabs="علامات التبويب",
 
         # Conversation settings

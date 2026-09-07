@@ -245,6 +245,7 @@ def get_french_strings() -> LanguageStrings:
         settings_editor="Éditeur",
         settings_diff="Diff",
         settings_terminal="Terminal",
+        settings_conversation="Conversation",
         settings_tabs="Tabulations",
 
         # Conversation settings

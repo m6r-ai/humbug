@@ -245,6 +245,7 @@ def get_english_strings() -> LanguageStrings:
         settings_editor="Editor",
         settings_diff="Diff",
         settings_terminal="Terminal",
+        settings_conversation="Conversation",
         settings_tabs="Tabs",
 
         # Conversation settings

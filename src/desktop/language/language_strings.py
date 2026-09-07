@@ -232,6 +232,7 @@ class LanguageStrings:
     settings_diff: str
     settings_terminal: str
     settings_tabs: str
+    settings_conversation: str
 
     # Conversation settings
     model_info: str

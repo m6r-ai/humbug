@@ -2291,6 +2291,13 @@ class MainWindow(QMainWindow):
             settings.prompt_markers_visible = visible
             self._mindspace_manager.mindspace().update_settings(settings)
 
+    def _sync_prompt_markers(self, visible: bool) -> None:
+        """Update the View menu checkbox and all open conversation tabs."""
+        self._prompt_navigator_action.setChecked(visible)
+        for tab in self._tab_manager.get_all_tabs():
+            if isinstance(tab, ConversationTab):
+                tab.set_prompt_minimap_visible(visible)
+
     def _restore_prompt_marker_setting(self) -> None:
         """Restore prompt-marker visibility for the active mindspace."""
         settings = self._mindspace_manager.settings()
@@ -2364,6 +2371,8 @@ class MainWindow(QMainWindow):
                     f"disabled tools: {', '.join(k for k, v in new_settings.enabled_tools.items() if not v)}"
                 )
 
+                self._sync_prompt_markers(new_settings.prompt_markers_visible)
+
             except MindspaceError as e:
                 self._logger.error("Failed to save mindspace settings: %s", str(e))
                 strings = self._language_manager.strings()
@@ -2386,6 +2395,8 @@ class MainWindow(QMainWindow):
                         reasoning_effort=new_settings.reasoning_effort,
                     )
                 )
+
+                self._sync_prompt_markers(new_settings.prompt_markers_visible)
 
             except MindspaceError as e:
                 self._logger.error("Failed to save mindspace settings: %s", str(e))

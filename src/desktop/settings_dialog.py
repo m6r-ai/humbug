@@ -56,9 +56,12 @@ SECTION_AI_TOOLS = "ai_tools"
 SECTION_EDITOR = "editor"
 SECTION_DIFF = "diff"
 SECTION_TERMINAL = "terminal"
+SECTION_CONVERSATION = "conversation"
 
 _ALL_MINDSPACES_SECTIONS = [SECTION_DISPLAY, SECTION_FILE_ACCESS, SECTION_AI_BACKENDS]
-_THIS_MINDSPACE_SECTIONS = [SECTION_AI_MODEL, SECTION_AI_TOOLS, SECTION_EDITOR, SECTION_DIFF, SECTION_TERMINAL]
+_THIS_MINDSPACE_SECTIONS = [
+    SECTION_AI_MODEL, SECTION_AI_TOOLS, SECTION_EDITOR, SECTION_DIFF, SECTION_TERMINAL, SECTION_CONVERSATION
+]
 
 
 class _NavItemDelegate(QStyledItemDelegate):
@@ -173,6 +176,10 @@ class SettingsDialog(QDialog):
         self._terminal_close_on_exit_check: SettingsSwitch
         self._terminal_container: SettingsContainer
 
+        self._conversation_heading: SettingsPageHeading
+        self._prompt_markers_check: SettingsSwitch
+        self._conversation_container: SettingsContainer
+
         strings = self._language_manager.strings()
         self.setWindowTitle(strings.settings)
         self.setMinimumWidth(900)
@@ -264,6 +271,7 @@ class SettingsDialog(QDialog):
         self._build_editor_page()
         self._build_diff_page()
         self._build_terminal_page()
+        self._build_conversation_page()
 
     def _add_nav_group(self, label: str, string_key: str) -> None:
         """Add a non-selectable group header to the nav list."""
@@ -672,6 +680,26 @@ class SettingsDialog(QDialog):
         self._section_pages[SECTION_TERMINAL] = page
         self._add_nav_section(SECTION_TERMINAL, strings.settings_terminal)
 
+    def _build_conversation_page(self) -> None:
+        """Build the Conversation settings page."""
+        strings = self._language_manager.strings()
+        container = SettingsContainer()
+
+        self._conversation_heading = SettingsFactory.create_page_heading(strings.settings_conversation)
+        container.add_setting(self._conversation_heading)
+
+        self._prompt_markers_check = SettingsFactory.create_switch(strings.prompt_markers)
+        container.add_setting(self._prompt_markers_check)
+
+        container.add_stretch()
+        container.value_changed.connect(self._on_value_changed)
+
+        self._conversation_container = container
+        page = self._make_scroll_page(container)
+        self._stack.addWidget(page)
+        self._section_pages[SECTION_CONVERSATION] = page
+        self._add_nav_section(SECTION_CONVERSATION, strings.settings_conversation)
+
     def set_settings(
         self,
         user_settings: UserSettings,
@@ -766,7 +794,13 @@ class SettingsDialog(QDialog):
             temperature=self._temp_spin.get_value(),
             reasoning=self._reasoning_combo.get_value(),
             reasoning_effort=self._effort_combo.get_value() if reasoning_options else None,
+            prompt_markers_visible=self._prompt_markers_check.get_value(),
             enabled_tools=enabled_tools,
+            pinned_paths=(
+                list(self._current_mindspace_settings.pinned_paths)
+                if self._current_mindspace_settings is not None
+                else []
+            ),
         )
 
     def _on_apply_to_all_clicked(self) -> None:
@@ -874,6 +908,9 @@ class SettingsDialog(QDialog):
         self._terminal_scrollback_spin.set_enabled(settings.terminal_scrollback_enabled)
         self._terminal_close_on_exit_check.set_value(settings.terminal_close_on_exit)
 
+        # Conversation
+        self._prompt_markers_check.set_value(settings.prompt_markers_visible)
+
     def _update_mindspace_sections_enabled(self) -> None:
         """Enable or disable 'This Mindspace' nav items based on whether a mindspace is open."""
         for section_id in _THIS_MINDSPACE_SECTIONS:
@@ -925,6 +962,7 @@ class SettingsDialog(QDialog):
                 self._tools_container,
                 self._editor_container,
                 self._terminal_container,
+                self._conversation_container,
             ]
         )
         self.apply_button.setEnabled(modified)
@@ -1364,6 +1402,7 @@ class SettingsDialog(QDialog):
             SECTION_EDITOR: strings.settings_editor,
             SECTION_DIFF: strings.settings_diff,
             SECTION_TERMINAL: strings.settings_terminal,
+            SECTION_CONVERSATION: strings.settings_conversation,
         }
         for section_id, item in self._section_items.items():
             item.setText("  " + label_map.get(section_id, section_id))
@@ -1377,6 +1416,7 @@ class SettingsDialog(QDialog):
         self._editor_heading.set_label(strings.editor_settings)
         self._diff_heading.set_label(strings.diff_settings)
         self._terminal_heading.set_label(strings.terminal_settings)
+        self._conversation_heading.set_label(strings.settings_conversation)
 
         # Update Display page controls
         current_lang = self._language_combo.get_value()
@@ -1474,6 +1514,9 @@ class SettingsDialog(QDialog):
         self._terminal_scrollback_spin.set_label(strings.terminal_scrollback_lines)
         self._terminal_close_on_exit_check.set_label(strings.terminal_close_on_exit)
 
+        # Update Conversation page controls
+        self._prompt_markers_check.set_label(strings.prompt_markers)
+
         self.adjustSize()
 
     def _on_style_changed(self) -> None:
@@ -1550,6 +1593,7 @@ class SettingsDialog(QDialog):
             self._tools_container,
             self._editor_container,
             self._terminal_container,
+            self._conversation_container,
         ]:
             container.reset_modified_state()
 
@@ -1593,7 +1637,10 @@ class SettingsDialog(QDialog):
             provider=settings.provider,
             temperature=settings.temperature,
             reasoning=settings.reasoning,
+            reasoning_effort=settings.reasoning_effort,
+            prompt_markers_visible=settings.prompt_markers_visible,
             enabled_tools=settings.enabled_tools.copy(),
+            pinned_paths=list(settings.pinned_paths),
         )
 
 
