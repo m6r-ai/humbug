@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v55 (2026-08-xx)
+## v55 (2026-09-xx)
 
 New features:
 
@@ -14,6 +14,7 @@ New features:
 - Border animation now applies to all messages with pending or ongoing content, not just the last visible one.  This
   ensures the correct message boxes are highlighted after scrolling and deferred content is revealed.
 - Added pinning of conversations within the mindspace sidebar.
+- Added undo/redo for deletions of conversations from the sidebar.
 
 Bug fixes:
 
