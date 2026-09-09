@@ -595,7 +595,7 @@ class PreviewTab(TabBase):
                 padding: 0;
             }}
 
-            #PreviewWidget #PreviewMarkdownContentSection QTextEdit {{
+            #PreviewWidget #PreviewMarkdownContentSection QTextEdit, QPlainTextEdit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;

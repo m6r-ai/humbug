@@ -811,7 +811,7 @@ class ConversationTab(TabBase):
                 padding: 0;
                 margin: 0;
             }}
-            #ConversationWidget #ConversationMessage #ConversationMessageSection QTextEdit {{
+            #ConversationWidget #ConversationMessage #ConversationMessageSection QTextEdit, QPlainTextEdit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
