@@ -1,8 +1,10 @@
 from collections.abc import Callable
+from datetime import datetime, timezone
 import json
 import logging
 import os
 import shutil
+import uuid
 
 from ai import AIConversationSettings
 from ai_tool import AIToolManager
@@ -15,6 +17,7 @@ from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
 from mindspace.mindspace_settings import MindspaceSettings
 from mindspace.mindspace_usage import MindspaceUsage
+from mindspace.trash_manifest import TrashEntry, TrashManifest, strip_trash_prefix
 
 
 class Mindspace:
@@ -30,6 +33,7 @@ class Mindspace:
     INTERACTIONS_FILE = "system.json"
     USAGE_FILE = "usage.json"
     CONVERSATIONS_DIR = "conversations"
+    TRASH_DIR = "trash"
 
     def __init__(
         self,
@@ -243,6 +247,177 @@ class Mindspace:
             Path relative to the mindspace root, e.g. '.humbug/conversations'.
         """
         return os.path.join(self.MINDSPACE_DIR, self.CONVERSATIONS_DIR)
+
+    def trash_dir(self) -> str:
+        """
+        Return the absolute path to the trash directory, creating it if needed.
+
+        The trash directory lives inside .humbug, alongside but outside of
+        conversations/, so trashed items never appear in the conversations
+        tree.  Used to support undoing a delete.
+
+        Returns:
+            Absolute path to the trash directory.
+
+        Raises:
+            MindspaceError: No mindspace is open or directory could not be created.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        path = os.path.join(self._path, self.MINDSPACE_DIR, self.TRASH_DIR)
+        try:
+            os.makedirs(path, exist_ok=True)
+
+        except OSError as e:
+            raise MindspaceError(f"Failed to create trash directory: {str(e)}") from e
+
+        return path
+
+    def _trash_manifest_path(self) -> str:
+        """Return the absolute path to the trash manifest file, creating trash_dir() if needed."""
+        return os.path.join(self.trash_dir(), "manifest.json")
+
+    def new_trash_path(self, original_path: str) -> str:
+        """
+        Return a unique location within the trash directory for original_path.
+
+        Args:
+            original_path: Absolute path of the item about to be trashed.
+
+        Returns:
+            Absolute path within trash_dir() to move it to.
+        """
+        unique_name = f"{uuid.uuid4().hex[:8]}_{os.path.basename(original_path)}"
+        return os.path.join(self.trash_dir(), unique_name)
+
+    def record_trashed(self, original_path: str, trash_path: str) -> None:
+        """
+        Record where a trashed item originally lived, so it can later be restored.
+
+        Args:
+            original_path: Absolute path the item was moved from.
+            trash_path: Absolute path within trash_dir() the item now lives at.
+        """
+        manifest = TrashManifest.load(self._trash_manifest_path())
+        manifest.record(
+            os.path.basename(trash_path),
+            os.path.relpath(original_path, self._path),
+            datetime.now(timezone.utc).isoformat(),
+            os.path.isdir(trash_path),
+        )
+        manifest.save(self._trash_manifest_path())
+
+    def forget_trashed(self, trash_path: str) -> None:
+        """Remove trash_path's manifest entry, e.g. once it has been restored."""
+        manifest = TrashManifest.load(self._trash_manifest_path())
+        manifest.forget(os.path.basename(trash_path))
+        manifest.save(self._trash_manifest_path())
+
+    def purge_trashed(self, trash_path: str) -> None:
+        """Permanently delete a trashed item and forget its manifest entry."""
+        if os.path.isdir(trash_path):
+            shutil.rmtree(trash_path, ignore_errors=True)
+
+        elif os.path.exists(trash_path):
+            os.remove(trash_path)
+
+        self.forget_trashed(trash_path)
+
+    def restore_trashed(self, trash_name: str) -> str:
+        """
+        Restore a trashed item to its original location.
+
+        Items trashed before this feature existed (or whose manifest entry
+        was otherwise lost) have no known original location, and are
+        restored into the conversations directory instead.
+
+        Args:
+            trash_name: Basename of the item within trash_dir().
+
+        Returns:
+            The absolute path the item was restored to.
+
+        Raises:
+            MindspaceError: The trashed item no longer exists, or something
+                already occupies the restore destination.
+        """
+        trash_path = os.path.join(self.trash_dir(), trash_name)
+        if not os.path.exists(trash_path):
+            raise MindspaceError(f"'{trash_name}' is no longer in the trash")
+
+        manifest = TrashManifest.load(self._trash_manifest_path())
+        entry = manifest.get(trash_name)
+        target = (
+            os.path.join(self._path, entry.original_path) if entry is not None
+            else os.path.join(self.conversations_dir(), strip_trash_prefix(trash_name))
+        )
+
+        if os.path.exists(target):
+            raise MindspaceError(f"Cannot restore '{trash_name}': '{target}' already exists")
+
+        try:
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            shutil.move(trash_path, target)
+
+        except OSError as e:
+            raise MindspaceError(f"Failed to restore '{trash_name}': {str(e)}") from e
+
+        manifest.forget(trash_name)
+        manifest.save(self._trash_manifest_path())
+        return target
+
+    def empty_trash(self) -> None:
+        """Permanently delete everything currently in the trash."""
+        trash_dir = self.trash_dir()
+        manifest_name = os.path.basename(self._trash_manifest_path())
+        for scan_entry in os.scandir(trash_dir):
+            if scan_entry.name == manifest_name:
+                continue
+
+            if scan_entry.is_dir():
+                shutil.rmtree(scan_entry.path, ignore_errors=True)
+
+            else:
+                os.remove(scan_entry.path)
+
+        TrashManifest().save(self._trash_manifest_path())
+
+    def list_trashed(self) -> list[TrashEntry]:
+        """
+        Return metadata for everything currently in the trash, newest first.
+
+        Items with no manifest entry (e.g. left over from before this
+        feature existed) are still listed, with their original location
+        left blank and their deletion time approximated from the
+        filesystem.
+
+        Returns:
+            TrashEntry objects sorted by deleted_at, newest first.
+        """
+        trash_dir = self.trash_dir()
+        manifest = TrashManifest.load(self._trash_manifest_path())
+        manifest_name = os.path.basename(self._trash_manifest_path())
+
+        entries = []
+        for scan_entry in os.scandir(trash_dir):
+            if scan_entry.name == manifest_name:
+                continue
+
+            known = manifest.get(scan_entry.name)
+            if known is not None:
+                entries.append(known)
+                continue
+
+            entries.append(TrashEntry(
+                trash_name=scan_entry.name,
+                original_path="",
+                deleted_at=datetime.fromtimestamp(
+                    scan_entry.stat().st_mtime, tz=timezone.utc
+                ).isoformat(),
+                is_dir=scan_entry.is_dir(),
+            ))
+
+        entries.sort(key=lambda e: e.deleted_at, reverse=True)
+        return entries
 
     def can_pin_path(self, abs_path: str) -> bool:
         """

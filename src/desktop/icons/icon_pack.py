@@ -55,6 +55,7 @@ ACTIVE_INACTIVE_THEME_ICONS: Final[tuple[str, ...]] = (
     "usage",
     "tab-overview",
     "tab-carousel",
+    "trash",
 )
 
 
@@ -266,6 +267,13 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
         </svg>
     ''',
     "delete": '''
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <path stroke="{color}" stroke-width="6" fill="none"
+                d="M12.5,20 L12.5,56 L51.5,56 L51.5,20 M4,20 L60,20 M18,20 L24,8 L40,8 L46,20"/>
+            <path stroke="{color}" stroke-width="6" fill="none" d="M25.5,28 L25.5,46 M38.5,28 L38.5,46"/>
+        </svg>
+    ''',
+    "trash": '''
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
             <path stroke="{color}" stroke-width="6" fill="none"
                 d="M12.5,20 L12.5,56 L51.5,56 L51.5,20 M4,20 L60,20 M18,20 L24,8 L40,8 L46,20"/>
