@@ -49,16 +49,16 @@ class TrashSidebar(SidebarBase):
         self._mindspace_path = ""
         self._empty_state_spacer: QSpacerItem | None = None
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
 
         self._header = SidebarSectionHeader(self._language_manager.strings().trash, self)
-        layout.addWidget(self._header)
+        self._layout.addWidget(self._header)
 
         self._status_label = QLabel(self)
         self._status_label.setObjectName("_status_label")
-        layout.addWidget(self._status_label)
+        self._layout.addWidget(self._status_label)
 
         self._tree = QTreeWidget(self)
         self._tree.setObjectName("TrashSidebarTree")
@@ -69,7 +69,7 @@ class TrashSidebar(SidebarBase):
         self._tree.setRootIsDecorated(False)
         self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._tree.customContextMenuRequested.connect(self._show_context_menu)
-        layout.addWidget(self._tree)
+        self._layout.addWidget(self._tree)
 
         self._on_language_changed()
 
@@ -95,7 +95,7 @@ class TrashSidebar(SidebarBase):
         self._status_label.hide()
         self._tree.show()
         if self._empty_state_spacer is not None:
-            self.layout().removeItem(self._empty_state_spacer)
+            self._layout.removeItem(self._empty_state_spacer)
             self._empty_state_spacer = None
 
         for entry in entries:
@@ -110,7 +110,7 @@ class TrashSidebar(SidebarBase):
             self._empty_state_spacer = QSpacerItem(
                 0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
             )
-            self.layout().addItem(self._empty_state_spacer)
+            self._layout.addItem(self._empty_state_spacer)
 
     def _build_item(self, entry: TrashEntry) -> QTreeWidgetItem:
         """Build a single row for a trash entry."""
