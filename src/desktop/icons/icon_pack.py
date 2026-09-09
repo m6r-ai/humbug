@@ -107,6 +107,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path stroke="{color}" stroke-width="6" fill="none" d="M8,20 L32,44 L56,20"/>
         </svg>
     ''',
+    # Conversation tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
     "conversation": '''
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 10H8.01" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -131,6 +132,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path d="M18 9V12.3242C18 16.9982 16.9424 18 12.008 18H9" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
         </svg>
     ''',
+    # Editor tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
     "editor": '''
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M13 21H21" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -150,6 +152,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path d="M4 10H20" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
         </svg>
     ''',
+    # Log tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
     "log": '''
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M5 12H7.75044C7.89947 12 8.03179 11.9046 8.07892 11.7632V11.7632L9.875 6.375V6.375C9.91626
@@ -158,6 +161,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
                 stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     ''',
+    # Preview tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
     "preview": '''
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M17.8284 6.82843C18.4065 7.40649 18.6955 7.69552 18.8478 8.06306C19 8.4306 19 8.83935
@@ -178,6 +182,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path d="M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="{color}" stroke-width="2"/>
         </svg>
     ''',
+    # Shell tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
     "shell": '''
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 7C3 5.11438 3 4.17157 3.58579 3.58579C4.17157 3 5.11438 3 7 3H12H17C18.8856 3 19.8284
@@ -188,6 +193,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path d="M12 17V21" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
         </svg>
     ''',
+    # Terminal tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
     "terminal": '''
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M13 15H16" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
@@ -208,6 +214,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
                 stroke="{color}" stroke-width="2" stroke-linecap="round"/>
         </svg>
     ''',
+    # Alert hexagon icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
     "critical": '''
         <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 9.22843V14.7716C3 15.302 3.21071 15.8107 3.58579 16.1858L7.81421 20.4142C8.18929 20.7893 8.69799
@@ -219,6 +226,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path d="M12 16V15.9888" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
         </svg>
     ''',
+    # Bulb on icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
     "info": '''
         <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 7C9.23858 7 7 9.23858 7 12C7 13.3613 7.54402 14.5955 8.42651 15.4972C8.77025 15.8484 9.05281 16.2663
@@ -233,6 +241,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path d="M10 17H14" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     ''',
+    # Help circle icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
     "question": '''
         <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12
@@ -243,6 +252,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path d="M12 16H12.01" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     ''',
+    # Alert triangle icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
     "warning": '''
         <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 10V13" stroke="{color}" stroke-width="2" stroke-linecap="round"/>
