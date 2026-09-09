@@ -55,12 +55,14 @@ What costs, risks, or constraints does this decision impose?
 
 ### Principles
 
-- An ADR records **context, alternatives, and reasoning** — the things that are
+- An ADR records context, alternatives, and reasoning - the things that are
   not in the code. Do not reproduce implementation details that can be read from
   the source.
-- An ADR is written when the decision is **settled**, not while it is still under
+
+- An ADR is written when the decision is settled, not while it is still under
   discussion. Use a working document for proposals, then create the ADR once the
   approach is confirmed.
+
 - Once accepted, an ADR is not updated to reflect implementation details. If the
   decision itself changes, write a new ADR that supersedes the old one.
 
@@ -74,3 +76,4 @@ What costs, risks, or constraints does this decision impose?
 | [0004](0004-minimal-dependencies.md) | Minimal dependencies | Accepted |
 | [0005](0005-desktop-ui-toolkit-qt.md) | Desktop UI toolkit — Qt | Accepted |
 | [0006](0006-humans-and-ais-are-equal-actors.md) | Humans and AIs are equal actors | Accepted |
+| [0007](0007-tool-approval-policy.md) | Tool approval policy — persistent vs ephemeral state | Accepted |

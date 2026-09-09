@@ -25,6 +25,7 @@ The checker runs as part of the standard code-quality gate, so violations block 
 ## Alternatives considered
 
 - Established libraries per need (HTTP clients, PDF/DOCX parsers, Markdown engines, syntax highlighters) were rejected because they risk introducing the problems described above.
+
 - Vendoring third-party source code was rejected because it is hard to keep compliant/coherent with the system design.
 
 ## Consequences
@@ -32,13 +33,18 @@ The checker runs as part of the standard code-quality gate, so violations block 
 ### Positive
 
 - A small, auditable supply chain and a system readable from one repository.
+
 - Any part can be replaced, because the interfaces are owned rather than adapted to.
+
 - AIs can read and modify every layer, which compounds the bootstrapping advantage.
+
 - Dependency upgrades are rare, deliberate events rather than continuous churn.
+
 - Implementations do just what they need and nothing else (YAGNI principle).
 
 ### Negative
 
 - Maintenance and edge cases for everything in-house are Humbug's responsibility — parser quirks, format corners, proxy tunnelling, platform differences.
+
 - Feature parity with mature libraries lags.
   Some obscure format corners remain unsupported.

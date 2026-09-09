@@ -1524,8 +1524,12 @@ class TabManager(QWidget):
         Args:
             tab: The tab widget to add
             title: Initial title for the tab
-            requester_id: Optional ID of the tab requesting this open, used
-                          to determine placement column.
+            requester_id: ID of the context requesting this open.  When
+                          non-empty (AI-initiated or opened from another tab),
+                          the new tab is placed in a column adjacent to the
+                          requester and focus is not stolen from the user.
+                          When empty (user-initiated), the new tab is placed
+                          in the active column and receives focus.
         """
         if len(self._tabs) == 0:
             # If no tabs exist, we need to switch to the columns widget
@@ -1542,8 +1546,18 @@ class TabManager(QWidget):
         # If the new tab landed in a column that wasn't already active, restore the previously
         # active column so that opening a tab doesn't implicitly steal column activation
         if target_column != prior_active_column:
-            self._active_column = prior_active_column
-            self._update_tabs(change_focus=False)
+            if requester_id:
+                self._active_column = prior_active_column
+                self._update_tabs(change_focus=False)
+
+            else:
+                self._active_column = target_column
+                self._focus_restore_timer.stop()
+                self._update_tabs(change_focus=True)
+
+        elif not requester_id:
+            self._focus_restore_timer.stop()
+            self._update_tabs(change_focus=True)
 
         # Close any ephemeral tab in target column because we've just added a new one
         self._close_ephemeral_tab_in_column(target_column, tab)

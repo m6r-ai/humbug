@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
+from ai_tool import AIToolExecutionError
 from editor_ai_tool.editor_ai_tool import EditorAITool
 
 from tests.conftest import MockRequester
@@ -25,14 +25,6 @@ def mock_authorization():
     """Fixture that always grants authorization."""
     async def _auth(*_args, **_kwargs):
         return True
-    return _auth
-
-
-@pytest.fixture
-def mock_authorization_denied():
-    """Fixture that always denies authorization."""
-    async def _auth(*_args, **_kwargs):
-        return False
     return _auth
 
 
@@ -106,20 +98,6 @@ class TestEditorAIToolTransform:
         )
         result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "no changes" in result.content.lower()
-        ctx.apply_diff.assert_not_called()
-
-    def test_transform_authorization_denied(self, editor_tool, mock_authorization_denied, make_tool_call):
-        """Transform is aborted when the user denies authorization."""
-        tool, mindspace = editor_tool
-        ctx = make_editor_context("original")
-        _set_context(tool, mindspace, ctx)
-
-        tool_call = make_tool_call(
-            "editor",
-            {"operation": "transform", "tab_id": "test-tab-id", "program": "(string-upcase input-text)"}
-        )
-        with pytest.raises(AIToolAuthorizationDenied):
-            asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization_denied))
         ctx.apply_diff.assert_not_called()
 
     def test_transform_invalid_program(self, editor_tool, mock_authorization, make_tool_call):

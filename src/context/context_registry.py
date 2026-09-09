@@ -110,8 +110,12 @@ class ContextRegistry:
                            the context.  Stored before OPENED is emitted so
                            subscribers can retrieve it immediately.
             requester_id:  Optional ID of the context that is requesting this
-                           open.  Forwarded opaquely to OPENED callbacks so the
-                           frontend can use it for tab placement decisions.
+                           open.  An empty string means the open is
+                           user-initiated; a non-empty value means it was
+                           triggered by another context (e.g. an AI
+                           conversation or shell command).  Forwarded
+                           opaquely to OPENED callbacks so the frontend can
+                           use it for tab placement and focus decisions.
             column:        Column index (0-based) for layout.  Defaults to 0.
 
         Returns:
