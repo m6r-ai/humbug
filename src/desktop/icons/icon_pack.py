@@ -287,7 +287,7 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path stroke="{color}" stroke-width="2" fill="none"
                 d="M4.69,7.5 L4.69,19.5 Q4.69,21 6.19,21 L17.81,21 Q19.31,21 19.31,19.5 L19.31,7.5 M1.5,7.5 L22.5,7.5 M6.75,7.5 L9,3 L15,3 L17.25,7.5"/>
-            <path stroke="{color}" stroke-width="2" fill="none" d="M9.56,10.5 L9.56,17.25 M14.44,10.5 L14.44,17.25"/>
+            <path stroke="{color}" stroke-width="1" stroke-linecap="round" fill="none" d="M9.56,11.25 L9.56,17.25 M14.44,11.25 L14.44,17.25"/>
         </svg>
     ''',
     "edit": '''
