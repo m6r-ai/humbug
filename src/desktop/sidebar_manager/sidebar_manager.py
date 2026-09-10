@@ -277,6 +277,17 @@ class SidebarManager(QWidget):
         """
         return self._panel_widgets.get(panel_id)
 
+    def panel_button(self, panel_id: str) -> QToolButton | None:
+        """
+        Return the rail button for panel_id, or None if not registered.
+
+        Used by the onboarding tour to spotlight a specific rail button (e.g. "conversations").
+
+        Args:
+            panel_id: The panel to look up.
+        """
+        return self._panel_buttons.get(panel_id)
+
     def _set_active_panel(self, panel_id: str) -> None:
         """
         Make the given panel current in the stacked pane.
@@ -362,6 +373,18 @@ class SidebarManager(QWidget):
     def content_min_width(self) -> int:
         """Return the minimum width of the sidebar content pane."""
         return self._content_min_width
+
+    def header_widget(self) -> QWidget:
+        """Return the mindspace picker header button, used as an onboarding tour target."""
+        return self._header_widget
+
+    def rail_widget(self) -> QWidget:
+        """Return the icon rail widget, used as an onboarding tour target."""
+        return self._rail_widget
+
+    def settings_button(self) -> QWidget:
+        """Return the settings button, used as an onboarding tour target."""
+        return self._settings_button
 
     def reveal_and_select_file(self, panel_id: str, file_path: str) -> None:
         """

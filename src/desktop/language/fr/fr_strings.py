@@ -47,6 +47,7 @@ def get_french_strings() -> LanguageStrings:
         close_tab="Fermer l'onglet",
         settings="Paramètres",
         recent_mindspaces="Ouvrir un espace mental récent",
+        take_tour="Faire une visite guidée",
 
         # Tab bar context menu items
         close_tabs_to_left="Fermer les onglets à gauche",
@@ -515,6 +516,49 @@ def get_french_strings() -> LanguageStrings:
         fetched_models_title="Modèles récupérés — {0}",
         no_fetched_models="Aucun modèle récupéré pour ce fournisseur.",
         fetched_models_close="Fermer",
+
+        # Onboarding product tour
+        tour_step_of="Étape {0} sur {1}",
+        tour_back_button="Précédent",
+        tour_skip_button="Ignorer la visite",
+        tour_next_button="Suivant",
+        tour_finish_button="Commencer à utiliser Humbug",
+        tour_welcome_title="Bienvenue dans Humbug",
+        tour_welcome_description=(
+            "Humbug vous aide à collaborer avec l'IA sur vos projets — discutez, modifiez des fichiers, "
+            "exécutez des terminaux et examinez les modifications, le tout dans un seul espace de travail. "
+            "Faisons une visite rapide."
+        ),
+        tour_start_here_title="Commencez ici",
+        tour_start_here_description=(
+            "Cliquez ici pour créer ou ouvrir un espace mental — votre espace de travail de projet dans Humbug."
+        ),
+        tour_open_conversation_title="Ouvrir une conversation",
+        tour_open_conversation_description=(
+            "Cliquez ici pour ouvrir le panneau Conversations — faites un clic droit à cet endroit (ou utilisez "
+            "Fichier → Nouvelle conversation) pour commencer à discuter avec l'IA."
+        ),
+        tour_workspace_title="Votre espace de travail",
+        tour_workspace_description=(
+            "Les conversations et autres onglets s'ouvrent ici. C'est ici que vous ferez l'essentiel de votre travail."
+        ),
+        tour_key_action_title="Envoyer un message",
+        tour_key_action_description="Tapez un message et appuyez sur Envoyer (ou Ctrl+Entrée) pour discuter avec l'IA.",
+        tour_output_title="Historique de la conversation",
+        tour_output_description=(
+            "Les réponses de l'IA et l'historique de votre conversation apparaissent ici au fil de la discussion."
+        ),
+        tour_navigation_title="Navigation",
+        tour_navigation_description=(
+            "Passez d'un panneau à l'autre (Conversations, Fichiers, Recherche, Aperçu, etc.) "
+            "grâce à cette barre latérale."
+        ),
+        tour_help_title="Paramètres et aide",
+        tour_help_description=(
+            "Ouvrez les Paramètres ici à tout moment. Vous pouvez relancer cette visite depuis "
+            "Humbug → Faire une visite guidée."
+        ),
+
         fetched_models_remove="Supprimer",
 
         fetch_error_invalid_key="Clé API invalide — veuillez vérifier votre clé et réessayer.",

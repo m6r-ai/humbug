@@ -48,6 +48,7 @@ def get_arabic_strings() -> LanguageStrings:
         close_tab="إغلاق التبويب",
         settings="الإعدادات",
         recent_mindspaces="فتح مساحة ذهنية حديثة",
+        take_tour="أخذ جولة",
 
         # Tab bar context menu items
         close_tabs_to_left="إغلاق التبويبات إلى اليسار",
@@ -508,6 +509,36 @@ def get_arabic_strings() -> LanguageStrings:
         fetched_models_title="النماذج المسترجعة — {0}",
         no_fetched_models="لا توجد نماذج مسترجعة لهذا المزود.",
         fetched_models_close="إغلاق",
+
+        # Onboarding product tour
+        tour_step_of="الخطوة {0} من {1}",
+        tour_back_button="رجوع",
+        tour_skip_button="تخطي الجولة",
+        tour_next_button="التالي",
+        tour_finish_button="ابدأ استخدام Humbug",
+        tour_welcome_title="مرحباً بك في Humbug",
+        tour_welcome_description=(
+            "يساعدك Humbug على التعاون مع الذكاء الاصطناعي في مشاريعك — الدردشة، وتعديل الملفات، "
+            "وتشغيل الطرفيات، ومراجعة التغييرات، كل ذلك في مساحة عمل واحدة. لنأخذ جولة سريعة."
+        ),
+        tour_start_here_title="ابدأ من هنا",
+        tour_start_here_description="انقر هنا لإنشاء أو فتح مساحة ذهنية — مساحة عمل مشروعك في Humbug.",
+        tour_open_conversation_title="فتح محادثة",
+        tour_open_conversation_description=(
+            "انقر هنا لفتح لوحة المحادثات — انقر بزر الماوس الأيمن هناك (أو استخدم ملف ← محادثة جديدة) "
+            "لبدء الدردشة مع الذكاء الاصطناعي."
+        ),
+        tour_workspace_title="مساحة عملك",
+        tour_workspace_description="تُفتح المحادثات وعلامات التبويب الأخرى هنا. هذا هو المكان الذي ستقوم فيه بمعظم عملك.",
+        tour_key_action_title="إرسال رسالة",
+        tour_key_action_description="اكتب رسالة واضغط على إرسال (أو Ctrl+Enter) للتحدث مع الذكاء الاصطناعي.",
+        tour_output_title="سجل المحادثة",
+        tour_output_description="تظهر ردود الذكاء الاصطناعي وسجل محادثتك هنا أثناء الدردشة.",
+        tour_navigation_title="التنقل",
+        tour_navigation_description="بدّل بين المحادثات والملفات والبحث والمعاينة والمزيد باستخدام هذا الشريط الجانبي.",
+        tour_help_title="الإعدادات والمساعدة",
+        tour_help_description="افتح الإعدادات هنا في أي وقت. يمكنك إعادة تشغيل هذه الجولة من Humbug ← أخذ جولة.",
+
         fetched_models_remove="إزالة",
 
         fetch_error_invalid_key="مفتاح API غير صالح — يرجى التحقق من مفتاحك والمحاولة مجدداً.",

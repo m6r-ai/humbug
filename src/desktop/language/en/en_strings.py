@@ -47,6 +47,7 @@ def get_english_strings() -> LanguageStrings:
         close_tab="Close Tab",
         settings="Settings",
         recent_mindspaces="Open Recent Mindspace",
+        take_tour="Take a Tour",
 
         # Tab bar context menu items
         close_tabs_to_left="Close Tabs to the Left",
@@ -512,6 +513,36 @@ def get_english_strings() -> LanguageStrings:
         fetched_models_title="Fetched Models — {0}",
         no_fetched_models="No fetched models for this provider.",
         fetched_models_close="Close",
+
+        # Onboarding product tour
+        tour_step_of="Step {0} of {1}",
+        tour_back_button="Back",
+        tour_skip_button="Skip Tour",
+        tour_next_button="Next",
+        tour_finish_button="Start Using Humbug",
+        tour_welcome_title="Welcome to Humbug",
+        tour_welcome_description=(
+            "Humbug helps you collaborate with AI on your projects — chat, edit files, run terminals, "
+            "and review changes, all in one workspace. Let's take a quick tour."
+        ),
+        tour_start_here_title="Start Here",
+        tour_start_here_description="Click here to create or open a mindspace — your project workspace in Humbug.",
+        tour_open_conversation_title="Open a Conversation",
+        tour_open_conversation_description=(
+            "Click here to open the Conversations panel — right-click there (or use File → New Conversation) "
+            "to start chatting with the AI."
+        ),
+        tour_workspace_title="Your Workspace",
+        tour_workspace_description="Conversations and other tabs open here. This is where you'll do most of your work.",
+        tour_key_action_title="Send a Message",
+        tour_key_action_description="Type a message and press Send (or Ctrl+Enter) to talk with the AI.",
+        tour_output_title="Conversation History",
+        tour_output_description="AI responses and your conversation history appear here as you chat.",
+        tour_navigation_title="Navigation",
+        tour_navigation_description="Switch between Conversations, Files, Search, Preview, and more using this sidebar.",
+        tour_help_title="Settings & Help",
+        tour_help_description="Open Settings here anytime. You can restart this tour from Humbug → Take a Tour.",
+
         fetched_models_remove="Remove",
 
         fetch_error_invalid_key="Invalid API key — please check your key and try again.",

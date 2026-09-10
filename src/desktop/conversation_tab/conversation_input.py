@@ -107,6 +107,10 @@ class ConversationInput(ConversationMessage):
         self._current_model = model
         self._update_banner_text()
 
+    def submit_button(self) -> QToolButton | None:
+        """Return the submit button, used as an onboarding tour target."""
+        return self._submit_button
+
     def _on_language_changed(self) -> None:
         """Handle language change event."""
         self._update_banner_text()

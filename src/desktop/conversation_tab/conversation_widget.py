@@ -8,7 +8,7 @@ import re
 from typing import Any, cast
 
 from PySide6.QtWidgets import (
-    QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QFileDialog
+    QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QFileDialog, QToolButton
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QEvent, QSize, QUrl, QVariantAnimation
 from PySide6.QtGui import QCursor, QDesktopServices, QFont, QGuiApplication, QIcon, QResizeEvent
@@ -343,6 +343,14 @@ class ConversationWidget(QWidget):
 
         # The last SYSTEM error message widget that has a retry button showing
         self._last_error_message_widget: ConversationMessage | None = None
+
+    def scroll_area(self) -> QScrollArea:
+        """Return the message history scroll area, used as an onboarding tour target."""
+        return self._scroll_area
+
+    def submit_button(self) -> QToolButton | None:
+        """Return the message submit button, used as an onboarding tour target."""
+        return self._input.submit_button()
 
     def _activate_widget(self, widget: QWidget) -> None:
         """

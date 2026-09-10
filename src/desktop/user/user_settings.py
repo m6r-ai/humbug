@@ -11,6 +11,7 @@ from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettin
 
 from desktop.language.language_code import LanguageCode
 from desktop.color_theme import ColorTheme
+from desktop.user.onboarding_tour_status import OnboardingTourStatus
 from desktop.user.user_file_sort_order import UserFileSortOrder
 
 
@@ -36,6 +37,8 @@ class UserSettings:
     check_for_updates: bool = True
     external_file_allowlist: list[str] = field(default_factory=list)
     external_file_denylist: list[str] = field(default_factory=list)
+    onboarding_tour_status: OnboardingTourStatus = OnboardingTourStatus.NOT_STARTED
+    onboarding_tour_version: int = 0
 
     @classmethod
     def create_default(cls) -> "UserSettings":
@@ -61,7 +64,9 @@ class UserSettings:
             allow_external_file_access=True,
             check_for_updates=True,
             external_file_allowlist=FilesystemAccessSettings.get_default_allowlist(),
-            external_file_denylist=FilesystemAccessSettings.get_default_denylist()
+            external_file_denylist=FilesystemAccessSettings.get_default_denylist(),
+            onboarding_tour_status=OnboardingTourStatus.NOT_STARTED,
+            onboarding_tour_version=0
         )
 
     @staticmethod
@@ -394,6 +399,37 @@ class UserSettings:
                 path
             )
 
+        # Load onboarding tour state with validation
+        tour_status_str = data.get("onboardingTourStatus", "NOT_STARTED")
+        if not isinstance(tour_status_str, str):
+            cls._logger.warning(
+                "Invalid onboardingTourStatus type in %s: expected str, got %s. Using default.",
+                path, type(tour_status_str).__name__
+            )
+            settings.onboarding_tour_status = OnboardingTourStatus.NOT_STARTED
+
+        else:
+            try:
+                settings.onboarding_tour_status = OnboardingTourStatus[tour_status_str]
+
+            except (KeyError, ValueError):
+                cls._logger.warning(
+                    "Invalid onboardingTourStatus '%s' in %s. Using default (NOT_STARTED).",
+                    tour_status_str, path
+                )
+                settings.onboarding_tour_status = OnboardingTourStatus.NOT_STARTED
+
+        tour_version = data.get("onboardingTourVersion", 0)
+        if not isinstance(tour_version, int):
+            cls._logger.warning(
+                "Invalid onboardingTourVersion type in %s: expected int, got %s. Using default.",
+                path, type(tour_version).__name__
+            )
+            settings.onboarding_tour_version = 0
+
+        else:
+            settings.onboarding_tour_version = tour_version
+
         # Load the name of the active saved custom theme (None means the live custom set)
         active_custom_theme = data.get("activeCustomThemeName", None)
         if active_custom_theme is None or (
@@ -537,7 +573,9 @@ class UserSettings:
             "checkForUpdates": self.check_for_updates,
             "allowExternalFileAccess": self.allow_external_file_access,
             "externalFileAllowlist": self.external_file_allowlist,
-            "externalFileDenylist": self.external_file_denylist
+            "externalFileDenylist": self.external_file_denylist,
+            "onboardingTourStatus": self.onboarding_tour_status.name,
+            "onboardingTourVersion": self.onboarding_tour_version
         }
 
         with open(path, 'w', encoding='utf-8') as f:
