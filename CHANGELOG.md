@@ -17,6 +17,7 @@ New features:
 - Added undo/redo for deletions of conversations from the sidebar.
 - Added an interactive onboarding product tour that spotlights the key parts of Humbug for first-time users.  It can
   be replayed at any time from Humbug → Take a Tour.
+- Added a "product tour" feature to guide new users.
 
 Bug fixes:
 

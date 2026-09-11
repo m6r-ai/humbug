@@ -30,6 +30,8 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Added new file tree icons.
 * Added the conversation prompt mini-map option.
 * Added pinning of conversations.
+* Added the conversation trash/recovery feature.
+* Added the product tour feature.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 
