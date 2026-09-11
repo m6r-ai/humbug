@@ -3,15 +3,18 @@
 from datetime import datetime, timezone
 import os
 
-from PySide6.QtCore import QFileInfo, QPoint, QSize, Qt, Signal
+from PySide6.QtCore import QFileInfo, QMimeData, QModelIndex, QPersistentModelIndex, QPoint, QSize, Qt, Signal
+from PySide6.QtGui import QDrag, QMouseEvent
 from PySide6.QtWidgets import (
-    QFrame, QLabel, QSizePolicy, QSpacerItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
+    QApplication, QFrame, QLabel, QSizePolicy, QSpacerItem, QStyledItemDelegate, QStyleOptionViewItem,
+    QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
 )
 
 from mindspace.mindspace_error import MindspaceError
 from mindspace.trash_manifest import TrashEntry, strip_trash_prefix
 
 from desktop.color_role import ColorRole
+from desktop.file_utils import is_conversation_file
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -37,6 +40,7 @@ class TrashSidebar(SidebarBase):
     """
 
     visibility_requested = Signal(bool)
+    file_clicked = Signal(str, str, bool)  # panel_id, path, ephemeral
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -60,15 +64,22 @@ class TrashSidebar(SidebarBase):
         self._status_label.setObjectName("_status_label")
         self._layout.addWidget(self._status_label)
 
-        self._tree = QTreeWidget(self)
+        self._tree = TrashTreeWidget(self)
         self._tree.setObjectName("TrashSidebarTree")
         self._tree_style = SidebarTreeStyle()
         self._tree.setStyle(self._tree_style)
         self._tree.setFrameShape(QFrame.Shape.NoFrame)
         self._tree.setHeaderHidden(True)
         self._tree.setRootIsDecorated(False)
+        self._tree.setDragEnabled(True)
         self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._tree.customContextMenuRequested.connect(self._show_context_menu)
+
+        self._delegate = TrashTreeDelegate(self._tree, self._style_manager)
+        self._tree.setItemDelegate(self._delegate)
+
+        self._tree.itemClicked.connect(self._on_item_clicked)
+        self._tree.itemDoubleClicked.connect(self._on_item_double_clicked)
         self._layout.addWidget(self._tree)
 
         self._on_language_changed()
@@ -147,6 +158,26 @@ class TrashSidebar(SidebarBase):
             return strings.trash_time_hours_ago.format(hours)
 
         return strings.trash_time_days_ago.format(hours // 24)
+
+    def _on_item_clicked(self, item: QTreeWidgetItem) -> None:
+        """Open a trashed conversation file in a conversation tab (ephemeral, active column)."""
+        trash_path = self._trash_path_for_item(item)
+        if trash_path and is_conversation_file(trash_path):
+            self.file_clicked.emit("trash", trash_path, True)
+
+    def _on_item_double_clicked(self, item: QTreeWidgetItem) -> None:
+        """Open a trashed conversation file in a conversation tab (non-ephemeral, active column)."""
+        trash_path = self._trash_path_for_item(item)
+        if trash_path and is_conversation_file(trash_path):
+            self.file_clicked.emit("trash", trash_path, False)
+
+    def _trash_path_for_item(self, item: QTreeWidgetItem) -> str:
+        """Return the absolute trash-directory path for a tree widget item."""
+        trash_name = item.data(0, _TRASH_NAME_ROLE)
+        if not trash_name:
+            return ""
+
+        return os.path.join(self._mindspace_manager.mindspace().trash_dir(), trash_name)
 
     def _show_context_menu(self, position: QPoint) -> None:
         """Show the Restore/Delete Forever/Empty Trash context menu."""
@@ -261,6 +292,71 @@ class TrashSidebar(SidebarBase):
             }}
             """
         )
+
+
+class TrashTreeWidget(QTreeWidget):
+    """QTreeWidget subclass supporting drag initiation for trashed conversation files."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._drag_start_pos: QPoint | None = None
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        """Record the drag start position before delegating to the base class."""
+        if event.button() & Qt.MouseButton.LeftButton:
+            self._drag_start_pos = event.pos()
+
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        """Initiate a drag when the mouse moves far enough from the press point."""
+        if not event.buttons() & Qt.MouseButton.LeftButton:
+            return
+
+        if not self._drag_start_pos:
+            return
+
+        if (event.pos() - self._drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+            return
+
+        item = self.itemAt(self._drag_start_pos)
+        if item is None:
+            return
+
+        trash_name = item.data(0, _TRASH_NAME_ROLE)
+        if not trash_name:
+            return
+
+        trash_path = os.path.join(MindspaceManager().mindspace().trash_dir(), trash_name)
+
+        mime_data = QMimeData()
+        mime_data.setData("application/x-humbug-path", trash_path.encode())
+        mime_data.setData("application/x-humbug-source", b"conversations")
+
+        drag = QDrag(self)
+        drag.setMimeData(mime_data)
+        pixmap = self.viewport().grab(self.visualItemRect(item))
+        drag.setPixmap(pixmap)
+        drag.setHotSpot(event.pos() - self._drag_start_pos)
+        drag.exec_(Qt.DropAction.MoveAction | Qt.DropAction.CopyAction)
+
+        self._drag_start_pos = None
+
+
+class TrashTreeDelegate(QStyledItemDelegate):
+    """Item delegate for the trash tree widget, providing consistent row spacing."""
+
+    def __init__(self, tree: QTreeWidget, style_manager: StyleManager) -> None:
+        super().__init__(tree)
+        self._style_manager = style_manager
+
+    def sizeHint(self, option: QStyleOptionViewItem, _index: QModelIndex | QPersistentModelIndex) -> QSize:
+        """Return a consistent, zoom-scaled row height matching the conversation sidebar."""
+        zoom = self._style_manager.zoom_factor()
+        fm = option.fontMetrics  # type: ignore
+        line_height = fm.height()
+        row_height = max(line_height + round(10 * zoom), round(24 * zoom))
+        return QSize(super().sizeHint(option, _index).width(), row_height)
 
 
 def _display_name(trash_name: str) -> str:
