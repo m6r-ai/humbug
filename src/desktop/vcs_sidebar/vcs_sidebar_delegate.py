@@ -124,5 +124,5 @@ class VCSSidebarDelegate(QStyledItemDelegate):
         zoom = self._style_manager.zoom_factor()
         fm = option.fontMetrics  # type: ignore
         line_height = fm.height()
-        row_height = max(line_height + round(8 * zoom), round(24 * zoom))
+        row_height = max(line_height + round(10 * zoom), round(24 * zoom))
         return QSize(super().sizeHint(option, index).width(), row_height)
