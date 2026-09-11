@@ -38,6 +38,7 @@ class LanguageStrings:
     close_tab: str
     settings: str
     recent_mindspaces: str
+    take_tour: str
 
     # Tab bar context menu items
     close_tabs_to_left: str
@@ -488,4 +489,27 @@ class LanguageStrings:
     fetched_models_title: str  # Format: "Fetched Models — {0}"
     no_fetched_models: str
     fetched_models_close: str
+
+    # Onboarding product tour
+    tour_step_of: str  # Format: "Step {0} of {1}"
+    tour_back_button: str
+    tour_skip_button: str
+    tour_next_button: str
+    tour_finish_button: str
+    tour_welcome_title: str
+    tour_welcome_description: str
+    tour_start_here_title: str
+    tour_start_here_description: str
+    tour_open_conversation_title: str
+    tour_open_conversation_description: str
+    tour_workspace_title: str
+    tour_workspace_description: str
+    tour_key_action_title: str
+    tour_key_action_description: str  # Format: "... ({0}) ..." — {0} is the platform submit shortcut
+    tour_output_title: str
+    tour_output_description: str
+    tour_navigation_title: str
+    tour_navigation_description: str
+    tour_help_title: str
+    tour_help_description: str
     fetched_models_remove: str

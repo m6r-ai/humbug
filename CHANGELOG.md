@@ -15,6 +15,8 @@ New features:
   ensures the correct message boxes are highlighted after scrolling and deferred content is revealed.
 - Added pinning of conversations within the mindspace sidebar.
 - Added undo/redo for deletions of conversations from the sidebar.
+- Added an interactive onboarding product tour that spotlights the key parts of Humbug for first-time users.  It can
+  be replayed at any time from Humbug → Take a Tour.
 
 Bug fixes:
 

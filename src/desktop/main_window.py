@@ -77,6 +77,7 @@ from desktop.status_message import StatusMessage
 from desktop.tab_manager import TabManager
 from desktop.terminal_tab.terminal_tab import TerminalTab
 from desktop.title_bar import MenuBarDragFilter, WindowControlsWidget
+from desktop.tour.tour_controller import TourController
 from desktop.trash_sidebar.trash_sidebar import TrashSidebar
 from desktop.update_checker import UpdateChecker
 from desktop.update_dialog import UpdateDialog
@@ -285,6 +286,10 @@ class MainWindow(QMainWindow):
         self._check_for_updates_action.setMenuRole(QAction.MenuRole.ApplicationSpecificRole)
         self._check_for_updates_action.triggered.connect(self._on_check_for_updates)
 
+        self._take_tour_action = QAction(strings.take_tour, self)
+        self._take_tour_action.setMenuRole(QAction.MenuRole.ApplicationSpecificRole)
+        self._take_tour_action.triggered.connect(self._on_take_tour)
+
         self._settings_action = QAction(strings.settings, self)
         self._settings_action.setMenuRole(QAction.MenuRole.PreferencesRole)
         self._settings_action.setShortcut(QKeySequence("Ctrl+,"))
@@ -483,6 +488,7 @@ class MainWindow(QMainWindow):
         self._humbug_menu = self._menu_bar.addMenu(strings.humbug_menu)
         self._humbug_menu.addAction(self._about_action)
         self._humbug_menu.addAction(self._check_for_updates_action)
+        self._humbug_menu.addAction(self._take_tour_action)
         self._humbug_menu.addSeparator()
         self._humbug_menu.addAction(self._settings_action)
         self._humbug_menu.addSeparator()
@@ -771,6 +777,12 @@ class MainWindow(QMainWindow):
         self._update_checker.update_available.connect(self._on_update_available)
         QTimer.singleShot(5000, self._run_startup_update_check)
 
+        self._tour_controller = TourController(self)
+        self._tour_start_timer = QTimer(self)
+        self._tour_start_timer.setSingleShot(True)
+        self._tour_start_timer.timeout.connect(self._tour_controller.maybe_start_on_launch)
+        self._tour_start_timer.start(400)
+
     def changeEvent(self, event: QEvent) -> None:
         """Handle change events."""
         super().changeEvent(event)
@@ -786,6 +798,18 @@ class MainWindow(QMainWindow):
             is_maximised = bool(state & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen))
             self._window_controls.set_maximised(is_maximised)
 
+
+    def sidebar_manager(self) -> SidebarManager:
+        """Return the sidebar manager, used by the onboarding tour to locate spotlight targets."""
+        return self._sidebar_manager
+
+    def tab_manager(self) -> TabManager:
+        """Return the tab manager, used by the onboarding tour to locate spotlight targets."""
+        return self._tab_manager
+
+    def _on_take_tour(self) -> None:
+        """Restart the onboarding product tour from the beginning."""
+        self._tour_controller.start()
 
     def _on_exception_occurred(self) -> None:
         """Handle uncaught exception notification by activating canary."""
@@ -908,6 +932,7 @@ class MainWindow(QMainWindow):
         # Update action texts
         self._about_action.setText(strings.about_humbug)
         self._check_for_updates_action.setText(strings.check_for_updates)
+        self._take_tour_action.setText(strings.take_tour)
         self._settings_action.setText(strings.settings)
         self._quit_action.setText(strings.quit_humbug)
         self._new_mindspace_action.setText(strings.new_mindspace)

@@ -106,6 +106,10 @@ class ConversationTab(TabBase):
         """Return the tool name for this tab type."""
         return "conversation"
 
+    def conversation_widget(self) -> ConversationWidget:
+        """Return the conversation widget, used as an onboarding tour target."""
+        return self._conversation_widget
+
     def tab_title_from_path(self) -> str:
         """Return the conversation title derived from the filename (without extension)."""
         return os.path.splitext(os.path.basename(self._path))[0] if self._path else ""
