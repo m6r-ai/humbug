@@ -1192,6 +1192,8 @@ class ConversationWidget(QWidget):
         else:
             self._update_animated_messages()
 
+        self._deferred_minimap_update()
+
         # Scroll to bottom if in auto-scroll mode, otherwise mark tab as updated
         if self._auto_scroll:
             self._scroll_to_bottom()
@@ -2013,7 +2015,7 @@ class ConversationWidget(QWidget):
 
         self._prompt_minimap.set_markers(markers, self._spotlighted_message_index)
         self._prompt_minimap.setVisible(
-            (self._prompt_minimap_visible or self._prompt_minimap_margin > 0) and bool(markers)
+            self._prompt_minimap_visible or self._prompt_minimap_margin > 0
         )
 
     def set_prompt_minimap_visible(self, visible: bool) -> None:

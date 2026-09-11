@@ -227,9 +227,10 @@ def _activate_search_sidebar(panel: SidebarBase) -> None:
     panel.focus_search()
 
 
-def _wire_trash_sidebar(panel: SidebarBase, _mgr: SidebarManager) -> None:
-    """Wire TrashSidebar signals to SidebarManager. TrashSidebar has no signals to bubble up."""
+def _wire_trash_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
+    """Wire TrashSidebar signals to SidebarManager."""
     assert isinstance(panel, TrashSidebar)
+    panel.file_clicked.connect(mgr.file_clicked)
 
 
 def _activate_trash_sidebar(panel: SidebarBase) -> None:
@@ -1643,6 +1644,9 @@ class MainWindow(QMainWindow):
             context_type = "diff"
 
         elif panel_id == "conversations":
+            context_type = "conversation"
+
+        elif panel_id == "trash":
             context_type = "conversation"
 
         elif panel_id == "preview":
