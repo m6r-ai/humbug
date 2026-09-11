@@ -531,7 +531,7 @@ def get_arabic_strings() -> LanguageStrings:
         tour_workspace_title="مساحة عملك",
         tour_workspace_description="تُفتح المحادثات وعلامات التبويب الأخرى هنا. هذا هو المكان الذي ستقوم فيه بمعظم عملك.",
         tour_key_action_title="إرسال رسالة",
-        tour_key_action_description="اكتب رسالة واضغط على إرسال (أو Ctrl+Enter) للتحدث مع الذكاء الاصطناعي.",
+        tour_key_action_description="اكتب رسالة واضغط على إرسال (أو {0}) للتحدث مع الذكاء الاصطناعي.",
         tour_output_title="سجل المحادثة",
         tour_output_description="تظهر ردود الذكاء الاصطناعي وسجل محادثتك هنا أثناء الدردشة.",
         tour_navigation_title="التنقل",

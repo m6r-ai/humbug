@@ -535,7 +535,7 @@ def get_english_strings() -> LanguageStrings:
         tour_workspace_title="Your Workspace",
         tour_workspace_description="Conversations and other tabs open here. This is where you'll do most of your work.",
         tour_key_action_title="Send a Message",
-        tour_key_action_description="Type a message and press Send (or Ctrl+Enter) to talk with the AI.",
+        tour_key_action_description="Type a message and press Send (or {0}) to talk with the AI.",
         tour_output_title="Conversation History",
         tour_output_description="AI responses and your conversation history appear here as you chat.",
         tour_navigation_title="Navigation",

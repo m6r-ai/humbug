@@ -505,7 +505,7 @@ class LanguageStrings:
     tour_workspace_title: str
     tour_workspace_description: str
     tour_key_action_title: str
-    tour_key_action_description: str
+    tour_key_action_description: str  # Format: "... ({0}) ..." — {0} is the platform submit shortcut
     tour_output_title: str
     tour_output_description: str
     tour_navigation_title: str

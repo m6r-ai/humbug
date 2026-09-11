@@ -543,7 +543,7 @@ def get_french_strings() -> LanguageStrings:
             "Les conversations et autres onglets s'ouvrent ici. C'est ici que vous ferez l'essentiel de votre travail."
         ),
         tour_key_action_title="Envoyer un message",
-        tour_key_action_description="Tapez un message et appuyez sur Envoyer (ou Ctrl+Entrée) pour discuter avec l'IA.",
+        tour_key_action_description="Tapez un message et appuyez sur Envoyer (ou {0}) pour discuter avec l'IA.",
         tour_output_title="Historique de la conversation",
         tour_output_description=(
             "Les réponses de l'IA et l'historique de votre conversation apparaissent ici au fil de la discussion."

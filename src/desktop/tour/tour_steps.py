@@ -1,5 +1,6 @@
 """Centrally configurable list of onboarding tour steps for Humbug."""
 
+import sys
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget
@@ -9,6 +10,14 @@ from desktop.tour.tour_step import TourStep
 
 if TYPE_CHECKING:
     from desktop.main_window import MainWindow
+
+
+def _submit_shortcut_text() -> str:
+    """Return the platform-appropriate keyboard shortcut for submitting a message."""
+    if sys.platform == "darwin":
+        return "⌘ Enter"
+
+    return "Ctrl+Enter"
 
 
 def _resolve_start_here(main_window: "MainWindow") -> QWidget | None:
@@ -81,7 +90,7 @@ def build_tour_steps() -> list[TourStep]:
         ),
         TourStep(
             title=lambda strings: strings.tour_key_action_title,
-            description=lambda strings: strings.tour_key_action_description,
+            description=lambda strings: strings.tour_key_action_description.format(_submit_shortcut_text()),
             resolve_target=_resolve_key_action,
         ),
         TourStep(
