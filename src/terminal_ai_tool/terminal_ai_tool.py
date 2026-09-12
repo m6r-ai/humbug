@@ -64,9 +64,7 @@ class TerminalAITool(AITool):
                 AIToolParameter(
                     name="keystrokes",
                     type="string",
-                    description="Keystrokes to send to terminal (for write operation). "
-                        "You MUST use `\\u####` format for control characters "
-                        "(e.g., `\\u000a` for newline, `\\u000d` for carriage return)",
+                    description="Keystrokes to send to terminal (for write operation)",
                     required=False
                 ),
                 AIToolParameter(
@@ -97,10 +95,8 @@ class TerminalAITool(AITool):
                 allowed_parameters={"tab_id", "keystrokes"},
                 required_parameters={"tab_id", "keystrokes"},
                 description="Send keystrokes to a terminal tab. Requires user authorization before execution. "
-                    "The terminal may have access beyond the project mindspace, so user will review commands before "
-                    "they are sent. You may send more than one keystroke at a time by submitting them as a string. "
-                    "The string is not terminated with an enter/return keycode automatically, so "
-                    "if you want to execute a command you must include appropriate end-of-line control characters. "
+                    "You may send more than one keystroke at a time by submitting them as a string. "
+                    "You MUST include the end-of-line control character `\\u000d` to submit a shell command. "
                     "You MUST use `\\u####` format to send any control characters (ASCII values less than 0x20), "
                     "including newline (`\\u000a`), carriage return (`\\u000d`), tab (`\\u0009`), and escape (`\\u001b`)"
             ),
