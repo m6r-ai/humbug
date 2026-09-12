@@ -24,8 +24,8 @@ class TerminalAITool(AITool):
     AI tool for terminal operations.
 
     Provides operations for reading terminal output, writing input,
-    and querying terminal status. Requires a terminal tab to be open
-    (use system tool to create terminals).
+    sending commands, and querying terminal status. Requires a terminal
+    tab to be open (use system tool to create terminals).
     """
 
     def __init__(self, mindspace: Mindspace):
@@ -62,6 +62,12 @@ class TerminalAITool(AITool):
                     required=True
                 ),
                 AIToolParameter(
+                    name="command",
+                    type="string",
+                    description="Command to send to the terminal (for send_command operation)",
+                    required=False
+                ),
+                AIToolParameter(
                     name="keystrokes",
                     type="string",
                     description="Keystrokes to send to terminal (for write operation)",
@@ -88,17 +94,31 @@ class TerminalAITool(AITool):
             Dictionary mapping operation names to their definitions
         """
         return {
+            "send_command": AIToolOperationDefinition(
+                name="send_command",
+                handler=self._send_command,
+                extract_context=self.command_context,
+                allowed_parameters={"tab_id", "command"},
+                required_parameters={"tab_id", "command"},
+                description="Send a command to a terminal tab and have it executed. The command is "
+                    "submitted automatically so you should provide only the command text itself. "
+                    "Requires user authorization before execution"
+            ),
             "write": AIToolOperationDefinition(
                 name="write",
                 handler=self._write,
                 extract_context=self.write_context,
                 allowed_parameters={"tab_id", "keystrokes"},
                 required_parameters={"tab_id", "keystrokes"},
-                description="Send keystrokes to a terminal tab. Requires user authorization before execution. "
+                description="Send raw keystrokes to a terminal tab. Use this instead of send_command "
+                    "when you need control characters rather than executing a command. "
+                    "Requires user authorization before execution. "
                     "You may send more than one keystroke at a time by submitting them as a string. "
                     "You MUST include the end-of-line control character `\\u000d` to submit a shell command. "
                     "You MUST use `\\u####` format to send any control characters (ASCII values less than 0x20), "
-                    "including newline (`\\u000a`), carriage return (`\\u000d`), tab (`\\u0009`), and escape (`\\u001b`)"
+                    "including newline (`\\u000a`), carriage return (`\\u000d`), tab (`\\u0009`), and escape (`\\u001b`). "
+                    "If you just want to execute a command, prefer the send_command operation which submits "
+                    "the command for you"
             ),
             "read": AIToolOperationDefinition(
                 name="read",
@@ -188,6 +208,19 @@ class TerminalAITool(AITool):
 
         return input_text.replace('\\u000a', '\n').replace('\\u000d', '\r')
 
+    def command_context(self, arguments: dict[str, Any]) -> str | None:
+        """
+        Extract context for send_command operation.
+
+        Args:
+            arguments: Tool call arguments
+
+        Returns:
+            Context string for send_command operation
+        """
+        command = self._get_required_str_value("command", arguments)
+        return f"`command` is:\n```text\n{command}\n```"
+
     def write_context(self, arguments: dict[str, Any]) -> str | None:
         """
         Extract context for write operation.
@@ -202,16 +235,31 @@ class TerminalAITool(AITool):
         preview_keystrokes = self._preview_ai_escape_sequences(raw_keystrokes)
         return f"`keystrokes` is:\n```text\n{preview_keystrokes}\n```"
 
-    async def _write(
+    async def _send_keystrokes(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        arguments: dict[str, Any],
+        raw_input: str,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
-        """Write keystrokes to a terminal."""
-        arguments = tool_call.arguments
-        raw_keystrokes = self._get_required_str_value("keystrokes", arguments)
-        processed_keystrokes = self._process_ai_escape_sequences(raw_keystrokes)
+        """
+        Authorize and send processed keystrokes to a terminal tab.
+
+        Args:
+            tool_call: The tool call being executed
+            arguments: Tool call arguments containing tab_id
+            raw_input: The raw input string as provided by the AI, for logging
+                and authorization denial messages
+            request_authorization: Authorization callback
+
+        Returns:
+            Tool result confirming the keystrokes were sent
+
+        Raises:
+            AIToolAuthorizationDenied: If the user denies permission
+            AIToolExecutionError: If sending the keystrokes fails
+        """
+        processed_input = self._process_ai_escape_sequences(raw_input)
 
         terminal_context = self._get_terminal_context(arguments)
         context_id = terminal_context.context_id()
@@ -219,14 +267,14 @@ class TerminalAITool(AITool):
         context = f"Send keystrokes to terminal (tab {context_id}):"
         authorized = await request_authorization("terminal", arguments, context, None, True)
         if not authorized:
-            raise AIToolAuthorizationDenied(f"User denied permission to send keystrokes: {raw_keystrokes}")
+            raise AIToolAuthorizationDenied(f"User denied permission to send keystrokes: {raw_input}")
 
         try:
-            await terminal_context.send_keystrokes(processed_keystrokes)
+            await terminal_context.send_keystrokes(processed_input)
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI sent keystrokes to terminal: '{raw_keystrokes}'\ntab ID: {context_id}"
+                f"AI sent keystrokes to terminal: '{raw_input}'\ntab ID: {context_id}"
             )
 
             return AIToolResult(
@@ -237,6 +285,30 @@ class TerminalAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to send keystrokes to terminal: {str(e)}") from e
+
+    async def _send_command(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Send a command to a terminal, submitting it for execution."""
+        arguments = tool_call.arguments
+        command = self._get_required_str_value("command", arguments)
+
+        return await self._send_keystrokes(tool_call, arguments, command + "\\u000d", request_authorization)
+
+    async def _write(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Write keystrokes to a terminal."""
+        arguments = tool_call.arguments
+        raw_keystrokes = self._get_required_str_value("keystrokes", arguments)
+
+        return await self._send_keystrokes(tool_call, arguments, raw_keystrokes, request_authorization)
 
     async def _read(
         self,
