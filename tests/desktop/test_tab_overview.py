@@ -20,26 +20,26 @@ def press_key(qapp, widget, key, modifier=Qt.KeyboardModifier.NoModifier):
 
 
 class TestAspectFillSourceRect:
-    def test_full_pixmap_when_aspect_matches(self):
+    def test_full_pixmap_when_aspect_matches(self, qapp):
         pixmap = QPixmap(800, 600)
         crop = aspect_fill_source_rect(pixmap, QRect(0, 0, 400, 300))
         assert crop == QRect(0, 0, 800, 600)
 
-    def test_wide_source_cropped_horizontally_centred(self):
+    def test_wide_source_cropped_horizontally_centred(self, qapp):
         pixmap = QPixmap(1600, 600)
         crop = aspect_fill_source_rect(pixmap, QRect(0, 0, 400, 300))
         assert crop.height() == 600
         assert crop.width() == 800
         assert crop.left() == 400
 
-    def test_tall_source_cropped_to_top(self):
+    def test_tall_source_cropped_to_top(self, qapp):
         pixmap = QPixmap(400, 1200)
         crop = aspect_fill_source_rect(pixmap, QRect(0, 0, 400, 300))
         assert crop.top() == 0
         assert crop.width() == 400
         assert crop.height() == 300
 
-    def test_degenerate_inputs_give_empty_rect(self):
+    def test_degenerate_inputs_give_empty_rect(self, qapp):
         assert aspect_fill_source_rect(QPixmap(), QRect(0, 0, 100, 100)).isEmpty()
         assert aspect_fill_source_rect(QPixmap(10, 10), QRect(0, 0, 0, 0)).isEmpty()
 
