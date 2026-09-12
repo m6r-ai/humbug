@@ -1207,6 +1207,14 @@ class TabManager(QWidget):
         self._hide_tab_overview()
         self._hide_tab_carousel()
 
+    def _refresh_tab_overlays(self) -> None:
+        """Refresh the overlay views so a newly added tab appears as a card."""
+        if self._tab_overview is not None and self._tab_overview.isVisible():
+            self._tab_overview.set_entries(self._build_overview_entries())
+
+        elif self._tab_carousel is not None and self._tab_carousel.isVisible():
+            self._tab_carousel.set_entries(self._build_overview_entries())
+
     def _on_carousel_tab_activated(self, tab_id: str) -> None:
         """Switch to the tab whose carousel card was clicked or chosen."""
         self._hide_tab_carousel()
@@ -1535,9 +1543,6 @@ class TabManager(QWidget):
             # If no tabs exist, we need to switch to the columns widget
             self._stack.setCurrentWidget(self._columns_widget)
 
-        # A newly opened tab supersedes the overlay views
-        self._hide_tab_overlays()
-
         prior_active_column = self._active_column
         target_column = self._get_target_column_for_new_tab(requester_id)
 
@@ -1558,6 +1563,9 @@ class TabManager(QWidget):
         elif not requester_id:
             self._focus_restore_timer.stop()
             self._update_tabs(change_focus=True)
+
+        # Refresh the overlay views so the new tab appears as a card
+        self._refresh_tab_overlays()
 
         # Close any ephemeral tab in target column because we've just added a new one
         self._close_ephemeral_tab_in_column(target_column, tab)

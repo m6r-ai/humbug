@@ -31,6 +31,7 @@ Bug fixes:
 - Fixed a problem where closing a tab might leave mouse-over hover effects not working afterwards.
 - The editor `transform` operation no longer requests user authorization.  It modifies the in-memory
   editor buffer, consistent with `apply_diff`.  Use `save_file` to persist changes to disk.
+- Fixed a problem when an AI opened a tab while in the carousel view.
 
 Internal structure changes:
 
