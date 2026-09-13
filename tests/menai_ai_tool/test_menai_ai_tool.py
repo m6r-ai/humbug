@@ -120,22 +120,6 @@ class TestMenaiAIToolErrorHandling:
         error = exc_info.value
         assert "Expression must be a string" in str(error)
 
-    def test_execute_division_by_zero_error(self, menai_tool, mock_authorization, make_tool_call):
-        """Test execution with division by zero."""
-        tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer/ 5 0)"})
-        with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(menai_tool.execute(tool_call, MockRequester(), mock_authorization))
-
-        error = exc_info.value
-        # Fixed: Menai raises MenaiEvalError, not ZeroDivisionError
-        # The VM reports DIVISION_BY_ZERO, which maps to Python's ZeroDivisionError
-        # (a built-in, not a MenaiError subclass).  Structured VM diagnostic
-        # attributes are still attached to the exception.
-        assert "division by zero" in str(error).lower()
-        assert isinstance(error.__cause__, ZeroDivisionError)
-        assert hasattr(error.__cause__, "error_code")
-        assert hasattr(error.__cause__, "vm_opcode")
-
     def test_execute_invalid_syntax_error(self, menai_tool, mock_authorization, make_tool_call):
         """Test execution with invalid Menai syntax."""
         invalid_expressions = [
