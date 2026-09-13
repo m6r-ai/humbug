@@ -30,7 +30,7 @@ class TestSystemAIToolDefinition:
             "open_editor_tab", "new_terminal_tab", "open_conversation_tab",
             "new_conversation_tab", "open_preview_tab", "open_diff_tab",
             "get_tab_info", "close_tab", "list_tabs", "move_tab",
-            "get_system_info",
+            "split_column", "merge_column", "swap_column", "get_system_info",
         }
         assert set(ops.keys()) == expected
 
@@ -339,6 +339,177 @@ class TestMoveTab:
         move_call = make_tool_call("move_tab", tab_id=tab_id, target_column=99)
         with pytest.raises(AIToolExecutionError, match="Column must be"):
             asyncio.run(system_tool.execute(move_call, None, mock_authorization))
+
+
+class TestSplitColumn:
+    """Test the split_column operation."""
+
+    def test_split_right_moves_tab_to_new_column(
+        self, system_tool: SystemAITool, mock_authorization, make_tool_call, temp_mindspace
+    ) -> None:
+        """Test that splitting right moves the tab into a new column to its right."""
+        mindspace, _ = temp_mindspace
+        open_call = make_tool_call("open_editor_tab", file_path="test.py")
+        result = asyncio.run(system_tool.execute(open_call, None, mock_authorization))
+        tab_id = result.content.split("tab ID: ")[1]
+
+        split_call = make_tool_call("split_column", tab_id=tab_id, direction="right")
+        split_result = asyncio.run(system_tool.execute(split_call, None, mock_authorization))
+
+        assert "Split column" in split_result.content
+        assert "to the right" in split_result.content
+        info = mindspace.contexts().get(tab_id)
+        assert info is not None
+        assert info.column == 1
+        assert mindspace.contexts().num_columns() == 2
+
+    def test_split_left_keeps_tab_and_shifts_neighbours(
+        self, system_tool: SystemAITool, mock_authorization, make_tool_call, temp_mindspace
+    ) -> None:
+        """Test that splitting left inserts a new column and the tab stays at its index."""
+        mindspace, _ = temp_mindspace
+        first_call = make_tool_call("open_editor_tab", file_path="first.py")
+        first_result = asyncio.run(system_tool.execute(first_call, None, mock_authorization))
+        first_id = first_result.content.split("tab ID: ")[1]
+
+        second_call = make_tool_call("open_editor_tab", file_path="second.py")
+        second_result = asyncio.run(system_tool.execute(second_call, None, mock_authorization))
+        second_id = second_result.content.split("tab ID: ")[1]
+        mindspace.contexts().move(second_id, 1)
+
+        split_call = make_tool_call("split_column", tab_id=first_id, direction="left")
+        split_result = asyncio.run(system_tool.execute(split_call, None, mock_authorization))
+
+        assert "Split column" in split_result.content
+        assert "to the left" in split_result.content
+        first_info = mindspace.contexts().get(first_id)
+        second_info = mindspace.contexts().get(second_id)
+        assert first_info is not None
+        assert second_info is not None
+        assert first_info.column == 0
+        assert second_info.column == 2
+        assert mindspace.contexts().num_columns() == 3
+
+    def test_split_invalid_direction(
+        self, system_tool: SystemAITool, mock_authorization, make_tool_call, temp_mindspace
+    ) -> None:
+        """Test that an invalid direction is rejected."""
+        _, _ = temp_mindspace
+        open_call = make_tool_call("open_editor_tab", file_path="test.py")
+        result = asyncio.run(system_tool.execute(open_call, None, mock_authorization))
+        tab_id = result.content.split("tab ID: ")[1]
+
+        split_call = make_tool_call("split_column", tab_id=tab_id, direction="up")
+        with pytest.raises(AIToolExecutionError, match="'direction' must be"):
+            asyncio.run(system_tool.execute(split_call, None, mock_authorization))
+
+    def test_split_nonexistent_tab(
+        self, system_tool: SystemAITool, mock_authorization, make_tool_call
+    ) -> None:
+        """Test that splitting a non-existent tab fails."""
+        split_call = make_tool_call("split_column", tab_id="nonexistent", direction="right")
+        with pytest.raises(AIToolExecutionError, match="Context not found"):
+            asyncio.run(system_tool.execute(split_call, None, mock_authorization))
+
+
+class TestMergeColumn:
+    """Test the merge_column operation."""
+
+    def test_merge_right_removes_column(
+        self, system_tool: SystemAITool, mock_authorization, make_tool_call, temp_mindspace
+    ) -> None:
+        """Test that merging right moves the tab into the right neighbour and removes the column."""
+        mindspace, _ = temp_mindspace
+        open_call = make_tool_call("open_editor_tab", file_path="test.py")
+        result = asyncio.run(system_tool.execute(open_call, None, mock_authorization))
+        tab_id = result.content.split("tab ID: ")[1]
+
+        split_call = make_tool_call("split_column", tab_id=tab_id, direction="right")
+        asyncio.run(system_tool.execute(split_call, None, mock_authorization))
+        assert mindspace.contexts().num_columns() == 2
+
+        merge_call = make_tool_call("merge_column", tab_id=tab_id, direction="left")
+        merge_result = asyncio.run(system_tool.execute(merge_call, None, mock_authorization))
+
+        assert "Merged column" in merge_result.content
+        assert "into the left" in merge_result.content
+        info = mindspace.contexts().get(tab_id)
+        assert info is not None
+        assert info.column == 0
+        assert mindspace.contexts().num_columns() == 1
+
+    def test_merge_invalid_direction(
+        self, system_tool: SystemAITool, mock_authorization, make_tool_call, temp_mindspace
+    ) -> None:
+        """Test that an invalid direction is rejected."""
+        _, _ = temp_mindspace
+        open_call = make_tool_call("open_editor_tab", file_path="test.py")
+        result = asyncio.run(system_tool.execute(open_call, None, mock_authorization))
+        tab_id = result.content.split("tab ID: ")[1]
+
+        merge_call = make_tool_call("merge_column", tab_id=tab_id, direction="down")
+        with pytest.raises(AIToolExecutionError, match="'direction' must be"):
+            asyncio.run(system_tool.execute(merge_call, None, mock_authorization))
+
+    def test_merge_nonexistent_tab(
+        self, system_tool: SystemAITool, mock_authorization, make_tool_call
+    ) -> None:
+        """Test that merging a non-existent tab fails."""
+        merge_call = make_tool_call("merge_column", tab_id="nonexistent", direction="left")
+        with pytest.raises(AIToolExecutionError, match="No tab found"):
+            asyncio.run(system_tool.execute(merge_call, None, mock_authorization))
+
+
+class TestSwapColumn:
+    """Test the swap_column operation."""
+
+    def test_swap_left_exchanges_columns(
+        self, system_tool: SystemAITool, mock_authorization, make_tool_call, temp_mindspace
+    ) -> None:
+        """Test that swapping left exchanges the tab's column with its left neighbour."""
+        mindspace, _ = temp_mindspace
+        first_call = make_tool_call("open_editor_tab", file_path="first.py")
+        first_result = asyncio.run(system_tool.execute(first_call, None, mock_authorization))
+        first_id = first_result.content.split("tab ID: ")[1]
+
+        second_call = make_tool_call("open_editor_tab", file_path="second.py")
+        second_result = asyncio.run(system_tool.execute(second_call, None, mock_authorization))
+        second_id = second_result.content.split("tab ID: ")[1]
+        mindspace.contexts().move(second_id, 1)
+
+        swap_call = make_tool_call("swap_column", tab_id=second_id, direction="left")
+        swap_result = asyncio.run(system_tool.execute(swap_call, None, mock_authorization))
+
+        assert "Swapped column" in swap_result.content
+        assert "with the left" in swap_result.content
+        first_info = mindspace.contexts().get(first_id)
+        second_info = mindspace.contexts().get(second_id)
+        assert first_info is not None
+        assert second_info is not None
+        assert second_info.column == 0
+        assert first_info.column == 1
+        assert mindspace.contexts().num_columns() == 2
+
+    def test_swap_invalid_direction(
+        self, system_tool: SystemAITool, mock_authorization, make_tool_call, temp_mindspace
+    ) -> None:
+        """Test that an invalid direction is rejected."""
+        _, _ = temp_mindspace
+        open_call = make_tool_call("open_editor_tab", file_path="test.py")
+        result = asyncio.run(system_tool.execute(open_call, None, mock_authorization))
+        tab_id = result.content.split("tab ID: ")[1]
+
+        swap_call = make_tool_call("swap_column", tab_id=tab_id, direction="sideways")
+        with pytest.raises(AIToolExecutionError, match="'direction' must be"):
+            asyncio.run(system_tool.execute(swap_call, None, mock_authorization))
+
+    def test_swap_nonexistent_tab(
+        self, system_tool: SystemAITool, mock_authorization, make_tool_call
+    ) -> None:
+        """Test that swapping a non-existent tab fails."""
+        swap_call = make_tool_call("swap_column", tab_id="nonexistent", direction="right")
+        with pytest.raises(AIToolExecutionError, match="No tab found"):
+            asyncio.run(system_tool.execute(swap_call, None, mock_authorization))
 
 
 class TestGetSystemInfo:

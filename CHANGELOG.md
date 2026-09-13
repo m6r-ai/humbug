@@ -19,6 +19,8 @@ New features:
 - Added an interactive onboarding product tour that spotlights the key parts of Humbug for first-time users.  It can
   be replayed at any time from Humbug → Take a Tour.
 - Added a "product tour" feature to guide new users.
+- Added `split_column`, `merge_column`, and `swap_column` operations to the system AI tool, so the AI can organise the
+  workspace layout into columns just as the user can.
 
 Bug fixes:
 

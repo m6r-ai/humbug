@@ -83,6 +83,13 @@ class SystemAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
+                    name="direction",
+                    type="string",
+                    description="Direction for split_column, merge_column, and swap_column operations. "
+                        "Must be 'left' or 'right'",
+                    required=False
+                ),
+                AIToolParameter(
                     name="model",
                     type="string",
                     description="AI model to use (for new_conversation_tab operation)",
@@ -208,6 +215,34 @@ class SystemAITool(AITool):
                 required_parameters={"tab_id", "target_column"},
                 description="Move a tab to a specific column by index. You must provide the tab_id and target_column "
                     "parameters. There are a maximum of 6 columns"
+            ),
+            "split_column": AIToolOperationDefinition(
+                name="split_column",
+                handler=self._split_column,
+                extract_context=None,
+                allowed_parameters={"tab_id", "direction"},
+                required_parameters={"tab_id", "direction"},
+                description="Split the column containing a tab, moving that tab into a new column. "
+                    "The 'direction' parameter must be 'left' or 'right' and determines on which side of the "
+                    "existing column the new column is inserted. There are a maximum of 6 columns"
+            ),
+            "merge_column": AIToolOperationDefinition(
+                name="merge_column",
+                handler=self._merge_column,
+                extract_context=None,
+                allowed_parameters={"tab_id", "direction"},
+                required_parameters={"tab_id", "direction"},
+                description="Merge the column containing a tab into the adjacent column. "
+                    "The 'direction' parameter must be 'left' or 'right' and selects the neighbour to merge into"
+            ),
+            "swap_column": AIToolOperationDefinition(
+                name="swap_column",
+                handler=self._swap_column,
+                extract_context=None,
+                allowed_parameters={"tab_id", "direction"},
+                required_parameters={"tab_id", "direction"},
+                description="Swap the column containing a tab with the adjacent column. "
+                    "The 'direction' parameter must be 'left' or 'right' and selects the neighbour to swap with"
             ),
             "get_system_info": AIToolOperationDefinition(
                 name="get_system_info",
@@ -811,6 +846,132 @@ class SystemAITool(AITool):
             id=tool_call.id,
             name="system",
             content=f"Moved tab {tab_id} to column {target_column}"
+        )
+
+    def _resolve_direction(self, arguments: dict[str, Any]) -> bool:
+        """
+        Resolve and validate the 'direction' argument for column operations.
+
+        Args:
+            arguments: Tool call arguments dictionary.
+
+        Returns:
+            True if the direction is 'left', False if 'right'.
+
+        Raises:
+            AIToolExecutionError: If 'direction' is missing or not 'left'/'right'.
+        """
+        direction = self._get_required_str_value("direction", arguments)
+        if direction not in ("left", "right"):
+            raise AIToolExecutionError(
+                f"'direction' must be 'left' or 'right', got '{direction}'"
+            )
+
+        return direction == "left"
+
+    def _require_tab_column(self, tab_id: str) -> int:
+        """
+        Return the column index of an existing tab.
+
+        Args:
+            tab_id: ID of the tab whose column is required.
+
+        Returns:
+            The tab's current column index.
+
+        Raises:
+            AIToolExecutionError: If no tab exists with the given ID.
+        """
+        info = self._mindspace.contexts().get(tab_id)
+        if info is None:
+            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
+
+        return info.column
+
+    async def _split_column(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        _request_authorization: AIToolAuthorizationCallback,
+    ) -> AIToolResult:
+        """Split the column containing a tab into two columns."""
+        arguments = tool_call.arguments
+        tab_id = self._get_required_str_value("tab_id", arguments)
+        split_left = self._resolve_direction(arguments)
+
+        try:
+            self._mindspace.contexts().split_column(tab_id, split_left)
+
+        except ValueError as e:
+            raise AIToolExecutionError(str(e)) from e
+
+        side = "left" if split_left else "right"
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI split column containing tab {tab_id} to the {side}"
+        )
+        return AIToolResult(
+            id=tool_call.id,
+            name="system",
+            content=f"Split column containing tab {tab_id} to the {side}"
+        )
+
+    async def _merge_column(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        _request_authorization: AIToolAuthorizationCallback,
+    ) -> AIToolResult:
+        """Merge the column containing a tab into the adjacent column."""
+        arguments = tool_call.arguments
+        tab_id = self._get_required_str_value("tab_id", arguments)
+        merge_left = self._resolve_direction(arguments)
+        column = self._require_tab_column(tab_id)
+
+        try:
+            self._mindspace.contexts().merge_column(column, merge_left)
+
+        except ValueError as e:
+            raise AIToolExecutionError(str(e)) from e
+
+        side = "left" if merge_left else "right"
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI merged column {column} (containing tab {tab_id}) into the {side}"
+        )
+        return AIToolResult(
+            id=tool_call.id,
+            name="system",
+            content=f"Merged column {column} (containing tab {tab_id}) into the {side}"
+        )
+
+    async def _swap_column(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        _request_authorization: AIToolAuthorizationCallback,
+    ) -> AIToolResult:
+        """Swap the column containing a tab with the adjacent column."""
+        arguments = tool_call.arguments
+        tab_id = self._get_required_str_value("tab_id", arguments)
+        swap_left = self._resolve_direction(arguments)
+        column = self._require_tab_column(tab_id)
+
+        try:
+            self._mindspace.contexts().swap_column(column, swap_left)
+
+        except ValueError as e:
+            raise AIToolExecutionError(str(e)) from e
+
+        side = "left" if swap_left else "right"
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI swapped column {column} (containing tab {tab_id}) with the {side}"
+        )
+        return AIToolResult(
+            id=tool_call.id,
+            name="system",
+            content=f"Swapped column {column} (containing tab {tab_id}) with the {side}"
         )
 
     async def _get_system_info(
