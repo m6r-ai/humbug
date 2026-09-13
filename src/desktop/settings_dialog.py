@@ -42,6 +42,7 @@ from desktop.settings.settings_text_field import SettingsTextField
 from desktop.style_manager import StyleManager
 from desktop.color_theme import ColorTheme
 from desktop.user.user_file_sort_order import UserFileSortOrder
+from desktop.user.onboarding_tour_status import OnboardingTourStatus
 from desktop.user.user_settings import UserSettings
 
 _FETCHED_MODELS_CACHE = os.path.join(os.path.expanduser("~"), ".humbug", "fetched-models.json")
@@ -739,6 +740,10 @@ class SettingsDialog(QDialog):
 
     def get_user_settings(self) -> UserSettings:
         """Read current user settings from the dialog controls."""
+        # The onboarding tour state has no dialog control, so it must be carried over
+        # from the settings the dialog was populated with. Otherwise rebuilding the
+        # settings object here would silently reset the tour to NOT_STARTED.
+        initial = self._initial_user_settings
         ai_backends = {}
         for backend_id, controls in self._ai_backend_controls.items():
             enabled = cast(SettingsSwitch, controls["enable"]).get_value()
@@ -762,6 +767,12 @@ class SettingsDialog(QDialog):
             external_file_allowlist=self._external_allowlist_area.get_value(),
             external_file_denylist=self._external_denylist_area.get_value(),
             check_for_updates=self._check_for_updates_check.get_value(),
+            onboarding_tour_status=(
+                initial.onboarding_tour_status if initial is not None else OnboardingTourStatus.NOT_STARTED
+            ),
+            onboarding_tour_version=(
+                initial.onboarding_tour_version if initial is not None else 0
+            ),
         )
 
     def get_mindspace_settings(self) -> MindspaceSettings | None:
@@ -1617,6 +1628,8 @@ class SettingsDialog(QDialog):
             external_file_allowlist=list(settings.external_file_allowlist),
             external_file_denylist=list(settings.external_file_denylist),
             check_for_updates=settings.check_for_updates,
+            onboarding_tour_status=settings.onboarding_tour_status,
+            onboarding_tour_version=settings.onboarding_tour_version,
         )
 
     @staticmethod

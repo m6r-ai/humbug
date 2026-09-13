@@ -6,6 +6,7 @@ import tempfile
 
 from desktop.user.onboarding_tour_status import OnboardingTourStatus
 from desktop.user.user_settings import UserSettings
+from desktop.settings_dialog import SettingsDialog
 
 
 class TestDefaults:
@@ -63,3 +64,33 @@ class TestMalformedData:
 
         assert loaded.onboarding_tour_status == OnboardingTourStatus.NOT_STARTED
         assert loaded.onboarding_tour_version == 0
+
+
+class TestSettingsDialogPreservesTourState:
+    def test_saving_user_settings_preserves_completed_tour(self, qapp):
+        settings = UserSettings.create_default()
+        settings.onboarding_tour_status = OnboardingTourStatus.COMPLETED
+        settings.onboarding_tour_version = 1
+
+        dialog = SettingsDialog()
+        dialog.set_settings(settings, None)
+        saved = dialog.get_user_settings()
+        dialog.deleteLater()
+        qapp.processEvents()
+
+        assert saved.onboarding_tour_status == OnboardingTourStatus.COMPLETED
+        assert saved.onboarding_tour_version == 1
+
+    def test_saving_user_settings_preserves_skipped_tour(self, qapp):
+        settings = UserSettings.create_default()
+        settings.onboarding_tour_status = OnboardingTourStatus.SKIPPED
+        settings.onboarding_tour_version = 1
+
+        dialog = SettingsDialog()
+        dialog.set_settings(settings, None)
+        saved = dialog.get_user_settings()
+        dialog.deleteLater()
+        qapp.processEvents()
+
+        assert saved.onboarding_tour_status == OnboardingTourStatus.SKIPPED
+        assert saved.onboarding_tour_version == 1
