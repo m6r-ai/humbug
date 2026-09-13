@@ -4,6 +4,7 @@
 
 New features:
 
+- Added DeepSeek v4.1 Flash support.
 - Added Gemini 3.8 Flash, and removed Gemini 3.5 Flash.
 - Added Gemini 3.5 Flash lite, and removed Gemini 3.1 Flash lite.
 - Removed GPT-5.4 and GPT-5.5.

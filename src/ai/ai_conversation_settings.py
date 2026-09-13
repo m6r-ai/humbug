@@ -87,10 +87,10 @@ class AIConversationSettings:
         ),
 
         # DeepSeek models
-        ("deepseek-v4-flash", "deepseek"): AIModel(
-            name="deepseek-v4-flash",
+        ("deepseek-flash", "deepseek"): AIModel(
+            name="deepseek-flash",
             provider="deepseek",
-            display_name="DeepSeek V4 Flash",
+            display_name="DeepSeek Flash",
             context_window=1000000,
             max_output_tokens=384000,
             supports_temperature=True,
@@ -98,7 +98,9 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
             ],
         ),
         ("deepseek-v4-pro", "deepseek"): AIModel(
@@ -112,7 +114,9 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
             ],
         ),
 
@@ -238,10 +242,10 @@ class AIConversationSettings:
         ),
 
         # Ollama Cloud models
-        ("deepseek-v4-flash", "ollama-cloud"): AIModel(
-            name="deepseek-v4-flash:cloud",
+        ("deepseek-v4.1-flash", "ollama-cloud"): AIModel(
+            name="deepseek-v4.1-flash:cloud",
             provider="ollama-cloud",
-            display_name="DeepSeek V4 Flash",
+            display_name="DeepSeek V4.1 Flash",
             context_window=1000000,
             max_output_tokens=384000,
             supports_temperature=True,
