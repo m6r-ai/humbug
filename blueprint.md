@@ -83,14 +83,21 @@ creates a circular dependency between modules.
 
 ### Frontend-agnostic workspace state
 All workspace layout state — which tabs are open, which column each tab is in,
-which tab is focused, and whether a tab is ephemeral — lives in the
-frontend-agnostic `ContextRegistry` within the `Mindspace` model.  The desktop
-frontend (`TabManager`) is a projection: it subscribes to registry events
-(OPENED, CLOSED, UPDATED, FOCUSED, MOVED) and renders the corresponding Qt
-widgets.  User actions (clicking a tab, dragging between columns) call back
-into the registry, which emits events that the frontend reacts to.  This
-separation is the foundation for a future remote frontend that visualises
-activities on a headless backend.
+its position within that column, which tab is focused, and whether a tab is
+ephemeral — lives in the frontend-agnostic `ContextRegistry` within the
+`Mindspace` model.  The desktop frontend (`TabManager`) is a projection: it
+subscribes to registry events (OPENED, CLOSED, UPDATED, FOCUSED, MOVED) and
+renders the corresponding Qt widgets.  User actions (clicking a tab, dragging
+between columns) call back into the registry, which emits events that the
+frontend reacts to.  This separation is the foundation for a future remote
+frontend that visualises activities on a headless backend.
+
+Workspace state is divided into three layers, each with a single owner.
+Layout belongs to the registry; content (a file path, a terminal command, a
+conversation transcript) belongs to the frontend-agnostic context models; and
+view state (cursor positions, scroll offsets, find-widget state) belongs to the
+frontend, which supplies it to the registry as an opaque blob.  Session
+persistence is a registry operation that combines all three.  See ADR-0008.
 
 ### YAGNI — no speculative code
 Humbug follows the YAGNI (You Aren't Gonna Need It) principle. Every method,

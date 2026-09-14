@@ -907,35 +907,31 @@ class PreviewWidget(QWidget):
         """Remove find highlights without resetting match state."""
         self._clear_highlights()
 
-    def create_state_metadata(self) -> dict[str, Any]:
+    def create_view_state(self) -> dict[str, Any]:
         """
-        Create metadata dictionary capturing current widget state.
+        Create a dictionary capturing the preview view's state.
 
         Returns:
-            Dictionary containing preview state metadata
+            Dictionary containing the scroll position.
         """
-        metadata: dict[str, Any] = {}
+        return {
+            "scroll_position": self._scroll_area.verticalScrollBar().value(),
+        }
 
-        # Store scroll position
-        scrollbar = self._scroll_area.verticalScrollBar()
-        metadata["scroll_position"] = scrollbar.value()
-
-        return metadata
-
-    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
+    def restore_view_state(self, state: dict[str, Any]) -> None:
         """
-        Restore widget state from metadata.
+        Restore the preview view's state.
 
         Args:
-            metadata: Dictionary containing state metadata
+            state: Dictionary produced by create_view_state.
         """
-        if not metadata:
+        if not state:
             return
 
         # Restore scroll position if specified
-        if "scroll_position" in metadata:
+        if "scroll_position" in state:
             # Use a timer to ensure the scroll happens after layout is complete
-            self._deferred_scroll_position = metadata["scroll_position"]
+            self._deferred_scroll_position = state["scroll_position"]
             self._deferred_scroll_timer.start()
 
     # AI Tool Support Methods

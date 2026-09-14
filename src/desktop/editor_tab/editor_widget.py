@@ -564,56 +564,78 @@ class EditorWidget(QPlainTextEdit):
             'type': file_type
         }
 
-    def create_state_metadata(self, temp_state: bool) -> dict[str, Any]:
+    def create_view_state(self) -> dict[str, Any]:
         """
-        Create metadata dictionary capturing current widget state.
+        Create a dictionary capturing the editor's view state.
 
-        Args:
-            temp_state: Whether this is temporary state for moving tabs
+        This is pure view state: it says nothing about the document's content
+        and is safe to persist across sessions.
 
         Returns:
-            Dictionary containing editor state metadata
+            Dictionary containing syntax, cursor, and scroll positions.
         """
-        metadata: dict[str, Any] = {}
+        return {
+            "syntax": self._syntax.name,
+            "cursor": self._get_cursor_position(),
+            "horizontal_scroll": self.horizontalScrollBar().value(),
+            "vertical_scroll": self.verticalScrollBar().value(),
+        }
 
-        metadata["syntax"] = self._syntax.name
-        metadata["cursor"] = self._get_cursor_position()
-        metadata["horizontal_scroll"] = self.horizontalScrollBar().value()
-        metadata["vertical_scroll"] = self.verticalScrollBar().value()
-
-        if temp_state:
-            metadata["content"] = self.toPlainText()
-
-        return metadata
-
-    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
+    def restore_view_state(self, state: dict[str, Any]) -> None:
         """
-        Restore widget state from metadata.
+        Restore the editor's view state.
 
         Args:
-            metadata: Dictionary containing state metadata
+            state: Dictionary produced by create_view_state.
         """
-        if not metadata:
+        if not state:
             return
 
-        if "content" in metadata:
-            self.setPlainText(metadata["content"])
-
         # Restore language if specified
-        if "language" in metadata:
-            language = ProgrammingLanguage[metadata["language"]]
+        if "language" in state:
+            language = ProgrammingLanguage[state["language"]]
             self._update_syntax(language)
 
         # Restore cursor position if present
-        if "cursor" in metadata:
-            self._set_cursor_position(metadata["cursor"])
+        if "cursor" in state:
+            self._set_cursor_position(state["cursor"])
 
         # Restore scroll positions if present
-        if "horizontal_scroll" in metadata:
-            self.horizontalScrollBar().setValue(metadata["horizontal_scroll"])
+        if "horizontal_scroll" in state:
+            self.horizontalScrollBar().setValue(state["horizontal_scroll"])
 
-        if "vertical_scroll" in metadata:
-            self.verticalScrollBar().setValue(metadata["vertical_scroll"])
+        if "vertical_scroll" in state:
+            self.verticalScrollBar().setValue(state["vertical_scroll"])
+
+    def create_migration_state(self) -> dict[str, Any]:
+        """
+        Create a dictionary capturing the state needed to rebuild this editor.
+
+        In addition to the view state, this includes the unsaved buffer content,
+        which must survive the widget being destroyed and recreated during a
+        column move.
+
+        Returns:
+            Dictionary containing view state and the buffer content.
+        """
+        state = self.create_view_state()
+        state["content"] = self.toPlainText()
+        return state
+
+    def restore_migration_state(self, state: dict[str, Any]) -> None:
+        """
+        Restore the editor's content and view state after a column move.
+
+        Args:
+            state: Dictionary produced by create_migration_state.
+        """
+        if not state:
+            return
+
+        if "content" in state:
+            self.setPlainText(state["content"])
+
+        self.restore_view_state(state)
 
     def _set_cursor_position(self, position: dict[str, int]) -> None:
         """

@@ -23,7 +23,7 @@ from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
 from desktop.color_role import ColorRole
 from desktop.widgets import FindWidget
-from desktop.tab import TabBase, TabState
+from desktop.tab import TabBase
 from desktop.terminal_tab.terminal_status import TerminalStatusInfo
 from desktop.terminal_tab.terminal_widget import TerminalWidget
 
@@ -164,6 +164,7 @@ class TerminalTab(TabBase):
             context_id=self._tab_id,
             terminal_process=self._terminal_process,
             terminal_state=self._terminal_state,
+            command=self._command,
         )
 
         # Start local shell process
@@ -374,78 +375,59 @@ class TerminalTab(TabBase):
         except Exception as e:
             self._logger.error("Failed to write to process: %s", str(e))
 
-    def get_state(self, temp_state: bool = False) -> TabState:
+    def capture_view_state(self) -> dict:
         """
-        Get serializable state.
+        Capture this terminal tab's view state for session persistence.
 
-        For temporary state (like moving tabs), this includes:
-        1. Terminal visual state (buffers, cursor, etc.)
-        2. Process state (open file descriptors and PIDs)
-        3. Command used to start the terminal
+        A terminal's state is its running process and scrollback, neither of
+        which is persisted across sessions, so there is no view state to save.
+        """
+        return {}
 
-        For permanent state, only includes:
-        1. Command used to start the terminal
-        2. Basic terminal settings
+    def restore_view_state(self, state: dict) -> None:
+        """Restore this terminal tab's view state after session restore."""
 
-        Args:
-            temp_state: Whether this is for temporary state capture
+    def capture_migration_state(self) -> dict:
+        """
+        Capture the state needed to rebuild this terminal tab in another column.
 
-        Returns:
-            TabState containing tab state
+        This includes the terminal visual state (buffers, cursor), the command
+        used to start the terminal, and a reference to this tab so its running
+        process can be transferred to the replacement.
         """
         metadata: dict[str, Any] = {}
 
-        # Store command for both persistent and temporary state
         if self._command:
             metadata["command"] = self._command
 
-        # Only store process/display state for temporary moves
-        if temp_state:
-            metadata.update(self._terminal_widget.create_state_metadata())
-            metadata['source_tab'] = self
-            metadata['is_ephemeral'] = True
-            metadata['find_widget'] = self._find_widget.create_state_metadata()
+        metadata.update(self._terminal_widget.create_migration_state())
+        metadata['source_tab'] = self
+        metadata['find_widget'] = self._find_widget.create_state_metadata()
 
-        return TabState(
-            type=self.tool_name(),
-            tab_id=self._tab_id,
-            path="terminal://local",
-            metadata=metadata
-        )
+        return {
+            "tab_id": self._tab_id,
+            "metadata": metadata,
+        }
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'TerminalTab':
+    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'TerminalTab':
         """
-        Restore terminal from saved state.
+        Create a replacement terminal tab carrying state from a column move.
 
-        Args:
-            state: State to restore from
-            parent: Parent widget
-
-        Returns:
-            New TerminalTab instance
+        The replacement does not start its own process; instead it adopts the
+        process from the source tab referenced in the migrated state.
         """
-        command = None
-        start_process = True
-        if state.metadata:
-            command = state.metadata.get("command")
+        metadata = state["metadata"]
+        command = metadata.get("command")
 
-            if state.metadata.get('is_ephemeral') and 'source_tab' in state.metadata:
-                start_process = False
+        tab = cls(state["tab_id"], command, parent, start_process=False)
+        tab._terminal_widget.restore_migration_state(metadata)
 
-        tab = cls(state.tab_id, command, parent, start_process=start_process)
+        source_tab = metadata['source_tab']
+        tab._transfer_process_from(source_tab)
 
-        # Only restore process/display state if this is ephemeral (temp) state
-        if state.metadata and state.metadata.get('is_ephemeral'):
-            tab._terminal_widget.restore_from_metadata(state.metadata)
-
-            # If we have a source tab, transfer the process
-            if 'source_tab' in state.metadata:
-                source_tab = state.metadata['source_tab']
-                tab._transfer_process_from(source_tab)
-
-            if 'find_widget' in state.metadata:
-                tab._find_widget.restore_from_metadata(state.metadata['find_widget'])
+        if 'find_widget' in metadata:
+            tab._find_widget.restore_from_metadata(metadata['find_widget'])
 
         return tab
 
@@ -487,6 +469,7 @@ class TerminalTab(TabBase):
             context_id=self._tab_id,
             terminal_process=self._terminal_process,
             terminal_state=self._terminal_state,
+            command=self._command,
         )
 
         # Create new read loop task in this tab

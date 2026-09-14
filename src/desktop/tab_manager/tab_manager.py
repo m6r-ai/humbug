@@ -16,7 +16,6 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
 from desktop.tab.tab_base import TabBase
-from desktop.tab.tab_state import TabState
 from desktop.tab_manager.column_splitter import ColumnSplitter
 from desktop.tab_manager.column_widget import ColumnWidget
 from desktop.tab_manager.spacer_drop_widget import SpacerDropWidget
@@ -28,7 +27,6 @@ from desktop.tab_manager.tab_style import build_tab_manager_stylesheet, build_ta
 from desktop.tab_manager.welcome_widget import WelcomeWidget
 from desktop.user.user_settings import UserSettings
 
-TabFactory = Callable[[TabState, QWidget], "TabBase | None"]
 ContextFactory = Callable[[ContextInfo, ContextRegistry, QWidget], "TabBase | None"]
 
 
@@ -55,6 +53,7 @@ class TabManager(QWidget):
         # Subscribe to mindspace open/close so we can wire registry callbacks
         self._mindspace_manager.settings_changed.connect(self._on_mindspace_settings_changed)
         self._registry_subscribed = False
+        self._restoring = False
 
         self.setObjectName("TabManager")
 
@@ -129,12 +128,6 @@ class TabManager(QWidget):
 
         # Zero-delay deferral timers. Parented to self so they are torn down with the
         # manager and can never fire after the widgets they touch are deleted.
-        self._set_active_column_timer = QTimer(self)
-        self._set_active_column_timer.setSingleShot(True)
-        self._set_active_column_timer.timeout.connect(self._on_deferred_set_active_column)
-        self._deferred_active_column_index: int = 0
-        self._deferred_active_tab_ids: list[str] = []
-
         self._focus_restore_timer = QTimer(self)
         self._focus_restore_timer.setSingleShot(True)
         self._focus_restore_timer.timeout.connect(self._on_deferred_focus_restore)
@@ -150,23 +143,12 @@ class TabManager(QWidget):
         # Track tabs
         self._tabs: dict[str, TabBase] = {}
 
-        self._tab_factories: dict[str, TabFactory] = {}
         self._context_factories: dict[str, ContextFactory] = {}
         self._current_status_tab: TabBase | None = None
 
         # Lazily-created overlays: grid overview and carousel ("recents screens")
         self._tab_overview: TabOverviewWidget | None = None
         self._tab_carousel: TabCarouselWidget | None = None
-
-    def register_tab_factory(self, tool_name: str, factory: TabFactory) -> None:
-        """
-        Register a tab factory for session restore.
-
-        Args:
-            tool_name: The tool name string (e.g. 'editor', 'conversation').
-            factory: Callable(state, parent) -> TabBase | None.
-        """
-        self._tab_factories[tool_name] = factory
 
     def register_context_factory(self, tool_name: str, factory: ContextFactory) -> None:
         """
@@ -388,7 +370,7 @@ class TabManager(QWidget):
             return
 
         if tab.is_ephemeral():
-            self._make_tab_permanent(tab)
+            self._make_tab_permanent(tab, sync_registry=True)
 
     def _on_tab_label_context_menu(self, tab_id: str, global_pos: QPoint) -> None:
         """
@@ -602,8 +584,27 @@ class TabManager(QWidget):
 
         new_tab.set_ephemeral(is_ephemeral)
         title = new_tab.tab_title_from_path() or info.title
-        self._add_tab(new_tab, title, requester_id)
+        column = None
+        if self._restoring and 0 <= info.column < len(self._tab_columns):
+            column = self._tab_columns[info.column]
+
+        self._add_tab(new_tab, title, requester_id, column=column)
         self._apply_context_models(new_tab)
+
+        if self._restoring:
+            self._apply_frontend_state(new_tab, registry)
+
+    def _apply_frontend_state(self, tab: TabBase, registry: ContextRegistry) -> None:
+        """
+        Apply a restored tab's saved view state.
+
+        Args:
+            tab: The tab that was just created during a restore.
+            registry: The registry holding the saved frontend state.
+        """
+        state = registry.get_frontend_state(tab.tab_id())
+        if state:
+            tab.restore_view_state(state)
 
     def _apply_context_models(self, tab: TabBase) -> None:
         """Register context models for a tab by delegating to the tab itself."""
@@ -863,10 +864,7 @@ class TabManager(QWidget):
             target_column: Target column
             remove_if_empty: Whether to remove the source column if it becomes empty
         """
-        tab_state = tab.get_state(True)
-
-        # Moving a tab is a deliberate user action, so it is no longer ephemeral
-        tab_state.is_ephemeral = False
+        migration_state = tab.capture_migration_state()
 
         tab_id = tab.tab_id()
         src_index, src_tab_bar = self._find_tab_bar_and_index(tab)
@@ -880,9 +878,10 @@ class TabManager(QWidget):
 
         self._remove_tab_from_column(tab, source_column)
 
-        new_tab = self._restore_tab_from_state(tab_state)
-        if not new_tab:
-            return
+        new_tab = tab.rebuild_from_migration_state(migration_state, self)
+
+        # Moving a tab is a deliberate user action, so it is no longer ephemeral
+        new_tab.set_ephemeral(False)
 
         self._add_tab_to_column(new_tab, tab_title, target_column)
         self._apply_context_models(new_tab)
@@ -900,6 +899,8 @@ class TabManager(QWidget):
                     context_id=tab_id,
                     column=column_index,
                 )
+
+            contexts.make_permanent(tab_id)
 
         if remove_if_empty and source_column.count() == 0 and len(self._tab_columns) > 1:
             source_column_index = self._tab_columns.index(source_column)
@@ -1525,7 +1526,10 @@ class TabManager(QWidget):
 
         return self._tab_columns[current_column_number - 1]
 
-    def _add_tab(self, tab: TabBase, title: str, requester_id: str = "") -> None:
+    def _add_tab(
+        self, tab: TabBase, title: str, requester_id: str = "",
+        column: ColumnWidget | None = None,
+    ) -> None:
         """
         Add a new tab to the manager.
 
@@ -1538,13 +1542,16 @@ class TabManager(QWidget):
                           requester and focus is not stolen from the user.
                           When empty (user-initiated), the new tab is placed
                           in the active column and receives focus.
+            column: Explicit target column.  When provided it overrides the
+                    placement heuristic, which is used when restoring a saved
+                    layout.
         """
         if len(self._tabs) == 0:
             # If no tabs exist, we need to switch to the columns widget
             self._stack.setCurrentWidget(self._columns_widget)
 
         prior_active_column = self._active_column
-        target_column = self._get_target_column_for_new_tab(requester_id)
+        target_column = column if column is not None else self._get_target_column_for_new_tab(requester_id)
 
         self._add_tab_to_column(tab, title, target_column)
 
@@ -1683,12 +1690,25 @@ class TabManager(QWidget):
         self._update_mru_order(tab, column)
         self._update_tabs(not ephemeral)
 
-    def _make_tab_permanent(self, tab: TabBase) -> None:
-        """Convert an ephemeral tab to permanent."""
+    def _make_tab_permanent(self, tab: TabBase, sync_registry: bool = False) -> None:
+        """
+        Convert an ephemeral tab to permanent.
+
+        Args:
+            tab: The tab to make permanent.
+            sync_registry: Whether to push the change to the context registry.
+                This is False when the call originates from the registry itself
+                (via _on_context_updated), to avoid echoing the update back.
+        """
         tab.set_ephemeral(False)
         tab_index, tab_bar = self._find_tab_bar_and_index(tab)
         if tab_bar and tab_index != -1:
             tab_bar.set_tab_ephemeral(tab_index, False)
+
+        if sync_registry and self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.mindspace().contexts().update(
+                tab.tab_id(), is_ephemeral=False
+            )
 
     def _move_tab_to_active_column(self, tab: TabBase) -> None:
         """
@@ -1718,7 +1738,7 @@ class TabManager(QWidget):
             return
 
         if modified:
-            self._make_tab_permanent(tab)
+            self._make_tab_permanent(tab, sync_registry=True)
 
         tab.on_modified_changed(modified)
 
@@ -1864,165 +1884,77 @@ class TabManager(QWidget):
 
         return self._find_tab_by_path("editor", path)
 
-    def save_state(self) -> dict:
-        """Get current state of all tabs and columns."""
-        tab_columns = []
-        active_column_index = self._tab_columns.index(self._active_column)
 
-        for column in self._tab_columns:
-            tab_states = []
-            active_tab_id = None
-
-            current_index = column.currentIndex()
-            if current_index != -1:
-                current_tab = cast(TabBase, column.widget(current_index))
-                active_tab_id = current_tab.tab_id()
-
-            for index in range(column.count()):
-                tab = cast(TabBase, column.widget(index))
-                try:
-                    state = tab.get_state(False)
-                    state_dict = state.to_dict()
-                    tab_states.append(state_dict)
-
-                except Exception as e:
-                    self._logger.exception("Failed to save tab manager state: %s", str(e))
-                    continue
-
-            tab_columns.append({
-                'tabs': tab_states,
-                'active_tab_id': active_tab_id
-            })
-
-        return {
-            'columns': tab_columns,
-            'active_column_index': active_column_index
-        }
-
-    def _restore_tab_from_state(self, state: TabState) -> TabBase | None:
-        """Create a tab from a saved state using the registered factory."""
-        factory = self._tab_factories.get(state.type)
-        if factory is None:
-            self._logger.warning("No factory registered for tool '%s'", state.type)
-            return None
-
-        return factory(state, self)
-
-    def _restore_column_state(self, column_index: int, tab_states: list[dict]) -> None:
+    def current_tab_by_column(self) -> dict[int, str]:
         """
-        Restore state for a single column of tabs.
+        Return the context id currently visible in each column.
+
+        Returns:
+            Mapping of column index to the tab id shown in that column.
+        """
+        current: dict[int, str] = {}
+        for index, column in enumerate(self._tab_columns):
+            widget = column.currentWidget()
+            if isinstance(widget, TabBase):
+                current[index] = widget.tab_id()
+
+        return current
+
+    def restore_from_registry(self, saved_state: dict) -> None:
+        """
+        Restore the saved workspace by replaying it through the registry.
+
+        The registry is the source of truth for layout, so restoring means
+        asking it to rebuild its state and letting the resulting OPENED events
+        create the tabs.  While restoring, each tab is placed in its saved
+        column rather than by the usual placement heuristic.
 
         Args:
-            column_index: Index of the column to restore
-            tab_states: List of tab states to restore in this column
+            saved_state: Dictionary produced by ContextRegistry.save_state.
         """
-        for state_dict in tab_states:
-            try:
-                state = TabState.from_dict(state_dict)
-                state.path = self._mindspace_manager.get_absolute_path(state.path)
+        if not self._mindspace_manager.has_mindspace():
+            return
 
-                factory = self._tab_factories.get(state.type)
-                if factory is None:
-                    self._logger.info(
-                        "Skipping tab restore for type '%s', path: %s", state.type, state.path
-                    )
-                    continue
+        registry = self._mindspace_manager.mindspace().contexts()
 
-                cls = getattr(factory, '__self__', None)
-                if cls is not None and callable(getattr(cls, 'can_restore', None)) and not cls.can_restore(state.path):
-                    self._logger.info(
-                        "Skipping tab restore for type '%s', path: %s", state.type, state.path
-                    )
-                    continue
-
-                tab = self._restore_tab_from_state(state)
-                if not tab:
-                    continue
-
-                tab.set_ephemeral(state.is_ephemeral)
-
-                self._active_column = self._tab_columns[column_index]
-                title = tab.tab_title_from_path()
-                self._add_tab(tab, title)
-
-                if self._mindspace_manager.has_mindspace():
-                    self._mindspace_manager.mindspace().contexts().open(
-                        context_type=tab.tool_name(),
-                        path=tab.path(),
-                        title=title,
-                        context_id=tab.tab_id(),
-                        column=column_index,
-                    )
-
-            except Exception as e:
-                self._logger.exception("Failed to restore tab manager state: %s", str(e))
-                continue
-
-    def _deferred_set_active_column(self, active_column_index: int, active_tab_ids: list[str]) -> None:
-        """
-        Set the active column and tab after UI has settled.
-
-        Args:
-            active_column_index: Index of the column to make active
-            active_tab_ids: List of active tab IDs for each column
-        """
-        # Show all columns with appropriate sizes
-        self.show_all_columns()
-
-        # Set the active column
-        if 0 <= active_column_index < len(self._tab_columns):
-            self._active_column = self._tab_columns[active_column_index]
-
-            # If there's an active tab in this column, ensure it has focus
-            if active_tab_ids and active_column_index < len(active_tab_ids):
-                active_tab_id = active_tab_ids[active_column_index]
-                if active_tab_id in self._tabs:
-                    tab = self._tabs[active_tab_id]
-                    tab.setFocus()
-
-        # Update tab states to show correct active highlighting
-        self._update_tabs()
-
-    def restore_state(self, saved_state: dict) -> None:
-        """
-        Restore tabs and active states from saved state.
-
-        Args:
-            saved_state: Dictionary containing saved state of columns and tabs
-        """
-        saved_columns = saved_state.get('columns', [])
-        active_column_index = saved_state.get('active_column_index', 0)
-
-        # Create necessary columns
-        num_columns = len(saved_columns)
-        for index in range(1, num_columns):
+        num_columns = max(1, int(saved_state.get("num_columns", 1)))
+        for index in range(len(self._tab_columns), num_columns):
             self._create_column(index)
 
-        # First pass: restore all tabs in all columns
-        for column_index, column_state in enumerate(saved_columns):
-            tab_states = column_state.get('tabs', [])
-            self._restore_column_state(column_index, tab_states)
+        self._restoring = True
+        try:
+            registry.restore_state(saved_state)
 
-        # Second pass: set active tabs in each column
-        active_tab_ids = []
-        for column_index, column_state in enumerate(saved_columns):
-            active_tab_id = column_state.get('active_tab_id')
-            if active_tab_id and active_tab_id in self._tabs:
-                column = self._tab_columns[column_index]
-                tab = self._tabs[active_tab_id]
+        finally:
+            self._restoring = False
+
+        # Restore which tab is visible in each column.  This must happen after
+        # every tab exists, and it deliberately does not change the active column.
+        self._restore_current_tabs(registry.get_current_by_column())
+
+        self.show_all_columns()
+        self._update_tabs()
+
+    def _restore_current_tabs(self, current_by_column: dict[int, str]) -> None:
+        """
+        Make the saved tab visible in each column.
+
+        Args:
+            current_by_column: Mapping of column index to the tab id that was
+                visible in that column when the session was saved.
+        """
+        for column_index, tab_id in current_by_column.items():
+            if not 0 <= column_index < len(self._tab_columns):
+                continue
+
+            tab = self._tabs.get(tab_id)
+            if tab is None:
+                continue
+
+            column = self._tab_columns[column_index]
+            if column.indexOf(tab) != -1:
                 column.setCurrentWidget(tab)
-                active_tab_ids.append(active_tab_id)
-
-        # Defer setting the active column to ensure it's not overridden by other UI operations
-        self._deferred_active_column_index = active_column_index
-        self._deferred_active_tab_ids = active_tab_ids
-        self._set_active_column_timer.start(0)
-
-    def _on_deferred_set_active_column(self) -> None:
-        """Apply the active column and tab ids saved before the deferral."""
-        self._deferred_set_active_column(
-            self._deferred_active_column_index, self._deferred_active_tab_ids
-        )
+                self._update_mru_order(tab, column)
 
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""

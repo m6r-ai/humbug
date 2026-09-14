@@ -74,6 +74,19 @@ class EditorContext:
         """Return the stable context identifier."""
         return self._context_id
 
+    def save_content_state(self) -> dict[str, Any]:
+        """
+        Return this editor's content state as a JSON-safe dictionary.
+
+        The document text is loaded from the file at the path when the context
+        is restored, so only the path is persisted.  View state (cursor
+        position, scroll offsets, syntax override) belongs to the frontend.
+
+        Returns:
+            Dictionary with a path key.
+        """
+        return {"path": self._document.path()}
+
     def get_text_range(
         self,
         start_line: int | None = None,

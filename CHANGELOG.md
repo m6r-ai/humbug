@@ -42,7 +42,15 @@ Internal structure changes:
   this change.
 - The editor context no longer depends on Qt.  Instead there is an abstract editor concept and the Qt editor reacts
   to changes made in the context document.
-- The main window UI updatest the context registry and the UI then reacts to that, rather than the UI driving the change.
+- The main window UI updates the context registry and the UI then reacts to that, rather than the UI driving the change.
+- Workspace state is now split into three layers with distinct owners (see ADR-0008): layout (open contexts, column,
+  position, focus, ephemerality) belongs to the context registry, content (file paths, terminal commands, conversation
+  transcripts) belongs to the frontend-agnostic context models, and view state (cursor, scroll, find widget) belongs to
+  the frontend.  Session save and restore are now registry operations rather than being driven by the tab manager.
+- Tab order within a column is now part of the registry's layout state, so columns and ordering are preserved exactly
+  across a session.
+- Moving a tab between columns now carries live state (unsaved buffers, terminal processes) through an explicit
+  frontend migration mechanism rather than through the session persistence format.
 
 ## v54 (2026-08-20)
 

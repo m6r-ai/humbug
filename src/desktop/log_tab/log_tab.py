@@ -15,7 +15,7 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
 from desktop.widgets import FindWidget
 from desktop.log_tab.log_widget import LogWidget
-from desktop.tab import TabBase, TabState
+from desktop.tab import TabBase
 from desktop.style_manager import StyleManager
 from desktop.color_role import ColorRole
 
@@ -135,48 +135,35 @@ class LogTab(TabBase):
         """
         self.set_has_seen_latest_update(seen)
 
-    def get_state(self, temp_state: bool = False) -> TabState:
-        """
-        Get serializable state for persistence.
+    def capture_view_state(self) -> dict:
+        """Capture this log tab's view state for session persistence."""
+        state = self._log_widget.create_view_state()
+        state['find_widget'] = self._find_widget.create_state_metadata()
+        return state
 
-        Args:
-            temp_state: True if we're saving temporary state to restore locally,
-                False if we're persisting state
+    def restore_view_state(self, state: dict) -> None:
+        """Restore this log tab's view state after session restore."""
+        self._log_widget.restore_view_state(state)
+        if 'find_widget' in state:
+            self._find_widget.restore_from_metadata(state['find_widget'])
 
-        Returns:
-            TabState object containing serializable state
-        """
-        metadata = self._log_widget.create_state_metadata(temp_state)
-
-        if temp_state:
-            metadata['find_widget'] = self._find_widget.create_state_metadata()
-
-        return TabState(
-            type=self.tool_name(),
-            tab_id=self._tab_id,
-            path="",  # Log tab doesn't have a file path
-            metadata=metadata
-        )
+    def capture_migration_state(self) -> dict:
+        """Capture the state needed to rebuild this log tab in another column."""
+        metadata = self._log_widget.create_view_state()
+        metadata['find_widget'] = self._find_widget.create_state_metadata()
+        return {
+            "tab_id": self._tab_id,
+            "metadata": metadata,
+        }
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'LogTab':
-        """
-        Create and restore a tab from serialized state.
-
-        Args:
-            state: TabState object containing serialized state
-            parent: Parent widget
-
-        Returns:
-            Restored LogTab instance
-        """
-        tab = cls(state.tab_id, parent)
-
-        if state.metadata:
-            tab._log_widget.restore_from_metadata(state.metadata)
-
-            if 'find_widget' in state.metadata:
-                tab._find_widget.restore_from_metadata(state.metadata['find_widget'])
+    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'LogTab':
+        """Create a replacement log tab carrying state from a column move."""
+        tab = cls(state["tab_id"], parent)
+        metadata = state["metadata"]
+        tab._log_widget.restore_view_state(metadata)
+        if 'find_widget' in metadata:
+            tab._find_widget.restore_from_metadata(metadata['find_widget'])
 
         return tab
 

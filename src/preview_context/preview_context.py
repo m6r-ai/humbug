@@ -47,6 +47,19 @@ class PreviewContext:
         """Return the stable context identifier."""
         return self._context_id
 
+    def save_content_state(self) -> dict[str, Any]:
+        """
+        Return this preview's content state as a JSON-safe dictionary.
+
+        The content blocks are derived from the file at the path and are
+        repopulated by the frontend when the context is restored, so only the
+        path is persisted.
+
+        Returns:
+            Dictionary with a path key.
+        """
+        return {"path": self._path}
+
     def get_info(self) -> dict[str, Any]:
         """
         Return high-level metadata about the preview content.

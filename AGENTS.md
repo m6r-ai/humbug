@@ -141,6 +141,10 @@ AI tool implementation for date/time operations.
 
 ### `src/context/`
 Registry infrastructure for tracking open contexts within a mindspace.
+The registry is the source of truth for workspace layout (which contexts are
+open, their column, position, and focus) and serialises session state.  Each
+context model supplies its own content state via `save_content_state`; the
+frontend supplies view state as an opaque blob.  See ADR-0008.
 
 ### `src/conversation_ai_tool/`
 AI tool implementation for conversation tab operations (read, search, navigate messages).
@@ -177,8 +181,8 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `shell_tab/` - Shell tab implementation
 - `sidebar/` - Shared sidebar component infrastructure (breadcrumbs, tree views, delegates, pane styles) used by individual `*_sidebar/` panels
 - `sidebar_manager/` - Sidebar manager: generic sidebar container with panel registration
-- `tab/` - Abstract tab contract
-- `tab_manager/` - Tab manager: generic tab container with tab factory registration
+- `tab/` - Abstract tab contract, including the view-state and migration-state contracts
+- `tab_manager/` - Tab manager: generic tab container with context factory registration and session restore
 - `terminal_tab/` - Terminal tab implementation
 - `user/` - User management
 - `vcs_sidebar/` - VCS/diff panel implementation

@@ -18,7 +18,7 @@ from desktop.style_manager import StyleManager
 from desktop.color_role import ColorRole
 from desktop.editor_tab.editor_widget import EditorWidget
 from desktop.widgets import FindWidget
-from desktop.tab import TabBase, TabState
+from desktop.tab import TabBase
 
 
 class EditorTab(TabBase):
@@ -219,24 +219,32 @@ class EditorTab(TabBase):
             self._editor_widget.refresh_content()
             self.set_updated(True)
 
-    def get_state(self, temp_state: bool=False) -> TabState:
-        """Get serializable state for mindspace persistence."""
+    def capture_view_state(self) -> dict:
+        """Capture this editor tab's view state for session persistence."""
+        state = self._editor_widget.create_view_state()
+        state['find_widget'] = self._find_widget.create_state_metadata()
+        return state
 
-        metadata = self._editor_widget.create_state_metadata(temp_state)
+    def restore_view_state(self, state: dict) -> None:
+        """Restore this editor tab's view state after session restore."""
+        self._editor_widget.restore_view_state(state)
+        if 'find_widget' in state:
+            self._find_widget.restore_from_metadata(state['find_widget'])
 
-        if temp_state:
-            metadata['find_widget'] = self._find_widget.create_state_metadata()
+    def capture_migration_state(self) -> dict:
+        """Capture the state needed to rebuild this editor tab in another column."""
+        metadata = self._editor_widget.create_migration_state()
+        metadata['find_widget'] = self._find_widget.create_state_metadata()
 
         path = self._editor_widget.path()
         if not path and self._untitled_number:
             path = f"untitled-{self._untitled_number}"
 
-        return TabState(
-            type=self.tool_name(),
-            tab_id=self._tab_id,
-            path=path,
-            metadata=metadata
-        )
+        return {
+            "tab_id": self._tab_id,
+            "path": path,
+            "metadata": metadata,
+        }
 
     def get_editor_context(self) -> EditorContext | None:
         """
@@ -248,26 +256,26 @@ class EditorTab(TabBase):
         return self._editor_context
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'EditorTab':
-        """Create and restore an editor tab from serialized state."""
+    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'EditorTab':
+        """Create a replacement editor tab carrying state from a column move."""
         # Set filename and load content
         number: int | None = None
         path = ""
 
-        if state.path.startswith("untitled-"):
-            number = int(state.path.split("-")[1])
+        if state["path"].startswith("untitled-"):
+            number = int(state["path"].split("-")[1])
 
         else:
-            path = state.path
+            path = state["path"]
 
         # Create new tab instance
-        tab = cls(state.tab_id, path, number, parent)
+        tab = cls(state["tab_id"], path, number, parent)
 
-        if state.metadata:
-            tab._editor_widget.restore_from_metadata(state.metadata)
+        metadata = state["metadata"]
+        tab._editor_widget.restore_migration_state(metadata)
 
-            if 'find_widget' in state.metadata:
-                tab._find_widget.restore_from_metadata(state.metadata['find_widget'])
+        if 'find_widget' in metadata:
+            tab._find_widget.restore_from_metadata(metadata['find_widget'])
 
         return tab
 

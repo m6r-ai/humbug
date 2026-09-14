@@ -14,7 +14,7 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
 from desktop.widgets import FindWidget
 from desktop.shell_tab.shell_widget import ShellWidget
-from desktop.tab import TabBase, TabState
+from desktop.tab import TabBase
 from desktop.style_manager import StyleManager
 from desktop.color_role import ColorRole
 
@@ -120,48 +120,35 @@ class ShellTab(TabBase):
         # Update status bar
         self.update_status()
 
-    def get_state(self, temp_state: bool = False) -> TabState:
-        """
-        Get serializable state for persistence.
+    def capture_view_state(self) -> dict:
+        """Capture this shell tab's view state for session persistence."""
+        state = self._shell_widget.create_view_state()
+        state['find_widget'] = self._find_widget.create_state_metadata()
+        return state
 
-        Args:
-            temp_state: True if we're saving temporary state to restore locally,
-                False if we're persisting state
+    def restore_view_state(self, state: dict) -> None:
+        """Restore this shell tab's view state after session restore."""
+        self._shell_widget.restore_view_state(state)
+        if 'find_widget' in state:
+            self._find_widget.restore_from_metadata(state['find_widget'])
 
-        Returns:
-            TabState object containing serializable state
-        """
-        metadata = self._shell_widget.create_state_metadata(temp_state)
-
-        if temp_state:
-            metadata['find_widget'] = self._find_widget.create_state_metadata()
-
-        return TabState(
-            type=self.tool_name(),
-            tab_id=self._tab_id,
-            path="",  # Shell tab doesn't have a file path
-            metadata=metadata
-        )
+    def capture_migration_state(self) -> dict:
+        """Capture the state needed to rebuild this shell tab in another column."""
+        metadata = self._shell_widget.create_migration_state()
+        metadata['find_widget'] = self._find_widget.create_state_metadata()
+        return {
+            "tab_id": self._tab_id,
+            "metadata": metadata,
+        }
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'ShellTab':
-        """
-        Create and restore a tab from serialized state.
-
-        Args:
-            state: TabState object containing serialized state
-            parent: Parent widget
-
-        Returns:
-            Restored ShellTab instance
-        """
-        tab = cls(state.tab_id, parent)
-
-        if state.metadata:
-            tab._shell_widget.restore_from_metadata(state.metadata)
-
-            if 'find_widget' in state.metadata:
-                tab._find_widget.restore_from_metadata(state.metadata['find_widget'])
+    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'ShellTab':
+        """Create a replacement shell tab carrying state from a column move."""
+        tab = cls(state["tab_id"], parent)
+        metadata = state["metadata"]
+        tab._shell_widget.restore_migration_state(metadata)
+        if 'find_widget' in metadata:
+            tab._find_widget.restore_from_metadata(metadata['find_widget'])
 
         return tab
 

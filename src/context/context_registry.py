@@ -37,6 +37,9 @@ class ContextRegistry:
         """Initialise an empty registry."""
         self._contexts: dict[str, ContextInfo] = {}
         self._models: dict[str, Any] = {}
+        self._content_state: dict[str, dict[str, Any]] = {}
+        self._frontend_state: dict[str, dict[str, Any]] = {}
+        self._current_by_column: dict[int, str] = {}
         self._callbacks: dict[ContextEvent, set[Callable]] = {
             event: set() for event in ContextEvent
         }
@@ -94,6 +97,7 @@ class ContextRegistry:
         initial_model: Any = None,
         requester_id: str = "",
         column: int = 0,
+        position: int | None = None,
     ) -> str:
         """
         Register a new open context and emit OPENED.
@@ -117,12 +121,17 @@ class ContextRegistry:
                            opaquely to OPENED callbacks so the frontend can
                            use it for tab placement and focus decisions.
             column:        Column index (0-based) for layout.  Defaults to 0.
+            position:      Index within the column.  When None the context is
+                           appended to the end of the column.
 
         Returns:
             The context_id for the newly registered context.
         """
         if not context_id:
             context_id = str(uuid.uuid4())
+
+        if position is None:
+            position = self._next_position(column)
 
         info = ContextInfo(
             context_id=context_id,
@@ -132,6 +141,7 @@ class ContextRegistry:
             is_modified=False,
             is_ephemeral=is_ephemeral,
             column=column,
+            position=position,
         )
         self._contexts[context_id] = info
         if initial_model is not None:
@@ -147,11 +157,17 @@ class ContextRegistry:
         Args:
             context_id: ID of the context to close.
         """
+        info = self._contexts.get(context_id)
         if context_id in self._contexts:
             del self._contexts[context_id]
             self._emit(ContextEvent.CLOSED, context_id)
 
+        if info is not None:
+            self._normalize_positions(info.column)
+
         self._models.pop(context_id, None)
+        self._content_state.pop(context_id, None)
+        self._frontend_state.pop(context_id, None)
 
         if self._current_context_id == context_id:
             self._current_context_id = None
@@ -160,19 +176,20 @@ class ContextRegistry:
         """
         Update mutable fields on a context and emit UPDATED.
 
-        Only title, path, is_modified, is_ephemeral, and column may be updated.
+        Only title, path, is_modified, is_ephemeral, column, and position may
+        be updated.
         Unknown keys are silently ignored.
 
         Args:
             context_id: ID of the context to update.
             **kwargs:   Fields to update (title, path, is_modified,
-                        is_ephemeral, column).
+                        is_ephemeral, column, position).
         """
         info = self._contexts.get(context_id)
         if info is None:
             return
 
-        allowed = {"title", "path", "is_modified", "is_ephemeral", "column"}
+        allowed = {"title", "path", "is_modified", "is_ephemeral", "column", "position"}
         updates = {k: v for k, v in kwargs.items() if k in allowed}
         if not updates:
             return
@@ -188,6 +205,7 @@ class ContextRegistry:
             is_modified=updates.get("is_modified", info.is_modified),
             is_ephemeral=updates.get("is_ephemeral", info.is_ephemeral),
             column=updates.get("column", info.column),
+            position=updates.get("position", info.position),
         )
         self._emit(ContextEvent.UPDATED, self._contexts[context_id])
 
@@ -228,6 +246,7 @@ class ContextRegistry:
         if info.column == column:
             return
 
+        source_column = info.column
         self._contexts[context_id] = ContextInfo(
             context_id=info.context_id,
             context_type=info.context_type,
@@ -236,7 +255,10 @@ class ContextRegistry:
             is_modified=info.is_modified,
             is_ephemeral=info.is_ephemeral,
             column=column,
+            position=self._next_position(column),
         )
+        self._normalize_positions(source_column)
+        self._normalize_positions(column)
         self._emit(ContextEvent.MOVED, context_id, column)
 
     def split_column(self, context_id: str, split_left: bool) -> None:
@@ -281,6 +303,7 @@ class ContextRegistry:
 
             self._set_column(context_id, current + 1)
 
+        self._normalize_all_positions()
         self._emit(ContextEvent.COLUMN_SPLIT, context_id, split_left)
 
     def merge_column(self, column: int, merge_left: bool) -> None:
@@ -313,6 +336,7 @@ class ContextRegistry:
             elif other.column > column:
                 self._set_column(cid, other.column - 1)
 
+        self._normalize_all_positions()
         self._emit(ContextEvent.COLUMN_MERGE, column, merge_left)
 
     def swap_column(self, column: int, swap_left: bool) -> None:
@@ -344,6 +368,7 @@ class ContextRegistry:
             elif other.column == target:
                 self._set_column(cid, column)
 
+        self._normalize_all_positions()
         self._emit(ContextEvent.COLUMN_SWAP, column, swap_left)
 
     def _set_column(self, context_id: str, column: int) -> None:
@@ -366,7 +391,57 @@ class ContextRegistry:
             is_modified=info.is_modified,
             is_ephemeral=info.is_ephemeral,
             column=column,
+            position=info.position,
         )
+
+    def _next_position(self, column: int) -> int:
+        """
+        Return the position one past the last context in a column.
+
+        Args:
+            column: Column index to inspect.
+
+        Returns:
+            The next free position in the column, or 0 if it is empty.
+        """
+        positions = [
+            info.position for info in self._contexts.values() if info.column == column
+        ]
+        return max(positions) + 1 if positions else 0
+
+    def _normalize_positions(self, column: int) -> None:
+        """
+        Renumber a column's contexts to contiguous positions from zero.
+
+        Contexts are ordered by their current position, so relative order is
+        preserved while gaps left by moves and closes are removed.
+
+        Args:
+            column: Column index to renumber.
+        """
+        members = sorted(
+            (info for info in self._contexts.values() if info.column == column),
+            key=lambda info: info.position,
+        )
+        for position, info in enumerate(members):
+            if info.position == position:
+                continue
+
+            self._contexts[info.context_id] = ContextInfo(
+                context_id=info.context_id,
+                context_type=info.context_type,
+                path=info.path,
+                title=info.title,
+                is_modified=info.is_modified,
+                is_ephemeral=info.is_ephemeral,
+                column=info.column,
+                position=position,
+            )
+
+    def _normalize_all_positions(self) -> None:
+        """Renumber positions in every column that currently has contexts."""
+        for column in range(self.num_columns()):
+            self._normalize_positions(column)
 
     def make_permanent(self, context_id: str) -> None:
         """
@@ -389,6 +464,7 @@ class ContextRegistry:
             is_modified=info.is_modified,
             is_ephemeral=False,
             column=info.column,
+            position=info.position,
         )
         self._emit(ContextEvent.UPDATED, self._contexts[context_id])
 
@@ -407,7 +483,151 @@ class ContextRegistry:
         """
         self._contexts.clear()
         self._models.clear()
+        self._content_state.clear()
+        self._frontend_state.clear()
+        self._current_by_column.clear()
         self._current_context_id = None
+
+    def save_state(self, current_by_column: dict[int, str] | None = None) -> dict[str, Any]:
+        """
+        Serialise the full workspace state to a JSON-safe dictionary.
+
+        Each context contributes three parts: its layout (from ContextInfo),
+        its content state (from the model's save_content_state), and its opaque
+        frontend state.  Contexts without a registered model contribute empty
+        content state.
+
+        Args:
+            current_by_column: Maps a column index to the context id that is
+                currently visible in that column.  The registry does not track
+                this itself, so the frontend supplies it.
+
+        Returns:
+            Dictionary with contexts, focused_id, num_columns, and
+            current_by_column keys.
+        """
+        contexts = []
+        ordered = sorted(
+            self._contexts.values(), key=lambda info: (info.column, info.position)
+        )
+        for info in ordered:
+            contexts.append({
+                "layout": {
+                    "context_id": info.context_id,
+                    "context_type": info.context_type,
+                    "path": info.path,
+                    "title": info.title,
+                    "is_ephemeral": info.is_ephemeral,
+                    "column": info.column,
+                    "position": info.position,
+                },
+                "content": self._content_state_for(info.context_id),
+                "frontend": self._frontend_state.get(info.context_id, {}),
+            })
+
+        return {
+            "contexts": contexts,
+            "focused_id": self._current_context_id,
+            "num_columns": self.num_columns(),
+            "current_by_column": {
+                str(column): context_id
+                for column, context_id in (current_by_column or {}).items()
+            },
+        }
+
+    def _content_state_for(self, context_id: str) -> dict[str, Any]:
+        """
+        Return the content state for a context, or empty if it has no model.
+
+        Args:
+            context_id: ID of the context to serialise.
+
+        Returns:
+            JSON-safe dictionary of content state.
+        """
+        model = self._models.get(context_id)
+        if model is None:
+            return {}
+
+        save = getattr(model, "save_content_state", None)
+        if save is None:
+            return {}
+
+        try:
+            return save()
+
+        except Exception:
+            self._logger.exception(
+                "Failed to save content state for context %s", context_id
+            )
+            return {}
+
+    def restore_state(self, state: dict[str, Any]) -> None:
+        """
+        Rebuild the workspace from a dictionary produced by save_state.
+
+        Existing state is cleared first.  Each context's content state and
+        opaque frontend state are retained and made available via
+        get_content_state and get_frontend_state before OPENED is emitted, so
+        that subscribers handling OPENED can reconstruct the context.
+
+        Args:
+            state: Dictionary with contexts, focused_id, num_columns, and
+                current_by_column keys.
+        """
+        self.clear()
+
+        self._current_by_column = {
+            int(column): context_id
+            for column, context_id in state.get("current_by_column", {}).items()
+        }
+
+        entries = sorted(
+            state.get("contexts", []),
+            key=lambda entry: (
+                entry.get("layout", {}).get("column", 0),
+                entry.get("layout", {}).get("position", 0),
+            ),
+        )
+        for entry in entries:
+            layout = entry.get("layout", {})
+            context_type = layout.get("context_type", "")
+            context_id = layout.get("context_id", "")
+            if not context_type or not context_id:
+                continue
+
+            self._content_state[context_id] = entry.get("content", {})
+            self._frontend_state[context_id] = entry.get("frontend", {})
+            self.open(
+                context_type=context_type,
+                path=layout.get("path", ""),
+                title=layout.get("title", ""),
+                is_ephemeral=layout.get("is_ephemeral", False),
+                context_id=context_id,
+                column=layout.get("column", 0),
+                position=layout.get("position", 0),
+            )
+
+        focused_id = state.get("focused_id")
+        if focused_id is not None:
+            self.focus(focused_id)
+
+    def get_content_state(self, context_id: str) -> dict[str, Any]:
+        """
+        Return the content state retained for a context during restore.
+
+        Content state is populated by restore_state and holds the information
+        a frontend needs to reconstruct a context that is not already present
+        in its ContextInfo (for example a terminal's command).  It is empty for
+        contexts opened normally rather than restored.
+
+        Args:
+            context_id: ID of the context to retrieve content state for.
+
+        Returns:
+            The retained dictionary, or an empty dictionary if none was set.
+        """
+        return self._content_state.get(context_id, {})
 
     def get(self, context_id: str) -> ContextInfo | None:
         """
@@ -500,6 +720,46 @@ class ContextRegistry:
             return None
 
         return model
+
+    def set_frontend_state(self, context_id: str, state: dict[str, Any]) -> None:
+        """
+        Store opaque frontend state for a context.
+
+        The registry stores and returns this state but never interprets it.
+        A frontend uses it to preserve view state (cursor positions, scroll
+        offsets) that has no meaning without a view.  It is included in
+        save_state and removed when the context closes.
+
+        Args:
+            context_id: ID of the context the state belongs to.
+            state: JSON-safe dictionary of frontend state.
+        """
+        self._frontend_state[context_id] = state
+
+    def get_frontend_state(self, context_id: str) -> dict[str, Any]:
+        """
+        Return the opaque frontend state stored for a context.
+
+        Args:
+            context_id: ID of the context to retrieve state for.
+
+        Returns:
+            The stored dictionary, or an empty dictionary if none was set.
+        """
+        return self._frontend_state.get(context_id, {})
+
+    def get_current_by_column(self) -> dict[int, str]:
+        """
+        Return the context id that was visible in each column when saved.
+
+        This is populated by restore_state from the saved state.  The registry
+        does not track which context is visible in a column itself; a frontend
+        supplies it at save time and applies it after restore.
+
+        Returns:
+            Mapping of column index to context id.
+        """
+        return dict(self._current_by_column)
 
     def __len__(self) -> int:
         """Return the number of open contexts."""

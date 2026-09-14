@@ -48,6 +48,23 @@ class ConversationContext:
         """Return the stable context identifier."""
         return self._context_id
 
+    def save_content_state(self) -> dict[str, Any]:
+        """
+        Return this conversation's content state as a JSON-safe dictionary.
+
+        The message history lives in the transcript file at the path, so only
+        the path is needed to reload it.  The current settings are also saved
+        because a settings change made since the last message is held in memory
+        only and would otherwise be lost on restore.
+
+        Returns:
+            Dictionary with path and settings keys.
+        """
+        return {
+            "path": self._transcript.path(),
+            "settings": self._transcript.conversation_settings().to_dict(),
+        }
+
     def ai_transcript_conversation(self) -> AITranscriptConversation:
         """Return the backing AITranscriptConversation."""
         return self._transcript

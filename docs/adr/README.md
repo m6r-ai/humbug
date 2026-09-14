@@ -77,3 +77,4 @@ What costs, risks, or constraints does this decision impose?
 | [0005](0005-desktop-ui-toolkit-qt.md) | Desktop UI toolkit — Qt | Accepted |
 | [0006](0006-humans-and-ais-are-equal-actors.md) | Humans and AIs are equal actors | Accepted |
 | [0007](0007-tool-approval-policy.md) | Tool approval policy — persistent vs ephemeral state | Accepted |
+| [0008](0008-workspace-state-ownership.md) | Workspace state ownership — layout, content, and view | Accepted |

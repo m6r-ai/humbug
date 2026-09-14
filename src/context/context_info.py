@@ -16,3 +16,4 @@ class ContextInfo:
     is_modified: bool
     is_ephemeral: bool = False
     column: int = 0
+    position: int = 0

@@ -19,7 +19,7 @@ from desktop.preview_tab.preview_widget import PreviewWidget
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
 from desktop.color_role import ColorRole
-from desktop.tab import TabBase, TabState
+from desktop.tab import TabBase
 from desktop.widgets import FindWidget
 
 
@@ -271,44 +271,43 @@ class PreviewTab(TabBase):
         self.stop_file_watching()
         self._preview_content_widget.close_widget()
 
-    def get_state(self, temp_state: bool = False) -> TabState:
-        """Get serializable state for mindspace persistence."""
-        metadata = {}
+    def capture_view_state(self) -> dict:
+        """Capture this preview tab's view state for session persistence."""
+        state = self._preview_content_widget.create_view_state()
+        state['find_widget'] = self._find_widget.create_state_metadata()
+        return state
 
-        # Get widget-specific metadata
-        metadata.update(self._preview_content_widget.create_state_metadata())
+    def restore_view_state(self, state: dict) -> None:
+        """Restore this preview tab's view state after session restore."""
+        self._preview_content_widget.restore_view_state(state)
+        if 'find_widget' in state:
+            self._find_widget.restore_from_metadata(state['find_widget'])
 
-        if temp_state:
-            metadata['find_widget'] = self._find_widget.create_state_metadata()
-
-        return TabState(
-            type=self.tool_name(),
-            tab_id=self._tab_id,
-            path=self._path,
-            metadata=metadata,
-            is_ephemeral=self._is_ephemeral
-        )
+    def capture_migration_state(self) -> dict:
+        """Capture the state needed to rebuild this preview tab in another column."""
+        metadata = self._preview_content_widget.create_view_state()
+        metadata['find_widget'] = self._find_widget.create_state_metadata()
+        return {
+            "tab_id": self._tab_id,
+            "path": self._path,
+            "metadata": metadata,
+        }
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'PreviewTab':
-        """Create and restore a preview tab from serialized state."""
-        tab = cls(state.tab_id, state.path, parent)
-        if state.is_ephemeral:
-            tab._is_ephemeral = True
+    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'PreviewTab':
+        """Create a replacement preview tab carrying state from a column move."""
+        tab = cls(state["tab_id"], state["path"], parent)
+        metadata = state["metadata"]
 
-        # Load preview content
         try:
-            # Restore widget-specific state if metadata present
-            if state.metadata:
-                tab._preview_content_widget.restore_from_metadata(state.metadata)
-
-                if 'find_widget' in state.metadata:
-                    tab._find_widget.restore_from_metadata(state.metadata['find_widget'])
+            tab._preview_content_widget.restore_view_state(metadata)
+            if 'find_widget' in metadata:
+                tab._find_widget.restore_from_metadata(metadata['find_widget'])
 
             return tab
 
         except Exception as e:
-            raise PreviewError(f"Failed to restore preview tab: {str(e)}") from e
+            raise PreviewError(f"Failed to rebuild preview tab: {str(e)}") from e
 
     def can_save(self) -> bool:
         """Check if preview can be saved."""

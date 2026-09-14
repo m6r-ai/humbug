@@ -1,5 +1,7 @@
 """Terminal context model."""
 
+from typing import Any
+
 from terminal.terminal_base import TerminalBase
 from terminal.terminal_state import TerminalState
 
@@ -16,6 +18,7 @@ class TerminalContext:
         context_id: str,
         terminal_process: TerminalBase,
         terminal_state: TerminalState,
+        command: str | None = None,
     ) -> None:
         """
         Initialise the terminal context.
@@ -24,14 +27,29 @@ class TerminalContext:
             context_id: Stable identifier matching the ContextRegistry entry.
             terminal_process: The running PTY process.
             terminal_state: The terminal buffer and emulator state.
+            command: The command used to start the terminal, or None for a
+                plain shell.  Persisted so the terminal can be recreated.
         """
         self._context_id = context_id
         self._process = terminal_process
         self._state = terminal_state
+        self._command = command
 
     def context_id(self) -> str:
         """Return the stable context identifier."""
         return self._context_id
+
+    def save_content_state(self) -> dict[str, Any]:
+        """
+        Return this terminal's content state as a JSON-safe dictionary.
+
+        The terminal process and buffer are not persisted; a fresh process is
+        started from the saved command when the context is restored.
+
+        Returns:
+            Dictionary with a command key.
+        """
+        return {"command": self._command}
 
     def get_buffer_content(self, max_lines: int | None = None) -> str:
         """

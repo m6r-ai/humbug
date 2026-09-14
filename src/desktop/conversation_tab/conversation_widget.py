@@ -125,7 +125,8 @@ class ConversationWidget(QWidget):
 
         # Batched message loading state
         self._load_queue: list[AIMessage] = []
-        self._load_pending_metadata: dict[str, Any] | None = None
+        self._load_pending_state: dict[str, Any] | None = None
+        self._load_pending_is_migration: bool = False
         self._load_scroll_offset: int | None = None
         self._load_batch_size: int = 2
         self._load_tail_size: int = 80  # Weirdly we might get 80 message in view!
@@ -2306,8 +2307,10 @@ class ConversationWidget(QWidget):
 
         self.status_updated.emit()
 
-        pending = self._load_pending_metadata
-        self._load_pending_metadata = None
+        pending = self._load_pending_state
+        is_migration = self._load_pending_is_migration
+        self._load_pending_state = None
+        self._load_pending_is_migration = False
 
         if not self._auto_scroll:
             # The user scrolled during loading — record the current offset from
@@ -2321,7 +2324,7 @@ class ConversationWidget(QWidget):
                 pending.pop("auto_scroll", None)
                 pending.pop("vertical_scroll", None)
                 pending.pop("scroll_maximum", None)
-                self.restore_from_metadata(pending)
+                self._reapply_pending_state(pending, is_migration)
 
         elif pending is not None:
             # User hasn't scrolled — check whether the saved position was
@@ -2337,7 +2340,22 @@ class ConversationWidget(QWidget):
             pending.pop("auto_scroll", None)
             pending.pop("vertical_scroll", None)
             pending.pop("scroll_maximum", None)
-            self.restore_from_metadata(pending)
+            self._reapply_pending_state(pending, is_migration)
+
+    def _reapply_pending_state(self, state: dict[str, Any], is_migration: bool) -> None:
+        """
+        Re-apply state that was deferred while a batch load was in progress.
+
+        Args:
+            state: The deferred state dictionary.
+            is_migration: True if the state came from a column move rather than
+                from session restore.
+        """
+        if is_migration:
+            self.restore_migration_state(state)
+
+        else:
+            self.restore_view_state(state)
 
     def _delete_empty_transcript_file(self) -> None:
         """
@@ -2389,7 +2407,8 @@ class ConversationWidget(QWidget):
         # Advance the generation so any pending timer callbacks from a batch load
         # recognise they have been superseded and exit without touching the widget.
         self._load_generation += 1
-        self._load_pending_metadata = None
+        self._load_pending_state = None
+        self._load_pending_is_migration = False
 
         # If this is a delegated conversation, we need to ensure we notify the parent
         if self._is_delegated_conversation and self._is_streaming:
@@ -2950,32 +2969,45 @@ class ConversationWidget(QWidget):
         """Get the conversation history object."""
         return self._ai_conversation.get_conversation_history()
 
-    def create_state_metadata(self, temp_state: bool) -> dict[str, Any]:
+    def create_view_state(self) -> dict[str, Any]:
         """
-        Create metadata dictionary capturing current widget state.
+        Create a dictionary capturing the conversation view's state.
+
+        This is pure view state: it says nothing about the conversation's
+        content and is safe to persist across sessions.
 
         Returns:
-            Dictionary containing conversation state metadata
+            Dictionary containing the delegated flag, input cursor, scroll
+            positions, and message expansion states.
         """
-        metadata: dict[str, Any] = {}
-
-        # Is this a conversation or a delegated conversation?
-        metadata["delegated_conversation"] = self._is_delegated_conversation
-
-        # Store current input content
-        metadata["content"] = self._input.to_plain_text()
-        metadata['cursor'] = self._get_cursor_position()
-
-        metadata["auto_scroll"] = self._auto_scroll
-        metadata["vertical_scroll"] = self._scroll_area.verticalScrollBar().value()
-        metadata["scroll_maximum"] = self._scroll_area.verticalScrollBar().maximum()
-
-        # Store message expansion states
         expansion_states = []
         for message_widget in self._messages:
             expansion_states.append(message_widget.is_expanded())
 
-        metadata["message_expansion"] = expansion_states
+        return {
+            "delegated_conversation": self._is_delegated_conversation,
+            "cursor": self._get_cursor_position(),
+            "auto_scroll": self._auto_scroll,
+            "vertical_scroll": self._scroll_area.verticalScrollBar().value(),
+            "scroll_maximum": self._scroll_area.verticalScrollBar().maximum(),
+            "message_expansion": expansion_states,
+        }
+
+    def create_migration_state(self) -> dict[str, Any]:
+        """
+        Create a dictionary capturing the state needed to rebuild this view.
+
+        In addition to the view state, this includes the unsaved input content,
+        the current settings, and the live conversation state (streaming status,
+        unfinished message, pending tool approval) which must survive the widget
+        being destroyed and recreated during a column move.
+
+        Returns:
+            Dictionary containing view state and live conversation state.
+        """
+        metadata = self.create_view_state()
+
+        metadata["content"] = self._input.to_plain_text()
 
         # Store current settings
         settings = self._ai_conversation.conversation_settings()
@@ -2987,50 +3019,99 @@ class ConversationWidget(QWidget):
             "reasoning_effort": settings.reasoning_effort,
         }
 
-        # If we've been asked for temporary state it means we're going to move this
-        # widget so prep for moving our conversation state directly.
-        if temp_state:
-            # Capture tool approval state
-            if self._pending_tool_call_approval:
-                # Find the message index
-                message_index = self._messages.index(self._pending_tool_call_approval)
+        # This widget is about to be rebuilt in another column, so capture the
+        # live conversation state and detach it from the old widget.
+        if self._pending_tool_call_approval:
+            # Find the message index
+            message_index = self._messages.index(self._pending_tool_call_approval)
 
-                # Get the message ID for robust lookup
-                message_id = self._pending_tool_call_approval.message_id()
+            # Get the message ID for robust lookup
+            message_id = self._pending_tool_call_approval.message_id()
 
-                # Get the tool approval info from the message widget
-                tool_approval_info = self._pending_tool_call_approval.get_tool_approval_info()
+            # Get the tool approval info from the message widget
+            tool_approval_info = self._pending_tool_call_approval.get_tool_approval_info()
 
-                if tool_approval_info and tool_approval_info["tool_call"]:
-                    metadata["pending_tool_approval"] = {
-                        "message_index": message_index,
-                        "message_id": message_id,
-                        "tool_call": tool_approval_info["tool_call"].to_dict(),
-                        "reason": tool_approval_info["reason"],
-                        "context": tool_approval_info["context"],
-                        "destructive": tool_approval_info["destructive"]
-                    }
+            if tool_approval_info and tool_approval_info["tool_call"]:
+                metadata["pending_tool_approval"] = {
+                    "message_index": message_index,
+                    "message_id": message_id,
+                    "tool_call": tool_approval_info["tool_call"].to_dict(),
+                    "reason": tool_approval_info["reason"],
+                    "context": tool_approval_info["context"],
+                    "destructive": tool_approval_info["destructive"]
+                }
 
-                    # Clear the approval UI from the old widget
-                    self._pending_tool_call_approval.remove_tool_approval_ui()
-                    self._pending_tool_call_approval = None
+                # Clear the approval UI from the old widget
+                self._pending_tool_call_approval.remove_tool_approval_ui()
+                self._pending_tool_call_approval = None
 
-            # Unregister callbacks from the current widget
-            self._unregister_ai_conversation_callbacks()
+        # Unregister callbacks from the current widget
+        self._unregister_ai_conversation_callbacks()
 
-            # Store AIConversation reference in metadata
-            metadata["ai_conversation_ref"] = self._ai_conversation
-            metadata["is_streaming"] = self._is_streaming
-            metadata["current_unfinished_message"] = self._current_unfinished_message
+        # Store AIConversation reference in metadata
+        metadata["ai_conversation_ref"] = self._ai_conversation
+        metadata["is_streaming"] = self._is_streaming
+        metadata["current_unfinished_message"] = self._current_unfinished_message
 
         return metadata
 
-    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
+    def restore_view_state(self, state: dict[str, Any]) -> None:
         """
-        Restore widget state from metadata.
+        Restore the conversation view's state.
 
         Args:
-            metadata: Dictionary containing state metadata
+            state: Dictionary produced by create_view_state.
+        """
+        if not state:
+            return
+
+        # If a batch load is still in progress, defer restoration until it
+        # completes so that self._messages is fully populated when we apply it.
+        if self._load_queue:
+            self._load_pending_state = state
+            self._load_pending_is_migration = False
+            return
+
+        delegated_conversation = False
+        if "delegated_conversation" in state:
+            delegated_conversation = state["delegated_conversation"]
+
+        self._is_delegated_conversation = delegated_conversation
+
+        if "cursor" in state:
+            self._set_cursor_position(state["cursor"])
+
+        # Restore vertical scroll position if specified
+        if "auto_scroll" in state:
+            self._auto_scroll = state["auto_scroll"]
+
+        if "vertical_scroll" in state:
+            # Defer so Qt has one event-loop cycle to finish layout geometry
+            # before we set the scroll position.
+            if self._deferred_scroll_timer_slot is not None:
+                self._deferred_scroll_timer.timeout.disconnect(self._deferred_scroll_timer_slot)
+
+            self._deferred_scroll_timer_slot = (
+                lambda v=state["vertical_scroll"]: self._scroll_area.verticalScrollBar().setValue(v)
+            )
+            self._deferred_scroll_timer.timeout.connect(self._deferred_scroll_timer_slot)
+            self._deferred_scroll_timer.start()
+
+        # Restore message expansion states if specified
+        if "message_expansion" in state:
+            expansion_states = state["message_expansion"]
+            for i, is_expanded in enumerate(expansion_states):
+                self._change_message_expansion(i, is_expanded)
+
+        # Update our status
+        self.status_updated.emit()
+
+    def restore_migration_state(self, metadata: dict[str, Any]) -> None:
+        """
+        Restore the conversation view's content and view state after a move.
+
+        Args:
+            metadata: Dictionary produced by create_migration_state.
         """
         if not metadata:
             return
@@ -3038,43 +3119,13 @@ class ConversationWidget(QWidget):
         # If a batch load is still in progress, defer restoration until it
         # completes so that self._messages is fully populated when we apply it.
         if self._load_queue:
-            self._load_pending_metadata = metadata
+            self._load_pending_state = metadata
+            self._load_pending_is_migration = True
             return
-
-        delegated_conversation = False
-        if "delegated_conversation" in metadata:
-            delegated_conversation = metadata["delegated_conversation"]
-
-        self._is_delegated_conversation = delegated_conversation
 
         # Restore input content if specified
         if "content" in metadata:
             self.set_input_text(metadata["content"])
-
-        if "cursor" in metadata:
-            self._set_cursor_position(metadata["cursor"])
-
-        # Restore vertical scroll position if specified
-        if "auto_scroll" in metadata:
-            self._auto_scroll = metadata["auto_scroll"]
-
-        if "vertical_scroll" in metadata:
-            # Defer so Qt has one event-loop cycle to finish layout geometry
-            # before we set the scroll position.
-            if self._deferred_scroll_timer_slot is not None:
-                self._deferred_scroll_timer.timeout.disconnect(self._deferred_scroll_timer_slot)
-
-            self._deferred_scroll_timer_slot = (
-                lambda v=metadata["vertical_scroll"]: self._scroll_area.verticalScrollBar().setValue(v)
-            )
-            self._deferred_scroll_timer.timeout.connect(self._deferred_scroll_timer_slot)
-            self._deferred_scroll_timer.start()
-
-        # Restore message expansion states if specified
-        if "message_expansion" in metadata:
-            expansion_states = metadata["message_expansion"]
-            for i, is_expanded in enumerate(expansion_states):
-                self._change_message_expansion(i, is_expanded)
 
         if "is_streaming" in metadata:
             # Restore streaming state from a tab move
@@ -3135,8 +3186,7 @@ class ConversationWidget(QWidget):
                 # Update our tracking reference
                 self._pending_tool_call_approval = message_widget
 
-        # Update our status
-        self.status_updated.emit()
+        self.restore_view_state(metadata)
 
     def _set_cursor_position(self, position: dict[str, int]) -> None:
         """

@@ -815,59 +815,82 @@ class ShellWidget(QWidget):
         has_text = bool(self._input.to_plain_text())
         return has_text and self._mindspace_manager.has_mindspace()
 
-    def create_state_metadata(self, _temp_state: bool) -> dict[str, Any]:
+    def create_view_state(self) -> dict[str, Any]:
         """
-        Create metadata dictionary capturing current widget state.
+        Create a dictionary capturing the shell view's state.
 
         Returns:
-            Dictionary containing shell state metadata
+            Dictionary containing the input cursor, scroll position, and
+            spotlighted message index.
         """
-        metadata: dict[str, Any] = {}
+        return {
+            "cursor": self._get_cursor_position(),
+            "scroll_position": self._scroll_area.verticalScrollBar().value(),
+            "spotlighted_message_index": self._spotlighted_message_index,
+        }
 
-        # Store current input content
-        metadata["content"] = self._input.to_plain_text()
-        metadata['cursor'] = self._get_cursor_position()
-
-        # Store current scroll position
-        metadata["scroll_position"] = self._scroll_area.verticalScrollBar().value()
-
-        # Store spotlighted message index
-        metadata["spotlighted_message_index"] = self._spotlighted_message_index
-
-        return metadata
-
-    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
+    def restore_view_state(self, state: dict[str, Any]) -> None:
         """
-        Restore widget state from metadata.
+        Restore the shell view's state.
 
         Args:
-            metadata: Dictionary containing state metadata
+            state: Dictionary produced by create_view_state.
         """
-        if not metadata:
+        if not state:
+            return
+
+        # Refresh messages
+        self.load_messages()
+
+        if "cursor" in state:
+            self._set_cursor_position(state["cursor"])
+
+        # Restore scroll position if specified
+        if "scroll_position" in state:
+            # Use a timer to ensure the scroll happens after layout is complete
+            self._deferred_scroll_position = state["scroll_position"]
+            self._deferred_scroll_timer.start()
+
+        # Restore spotlighted message index if specified
+        if "spotlighted_message_index" in state:
+            self._spotlighted_message_index = state["spotlighted_message_index"]
+            if 0 <= self._spotlighted_message_index < len(self._messages):
+                self._messages[self._spotlighted_message_index].set_spotlighted(True)
+                self._messages[self._spotlighted_message_index].setFocus()
+
+    def create_migration_state(self) -> dict[str, Any]:
+        """
+        Create a dictionary capturing the state needed to rebuild this shell view.
+
+        In addition to the view state, this includes the unsaved input content,
+        which must survive the widget being destroyed and recreated during a
+        column move.
+
+        Returns:
+            Dictionary containing view state and the input content.
+        """
+        state = self.create_view_state()
+        state["content"] = self._input.to_plain_text()
+        return state
+
+    def restore_migration_state(self, state: dict[str, Any]) -> None:
+        """
+        Restore the shell view's content and view state after a column move.
+
+        Args:
+            state: Dictionary produced by create_migration_state.
+        """
+        if not state:
             return
 
         # Refresh messages
         self.load_messages()
 
         # Restore input content if specified
-        if "content" in metadata:
-            self.set_input_text(metadata["content"])
+        if "content" in state:
+            self.set_input_text(state["content"])
 
-        if "cursor" in metadata:
-            self._set_cursor_position(metadata["cursor"])
-
-        # Restore scroll position if specified
-        if "scroll_position" in metadata:
-            # Use a timer to ensure the scroll happens after layout is complete
-            self._deferred_scroll_position = metadata["scroll_position"]
-            self._deferred_scroll_timer.start()
-
-        # Restore spotlighted message index if specified
-        if "spotlighted_message_index" in metadata:
-            self._spotlighted_message_index = metadata["spotlighted_message_index"]
-            if 0 <= self._spotlighted_message_index < len(self._messages):
-                self._messages[self._spotlighted_message_index].set_spotlighted(True)
-                self._messages[self._spotlighted_message_index].setFocus()
+        self.restore_view_state(state)
 
     def _set_cursor_position(self, position: dict[str, int]) -> None:
         """

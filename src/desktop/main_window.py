@@ -121,10 +121,11 @@ def _create_editor_tab(
 
 
 def _create_terminal_tab(
-    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, registry: ContextRegistry, parent: QWidget
 ) -> TerminalTab:
     """Context factory for TerminalTab."""
-    return TerminalTab(info.context_id, None, parent)
+    command = registry.get_content_state(info.context_id).get("command")
+    return TerminalTab(info.context_id, command, parent)
 
 
 def _create_preview_tab(
@@ -627,16 +628,8 @@ class MainWindow(QMainWindow):
         self._tab_manager.tab_closed.connect(self._on_tab_manager_tab_closed)
         self._splitter.addWidget(self._tab_manager)
 
-        # Register tab factories for session restore and context-open events.
+        # Register context factories for context-open events.
         tab_manager = self._tab_manager
-        tab_manager.register_tab_factory("conversation", ConversationTab.restore_from_state)
-        tab_manager.register_tab_factory("editor", EditorTab.restore_from_state)
-        tab_manager.register_tab_factory("log", LogTab.restore_from_state)
-        tab_manager.register_tab_factory("shell", ShellTab.restore_from_state)
-        tab_manager.register_tab_factory("usage", UsageTab.restore_from_state)
-        tab_manager.register_tab_factory("terminal", TerminalTab.restore_from_state)
-        tab_manager.register_tab_factory("preview", PreviewTab.restore_from_state)
-        tab_manager.register_tab_factory("diff", DiffTab.restore_from_state)
 
         tab_manager.register_context_factory("conversation", _create_conversation_tab)
         tab_manager.register_context_factory("editor", _create_editor_tab)
@@ -1382,6 +1375,19 @@ class MainWindow(QMainWindow):
         self._menai_tool.set_module_path([])
         self._mindspace_manager.close_mindspace()
 
+    def _capture_frontend_state(self, contexts: ContextRegistry) -> None:
+        """
+        Store each open tab's view state in the registry before saving.
+
+        View state belongs to the frontend, so the registry stores it opaquely.
+        Capturing it immediately before the save keeps it fresh.
+
+        Args:
+            contexts: The registry for the active mindspace.
+        """
+        for tab in self._tab_manager.get_all_tabs():
+            contexts.set_frontend_state(tab.tab_id(), tab.capture_view_state())
+
     def _save_mindspace_state(self) -> None:
         """Save current mindspace state."""
         if not self._mindspace_manager.has_mindspace():
@@ -1389,7 +1395,11 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            mindspace_state = self._tab_manager.save_state()
+            contexts = self._mindspace_manager.mindspace().contexts()
+            self._capture_frontend_state(contexts)
+            mindspace_state = contexts.save_state(
+                current_by_column=self._tab_manager.current_tab_by_column()
+            )
             self._mindspace_manager.save_mindspace_state(mindspace_state)
 
         except MindspaceError as e:
@@ -1410,7 +1420,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            self._tab_manager.restore_state(saved_state)
+            self._tab_manager.restore_from_registry(saved_state)
 
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace state: %s", str(e))
@@ -1947,9 +1957,7 @@ class MainWindow(QMainWindow):
             return
 
         contexts = self._mindspace_manager.mindspace().contexts()
-        existing = next(
-            (i for i in contexts.list_all() if i.context_type == "usage"), None
-        )
+        existing = next((i for i in contexts.list_all() if i.context_type == "usage"), None)
         if existing:
             # If the tab is already tracked by the tab manager, just focus it.
             # If the context is stale (e.g. the tab failed to create on a

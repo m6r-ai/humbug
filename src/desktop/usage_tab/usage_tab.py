@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QScrollArea, QSizePolicy, QVB
 from desktop.status_message import StatusMessage
 from desktop.color_role import ColorRole
 from desktop.style_manager import StyleManager
-from desktop.tab import TabBase, TabState
+from desktop.tab import TabBase
 from desktop.usage_tab.usage_widget import UsageWidget
 
 
@@ -335,24 +335,26 @@ class UsageTab(TabBase):
             {style_manager.get_scrollbar_stylesheet("#UsageTabScroll QScrollBar")}
         """
 
-    def get_state(self, temp_state: bool = False) -> TabState:
-        """
-        Get serializable state for mindspace persistence.
+    def capture_view_state(self) -> dict:
+        """Capture this usage tab's view state for session persistence."""
+        return {
+            "expanded_providers": list(self._usage_widget.expanded_providers()),
+        }
 
-        When capturing temporary state (e.g. moving between columns), the set
-        of expanded provider accordions is included so it can be restored.
-        """
-        metadata: dict = {}
-        if temp_state:
-            metadata["expanded_providers"] = list(self._usage_widget.expanded_providers())
+    def restore_view_state(self, state: dict) -> None:
+        """Restore this usage tab's view state after session restore."""
+        if "expanded_providers" in state:
+            self._usage_widget.restore_expanded_providers(set(state["expanded_providers"]))
 
-        return TabState(type=self.tool_name(), tab_id=self._tab_id, path="", metadata=metadata)
+    def capture_migration_state(self) -> dict:
+        """Capture the state needed to rebuild this usage tab in another column."""
+        state = self.capture_view_state()
+        state["tab_id"] = self._tab_id
+        return state
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget) -> "UsageTab":
-        """Create and restore a usage tab from serialized state."""
-        tab = cls(state.tab_id, parent)
-        if state.metadata and "expanded_providers" in state.metadata:
-            tab._usage_widget.restore_expanded_providers(set(state.metadata["expanded_providers"]))
-
+    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> "UsageTab":
+        """Create a replacement usage tab carrying state from a column move."""
+        tab = cls(state["tab_id"], parent)
+        tab._usage_widget.restore_expanded_providers(set(state["expanded_providers"]))
         return tab

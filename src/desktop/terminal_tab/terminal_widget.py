@@ -1379,13 +1379,13 @@ class TerminalWidget(QAbstractScrollArea):
         self._update_dimensions()
         self.viewport().update()
 
-    def create_state_metadata(self) -> dict:
-        """Create metadata dictionary capturing widget state."""
+    def create_migration_state(self) -> dict:
+        """Create a dictionary capturing the state needed to rebuild this terminal."""
         return self._state.create_state_metadata()
 
-    def restore_from_metadata(self, metadata: dict) -> None:
-        """Restore terminal state from metadata."""
-        self._state.restore_from_metadata(metadata)
+    def restore_migration_state(self, state: dict) -> None:
+        """Restore terminal state after a column move."""
+        self._state.restore_from_metadata(state)
         self._clear_selection()
         self.viewport().update()
         self._update_scrollbar()

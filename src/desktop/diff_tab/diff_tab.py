@@ -15,7 +15,7 @@ from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.status_message import StatusMessage
-from desktop.tab import TabBase, TabState
+from desktop.tab import TabBase
 from desktop.style_manager import StyleManager
 from desktop.color_role import ColorRole
 from desktop.widgets import FindWidget
@@ -225,20 +225,31 @@ class DiffTab(TabBase):
         scale = 2.0 if self._view_mode == DiffViewMode.SIDE_BY_SIDE else 1.0
         return style_manager.scaled_tab_width(scale)
 
-    def get_state(self, temp_state: bool = False) -> TabState:
-        """Return serialisable state for mindspace persistence."""
-        return TabState(
-            type=self.tool_name(),
-            tab_id=self._tab_id,
-            path=self._path,
-            metadata=None,
-            is_ephemeral=self._is_ephemeral,
-        )
+    def capture_view_state(self) -> dict:
+        """Capture this diff tab's view state for session persistence."""
+        return {
+            "find_widget": self._find_widget.create_state_metadata(),
+        }
+
+    def restore_view_state(self, state: dict) -> None:
+        """Restore this diff tab's view state after session restore."""
+        if "find_widget" in state:
+            self._find_widget.restore_from_metadata(state["find_widget"])
+
+    def capture_migration_state(self) -> dict:
+        """Capture the state needed to rebuild this diff tab in another column."""
+        return {
+            "tab_id": self._tab_id,
+            "path": self._path,
+            "find_widget": self._find_widget.create_state_metadata(),
+        }
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'DiffTab':
-        """Create and restore a diff tab from serialised state."""
-        return cls(state.tab_id, state.path, parent)
+    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'DiffTab':
+        """Create a replacement diff tab carrying state from a column move."""
+        tab = cls(state["tab_id"], state["path"], parent)
+        tab._find_widget.restore_from_metadata(state["find_widget"])  # pylint: disable=protected-access
+        return tab
 
     @staticmethod
     def can_restore(path: str) -> bool:

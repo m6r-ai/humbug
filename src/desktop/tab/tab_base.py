@@ -11,7 +11,6 @@ from mindspace.mindspace_settings import MindspaceSettings
 
 from desktop.file_watcher import FileWatcher
 from desktop.status_message import StatusMessage
-from desktop.tab.tab_state import TabState
 
 class TabBase(QFrame):
     """Base class for all tab content."""
@@ -291,39 +290,64 @@ class TabBase(QFrame):
                 self._file_exists = False
                 self.file_state_changed.emit(self._tab_id, False)
 
-    def get_state(self, temp_state: bool) -> TabState:
+    def capture_view_state(self) -> dict:
         """
-        Get serializable state for mindspace persistence.
+        Capture this tab's view state for session persistence.
+
+        View state is the part of a tab's state that only has meaning to a
+        frontend: cursor positions, scroll offsets, find-widget state, and the
+        like.  It is persisted so a graphical frontend can restore it across
+        sessions, and is stored opaquely by the ContextRegistry.
 
         Must be implemented by subclasses to provide their specific state.
 
-        Args:
-            temp_state: True if we're saving temporary state to restore locally,
-                False if we're persisting state
-
         Returns:
-            TabState object containing serializable state
+            JSON-safe dictionary of view state.
         """
-        raise NotImplementedError("Subclasses must implement get_state")
+        raise NotImplementedError("Subclasses must implement capture_view_state")
 
-    @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'TabBase':
+    def restore_view_state(self, state: dict) -> None:
         """
-        Create and restore a tab from serialized state.
+        Restore this tab's view state after session restore.
 
         Must be implemented by subclasses to handle their specific state.
 
         Args:
-            state: TabState object containing serialized state
-            parent: Parent widget
+            state: Dictionary previously returned by capture_view_state.
+        """
+        raise NotImplementedError("Subclasses must implement restore_view_state")
+
+    def capture_migration_state(self) -> dict:
+        """
+        Capture the live state needed to rebuild this tab in another column.
+
+        Moving a tab between columns destroys and recreates its widget, so the
+        live state that would otherwise be lost — unsaved buffer contents,
+        cursor and scroll positions, a running terminal process — must be
+        carried across.  This state is frontend-only and is never persisted.
+
+        Must be implemented by subclasses to provide their specific state.
 
         Returns:
-            Newly created and restored tab instance
-
-        Raises:
-            ValueError: If state is invalid for this tab type
+            Opaque dictionary of live state.
         """
-        raise NotImplementedError("Subclasses must implement restore_from_state")
+        raise NotImplementedError("Subclasses must implement capture_migration_state")
+
+    @classmethod
+    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'TabBase':
+        """
+        Create a replacement tab carrying state from a column move.
+
+        Must be implemented by subclasses to handle their specific state.
+
+        Args:
+            state: Dictionary previously returned by capture_migration_state.
+            parent: Parent widget for the new tab.
+
+        Returns:
+            Newly created tab carrying the migrated state.
+        """
+        raise NotImplementedError("Subclasses must implement rebuild_from_migration_state")
 
     def can_close_tab(self) -> bool:
         """

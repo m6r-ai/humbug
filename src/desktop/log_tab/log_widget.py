@@ -643,31 +643,26 @@ class LogWidget(QWidget):
         if self._message_with_selection:
             self._message_with_selection.copy_selection()
 
-    def create_state_metadata(self, _temp_state: bool) -> dict[str, Any]:
+    def create_view_state(self) -> dict[str, Any]:
         """
-        Create metadata dictionary capturing current widget state.
+        Create a dictionary capturing the log view's state.
 
         Returns:
-            Dictionary containing log state metadata
+            Dictionary containing the scroll position and spotlighted message index.
         """
-        metadata: dict[str, Any] = {}
+        return {
+            "scroll_position": self._scroll_area.verticalScrollBar().value(),
+            "spotlighted_message_index": self._spotlighted_message_index,
+        }
 
-        # Store current scroll position
-        metadata["scroll_position"] = self._scroll_area.verticalScrollBar().value()
-
-        # Store spotlighted message index
-        metadata["spotlighted_message_index"] = self._spotlighted_message_index
-
-        return metadata
-
-    def restore_from_metadata(self, metadata: dict[str, Any]) -> None:
+    def restore_view_state(self, state: dict[str, Any]) -> None:
         """
-        Restore widget state from metadata.
+        Restore the log view's state.
 
         Args:
-            metadata: Dictionary containing state metadata
+            state: Dictionary produced by create_view_state.
         """
-        if not metadata:
+        if not state:
             return
 
         # Refresh messages if we have a mindspace
@@ -675,14 +670,14 @@ class LogWidget(QWidget):
             self.load_messages()
 
         # Restore scroll position if specified
-        if "scroll_position" in metadata:
+        if "scroll_position" in state:
             # Use a timer to ensure the scroll happens after layout is complete
-            self._deferred_scroll_position = metadata["scroll_position"]
+            self._deferred_scroll_position = state["scroll_position"]
             self._deferred_scroll_timer.start()
 
         # Restore spotlighted message index if specified
-        if "spotlighted_message_index" in metadata:
-            self._spotlighted_message_index = metadata["spotlighted_message_index"]
+        if "spotlighted_message_index" in state:
+            self._spotlighted_message_index = state["spotlighted_message_index"]
             if 0 <= self._spotlighted_message_index < len(self._messages):
                 self._messages[self._spotlighted_message_index].set_spotlighted(True)
                 self._messages[self._spotlighted_message_index].setFocus()

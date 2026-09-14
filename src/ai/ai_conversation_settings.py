@@ -608,6 +608,42 @@ class AIConversationSettings:
             self.context_window = self.DEFAULT_CONTEXT_WINDOW
             self.max_output_tokens = self.DEFAULT_MAX_OUTPUT_TOKENS
 
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Serialise these settings to a JSON-safe dictionary.
+
+        Returns:
+            Dictionary with model, provider, temperature, reasoning, and
+            reasoning_effort keys.
+        """
+        return {
+            "model": self.model,
+            "provider": self.provider,
+            "temperature": self.temperature,
+            "reasoning": self.reasoning.name,
+            "reasoning_effort": self.reasoning_effort,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'AIConversationSettings':
+        """
+        Reconstruct settings from a dictionary produced by to_dict.
+
+        Args:
+            data: Dictionary with model, provider, temperature, reasoning, and
+                reasoning_effort keys.
+
+        Returns:
+            Reconstructed AIConversationSettings.
+        """
+        return cls(
+            model=data["model"],
+            provider=data["provider"],
+            temperature=data["temperature"],
+            reasoning=AIReasoningCapability[data["reasoning"]],
+            reasoning_effort=data["reasoning_effort"],
+        )
+
     @classmethod
     def get_display_name(cls, model: str, provider: str) -> str:
         """

@@ -23,7 +23,7 @@ from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
-from desktop.tab import TabBase, TabState
+from desktop.tab import TabBase
 from desktop.widgets import FindWidget
 
 
@@ -237,47 +237,48 @@ class ConversationTab(TabBase):
         """
         self._conversation_widget.set_conversation_history(history)
 
-    def get_state(self, temp_state: bool=False) -> TabState:
-        """Get serializable state for mindspace persistence."""
-        metadata = {}
+    def capture_view_state(self) -> dict:
+        """Capture this conversation tab's view state for session persistence."""
+        state = self._conversation_widget.create_view_state()
+        state['find_widget'] = self._find_widget.create_state_metadata()
+        return state
 
-        # Get widget-specific metadata
-        metadata.update(self._conversation_widget.create_state_metadata(temp_state))
+    def restore_view_state(self, state: dict) -> None:
+        """Restore this conversation tab's view state after session restore."""
+        self._conversation_widget.restore_view_state(state)
+        if 'find_widget' in state:
+            self._find_widget.restore_from_metadata(state['find_widget'])
 
-        if temp_state:
-            metadata['find_widget'] = self._find_widget.create_state_metadata()
-            metadata['temp_state'] = True
-
-        return TabState(
-            type=self.tool_name(),
-            tab_id=self._tab_id,
-            path=self._path,
-            metadata=metadata,
-            is_ephemeral=self._is_ephemeral
-        )
+    def capture_migration_state(self) -> dict:
+        """Capture the state needed to rebuild this conversation tab in another column."""
+        metadata = self._conversation_widget.create_migration_state()
+        metadata['find_widget'] = self._find_widget.create_state_metadata()
+        return {
+            "tab_id": self._tab_id,
+            "path": self._path,
+            "metadata": metadata,
+        }
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'ConversationTab':
-        """Create and restore a conversation tab from serialized state."""
+    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'ConversationTab':
+        """Create a replacement conversation tab carrying state from a column move."""
+        metadata = state["metadata"]
+        ai_transcript_conversation = metadata.get('ai_conversation_ref')
+        tab = cls(
+            state["tab_id"], state["path"], parent,
+            ai_transcript_conversation=ai_transcript_conversation,
+        )
 
-        ai_transcript_conversation = state.metadata.get('ai_conversation_ref') if state.metadata else None
-        tab = cls(state.tab_id, state.path, parent, ai_transcript_conversation=ai_transcript_conversation)
-        if state.is_ephemeral:
-            tab._is_ephemeral = True
-
-        # Load conversation from transcript
         try:
-            # Restore widget-specific state if metadata present
-            if state.metadata:
-                tab._conversation_widget.restore_from_metadata(state.metadata)
+            tab._conversation_widget.restore_migration_state(metadata)
 
-                if 'find_widget' in state.metadata:
-                    tab._find_widget.restore_from_metadata(state.metadata['find_widget'])
+            if 'find_widget' in metadata:
+                tab._find_widget.restore_from_metadata(metadata['find_widget'])
 
             return tab
 
         except Exception as e:
-            raise ValueError(f"Failed to restore conversation tab: {str(e)}") from e
+            raise ValueError(f"Failed to rebuild conversation tab: {str(e)}") from e
 
     def set_path(self, path: str) -> None:
         """

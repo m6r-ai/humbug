@@ -997,13 +997,15 @@ class Mindspace:
         try:
             self.ensure_mindspace_dir(self.MINDSPACE_DIR)
 
-            for tab_state in state.get('tabs', []):
-                if 'path' in tab_state and os.path.isabs(tab_state['path']):
-                    try:
-                        tab_state['path'] = os.path.relpath(tab_state['path'], self._path)
+            for entry in state.get('contexts', []):
+                layout = entry.get('layout', {})
+                path = layout.get('path', '')
+                if os.path.isabs(path):
+                    relative = os.path.relpath(path, self._path)
+                    if relative.startswith(os.pardir + os.sep) or relative == os.pardir:
+                        continue  # Path outside mindspace — keep absolute
 
-                    except ValueError:
-                        pass  # Path outside mindspace — keep absolute
+                    layout['path'] = relative
 
             session_file = os.path.join(self._path, self.MINDSPACE_DIR, self.SESSION_FILE)
             with open(session_file, 'w', encoding='utf-8') as f:
@@ -1035,9 +1037,11 @@ class Mindspace:
             with open(session_file, encoding='utf-8') as f:
                 state = json.load(f)
 
-            for tab_state in state.get('tabs', []):
-                if 'path' in tab_state and not os.path.isabs(tab_state['path']):
-                    tab_state['path'] = os.path.join(self._path, tab_state['path'])
+            for entry in state.get('contexts', []):
+                layout = entry.get('layout', {})
+                path = layout.get('path', '')
+                if path and not os.path.isabs(path):
+                    layout['path'] = os.path.normpath(os.path.join(self._path, path))
 
             return state
 
