@@ -2973,12 +2973,13 @@ class ConversationWidget(QWidget):
         """
         Create a dictionary capturing the conversation view's state.
 
-        This is pure view state: it says nothing about the conversation's
-        content and is safe to persist across sessions.
+        This is pure view state and is safe to persist across sessions.  It
+        includes the unsaved input draft, which is a frontend concern and not
+        part of the conversation transcript.
 
         Returns:
-            Dictionary containing the delegated flag, input cursor, scroll
-            positions, and message expansion states.
+            Dictionary containing the delegated flag, input draft and cursor,
+            scroll positions, and message expansion states.
         """
         expansion_states = []
         for message_widget in self._messages:
@@ -2986,6 +2987,7 @@ class ConversationWidget(QWidget):
 
         return {
             "delegated_conversation": self._is_delegated_conversation,
+            "content": self._input.to_plain_text(),
             "cursor": self._get_cursor_position(),
             "auto_scroll": self._auto_scroll,
             "vertical_scroll": self._scroll_area.verticalScrollBar().value(),
@@ -2997,17 +2999,15 @@ class ConversationWidget(QWidget):
         """
         Create a dictionary capturing the state needed to rebuild this view.
 
-        In addition to the view state, this includes the unsaved input content,
-        the current settings, and the live conversation state (streaming status,
-        unfinished message, pending tool approval) which must survive the widget
-        being destroyed and recreated during a column move.
+        The view state already carries the unsaved input content.  In addition,
+        this includes the current settings and the live conversation state
+        (streaming status, unfinished message, pending tool approval) which must
+        survive the widget being destroyed and recreated during a column move.
 
         Returns:
             Dictionary containing view state and live conversation state.
         """
         metadata = self.create_view_state()
-
-        metadata["content"] = self._input.to_plain_text()
 
         # Store current settings
         settings = self._ai_conversation.conversation_settings()
@@ -3065,6 +3065,15 @@ class ConversationWidget(QWidget):
         if not state:
             return
 
+        # The input draft and cursor do not depend on the message widgets, so
+        # apply them immediately.  This makes a partially completed input
+        # visible as soon as the tab appears rather than after a batch load.
+        if "content" in state:
+            self.set_input_text(state["content"])
+
+        if "cursor" in state:
+            self._set_cursor_position(state["cursor"])
+
         # If a batch load is still in progress, defer restoration until it
         # completes so that self._messages is fully populated when we apply it.
         if self._load_queue:
@@ -3077,9 +3086,6 @@ class ConversationWidget(QWidget):
             delegated_conversation = state["delegated_conversation"]
 
         self._is_delegated_conversation = delegated_conversation
-
-        if "cursor" in state:
-            self._set_cursor_position(state["cursor"])
 
         # Restore vertical scroll position if specified
         if "auto_scroll" in state:
@@ -3116,14 +3122,10 @@ class ConversationWidget(QWidget):
         if not metadata:
             return
 
-        # If a batch load is still in progress, defer restoration until it
-        # completes so that self._messages is fully populated when we apply it.
-        if self._load_queue:
-            self._load_pending_state = metadata
-            self._load_pending_is_migration = True
-            return
-
-        # Restore input content if specified
+        # The input draft and streaming/settings state do not depend on the
+        # message widgets being fully populated, so apply them immediately.
+        # This makes a partially completed input visible as soon as the tab
+        # appears rather than after a batch load.
         if "content" in metadata:
             self.set_input_text(metadata["content"])
 
@@ -3158,6 +3160,22 @@ class ConversationWidget(QWidget):
                 )
                 self.update_conversation_settings(settings)
 
+        # If a batch load is still in progress, defer the remaining restoration
+        # until it completes so that self._messages is fully populated when we
+        # apply the tool approval UI and the layout-dependent view state.
+        if self._load_queue:
+            # Drop the fields already applied above so they are not applied a
+            # second time when the deferred state is reapplied.  Re-adding the
+            # unfinished message would otherwise duplicate it.
+            deferred = dict(metadata)
+            deferred.pop("content", None)
+            deferred.pop("is_streaming", None)
+            deferred.pop("current_unfinished_message", None)
+            deferred.pop("settings", None)
+            self._load_pending_state = deferred
+            self._load_pending_is_migration = True
+            return
+
         # Restore tool approval state if present
         if "pending_tool_approval" in metadata:
             approval_info = metadata["pending_tool_approval"]
@@ -3187,6 +3205,7 @@ class ConversationWidget(QWidget):
                 self._pending_tool_call_approval = message_widget
 
         self.restore_view_state(metadata)
+
 
     def _set_cursor_position(self, position: dict[str, int]) -> None:
         """

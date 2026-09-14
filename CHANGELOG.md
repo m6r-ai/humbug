@@ -2,6 +2,11 @@
 
 ## v56 (2026-09-xx)
 
+Bug fixes:
+
+- Restore incomplete conversation and shell inputs immediately on load to avoid the user startign to type over any previous
+  text.
+
 ## v55 (2026-09-14)
 
 New features:

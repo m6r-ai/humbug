@@ -819,11 +819,16 @@ class ShellWidget(QWidget):
         """
         Create a dictionary capturing the shell view's state.
 
+        This is pure view state and is safe to persist across sessions.  It
+        includes the unsaved input draft, which is a frontend concern and not
+        part of the shell transcript.
+
         Returns:
-            Dictionary containing the input cursor, scroll position, and
-            spotlighted message index.
+            Dictionary containing the input draft and cursor, scroll position,
+            and spotlighted message index.
         """
         return {
+            "content": self._input.to_plain_text(),
             "cursor": self._get_cursor_position(),
             "scroll_position": self._scroll_area.verticalScrollBar().value(),
             "spotlighted_message_index": self._spotlighted_message_index,
@@ -841,6 +846,10 @@ class ShellWidget(QWidget):
 
         # Refresh messages
         self.load_messages()
+
+        # Restore input content if specified
+        if "content" in state:
+            self.set_input_text(state["content"])
 
         if "cursor" in state:
             self._set_cursor_position(state["cursor"])
@@ -862,16 +871,13 @@ class ShellWidget(QWidget):
         """
         Create a dictionary capturing the state needed to rebuild this shell view.
 
-        In addition to the view state, this includes the unsaved input content,
-        which must survive the widget being destroyed and recreated during a
-        column move.
+        The view state already carries the unsaved input content, which must
+        survive the widget being destroyed and recreated during a column move.
 
         Returns:
             Dictionary containing view state and the input content.
         """
-        state = self.create_view_state()
-        state["content"] = self._input.to_plain_text()
-        return state
+        return self.create_view_state()
 
     def restore_migration_state(self, state: dict[str, Any]) -> None:
         """
@@ -885,10 +891,6 @@ class ShellWidget(QWidget):
 
         # Refresh messages
         self.load_messages()
-
-        # Restore input content if specified
-        if "content" in state:
-            self.set_input_text(state["content"])
 
         self.restore_view_state(state)
 
