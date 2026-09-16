@@ -525,8 +525,7 @@ def get_arabic_strings() -> LanguageStrings:
         tour_start_here_description="انقر هنا لإنشاء أو فتح مساحة ذهنية — مساحة عمل مشروعك في Humbug.",
         tour_open_conversation_title="فتح محادثة",
         tour_open_conversation_description=(
-            "انقر هنا لفتح لوحة المحادثات — انقر بزر الماوس الأيمن هناك (أو استخدم ملف ← محادثة جديدة) "
-            "لبدء الدردشة مع الذكاء الاصطناعي."
+            "افتح محادثاتك هنا — استخدم + لبدء محادثة جديدة، أو أيقونة المجلد لتنظيمها."
         ),
         tour_workspace_title="مساحة عملك",
         tour_workspace_description="تُفتح المحادثات وعلامات التبويب الأخرى هنا. هذا هو المكان الذي ستقوم فيه بمعظم عملك.",

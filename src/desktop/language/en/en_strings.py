@@ -529,8 +529,7 @@ def get_english_strings() -> LanguageStrings:
         tour_start_here_description="Click here to create or open a mindspace — your project workspace in Humbug.",
         tour_open_conversation_title="Open a Conversation",
         tour_open_conversation_description=(
-            "Click here to open the Conversations panel — right-click there (or use File → New Conversation) "
-            "to start chatting with the AI."
+            "Open your conversations here — use + to start a new one, or the folder icon to organize them."
         ),
         tour_workspace_title="Your Workspace",
         tour_workspace_description="Conversations and other tabs open here. This is where you'll do most of your work.",

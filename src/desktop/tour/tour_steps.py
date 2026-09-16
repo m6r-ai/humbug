@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QWidget
 
+from desktop.conversation_sidebar.conversation_sidebar import ConversationSidebar
 from desktop.conversation_tab.conversation_tab import ConversationTab
 from desktop.tour.tour_step import TourStep
 
@@ -26,7 +27,13 @@ def _resolve_start_here(main_window: "MainWindow") -> QWidget | None:
 
 
 def _resolve_open_conversation(main_window: "MainWindow") -> QWidget | None:
-    """Spotlight the Conversations rail button, used to open or start a conversation."""
+    """Spotlight the header's create buttons (conversation and folder) if usable, else the rail button."""
+    panel = main_window.sidebar_manager().get_panel("conversations")
+    if isinstance(panel, ConversationSidebar):
+        button = panel.new_conversation_button()
+        if button.isVisible() and button.isEnabled():
+            return panel.header()
+
     return main_window.sidebar_manager().panel_button("conversations")
 
 
