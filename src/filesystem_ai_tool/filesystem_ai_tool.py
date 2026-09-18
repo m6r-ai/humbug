@@ -13,7 +13,7 @@ import tempfile
 import threading
 from typing import Any, cast
 
-from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
+from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiDict
 
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
@@ -193,8 +193,9 @@ class FileSystemAITool(AITool):
                     description=(
                         "Menai expression for the transform_file operation. "
                         "Menai uses Lisp-style prefix syntax: (operator arg1 arg2 ...). "
-                        "May reference 'input-text' (full file content as a string) "
-                        "and 'input-lines' (file lines as a list of strings). "
+                        "The file content is bound to the name 'inputs' as a dict: read the "
+                        "full content with (dict-get inputs \"input-text\") and the lines as a "
+                        "list of strings with (dict-get inputs \"input-lines\"). "
                         "Must evaluate to a string (new file content) or a list of strings (new lines)."
                     ),
                     required=False
@@ -411,8 +412,9 @@ class FileSystemAITool(AITool):
                 required_parameters={"path", "program"},
                 description=(
                     "Read a file, apply a Menai program to its content, and write the result back. "
-                    "The program may reference 'input-text' (full content as a string) and "
-                    "'input-lines' (content split on newlines as a list of strings). "
+                    "The file content is bound to the name 'inputs' as a dict: read the full "
+                    "content with (dict-get inputs \"input-text\") and the lines as a list of "
+                    "strings with (dict-get inputs \"input-lines\"). "
                     "It must return a string or a list of strings. "
                     "A unified diff is shown for user approval before any write occurs. "
                     "If dry_run is True, returns the diff without requesting authorisation or writing anything. "
@@ -2425,7 +2427,8 @@ class FileSystemAITool(AITool):
         Args:
             menai: A fresh Menai instance for this evaluation (thread-safe).
             path: Resolved path to the file.
-            expression: Menai expression referencing 'input-text' and 'input-lines'.
+            expression: Menai expression reading the file content from the 'inputs'
+                        dict via (dict-get inputs "input-text") and (dict-get inputs "input-lines").
             encoding: File encoding to use for reading.
 
         Returns:
@@ -2445,12 +2448,12 @@ class FileSystemAITool(AITool):
             raise AIToolExecutionError(f"Cannot read file: {e}") from e
 
         lines = original_content.split('\n')
-        bindings: dict[str, MenaiValue] = {
-            'input-text': MenaiString(original_content),
-            'input-lines': MenaiList(tuple(MenaiString(line) for line in lines)),
-        }
+        inputs = MenaiDict((
+            (MenaiString('input-text'), MenaiString(original_content)),
+            (MenaiString('input-lines'), MenaiList(tuple(MenaiString(line) for line in lines))),
+        ))
 
-        raw_result = menai.evaluate_raw_with_bindings(expression, bindings)
+        raw_result = menai.evaluate_raw_with_dict(expression, 'inputs', inputs)
 
         if isinstance(raw_result, MenaiString):
 

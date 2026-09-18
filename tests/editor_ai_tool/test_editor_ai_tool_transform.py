@@ -64,7 +64,7 @@ class TestEditorAIToolTransform:
 
         tool_call = make_tool_call(
             "editor",
-            {"operation": "transform", "tab_id": "test-tab-id", "program": "(string-upcase input-text)"}
+            {"operation": "transform", "tab_id": "test-tab-id", "program": "(string-upcase (dict-get inputs \"input-text\"))"}
         )
         result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
@@ -80,7 +80,7 @@ class TestEditorAIToolTransform:
 
         tool_call = make_tool_call(
             "editor",
-            {"operation": "transform", "tab_id": "test-tab-id", "program": "(list-reverse input-lines)"}
+            {"operation": "transform", "tab_id": "test-tab-id", "program": "(list-reverse (dict-get inputs \"input-lines\"))"}
         )
         result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
@@ -94,7 +94,7 @@ class TestEditorAIToolTransform:
 
         tool_call = make_tool_call(
             "editor",
-            {"operation": "transform", "tab_id": "test-tab-id", "program": "input-text"}
+            {"operation": "transform", "tab_id": "test-tab-id", "program": "(dict-get inputs \"input-text\")"}
         )
         result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "no changes" in result.content.lower()
@@ -141,13 +141,13 @@ class TestEditorAIToolTransform:
             asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
 
     def test_transform_input_text_binding(self, editor_tool, mock_authorization, make_tool_call):
-        """'input-text' is bound to the full buffer content as a single string."""
+        """The 'inputs' dict carries the full buffer content under "input-text" as a single string."""
         tool, mindspace = editor_tool
         content = "line one\nline two"
         ctx = make_editor_context(content)
         _set_context(tool, mindspace, ctx)
 
-        program = '(integer->string (string-length input-text))'
+        program = '(integer->string (string-length (dict-get inputs "input-text")))'
         tool_call = make_tool_call(
             "editor",
             {"operation": "transform", "tab_id": "test-tab-id", "program": program}
@@ -159,12 +159,12 @@ class TestEditorAIToolTransform:
         assert str(len(content)) in diff_arg
 
     def test_transform_input_lines_binding(self, editor_tool, mock_authorization, make_tool_call):
-        """'input-lines' is bound to a list of strings, one per line."""
+        """The 'inputs' dict carries the lines under "input-lines" as a list of strings, one per line."""
         tool, mindspace = editor_tool
         ctx = make_editor_context("alpha\nbeta\ngamma")
         _set_context(tool, mindspace, ctx)
 
-        program = '(integer->string (list-length input-lines))'
+        program = '(integer->string (list-length (dict-get inputs "input-lines")))'
         tool_call = make_tool_call(
             "editor",
             {"operation": "transform", "tab_id": "test-tab-id", "program": program}
@@ -183,7 +183,7 @@ class TestEditorAIToolTransform:
 
         tool_call = make_tool_call(
             "editor",
-            {"operation": "transform", "tab_id": "test-tab-id", "program": "(string-upcase input-text)"}
+            {"operation": "transform", "tab_id": "test-tab-id", "program": "(string-upcase (dict-get inputs \"input-text\"))"}
         )
         asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         mindspace.add_interaction.assert_called_once()
@@ -197,7 +197,7 @@ class TestEditorAIToolTransform:
 
         tool_call = make_tool_call(
             "editor",
-            {"operation": "transform", "tab_id": "nonexistent-tab", "program": "input-text"}
+            {"operation": "transform", "tab_id": "nonexistent-tab", "program": "(dict-get inputs \"input-text\")"}
         )
         with pytest.raises(AIToolExecutionError):
             asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
@@ -215,7 +215,7 @@ class TestEditorAIToolTransform:
             {
                 "operation": "transform",
                 "tab_id": "test-tab-id",
-                "program": "(string-upcase input-text)",
+                "program": "(string-upcase (dict-get inputs \"input-text\"))",
                 "dry_run": True
             }
         )
@@ -234,7 +234,7 @@ class TestEditorAIToolTransform:
 
         tool_call = make_tool_call(
             "editor",
-            {"operation": "transform", "tab_id": "test-tab-id", "program": "input-text", "dry_run": True}
+            {"operation": "transform", "tab_id": "test-tab-id", "program": "(dict-get inputs \"input-text\")", "dry_run": True}
         )
         result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "no changes" in result.content.lower()
@@ -249,7 +249,7 @@ class TestEditorAIToolTransform:
         requester = MockRequester(menai_help_read=False)
         tool_call = make_tool_call(
             "editor",
-            {"operation": "transform", "tab_id": "test-tab-id", "program": "(string-upcase input-text)"}
+            {"operation": "transform", "tab_id": "test-tab-id", "program": "(string-upcase (dict-get inputs \"input-text\"))"}
         )
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(tool.execute(tool_call, requester, mock_authorization))

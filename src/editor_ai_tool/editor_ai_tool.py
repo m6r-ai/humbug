@@ -5,7 +5,7 @@ import json
 import logging
 from typing import Any, cast
 
-from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiValue
+from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiDict
 
 from ai_tool import (
     AITool,
@@ -125,8 +125,9 @@ class EditorAITool(AITool):
                     description=(
                         "Menai expression for the transform operation. "
                         "Menai uses Lisp-style prefix syntax: (operator arg1 arg2 ...). "
-                        "May reference 'input-text' (full buffer content as a string) "
-                        "and 'input-lines' (buffer lines as a list of strings). "
+                        "The buffer content is bound to the name 'inputs' as a dict: read the "
+                        "full content with (dict-get inputs \"input-text\") and the lines as a "
+                        "list of strings with (dict-get inputs \"input-lines\"). "
                         "Must evaluate to a string (new content) or a list of strings (new lines). "
                         "Changes are applied to the buffer; use save_file to persist."
                     ),
@@ -248,8 +249,9 @@ class EditorAITool(AITool):
                 required_parameters={"tab_id", "program"},
                 description=(
                     "Use a Menai expression to modify the full editor buffer content and write the result "
-                    "back to the buffer. The program may reference 'input-text' (full content as a "
-                    "string) and 'input-lines' (content split on newlines as a list of strings). "
+                    "back to the buffer. The buffer content is bound to the name 'inputs' as a dict: "
+                    "read the full content with (dict-get inputs \"input-text\") and the lines as a "
+                    "list of strings with (dict-get inputs \"input-lines\"). "
                     "It must return a string or a list of strings. "
                     "If dry_run is True, returns the diff without applying anything. "
                     "Use save_file afterward to persist the changes. "
@@ -724,7 +726,8 @@ class EditorAITool(AITool):
         Args:
             menai: A fresh Menai instance for this evaluation (thread-safe).
             content: The current buffer text.
-            expression: Menai expression referencing 'input-text' and 'input-lines'.
+            expression: Menai expression reading the buffer content from the 'inputs'
+                        dict via (dict-get inputs "input-text") and (dict-get inputs "input-lines").
 
         Returns:
             The new content string.
@@ -734,12 +737,12 @@ class EditorAITool(AITool):
             Various Menai exceptions: Propagated to the async caller.
         """
         lines = content.split('\n')
-        bindings: dict[str, MenaiValue] = {
-            'input-text': MenaiString(content),
-            'input-lines': MenaiList(tuple(MenaiString(line) for line in lines)),
-        }
+        inputs = MenaiDict((
+            (MenaiString('input-text'), MenaiString(content)),
+            (MenaiString('input-lines'), MenaiList(tuple(MenaiString(line) for line in lines))),
+        ))
 
-        raw_result = menai.evaluate_raw_with_bindings(expression, bindings)
+        raw_result = menai.evaluate_raw_with_dict(expression, 'inputs', inputs)
 
         if isinstance(raw_result, MenaiString):
             new_content = raw_result.value

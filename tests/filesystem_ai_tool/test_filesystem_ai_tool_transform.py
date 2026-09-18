@@ -79,7 +79,7 @@ class TestFileSystemAIToolTransformFile:
 
         tool_call = make_tool_call(
             "filesystem",
-            {"operation": "transform_file", "path": str(target), "program": "(string-upcase input-text)"}
+            {"operation": "transform_file", "path": str(target), "program": "(string-upcase (dict-get inputs \"input-text\"))"}
         )
         result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
@@ -93,7 +93,7 @@ class TestFileSystemAIToolTransformFile:
 
         tool_call = make_tool_call(
             "filesystem",
-            {"operation": "transform_file", "path": str(target), "program": "(list-reverse input-lines)"}
+            {"operation": "transform_file", "path": str(target), "program": "(list-reverse (dict-get inputs \"input-lines\"))"}
         )
         result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
@@ -109,7 +109,7 @@ class TestFileSystemAIToolTransformFile:
 
         tool_call = make_tool_call(
             "filesystem",
-            {"operation": "transform_file", "path": str(target), "program": "input-text"}
+            {"operation": "transform_file", "path": str(target), "program": "(dict-get inputs \"input-text\")"}
         )
         result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "no changes" in result.content.lower()
@@ -123,7 +123,7 @@ class TestFileSystemAIToolTransformFile:
 
         tool_call = make_tool_call(
             "filesystem",
-            {"operation": "transform_file", "path": str(target), "program": "(string-upcase input-text)"}
+            {"operation": "transform_file", "path": str(target), "program": "(string-upcase (dict-get inputs \"input-text\"))"}
         )
         with pytest.raises(AIToolAuthorizationDenied):
             asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization_denied))
@@ -135,7 +135,7 @@ class TestFileSystemAIToolTransformFile:
         missing = str(tmp_path / "nonexistent.txt")
         tool_call = make_tool_call(
             "filesystem",
-            {"operation": "transform_file", "path": missing, "program": "input-text"}
+            {"operation": "transform_file", "path": missing, "program": "(dict-get inputs \"input-text\")"}
         )
         with pytest.raises(AIToolExecutionError):
             asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
@@ -178,12 +178,12 @@ class TestFileSystemAIToolTransformFile:
             asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
 
     def test_transform_input_text_binding(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
-        """'input-text' is bound to the full file content as a single string."""
+        """The 'inputs' dict carries the full file content under "input-text" as a single string."""
         target = tmp_path / "data.txt"
         content = "line one\nline two"
         target.write_text(content, encoding='utf-8')
 
-        program = '(integer->string (string-length input-text))'
+        program = '(integer->string (string-length (dict-get inputs "input-text")))'
         tool_call = make_tool_call(
             "filesystem",
             {"operation": "transform_file", "path": str(target), "program": program}
@@ -194,11 +194,11 @@ class TestFileSystemAIToolTransformFile:
         assert target.read_text(encoding='utf-8') == str(len(content)) + "\n"
 
     def test_transform_input_lines_binding(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
-        """'input-lines' is bound to a list of strings, one per line."""
+        """The 'inputs' dict carries the lines under "input-lines" as a list of strings, one per line."""
         target = tmp_path / "data.txt"
         target.write_text("alpha\nbeta\ngamma", encoding='utf-8')
 
-        program = '(integer->string (list-length input-lines))'
+        program = '(integer->string (list-length (dict-get inputs "input-lines")))'
         tool_call = make_tool_call(
             "filesystem",
             {"operation": "transform_file", "path": str(target), "program": program}
@@ -215,7 +215,7 @@ class TestFileSystemAIToolTransformFile:
 
         tool_call = make_tool_call(
             "filesystem",
-            {"operation": "transform_file", "path": str(target), "program": "(string-upcase input-text)"}
+            {"operation": "transform_file", "path": str(target), "program": "(string-upcase (dict-get inputs \"input-text\"))"}
         )
         asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         assert target.read_text(encoding='utf-8') == "HELLO\n"
@@ -235,7 +235,7 @@ class TestFileSystemAIToolTransformFile:
             {
                 "operation": "transform_file",
                 "path": str(target),
-                "program": "(string-upcase input-text)",
+                "program": "(string-upcase (dict-get inputs \"input-text\"))",
                 "dry_run": True
             }
         )
@@ -254,7 +254,7 @@ class TestFileSystemAIToolTransformFile:
 
         tool_call = make_tool_call(
             "filesystem",
-            {"operation": "transform_file", "path": str(target), "program": "input-text", "dry_run": True}
+            {"operation": "transform_file", "path": str(target), "program": "(dict-get inputs \"input-text\")", "dry_run": True}
         )
         result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         assert "no changes" in result.content.lower()
@@ -268,7 +268,7 @@ class TestFileSystemAIToolTransformFile:
         requester = MockRequester(menai_help_read=False)
         tool_call = make_tool_call(
             "filesystem",
-            {"operation": "transform_file", "path": str(target), "program": "(string-upcase input-text)"}
+            {"operation": "transform_file", "path": str(target), "program": "(string-upcase (dict-get inputs \"input-text\"))"}
         )
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(transform_tool.execute(tool_call, requester, mock_authorization))
@@ -285,7 +285,7 @@ class TestFileSystemAIToolTransformFile:
 
         tool_call = make_tool_call(
             "filesystem",
-            {"operation": "transform_file", "path": str(target), "program": "(string-upcase input-text)"}
+            {"operation": "transform_file", "path": str(target), "program": "(string-upcase (dict-get inputs \"input-text\"))"}
         )
         asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         assert target.read_text(encoding='utf-8') == "HELLO WORLD\n"
