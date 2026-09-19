@@ -12,6 +12,8 @@ New features:
 
 Bug fixes:
 
+- Indenting a block of lines in the editor and Markdown text editors no longer shifts the start of the selection when the
+  selection begins at the start of a line.  A mid-line selection still tracks the character it started on.
 - Restore incomplete conversation and shell inputs immediately on load to avoid the user starting to type over any previous
   text.
 - Removed the stale `trace` keyword from the Menai syntax highlighter - it is no longer part of the language.

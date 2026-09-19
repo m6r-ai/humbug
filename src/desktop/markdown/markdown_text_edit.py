@@ -213,7 +213,12 @@ class MarkdownTextEdit(MinHeightTextEdit):
         if check_cursor.atBlockStart():
             end_offs = 1
 
-        start += tab_size
+        # The start only moves right by the indentation inserted before it.  If the
+        # selection starts at the beginning of the line then the inserted indentation
+        # lands at the start position rather than before it, so the start stays put.
+        if start > cursor.block().position():
+            start += tab_size
+
         while cursor.position() <= end - end_offs:
             if not cursor.atBlockEnd():
                 cursor.insertText(" " * tab_size)
@@ -246,7 +251,12 @@ class MarkdownTextEdit(MinHeightTextEdit):
         if check_cursor.atBlockStart():
             end_offs = 1
 
-        start += 1
+        # The start only moves right by the indentation inserted before it.  If the
+        # selection starts at the beginning of the line then the inserted indentation
+        # lands at the start position rather than before it, so the start stays put.
+        if start > cursor.block().position():
+            start += 1
+
         while cursor.position() <= end - end_offs:
             if not cursor.atBlockEnd():
                 cursor.insertText("\t")
