@@ -340,8 +340,8 @@ class TestMenaiParser:
             assert len(dot_tokens) == 1, f"Expression '{expr}' should have one dot"
             assert dot_tokens[0].type == TokenType.OPERATOR
 
-    def test_parse_dot_without_whitespace_is_identifier(self):
-        """Test that dot without whitespace is part of identifier."""
+    def test_parse_dot_without_whitespace_is_single_token(self):
+        """Test that a dot without surrounding whitespace stays part of one token."""
         parser = MenaiParser()
         state = parser.parse(None, '(head.tail)')
 
@@ -351,9 +351,10 @@ class TestMenaiParser:
         dot_tokens = [t for t in tokens if t.value == '.' and t.type == TokenType.OPERATOR]
         assert len(dot_tokens) == 0
 
-        # Should have an identifier containing the dot
-        ident_tokens = [t for t in tokens if t.type == TokenType.IDENTIFIER]
-        assert any('.' in t.value for t in ident_tokens)
+        # Should have a single token containing the dot, classified as a
+        # function because it sits in operator position
+        head_tokens = [t for t in tokens if t.type == TokenType.FUNCTION_OR_METHOD]
+        assert [t.value for t in head_tokens] == ['head.tail']
 
     def test_parse_paren_depth_tracking(self):
         """Test that parser tracks parenthesis depth."""

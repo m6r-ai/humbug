@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from syntax.menai.menai_call_context import CallContextState, MenaiCallContext
 from syntax.menai.menai_lexer import MenaiLexer
 from syntax.lexer import TokenType
 from syntax.parser import Parser, ParserState
@@ -14,8 +15,10 @@ class MenaiParserState(ParserState):
 
     Attributes:
         paren_depth: Current parenthesis nesting depth
+        call_context_state: Persistent call-context tracking state
     """
     paren_depth: int = 0
+    call_context_state: CallContextState | None = None
 
 
 @ParserRegistry.register_parser(ProgrammingLanguage.MENAI)
@@ -46,6 +49,7 @@ class MenaiParser(Parser):
         """
         paren_depth = 0
         prev_lexer_state = None
+        call_context = MenaiCallContext()
 
         if prev_parser_state:
             assert isinstance(prev_parser_state, MenaiParserState), \
@@ -53,6 +57,8 @@ class MenaiParser(Parser):
 
             prev_lexer_state = prev_parser_state.lexer_state
             paren_depth = prev_parser_state.paren_depth
+            if prev_parser_state.call_context_state is not None:
+                call_context.restore_state(prev_parser_state.call_context_state)
 
         lexer = MenaiLexer()
         lexer_state = lexer.lex(prev_lexer_state, input_str)
@@ -75,6 +81,9 @@ class MenaiParser(Parser):
                     # Convert invalid dot to error
                     token.type = TokenType.ERROR
 
+            # Classify identifiers in operator position as function calls
+            call_context.process_token(token)
+
             self._tokens.append(token)
 
         parser_state = MenaiParserState()
@@ -82,6 +91,7 @@ class MenaiParser(Parser):
         parser_state.parsing_continuation = lexer_state.in_string
         parser_state.lexer_state = lexer_state
         parser_state.paren_depth = paren_depth
+        parser_state.call_context_state = call_context.save_state()
         return parser_state
 
     def _is_valid_dot_context(self, lexer: MenaiLexer) -> bool:

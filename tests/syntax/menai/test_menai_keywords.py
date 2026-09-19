@@ -264,3 +264,65 @@ class TestMenaiKeywords:
         assert 'and' in keyword_values
         assert 'or' in keyword_values
         assert 'quote' in keyword_values
+
+    def test_module_access_keyword(self):
+        """Test the :: module member access keyword."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '::')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.KEYWORD
+        assert tokens[0].value == '::'
+
+    def test_module_access_expression(self):
+        """Test :: in a module member access expression."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '(:: math square)')
+
+        tokens = list(lexer._tokens)
+        keyword_tokens = [t for t in tokens if t.type == TokenType.KEYWORD]
+        assert len(keyword_tokens) == 1
+        assert keyword_tokens[0].value == '::'
+
+    def test_module_access_keyword_position(self):
+        """Test that the :: keyword position is correctly tracked."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '(:: math square)')
+
+        tokens = list(lexer._tokens)
+        keyword_tokens = [t for t in tokens if t.type == TokenType.KEYWORD]
+        assert len(keyword_tokens) == 1
+        assert keyword_tokens[0].start == 1
+
+    def test_module_access_operands_are_identifiers(self):
+        """Test that the namespace and member operands are identifiers."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '(:: math square)')
+
+        tokens = list(lexer._tokens)
+        ident_tokens = [t for t in tokens if t.type == TokenType.IDENTIFIER]
+        assert [t.value for t in ident_tokens] == ['math', 'square']
+
+    def test_module_access_in_expression(self):
+        """Test :: within a larger expression."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '((:: math square) 5)')
+
+        tokens = list(lexer._tokens)
+        keyword_tokens = [t for t in tokens if t.type == TokenType.KEYWORD]
+        assert len(keyword_tokens) == 1
+        assert keyword_tokens[0].value == '::'
+
+    def test_colon_identifiers_are_not_keywords(self):
+        """Test that identifiers containing colons are not the :: keyword."""
+        test_cases = ['key:value', 'namespace:function', 'one::two']
+        for ident in test_cases:
+            lexer = MenaiLexer()
+            lexer.lex(None, ident)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1
+            assert tokens[0].type == TokenType.IDENTIFIER, \
+                f"'{ident}' should be IDENTIFIER, not KEYWORD"
+            assert tokens[0].value == ident
