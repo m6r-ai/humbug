@@ -233,7 +233,7 @@ class ClockAITool(AITool):
             raise AIToolExecutionError("Duration cannot be negative")
 
         try:
-            self._logger.debug("Sleeping for %s seconds", duration)
+            self._logger.info("Sleeping for %s seconds", duration)
 
             # Perform the sleep
             await asyncio.sleep(duration)
@@ -242,7 +242,7 @@ class ClockAITool(AITool):
             now = self._get_current_time(timezone_str)
             result = self._format_time(now, format_type)
 
-            self._logger.debug("Sleep completed, current time: %s", result)
+            self._logger.info("Sleep completed, current time: %s", result)
 
             return AIToolResult(
                 id=tool_call.id,
@@ -297,7 +297,7 @@ class ClockAITool(AITool):
             # Calculate sleep duration
             sleep_duration = (target_time - current_time).total_seconds()
 
-            self._logger.debug("Alarm set for %s (sleeping %s seconds)", target_time, sleep_duration)
+            self._logger.info("Alarm set for %s (sleeping %s seconds)", target_time, sleep_duration)
 
             # Perform the sleep
             await asyncio.sleep(sleep_duration)
@@ -305,7 +305,7 @@ class ClockAITool(AITool):
             # Return current time after alarm
             now = self._get_current_time(timezone_str)
             result = self._format_time(now, format_type)
-            self._logger.debug("Alarm completed, current time: %s", result)
+            self._logger.info("Alarm completed, current time: %s", result)
             return AIToolResult(
                 id=tool_call.id,
                 name="clock",

@@ -234,7 +234,7 @@ class MenaiAITool(AITool):
             raise AIToolExecutionError("Expression must be a string")
 
         try:
-            self._logger.debug("Evaluating Menai expression: %s", expression)
+            self._logger.info("Evaluating Menai expression: %s", expression)
 
             # Run calculation with timeout protection and cancellation support
             # We use a Task so we can cancel the thread execution via the VM's cancel() method
@@ -273,7 +273,7 @@ class MenaiAITool(AITool):
 
                 raise AIToolTimeoutError("Menai calculation timed out", 10.0)  # pylint: disable=raise-missing-from
 
-            self._logger.debug("Menai evaluation successful: %s = %s", expression, result)
+            self._logger.info("Menai evaluation successful: %s = %s", expression, result)
 
             if self._mindspace is not None:
                 self._mindspace.add_interaction(

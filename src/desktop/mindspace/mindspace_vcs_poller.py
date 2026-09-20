@@ -290,7 +290,7 @@ class MindspaceVCSPoller(QObject):
                 self._logger.warning("git not found: %s", result.error)
 
             else:
-                self._logger.debug("git status failed: %s", result.error)
+                self._logger.warning("git status failed: %s", result.error)
 
             return
 

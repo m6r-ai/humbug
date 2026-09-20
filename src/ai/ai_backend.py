@@ -172,8 +172,6 @@ class AIBackend(ABC):
         # Format messages for this specific provider
         config = self._build_request_config(conversation_history, conversation_settings)
 
-        self._logger.debug(config.data)
-
         attempt = 0
 
         # Use explicit IPv4 for local connections as localhost can cause SSL issues!
@@ -203,7 +201,7 @@ class AIBackend(ABC):
                             self._logger.warning("Unable to parse: %s (%s)", response_message, str(e))
                             error_data = {}
 
-                        self._logger.debug("API error: %d: %s", response.status(), error_data)
+                        self._logger.warning("API error: %d: %s", response.status(), error_data)
 
                         # If we get a 429 error, this is a rate limit error and we should retry
                         if response.status() == 429:

@@ -95,7 +95,7 @@ class UpdateChecker(QObject):
                     headers={"Accept": "application/vnd.github+json"},
                 )
                 if response.status() != 200:
-                    self._logger.debug(
+                    self._logger.warning(
                         "Update check returned HTTP %d", response.status()
                     )
                     return None, None
@@ -109,7 +109,7 @@ class UpdateChecker(QObject):
                 return tag, url
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            self._logger.debug("Update check failed: %s", exc)
+            self._logger.warning("Update check failed: %s", exc)
             return None, None
 
     def _is_newer(self, tag: str) -> bool:

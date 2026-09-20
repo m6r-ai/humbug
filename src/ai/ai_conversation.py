@@ -54,6 +54,7 @@ class AIConversation:
     def __init__(self) -> None:
         """Initialize the AIConversation."""
         self._logger = logging.getLogger("AIConversation")
+        self._conversation_id = ""
         self._ai_manager = AIManager()
         self._tool_manager = AIToolManager()
         self._settings = AIConversationSettings()
@@ -166,6 +167,16 @@ class AIConversation:
             reasoning_effort=self._settings.reasoning_effort,
         )
 
+    def set_conversation_id(self, conversation_id: str) -> None:
+        """
+        Set the stable identifier for this conversation.
+
+        Args:
+            conversation_id: Identifier used to attribute log entries to this
+                conversation, typically the transcript file path.
+        """
+        self._conversation_id = conversation_id
+
     def get_conversation_history(self) -> AIConversationHistory:
         """
         Get the conversation history object.
@@ -268,7 +279,7 @@ class AIConversation:
 
         # If we're actively processing, queue the message
         if self._state in (ConversationState.EXECUTING_TOOLS, ConversationState.STREAMING_AI_RESPONSE):
-            self._logger.debug("Queuing message during active processing")
+            self._logger.info("[conv=%s] Queuing message during active processing", self._conversation_id)
             message = AIMessage.create(
                 AIMessageSource.USER_QUEUED,
                 user_message,
@@ -318,7 +329,12 @@ class AIConversation:
         settings = self.conversation_settings()
 
         try:
-            self._logger.debug("Starting AI response streaming")
+            self._logger.info(
+                "[conv=%s] Starting AI response streaming (provider=%s model=%s)",
+                self._conversation_id,
+                settings.provider,
+                settings.model
+            )
 
             # Get appropriate backend for conversation
             backend = self._ai_manager.get_backends().get(settings.provider)
@@ -355,7 +371,7 @@ class AIConversation:
             # If we get here and are still marked as streaming then we failed to get a
             # complete response before giving up.  This is a failure and should be handled as such.
             if self._is_streaming:
-                self._logger.debug("AI response failed (likely timeout)")
+                self._logger.warning("AI response failed (likely timeout)")
                 await self._handle_error(
                     AIError(
                         code="cancelled",
@@ -367,7 +383,7 @@ class AIConversation:
                 return
 
         except asyncio.CancelledError:
-            self._logger.debug("AI response cancelled")
+            self._logger.info("[conv=%s] AI response cancelled", self._conversation_id)
             await self._handle_error(
                 AIError(
                     code="cancelled",
@@ -434,7 +450,12 @@ class AIConversation:
                                 len(self._pending_user_messages))
             return False
 
-        self._logger.debug("Tool '%s' requesting authorization: %s", tool_name, reason)
+        self._logger.info(
+            "[conv=%s] Tool '%s' requesting authorization: %s",
+            self._conversation_id,
+            tool_name,
+            reason
+        )
 
         # Create a tool call for authorization
         tool_call = AIToolCall(
@@ -459,7 +480,12 @@ class AIConversation:
 
             # Wait for the user's response
             result = await self._pending_authorization_future
-            self._logger.debug("Tool '%s' authorization result: %s", tool_name, result)
+            self._logger.info(
+                "[conv=%s] Tool '%s' authorization result: %s",
+                self._conversation_id,
+                tool_name,
+                result
+            )
             return result
 
         finally:
@@ -570,14 +596,14 @@ class AIConversation:
     async def _execute_tool_calls(self, tool_calls: list[AIToolCall]) -> None:
         """Execute tool calls with support for parallel execution via continuations."""
         self._state = ConversationState.EXECUTING_TOOLS
-        self._logger.debug("Executing tool calls with continuation support...")
+        self._logger.info("[conv=%s] Executing tool calls with continuation support...", self._conversation_id)
 
         # Execute all tool calls and collect results and continuations
         tool_results: list[AIToolResult] = []
         continuations = []
 
         for tool_call in tool_calls:
-            self._logger.debug("Executing tool call: %s", tool_call.name)
+            self._logger.info("[conv=%s] Executing tool call: %s", self._conversation_id, tool_call.name)
 
             # Create and add tool call message
             tool_call_dict = tool_call.to_dict()
@@ -722,7 +748,7 @@ class AIConversation:
         if not self._pending_authorization_future or self._pending_authorization_future.done():
             return
 
-        self._logger.debug("User approved tool authorization")
+        self._logger.info("[conv=%s] User approved tool authorization", self._conversation_id)
 
         # Complete the authorization message
         if self._pending_tool_call_message:
@@ -744,7 +770,7 @@ class AIConversation:
         if not self._pending_authorization_future or self._pending_authorization_future.done():
             return
 
-        self._logger.debug("User rejected tool authorization: %s", reason)
+        self._logger.info("[conv=%s] User rejected tool authorization: %s", self._conversation_id, reason)
 
         # Complete the authorization message
         if self._pending_tool_call_message:
@@ -772,7 +798,7 @@ class AIConversation:
         notify = True
         if error.code == "cancelled":
             notify = not self._expecting_cancellation
-            self._logger.debug("AI response cancelled by user")
+            self._logger.info("[conv=%s] AI response cancelled by user", self._conversation_id)
 
         else:
             self._logger.warning("AI response error: %s", error.message)
@@ -964,12 +990,17 @@ class AIConversation:
         redacted_reasoning: str | None = None
     ) -> None:
         """Finalize the AI response, handle tool calls, and emit completion events."""
-        self._logger.debug("Finished AI response streaming")
+        settings = self.conversation_settings()
+        self._logger.info(
+            "[conv=%s] Finished AI response streaming (provider=%s model=%s)",
+            self._conversation_id,
+            settings.provider,
+            settings.model
+        )
 
         self._is_streaming = False
 
         if not content and not reasoning:
-            settings = self.conversation_settings()
             message = AIMessage.create(
                 AIMessageSource.AI,
                 content="",

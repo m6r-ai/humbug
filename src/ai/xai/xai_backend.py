@@ -289,8 +289,6 @@ class XAIBackend(AIBackend):
                 data["tool_choice"] = "auto"
                 self._logger.debug("Added %d tool definitions for xai", len(tool_definitions))
 
-        self._logger.debug("stream message %r", data)
-
         # Build headers
         headers = {
             "Content-Type": "application/json",

@@ -158,7 +158,7 @@ class AITool(ABC):
 
         # Log operation
         logger = self.get_logger()
-        logger.debug("%s operation requested: %s", self.get_tool_name(), operation)
+        logger.info("%s operation requested: %s", self.get_tool_name(), operation)
 
         try:
             return await operation_def.handler(tool_call, requester_ref, request_authorization)

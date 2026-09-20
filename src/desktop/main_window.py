@@ -806,7 +806,7 @@ class MainWindow(QMainWindow):
 
     def _on_exception_occurred(self) -> None:
         """Handle uncaught exception notification by activating canary."""
-        self._logger.debug("Uncaught exception detected, activating canary")
+        self._logger.warning("Uncaught exception detected, activating canary")
         self._canary_active = True
         self._on_style_changed()  # Refresh styles to apply canary background
 

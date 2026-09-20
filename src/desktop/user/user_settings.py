@@ -189,7 +189,7 @@ class UserSettings:
                         continue
 
                     if not backend_id in settings.ai_backends:
-                        cls._logger.debug("Ignoring unknown backend: %s", backend_id)
+                        cls._logger.warning("Ignoring unknown backend: %s", backend_id)
                         continue
 
                     if not cls._validate_ai_backend_data(backend_data):

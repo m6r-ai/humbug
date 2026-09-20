@@ -78,3 +78,4 @@ What costs, risks, or constraints does this decision impose?
 | [0006](0006-humans-and-ais-are-equal-actors.md) | Humans and AIs are equal actors | Accepted |
 | [0007](0007-tool-approval-policy.md) | Tool approval policy — persistent vs ephemeral state | Accepted |
 | [0008](0008-workspace-state-ownership.md) | Workspace state ownership — layout, content, and view | Accepted |
+| [0009](0009-logging-level-policy.md) | Logging level policy | Accepted |

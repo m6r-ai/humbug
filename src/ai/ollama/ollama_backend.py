@@ -398,8 +398,6 @@ class OllamaBackend(AIBackend):
                 data["tools"] = [self._format_tool_definition(tool_def) for tool_def in tool_definitions]
                 self._logger.debug("Added %d tool definitions for ollama", len(tool_definitions))
 
-        self._logger.debug("stream message %r", data)
-
         # Build headers
         headers = {
             "Content-Type": "application/json",

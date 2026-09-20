@@ -24,6 +24,7 @@ Internal structure changes:
 - Migrated the Menai `transform` and `transform_file` operations off the removed `evaluate_raw_with_bindings` API.  The
   editor buffer or file content is now supplied as a single `inputs` dict bound to the program, and transform programs
   read it with `(dict-get inputs "input-text")` and `(dict-get inputs "input-lines")`.
+- Switched the default log level to INFO, but moved some log messages to INFO and WARNING.
 
 ## v55 (2026-09-14)
 

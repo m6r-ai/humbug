@@ -249,7 +249,7 @@ class DelegateAITool(AITool):
 
             reasoning_effort = reasoning_effort_arg
 
-        self._logger.debug("AI delegation requested with task: %s", task_prompt[:100])
+        self._logger.info("AI delegation requested with task: %s", task_prompt[:100])
 
         # Request user authorization
         session_info = "continue an existing session" if session_path else "start a new session"

@@ -443,7 +443,7 @@ class ConversationSidebarIndex(QObject):
             return message_ids, parent_message_id, parent_tool_call_id
 
         except (OSError, json.JSONDecodeError, ValueError) as e:
-            self._logger.debug("Could not index conversation file %s: %s", path, str(e))
+            self._logger.warning("Could not index conversation file %s: %s", path, str(e))
             return None
 
     def _add_file(self, path: str) -> None:

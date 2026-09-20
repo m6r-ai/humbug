@@ -51,6 +51,8 @@ class AITranscriptConversation:
         else:
             self._conversation = AIConversation()
 
+        self._conversation.set_conversation_id(path)
+
         self._register_persistence_callbacks()
 
     def path(self) -> str:
@@ -65,6 +67,7 @@ class AITranscriptConversation:
             new_path: New path for the transcript file
         """
         self._transcript_handler.set_path(new_path)
+        self._conversation.set_conversation_id(new_path)
 
     def read(self) -> AIConversationHistory:
         """
