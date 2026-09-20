@@ -11,6 +11,9 @@ New features:
 - Added the new `export` keyword to the Menai syntax highlighter.
 - Resolving a tool approval request (approving, rejecting, or indicating uncertainty) now moves focus to the conversation
   input box so the user can continue typing immediately.
+- Choosing "Open In Editor" from a preview's context menu now opens the editor scrolled to the line that was clicked.
+  Source files map exactly; rendered markdown maps on a best-effort basis using the source line of the block under the
+  cursor.
 
 Bug fixes:
 

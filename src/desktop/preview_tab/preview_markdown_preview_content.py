@@ -145,6 +145,22 @@ class PreviewMarkdownPreviewContent(PreviewContentWidget):
         point = self._markdown_content.select_and_scroll_to_position(section_num, position)
         return self._markdown_content.mapTo(self, point)
 
+    def line_column_at(self, point: QPoint) -> tuple[int, int] | None:
+        """
+        Map a point in this widget's coordinates to a source line and column.
+
+        Delegates to the wrapped markdown content widget.  The mapping is best
+        effort for rendered markdown and exact for code-block sections.
+
+        Args:
+            point: A point in this widget's local coordinates.
+
+        Returns:
+            A (line, column) tuple (1-indexed), or None if no source line can be
+            determined for the point.
+        """
+        return self._markdown_content.line_column_at(self._markdown_content.mapFrom(self, point))
+
     def get_context_menu_actions(self) -> list[tuple[str, Callable]]:
         """
         Get context menu actions for this content.

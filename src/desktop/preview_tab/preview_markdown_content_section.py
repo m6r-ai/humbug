@@ -452,3 +452,49 @@ class PreviewMarkdownContentSection(QFrame):
         local_pos = self._text_area.mapTo(self, cursor_rect.topLeft())
 
         return local_pos
+
+    def line_column_at(self, point: QPoint) -> tuple[int, int] | None:
+        """
+        Map a point in this section's coordinates to a source line and column.
+
+        Node line numbers from the markdown AST builder are 0-based, so one is added
+        to produce the 1-based line the editor expects.  For a code-block section the
+        mapping is exact: the node's source start line is the opening fence, so the
+        first content block is the line after it, and the block number within the code
+        block is added to that.  For a markdown section the mapping is best effort: the
+        clicked block is attributed to the deepest node that produced it using the
+        renderer's recorded start blocks, then the parent chain is walked to the nearest
+        ancestor that carries a source start line, and that line is used.
+
+        Args:
+            point: A point in this section widget's local coordinates.
+
+        Returns:
+            A (line, column) tuple (1-indexed), or None if no source line can be
+            determined for the point.
+        """
+        if self._content_node is None:
+            return None
+
+        text_area_pos = self._text_area.mapFrom(self, point)
+        cursor = self._text_area.cursorForPosition(text_area_pos)
+
+        if isinstance(self._content_node, MarkdownASTCodeBlockNode):
+            if self._content_node.line_start is None:
+                return None
+
+            line = self._content_node.line_start + 2 + cursor.blockNumber()
+            column = cursor.positionInBlock() + 1
+            return (line, column)
+
+        if self._renderer is None:
+            return None
+
+        node = self._renderer.node_for_block(cursor.blockNumber())
+        while node is not None and node.line_start is None:
+            node = node.parent
+
+        if node is None or node.line_start is None:
+            return None
+
+        return (node.line_start + 1, 1)

@@ -171,6 +171,23 @@ class PreviewContentWidget(QFrame):
         """
         return QPoint(0, 0)
 
+    def line_column_at(self, _point: QPoint) -> tuple[int, int] | None:
+        """
+        Map a point in this content widget's coordinates to a source line and column.
+
+        This method maps a clicked position within the content to the corresponding
+        position in the underlying source file, so that opening the file in an editor
+        can navigate to the same place.  The default implementation returns None,
+        indicating that no mapping is available.
+
+        Args:
+            point: A point in this content widget's local coordinates.
+
+        Returns:
+            A (line, column) tuple (1-indexed), or None if no mapping is available.
+        """
+        return None
+
     def get_context_menu_actions(self) -> list[tuple[str, Callable]]:
         """
         Get context menu actions for this content.

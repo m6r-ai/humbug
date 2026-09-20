@@ -283,6 +283,28 @@ class PreviewMarkdownContent(PreviewContentWidget):
 
         return QPoint(0, 0)
 
+    def line_column_at(self, point: QPoint) -> tuple[int, int] | None:
+        """
+        Map a point in this widget's coordinates to a source line and column.
+
+        Finds the section containing the point and delegates to it.  The mapping is
+        best effort for rendered markdown and exact for code-block sections.
+
+        Args:
+            point: A point in this widget's local coordinates.
+
+        Returns:
+            A (line, column) tuple (1-indexed), or None if no section contains the
+            point or no source line can be determined.
+        """
+        for section in self._sections:
+            section_top_left = section.mapTo(self, QPoint(0, 0))
+            section_rect = section.rect().translated(section_top_left)
+            if section_rect.contains(point):
+                return section.line_column_at(section.mapFrom(self, point))
+
+        return None
+
     def get_context_menu_actions(self) -> list[tuple[str, Callable]]:
         """
         Get context menu actions for this content.

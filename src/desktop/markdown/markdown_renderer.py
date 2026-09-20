@@ -6,7 +6,7 @@ from collections.abc import Callable
 import logging
 import os
 import re
-from typing import cast
+from typing import Any, cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import (
@@ -87,6 +87,12 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Per-level list-indent at each blockquote nesting depth (empty = not in a blockquote)
         self._blockquote_bar_offsets: list[int] = []
 
+        # Maps each visited node to the document block number at which its rendering
+        # began.  Used to map a clicked document position back to the source line of the
+        # node that produced it.  Entries for the stable prefix survive incremental
+        # re-renders.
+        self._node_start_blocks: dict[MarkdownASTNode, int] = {}
+
     def apply_style(self) -> None:
         """Apply style changes."""
         self._stable_fingerprints = []
@@ -147,6 +153,47 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         return len(new_children)
 
+    def node_for_block(self, block_number: int) -> MarkdownASTNode | None:
+        """
+        Find the deepest node whose rendered output contains the given block.
+
+        Uses the block index recorded for each node during rendering to return the
+        node that most specifically produced the block, i.e. the node with the
+        greatest recorded start block at or before block_number.
+
+        Args:
+            block_number: The document block number to look up (0-indexed).
+
+        Returns:
+            The matching node, or None if no node starts at or before the given
+            block.
+        """
+        result: MarkdownASTNode | None = None
+        best_start = -1
+        for node, start in self._node_start_blocks.items():
+            if best_start <= start <= block_number:
+                best_start = start
+                result = node
+
+        return result
+
+    def visit(self, node: MarkdownASTNode) -> Any:
+        """
+        Record the block at which a node begins rendering, then dispatch to the visitor.
+
+        Every node visited is recorded, not just top-level ones, so that a clicked
+        block can be attributed to the most specific node that produced it (for
+        example a list item rather than the enclosing list).
+
+        Args:
+            node: The node being visited.
+
+        Returns:
+            The result of dispatching to the node's visitor.
+        """
+        self._node_start_blocks[node] = self._cursor.blockNumber()
+        return super().visit(node)
+
     def visit_MarkdownASTDocumentNode(self, node: MarkdownASTDocumentNode) -> None:  # pylint: disable=invalid-name
         """
         Render a document node to the QTextDocument.
@@ -176,6 +223,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         if first_changed == 0 or self._snapshot is None:
             # Nothing is reusable — full clear and re-render.
+            self._node_start_blocks.clear()
             cursor.select(QTextCursor.SelectionType.Document)
             cursor.removeSelectedText()
             cursor.setBlockFormat(self._orig_block_format)

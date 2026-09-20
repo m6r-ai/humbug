@@ -11,6 +11,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, Qt, QPoint, QTimer
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
+from editor_context.editor_context import EditorContext
+
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.file_watcher import FileWatcher
@@ -684,7 +686,7 @@ class PreviewWidget(QWidget):
             menu.addSeparator()
 
             editor_action = menu.addAction(strings.open_in_editor)
-            editor_action.triggered.connect(self._open_in_editor)
+            editor_action.triggered.connect(lambda: self._open_in_editor(pos))
 
             if MindspaceVCSPoller().has_repo():
                 diff_action = menu.addAction(strings.open_in_diff)
@@ -693,19 +695,49 @@ class PreviewWidget(QWidget):
 
         menu.exec_(self.mapToGlobal(pos))
 
-    def _open_in_editor(self) -> None:
-        """Open the current file in an editor tab."""
+    def _line_column_at(self, pos: QPoint) -> tuple[int, int] | None:
+        """
+        Map a point in this widget's coordinates to a source line and column.
+
+        Finds the content block containing the point and delegates to it.  Returns
+        None if the point is not over a content block that can be mapped.
+
+        Args:
+            pos: A point in this widget's local coordinates.
+
+        Returns:
+            A (line, column) tuple (1-indexed), or None if no mapping is available.
+        """
+        for content_block in self._content_blocks:
+            block_top_left = content_block.mapTo(self, QPoint(0, 0))
+            block_rect = content_block.rect().translated(block_top_left)
+            if block_rect.contains(pos):
+                return content_block.line_column_at(content_block.mapFrom(self, pos))
+
+        return None
+
+    def _open_in_editor(self, pos: QPoint) -> None:
+        """Open the current file in an editor tab, navigating to the clicked position."""
+        target = self._line_column_at(pos)
         contexts = MindspaceManager().mindspace().contexts()
         existing = contexts.get_by_path_and_type(self._path, "editor")
         if existing:
             contexts.focus(existing.context_id)
+            if target is None:
+                return
 
-        else:
-            contexts.open(
-                context_type="editor",
-                path=self._path,
-                title=os.path.basename(self._path),
-            )
+            editor_context = contexts.get_model(existing.context_id, EditorContext)
+            if editor_context is not None:
+                editor_context.goto_line(target[0], target[1])
+
+            return
+
+        contexts.open(
+            context_type="editor",
+            path=self._path,
+            title=os.path.basename(self._path),
+            initial_model=target,
+        )
 
     def _open_in_diff(self) -> None:
         """Open the current file in a diff tab."""

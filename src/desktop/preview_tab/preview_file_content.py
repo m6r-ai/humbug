@@ -320,6 +320,29 @@ class PreviewFileContent(PreviewContentWidget):
 
         return local_pos
 
+    def line_column_at(self, point: QPoint) -> tuple[int, int] | None:
+        """
+        Map a point in this widget's coordinates to a source line and column.
+
+        The file text is displayed verbatim, so the block number within the text
+        area is the source line number.
+
+        Args:
+            point: A point in this widget's local coordinates.
+
+        Returns:
+            A (line, column) tuple (1-indexed), or None if the point is not over
+            the text area.
+        """
+        text_area_pos = self._text_area.mapFrom(self, point)
+        if not self._text_area.rect().contains(text_area_pos):
+            return None
+
+        cursor = self._text_area.cursorForPosition(text_area_pos)
+        line = cursor.blockNumber() + 1
+        column = cursor.positionInBlock() + 1
+        return (line, column)
+
     def find_element_by_id(self, _element_id: str) -> tuple[int, int, int] | None:
         """
         Find an element with the given ID (not supported for source content).
