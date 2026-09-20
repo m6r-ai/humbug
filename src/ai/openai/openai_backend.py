@@ -15,6 +15,19 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 class OpenAIBackend(AIBackend):
     """OpenAI API backend implementation with streaming support."""
 
+    def _read_timeout(self) -> float:
+        """
+        Return the read timeout in seconds for the streaming request.
+
+        OpenAI models without reasoning tokens can work for a long time before
+        emitting any output, so we must allow for a long period of silence even
+        though the model is actively doing work.
+
+        Returns:
+            Read timeout in seconds.
+        """
+        return 300.0
+
     async def fetch_models(self) -> list[str]:
         """Fetch available model IDs from the OpenAI API."""
         url = self._api_url.replace("/chat/completions", "/models")

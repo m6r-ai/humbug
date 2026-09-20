@@ -99,6 +99,19 @@ class AIBackend(ABC):
     def _create_stream_response_handler(self) -> AIStreamResponse:
         """Abstract method to create a backend-specific stream response handler."""
 
+    def _read_timeout(self) -> float:
+        """
+        Return the read timeout in seconds for the streaming request.
+
+        Backends whose models can spend a long time working before emitting any
+        output should override this to allow for that silence.
+
+        Returns:
+            Read timeout in seconds.
+        """
+        return 30.0
+
+
     def _reasoning_model_matches(self, message: AIMessage, settings: AIConversationSettings) -> bool:
         """
         Determine whether a reasoning message from history is compatible with the current model.
@@ -180,7 +193,7 @@ class AIBackend(ABC):
         async with HttpClient(
             ssl_context=self._ssl_context,
             connect_timeout=20,
-            read_timeout=300,
+            read_timeout=self._read_timeout(),
         ) as client:
             while attempt < self._max_retries:
                 try:

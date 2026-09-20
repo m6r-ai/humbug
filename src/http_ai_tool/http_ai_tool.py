@@ -149,7 +149,7 @@ class HttpAITool(AITool):
                     type="number",
                     description="Maximum time in seconds to wait for a response. Applies to "
                                 "the read phase of each request (per-read-operation, not total). "
-                                "Default is 300 seconds if not specified.",
+                                "Default is 30 seconds if not specified.",
                     required=False
                 ),
                 AIToolParameter(
@@ -1036,7 +1036,7 @@ class HttpAITool(AITool):
 
         return result
 
-    _DEFAULT_READ_TIMEOUT: float = 300.0
+    _DEFAULT_READ_TIMEOUT: float = 30.0
 
     def _get_timeout(self, arguments: dict[str, Any]) -> float:
         """
@@ -1046,7 +1046,7 @@ class HttpAITool(AITool):
             arguments: Tool call arguments possibly containing 'timeout'.
 
         Returns:
-            Timeout in seconds, or the default of 300.0 if not specified.
+            Timeout in seconds, or the default of 30.0 if not specified.
 
         Raises:
             AIToolExecutionError: If the timeout is not a positive number.
