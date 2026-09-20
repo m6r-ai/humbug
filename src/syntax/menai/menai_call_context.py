@@ -56,6 +56,28 @@ class CallContextState:
     frames: list[Frame] = field(default_factory=list)
     quote_pending: bool = False
 
+    def clone(self) -> 'CallContextState':
+        """
+        Return an independent copy of this state.
+
+        The frame stack is copied so that the returned state shares no mutable
+        objects with this one.  This is essential when a state is persisted
+        between lines: the parser mutates its working state in place, so it
+        must never do so on a state object that is still referenced elsewhere.
+
+        Returns:
+            A deep copy of this state
+        """
+        return CallContextState(
+            frames=[Frame(
+                kind=frame.kind,
+                head_keyword=frame.head_keyword,
+                element_index=frame.element_index,
+                quoted=frame.quoted
+            ) for frame in self.frames],
+            quote_pending=self.quote_pending
+        )
+
 
 class MenaiCallContext:
     """
@@ -79,7 +101,7 @@ class MenaiCallContext:
         Returns:
             The current call-context state
         """
-        return self._state
+        return self._state.clone()
 
     def restore_state(self, state: CallContextState) -> None:
         """
@@ -88,7 +110,7 @@ class MenaiCallContext:
         Args:
             state: The state to restore
         """
-        self._state = state
+        self._state = state.clone()
 
     def process_token(self, token: Token) -> None:
         """

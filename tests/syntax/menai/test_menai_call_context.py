@@ -333,3 +333,43 @@ class TestMenaiCallContext:
         state = parser.parse(None, '((foo')
 
         assert state.paren_depth == 2
+
+
+class TestMenaiCallContextStateIsolation:
+    """Test that saved call-context state is isolated between parser runs."""
+
+    def test_saved_state_is_not_mutated_by_later_parsing(self):
+        """Test that parsing a later line leaves an earlier saved state intact."""
+        parser = MenaiParser()
+        first_state = parser.parse(None, '(letrec')
+        parser.parse(first_state, '  ((pi 3.14)')
+        second_state = parser.parse(first_state, '  ((pi 3.14)')
+
+        frames = second_state.call_context_state.frames
+        assert [frame.kind.name for frame in frames] == ['APPLICATION', 'BINDING_LIST']
+
+    def test_reparsing_a_line_does_not_corrupt_its_predecessor_state(self):
+        """Test that re-parsing a line from a saved state leaves that state unchanged."""
+        parser = MenaiParser()
+        first_state = parser.parse(None, '(let')
+        parser.parse(first_state, '  ((x 1)')
+        second_state = parser.parse(first_state, '  ((x 1)')
+
+        parser.parse(first_state, '  ((x 1)')
+        reparsed_state = parser.parse(first_state, '  ((x 1)')
+
+        assert (
+            [frame.kind.name for frame in second_state.call_context_state.frames]
+            == [frame.kind.name for frame in reparsed_state.call_context_state.frames]
+        )
+
+    def test_restoring_state_does_not_alias_it(self):
+        """Test that a restored state shares no mutable frames with its source."""
+        parser = MenaiParser()
+        first_state = parser.parse(None, '(let')
+
+        parser.parse(first_state, '((x (foo)))')
+
+        frames = first_state.call_context_state.frames
+        assert len(frames) == 1
+        assert frames[0].kind.name == 'APPLICATION'
