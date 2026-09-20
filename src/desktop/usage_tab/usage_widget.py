@@ -163,14 +163,14 @@ class UsageWidget(QWidget):
         sl.addSpacing(int(self._style_manager.message_bubble_spacing()))
 
         stat_defs = [
-            ("Input", _fmt(total_in), "Prompt and context tokens"),
+            ("Input", _fmt(total_in), "Prompt and context tokens, including cached"),
             ("Output", _fmt(total_out), "Generated response tokens"),
         ]
         if total_cr > 0:
-            stat_defs.append(("Cache hits", _fmt(total_cr), "Tokens read from cache"))
+            stat_defs.append(("Cache hits", _fmt(total_cr), "Of the input, read from cache"))
 
         if total_cw > 0:
-            stat_defs.append(("Cache writes", _fmt(total_cw), "Tokens added to cache"))
+            stat_defs.append(("Cache writes", _fmt(total_cw), "Of the input, written to cache"))
 
         cards_w = QWidget()
         cards_w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)

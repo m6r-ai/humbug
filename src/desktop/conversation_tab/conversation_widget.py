@@ -106,6 +106,10 @@ class ConversationWidget(QWidget):
 
         self._last_submitted_message: str = ""
 
+        # Cumulative token totals as of the last committed usage delta.  Used to
+        # record the usage contributed by each completed AI message.
+        self._usage_baseline: dict[str, int] | None = None
+
         # We need to track any unfinished message because it won't appear in the transcript until
         # it completes.  If we move a conversation to a new tab, we need to ensure it doesn't get lost.
         self._current_unfinished_message: AIMessage | None = None
@@ -469,7 +473,8 @@ class ConversationWidget(QWidget):
         Returns:
             Dictionary containing completion result
         """
-        messages = self._ai_conversation.get_conversation_history().get_messages()
+        history = self._ai_conversation.get_conversation_history()
+        messages = history.get_messages()
 
         if not messages:
             return {"success": False, "error": "No messages in conversation"}
@@ -498,6 +503,74 @@ class ConversationWidget(QWidget):
             }
 
         return {"success": False, "error": "Conversation ended unexpectedly"}
+
+    def _on_usage_changed(self) -> None:
+        """
+        Record the token usage contributed by the most recently completed AI message.
+
+        Invoked by the conversation history each time a message's usage enters the
+        cumulative totals, so usage is committed per message (including every
+        tool-call round trip) rather than once per submit.  The delta since the last
+        commit is recorded against the current mindspace.
+        """
+        history = self._ai_conversation.get_conversation_history()
+        counts = history.get_token_counts()
+        cache = history.get_cache_totals()
+
+        current = {
+            "input_total": counts["input_total"],
+            "output_total": counts["output_total"],
+            "cache_write_total": cache["cache_write_total"],
+            "cache_read_total": cache["cache_read_total"],
+        }
+
+        baseline = self._usage_baseline
+        self._usage_baseline = current
+
+        if baseline is None:
+            return
+
+        prompt_tokens = current["input_total"] - baseline["input_total"]
+        completion_tokens = current["output_total"] - baseline["output_total"]
+        cache_write_tokens = current["cache_write_total"] - baseline["cache_write_total"]
+        cache_read_tokens = current["cache_read_total"] - baseline["cache_read_total"]
+
+        if prompt_tokens == 0 and completion_tokens == 0 and cache_write_tokens == 0 and cache_read_tokens == 0:
+            return
+
+        settings = self.conversation_settings()
+        if settings is None:
+            return
+
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        self._mindspace_manager.mindspace().update_usage(
+            provider=settings.provider,
+            model=settings.model,
+            input_tokens=prompt_tokens,
+            output_tokens=completion_tokens,
+            cache_write_tokens=cache_write_tokens,
+            cache_read_tokens=cache_read_tokens,
+        )
+
+    def _reset_usage_baseline(self) -> None:
+        """
+        Reset the usage baseline to the current cumulative totals.
+
+        Called after loading conversation history so that only usage from subsequent
+        AI messages is recorded, and historical usage is never re-counted.
+        """
+        history = self._ai_conversation.get_conversation_history()
+        counts = history.get_token_counts()
+        cache = history.get_cache_totals()
+
+        self._usage_baseline = {
+            "input_total": counts["input_total"],
+            "output_total": counts["output_total"],
+            "cache_write_total": cache["cache_write_total"],
+            "cache_read_total": cache["cache_read_total"],
+        }
 
     def _add_message_core(
         self,
@@ -733,6 +806,10 @@ class ConversationWidget(QWidget):
         self._ai_conversation.register_callback(
             AIConversationEvent.RATE_LIMITED, self._on_rate_limited
         )
+
+        # Record usage per completed AI message as it enters the cumulative totals.
+        self._ai_conversation.get_conversation_history().set_on_usage_changed(self._on_usage_changed)
+        self._reset_usage_baseline()
 
     async def _on_rate_limited(self, message: str) -> None:
         """Emit a signal so the parent tab can show a timed status bar notice."""
@@ -2304,6 +2381,9 @@ class ConversationWidget(QWidget):
                 if msgs and msgs[-1].error:
                     self._last_error_message_widget = last_widget
                     last_widget.show_retry_ui()
+
+        # History replay must not be counted as new usage, so re-baseline here.
+        self._reset_usage_baseline()
 
         self.status_updated.emit()
 

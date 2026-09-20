@@ -193,20 +193,25 @@ class AIConversation:
         """
         self._conversation.clear()
 
-        for message in messages:
-            self._conversation.add_message(message)
+        self._conversation.begin_load()
+        try:
+            for message in messages:
+                self._conversation.add_message(message)
 
-            # Update settings if AI message
-            if message.source == AIMessageSource.AI:
-                reasoning = message.reasoning_capability if message.reasoning_capability else AIReasoningCapability.NO_REASONING
-                if message.model and message.provider:
-                    self.update_conversation_settings(AIConversationSettings(
-                        model=message.model,
-                        provider=message.provider,
-                        temperature=message.temperature,
-                        reasoning=reasoning,
-                        reasoning_effort=message.reasoning_effort,
-                    ))
+                # Update settings if AI message
+                if message.source == AIMessageSource.AI:
+                    reasoning = message.reasoning_capability if message.reasoning_capability else AIReasoningCapability.NO_REASONING
+                    if message.model and message.provider:
+                        self.update_conversation_settings(AIConversationSettings(
+                            model=message.model,
+                            provider=message.provider,
+                            temperature=message.temperature,
+                            reasoning=reasoning,
+                            reasoning_effort=message.reasoning_effort,
+                        ))
+
+        finally:
+            self._conversation.end_load()
 
     def load_history(self, history: AIConversationHistory) -> None:
         """
@@ -222,19 +227,24 @@ class AIConversation:
         self._conversation.clear()
         self._conversation.restore_attachments(history.attachments())
 
-        for message in history.get_messages():
-            self._conversation.add_message(message)
+        self._conversation.begin_load()
+        try:
+            for message in history.get_messages():
+                self._conversation.add_message(message)
 
-            if message.source == AIMessageSource.AI:
-                reasoning = message.reasoning_capability if message.reasoning_capability else AIReasoningCapability.NO_REASONING
-                if message.model and message.provider:
-                    self.update_conversation_settings(AIConversationSettings(
-                        model=message.model,
-                        provider=message.provider,
-                        temperature=message.temperature,
-                        reasoning=reasoning,
-                        reasoning_effort=message.reasoning_effort,
-                    ))
+                if message.source == AIMessageSource.AI:
+                    reasoning = message.reasoning_capability if message.reasoning_capability else AIReasoningCapability.NO_REASONING
+                    if message.model and message.provider:
+                        self.update_conversation_settings(AIConversationSettings(
+                            model=message.model,
+                            provider=message.provider,
+                            temperature=message.temperature,
+                            reasoning=reasoning,
+                            reasoning_effort=message.reasoning_effort,
+                        ))
+
+        finally:
+            self._conversation.end_load()
 
     async def submit_message(
         self,

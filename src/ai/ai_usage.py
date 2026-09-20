@@ -5,7 +5,13 @@ from dataclasses import dataclass, asdict
 
 @dataclass
 class AIUsage:
-    """Token usage information from AI responses."""
+    """
+    Token usage information from AI responses.
+
+    prompt_tokens is the total input token count and always includes any tokens
+    served from or written to the provider cache.  cache_write_tokens and
+    cache_read_tokens are subsets of prompt_tokens, not additional to it.
+    """
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int

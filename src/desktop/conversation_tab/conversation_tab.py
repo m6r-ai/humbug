@@ -330,21 +330,6 @@ class ConversationTab(TabBase):
 
     def _on_submit_finished(self, result: dict[str, Any]) -> None:
         """Handle when a submitted message finishes processing."""
-        usage_data = result.get("usage")
-        if usage_data:
-            settings = self._conversation_widget.conversation_settings()
-            if settings:
-                mindspace_manager = MindspaceManager()
-                if mindspace_manager.has_mindspace():
-                    mindspace_manager.mindspace().update_usage(
-                        provider=settings.provider,
-                        model=settings.model,
-                        input_tokens=usage_data.get("prompt_tokens", 0),
-                        output_tokens=usage_data.get("completion_tokens", 0),
-                        cache_write_tokens=usage_data.get("cache_write_tokens", 0),
-                        cache_read_tokens=usage_data.get("cache_read_tokens", 0),
-                    )
-
         self.conversation_completed.emit(result)
 
     def update_status(self) -> None:

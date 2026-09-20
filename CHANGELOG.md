@@ -17,6 +17,7 @@ Bug fixes:
 - Restore incomplete conversation and shell inputs immediately on load to avoid the user starting to type over any previous
   text.
 - Removed the stale `trace` keyword from the Menai syntax highlighter - it is no longer part of the language.
+- Fixed a problem where token usage for the usage tab was not updated correctly.
 
 Internal structure changes:
 

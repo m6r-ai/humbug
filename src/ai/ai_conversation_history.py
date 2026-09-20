@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 import uuid
+from collections.abc import Callable
 
 from ai.ai_message import AIMessage
 from ai.ai_usage import AIUsage
@@ -30,6 +31,9 @@ class AIConversationHistory:
         self._parent = parent
         self._attachments: dict[str, dict] = attachments if attachments is not None else {}
         self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
+        self._cache_totals = {"cache_write_total": 0, "cache_read_total": 0}
+        self._on_usage_changed: Callable[[], None] | None = None
+        self._loading = False
 
     def version(self) -> str:
         """Get the transcript version."""
@@ -92,11 +96,29 @@ class AIConversationHistory:
         """
         self._parent = parent
 
+    def set_on_usage_changed(self, callback: Callable[[], None] | None) -> None:
+        """
+        Set a callback invoked whenever a message's usage enters the cumulative totals.
+
+        Args:
+            callback: Zero-argument callable, or None to clear the callback.
+        """
+        self._on_usage_changed = callback
+
+    def begin_load(self) -> None:
+        """Suppress usage-change notifications while replaying historical messages."""
+        self._loading = True
+
+    def end_load(self) -> None:
+        """Resume usage-change notifications after replaying historical messages."""
+        self._loading = False
+
     def clear(self) -> None:
         """Clear the conversation history."""
         self._messages.clear()
         self._attachments.clear()
         self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
+        self._cache_totals = {"cache_write_total": 0, "cache_read_total": 0}
 
     def restore_attachments(self, attachments: dict[str, dict]) -> None:
         """
@@ -121,6 +143,14 @@ class AIConversationHistory:
             self._last_response_tokens["output"] = message.usage.completion_tokens
             self._last_response_tokens["input_total"] += message.usage.prompt_tokens
             self._last_response_tokens["output_total"] += message.usage.completion_tokens
+            self._cache_totals["cache_write_total"] += message.usage.cache_write_tokens
+            self._cache_totals["cache_read_total"] += message.usage.cache_read_tokens
+            self._notify_usage_changed()
+
+    def _notify_usage_changed(self) -> None:
+        """Invoke the usage-changed callback unless history is being replayed."""
+        if self._on_usage_changed is not None and not self._loading:
+            self._on_usage_changed()
 
     def update_message(
         self,
@@ -145,6 +175,9 @@ class AIConversationHistory:
                         self._last_response_tokens["output"] = usage.completion_tokens
                         self._last_response_tokens["input_total"] += usage.prompt_tokens
                         self._last_response_tokens["output_total"] += usage.completion_tokens
+                        self._cache_totals["cache_write_total"] += usage.cache_write_tokens
+                        self._cache_totals["cache_read_total"] += usage.cache_read_tokens
+                        self._notify_usage_changed()
 
                 if completed is not None:
                     message.completed = completed
@@ -180,6 +213,10 @@ class AIConversationHistory:
     def get_token_counts(self) -> dict[str, int]:
         """Get token counts from last response."""
         return self._last_response_tokens
+
+    def get_cache_totals(self) -> dict[str, int]:
+        """Get cumulative cache token totals across the conversation."""
+        return dict(self._cache_totals)
 
     def get_attachment_content_for_request(self, guid: str) -> tuple[str, str] | None:
         """
