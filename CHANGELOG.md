@@ -9,6 +9,8 @@ New features:
   highlighted as a function, while names in binding, parameter, field, export, pattern, namespace, and quoted positions
   are left as identifiers.
 - Added the new `export` keyword to the Menai syntax highlighter.
+- Resolving a tool approval request (approving, rejecting, or indicating uncertainty) now moves focus to the conversation
+  input box so the user can continue typing immediately.
 
 Bug fixes:
 

@@ -1087,6 +1087,9 @@ class ConversationWidget(QWidget):
 
     def _on_tool_call_approved(self, _tool_call: AIToolCall) -> None:
         """Handle user approval of tool calls."""
+        # The user has resolved the approval, so move focus to the input box
+        # where they can continue the conversation.
+        self._focus_input()
         if self._pending_tool_call_approval and self._mindspace_manager.has_mindspace():
             info = self._pending_tool_call_approval.get_tool_approval_info()
             if info and info.get("tool_call"):
@@ -1104,6 +1107,9 @@ class ConversationWidget(QWidget):
 
     def _on_tool_call_i_am_unsure(self) -> None:
         """Handle user indicating uncertainty about tool calls."""
+        # The user has resolved the approval, so move focus to the input box
+        # where they can continue the conversation.
+        self._focus_input()
         # Clean up the tool approval UI
         if self._pending_tool_call_approval:
             if self._mindspace_manager.has_mindspace():
@@ -1132,6 +1138,9 @@ class ConversationWidget(QWidget):
 
     def _on_tool_call_rejected(self, reason: str) -> None:
         """Handle user rejection of tool calls."""
+        # The user has resolved the approval, so move focus to the input box
+        # where they can continue the conversation.
+        self._focus_input()
         if self._pending_tool_call_approval and self._mindspace_manager.has_mindspace():
             info = self._pending_tool_call_approval.get_tool_approval_info()
             if info and info.get("tool_call"):
@@ -1146,6 +1155,12 @@ class ConversationWidget(QWidget):
         self._pending_tool_call_approval = None
         loop = asyncio.get_event_loop()
         loop.create_task(self._ai_conversation.reject_pending_tool_calls(reason))
+
+    def _focus_input(self) -> None:
+        """Spotlight and focus the input box so the user can type immediately."""
+        self._spotlighted_message_index = -1
+        self._input.set_spotlighted(True)
+        self._input.setFocus()
 
     def _remove_last_error_retry_ui(self) -> None:
         """Remove the retry button from the last error message widget, if present."""
