@@ -46,8 +46,8 @@ entirely with the contributor.
 Humbug has only 3 external runtime dependencies beyond the Python standard library
 (PySide6, qasync, certifi). This is a core design principle and the bar for
 adding a new one is extremely high. If you think a new external dependency is genuinely
-necessary, raise it for discussion on Discord before writing any code that relies on it.
-Do not add new external dependencies without explicit agreement.
+necessary, raise it for discussion on GitHub discussions before writing any code that relies
+on it. You will not be able to add new external dependencies without explicit agreement.
 
 The dependency graph between modules must remain acyclic. When adding a new import:
 
@@ -87,5 +87,5 @@ All checks must pass cleanly. This runs:
 
 ## Getting involved
 
-Join the [Discord server](https://discord.gg/GZhJ7ZtgwN) if you want to discuss ideas or
-coordinate on larger changes before writing code.
+Join the [GitHub Discussions](https://github.com/m6r-ai/humbug/discussions) if you want to
+discuss ideas or coordinate on larger changes before writing code.

@@ -201,12 +201,12 @@ Humbug will run with local AI models via Ollama or VLLM, and will also run with 
 - **Blog posts:** [Dave's blog posts about Humbug and Menai](https://davehudson.io/blog)
 - **Developer notes:** [Dave's project notes](https://davehudson.io/notes)
 - **Menai summary:** [Menai project page](https://davehudson.io/projects/menai)
-- **Discord:** [Discord](https://discord.gg/GZhJ7ZtgwN)
+- **GitHub discussions:** [GitHub discussions](https://github.com/m6r-ai/humbug/discussions)
 - **YouTube:** [@m6rai on YouTube](https://youtube.com/@m6rai)
 
 ## Get involved
 
-Humbug is open source and the project welcomes contributions. If you're interested in helping, join the Discord server.
+Humbug is open source and the project welcomes contributions. If you're interested in helping, join the GitHub discussions.
 
 If you plan to contribute changes, see [CONTRIBUTING.md](./CONTRIBUTING.md) for coding standards and how to verify your work.
 
