@@ -64,6 +64,7 @@ class AIModel:
         supported_reasoning_efforts: list[str] | None = None,
         temperature_incompatible_efforts: set[str] | None = None,
         adaptive_thinking_only: bool = False,
+        tools_require_no_reasoning_effort: bool = False,
     ):
         """
         Initialize an AI model configuration.
@@ -84,6 +85,10 @@ class AIModel:
                 support (e.g. Anthropic thinking mode disables temperature).
             adaptive_thinking_only: If True, the model only supports adaptive thinking
                 (thinking: {type: "adaptive"}) and rejects manual budget-based thinking.
+            tools_require_no_reasoning_effort: If True, the provider only accepts function
+                tools on the chat completions endpoint when reasoning effort is 'none'.
+                Tools take precedence over reasoning, so the effort is forced to 'none'
+                whenever tools are present.
         """
         self.name = name
         self.provider = provider
@@ -96,6 +101,7 @@ class AIModel:
         self.supported_reasoning_efforts: list[str] = supported_reasoning_efforts or []
         self.temperature_incompatible_efforts: set[str] = temperature_incompatible_efforts or set()
         self.adaptive_thinking_only: bool = adaptive_thinking_only
+        self.tools_require_no_reasoning_effort: bool = tools_require_no_reasoning_effort
 
     def supports_tools(self) -> bool:
         """Check if this model supports any tool calling capabilities."""

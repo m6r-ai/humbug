@@ -7,6 +7,7 @@ from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessageSource
 from ai.ai_conversation_history import AIConversationHistory
+from ai.ai_model import AIReasoningEffort
 from ai.openai.openai_stream_response import OpenAIStreamResponse
 from http_client import HttpClient
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
@@ -245,18 +246,36 @@ class OpenAIBackend(AIBackend):
         if AIConversationSettings.supports_temperature(settings.model, settings.provider):
             data["temperature"] = settings.temperature
 
-        # Add reasoning effort if the model supports variable effort levels
-        efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model, settings.provider)
-        if efforts and settings.reasoning_effort is not None:
-            data["reasoning_effort"] = settings.reasoning_effort
-
         # Add tools if supported
+        tools_included = False
         if self._supports_tools(settings):
             tool_definitions = self._tool_manager.get_tool_definitions()
             if tool_definitions:
                 data["tools"] = [self._format_tool_definition(tool_def) for tool_def in tool_definitions]
                 data["tool_choice"] = "auto"
+                tools_included = True
                 self._logger.debug("Added %d tool definitions for openai", len(tool_definitions))
+
+        # Add reasoning effort if the model supports variable effort levels.  Some models
+        # only accept function tools on the chat completions endpoint when reasoning
+        # effort is 'none', so tools take precedence and the effort is forced to 'none'.
+        efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model, settings.provider)
+        if efforts and settings.reasoning_effort is not None:
+            model_config = AIConversationSettings.find_by_model_and_provider(settings.model, settings.provider)
+            force_none = (
+                tools_included
+                and model_config is not None
+                and model_config.tools_require_no_reasoning_effort
+            )
+            if force_none:
+                self._logger.debug(
+                    "Forcing reasoning_effort 'none' for %s because tools are present",
+                    settings.model,
+                )
+                data["reasoning_effort"] = AIReasoningEffort.NONE
+
+            else:
+                data["reasoning_effort"] = settings.reasoning_effort
 
         # Build headers
         headers = {

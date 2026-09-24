@@ -47,6 +47,25 @@ class AIConversationSettings:
             ],
             adaptive_thinking_only=True,
         ),
+        ("claude-opus-5-5", "anthropic"): AIModel(
+            name="claude-opus-5-5",
+            provider="anthropic",
+            display_name="Claude Opus 5.5",
+            context_window=1000000,
+            max_output_tokens=64000,  # This is actually 128k but that's too much
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+            adaptive_thinking_only=True,
+        ),
         ("claude-opus-5", "anthropic"): AIModel(
             name="claude-opus-5",
             provider="anthropic",
@@ -389,6 +408,61 @@ class AIConversationSettings:
         ),
 
         # OpenAI models
+        ("gpt-6-astra", "openai"): AIModel(
+            name="gpt-6-astra",
+            provider="openai",
+            display_name="GPT 6 Astra",
+            context_window=1050000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.NO_TOOLS,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
+        ("gpt-6-sol", "openai"): AIModel(
+            name="gpt-6-sol",
+            provider="openai",
+            display_name="GPT 6 Sol",
+            context_window=1050000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+            tools_require_no_reasoning_effort=True,
+        ),
+        ("gpt-6-luna", "openai"): AIModel(
+            name="gpt-6-luna",
+            provider="openai",
+            display_name="GPT 6 Luna",
+            context_window=1050000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+            tools_require_no_reasoning_effort=True,
+        ),
         ("gpt-5.6-sol", "openai"): AIModel(
             name="gpt-5.6-sol",
             provider="openai",
