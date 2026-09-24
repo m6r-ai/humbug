@@ -5,15 +5,17 @@ from difflib import unified_diff
 from typing import Any, cast
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
-from PySide6.QtCore import Qt, QRect, Signal, QTimer, QRegularExpression
+from PySide6.QtCore import Qt, QPoint, QRect, Signal, QTimer, QRegularExpression
 from PySide6.QtGui import (
     QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
     QResizeEvent, QPaintEvent, QTextDocument, QTextBlock, QContextMenuEvent
 )
 
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
+from diff_context.diff_context import DiffContext
 from editor_context.editor_context_document import EditorContextDocument
 from mindspace.mindspace_settings import MindspaceSettings
+from preview_context.preview_context import PreviewContext
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils, Token, TokenType
 
 from desktop.code_block_highlighter import CodeBlockHighlighter, CodeBlockHighlighterBlockData
@@ -2230,13 +2232,15 @@ class EditorWidget(QPlainTextEdit):
         if self._path:
             menu.addSeparator()
 
+            line = self._line_at_position(event.pos())
+
             preview_action = menu.addAction(strings.open_in_preview)
-            preview_action.triggered.connect(self._open_in_preview)
+            preview_action.triggered.connect(lambda: self._open_in_preview(line))
 
             if MindspaceVCSPoller().has_repo():
                 diff_action = menu.addAction(strings.open_in_diff)
                 diff_action.setEnabled(MindspaceVCSPoller().has_vcs_changes(self._path))
-                diff_action.triggered.connect(self._open_in_diff)
+                diff_action.triggered.connect(lambda: self._open_in_diff(line))
 
         menu.exec_(event.globalPos())
 
@@ -2244,8 +2248,29 @@ class EditorWidget(QPlainTextEdit):
         """Delete the currently selected text."""
         self.textCursor().removeSelectedText()
 
-    def _open_in_preview(self) -> None:
-        """Open the current file in a preview tab."""
+    def _line_at_position(self, pos: QPoint) -> int:
+        """
+        Return the 1-based line number at a point in this widget's coordinates.
+
+        The point is mapped through the viewport, since the editor's viewport is
+        inset by the line number area and scrollbars.
+
+        Args:
+            pos: A point in this widget's local coordinates.
+
+        Returns:
+            The 1-based line number under the point.
+        """
+        viewport_pos = self.viewport().mapFrom(self, pos)
+        return self.cursorForPosition(viewport_pos).blockNumber() + 1
+
+    def _open_in_preview(self, line: int) -> None:
+        """
+        Open the current file in a preview tab, scrolled to the given line.
+
+        Args:
+            line: 1-based source line to bring into view.
+        """
         mindspace_manager = MindspaceManager()
         if not mindspace_manager.has_mindspace():
             return
@@ -2254,16 +2279,25 @@ class EditorWidget(QPlainTextEdit):
         existing = contexts.get_by_path_and_type(self._path, "preview")
         if existing:
             contexts.focus(existing.context_id)
+            preview_context = contexts.get_model(existing.context_id, PreviewContext)
+            if preview_context is not None:
+                preview_context.scroll_to_line(line)
 
         else:
             contexts.open(
                 context_type="preview",
                 path=self._path,
                 title=os.path.basename(self._path),
+                initial_model=line,
             )
 
-    def _open_in_diff(self) -> None:
-        """Open the current file in a diff tab."""
+    def _open_in_diff(self, line: int) -> None:
+        """
+        Open the current file in a diff tab, scrolled to the given line.
+
+        Args:
+            line: 1-based working-tree line to bring into view.
+        """
         mindspace_manager = MindspaceManager()
         if not mindspace_manager.has_mindspace():
             return
@@ -2272,10 +2306,14 @@ class EditorWidget(QPlainTextEdit):
         existing = contexts.get_by_path_and_type(self._path, "diff")
         if existing:
             contexts.focus(existing.context_id)
+            diff_context = contexts.get_model(existing.context_id, DiffContext)
+            if diff_context is not None:
+                diff_context.scroll_to_line(line)
 
         else:
             contexts.open(
                 context_type="diff",
                 path=self._path,
                 title=os.path.basename(self._path),
+                initial_model=line,
             )

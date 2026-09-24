@@ -498,3 +498,46 @@ class PreviewMarkdownContentSection(QFrame):
             return None
 
         return (node.line_start + 1, 1)
+
+    def position_for_line(self, line: int) -> tuple[int, int] | None:
+        """
+        Map a source line to a section and text position within this section.
+
+        This is the inverse of line_column_at.  For a code-block section the
+        mapping is exact: the node's source start line is the opening fence, so the
+        source line is offset by the fence and the header to find the document
+        block.  For a markdown section the renderer is asked which rendered block
+        corresponds to the source line, and the start of that block is returned.
+
+        Args:
+            line: A 1-indexed source line.
+
+        Returns:
+            A (0, position) tuple, or None if the line cannot be mapped.
+        """
+        if self._content_node is None:
+            return None
+
+        if isinstance(self._content_node, MarkdownASTCodeBlockNode):
+            if self._content_node.line_start is None:
+                return None
+
+            block_number = line - self._content_node.line_start - 2
+            block = self._text_area.document().findBlockByNumber(block_number)
+            if not block.isValid():
+                return None
+
+            return (0, block.position())
+
+        if self._renderer is None:
+            return None
+
+        rendered_block = self._renderer.block_for_line(line)
+        if rendered_block is None:
+            return None
+
+        block = self._text_area.document().findBlockByNumber(rendered_block)
+        if not block.isValid():
+            return None
+
+        return (0, block.position())

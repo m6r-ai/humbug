@@ -1156,3 +1156,28 @@ class PreviewWidget(QWidget):
         except Exception as e:
             self._logger.error("Error scrolling to position: %s", e, exc_info=True)
             return False
+
+    def scroll_to_line(self, line: int) -> bool:
+        """
+        Scroll to the content that corresponds to a source line.
+
+        Finds the first content block that can map the source line and scrolls it
+        to the centre of the viewport.
+
+        Args:
+            line: A 1-indexed source line.
+
+        Returns:
+            True if the line was mapped and scrolled to, False otherwise.
+        """
+        for block_index, content_block in enumerate(self._content_blocks):
+            position = content_block.position_for_line(line)
+            if position is None:
+                continue
+
+            section_index, char_position = position
+            return self.scroll_to_content_position(
+                block_index, section_index, char_position, "center"
+            )
+
+        return False

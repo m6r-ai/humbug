@@ -132,14 +132,34 @@ def _create_preview_tab(
     info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> PreviewTab:
     """Context factory for PreviewTab."""
-    return PreviewTab(info.context_id, info.path, parent)
+    tab = PreviewTab(info.context_id, info.path, parent)
+    line = _registry.get_model(info.context_id, int)
+    if line is not None:
+        # Zero-delay timer deferring the jump until the tab is laid out. Parented to
+        # the tab so it is destroyed with it and can never fire after teardown.
+        goto_timer = QTimer(tab)
+        goto_timer.setSingleShot(True)
+        goto_timer.timeout.connect(lambda: tab.scroll_to_line(line))
+        goto_timer.start(0)
+
+    return tab
 
 
 def _create_diff_tab(
     info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> DiffTab:
     """Context factory for DiffTab."""
-    return DiffTab(info.context_id, info.path, parent)
+    tab = DiffTab(info.context_id, info.path, parent)
+    line = _registry.get_model(info.context_id, int)
+    if line is not None:
+        # Zero-delay timer deferring the jump until the tab is laid out. Parented to
+        # the tab so it is destroyed with it and can never fire after teardown.
+        goto_timer = QTimer(tab)
+        goto_timer.setSingleShot(True)
+        goto_timer.timeout.connect(lambda: tab.scroll_to_line(line))
+        goto_timer.start(0)
+
+    return tab
 
 
 def _create_log_tab(

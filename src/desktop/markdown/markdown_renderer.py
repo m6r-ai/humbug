@@ -177,6 +177,40 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         return result
 
+    def block_for_line(self, line: int) -> int | None:
+        """
+        Find the rendered block that corresponds to a 1-based source line.
+
+        Selects the node whose source range contains the line, preferring the most
+        specific (deepest) node, and returns the document block at which that node
+        began rendering.  Nodes without a recorded source range are skipped, and a
+        node that has a source range but was never rendered (no recorded start
+        block) is also skipped.
+
+        Args:
+            line: The 1-based source line to locate.
+
+        Returns:
+            The 0-indexed document block number, or None if no rendered node covers
+            the line.
+        """
+        source_line = line - 1
+        best_block: int | None = None
+        best_start = -1
+        for node, start in self._node_start_blocks.items():
+            if node.line_start is None:
+                continue
+
+            line_end = node.line_end if node.line_end is not None else node.line_start
+            if not node.line_start <= source_line <= line_end:
+                continue
+
+            if node.line_start >= best_start:
+                best_start = node.line_start
+                best_block = start
+
+        return best_block
+
     def visit(self, node: MarkdownASTNode) -> Any:
         """
         Record the block at which a node begins rendering, then dispatch to the visitor.

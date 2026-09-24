@@ -191,6 +191,9 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 ### `src/diff/`
 Unified diff parsing and application with fuzzy matching.
 
+### `src/diff_context/`
+Context model for open diff tabs (`DiffContext`).
+
 ### `src/document_converter_ai_tool/`
 AI tool implementation for converting documents between supported formats (e.g. Markdown ↔ DOCX).
 Both input and output paths must be inside the mindspace. Write operations require user authorization

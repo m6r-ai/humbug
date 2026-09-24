@@ -188,6 +188,23 @@ class PreviewContentWidget(QFrame):
         """
         return None
 
+    def position_for_line(self, _line: int) -> tuple[int, int] | None:
+        """
+        Map a source line to a section and text position within this content.
+
+        This is the inverse of line_column_at: given a 1-indexed source line it
+        returns the section index and character position that should be scrolled
+        to.  The default implementation returns None, indicating that no mapping is
+        available.
+
+        Args:
+            line: A 1-indexed source line.
+
+        Returns:
+            A (section_index, position) tuple, or None if no mapping is available.
+        """
+        return None
+
     def get_context_menu_actions(self) -> list[tuple[str, Callable]]:
         """
         Get context menu actions for this content.

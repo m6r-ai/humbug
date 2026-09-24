@@ -305,6 +305,27 @@ class PreviewMarkdownContent(PreviewContentWidget):
 
         return None
 
+    def position_for_line(self, line: int) -> tuple[int, int] | None:
+        """
+        Map a source line to a section and text position within this content.
+
+        Finds the section that can map the line and delegates to it.  The mapping
+        is best effort for rendered markdown and exact for code-block sections.
+
+        Args:
+            line: A 1-indexed source line.
+
+        Returns:
+            A (section_index, position) tuple, or None if no section can map the
+            line.
+        """
+        for i, section in enumerate(self._sections):
+            position = section.position_for_line(line)
+            if position is not None:
+                return (i, position[1])
+
+        return None
+
     def get_context_menu_actions(self) -> list[tuple[str, Callable]]:
         """
         Get context menu actions for this content.

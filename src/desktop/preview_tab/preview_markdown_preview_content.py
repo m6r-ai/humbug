@@ -161,6 +161,21 @@ class PreviewMarkdownPreviewContent(PreviewContentWidget):
         """
         return self._markdown_content.line_column_at(self._markdown_content.mapFrom(self, point))
 
+    def position_for_line(self, line: int) -> tuple[int, int] | None:
+        """
+        Map a source line to a section and text position within this content.
+
+        Delegates to the wrapped markdown content widget.  The mapping is best
+        effort for rendered markdown and exact for code-block sections.
+
+        Args:
+            line: A 1-indexed source line.
+
+        Returns:
+            A (section_index, position) tuple, or None if the line cannot be mapped.
+        """
+        return self._markdown_content.position_for_line(line)
+
     def get_context_menu_actions(self) -> list[tuple[str, Callable]]:
         """
         Get context menu actions for this content.

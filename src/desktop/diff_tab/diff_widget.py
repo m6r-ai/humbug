@@ -346,6 +346,40 @@ class DiffWidget(QWidget):
 
         return 1
 
+    def scroll_to_line(self, line: int) -> bool:
+        """
+        Scroll the diff so the working-tree line is centred in the viewport.
+
+        Finds the row whose right-side line number matches *line*.  When no row
+        carries that exact line (for example the line sits inside a removed block
+        or beyond the diffed region), the nearest preceding row with a right-side
+        line number is used instead.
+
+        Args:
+            line: 1-based working-tree line to bring into view.
+
+        Returns:
+            True if a row was found and scrolled to, False if the diff is empty.
+        """
+        if not self._rows:
+            return False
+
+        target_block: int | None = None
+        for i, row in enumerate(self._rows):
+            if row.right_line_no is None:
+                continue
+
+            if row.right_line_no > line:
+                break
+
+            target_block = i
+
+        if target_block is None:
+            target_block = 0
+
+        self._start_smooth_scroll(self._primary_pane().target_scroll_for_block(target_block))
+        return True
+
     def load_diff(self, initial_load: bool = False) -> None:
         """
         Fetch both file versions and display the full diff.

@@ -97,6 +97,7 @@ class PreviewTab(TabBase):
             path=self._path,
             content_blocks=self.get_content_blocks(),
             on_scroll_to_position=self.scroll_to_content_position,
+            on_scroll_to_line=self.scroll_to_line,
         )
         registry.register_model(self._tab_id, preview_context)
 
@@ -141,6 +142,18 @@ class PreviewTab(TabBase):
         """
         # Delegate to the preview content widget
         self._preview_content_widget.scroll_to_target(anchor)
+
+    def scroll_to_line(self, line: int) -> bool:
+        """
+        Scroll the preview to the content corresponding to a source line.
+
+        Args:
+            line: 1-based source line to bring into view.
+
+        Returns:
+            True if the line was mapped and scrolled to, False otherwise.
+        """
+        return self._preview_content_widget.scroll_to_line(line)
 
     def _on_open_link(self, url: str) -> None:
         """

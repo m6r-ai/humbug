@@ -6,6 +6,8 @@ import os
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import QRegularExpression
 
+from context.context_registry import ContextRegistry
+from diff_context.diff_context import DiffContext
 from editor_context.editor_context import EditorContext
 from git import GitNotFoundError, find_repo_root
 
@@ -71,6 +73,27 @@ class DiffTab(TabBase):
 
         self.update_status()
         self.apply_style()
+
+    def register_context_models(self, registry: ContextRegistry) -> None:
+        """Register the DiffContext with the registry."""
+        diff_context = DiffContext(
+            context_id=self._tab_id,
+            path=self._path,
+            on_scroll_to_line=self.scroll_to_line,
+        )
+        registry.register_model(self._tab_id, diff_context)
+
+    def scroll_to_line(self, line: int) -> bool:
+        """
+        Scroll the diff to the working-tree line.
+
+        Args:
+            line: 1-based working-tree line to bring into view.
+
+        Returns:
+            True if a row was found and scrolled to, False otherwise.
+        """
+        return self._diff_widget.scroll_to_line(line)
 
     def _read_view_mode(self) -> DiffViewMode:
         """

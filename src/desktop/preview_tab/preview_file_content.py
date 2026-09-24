@@ -343,6 +343,26 @@ class PreviewFileContent(PreviewContentWidget):
         column = cursor.positionInBlock() + 1
         return (line, column)
 
+    def position_for_line(self, line: int) -> tuple[int, int] | None:
+        """
+        Map a source line to a section and text position within this content.
+
+        The file text is displayed verbatim, so the source line is the document
+        block number.  The returned position is the start of that block.
+
+        Args:
+            line: A 1-indexed source line.
+
+        Returns:
+            A (0, position) tuple, or None if the line is outside the document.
+        """
+        document = self._text_area.document()
+        block = document.findBlockByNumber(line - 1)
+        if not block.isValid():
+            return None
+
+        return (0, block.position())
+
     def find_element_by_id(self, _element_id: str) -> tuple[int, int, int] | None:
         """
         Find an element with the given ID (not supported for source content).

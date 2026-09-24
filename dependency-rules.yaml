@@ -69,6 +69,7 @@ modules:
       - conversation_context
       - delegate_ai_tool
       - diff
+      - diff_context
       - document_converter_ai_tool
       - editor_ai_tool
       - editor_context
@@ -96,6 +97,11 @@ modules:
       - "qasync"
 
   diff:
+    internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  diff_context:
     internal_dependencies: []
     external_dependencies:
       - "standard_library"

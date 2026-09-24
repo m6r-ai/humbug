@@ -25,6 +25,7 @@ class PreviewContext:
         path: str,
         content_blocks: list[tuple[Any, str]],
         on_scroll_to_position: Callable | None = None,
+        on_scroll_to_line: Callable | None = None,
     ) -> None:
         """
         Initialise the preview context.
@@ -37,11 +38,14 @@ class PreviewContext:
             on_scroll_to_position: Optional callable(block_index, section_index,
                 text_position, viewport_position) invoked when the AI requests a
                 scroll.
+            on_scroll_to_line: Optional callable(line) invoked when a source line
+                should be scrolled into view (e.g. when opened from the editor).
         """
         self._context_id = context_id
         self._path = path
         self._content_blocks = content_blocks
         self._on_scroll_to_position = on_scroll_to_position
+        self._on_scroll_to_line = on_scroll_to_line
 
     def context_id(self) -> str:
         """Return the stable context identifier."""
@@ -229,3 +233,22 @@ class PreviewContext:
             )
 
         return True
+
+    def scroll_to_line(self, line: int) -> bool:
+        """
+        Request that the frontend scroll the given source line into view.
+
+        Fires the on_scroll_to_line callback if one was supplied.  A CLI frontend
+        would supply None and this becomes a no-op.
+
+        Args:
+            line: 1-based source line to bring into view.
+
+        Returns:
+            True if the scroll was requested successfully, False if no callback
+            was supplied.
+        """
+        if self._on_scroll_to_line is None:
+            return False
+
+        return bool(self._on_scroll_to_line(line))
