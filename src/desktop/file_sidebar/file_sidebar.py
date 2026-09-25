@@ -64,6 +64,18 @@ class FileSidebar(SidebarBase):
             self._language_manager.strings().mindspace_files,
             self
         )
+        self._new_folder_button = self._header.add_action_button(
+            "new-folder",
+            self._language_manager.strings().new_folder,
+            lambda: self._start_new_folder_creation(self._mindspace_path or "")
+        )
+        self._new_folder_button.setEnabled(False)
+        self._new_file_button = self._header.add_action_button(
+            "plus",
+            self._language_manager.strings().new_file,
+            lambda: self._start_new_file_creation(self._mindspace_path or "")
+        )
+        self._new_file_button.setEnabled(False)
         layout.addWidget(self._header)
 
         # Create the three coordinated widgets and wrap them in the container.
@@ -1040,12 +1052,17 @@ class FileSidebar(SidebarBase):
 
         if not path:
             # Clear the model when no mindspace is active
+            self._new_folder_button.setEnabled(False)
+            self._new_file_button.setEnabled(False)
             self._filter_model.set_mindspace_root("")
             self._breadcrumb_bar.set_root_path("")
             self._bc_container.set_root_path("")
             # Configure tree view for empty path
             self._bc_container.configure_tree_for_path("")
             return
+
+        self._new_folder_button.setEnabled(True)
+        self._new_file_button.setEnabled(True)
 
         parent_path = os.path.dirname(path)
         self._fs_model.setRootPath(parent_path)
@@ -1091,6 +1108,8 @@ class FileSidebar(SidebarBase):
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
         self._header.set_title(self._language_manager.strings().mindspace_files)
+        self._new_folder_button.setToolTip(self._language_manager.strings().new_folder)
+        self._new_file_button.setToolTip(self._language_manager.strings().new_file)
         self.apply_style()
 
     def apply_style(self) -> None:

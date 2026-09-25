@@ -18,6 +18,8 @@ New features:
 - Added support for GPT 6 Astra, Sol, and Luna.
 - The OpenAI backend now uses the Responses API instead of Chat Completions, enabling tool calling and advanced
   reasoning on newer OpenAI models.
+- Added a feature to create folders and new conversations in the conversation sidebar view.
+- Added a feature to create folders and new files in the file sidebar view.
 
 Bug fixes:
 
