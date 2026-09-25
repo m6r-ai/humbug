@@ -50,7 +50,7 @@ class VCSSidebarDelegate(QStyledItemDelegate):
             bg = self._style_manager.get_color(ColorRole.TEXT_SELECTED)
 
         elif is_hovered:
-            bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_HOVER)
+            bg = self._style_manager.get_color(ColorRole.BACKGROUND_TERTIARY_HOVER)
 
         else:
             bg = self._style_manager.get_color(ColorRole.MINDSPACE_BACKGROUND)
@@ -58,19 +58,35 @@ class VCSSidebarDelegate(QStyledItemDelegate):
         painter.fillRect(rect, bg)
 
         badge_width = self._badge_width()
+        pad = round(4 * self._style_manager.zoom_factor())
 
-        badge_rect = QRect(
-            rect.left(),
-            rect.top(),
-            badge_width,
-            rect.height(),
-        )
-        path_rect = QRect(
-            rect.left() + badge_width,
-            rect.top(),
-            rect.width() - badge_width,
-            rect.height(),
-        )
+        if painter.layoutDirection() == Qt.LayoutDirection.LeftToRight:
+            badge_rect = QRect(
+                rect.left() + pad,
+                rect.top(),
+                badge_width,
+                rect.height(),
+            )
+            path_rect = QRect(
+                rect.left() + pad + badge_width,
+                rect.top(),
+                rect.width() - pad - badge_width,
+                rect.height(),
+            )
+
+        else:
+            badge_rect = QRect(
+                rect.right() - pad - badge_width,
+                rect.top(),
+                badge_width,
+                rect.height(),
+            )
+            path_rect = QRect(
+                rect.left(),
+                rect.top(),
+                rect.width() - pad - badge_width,
+                rect.height(),
+            )
 
         # Retrieve the display text stored as "B  path/to/file".
         display_text: str = index.data(Qt.ItemDataRole.DisplayRole) or ""

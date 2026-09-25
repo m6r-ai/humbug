@@ -31,6 +31,7 @@ Bug fixes:
 - Fixed a problem where token usage for the usage tab was not updated correctly.
 - Fixed a problem where changing provider in the conversation settings did not correctly update model reasoning.
 - Hover effects in the sidebar view are now all consistent.
+- Fixed the right-to-left rendering for the VCS list view when rendering in Arabic.
 
 Internal structure changes:
 

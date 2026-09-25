@@ -88,8 +88,7 @@ def build_tree_pane_stylesheet(
 def build_list_pane_stylesheet(
     style_manager: StyleManager,
     container_selector: str,
-    list_selector: str,
-    layout_direction: Qt.LayoutDirection,
+    list_selector: str
 ) -> str:
     """Build a stylesheet for a list-based mindspace pane."""
     panel_bg = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
@@ -97,7 +96,6 @@ def build_list_pane_stylesheet(
     hover = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
     selected = style_manager.get_color_str(ColorRole.TEXT_SELECTED)
     text = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-    padding = "2px 0 0 5px" if layout_direction == Qt.LayoutDirection.LeftToRight else "2px 5px 0 0"
 
     return f"""
         {container_selector} {{
@@ -107,7 +105,7 @@ def build_list_pane_stylesheet(
             background-color: {list_bg};
             color: {text};
             outline: none;
-            padding: {padding};
+            padding: 2px 0 0 0;
         }}
         {list_selector}::item {{
             color: {text};

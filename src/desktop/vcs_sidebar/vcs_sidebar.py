@@ -192,8 +192,7 @@ class VCSSidebar(SidebarBase):
         self.setStyleSheet(build_list_pane_stylesheet(
             self._style_manager,
             "VCSSidebar",
-            "QListWidget#_list_widget",
-            self.layoutDirection(),
+            "QListWidget#_list_widget"
         ))
 
     def _on_repo_state_changed(self, has_repo: bool) -> None:
