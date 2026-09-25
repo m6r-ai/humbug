@@ -22,9 +22,10 @@ class SidebarSectionHeader(QWidget):
         self._action_buttons: list[QToolButton] = []
 
         self._layout = QHBoxLayout(self)
-        spacing = 5
+        spacing = 4
+        inset = 8
         self._layout.setSpacing(spacing)
-        self._layout.setContentsMargins(spacing + 3, spacing, spacing, spacing)
+        self._layout.setContentsMargins(inset, spacing, inset, spacing)
 
         self._title_label = QLabel(title, self)
         self._title_label.setIndent(0)
@@ -68,7 +69,6 @@ class SidebarSectionHeader(QWidget):
         text = sm.get_color_str(ColorRole.TEXT_INACTIVE)
         button_hover = sm.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
         button_pressed = sm.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)
-        radius = sm.radius()
 
         font = self._title_label.font()
         font.setPointSizeF(base_font_size * zoom_factor)
@@ -89,7 +89,8 @@ class SidebarSectionHeader(QWidget):
             QWidget#SidebarSectionHeader QToolButton#_action_button {{
                 background-color: transparent;
                 border: none;
-                border-radius: {radius}px;
+                padding: 0px;
+                margin: 0px;
             }}
             QWidget#SidebarSectionHeader QToolButton#_action_button:hover {{
                 background-color: {button_hover};
@@ -109,12 +110,12 @@ class SidebarSectionHeader(QWidget):
             return
 
         sm = self._style_manager
-        icon_size = sm.scale(14)
-        button_size = sm.scale(22)
+        icon_base_size = 14
+        icon_scaled_size = sm.scale(icon_base_size)
+        icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
         icon = QIcon()
-        icon.addPixmap(sm.scale_icon(icon_name, 14), QIcon.Mode.Normal)
-        icon.addPixmap(sm.scale_icon(f"inactive-{icon_name}", 14), QIcon.Mode.Disabled)
+        icon.addPixmap(sm.scale_icon(icon_name, icon_base_size), QIcon.Mode.Normal)
+        icon.addPixmap(sm.scale_icon(f"inactive-{icon_name}", icon_base_size), QIcon.Mode.Disabled)
         button.setIcon(icon)
-        button.setIconSize(QSize(icon_size, icon_size))
-        button.setFixedSize(button_size, button_size)
+        button.setIconSize(icon_size)

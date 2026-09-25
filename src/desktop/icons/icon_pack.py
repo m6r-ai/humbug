@@ -95,15 +95,13 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
     "plus": '''
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
             <path stroke="{color}" stroke-width="6" fill="none"
-                d="M32,14 L32,50 M14,32 L50,32" stroke-linecap="round"/>
+                d="M32,8 L32,56 M8,32 L56,32" stroke-linecap="round"/>
         </svg>
     ''',
     "new-folder": '''
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-            <path stroke="{color}" stroke-width="5" fill="none" stroke-linejoin="round" stroke-linecap="round"
-                d="M8,16 L26,16 L30,22 L56,22 L56,50 L8,50 Z"/>
-            <path stroke="{color}" stroke-width="5" fill="none" stroke-linecap="round"
-                d="M32,30 L32,44 M25,37 L39,37"/>
+            <path stroke="{color}" stroke-width="6" fill="none" stroke-linejoin="round" stroke-linecap="round"
+                d="M8,17 C8,17 23,17 26,17 C29,17 30,11 32,11 C34,11 56,11 56,11 L56,53 L8,53 L8,17"/>
         </svg>
     ''',
     "expand-right": '''
