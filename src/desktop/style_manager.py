@@ -297,6 +297,8 @@ class StyleManager(QObject):
             self._write_icon(f'bright-expand-left-{suffix}.svg', theme_icon_svg("expand-left", bright_color))
             self._write_icon(f'inactive-cog-{suffix}.svg', theme_icon_svg("cog", inactive_color))
             self._write_icon(f'bright-cog-{suffix}.svg', theme_icon_svg("cog", bright_color))
+            self._write_icon(f'inactive-plus-{suffix}.svg', theme_icon_svg("plus", inactive_color))
+            self._write_icon(f'inactive-new-folder-{suffix}.svg', theme_icon_svg("new-folder", inactive_color))
 
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)

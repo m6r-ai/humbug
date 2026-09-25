@@ -56,7 +56,7 @@ class SidebarSectionHeader(QWidget):
         button.clicked.connect(callback)
         self._layout.addWidget(button)
         self._action_buttons.append(button)
-        self.apply_style()
+        self._style_button(button)
         return button
 
     def apply_style(self) -> None:
@@ -74,13 +74,8 @@ class SidebarSectionHeader(QWidget):
         font.setPointSizeF(base_font_size * zoom_factor)
         self._title_label.setFont(font)
 
-        icon_size = sm.scale(14)
-        button_size = sm.scale(22)
         for button in self._action_buttons:
-            icon_name = button.property("icon_name")
-            button.setIcon(QIcon(sm.scale_icon(icon_name, 14)))
-            button.setIconSize(QSize(icon_size, icon_size))
-            button.setFixedSize(button_size, button_size)
+            self._style_button(button)
 
         self.setStyleSheet(f"""
             QWidget#SidebarSectionHeader {{
@@ -102,4 +97,24 @@ class SidebarSectionHeader(QWidget):
             QWidget#SidebarSectionHeader QToolButton#_action_button:pressed {{
                 background-color: {button_pressed};
             }}
+            QWidget#SidebarSectionHeader QToolButton#_action_button:disabled {{
+                background-color: transparent;
+            }}
         """)
+
+    def _style_button(self, button: QToolButton) -> None:
+        """Set one action button's icon (normal and disabled variants) and size."""
+        icon_name = button.property("icon_name")
+        if not isinstance(icon_name, str):
+            return
+
+        sm = self._style_manager
+        icon_size = sm.scale(14)
+        button_size = sm.scale(22)
+
+        icon = QIcon()
+        icon.addPixmap(sm.scale_icon(icon_name, 14), QIcon.Mode.Normal)
+        icon.addPixmap(sm.scale_icon(f"inactive-{icon_name}", 14), QIcon.Mode.Disabled)
+        button.setIcon(icon)
+        button.setIconSize(QSize(icon_size, icon_size))
+        button.setFixedSize(button_size, button_size)
