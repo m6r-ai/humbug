@@ -35,7 +35,7 @@ def build_tree_pane_stylesheet(
             background-color: {tree_bg};
             color: {text};
             outline: none;
-            margin-left: {tree_margin}px;
+            border: none;
         }}
         {tree_selector}::item {{
             color: {text};
@@ -48,6 +48,9 @@ def build_tree_pane_stylesheet(
         {tree_selector}::item:selected {{
             background-color: {tree_selected};
             color: {text};
+        }}
+        {tree_selector}::branch {{
+            padding-left: {tree_margin}px;
         }}
         {tree_selector}::branch:hover {{
             background-color: {tree_hover};

@@ -465,7 +465,7 @@ class SearchSidebar(SidebarBase):
         self._results_tree.setFont(font)
         icon_size = round(16 * zoom_factor)
         self._results_tree.setIconSize(QSize(icon_size, icon_size))
-        self._results_tree.setIndentation(icon_size)
+        self._results_tree.setIndentation(icon_size + round(6 * zoom_factor))
         input_bg = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
         text = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
         subtle_text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)

@@ -237,7 +237,7 @@ class SidebarBreadcrumbBar(QTreeView):
 
         icon_size = round(16 * zoom_factor)
         self.setIconSize(QSize(icon_size, icon_size))
-        self.setIndentation(icon_size)
+        self.setIndentation(icon_size + round(6 * zoom_factor))
 
         font = self.font()
         font.setPointSizeF(font_size * zoom_factor)
@@ -256,7 +256,7 @@ class SidebarBreadcrumbBar(QTreeView):
                 background: transparent;
                 color: {text};
                 outline: none;
-                margin-left: {tree_margin}px;
+                border: none;
             }}
             SidebarBreadcrumbBar::item {{
                 color: {text};
@@ -265,6 +265,9 @@ class SidebarBreadcrumbBar(QTreeView):
             }}
             SidebarBreadcrumbBar::item:hover {{
                 background-color: {tree_hover};
+            }}
+            SidebarBreadcrumbBar::branch {{
+                padding-left: {tree_margin}px;
             }}
             SidebarBreadcrumbBar::branch:has-children:!has-siblings:closed,
             SidebarBreadcrumbBar::branch:closed:has-children:has-siblings {{

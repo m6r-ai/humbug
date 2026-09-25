@@ -1129,7 +1129,7 @@ class FileSidebar(SidebarBase):
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
-        self._bc_container.apply_tree_style(file_icon_size, font)
+        self._bc_container.apply_tree_style(file_icon_size, round(6 * zoom_factor), font)
         self.setStyleSheet(build_tree_pane_stylesheet(
             self._style_manager,
             "FileSidebar",

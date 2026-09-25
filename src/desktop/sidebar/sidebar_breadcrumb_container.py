@@ -146,7 +146,7 @@ class SidebarBreadcrumbContainer(QWidget):
         self._tree_view.viewport().update()
         self._breadcrumb_bar.viewport().update()
 
-    def apply_tree_style(self, icon_size: int, font: QFont) -> None:
+    def apply_tree_style(self, icon_size: int, indentation: int, font: QFont) -> None:
         """
         Apply icon size, indentation, and font to the tree view.
 
@@ -158,7 +158,7 @@ class SidebarBreadcrumbContainer(QWidget):
             font: QFont to apply to the tree view.
         """
         self._tree_view.setIconSize(QSize(icon_size, icon_size))
-        self._tree_view.setIndentation(icon_size)
+        self._tree_view.setIndentation(icon_size + indentation)
         self._tree_view.setFont(font)
 
     def configure_tree_for_path(self, path: str) -> None:
