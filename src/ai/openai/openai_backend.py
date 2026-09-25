@@ -1,4 +1,4 @@
-"""OpenAI backend implementation."""
+"""OpenAI backend implementation using the Responses API."""
 import json
 from typing import Any
 
@@ -7,14 +7,13 @@ from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessageSource
 from ai.ai_conversation_history import AIConversationHistory
-from ai.ai_model import AIReasoningEffort
 from ai.openai.openai_stream_response import OpenAIStreamResponse
 from http_client import HttpClient
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
 
 class OpenAIBackend(AIBackend):
-    """OpenAI API backend implementation with streaming support."""
+    """OpenAI API backend implementation using the Responses API with streaming support."""
 
     def _read_timeout(self) -> float:
         """
@@ -31,7 +30,7 @@ class OpenAIBackend(AIBackend):
 
     async def fetch_models(self) -> list[str]:
         """Fetch available model IDs from the OpenAI API."""
-        url = self._api_url.replace("/chat/completions", "/models")
+        url = self._api_url.replace("/responses", "/models")
         headers = {"Authorization": f"Bearer {self._api_key}"}
         async with HttpClient(ssl_context=self._ssl_context) as client:
             response = await client.get(url, headers=headers)
@@ -41,13 +40,13 @@ class OpenAIBackend(AIBackend):
 
     def _format_tool_definition(self, tool_def: AIToolDefinition) -> dict[str, Any]:
         """
-        Convert tool definition to OpenAI format.
+        Convert tool definition to Responses API format.
 
         Args:
             tool_def: Generic tool definition
 
         Returns:
-            Tool definition in OpenAI format
+            Tool definition in Responses API format
         """
         properties: dict[str, Any] = {}
         required = []
@@ -85,90 +84,87 @@ class OpenAIBackend(AIBackend):
 
         return {
             "type": "function",
-            "function": {
-                "name": tool_def.name,
-                "description": tool_def.description,
-                "parameters": {
-                    "type": "object",
-                    "properties": properties,
-                    "required": required
-                }
+            "name": tool_def.name,
+            "description": tool_def.description,
+            "strict": False,
+            "parameters": {
+                "type": "object",
+                "properties": properties,
+                "required": required
             }
         }
 
-    def _build_user_message(self, content: str, tool_results: list[AIToolResult] | None = None) -> list[dict[str, Any]]:
+    def _build_user_input_items(self, content: str, tool_results: list[AIToolResult] | None = None) -> list[dict[str, Any]]:
         """
-        Build user message(s) for OpenAI format.
+        Build user input item(s) for the Responses API.
 
         Args:
             content: User message content
             tool_results: Optional tool results to include
 
         Returns:
-            List of message dictionaries (may include separate tool result messages)
+            List of input item dictionaries
         """
-        messages = []
+        items: list[dict[str, Any]] = []
 
-        # Add tool result messages
         if tool_results:
             for tool_result in tool_results:
                 tool_content = tool_result.content if not tool_result.error else f"Error: {tool_result.error}"
 
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_result.id,
-                    "content": tool_content
+                items.append({
+                    "type": "function_call_output",
+                    "call_id": tool_result.id,
+                    "output": tool_content
                 })
 
-        # Add user message if there's content
         if content:
-            messages.append({
+            items.append({
                 "role": "user",
                 "content": content
             })
 
-        return messages
+        return items
 
-    def _build_assistant_message(self, content: str, tool_calls: list[AIToolCall] | None = None) -> dict[str, Any]:
+    def _build_assistant_input_items(self, content: str, tool_calls: list[AIToolCall] | None = None) -> list[dict[str, Any]]:
         """
-        Build assistant message for OpenAI format.
+        Build assistant output item(s) for replay into a subsequent request.
 
         Args:
             content: Assistant message content
             tool_calls: Optional tool calls made by the assistant
 
         Returns:
-            Assistant message dictionary
+            List of input item dictionaries
         """
-        message: dict[str, Any] = {
-            "role": "assistant",
-            "content": content if content else "...",  # Never send empty content
-        }
+        items: list[dict[str, Any]] = []
+
+        if content:
+            items.append({
+                "type": "message",
+                "role": "assistant",
+                "content": content
+            })
 
         if tool_calls:
-            message["tool_calls"] = [
-                {
-                    "id": call.id,
-                    "type": "function",
-                    "function": {
-                        "name": call.name,
-                        "arguments": json.dumps(call.arguments)
-                    }
-                }
-                for call in tool_calls
-            ]
+            for call in tool_calls:
+                items.append({
+                    "type": "function_call",
+                    "call_id": call.id,
+                    "name": call.name,
+                    "arguments": json.dumps(call.arguments)
+                })
 
-        return message
+        return items
 
-    def _format_messages_for_provider(self, conversation_history: AIConversationHistory) -> list[dict[str, Any]]:
+    def _format_input_for_provider(self, conversation_history: AIConversationHistory) -> list[dict[str, Any]]:
         """
-        Format conversation history for OpenAI's API format in a single pass.
+        Format conversation history as Responses API input items in a single pass.
 
         Args:
             conversation_history: List of AIMessage objects
 
         Returns:
-            List of messages formatted for OpenAI API
+            List of input items formatted for the Responses API
         """
         result: list[dict[str, Any]] = []
         last_user_message_index = -1
@@ -185,11 +181,11 @@ class OpenAIBackend(AIBackend):
 
                     current_turn_message_index = len(result)
 
-                user_messages = self._build_user_message(
+                user_items = self._build_user_input_items(
                     content=self._resolve_message_content(message, conversation_history),
                     tool_results=message.tool_results
                 )
-                result.extend(user_messages)
+                result.extend(user_items)
 
                 last_user_message_index = len(result) - 1
                 continue
@@ -199,11 +195,19 @@ class OpenAIBackend(AIBackend):
                 if not message.completed or message.error:
                     continue
 
-                assistant_msg = self._build_assistant_message(
+                # Replay any encrypted reasoning content before the assistant output so
+                # stateless reasoning models retain their prior reasoning context.
+                if message.redacted_reasoning:
+                    result.append({
+                        "type": "reasoning",
+                        "encrypted_content": message.redacted_reasoning
+                    })
+
+                assistant_items = self._build_assistant_input_items(
                     content=message.content,
                     tool_calls=message.tool_calls
                 )
-                result.append(assistant_msg)
+                result.extend(assistant_items)
 
                 # If we have an AI message that has no tool calls then we've finished this turn
                 if not message.tool_calls:
@@ -223,59 +227,37 @@ class OpenAIBackend(AIBackend):
         conversation_history: AIConversationHistory,
         settings: AIConversationSettings
     ) -> RequestConfig:
-        """Build complete request configuration for OpenAI."""
-        # Use the unified message formatting
-        messages = self._format_messages_for_provider(conversation_history)
-
-        # Prepend system message if configured
-        if self._system_prompt:
-            messages.insert(0, {
-                "role": "system",
-                "content": self._system_prompt
-            })
+        """Build complete request configuration for the OpenAI Responses API."""
+        input_items = self._format_input_for_provider(conversation_history)
 
         # Build request data
-        data = {
+        data: dict[str, Any] = {
             "model": settings.model,
-            "messages": messages,
+            "input": input_items,
             "stream": True,
-            "stream_options": {"include_usage": True}
+            "store": False
         }
+
+        # The system prompt is supplied separately from the input items
+        if self._system_prompt:
+            data["instructions"] = self._system_prompt
 
         # Only include temperature if supported by model
         if AIConversationSettings.supports_temperature(settings.model, settings.provider):
             data["temperature"] = settings.temperature
 
         # Add tools if supported
-        tools_included = False
         if self._supports_tools(settings):
             tool_definitions = self._tool_manager.get_tool_definitions()
             if tool_definitions:
                 data["tools"] = [self._format_tool_definition(tool_def) for tool_def in tool_definitions]
                 data["tool_choice"] = "auto"
-                tools_included = True
                 self._logger.debug("Added %d tool definitions for openai", len(tool_definitions))
 
-        # Add reasoning effort if the model supports variable effort levels.  Some models
-        # only accept function tools on the chat completions endpoint when reasoning
-        # effort is 'none', so tools take precedence and the effort is forced to 'none'.
+        # Add reasoning effort if the model supports variable effort levels
         efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model, settings.provider)
         if efforts and settings.reasoning_effort is not None:
-            model_config = AIConversationSettings.find_by_model_and_provider(settings.model, settings.provider)
-            force_none = (
-                tools_included
-                and model_config is not None
-                and model_config.tools_require_no_reasoning_effort
-            )
-            if force_none:
-                self._logger.debug(
-                    "Forcing reasoning_effort 'none' for %s because tools are present",
-                    settings.model,
-                )
-                data["reasoning_effort"] = AIReasoningEffort.NONE
-
-            else:
-                data["reasoning_effort"] = settings.reasoning_effort
+            data["reasoning"] = {"effort": settings.reasoning_effort}
 
         # Build headers
         headers = {

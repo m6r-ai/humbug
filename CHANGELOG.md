@@ -16,6 +16,8 @@ New features:
   cursor.
 - Added support for Claude Opus 5.5.
 - Added support for GPT 6 Astra, Sol, and Luna.
+- The OpenAI backend now uses the Responses API instead of Chat Completions, enabling tool calling and advanced
+  reasoning on newer OpenAI models.
 
 Bug fixes:
 

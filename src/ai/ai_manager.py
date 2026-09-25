@@ -41,7 +41,7 @@ class AIManager:
         "mistral": _BackendRegistration(MistralBackend, "https://api.mistral.ai/v1/chat/completions"),
         "ollama": _BackendRegistration(OllamaBackend, "http://127.0.0.1:11434/api/chat"),
         "ollama-cloud": _BackendRegistration(OllamaBackend, "https://ollama.com/api/chat"),
-        "openai": _BackendRegistration(OpenAIBackend, "https://api.openai.com/v1/chat/completions"),
+        "openai": _BackendRegistration(OpenAIBackend, "https://api.openai.com/v1/responses"),
         "vllm": _BackendRegistration(VLLMBackend, "http://localhost:8000/v1/chat/completions"),
         "xai": _BackendRegistration(XAIBackend, "https://api.x.ai/v1/chat/completions"),
         "zai": _BackendRegistration(ZaiBackend, "https://api.z.ai/api/paas/v4/chat/completions"),

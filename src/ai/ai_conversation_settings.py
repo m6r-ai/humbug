@@ -416,7 +416,7 @@ class AIConversationSettings:
             max_output_tokens=128000,
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
@@ -442,7 +442,6 @@ class AIConversationSettings:
                 AIReasoningEffort.XHIGH,
                 AIReasoningEffort.MAX
             ],
-            tools_require_no_reasoning_effort=True,
         ),
         ("gpt-6-luna", "openai"): AIModel(
             name="gpt-6-luna",
@@ -461,7 +460,6 @@ class AIConversationSettings:
                 AIReasoningEffort.XHIGH,
                 AIReasoningEffort.MAX
             ],
-            tools_require_no_reasoning_effort=True,
         ),
         ("gpt-5.6-sol", "openai"): AIModel(
             name="gpt-5.6-sol",

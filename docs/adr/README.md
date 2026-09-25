@@ -79,3 +79,4 @@ What costs, risks, or constraints does this decision impose?
 | [0007](0007-tool-approval-policy.md) | Tool approval policy — persistent vs ephemeral state | Accepted |
 | [0008](0008-workspace-state-ownership.md) | Workspace state ownership — layout, content, and view | Accepted |
 | [0009](0009-logging-level-policy.md) | Logging level policy | Accepted |
+| [0010](0010-openai-responses-api.md) | OpenAI backend uses the Responses API | Accepted |

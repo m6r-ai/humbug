@@ -1,4 +1,4 @@
-"""Handles streaming response from OpenAI API."""
+"""Handles streaming response from the OpenAI Responses API."""
 
 import json
 
@@ -7,111 +7,97 @@ from ai_tool import AIToolCall
 
 
 class OpenAIStreamResponse(AIStreamResponse):
-    """Handles streaming response from OpenAI API."""
+    """Handles streaming response from the OpenAI Responses API."""
 
     def __init__(self) -> None:
         """Initialize stream response handler."""
         super().__init__()
 
-        # Track streaming tool calls
-        self._current_tool_calls: dict[str, dict] = {}
+        # Call ids of function calls already emitted, so each tool call is recorded once
+        self._emitted_call_ids: set[str] = set()
 
-    def _handle_choices(self, choices: dict) -> None:
+        # Encrypted reasoning content returned for stateless reasoning replay
+        self.encrypted_reasoning = ""
+
+    def _handle_output_item(self, item: dict) -> None:
         """
-        Handle choices from the OpenAI API response.
+        Handle a completed output item.
 
         Args:
-            choices: Choices from OpenAI API response
+            item: A single output item from the Responses API
         """
-        if not choices:
+        item_type = item.get("type")
+
+        if item_type == "function_call":
+            call_id = item.get("call_id", "")
+            if call_id in self._emitted_call_ids:
+                return
+
+            arguments = item.get("arguments", "")
+
+            json_args = {}
+            try:
+                if arguments:
+                    json_args = json.loads(arguments)
+
+            except json.JSONDecodeError as e:
+                self._logger.warning("Failed to parse tool arguments: %s (%s)", arguments, str(e))
+
+            self._emitted_call_ids.add(call_id)
+            self._add_tool_call(
+                AIToolCall(
+                    id=call_id,
+                    name=item.get("name", ""),
+                    arguments=json_args
+                )
+            )
             return
 
-        delta = choices[0].get("delta", {})
-        if "content" in delta:
-            new_content = delta["content"]
-            if new_content:
-                self.content += new_content
-
-        if "tool_calls" in delta:
-            tool_calls = delta["tool_calls"]
-            for tool_call_delta in tool_calls:
-                tool_call_index = tool_call_delta.get("index", -1)
-                if tool_call_index == -1:
-                    continue
-
-                tool_call_id = tool_call_delta.get("id", "")
-
-                # Initialize tool call if we haven't seen it before
-                if tool_call_index not in self._current_tool_calls:
-                    self._current_tool_calls[tool_call_index] = {
-                        "index": tool_call_index,
-                        "id": tool_call_id,
-                        "name": "",
-                        "arguments": ""
-                    }
-
-                current_call = self._current_tool_calls[tool_call_index]
-
-                # Update function name if provided
-                function = tool_call_delta.get("function", {})
-                if "name" in function:
-                    current_call["name"] = function["name"]
-
-                # Accumulate arguments if provided
-                if "arguments" in function:
-                    current_call["arguments"] += function["arguments"]
+        if item_type == "reasoning":
+            encrypted = item.get("encrypted_content", "")
+            if encrypted:
+                self.encrypted_reasoning = encrypted
 
     def _handle_usage(self, usage: dict) -> None:
         """
-        Handle usage data from the OpenAI API response.
+        Handle usage data from the Responses API response.
 
         Args:
-            usage: Usage data from OpenAI API response
+            usage: Usage data from the Responses API response
         """
         if not usage:
             return
 
-        prompt_tokens_details = usage.get("prompt_tokens_details", {}) or {}
+        input_tokens_details = usage.get("input_tokens_details", {}) or {}
         self._update_usage(
-            prompt_tokens=usage.get("prompt_tokens", 0),
-            completion_tokens=usage.get("completion_tokens", 0),
+            prompt_tokens=usage.get("input_tokens", 0),
+            completion_tokens=usage.get("output_tokens", 0),
             total_tokens=usage.get("total_tokens", 0),
-            cache_read_tokens=prompt_tokens_details.get("cached_tokens", 0),
+            cache_read_tokens=input_tokens_details.get("cached_tokens", 0),
         )
-
-        # Process all accumulated tool calls
-        for call_data in self._current_tool_calls.values():
-            # Create the tool call
-            json_args = {}
-            try:
-                if call_data["arguments"]:
-                    json_args = json.loads(call_data["arguments"])
-
-            except json.JSONDecodeError as e:
-                self._logger.warning("Failed to parse tool arguments: %s (%s)", call_data["arguments"], str(e))
-
-            tool_call = AIToolCall(
-                id=call_data["id"],
-                name=call_data["name"],
-                arguments=json_args
-            )
-
-            # Add to our tool calls list
-            self._add_tool_call(tool_call)
 
     def update_from_chunk(self, chunk: dict) -> None:
         """
-        Update from a response chunk and return new content if any.
+        Update internal state from a response event.
 
         Args:
-            chunk: Response chunk from OpenAI API
+            chunk: A server-sent event from the Responses API
         """
-        if "error" in chunk:
-            self._handle_error(chunk["error"])
+        event_type = chunk.get("type", "")
+
+        if event_type == "error":
+            self._handle_error(chunk)
             return
 
-        if "choices" in chunk:
-            self._handle_choices(chunk["choices"])
+        if event_type == "response.output_text.delta":
+            self.content += chunk.get("delta", "")
+            return
 
-        if "usage" in chunk:
-            self._handle_usage(chunk["usage"])
+        if event_type == "response.output_item.done":
+            self._handle_output_item(chunk.get("item", {}))
+            return
+
+        if event_type == "response.completed":
+            response = chunk.get("response", {})
+            self._handle_usage(response.get("usage", {}))
+            return
