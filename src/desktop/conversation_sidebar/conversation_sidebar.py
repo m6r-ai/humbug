@@ -6,7 +6,7 @@ import shutil
 
 from PySide6.QtCore import Signal, QModelIndex, QRect, Qt, QPoint, QTimer
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QMenu
+    QWidget, QVBoxLayout, QMenu, QToolButton
 )
 
 from mindspace.mindspace import Mindspace
@@ -75,6 +75,18 @@ class ConversationSidebar(SidebarBase):
             self._language_manager.strings().mindspace_conversations,
             self
         )
+        self._new_folder_button = self._header.add_action_button(
+            "new-folder",
+            self._language_manager.strings().new_folder,
+            lambda: self._start_new_folder_creation(self._conversations_path or "")
+        )
+        self._new_folder_button.setEnabled(False)
+        self._new_conversation_button = self._header.add_action_button(
+            "plus",
+            self._language_manager.strings().new_conversation,
+            lambda: self.new_conversation_requested.emit(self._conversations_path or "")
+        )
+        self._new_conversation_button.setEnabled(False)
         layout.addWidget(self._header)
 
         # Create the three coordinated widgets and wrap them in the container.
@@ -1445,6 +1457,8 @@ class ConversationSidebar(SidebarBase):
         if not path:
             # Clear the model when no mindspace is active
             self._conversations_path = None
+            self._new_conversation_button.setEnabled(False)
+            self._new_folder_button.setEnabled(False)
             self._breadcrumb_bar.set_root_path("")
             self._bc_container.set_root_path("")
             self._conversations_index.set_conversations_dir("")
@@ -1463,9 +1477,14 @@ class ConversationSidebar(SidebarBase):
             except OSError as e:
                 self._logger.error("Failed to create conversations directory '%s': %s", self._conversations_path, str(e))
                 self._conversations_path = None
+                self._new_conversation_button.setEnabled(False)
+                self._new_folder_button.setEnabled(False)
                 self._bc_container.configure_tree_for_path("")
                 self._conversations_index.set_conversations_dir("")
                 return
+
+        self._new_conversation_button.setEnabled(True)
+        self._new_folder_button.setEnabled(True)
 
         # Configure tree view with the conversations path
         self._bc_container.configure_tree_for_path(self._conversations_path)
@@ -1479,6 +1498,14 @@ class ConversationSidebar(SidebarBase):
 
         # Schedule a repaint after the event loop processes the index scan and model reset
         self._viewport_refresh_timer.start(0)
+
+    def new_conversation_button(self) -> QToolButton:
+        """Return the header's new-conversation button, used as an onboarding tour target."""
+        return self._new_conversation_button
+
+    def header(self) -> SidebarSectionHeader:
+        """Return the section header (title plus the create buttons), used as an onboarding tour target."""
+        return self._header
 
     def conversations_index(self) -> ConversationSidebarIndex:
         """
@@ -1508,6 +1535,8 @@ class ConversationSidebar(SidebarBase):
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
         self._header.set_title(self._language_manager.strings().mindspace_conversations)
+        self._new_conversation_button.setToolTip(self._language_manager.strings().new_conversation)
+        self._new_folder_button.setToolTip(self._language_manager.strings().new_folder)
         self.apply_style()
 
     def apply_style(self) -> None:

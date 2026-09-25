@@ -535,8 +535,8 @@ def get_french_strings() -> LanguageStrings:
         ),
         tour_open_conversation_title="Ouvrir une conversation",
         tour_open_conversation_description=(
-            "Cliquez ici pour ouvrir le panneau Conversations — faites un clic droit à cet endroit (ou utilisez "
-            "Fichier → Nouvelle conversation) pour commencer à discuter avec l'IA."
+            "Ouvrez vos conversations ici — utilisez + pour en commencer une nouvelle, "
+            "ou l'icône de dossier pour les organiser."
         ),
         tour_workspace_title="Votre espace de travail",
         tour_workspace_description=(

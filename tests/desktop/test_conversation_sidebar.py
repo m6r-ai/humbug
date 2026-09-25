@@ -2,10 +2,12 @@
 
 import json
 import os
+import shutil
 
 import pytest
 
 # pylint: disable=wrong-import-position
+import desktop.conversation_sidebar.conversation_sidebar as conversation_sidebar_module
 from desktop.conversation_sidebar.conversation_sidebar import ConversationSidebar
 from desktop.message_box import MessageBox, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -248,3 +250,48 @@ class TestUndoHistoryScopedToMindspace:
 
         assert not sidebar.can_undo()
         assert not sidebar.can_redo()
+
+
+class TestNewConversationAndFolderButtons:
+    """The header's create-conversation and create-folder buttons track mindspace availability."""
+
+    def test_buttons_start_disabled_with_no_mindspace(self, qapp):  # pylint: disable=unused-argument
+        widget = ConversationSidebar()
+        assert not widget.new_conversation_button().isEnabled()
+        assert not widget._new_folder_button.isEnabled()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_buttons_enabled_once_mindspace_is_set(self, sidebar):
+        assert sidebar.new_conversation_button().isEnabled()
+        assert sidebar._new_folder_button.isEnabled()  # pylint: disable=protected-access
+
+    def test_buttons_disabled_when_mindspace_is_cleared(self, sidebar):
+        sidebar.set_mindspace("")
+        assert not sidebar.new_conversation_button().isEnabled()
+        assert not sidebar._new_folder_button.isEnabled()  # pylint: disable=protected-access
+
+    def test_buttons_disabled_when_conversations_dir_cannot_be_created(self, sidebar_env, monkeypatch):
+        _mgr, ms_path, conv_dir = sidebar_env
+        if os.path.exists(conv_dir):
+            shutil.rmtree(conv_dir)
+
+        def _raise_os_error(*_args, **_kwargs):
+            raise OSError("Permission denied")
+
+        monkeypatch.setattr(conversation_sidebar_module.os, "makedirs", _raise_os_error)
+
+        widget = ConversationSidebar()
+        widget.set_mindspace(ms_path)
+
+        assert not widget.new_conversation_button().isEnabled()
+        assert not widget._new_folder_button.isEnabled()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_new_conversation_button_emits_signal_with_conversations_path(self, sidebar, sidebar_env):
+        _mgr, _ms_path, conv_dir = sidebar_env
+        requested: list[str] = []
+        sidebar.new_conversation_requested.connect(requested.append)
+
+        sidebar.new_conversation_button().click()
+
+        assert requested == [conv_dir]

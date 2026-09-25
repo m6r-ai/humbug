@@ -284,7 +284,7 @@ class StyleManager(QObject):
             update_color = palette.resolve(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
 
             for icon_name in (
-                "arrow-right", "arrow-left", "arrow-up", "arrow-down", "close", "check",
+                "arrow-right", "arrow-left", "arrow-up", "arrow-down", "close", "check", "plus", "new-folder",
                 "expand-right", "expand-left", "expand-down", "info", "warning", "critical",
                 "question", "save", "floppy", "cog", "copy", "fork", "delete", "edit", "submit",
                 "stop", "paperclip", "minimize", "maximize", "restore"
@@ -297,6 +297,8 @@ class StyleManager(QObject):
             self._write_icon(f'bright-expand-left-{suffix}.svg', theme_icon_svg("expand-left", bright_color))
             self._write_icon(f'inactive-cog-{suffix}.svg', theme_icon_svg("cog", inactive_color))
             self._write_icon(f'bright-cog-{suffix}.svg', theme_icon_svg("cog", bright_color))
+            self._write_icon(f'inactive-plus-{suffix}.svg', theme_icon_svg("plus", inactive_color))
+            self._write_icon(f'inactive-new-folder-{suffix}.svg', theme_icon_svg("new-folder", inactive_color))
 
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)
