@@ -14,6 +14,8 @@ New features:
 - Choosing "Open In Editor" from a preview's context menu now opens the editor scrolled to the line that was clicked.
   Source files map exactly; rendered markdown maps on a best-effort basis using the source line of the block under the
   cursor.
+- Added support for Claude Opus 5.5.
+- Added support for GPT 6 Astra, Sol, and Luna.
 
 Bug fixes:
 
@@ -23,6 +25,7 @@ Bug fixes:
   text.
 - Removed the stale `trace` keyword from the Menai syntax highlighter - it is no longer part of the language.
 - Fixed a problem where token usage for the usage tab was not updated correctly.
+- Fixed a problem where changing provider in the conversation settings did not correctly update model reasoning.
 
 Internal structure changes:
 

@@ -196,8 +196,9 @@ class ConversationSettingsDialog(QDialog):
             self._model_combo.set_grouped_items(groups)
 
     def _on_model_filter_changed(self) -> None:
-        """Repopulate the model combo when the filter changes."""
+        """Repopulate the model combo when the filter changes and refresh the model displays."""
         self._populate_model_combo(self._model_filter_combo.get_value())
+        self._on_model_value_changed()
 
     def _on_model_value_changed(self) -> None:
         """Handle model selection changes."""
