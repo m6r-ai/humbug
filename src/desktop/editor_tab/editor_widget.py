@@ -148,8 +148,15 @@ class EditorWidget(QPlainTextEdit):
         if not self._path or not os.path.exists(self._path):
             return
 
-        with open(self._path, 'r', encoding='utf-8') as f:
-            content = f.read()
+        try:
+            # Undecodable bytes are replaced rather than raising, so files that are
+            # not valid UTF-8 still open (matching the diff and conversation views).
+            with open(self._path, 'r', encoding='utf-8', errors='replace') as f:
+                content = f.read()
+
+        except OSError as e:
+            self._logger.error("Failed to load file '%s': %s", self._path, str(e))
+            return
 
         self._editor_document.set_text(content)
         self._editor_document.mark_saved()
@@ -175,7 +182,7 @@ class EditorWidget(QPlainTextEdit):
                 saved_vscroll = self.verticalScrollBar().value()
                 saved_hscroll = self.horizontalScrollBar().value()
 
-                with open(self._path, 'r', encoding='utf-8') as f:
+                with open(self._path, 'r', encoding='utf-8', errors='replace') as f:
                     content = f.read()
 
                 self._logger.debug("Refreshing content from file: %s", self._path)
