@@ -49,9 +49,6 @@ def build_tree_pane_stylesheet(
             background-color: {tree_selected};
             color: {text};
         }}
-        {tree_selector}::branch {{
-            background-color: {tree_bg};
-        }}
         {tree_selector}::branch:has-children:!has-siblings:closed,
         {tree_selector}::branch:closed:has-children:has-siblings {{
             image: url("{style_manager.get_icon_path(collapsed_icon)}");
