@@ -1,57 +1,34 @@
-"""Conversation DAG index for a mindspace conversations directory."""
+"""Live conversation DAG index for a mindspace conversations directory."""
 
-import json
 import logging
 import os
-from dataclasses import dataclass
 
 from PySide6.QtCore import QObject, Signal
 
+from conversation_dag import ConversationDag, ConversationNode, ForkEdge
 from desktop.file_watcher import FileWatcher
-
-
-@dataclass
-class ConversationNode:
-    """All index data for a single conversation file."""
-    path: str
-    message_ids: list[str]
-    parent_message_id: str | None
-    parent_tool_call_id: str | None
-
-
-@dataclass
-class ForkEdge:
-    """A fork relationship between two conversation files."""
-    path_a: str
-    path_b: str
-    fork_message_id: str
 
 
 class ConversationSidebarIndex(QObject):
     """
     Maintains a live DAG index of all conversation files in a mindspace.
 
+    The DAG model itself lives in the frontend-agnostic ConversationDag.  This
+    class adds the desktop concerns on top: it watches the conversations
+    directory with the FileWatcher and emits signals so that views can refresh.
+
     Scans the conversations directory on load, then stays current via the
-    FileWatcher.  Emits changed() whenever the index is updated so
-    that views can refresh.
-
-    Two kinds of edges are tracked:
-
-    - Delegation edges: recorded explicitly in each child file's metadata
-      (parent_message_id + parent_tool_call_id).
-    - Fork edges: inferred by finding message IDs shared across multiple files.
-      The last shared message ID between any two files is the fork point.
-
-    Both are recomputed incrementally when individual files change.
-
-    The watcher is registered on the root conversations directory and every
-    subdirectory found within it.  When subdirectories are added or removed
-    the watched set is updated accordingly.
+    FileWatcher.  Emits changed() whenever the index is updated so that views
+    can refresh.
 
     Two signals are emitted to allow consumers to distinguish between changes
     that affect the DAG structure (files added/removed, parent linkage changed)
     and changes that only affect conversation content (new messages appended to
     an existing conversation whose parentage is unchanged).
+
+    The watcher is registered on the root conversations directory and every
+    subdirectory found within it.  When subdirectories are added or removed
+    the watched set is updated accordingly.
     """
 
     changed = Signal()
@@ -64,15 +41,7 @@ class ConversationSidebarIndex(QObject):
         self._file_watcher = FileWatcher()
 
         self._conversations_dir: str = ""
-
-        # path -> ConversationNode
-        self._nodes: dict[str, ConversationNode] = {}
-
-        # message_id -> set of paths that contain it
-        self._message_id_index: dict[str, set[str]] = {}
-
-        # Computed fork edges (rebuilt incrementally)
-        self._fork_edges: list[ForkEdge] = []
+        self._dag = ConversationDag("")
 
         # Set of directories currently registered with the file watcher
         self._watched_dirs: set[str] = set()
@@ -90,8 +59,8 @@ class ConversationSidebarIndex(QObject):
                 or empty string to clear the index.
         """
         self._unwatch_all()
-        self._clear()
         self._conversations_dir = conversations_dir
+        self._dag = ConversationDag(conversations_dir)
 
         if not conversations_dir:
             self.changed.emit()
@@ -121,7 +90,7 @@ class ConversationSidebarIndex(QObject):
         Returns:
             ConversationNode if indexed, None otherwise.
         """
-        return self._nodes.get(os.path.normpath(path))
+        return self._dag.get_node(path)
 
     def get_all_paths(self) -> list[str]:
         """
@@ -130,7 +99,7 @@ class ConversationSidebarIndex(QObject):
         Returns:
             List of absolute paths.
         """
-        return list(self._nodes.keys())
+        return self._dag.get_all_paths()
 
     def get_children(self, path: str) -> list[str]:
         """
@@ -145,18 +114,7 @@ class ConversationSidebarIndex(QObject):
         Returns:
             List of absolute paths of child conversations.
         """
-        norm_path = os.path.normpath(path)
-        node = self._nodes.get(norm_path)
-        if node is None:
-            return []
-
-        message_id_set = set(node.message_ids)
-        children = []
-        for candidate_path, candidate_node in self._nodes.items():
-            if candidate_path != norm_path and candidate_node.parent_message_id in message_id_set:
-                children.append(candidate_path)
-
-        return children
+        return self._dag.get_children(path)
 
     def get_parent_paths(self, path: str) -> list[str]:
         """
@@ -173,13 +131,7 @@ class ConversationSidebarIndex(QObject):
             List of absolute paths of parent conversation files.  Empty if
             this is a root conversation or the parent cannot be resolved.
         """
-        node = self._nodes.get(os.path.normpath(path))
-        if node is None or node.parent_message_id is None:
-            return []
-
-        paths = self._message_id_index.get(node.parent_message_id, set())
-        norm_path = os.path.normpath(path)
-        return [p for p in paths if p != norm_path]
+        return self._dag.get_parent_paths(path)
 
     def get_fork_edges(self) -> list[ForkEdge]:
         """
@@ -188,7 +140,7 @@ class ConversationSidebarIndex(QObject):
         Returns:
             List of ForkEdge objects describing fork relationships.
         """
-        return list(self._fork_edges)
+        return self._dag.get_fork_edges()
 
     def get_roots(self) -> list[str]:
         """
@@ -197,10 +149,7 @@ class ConversationSidebarIndex(QObject):
         Returns:
             List of absolute paths of root conversations.
         """
-        return [
-            path for path, node in self._nodes.items()
-            if not self.get_parent_paths(path)
-        ]
+        return self._dag.get_roots()
 
     def compute_operation_scope(self, paths: set[str]) -> tuple[set[str], set[str]]:
         """
@@ -222,45 +171,7 @@ class ConversationSidebarIndex(QObject):
             - excluded: descendant paths that must be left behind because they
               are shared with conversations outside the operation scope.
         """
-        included: set[str] = set()
-        excluded: set[str] = set()
-
-        # Normalise the seed paths
-        queue: list[str] = [os.path.normpath(p) for p in paths]
-        for p in queue:
-            included.add(p)
-
-        # BFS over descendants
-        visited: set[str] = set(included)
-        while queue:
-            current = queue.pop(0)
-            for child in self.get_children(current):
-                child = os.path.normpath(child)
-                if child in visited:
-                    continue
-
-                visited.add(child)
-
-                # Check whether all parents of this child are within included
-                parent_paths = self.get_parent_paths(child)
-                all_parents_included = all(
-                    os.path.normpath(p) in included for p in parent_paths
-                )
-
-                if all_parents_included:
-                    included.add(child)
-                    queue.append(child)
-
-                else:
-                    excluded.add(child)
-
-        return included, excluded
-
-    def _clear(self) -> None:
-        """Clear all index state."""
-        self._nodes.clear()
-        self._message_id_index.clear()
-        self._fork_edges.clear()
+        return self._dag.compute_operation_scope(paths)
 
     def _unwatch_all(self) -> None:
         """Unregister all currently watched directories from the file watcher."""
@@ -298,13 +209,8 @@ class ConversationSidebarIndex(QObject):
         if not os.path.isdir(self._conversations_dir):
             return
 
-        for dirpath, _dirnames, filenames in os.walk(self._conversations_dir):
+        for dirpath, _dirnames, _filenames in os.walk(self._conversations_dir):
             self._watch_dir(dirpath)
-            for filename in filenames:
-                if filename.lower().endswith('.conv'):
-                    self._add_file(os.path.join(dirpath, filename))
-
-        self._recompute_fork_edges()
 
     def _reconcile_watched_dirs(self, current_dirs: set[str]) -> bool:
         """
@@ -346,7 +252,7 @@ class ConversationSidebarIndex(QObject):
         """
         if not os.path.isdir(self._conversations_dir):
             self._unwatch_all()
-            self._clear()
+            self._dag = ConversationDag("")
             self.changed.emit()
             self.structure_changed.emit()
             return
@@ -364,7 +270,7 @@ class ConversationSidebarIndex(QObject):
         # newly added subdirectories are watched immediately.
         dirs_changed = self._reconcile_watched_dirs(current_dirs)
 
-        indexed_paths = set(self._nodes.keys())
+        indexed_paths = set(self._dag.get_all_paths())
         added = current_paths - indexed_paths
         removed = indexed_paths - current_paths
         possibly_modified = current_paths & indexed_paths
@@ -373,13 +279,13 @@ class ConversationSidebarIndex(QObject):
         content_changed = False
 
         for path in removed:
-            self._remove_file(path)
+            self._dag.remove_file(path)
 
         for path in added:
-            self._add_file(path)
+            self._dag.add_file(path)
 
         for path in possibly_modified:
-            result = self._refresh_file_if_changed(path)
+            result = self._dag.refresh_file_if_changed(path)
             if result == "structure":
                 structure_changed = True
 
@@ -387,207 +293,9 @@ class ConversationSidebarIndex(QObject):
                 content_changed = True
 
         if structure_changed:
-            self._recompute_fork_edges()
+            self._dag.recompute_fork_edges()
             self.structure_changed.emit()
             self.changed.emit()
 
         elif content_changed:
             self.changed.emit()
-
-    def _read_conv_file(self, path: str) -> tuple[list[str], str | None, str | None] | None:
-        """
-        Read only the fields needed for indexing from a .conv file.
-
-        Extracts message IDs and parent metadata without constructing full
-        AIMessage objects.
-
-        Args:
-            path: Absolute path to the .conv file.
-
-        Returns:
-            Tuple of (message_ids, parent_message_id, parent_tool_call_id),
-            or None if the file cannot be read or is not a valid conversation.
-        """
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            if not isinstance(data, dict):
-                return None
-
-            conversation = data.get('conversation')
-            if not isinstance(conversation, list):
-                return None
-
-            message_ids = []
-            for msg in conversation:
-                if isinstance(msg, dict):
-                    msg_id = msg.get('id')
-                    if isinstance(msg_id, str):
-                        message_ids.append(msg_id)
-
-            parent_message_id = None
-            parent_tool_call_id = None
-            metadata = data.get('metadata')
-            if isinstance(metadata, dict):
-                parent = metadata.get('parent')
-                if isinstance(parent, dict):
-                    mid = parent.get('message_id')
-                    tid = parent.get('tool_call_id')
-                    if isinstance(mid, str):
-                        parent_message_id = mid
-
-                    if isinstance(tid, str):
-                        parent_tool_call_id = tid
-
-            return message_ids, parent_message_id, parent_tool_call_id
-
-        except (OSError, json.JSONDecodeError, ValueError) as e:
-            self._logger.warning("Could not index conversation file %s: %s", path, str(e))
-            return None
-
-    def _add_file(self, path: str) -> None:
-        """
-        Add a single conversation file to the index.
-
-        Args:
-            path: Absolute path to the .conv file.
-        """
-        norm_path = os.path.normpath(path)
-        result = self._read_conv_file(norm_path)
-        if result is None:
-            return
-
-        message_ids, parent_message_id, parent_tool_call_id = result
-
-        node = ConversationNode(
-            path=norm_path,
-            message_ids=message_ids,
-            parent_message_id=parent_message_id,
-            parent_tool_call_id=parent_tool_call_id
-        )
-        self._nodes[norm_path] = node
-
-        for msg_id in message_ids:
-            if msg_id not in self._message_id_index:
-                self._message_id_index[msg_id] = set()
-
-            self._message_id_index[msg_id].add(norm_path)
-
-    def _remove_file(self, path: str) -> None:
-        """
-        Remove a conversation file from the index.
-
-        Args:
-            path: Normalised absolute path to the .conv file.
-        """
-        node = self._nodes.pop(path, None)
-        if node is None:
-            return
-
-        for msg_id in node.message_ids:
-            paths = self._message_id_index.get(msg_id)
-            if paths:
-                paths.discard(path)
-                if not paths:
-                    del self._message_id_index[msg_id]
-
-    def _refresh_file_if_changed(self, path: str) -> str | None:
-        """
-        Re-index a file if its content has changed.
-
-        Args:
-            path: Normalised absolute path to the .conv file.
-
-        Returns:
-            ``"structure"`` if the parent linkage changed (the DAG topology is
-            different), ``"content"`` if only message IDs changed (new messages
-            were appended but the parentage is the same), or ``None`` if the
-            file is unchanged.
-        """
-        result = self._read_conv_file(path)
-        if result is None:
-            return None
-
-        message_ids, parent_message_id, parent_tool_call_id = result
-        existing = self._nodes.get(path)
-        if existing is not None:
-            if (existing.parent_message_id == parent_message_id
-                    and existing.parent_tool_call_id == parent_tool_call_id):
-                if existing.message_ids == message_ids:
-                    return None
-
-                # Parent linkage unchanged — only message content grew.  Update
-                # the message ID index without signalling a structural change.
-                self._remove_file(path)
-                self._add_file(path)
-                return "content"
-
-        self._remove_file(path)
-        self._add_file(path)
-        return "structure"
-
-    def _recompute_fork_edges(self) -> None:
-        """
-        Recompute all fork edges from the current message ID index.
-
-        A fork edge exists between two files A and B when they share at least
-        one message ID.  The fork point is the last message ID (by position in
-        A's message list) that both files share.
-        """
-        self._fork_edges = []
-
-        # Find all message IDs shared by more than one file
-        shared: dict[str, set[str]] = {
-            msg_id: paths
-            for msg_id, paths in self._message_id_index.items()
-            if len(paths) > 1
-        }
-
-        if not shared:
-            return
-
-        # For each pair of files that share at least one message ID, find the
-        # last shared message ID (the fork point).
-        processed_pairs: set[frozenset] = set()
-
-        for paths in shared.values():
-            path_list = sorted(paths)  # Deterministic ordering
-            for i, path_a in enumerate(path_list):
-                for j in range(i + 1, len(path_list)):
-                    pair = frozenset([path_a, path_list[j]])
-                    if pair in processed_pairs:
-                        continue
-
-                    processed_pairs.add(pair)
-                    fork_msg_id = self._find_fork_point(path_a, path_list[j])
-                    if fork_msg_id:
-                        self._fork_edges.append(ForkEdge(
-                            path_a=path_a,
-                            path_b=path_list[j],
-                            fork_message_id=fork_msg_id
-                        ))
-
-    def _find_fork_point(self, path_a: str, path_b: str) -> str | None:
-        """
-        Find the last shared message ID between two conversation files.
-
-        Args:
-            path_a: Normalised path to first conversation file.
-            path_b: Normalised path to second conversation file.
-
-        Returns:
-            The last shared message ID, or None if no shared messages.
-        """
-        node_a = self._nodes.get(path_a)
-        node_b = self._nodes.get(path_b)
-        if node_a is None or node_b is None:
-            return None
-
-        ids_b = set(node_b.message_ids)
-        last_shared = None
-        for msg_id in node_a.message_ids:
-            if msg_id in ids_b:
-                last_shared = msg_id
-
-        return last_shared

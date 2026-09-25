@@ -48,11 +48,17 @@ modules:
     external_dependencies:
       - "standard_library"
 
+  conversation_dag:
+    internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
   delegate_ai_tool:
     internal_dependencies:
       - ai
       - ai_transcript_conversation
       - ai_tool
+      - conversation_dag
       - conversation_context
       - mindspace
     external_dependencies:
@@ -67,6 +73,7 @@ modules:
       - context
       - conversation_ai_tool
       - conversation_context
+      - conversation_dag
       - delegate_ai_tool
       - diff
       - diff_context

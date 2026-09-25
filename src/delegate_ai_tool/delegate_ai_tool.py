@@ -18,6 +18,7 @@ from ai_tool import (
     AIToolResult, AIToolCall, AIToolOperationDefinition
 )
 from ai_transcript_conversation import AITranscriptConversation
+from conversation_dag import ConversationDag
 from conversation_context.conversation_context import ConversationContext
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
@@ -146,7 +147,7 @@ class DelegateAITool(AITool):
     async def _delegate(
         self,
         tool_call: AIToolCall,
-        requester_ref: Any,
+        requester_ref: AIConversation,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
@@ -175,7 +176,7 @@ class DelegateAITool(AITool):
         # Resolve session_id
         session_path: str | None = None
         if session_id_arg:
-            session_path = self._resolve_session_path(session_id_arg)
+            session_path = self._resolve_session_path(session_id_arg, requester_ref)
 
         # Validate temperature
         if temperature is not None:
@@ -527,19 +528,21 @@ class DelegateAITool(AITool):
             AIConversationParent(message_id=parent_message_id, tool_call_id=tool_call.id)
         )
 
-    def _resolve_session_path(self, session_id: str) -> str:
+    def _resolve_session_path(self, session_id: str, requester_ref: AIConversation) -> str:
         """
         Validate a mindspace-relative session_id and return its absolute path.
 
         Args:
             session_id: Mindspace-relative path to an existing transcript file.
+            requester_ref: The parent AIConversation making the request.
 
         Returns:
             Absolute path to the transcript file.
 
         Raises:
             AIToolExecutionError: If the session_id is invalid, attempts path traversal,
-                or does not refer to an existing file within the mindspace.
+                does not refer to an existing file within the mindspace, or refers to a
+                conversation that was not delegated by the requesting conversation.
         """
         if not session_id:
             raise AIToolExecutionError("session_id must not be empty")
@@ -559,7 +562,41 @@ class DelegateAITool(AITool):
         if not os.path.isfile(abs_path):
             raise AIToolExecutionError(f"session_id does not refer to an existing file: {session_id}")
 
+        if not self._is_delegated_by(abs_path, requester_ref):
+            raise AIToolExecutionError(
+                f"session_id refers to a conversation that was not delegated by this conversation: {session_id}"
+            )
+
         return abs_path
+
+    def _is_delegated_by(self, session_path: str, requester_ref: AIConversation) -> bool:
+        """
+        Check whether a conversation was delegated by the requesting conversation.
+
+        Resolves the delegation parents of the target conversation from the
+        mindspace conversation DAG and reports whether the requester is one of
+        them.  Fails closed: a requester with no conversation identity, or a
+        target with no resolvable parent, is not considered delegated.
+
+        Args:
+            session_path: Absolute path to the target transcript file.
+            requester_ref: The parent AIConversation making the request.
+
+        Returns:
+            True if the target was delegated by the requester, False otherwise.
+        """
+        requester_id = requester_ref.conversation_id()
+        if not requester_id:
+            return False
+
+        conversations_dir = self._mindspace.get_absolute_path(
+            self._mindspace.conversations_rel_path()
+        )
+        dag = ConversationDag(conversations_dir)
+
+        requester_norm = os.path.normpath(requester_id)
+        parent_paths = dag.get_parent_paths(session_path)
+        return any(os.path.normpath(parent) == requester_norm for parent in parent_paths)
 
     def _new_conversation_path(self) -> str:
         """

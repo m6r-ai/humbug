@@ -20,6 +20,8 @@ New features:
   reasoning on newer OpenAI models.
 - Added a feature to create folders and new conversations in the conversation sidebar view.
 - Added a feature to create folders and new files in the file sidebar view.
+- Ensure the delegate AI tool can only open a child conversation and cannot open any other conversation.  This is a sandboxing
+  capability to ensure AIs cannot inadvertently affect histories of other conversations.
 
 Bug fixes:
 
@@ -39,6 +41,7 @@ Internal structure changes:
   editor buffer or file content is now supplied as a single `inputs` dict bound to the program, and transform programs
   read it with `(dict-get inputs "input-text")` and `(dict-get inputs "input-lines")`.
 - Switched the default log level to INFO, but moved some log messages to INFO and WARNING.
+- Created a new `conversation_dag` module that reasons about the DAG of conversations in a mindspace.
 
 ## v55 (2026-09-14)
 

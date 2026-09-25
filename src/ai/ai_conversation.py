@@ -177,6 +177,16 @@ class AIConversation:
         """
         self._conversation_id = conversation_id
 
+    def conversation_id(self) -> str:
+        """
+        Get the stable identifier for this conversation.
+
+        Returns:
+            The conversation identifier, typically the transcript file path,
+            or an empty string if none has been set.
+        """
+        return self._conversation_id
+
     def get_conversation_history(self) -> AIConversationHistory:
         """
         Get the conversation history object.

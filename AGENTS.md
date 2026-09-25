@@ -152,10 +152,19 @@ AI tool implementation for conversation tab operations (read, search, navigate m
 ### `src/conversation_context/`
 Context model for open conversation tabs (`ConversationContext`).
 
+### `src/conversation_dag/`
+Frontend-agnostic DAG model of the conversation files in a mindspace conversations
+directory (`ConversationDag`). Tracks delegation edges (from each child's parent
+metadata) and inferred fork edges (from message IDs shared across files), and
+resolves parent/child relationships. Pure and Qt-free; the desktop conversation
+sidebar wraps it with file-watching and signals, and the delegate AI tool uses it
+to enforce session ownership.
+
 ### `src/delegate_ai_tool/`
 AI tool implementation for task delegation to child AI instances. Contains the backend
 logic (conversation creation, session management, persistence, completion handling) and
 the `DelegateAIListener` protocol for frontend integration. GUI wiring lives in `src/desktop/`.
+Enforces that a delegated session may only be resumed by the conversation that delegated it.
 
 ### `src/desktop/`
 Qt desktop front-end for Humbug. This is the graphical desktop application built on top of
@@ -287,29 +296,6 @@ AI tool implementation for terminal tab operations (read, write, status).
 
 ### `src/terminal_context/`
 Context model for open terminal tabs (`TerminalContext`).
-
-## `tests/` Directory
-
-Test structure mirrors `src/` organization:
-- `ai/` - AI backend tests
-- `ai_transcript_conversation/` - AI transcript/conversation tests
-- `clock_ai_tool/` - Clock AI tool tests
-- `diff/` - Diff system tests
-- `html_/` - HTML processing tests
-- `docx/` - DOCX handling tests
-- `document_converter_ai_tool/` - Document converter AI tool tests
-- `document_ir/` - Document IR tests
-- `markdown_/` - Markdown parser tests
-- `editor_ai_tool/` - Editor AI tool tests
-- `filesystem_ai_tool/` - Filesystem AI tool tests
-- `git/` - Git repository operation tests
-- `git_ai_tool/` - Git AI tool tests
-- `http_client/` - HTTP client tests
-- `http_ai_tool/` - HTTP AI tool tests
-- `menai_ai_tool/` - Menai AI tool tests
-- `pdf/` - PDF extraction tests
-- `syntax/` - Syntax highlighting tests
-- `terminal/` - Terminal emulator tests
 
 ## `tools/` Directory
 
