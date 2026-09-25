@@ -146,7 +146,6 @@ class TerminalTab(TabBase):
         self._terminal_widget.data_ready.connect(self._on_data_ready)
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Initialize process and task tracking
         self._tasks: set[asyncio.Task] = set()
@@ -172,6 +171,10 @@ class TerminalTab(TabBase):
             self._create_tracked_task(self._start_process())
 
         self.apply_style()
+
+        # Connect only once the widgets the handler depends on exist, so a
+        # partially constructed tab can never receive the signal.
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""

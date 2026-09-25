@@ -42,7 +42,6 @@ class DiffTab(TabBase):
         self._view_mode = self._read_view_mode()
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._on_language_changed)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -73,6 +72,10 @@ class DiffTab(TabBase):
 
         self.update_status()
         self.apply_style()
+
+        # Connect only once the widgets the handler depends on exist, so a
+        # partially constructed tab can never receive the signal.
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
     def register_context_models(self, registry: ContextRegistry) -> None:
         """Register the DiffContext with the registry."""

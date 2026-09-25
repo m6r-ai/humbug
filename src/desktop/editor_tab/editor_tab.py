@@ -48,7 +48,6 @@ class EditorTab(TabBase):
         self._untitled_number = untitled_number
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Set up layout
         layout = QVBoxLayout(self)
@@ -107,6 +106,10 @@ class EditorTab(TabBase):
 
         self.apply_style()
         self.update_status()
+
+        # Connect only once the widgets the handler depends on exist, so a
+        # partially constructed tab can never receive the signal.
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""

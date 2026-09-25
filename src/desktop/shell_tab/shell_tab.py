@@ -67,8 +67,11 @@ class ShellTab(TabBase):
         layout.addWidget(shell_container)
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._on_language_changed)
         self.apply_style()
+
+        # Connect only once the widgets the handler depends on exist, so a
+        # partially constructed tab can never receive the signal.
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""

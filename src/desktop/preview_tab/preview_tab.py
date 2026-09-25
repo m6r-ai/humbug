@@ -78,13 +78,16 @@ class PreviewTab(TabBase):
         layout.addWidget(preview_container)
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Load content
         self._preview_content_widget.load_content()
 
         self._start_file_watching(self._path)
         self.apply_style()
+
+        # Connect only once the widgets the handler depends on exist, so a
+        # partially constructed tab can never receive the signal.
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""

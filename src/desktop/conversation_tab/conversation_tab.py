@@ -93,7 +93,6 @@ class ConversationTab(TabBase):
         layout.addWidget(conversation_container)
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._start_file_watching(self._path)
         self.apply_style()
@@ -101,6 +100,10 @@ class ConversationTab(TabBase):
         settings = MindspaceManager().settings()
         if settings is not None and settings.prompt_markers_visible:
             self._conversation_widget.set_prompt_minimap_visible(True)
+
+        # Connect only once the widgets the handler depends on exist, so a
+        # partially constructed tab can never receive the signal.
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
     def tool_name(self) -> str:
         """Return the tool name for this tab type."""
