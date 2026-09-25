@@ -13,6 +13,9 @@ from git import GitRepository, GitFileStatus, find_repo_root
 from desktop.file_watcher.file_watcher import FileWatcher
 
 
+# The VCS polling interval is set at 10 seconds because Windows systems loaded
+# with some types of corporate anti-malware solutions become completely unusable
+# if we reduce this.  The UX isn't ideal, but "works everywhere" matters.
 _POLL_INTERVAL_MS = 10000
 
 

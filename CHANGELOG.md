@@ -4,7 +4,7 @@
 
 New features:
 
-- Menai syntax highlighting now recognises the `::` second-class module member access operator as a keyword form.
+- Menai syntax highlighting now recognises the `::` module member access operator as a keyword form.
 - Menai syntax highlighting now distinguishes function calls from plain identifiers.  The head of an ordinary form is
   highlighted as a function, while names in binding, parameter, field, export, pattern, namespace, and quoted positions
   are left as identifiers.
