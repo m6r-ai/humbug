@@ -22,6 +22,9 @@ New features:
 - Added a feature to create folders and new files in the file sidebar view.
 - Ensure the delegate AI tool can only open a child conversation and cannot open any other conversation.  This is a sandboxing
   capability to ensure AIs cannot inadvertently affect histories of other conversations.
+- Updated the message editing for conversations.  Delete really deletes things, while edit leaves messages below the
+  one being edited faded out to show what will be lost.  Edits now take place in the input box so all input features
+  are unified and there's not a second-class edit experience.
 
 Bug fixes:
 

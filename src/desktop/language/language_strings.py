@@ -119,6 +119,7 @@ class LanguageStrings:
     processing_message: str
     input_prompt: str  # Format: "Chat with {model}... ({key} to submit)"
     command_prompt: str  # Format: "Command... (Enter or {key} to submit)"
+    editing_message: str  # Format: "Editing message — submitting will remove this and all following messages ({key} to submit)"
 
     # AI thinking message
     ai_thinking: str
@@ -383,6 +384,7 @@ class LanguageStrings:
     tooltip_stop_message: str
     tooltip_settings_message: str
     tooltip_attach_file: str
+    tooltip_cancel_edit: str
     tooltip_expand_message: str
     tooltip_collapse_message: str
     warning_file_too_large: str

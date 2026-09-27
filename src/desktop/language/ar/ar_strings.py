@@ -129,6 +129,7 @@ def get_arabic_strings() -> LanguageStrings:
         processing_message="محادثة مع {model} (Esc للإلغاء، {key} للإرسال)",
         input_prompt="تحدث مع {model} ({key} للإرسال)",
         command_prompt="الأمر (Enter أو {key} للإرسال)",
+        editing_message="تحرير الرسالة — سيؤدي الإرسال إلى إزالة هذه الرسالة وكل الرسائل التالية ({key} للإرسال)",
 
         # AI thinking message
         ai_thinking="الذكاء الاصطناعي يفكر...",
@@ -408,6 +409,7 @@ def get_arabic_strings() -> LanguageStrings:
         tooltip_stop_message="إيقاف المعالجة الحالية",
         tooltip_settings_message="فتح إعدادات المحادثة",
         tooltip_attach_file="إرفاق ملف",
+        tooltip_cancel_edit="إلغاء التحرير",
         tooltip_expand_message="توسيع الرسالة",
         tooltip_collapse_message="طي الرسالة",
         warning_file_too_large=(

@@ -24,17 +24,20 @@ class ConversationInput(ConversationMessage):
     stop_requested = Signal()
     settings_requested = Signal()
     attach_requested = Signal()
+    cancel_edit_requested = Signal()
     modified = Signal()
     chrome_height_changed = Signal()
 
     def __init__(self, style: AIMessageSource, parent: QWidget | None = None) -> None:
         """Initialize the conversation input widget."""
         self._is_streaming = False
+        self._is_edit_mode = False
         self._current_model = ""
         self._submit_button: QToolButton | None = None
         self._stop_button: QToolButton | None = None
         self._settings_button: QToolButton | None = None
         self._attach_button: QToolButton | None = None
+        self._cancel_edit_button: QToolButton | None = None
         self._attachments: list[tuple[str, str]] = []  # (filename, content)
         self._attachments_bar: QWidget | None = None
         self._attachments_layout: QHBoxLayout | None = None
@@ -67,6 +70,13 @@ class ConversationInput(ConversationMessage):
         self._attach_button.setObjectName("_attach_button")
         self._attach_button.clicked.connect(self._on_attach_button_clicked)
         self._banner_layout.insertWidget(0, self._attach_button)
+
+        # Create cancel-edit button (initially hidden, shown only in edit mode)
+        self._cancel_edit_button = QToolButton(self)
+        self._cancel_edit_button.setObjectName("_cancel_edit_button")
+        self._cancel_edit_button.clicked.connect(self._on_cancel_edit_button_clicked)
+        self._cancel_edit_button.hide()
+        self._banner_layout.addWidget(self._cancel_edit_button)
 
         # Create stop button (initially hidden)
         self._stop_button = QToolButton(self)
@@ -129,11 +139,28 @@ class ConversationInput(ConversationMessage):
         if self._submit_button:
             self._submit_button.setToolTip(strings.tooltip_submit_message)
 
+        if self._cancel_edit_button:
+            self._cancel_edit_button.setToolTip(strings.tooltip_cancel_edit)
+
     def set_streaming(self, streaming: bool) -> None:
         """Update the streaming state and header text."""
         self._is_streaming = streaming
         self._update_banner_text()
         self._update_button_states()
+
+    def set_edit_mode(self, edit_mode: bool) -> None:
+        """
+        Enter or leave edit mode.
+
+        In edit mode the banner explains that submitting will remove the edited
+        message and everything after it, and a cancel control is shown so the user
+        can abandon the edit without submitting.
+        """
+        self._is_edit_mode = edit_mode
+        if self._cancel_edit_button:
+            self._cancel_edit_button.setVisible(edit_mode)
+
+        self._update_banner_text()
 
     def _get_submit_key_text(self) -> str:
         """Get the appropriate submit key text based on the platform."""
@@ -181,6 +208,10 @@ class ConversationInput(ConversationMessage):
             self._stop_button.setIcon(QIcon(self._style_manager.scale_icon("stop", icon_base_size)))
             self._stop_button.setIconSize(icon_size)
 
+        if self._cancel_edit_button:
+            self._cancel_edit_button.setIcon(QIcon(self._style_manager.scale_icon("close", icon_base_size)))
+            self._cancel_edit_button.setIconSize(icon_size)
+
         self._rescale_attachment_icons(icon_base_size, icon_size)
 
     def _update_banner_text(self) -> None:
@@ -188,7 +219,11 @@ class ConversationInput(ConversationMessage):
 
         strings = self._language_manager.strings()
         submit_key = self._get_submit_key_text()
-        if self._is_streaming:
+        if self._is_edit_mode:
+            self._role_label.setText(strings.editing_message.format(key=submit_key))
+            self.setProperty("message_source", "user_input")
+
+        elif self._is_streaming:
             self._role_label.setText(strings.processing_message.format(model=self._current_model, key=submit_key))
             self.setProperty("message_source", "ai_streaming")
 
@@ -254,6 +289,10 @@ class ConversationInput(ConversationMessage):
     def _on_attach_button_clicked(self) -> None:
         """Handle attach button click."""
         self.attach_requested.emit()
+
+    def _on_cancel_edit_button_clicked(self) -> None:
+        """Handle cancel-edit button click."""
+        self.cancel_edit_requested.emit()
 
     def add_attachment(self, filename: str, content: str) -> None:
         """Add a file attachment and show it in the attachments bar."""

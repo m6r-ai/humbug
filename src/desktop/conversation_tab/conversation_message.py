@@ -2,13 +2,14 @@ import colorsys
 from datetime import datetime
 import logging
 import re
-from typing import Any, cast
+from typing import Any
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
+    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication,
+    QGraphicsOpacityEffect,
 )
 from PySide6.QtCore import Signal, QPoint, Qt, QEvent, QObject
-from PySide6.QtGui import QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QKeyEvent, QFont, QFontMetrics
+from PySide6.QtGui import QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QFont, QFontMetrics
 
 from ai import AIMessageSource
 from ai_tool import AIToolCall
@@ -33,6 +34,10 @@ _BORDER_WIDTH = 1
 _BORDER_WIDTH_ACTIVE = 2  # animated or spotlighted
 _BORDER_INSET = _BORDER_WIDTH_ACTIVE  # inner pixel of widest border that must stay clear
 
+# Opacity applied to messages that a pending edit will remove.  Low enough to read
+# clearly as "going away", high enough that the content stays legible.
+_PENDING_REMOVAL_OPACITY = 0.35
+
 
 class ConversationMessage(QFrame):
     """Widget for displaying a single message in the conversation history with header."""
@@ -42,7 +47,7 @@ class ConversationMessage(QFrame):
     mouse_released = Signal()
     link_clicked = Signal(str)
     fork_requested = Signal()
-    edit_confirmed = Signal(str)
+    edit_from_here_requested = Signal()
     delete_requested = Signal()
     expand_requested = Signal(bool)
     tool_call_approved = Signal(AIToolCall)
@@ -200,7 +205,7 @@ class ConversationMessage(QFrame):
 
             self._edit_message_button = QToolButton()
             self._edit_message_button.setObjectName("_edit_button")
-            self._edit_message_button.clicked.connect(self._edit_message)
+            self._edit_message_button.clicked.connect(self.edit_from_here_requested)
             self._banner_layout.addWidget(self._edit_message_button)
 
             self._delete_message_button = QToolButton()
@@ -220,16 +225,13 @@ class ConversationMessage(QFrame):
             self._save_message_button.clicked.connect(self._save_message)
             self._banner_layout.addWidget(self._save_message_button)
 
-        # Inline edit area (hidden until edit mode is active)
-        self._edit_area: QWidget | None = None
-        self._edit_text_edit: MarkdownTextEdit | None = None
-        self._edit_confirm_button: QPushButton | None = None
-        self._edit_cancel_button: QPushButton | None = None
-
         # Container for message sections
         self._sections_container = QWidget(self)
         self._sections_container.setObjectName("_sections_container")
         self._is_spotlighted = False
+        self._is_pending_removal = False
+        self._is_being_edited = False
+        self._pending_removal_effect: QGraphicsOpacityEffect | None = None
         self._message_style: ConversationMessageStyle | None = message_style
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
@@ -412,6 +414,10 @@ class ConversationMessage(QFrame):
             border_color = self._get_fade_color()
             border_width = _BORDER_WIDTH_ACTIVE
 
+        elif self._is_being_edited:
+            border_color = self._style_manager.get_color_str(ColorRole.MESSAGE_EDITING)
+            border_width = _BORDER_WIDTH_ACTIVE
+
         elif self._is_spotlighted and self._has_focus_in_hierarchy():
             border_color = self._style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)
             border_width = _BORDER_WIDTH_ACTIVE
@@ -477,6 +483,43 @@ class ConversationMessage(QFrame):
 
         self._is_spotlighted = spotlighted
         self._update_border_style()
+
+    def is_pending_removal(self) -> bool:
+        """Check if this message is marked for removal by a pending edit."""
+        return self._is_pending_removal
+
+    def is_being_edited(self) -> bool:
+        """Check if this message is the target of a pending edit."""
+        return self._is_being_edited
+
+    def set_being_edited(self, being_edited: bool) -> None:
+        """Mark this message as the target of a pending edit, highlighting its border."""
+        if self._is_being_edited == being_edited:
+            return
+
+        self._is_being_edited = being_edited
+        self._update_border_style()
+
+    def set_pending_removal(self, pending: bool) -> None:
+        """
+        Mark this message as due to be removed if a pending edit is submitted.
+
+        The message is greyed out to signal that it will be removed, but remains
+        fully interactive: the user can still select, copy, and follow links in it
+        because it has not actually been removed yet.
+        """
+        if self._is_pending_removal == pending:
+            return
+
+        self._is_pending_removal = pending
+        if pending:
+            self._pending_removal_effect = QGraphicsOpacityEffect(self)
+            self._pending_removal_effect.setOpacity(_PENDING_REMOVAL_OPACITY)
+            self.setGraphicsEffect(self._pending_removal_effect)
+
+        elif self._pending_removal_effect is not None:
+            self._pending_removal_effect.deleteLater()
+            self._pending_removal_effect = None
 
     def is_expanded(self) -> bool:
         """Check if this message is expanded."""
@@ -621,12 +664,6 @@ class ConversationMessage(QFrame):
 
         if self._edit_message_button:
             self._edit_message_button.setToolTip(strings.tooltip_edit_message)
-
-        if self._edit_confirm_button:
-            self._edit_confirm_button.setText(strings.submit_message)
-
-        if self._edit_cancel_button:
-            self._edit_cancel_button.setText(strings.cancel)
 
         if self._delete_message_button:
             self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
@@ -1032,119 +1069,8 @@ class ConversationMessage(QFrame):
         """Fork the conversation at this message."""
         self.fork_requested.emit()
 
-    def _edit_message(self) -> None:
-        """Enter inline edit mode for this user message."""
-        if self._edit_area is not None:
-            return  # Already in edit mode
-
-        # Hide the rendered sections and banner action buttons
-        self._sections_container.hide()
-        for btn in (
-            self._fork_message_button,
-            self._edit_message_button,
-            self._delete_message_button,
-            self._copy_message_button,
-            self._save_message_button,
-        ):
-            if btn is not None:
-                btn.hide()
-
-        if self._expand_button is not None:
-            self._expand_button.setEnabled(False)
-
-        # Build the edit area using the same MarkdownTextEdit approach as the input box,
-        # so code block syntax highlighting and other input behaviours work correctly.
-        spacing = int(self._style_manager.message_bubble_spacing())
-        font = self.font()
-        font.setPointSizeF(self._style_manager.base_font_size() * self._style_manager.zoom_factor())
-        self._edit_area = QWidget(self)
-        self._edit_area.setObjectName("_edit_area")
-        edit_layout = QVBoxLayout(self._edit_area)
-        edit_layout.setContentsMargins(0, 0, 0, 0)
-        edit_layout.setSpacing(spacing // 2)
-
-        # Use MarkdownTextEdit (is_input=True) to get syntax highlighting for code blocks
-        text_edit = MarkdownTextEdit(True, self._edit_area)
-        text_edit.setObjectName("_edit_text_edit")
-        text_edit.setPlainText(self._message_content)
-        text_edit.apply_style()
-        text_edit.installEventFilter(self)
-        self._edit_text_edit = text_edit
-        edit_layout.addWidget(text_edit)
-
-        # Confirm / Cancel buttons
-        btn_row = QWidget(self._edit_area)
-        btn_row.setObjectName("_edit_btn_row")
-        btn_layout = QHBoxLayout(btn_row)
-        btn_layout.setContentsMargins(0, 0, 0, 0)
-        btn_layout.setSpacing(6)
-        btn_layout.addStretch()
-
-        cancel_btn = QPushButton(self._edit_area)
-        cancel_btn.setObjectName("_edit_cancel_button")
-        cancel_btn.clicked.connect(self._cancel_edit)
-        cancel_btn.setFont(font)
-        self._edit_cancel_button = cancel_btn
-        btn_layout.addWidget(cancel_btn)
-
-        confirm_btn = QPushButton(self._edit_area)
-        confirm_btn.setObjectName("_edit_confirm_button")
-        confirm_btn.clicked.connect(self._confirm_edit)
-        confirm_btn.setFont(font)
-        self._edit_confirm_button = confirm_btn
-        btn_layout.addWidget(confirm_btn)
-
-        edit_layout.addWidget(btn_row)
-        self._layout.addWidget(self._edit_area)
-
-        self._on_language_changed()  # set button labels
-        text_edit.setFocus()
-        cursor = text_edit.textCursor()
-        cursor.movePosition(cursor.MoveOperation.End)
-        text_edit.setTextCursor(cursor)
-
-    def _cancel_edit(self) -> None:
-        """Cancel inline editing and restore the rendered content."""
-        if self._edit_area is None:
-            return
-
-        self._layout.removeWidget(self._edit_area)
-        self._edit_area.deleteLater()
-        self._edit_area = None
-        self._edit_text_edit = None
-        self._edit_confirm_button = None
-        self._edit_cancel_button = None
-        self._sections_container.show()
-        for btn in (
-            self._fork_message_button,
-            self._edit_message_button,
-            self._delete_message_button,
-            self._copy_message_button,
-            self._save_message_button,
-        ):
-            if btn is not None:
-                btn.show()
-
-        if self._expand_button is not None:
-            self._expand_button.setEnabled(True)
-
-    def _confirm_edit(self) -> None:
-        """Confirm the inline edit and emit the new content."""
-        if self._edit_text_edit is None:
-            return
-
-        new_text = self._edit_text_edit.toPlainText()
-        self._cancel_edit()  # clean up edit UI before emitting
-        self.edit_confirmed.emit(new_text)
-
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        """Intercept Ctrl+Enter in the inline editor to confirm."""
-        if obj is self._edit_text_edit and event.type() == QEvent.Type.KeyPress:
-            key_event = cast(QKeyEvent, event)
-            if (key_event.key() == Qt.Key.Key_Return and key_event.modifiers() & Qt.KeyboardModifier.ControlModifier):
-                self._confirm_edit()
-                return True
-
+        """Keep the sticky banner pinned to its target position."""
         # While the banner is pinned, the parent layout may try to snap it back to its
         # natural position (most commonly during a window resize). Re-pin it immediately,
         # in the same event, so the sticky header never visibly drops out of place.
@@ -1366,16 +1292,6 @@ class ConversationMessage(QFrame):
                         label = chip.findChild(QLabel, "_attachment_label")
                         if label is not None:
                             label.setFont(style.chip_font)
-
-        if self._edit_confirm_button is not None:
-            self._edit_confirm_button.setFont(style.chip_font)
-
-        if self._edit_cancel_button is not None:
-            self._edit_cancel_button.setFont(style.chip_font)
-
-        # Re-apply style to the inline edit text area if currently open
-        if self._edit_text_edit is not None:
-            self._edit_text_edit.apply_style()
 
     def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> list[tuple[int, int, int]]:
         """

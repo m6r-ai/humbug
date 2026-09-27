@@ -129,9 +129,6 @@ _DARK_COLORS: dict[ColorRole, str] = {
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: "#c03020",
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: "#e05040",
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: "#d04030",
-    ColorRole.BUTTON_BACKGROUND_EDIT: "#b07010",
-    ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED: "#906000",
-    ColorRole.BUTTON_BACKGROUND_EDIT_HOVER: "#c08020",
     ColorRole.BUTTON_BACKGROUND_DISABLED: "#282828",
 
     # Switch colours
@@ -181,6 +178,7 @@ _DARK_COLORS: dict[ColorRole, str] = {
     ColorRole.MESSAGE_USER_BORDER: "#484848",
     ColorRole.MESSAGE_INPUT_BORDER: "#707070",
     ColorRole.MESSAGE_SPOTLIGHTED: "#788ca0",
+    ColorRole.MESSAGE_EDITING: "#e0a020",
     ColorRole.MESSAGE_USER: "#7090e0",
     ColorRole.MESSAGE_AI: "#80c080",
     ColorRole.MESSAGE_REASONING: "#808080",
@@ -353,9 +351,6 @@ _COLOR_BLIND_COLORS: dict[ColorRole, str] = {
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: "#d55e00",
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: "#a94b00",
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: "#e7771a",
-    ColorRole.BUTTON_BACKGROUND_EDIT: "#4b3d70",
-    ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED: "#3a3058",
-    ColorRole.BUTTON_BACKGROUND_EDIT_HOVER: "#5b4a84",
     ColorRole.BUTTON_BACKGROUND_DISABLED: "#2a3036",
 
     # Switch colours
@@ -405,6 +400,7 @@ _COLOR_BLIND_COLORS: dict[ColorRole, str] = {
     ColorRole.MESSAGE_USER_BORDER: "#3c5870",
     ColorRole.MESSAGE_INPUT_BORDER: "#566573",
     ColorRole.MESSAGE_SPOTLIGHTED: "#0072b2",
+    ColorRole.MESSAGE_EDITING: "#e69f00",
     ColorRole.MESSAGE_USER: "#56b4e9",
     ColorRole.MESSAGE_AI: "#009e73",
     ColorRole.MESSAGE_REASONING: "#cc79a7",
@@ -575,9 +571,6 @@ _OCEAN_LIGHT_COLORS: dict[ColorRole, str] = {
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: "#c94a3a",
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: "#9f3328",
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: "#b83e31",
-    ColorRole.BUTTON_BACKGROUND_EDIT: "#a06008",
-    ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED: "#804800",
-    ColorRole.BUTTON_BACKGROUND_EDIT_HOVER: "#b07018",
     ColorRole.BUTTON_BACKGROUND_DISABLED: "#e0e0e0",
 
     # Switch colours
@@ -627,6 +620,7 @@ _OCEAN_LIGHT_COLORS: dict[ColorRole, str] = {
     ColorRole.MESSAGE_USER_BORDER: "#9fbede",
     ColorRole.MESSAGE_INPUT_BORDER: "#95a3b1",
     ColorRole.MESSAGE_SPOTLIGHTED: "#607488",
+    ColorRole.MESSAGE_EDITING: "#b8720a",
     ColorRole.MESSAGE_USER: "#185d96",
     ColorRole.MESSAGE_AI: "#1d7a4d",
     ColorRole.MESSAGE_REASONING: "#7a4fa3",
@@ -799,9 +793,6 @@ _LIGHT_COLORS: dict[ColorRole, str] = {
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: "#e0503c",
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: "#b53626",
     ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: "#cc4433",
-    ColorRole.BUTTON_BACKGROUND_EDIT: "#a06008",
-    ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED: "#804800",
-    ColorRole.BUTTON_BACKGROUND_EDIT_HOVER: "#b07018",
     ColorRole.BUTTON_BACKGROUND_DISABLED: "#e0e0e0",
 
     # Switch colours
@@ -851,6 +842,7 @@ _LIGHT_COLORS: dict[ColorRole, str] = {
     ColorRole.MESSAGE_USER_BORDER: "#bcd0ef",
     ColorRole.MESSAGE_INPUT_BORDER: "#a0aab8",
     ColorRole.MESSAGE_SPOTLIGHTED: "#607488",
+    ColorRole.MESSAGE_EDITING: "#b8720a",
     ColorRole.MESSAGE_USER: "#2563eb",
     ColorRole.MESSAGE_AI: "#1d7a4d",
     ColorRole.MESSAGE_REASONING: "#7a4fa3",

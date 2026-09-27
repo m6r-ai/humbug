@@ -128,6 +128,7 @@ def get_english_strings() -> LanguageStrings:
         processing_message="Chat with {model} (Esc to cancel, {key} to submit)",
         input_prompt="Chat with {model} ({key} to submit)",
         command_prompt="Command (Enter or {key} to submit)",
+        editing_message="Editing message — submitting will remove this and all following messages ({key} to submit)",
 
         # AI thinking message
         ai_thinking="AI is thinking...",
@@ -404,12 +405,13 @@ def get_english_strings() -> LanguageStrings:
         tooltip_copy_message="Copy message to clipboard",
         tooltip_save_message="Save message as markdown",
         tooltip_fork_message="Fork conversation at this message",
-        tooltip_delete_from_message="Delete conversation from this point",
-        tooltip_edit_message="Edit this message",
+        tooltip_delete_from_message="Delete this message and all following messages",
+        tooltip_edit_message="Edit from this message",
         tooltip_submit_message="Submit message",
         tooltip_stop_message="Stop current processing",
         tooltip_settings_message="Open conversation settings",
         tooltip_attach_file="Attach a file",
+        tooltip_cancel_edit="Cancel editing",
         tooltip_expand_message="Expand message",
         tooltip_collapse_message="Collapse message",
         warning_file_too_large=(

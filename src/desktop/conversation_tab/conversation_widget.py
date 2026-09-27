@@ -247,6 +247,7 @@ class ConversationWidget(QWidget):
         self._input.stop_requested.connect(self._on_stop_requested)
         self._input.settings_requested.connect(self._on_input_settings_requested)
         self._input.attach_requested.connect(self._on_attach_requested)
+        self._input.cancel_edit_requested.connect(self._on_cancel_edit_requested)
         self._input.modified.connect(self.conversation_modified)
 
         # Invisible spacer that reserves the same height as the floating input
@@ -287,6 +288,12 @@ class ConversationWidget(QWidget):
 
         # Tracking for spotlighted message
         self._spotlighted_message_index = -1
+
+        # Pending edit: the message the next submit will truncate to, and the text
+        # that was loaded into the input box when the edit began.  Nothing is removed
+        # from the transcript until the edit is submitted.
+        self._pending_edit_message_id: str | None = None
+        self._pending_edit_original_text = ""
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -626,7 +633,7 @@ class ConversationWidget(QWidget):
         msg_widget.mouse_released.connect(self._stop_scroll)
         msg_widget.link_clicked.connect(self._on_link_clicked)
         msg_widget.fork_requested.connect(self._on_message_fork_requested)
-        msg_widget.edit_confirmed.connect(self._on_message_edit_confirmed)
+        msg_widget.edit_from_here_requested.connect(self._on_message_edit_from_here_requested)
         msg_widget.delete_requested.connect(self._on_message_delete_requested)
         msg_widget.expand_requested.connect(self._on_message_expand_requested)
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
@@ -2539,6 +2546,9 @@ class ConversationWidget(QWidget):
         """
         Handle Esc key press with confirmation for active streaming or pending tool approval.
 
+        If a pending edit is active, Esc cancels the edit and restores the messages
+        that were marked for removal.
+
         If the conversation is actively streaming or has a pending tool approval,
         shows a confirmation dialog before canceling. The dialog warns that this
         is a dangerous operation.
@@ -2546,6 +2556,11 @@ class ConversationWidget(QWidget):
         Returns:
             bool: True if the Esc key was handled (even if user declined), False otherwise
         """
+        # A pending edit is the innermost state, so Esc cancels it first.
+        if self._pending_edit_message_id is not None:
+            self._on_cancel_edit_requested()
+            return True
+
         # If not streaming and no pending tool approval, nothing to cancel
         if not self._is_streaming and not self._pending_tool_call_approval:
             return False
@@ -2659,8 +2674,14 @@ class ConversationWidget(QWidget):
         # Emit signal with the end index (inclusive)
         self.fork_from_index_requested.emit(message_index)
 
-    def _on_message_edit_confirmed(self, new_text: str) -> None:
-        """Handle confirmed inline edit: truncate from that message onward and resubmit."""
+    def _on_message_edit_from_here_requested(self) -> None:
+        """
+        Begin editing from a user message.
+
+        The message text is loaded into the input box and the message, along with
+        every subsequent message, is marked as pending removal.  Nothing is removed
+        from the transcript until the edit is submitted.
+        """
         sender = self.sender()
         if not isinstance(sender, ConversationMessage):
             return
@@ -2669,56 +2690,82 @@ class ConversationWidget(QWidget):
         if sender not in self._messages:
             return
 
-        widget_index = self._messages.index(sender)
-        if widget_index < 0 or widget_index >= len(self._messages):
+        index = self._messages.index(sender)
+        if self._messages[index].message_source() != AIMessageSource.USER:
             return
 
-        if self._messages[widget_index].message_source() != AIMessageSource.USER:
-            return
-
-        if self._is_streaming:
-            self.cancel_current_tasks(False)
-            self._is_streaming = False
-            self._input.set_streaming(False)
-            self._stop_message_border_animation()
-
-            self.status_updated.emit()
-
-        # Truncate history via the wrapper — this also writes the transcript
         message_id = sender.message_id()
         if message_id is None:
+            return
+
+        self._begin_pending_edit(message_id, index, sender.message_content())
+
+    def _begin_pending_edit(self, message_id: str, index: int, content: str) -> None:
+        """Enter pending-edit mode targeting the message at the given index."""
+        self._clear_pending_edit()
+
+        self._pending_edit_message_id = message_id
+        self._pending_edit_original_text = content
+
+        self._messages[index].set_being_edited(True)
+        for message_widget in self._messages[index + 1:]:
+            message_widget.set_pending_removal(True)
+
+        self._input.set_plain_text(content)
+        self._input.set_edit_mode(True)
+        self._input.set_spotlighted(True)
+        self._input.setFocus()
+
+    def _clear_pending_edit(self) -> None:
+        """Leave pending-edit mode, restoring any messages marked for removal."""
+        if self._pending_edit_message_id is None:
+            return
+
+        self._pending_edit_message_id = None
+        self._pending_edit_original_text = ""
+
+        for message_widget in self._messages:
+            message_widget.set_pending_removal(False)
+            message_widget.set_being_edited(False)
+
+        self._input.set_edit_mode(False)
+
+    def _on_cancel_edit_requested(self) -> None:
+        """Handle the user cancelling a pending edit."""
+        self._clear_pending_edit()
+        self._input.clear()
+        self._focus_input()
+
+    def _commit_pending_edit(self) -> None:
+        """
+        Commit a pending edit by truncating the conversation to the edited message.
+
+        The edited message and everything after it are removed from the transcript
+        and from the UI.  The revised text is then submitted as a new message by the
+        caller.
+        """
+        message_id = self._pending_edit_message_id
+        self._pending_edit_message_id = None
+        self._pending_edit_original_text = ""
+        self._input.set_edit_mode(False)
+
+        if message_id is None:
+            return
+
+        index = next(
+            (i for i, widget in enumerate(self._messages) if widget.message_id() == message_id),
+            -1,
+        )
+        if index < 0:
+            self._logger.error("Pending edit target %s is no longer present", message_id)
             return
 
         if self._ai_conversation.truncate_to_message(message_id) is None:
             self._logger.error("Failed to truncate conversation at message %s", message_id)
             return
 
-        preserved_messages = self._messages[:widget_index]
-        for i in range(len(self._messages) - 1, widget_index - 1, -1):
-            message_widget = self._messages[i]
-            if self._message_with_selection == message_widget:
-                self._message_with_selection = None
-
-            if self._last_error_message_widget == message_widget:
-                self._last_error_message_widget = None
-
-            self._remove_response_reveal(message_widget)
-            self._messages_layout.removeWidget(message_widget)
-            message_widget.deleteLater()
-
-        self._messages = preserved_messages
-
-        conversation_settings = self._ai_conversation.conversation_settings()
-        self._input.set_model(AIConversationSettings.get_display_name(conversation_settings.model, conversation_settings.provider))
-
-        if self._animated_messages and not self._animated_messages.issubset(preserved_messages):
-            self._stop_message_border_animation()
-
-        self.status_updated.emit()
+        self._remove_message_widgets_from(index)
         self._spotlighted_message_index = -1
-        self._auto_scroll = True
-        self._input.set_plain_text(new_text.strip())
-        self.submit()
 
     def _on_message_delete_requested(self) -> None:
         """Handle request to delete conversation from a message onwards."""
@@ -2732,6 +2779,9 @@ class ConversationWidget(QWidget):
             return
 
         assert self._messages[index].message_source() == AIMessageSource.USER, "Only user messages can be deleted."
+
+        # A delete supersedes any pending edit.
+        self._clear_pending_edit()
 
         # If we're currently streaming, cancel the AI interaction first
         if self._is_streaming:
@@ -2749,12 +2799,19 @@ class ConversationWidget(QWidget):
         if message_id is None:
             return
 
-        prompt = self._ai_conversation.truncate_to_message(message_id)
-        if prompt is None:
+        if self._ai_conversation.truncate_to_message(message_id) is None:
             self._logger.error("Failed to truncate conversation at message %s", message_id)
             return
 
-        # Remove message widgets from the layout
+        self._remove_message_widgets_from(index)
+
+        self.status_updated.emit()
+        self._spotlighted_message_index = -1
+        self._auto_scroll = True
+        self._scroll_to_bottom()
+
+    def _remove_message_widgets_from(self, index: int) -> None:
+        """Remove the message widgets at and after the given index from the layout."""
         preserved_messages = self._messages[:index]
         for i in range(len(self._messages) - 1, index - 1, -1):
             message_widget = self._messages[i]
@@ -2775,14 +2832,6 @@ class ConversationWidget(QWidget):
 
         if self._animated_messages and not self._animated_messages.issubset(preserved_messages):
             self._stop_message_border_animation()
-
-        self.status_updated.emit()
-        self._spotlighted_message_index = -1
-        self._input.set_content(prompt)
-        self._input.set_spotlighted(True)
-        self._input.setFocus()
-        self._auto_scroll = True
-        self._scroll_to_bottom()
 
     def can_cut(self) -> bool:
         """Check if cut operation is available."""
@@ -2840,6 +2889,11 @@ class ConversationWidget(QWidget):
         attachments = self._input.get_attachments()
         if not content and not attachments:
             return
+
+        # A pending edit is committed here: truncate the conversation to just before
+        # the message being edited, then send the revised text as a new message.
+        if self._pending_edit_message_id is not None:
+            self._commit_pending_edit()
 
         # Store each attachment in the conversation history and collect GUIDs
         history = self._ai_conversation.get_conversation_history()

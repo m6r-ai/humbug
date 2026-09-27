@@ -90,12 +90,6 @@ class ColorRole(Enum):
                                         # Destructive primary action button pressed
     BUTTON_BACKGROUND_DESTRUCTIVE_HOVER = auto()
                                         # Destructive primary action button hover
-    BUTTON_BACKGROUND_EDIT = auto()
-                                        # Edit action button
-    BUTTON_BACKGROUND_EDIT_PRESSED = auto()
-                                        # Edit action button pressed
-    BUTTON_BACKGROUND_EDIT_HOVER = auto()
-                                        # Edit action button hover
     BUTTON_BACKGROUND_DISABLED = auto()
                                         # Disabled push button background
 
@@ -148,6 +142,7 @@ class ColorRole(Enum):
     MESSAGE_USER_BORDER = auto()        # Message border for user messages
     MESSAGE_INPUT_BORDER = auto()       # Message border for input messages
     MESSAGE_SPOTLIGHTED = auto()        # For highlighting the spotlighted message
+    MESSAGE_EDITING = auto()            # For the message currently being edited
     MESSAGE_USER = auto()               # User message
     MESSAGE_AI = auto()                 # AI response
     MESSAGE_REASONING = auto()          # AI reasoning

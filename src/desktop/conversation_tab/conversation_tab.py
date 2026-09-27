@@ -575,6 +575,7 @@ class ConversationTab(TabBase):
             #ConversationWidget #ConversationMessage #_submit_button,
             #ConversationWidget #ConversationMessage #_settings_button,
             #ConversationWidget #ConversationMessage #_attach_button,
+            #ConversationWidget #ConversationMessage #_cancel_edit_button,
             #ConversationWidget #ConversationMessage #_attachments_button {{
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_INACTIVE)};
@@ -596,6 +597,10 @@ class ConversationTab(TabBase):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
+            #ConversationWidget #ConversationMessage #_cancel_edit_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
             #ConversationWidget #ConversationMessage #_expand_button:pressed,
             #ConversationWidget #ConversationMessage #_copy_button:pressed,
             #ConversationWidget #ConversationMessage #_save_button:pressed,
@@ -606,6 +611,7 @@ class ConversationTab(TabBase):
             #ConversationWidget #ConversationMessage #_submit_button:pressed,
             #ConversationWidget #ConversationMessage #_settings_button:pressed,
             #ConversationWidget #ConversationMessage #_attach_button:pressed,
+            #ConversationWidget #ConversationMessage #_cancel_edit_button:pressed,
             #ConversationWidget #ConversationMessage #_attachments_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -635,7 +641,7 @@ class ConversationTab(TabBase):
             }}
 
             #ConversationWidget #ConversationMessage #_attachments_container, #ConversationWidget #ConversationMessage #_chips_bar,
-            #ConversationWidget #ConversationMessage #_approval_widget, #ConversationWidget #ConversationMessage #_edit_btn_row,
+            #ConversationWidget #ConversationMessage #_approval_widget,
             #ConversationWidget #ConversationMessage #_attachments_bar {{
                 background-color: transparent;
                 border: none;
@@ -658,19 +664,6 @@ class ConversationTab(TabBase):
             #ConversationWidget #ConversationMessage #_approval_context_widget #_approval_context_text_edit {{
                 background-color: transparent;
             }}
-            #ConversationWidget #ConversationMessage #_edit_area {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
-                border-radius: {border_radius}px;
-                border: 0;
-            }}
-            #ConversationWidget #ConversationMessage #_edit_text_edit {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: transparent;
-                border: none;
-                padding: 0;
-                margin: 0 0 {border_radius}px 0;
-                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-            }}
             #ConversationWidget #ConversationMessage #_attachment_widget {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_ATTACHMENT_BACKGROUND)};
                 border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
@@ -691,34 +684,6 @@ class ConversationTab(TabBase):
             }}
             #ConversationWidget #ConversationMessage #_attachment_remove:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
-            }}
-            #ConversationWidget #ConversationMessage #_edit_confirm_button {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-                border: none;
-                border-radius: 4px;
-                padding: 4px 12px;
-            }}
-            #ConversationWidget #ConversationMessage #_edit_confirm_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT_HOVER)};
-            }}
-            #ConversationWidget #ConversationMessage #_edit_confirm_button:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED)};
-            }}
-            #ConversationWidget #ConversationMessage #_edit_cancel_button {{
-                background-color: transparent;
-                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
-                border: 1px solid {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
-                border-radius: 4px;
-                padding: 4px 12px;
-            }}
-            #ConversationWidget #ConversationMessage #_edit_cancel_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
-            }}
-            #ConversationWidget #ConversationMessage #_edit_cancel_button:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
-                border-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
-                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
             {style_manager.get_scrollbar_stylesheet(
                 "#ConversationWidget #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar"
