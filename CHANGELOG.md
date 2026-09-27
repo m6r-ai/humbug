@@ -16,6 +16,7 @@ New features:
   cursor.
 - Added support for Claude Opus 5.5.
 - Added support for GPT 6 Astra, Sol, and Luna.
+- Added support for Grok 4.7.
 - The OpenAI backend now uses the Responses API instead of Chat Completions, enabling tool calling and advanced
   reasoning on newer OpenAI models.
 - Added a feature to create folders and new conversations in the conversation sidebar view.
