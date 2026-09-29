@@ -1505,8 +1505,13 @@ class TabManager(QWidget):
         if column == self._active_column:
             return
 
+        # A column becoming active via a focus event must not steal focus or
+        # re-drive tab activation.  Restarting the activation timer here would
+        # race with the activation already scheduled for a tab that is being
+        # opened, and could activate the wrong column's current tab.  Only the
+        # active-column styling needs to change.
         self._active_column = column
-        self._update_tabs()
+        self._update_tabs(change_focus=False)
 
     def _get_target_column_for_new_tab(self, requester_id: str = "") -> ColumnWidget:
         """
@@ -1937,9 +1942,23 @@ class TabManager(QWidget):
         finally:
             self._restoring = False
 
+        # Capture the focused context id before restoring the visible tabs.
+        # _restore_current_tabs drives currentChanged, whose handler calls
+        # contexts().focus(), overwriting the registry's focused id with the
+        # last column it processes.
+        focused_id = registry.current_context_id()
+
         # Restore which tab is visible in each column.  This must happen after
-        # every tab exists, and it deliberately does not change the active column.
+        # every tab exists.
         self._restore_current_tabs(registry.get_current_by_column())
+
+        # Set the active column from the context that was focused when the
+        # session was saved.  Without this, _active_column is left pointing at
+        # whichever column _restore_current_tabs processed last, so focus ends
+        # up on the wrong column's tab.
+        focused_tab = self._tabs.get(focused_id) if focused_id else None
+        focused_column = self._find_column_for_tab(focused_tab) if focused_tab else None
+        self._active_column = focused_column if focused_column is not None else self._tab_columns[0]
 
         self.show_all_columns()
         self._update_tabs()
