@@ -776,7 +776,9 @@ class TabManager(QWidget):
 
         self._update_tabs()
 
-    def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
+    def _add_tab_to_column(
+        self, tab: TabBase, title: str, column: ColumnWidget, restore_focus: bool,
+    ) -> None:
         """
         Add a tab to a column and set up associated data.
 
@@ -784,6 +786,9 @@ class TabManager(QWidget):
             tab: Tab widget to add
             title: Initial title for the tab
             column: Target column
+            restore_focus: Whether focus should be restored to the widget that had
+                focus before the tab was added.  This is True for non-user-initiated
+                opens (AI or another context) so the user's focus is not stolen.
         """
         tool_tip = tab.path()
         if tool_tip:
@@ -834,12 +839,18 @@ class TabManager(QWidget):
             column_index = self._tab_columns.index(column)
             self._mindspace_manager.mindspace().contexts().update(tab_id, column=column_index)
 
-        # Only restore focus to the prior widget if it was outside the target column
-        # (e.g. the sidebar).  If focus was already inside the column, let it move to the new tab.
-        if focus_widget is not None and not column.isAncestorOf(focus_widget):
-            self._activation_timer.stop()
+        # Only restore focus to the prior widget when the open was not user-initiated
+        # and focus was outside the target column (e.g. the sidebar).  If focus was
+        # already inside the column, let it move to the new tab.  Deciding this here,
+        # rather than scheduling a restore and cancelling it later, removes the race
+        # between the focus-restore and activation timers.
+        if restore_focus and focus_widget is not None and not column.isAncestorOf(focus_widget):
             self._deferred_focus_widget = focus_widget
             self._focus_restore_timer.start(0)
+
+        else:
+            self._deferred_focus_widget = None
+            self._focus_restore_timer.stop()
 
     def _on_deferred_focus_restore(self) -> None:
         """Restore focus to the widget saved by the tab activation path."""
@@ -883,7 +894,7 @@ class TabManager(QWidget):
         # Moving a tab is a deliberate user action, so it is no longer ephemeral
         new_tab.set_ephemeral(False)
 
-        self._add_tab_to_column(new_tab, tab_title, target_column)
+        self._add_tab_to_column(new_tab, tab_title, target_column, restore_focus=False)
         self._apply_context_models(new_tab)
 
         # _remove_tab_from_column closes the context; re-open it in the target
@@ -1553,7 +1564,7 @@ class TabManager(QWidget):
         prior_active_column = self._active_column
         target_column = column if column is not None else self._get_target_column_for_new_tab(requester_id)
 
-        self._add_tab_to_column(tab, title, target_column)
+        self._add_tab_to_column(tab, title, target_column, restore_focus=bool(requester_id))
 
         # If the new tab landed in a column that wasn't already active, restore the previously
         # active column so that opening a tab doesn't implicitly steal column activation
@@ -1564,11 +1575,9 @@ class TabManager(QWidget):
 
             else:
                 self._active_column = target_column
-                self._focus_restore_timer.stop()
                 self._update_tabs(change_focus=True)
 
         elif not requester_id:
-            self._focus_restore_timer.stop()
             self._update_tabs(change_focus=True)
 
         # Refresh the overlay views so the new tab appears as a card
