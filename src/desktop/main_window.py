@@ -498,10 +498,6 @@ class MainWindow(QMainWindow):
         self._prompt_navigator_action.setCheckable(True)
         self._prompt_navigator_action.toggled.connect(self._on_set_prompt_minimaps_visible)
 
-        self._show_trash_action = QAction(strings.show_trash, self)
-        self._show_trash_action.setCheckable(True)
-        self._show_trash_action.toggled.connect(self._on_toggle_show_trash)
-
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
 
@@ -575,7 +571,6 @@ class MainWindow(QMainWindow):
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._show_tab_overview_action)
         self._view_menu.addAction(self._show_tab_carousel_action)
-        self._view_menu.addAction(self._show_trash_action)
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._show_all_columns_action)
         self._view_menu.addAction(self._split_column_left_action)
@@ -619,7 +614,7 @@ class MainWindow(QMainWindow):
         )
         self._sidebar_manager.register_panel(
             "trash", "trash", TrashSidebar, _wire_trash_sidebar,
-            visibility_signal="visibility_requested", on_activated=_activate_trash_sidebar
+            on_activated=_activate_trash_sidebar, place_at_bottom=True
         )
         self._sidebar_manager.file_clicked.connect(self._on_sidebar_file_clicked)
         self._sidebar_manager.file_deleted.connect(self._on_sidebar_file_deleted)
@@ -992,7 +987,6 @@ class MainWindow(QMainWindow):
         self._swap_column_left_action.setText(strings.swap_column_left)
         self._swap_column_right_action.setText(strings.swap_column_right)
         self._prompt_navigator_action.setText(strings.prompt_markers)
-        self._show_trash_action.setText(strings.show_trash)
 
         # Our logic for left and right reverses for right-to-left languages
         left_to_right = self._language_manager.left_to_right()
@@ -2395,12 +2389,6 @@ class MainWindow(QMainWindow):
         if settings is not None:
             settings.prompt_markers_visible = visible
             self._mindspace_manager.mindspace().update_settings(settings)
-
-    def _on_toggle_show_trash(self, visible: bool) -> None:
-        """Show or hide the Trash panel's rail icon."""
-        panel = self._sidebar_manager.get_panel("trash")
-        assert isinstance(panel, TrashSidebar)
-        panel.visibility_requested.emit(visible)
 
     def _sync_prompt_markers(self, visible: bool) -> None:
         """Update the View menu checkbox and all open conversation tabs."""

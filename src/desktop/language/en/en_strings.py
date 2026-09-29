@@ -80,7 +80,6 @@ def get_english_strings() -> LanguageStrings:
         open_token_usage="Token Usage",
         show_tab_overview="Show Open Tabs",
         show_tab_carousel="Show Tab Carousel",
-        show_trash="Show Trash",
         show_all_columns="Show All Columns",
         split_column_left="Split Column Left",
         split_column_right="Split Column Right",

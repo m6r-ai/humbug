@@ -71,7 +71,6 @@ class LanguageStrings:
     open_token_usage: str
     show_tab_overview: str
     show_tab_carousel: str
-    show_trash: str
     show_all_columns: str
     split_column_left: str
     split_column_right: str

@@ -81,7 +81,6 @@ def get_arabic_strings() -> LanguageStrings:
         open_token_usage="استخدام الرموز",
         show_tab_overview="عرض التبويبات المفتوحة",
         show_tab_carousel="عرض دوّار التبويبات",
-        show_trash="عرض سلة المهملات",
         show_all_columns="عرض كل الأعمدة",
         split_column_left="تقسيم العمود لليسار",
         split_column_right="تقسيم العمود لليمين",

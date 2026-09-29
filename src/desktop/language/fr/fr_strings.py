@@ -80,7 +80,6 @@ def get_french_strings() -> LanguageStrings:
         open_token_usage="Utilisation des tokens",
         show_tab_overview="Afficher les onglets ouverts",
         show_tab_carousel="Afficher le carrousel d'onglets",
-        show_trash="Afficher la corbeille",
         show_all_columns="Afficher toutes les colonnes",
         split_column_left="Diviser la colonne à gauche",
         split_column_right="Diviser la colonne à droite",

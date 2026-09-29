@@ -39,7 +39,6 @@ class TrashSidebar(SidebarBase):
     remain visible and restorable across restarts.
     """
 
-    visibility_requested = Signal(bool)
     file_clicked = Signal(str, str, bool)  # panel_id, path, ephemeral
 
     def __init__(self, parent: QWidget | None = None) -> None:

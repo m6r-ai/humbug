@@ -1,4 +1,4 @@
-"""Tests for the Trash panel's rail button visibility toggle."""
+"""Tests for the Trash panel's rail button placement."""
 
 import pytest
 
@@ -16,7 +16,7 @@ def _wire_trash_sidebar(_panel: SidebarBase, _mgr: SidebarManager) -> None:
 
 @pytest.fixture
 def manager(qapp, tmp_path, monkeypatch):  # pylint: disable=unused-argument
-    """A SidebarManager with the Trash panel registered, hidden-by-default."""
+    """A SidebarManager with the Trash panel registered in the bottom rail group."""
     home_dir = tmp_path / "home"
     home_dir.mkdir()
     monkeypatch.setenv("HOME", str(home_dir))
@@ -26,7 +26,7 @@ def manager(qapp, tmp_path, monkeypatch):  # pylint: disable=unused-argument
 
     mgr = SidebarManager()
     mgr.register_panel(
-        "trash", "trash", TrashSidebar, _wire_trash_sidebar, visibility_signal="visibility_requested"
+        "trash", "trash", TrashSidebar, _wire_trash_sidebar, place_at_bottom=True
     )
     yield mgr
 
@@ -36,27 +36,20 @@ def manager(qapp, tmp_path, monkeypatch):  # pylint: disable=unused-argument
 
 
 class TestTrashPanelVisibility:
-    """The Trash rail button starts hidden and follows visibility_requested."""
+    """The Trash rail button is always visible and sits in the bottom rail group."""
 
-    def test_trash_button_starts_hidden(self, manager):
-        button = manager._panel_buttons["trash"]  # pylint: disable=protected-access
-        assert button.isHidden()
-
-    def test_emitting_true_shows_the_button(self, manager):
-        panel = manager.get_panel("trash")
-        assert isinstance(panel, TrashSidebar)
-
-        panel.visibility_requested.emit(True)
-
+    def test_trash_button_is_visible(self, manager):
         button = manager._panel_buttons["trash"]  # pylint: disable=protected-access
         assert not button.isHidden()
 
-    def test_emitting_false_hides_it_again(self, manager):
-        panel = manager.get_panel("trash")
-        assert isinstance(panel, TrashSidebar)
+    def test_trash_button_sits_above_settings(self, manager):
+        layout = manager._rail_layout  # pylint: disable=protected-access
+        trash_button = manager._panel_buttons["trash"]  # pylint: disable=protected-access
+        settings_button = manager._settings_button  # pylint: disable=protected-access
+        assert layout.indexOf(trash_button) == layout.indexOf(settings_button) - 1
 
-        panel.visibility_requested.emit(True)
-        panel.visibility_requested.emit(False)
-
-        button = manager._panel_buttons["trash"]  # pylint: disable=protected-access
-        assert button.isHidden()
+    def test_trash_button_sits_below_carousel(self, manager):
+        layout = manager._rail_layout  # pylint: disable=protected-access
+        trash_button = manager._panel_buttons["trash"]  # pylint: disable=protected-access
+        carousel_button = manager._tab_carousel_button  # pylint: disable=protected-access
+        assert layout.indexOf(trash_button) == layout.indexOf(carousel_button) + 1

@@ -168,6 +168,7 @@ class SidebarManager(QWidget):
         wire_signals: "Callable[[SidebarBase, SidebarManager], None]",
         visibility_signal: str | None = None,
         on_activated: "Callable[[SidebarBase], None] | None" = None,
+        place_at_bottom: bool = False,
     ) -> None:
         """
         Register a sidebar panel.
@@ -186,6 +187,9 @@ class SidebarManager(QWidget):
                 hidden when this is set.
             on_activated: Optional callback invoked each time this panel's rail
                 button is clicked and the panel becomes active.
+            place_at_bottom: Place the rail button in the bottom group of the
+                rail (below the tab overview and carousel buttons, above the
+                settings button) instead of the panel group at the top.
         """
         panel = factory(self)
         assert isinstance(panel, SidebarBase)
@@ -210,8 +214,12 @@ class SidebarManager(QWidget):
                 lambda checked, pid=panel_id: self._on_panel_button_clicked(pid, checked, None)
             )
 
-        self._rail_layout.insertWidget(self._panel_insert_index, button)
-        self._panel_insert_index += 1
+        if place_at_bottom:
+            self._rail_layout.insertWidget(self._rail_layout.indexOf(self._settings_button), button)
+
+        else:
+            self._rail_layout.insertWidget(self._panel_insert_index, button)
+            self._panel_insert_index += 1
 
         self._panel_buttons[panel_id] = button
         self._panel_widgets[panel_id] = panel
