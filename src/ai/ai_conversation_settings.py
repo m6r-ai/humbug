@@ -14,24 +14,10 @@ class AIConversationSettings:
     # Registry keyed by (model_name, provider) — the canonical identity of a model.
     MODELS: dict[tuple[str, str], AIModel] = {
         # Anthropic models
-        ("claude-haiku-4-5", "anthropic"): AIModel(
-            name="claude-haiku-4-5",
+        ("claude-opus-5-5", "anthropic"): AIModel(
+            name="claude-opus-5-5",
             provider="anthropic",
-            display_name="Claude Haiku 4.5",
-            context_window=200000,
-            max_output_tokens=32000,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
-            ],
-        ),
-        ("claude-sonnet-5", "anthropic"): AIModel(
-            name="claude-sonnet-5",
-            provider="anthropic",
-            display_name="Claude Sonnet 5",
+            display_name="Claude Opus 5.5",
             context_window=1000000,
             max_output_tokens=64000,  # This is actually 128k but that's too much
             supports_temperature=False,
@@ -66,10 +52,10 @@ class AIConversationSettings:
             ],
             adaptive_thinking_only=True,
         ),
-        ("claude-opus-5-5", "anthropic"): AIModel(
-            name="claude-opus-5-5",
+        ("claude-fable-5", "anthropic"): AIModel(
+            name="claude-fable-5",
             provider="anthropic",
-            display_name="Claude Opus 5.5",
+            display_name="Claude Fable 5",
             context_window=1000000,
             max_output_tokens=64000,  # This is actually 128k but that's too much
             supports_temperature=False,
@@ -104,10 +90,10 @@ class AIConversationSettings:
             ],
             adaptive_thinking_only=True,
         ),
-        ("claude-fable-5", "anthropic"): AIModel(
-            name="claude-fable-5",
+        ("claude-sonnet-5", "anthropic"): AIModel(
+            name="claude-sonnet-5",
             provider="anthropic",
-            display_name="Claude Fable 5",
+            display_name="Claude Sonnet 5",
             context_window=1000000,
             max_output_tokens=64000,  # This is actually 128k but that's too much
             supports_temperature=False,
@@ -123,24 +109,22 @@ class AIConversationSettings:
             ],
             adaptive_thinking_only=True,
         ),
-
-        # DeepSeek models
-        ("deepseek-flash", "deepseek"): AIModel(
-            name="deepseek-flash",
-            provider="deepseek",
-            display_name="DeepSeek Flash",
-            context_window=1000000,
-            max_output_tokens=384000,
+        ("claude-haiku-4-5", "anthropic"): AIModel(
+            name="claude-haiku-4-5",
+            provider="anthropic",
+            display_name="Claude Haiku 4.5",
+            context_window=200000,
+            max_output_tokens=32000,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.NONE,
-                AIReasoningEffort.LOW,
-                AIReasoningEffort.HIGH,
-                AIReasoningEffort.MAX
+                AIReasoningEffort.HIGH
             ],
         ),
+
+        # DeepSeek models
         ("deepseek-v4-pro", "deepseek"): AIModel(
             name="deepseek-v4-pro",
             provider="deepseek",
@@ -157,8 +141,39 @@ class AIConversationSettings:
                 AIReasoningEffort.MAX
             ],
         ),
+        ("deepseek-flash", "deepseek"): AIModel(
+            name="deepseek-flash",
+            provider="deepseek",
+            display_name="DeepSeek Flash",
+            context_window=1000000,
+            max_output_tokens=384000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
 
         # Google models
+        ("gemini-3.8-flash", "google"): AIModel(
+            name="gemini-3.8-flash",
+            provider="google",
+            display_name="Gemini 3.8 Flash",
+            context_window=1048576,
+            max_output_tokens=65536,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+            ],
+        ),
         ("gemini-3.5-flash-lite", "google"): AIModel(
             name="gemini-3.5-flash-lite",
             provider="google",
@@ -170,21 +185,6 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
                 AIReasoningEffort.MINIMAL,
-                AIReasoningEffort.LOW,
-                AIReasoningEffort.MEDIUM,
-                AIReasoningEffort.HIGH,
-            ],
-        ),
-        ("gemini-3.8-flash", "google"): AIModel(
-            name="gemini-3.8-flash",
-            provider="google",
-            display_name="Gemini 3.8 Flash",
-            context_window=1048576,
-            max_output_tokens=65536,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
@@ -207,26 +207,6 @@ class AIConversationSettings:
         ),
 
         # Mistral models
-        ("devstral-small-latest", "mistral"): AIModel(
-            name="devstral-small-latest",
-            provider="mistral",
-            display_name="Devstral Small",
-            context_window=131072,
-            max_output_tokens=65536,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-        ),
-        ("codestral-latest", "mistral"): AIModel(
-            name="codestral-latest",
-            provider="mistral",
-            display_name="Codestral",
-            context_window=131072,
-            max_output_tokens=65536,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-        ),
         ("mistral-large-latest", "mistral"): AIModel(
             name="mistral-large-latest",
             provider="mistral",
@@ -243,6 +223,26 @@ class AIConversationSettings:
             display_name="Mistral Small",
             context_window=131072,
             max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+        ),
+        ("codestral-latest", "mistral"): AIModel(
+            name="codestral-latest",
+            provider="mistral",
+            display_name="Codestral",
+            context_window=131072,
+            max_output_tokens=65536,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+        ),
+        ("devstral-small-latest", "mistral"): AIModel(
+            name="devstral-small-latest",
+            provider="mistral",
+            display_name="Devstral Small",
+            context_window=131072,
+            max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
@@ -326,10 +326,10 @@ class AIConversationSettings:
                 AIReasoningEffort.HIGH
             ],
         ),
-        ("glm-5.3-flash", "ollama-cloud"): AIModel(
-            name="glm-5.3-flash:cloud",
+        ("glm-5.3", "ollama-cloud"): AIModel(
+            name="glm-5.3",
             provider="ollama-cloud",
-            display_name="GLM 5.3 Flash",
+            display_name="GLM 5.3",
             context_window=1048576,
             max_output_tokens=131072,
             supports_temperature=True,
@@ -342,10 +342,10 @@ class AIConversationSettings:
                 AIReasoningEffort.MAX
             ],
         ),
-        ("glm-5.3", "ollama-cloud"): AIModel(
-            name="glm-5.3",
+        ("glm-5.3-flash", "ollama-cloud"): AIModel(
+            name="glm-5.3-flash:cloud",
             provider="ollama-cloud",
-            display_name="GLM 5.3",
+            display_name="GLM 5.3 Flash",
             context_window=1048576,
             max_output_tokens=131072,
             supports_temperature=True,
@@ -427,6 +427,23 @@ class AIConversationSettings:
         ),
 
         # OpenAI models
+        ("gpt-6.1-sol", "openai"): AIModel(
+            name="gpt-6.1-sol",
+            provider="openai",
+            display_name="GPT 6.1 Sol",
+            context_window=1050000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
         ("gpt-6-astra", "openai"): AIModel(
             name="gpt-6-astra",
             provider="openai",
@@ -532,19 +549,6 @@ class AIConversationSettings:
                 AIReasoningEffort.MEDIUM
             ],
         ),
-        ("gpt-5.4-mini", "openai"): AIModel(
-            name="gpt-5.4-mini",
-            provider="openai",
-            display_name="GPT 5.4 Mini",
-            context_window=400000,
-            max_output_tokens=128000,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.MEDIUM
-            ],
-        ),
 
         # vLLM models
         ("gemma3:27b", "vllm"): AIModel(
@@ -607,10 +611,10 @@ class AIConversationSettings:
         ),
 
         # Z.ai models
-        ("glm-5.3-flash", "zai"): AIModel(
-            name="glm-5.3-flash",
+        ("glm-5.3", "zai"): AIModel(
+            name="glm-5.3",
             provider="zai",
-            display_name="GLM 5.3 Flash",
+            display_name="GLM 5.3",
             context_window=1048576,
             max_output_tokens=131072,
             supports_temperature=True,
@@ -623,10 +627,10 @@ class AIConversationSettings:
                 AIReasoningEffort.MAX
             ],
         ),
-        ("glm-5.3", "zai"): AIModel(
-            name="glm-5.3",
+        ("glm-5.3-flash", "zai"): AIModel(
+            name="glm-5.3-flash",
             provider="zai",
-            display_name="GLM 5.3",
+            display_name="GLM 5.3 Flash",
             context_window=1048576,
             max_output_tokens=131072,
             supports_temperature=True,
