@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QLabel, QApplication, QDialog, QMenu, QStatusBar
 )
 from PySide6.QtCore import Qt, QTimer, QEvent, QPoint
-from PySide6.QtGui import QKeyEvent, QMouseEvent, QAction, QKeySequence, QActionGroup
+from PySide6.QtGui import QKeyEvent, QMouseEvent, QAction, QKeySequence, QActionGroup, QResizeEvent
 
 from ai.ai_conversation_settings import AIConversationSettings
 from ai_tool import AIToolManager
@@ -55,6 +55,7 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.main_window_splitter import MainWindowSplitter
 from desktop.preview_sidebar.preview_sidebar import PreviewSidebar
 from desktop.preview_tab.preview_tab import PreviewTab
+from desktop.quick_switcher.quick_switcher_widget import QuickSwitcherEntry, QuickSwitcherWidget
 from desktop.search_sidebar.search_sidebar import SearchSidebar
 from desktop.settings_dialog import SettingsDialog, SECTION_AI_BACKENDS
 from desktop.shell_tab.commands.shell_command_cat import ShellCommandCat
@@ -274,6 +275,11 @@ class MainWindow(QMainWindow):
         "diff": "vcs",
     }
 
+    # Directories skipped when the Quick Switcher enumerates mindspace files.
+    _QUICK_SWITCHER_IGNORED_DIRS = {
+        ".git", ".humbug", ".venv", "venv", "__pycache__", "node_modules", "dist", "build",
+    }
+
     def __init__(self) -> None:
         """Initialize the main window."""
         super().__init__()
@@ -418,6 +424,10 @@ class MainWindow(QMainWindow):
         self._global_search_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
         self._global_search_action.triggered.connect(self._show_global_search)
 
+        self._quick_switcher_action = QAction(strings.quick_switcher, self)
+        self._quick_switcher_action.setShortcut(QKeySequence("Ctrl+P"))
+        self._quick_switcher_action.triggered.connect(self._on_show_quick_switcher)
+
         self._mindspace_settings_action = QAction(strings.mindspace_settings, self)
         self._mindspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
         self._mindspace_settings_action.triggered.connect(self._on_show_settings_dialog)
@@ -425,6 +435,9 @@ class MainWindow(QMainWindow):
         self._conv_settings_action = QAction(strings.conversation_settings, self)
         self._conv_settings_action.setShortcut(QKeySequence("Ctrl+Shift+,"))
         self._conv_settings_action.triggered.connect(self._on_show_conversation_settings_dialog)
+
+        # Lazily-created overlay for the Quick Switcher (Ctrl+P)
+        self._quick_switcher: QuickSwitcherWidget | None = None
 
         # View menu actions - Theme menu will be created in _on_language_changed
         self._theme_menu: QMenu | None = None
@@ -521,6 +534,7 @@ class MainWindow(QMainWindow):
         self._mindspace_menu.addAction(self._close_mindspace_action)
         self._mindspace_menu.addSeparator()
         self._mindspace_menu.addAction(self._global_search_action)
+        self._mindspace_menu.addAction(self._quick_switcher_action)
         self._mindspace_menu.addAction(self._mindspace_settings_action)
         self._mindspace_menu.addSeparator()
         self._mindspace_menu.addAction(self._open_mindspace_log_action)
@@ -799,6 +813,12 @@ class MainWindow(QMainWindow):
             if self._window_controls is not None:
                 QTimer.singleShot(0, self._update_window_controls_state)
 
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        """Keep the Quick Switcher overlay covering the content area if it is open."""
+        super().resizeEvent(event)
+        if self._quick_switcher is not None and self._quick_switcher.isVisible():
+            self._quick_switcher.setGeometry(self._main_widget.rect())
+
     def _update_window_controls_state(self) -> None:
         """Update the window controls maximised state after the event loop settles."""
         if self._window_controls is not None:
@@ -889,6 +909,7 @@ class MainWindow(QMainWindow):
 
         # Update mindspace actions
         self._global_search_action.setEnabled(has_mindspace)
+        self._quick_switcher_action.setEnabled(has_mindspace)
         self._mindspace_settings_action.setEnabled(has_mindspace)
         self._open_mindspace_log_action.setEnabled(has_mindspace)
         self._open_humbug_shell_action.setEnabled(has_mindspace)
@@ -966,6 +987,7 @@ class MainWindow(QMainWindow):
         self._goto_line_action.setText(strings.goto_line)
         self._conv_settings_action.setText(strings.conversation_settings)
         self._global_search_action.setText(strings.mindspace_search)
+        self._quick_switcher_action.setText(strings.quick_switcher)
         self._mindspace_settings_action.setText(strings.mindspace_settings)
         self._open_mindspace_log_action.setText(strings.open_mindspace_log)
         self._open_humbug_shell_action.setText(strings.open_humbug_shell)
@@ -1526,6 +1548,95 @@ class MainWindow(QMainWindow):
             return
 
         self._sidebar_manager.show_panel("search")
+
+    def _on_show_quick_switcher(self) -> None:
+        """Show the Quick Switcher overlay for jumping to files, conversations, or open tabs."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        strings = self._language_manager.strings()
+        if self._quick_switcher is None:
+            self._quick_switcher = QuickSwitcherWidget(self._main_widget)
+            self._quick_switcher.entry_activated.connect(self._on_quick_switcher_entry_activated)
+            self._quick_switcher.dismissed.connect(self._hide_quick_switcher)
+
+        self._quick_switcher.set_placeholder(strings.quick_switcher_placeholder)
+        self._quick_switcher.refresh_style()
+        self._quick_switcher.set_entries(self._build_quick_switcher_entries())
+        self._quick_switcher.setGeometry(self._main_widget.rect())
+        self._quick_switcher.show()
+        self._quick_switcher.raise_()
+        self._quick_switcher.focus_input()
+
+    def _hide_quick_switcher(self) -> None:
+        """Hide the Quick Switcher overlay."""
+        if self._quick_switcher is not None and self._quick_switcher.isVisible():
+            self._quick_switcher.hide()
+
+    def _on_quick_switcher_entry_activated(self, entry_id: str) -> None:
+        """Open or focus whatever the chosen Quick Switcher entry refers to."""
+        self._hide_quick_switcher()
+
+        kind, _, value = entry_id.partition(":")
+        if kind == "tab":
+            self._mindspace_manager.mindspace().contexts().focus(value)
+            return
+
+        if kind == "conversation":
+            self._open_by_panel_id("conversations", value, ephemeral=False)
+            return
+
+        if kind == "file":
+            self._open_by_panel_id("files", value, ephemeral=False)
+
+    def _build_quick_switcher_entries(self) -> list[QuickSwitcherEntry]:
+        """Gather open tabs, conversations, and files as Quick Switcher candidates."""
+        entries: list[QuickSwitcherEntry] = []
+        mindspace_path = self._mindspace_manager.mindspace_path()
+
+        for context in self._mindspace_manager.mindspace().contexts().list_all():
+            if not context.path:
+                continue
+
+            entries.append(QuickSwitcherEntry(
+                entry_id=f"tab:{context.context_id}",
+                kind="tab",
+                title=context.title,
+                subtitle=os.path.relpath(context.path, mindspace_path),
+                icon_name=context.context_type,
+            ))
+
+        conversations_dir = self._mindspace_manager.mindspace().conversations_dir()
+        for dirpath, _dirnames, filenames in os.walk(conversations_dir):
+            for filename in filenames:
+                if not filename.lower().endswith(".conv"):
+                    continue
+
+                path = os.path.join(dirpath, filename)
+                entries.append(QuickSwitcherEntry(
+                    entry_id=f"conversation:{path}",
+                    kind="conversation",
+                    title=os.path.splitext(filename)[0],
+                    subtitle=os.path.relpath(path, mindspace_path),
+                    icon_name="conversation",
+                ))
+
+        for root, dirs, files in os.walk(mindspace_path):
+            dirs[:] = [
+                directory for directory in dirs
+                if directory not in self._QUICK_SWITCHER_IGNORED_DIRS and not directory.startswith(".")
+            ]
+            for filename in files:
+                path = os.path.join(root, filename)
+                entries.append(QuickSwitcherEntry(
+                    entry_id=f"file:{path}",
+                    kind="file",
+                    title=filename,
+                    subtitle=os.path.relpath(path, mindspace_path),
+                    icon_name="files",
+                ))
+
+        return entries
 
     def _on_show_about_dialog(self) -> None:
         """Show the About dialog."""
