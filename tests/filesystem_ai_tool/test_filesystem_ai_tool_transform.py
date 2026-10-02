@@ -86,19 +86,19 @@ class TestFileSystemAIToolTransformFile:
         assert "Transform applied" in data["message"]
         assert target.read_text(encoding='utf-8') == "HELLO WORLD\n"
 
-    def test_transform_list_result(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
-        """Transform program returning a list of strings joins with newlines."""
+    def test_transform_list_result_rejected(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
+        """Transform program returning a list of strings is rejected; only a string is accepted."""
         target = tmp_path / "lines.txt"
         target.write_text("alpha\nbeta\ngamma", encoding='utf-8')
 
         tool_call = make_tool_call(
             "filesystem",
-            {"operation": "transform_file", "path": str(target), "program": "(list-reverse (dict-get inputs \"input-lines\"))"}
+            {"operation": "transform_file", "path": str(target), "program": "(string->list (dict-get inputs \"input-text\") \"\\n\")"}
         )
-        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
-        data = json.loads(result.content)
-        assert "Transform applied" in data["message"]
-        assert target.read_text(encoding='utf-8') == "gamma\nbeta\nalpha\n"
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert "must return a string" in str(exc_info.value)
+        assert target.read_text(encoding='utf-8') == "alpha\nbeta\ngamma"
 
     def test_transform_no_change(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
         """Transform producing identical content reports no changes and skips the write."""
@@ -163,7 +163,7 @@ class TestFileSystemAIToolTransformFile:
         )
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
-        assert "string or list of strings" in str(exc_info.value)
+        assert "must return a string" in str(exc_info.value)
 
     def test_transform_empty_program(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
         """transform_file raises AIToolExecutionError for a blank program."""
@@ -193,12 +193,12 @@ class TestFileSystemAIToolTransformFile:
         assert "Transform applied" in data["message"]
         assert target.read_text(encoding='utf-8') == str(len(content)) + "\n"
 
-    def test_transform_input_lines_binding(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
-        """The 'inputs' dict carries the lines under "input-lines" as a list of strings, one per line."""
+    def test_transform_no_input_lines_binding(self, transform_tool, mock_authorization, make_tool_call, tmp_path):
+        """The 'inputs' dict does not carry 'input-lines'; the program splits the text itself."""
         target = tmp_path / "data.txt"
         target.write_text("alpha\nbeta\ngamma", encoding='utf-8')
 
-        program = '(integer->string (list-length (dict-get inputs "input-lines")))'
+        program = '(integer->string (list-length (string->list (dict-get inputs "input-text") "\\n")))'
         tool_call = make_tool_call(
             "filesystem",
             {"operation": "transform_file", "path": str(target), "program": program}
@@ -289,3 +289,241 @@ class TestFileSystemAIToolTransformFile:
         )
         asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
         assert target.read_text(encoding='utf-8') == "HELLO WORLD\n"
+
+
+class TestFileSystemAIToolAnalyseFile:
+    """Tests for the analyse_file operation."""
+
+    def test_analyse_returns_result_without_writing(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """analyse_file returns the program result and leaves the file unchanged."""
+        target = tmp_path / "data.txt"
+        original = "alpha\nbeta\ngamma"
+        target.write_text(original, encoding='utf-8')
+
+        program = '(integer->string (list-length (string->list (dict-get inputs "input-text") "\\n")))'
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "analyse_file", "path": str(target), "program": program}
+        )
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert result.content == "3"
+        assert target.read_text(encoding='utf-8') == original
+        mock_authorization.assert_not_called()
+
+    def test_analyse_arbitrary_return_values(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """analyse_file accepts any Menai value and serialises it for the AI."""
+        target = tmp_path / "data.txt"
+        target.write_text("hello", encoding='utf-8')
+
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "analyse_file", "path": str(target), "program": '(dict "len" (string-length (dict-get inputs "input-text")))'}
+        )
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert "len" in result.content
+        assert "5" in result.content
+
+    def test_analyse_binary_hash(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """analyse_file with form 'binary' can hash raw file bytes."""
+        target = tmp_path / "blob.bin"
+        target.write_bytes(b"\x00\x01\x02\x03")
+
+        program = '(bytes->string-hex (bytes-hash-sha2-256 (dict-get inputs "input-bytes")))'
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "analyse_file", "path": str(target), "program": program, "form": "binary"}
+        )
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        # SHA-256 of 00010203, returned as raw text
+        assert result.content == "054edec1d0211f624fed0cbca9d4f9400b0e491c43742af2c5b0abebf0c990d8"
+
+    def test_analyse_binary_does_not_bind_input_text(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """analyse_file with form 'binary' does not bind 'input-text'."""
+        target = tmp_path / "blob.bin"
+        target.write_bytes(b"\x00\x01\x02\x03")
+
+        program = '(dict-get inputs "input-text")'
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "analyse_file", "path": str(target), "program": program, "form": "binary"}
+        )
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert result.content == "#none"
+
+    def test_analyse_text_form_is_default(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """analyse_file defaults to form 'text', binding 'input-text'."""
+        target = tmp_path / "data.txt"
+        target.write_text("hello", encoding='utf-8')
+
+        program = '(dict-get inputs "input-text")'
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "analyse_file", "path": str(target), "program": program}
+        )
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert result.content == "hello"
+
+    def test_analyse_invalid_form(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """analyse_file rejects an invalid form value."""
+        target = tmp_path / "data.txt"
+        target.write_text("hello", encoding='utf-8')
+
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "analyse_file", "path": str(target), "program": "(dict-get inputs \"input-text\")", "form": "hex"}
+        )
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert "'form' must be 'text' or 'binary'" in str(exc_info.value)
+
+    def test_analyse_missing_file(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """analyse_file raises AIToolExecutionError when the file does not exist."""
+        missing = str(tmp_path / "nonexistent.txt")
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "analyse_file", "path": missing, "program": "(dict-get inputs \"input-text\")"}
+        )
+        with pytest.raises(AIToolExecutionError):
+            asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+
+    def test_analyse_blocked_without_help(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """analyse_file raises an error when Menai help has not been read."""
+        target = tmp_path / "data.txt"
+        target.write_text("hello", encoding='utf-8')
+
+        requester = MockRequester(menai_help_read=False)
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "analyse_file", "path": str(target), "program": "(dict-get inputs \"input-text\")"}
+        )
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(transform_tool.execute(tool_call, requester, mock_authorization))
+        assert "must read the Menai language documentation" in str(exc_info.value)
+
+
+class TestFileSystemAIToolTransformOutputPath:
+    """Tests for transform_file writing to a different path."""
+
+    def test_transform_writes_to_output_path(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """transform_file with output_path writes there and leaves the source unchanged."""
+        source = tmp_path / "source.txt"
+        source.write_text("hello world", encoding='utf-8')
+        dest = tmp_path / "dest.txt"
+
+        tool_call = make_tool_call(
+            "filesystem",
+            {
+                "operation": "transform_file",
+                "path": str(source),
+                "program": "(string-upcase (dict-get inputs \"input-text\"))",
+                "output_path": str(dest)
+            }
+        )
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        data = json.loads(result.content)
+        assert "Transform applied" in data["message"]
+        assert source.read_text(encoding='utf-8') == "hello world"
+        assert dest.read_text(encoding='utf-8') == "HELLO WORLD\n"
+
+    def test_transform_output_path_dry_run(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """dry_run with output_path does not write the destination."""
+        source = tmp_path / "source.txt"
+        source.write_text("hello", encoding='utf-8')
+        dest = tmp_path / "dest.txt"
+
+        tool_call = make_tool_call(
+            "filesystem",
+            {
+                "operation": "transform_file",
+                "path": str(source),
+                "program": "(string-upcase (dict-get inputs \"input-text\"))",
+                "output_path": str(dest),
+                "dry_run": True
+            }
+        )
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert "dry run" in result.content.lower()
+        assert not dest.exists()
+        mock_authorization.assert_not_called()
+
+
+class TestFileSystemAIToolTransformBinary:
+    """Tests for binary transform_file."""
+
+    def test_transform_binary_round_trip(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """A binary transform returns bytes and writes them raw."""
+        target = tmp_path / "blob.bin"
+        target.write_bytes(b"\x01\x02\x03")
+
+        program = '(bytes-append-u8 (dict-get inputs "input-bytes") 4)'
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "transform_file", "path": str(target), "program": program, "form": "binary"}
+        )
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        data = json.loads(result.content)
+        assert "Transform applied" in data["message"]
+        assert "3 bytes -> 4 bytes" in data["message"]
+        assert target.read_bytes() == b"\x01\x02\x03\x04"
+
+    def test_transform_binary_requires_bytes_return(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """A binary transform returning a string is rejected."""
+        target = tmp_path / "blob.bin"
+        target.write_bytes(b"\x01\x02\x03")
+
+        program = '"not bytes"'
+        tool_call = make_tool_call(
+            "filesystem",
+            {"operation": "transform_file", "path": str(target), "program": program, "form": "binary"}
+        )
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert "must return bytes" in str(exc_info.value)
+        assert target.read_bytes() == b"\x01\x02\x03"
+
+    def test_transform_binary_output_path(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """A binary transform can write to a different path."""
+        source = tmp_path / "in.bin"
+        source.write_bytes(b"\x00\x01")
+        dest = tmp_path / "out.bin"
+
+        program = '(bytes-append-u8 (dict-get inputs "input-bytes") 255)'
+        tool_call = make_tool_call(
+            "filesystem",
+            {
+                "operation": "transform_file",
+                "path": str(source),
+                "program": program,
+                "form": "binary",
+                "output_path": str(dest)
+            }
+        )
+        asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert source.read_bytes() == b"\x00\x01"
+        assert dest.read_bytes() == b"\x00\x01\xff"
