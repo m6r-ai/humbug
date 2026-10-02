@@ -36,12 +36,14 @@ def real_access_settings():
 
 
 @pytest.fixture
-def transform_tool(real_path_resolver, real_access_settings):
+def transform_tool(real_path_resolver, real_access_settings, tmp_path):
     """FileSystemAITool with a real path resolver for transform tests."""
+    mindspace = MagicMock()
+    mindspace.mindspace_path.return_value = str(tmp_path)
     return FileSystemAITool(
         resolve_path=real_path_resolver,
         get_access_settings=real_access_settings,
-        mindspace=MagicMock()
+        mindspace=mindspace
     )
 
 

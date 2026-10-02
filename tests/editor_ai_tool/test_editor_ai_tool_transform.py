@@ -12,10 +12,11 @@ from tests.conftest import MockRequester
 
 
 @pytest.fixture
-def mock_mindspace():
+def mock_mindspace(tmp_path):
     """Fixture providing a minimal mock Mindspace."""
     mindspace = MagicMock()
     mindspace.add_interaction = MagicMock()
+    mindspace.mindspace_path.return_value = str(tmp_path)
     mindspace.contexts.return_value = MagicMock()
     return mindspace
 

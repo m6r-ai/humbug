@@ -67,6 +67,24 @@ class FileSystemAITool(AITool):
         self._active_menai: set[Menai] = set()
         self._menai_lock = threading.Lock()
 
+    def _module_path(self) -> list[str]:
+        """
+        Compose the Menai module search path for the active mindspace.
+
+        The path is composed by the Menai library, which places the mindspace's
+        ``menai_modules`` directory ahead of the standard library.  When no
+        mindspace is open the path falls back to the standard library alone.
+
+        Returns:
+            The composed module search path.
+        """
+        source_dir: str | None = None
+        mindspace_path = self._mindspace.mindspace_path()
+        if mindspace_path:
+            source_dir = str(Path(mindspace_path) / "menai_modules")
+
+        return Menai.build_module_path(source_dir)
+
     def get_definition(self) -> AIToolDefinition:
         """
         Get the tool definition.
@@ -2643,7 +2661,7 @@ class FileSystemAITool(AITool):
         inputs = self._build_menai_inputs(path, form, encoding)
 
         raw_result = await self._evaluate_menai_over_file(
-            Menai,
+            lambda: Menai(self._module_path()),
             lambda menai: self._run_menai_program_sync(menai, inputs, program),
             display_path,
             "analysis"
@@ -2723,7 +2741,7 @@ class FileSystemAITool(AITool):
         inputs = self._build_menai_inputs(path, form, encoding)
 
         raw_result = await self._evaluate_menai_over_file(
-            Menai,
+            lambda: Menai(self._module_path()),
             lambda menai: self._run_menai_program_sync(menai, inputs, program),
             display_path,
             "transform"

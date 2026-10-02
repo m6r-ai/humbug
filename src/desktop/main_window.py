@@ -1385,8 +1385,6 @@ class MainWindow(QMainWindow):
 
         self._sidebar_manager.set_mindspace("")
 
-        # Clear Menai module path and cache when closing mindspace
-        self._menai_tool.set_module_path([])
         self._mindspace_manager.close_mindspace()
 
     def _capture_frontend_state(self, contexts: ContextRegistry) -> None:
@@ -1445,10 +1443,6 @@ class MainWindow(QMainWindow):
                 strings.mindspace_error_title,
                 strings.error_restoring_mindspace.format(str(e))
             )
-
-        # Update Menai module path to use the new mindspace's menai_modules directory
-        mindspace_path = self._mindspace_manager.mindspace_path()
-        self._menai_tool.set_module_path([mindspace_path])
 
     def _close_all_tabs(self) -> bool:
         """Close all open tabs, returning True if all were closed."""
