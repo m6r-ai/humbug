@@ -4,7 +4,7 @@ Tests for the Menai (AI Functional Programming Language) tool
 import asyncio
 import json
 import math
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -311,54 +311,43 @@ class TestMenaiAIToolTimeout:
 class TestMenaiAIToolModulePath:
     """Test module path management in MenaiAITool."""
 
-    def test_default_module_path_is_empty(self):
-        """Test that default module path is empty list when not specified."""
+    def test_module_path_without_mindspace_is_stdlib_only(self):
+        """With no mindspace open the module path is the standard library alone."""
         tool = MenaiAITool()
-        assert tool.module_path() == []
+        assert tool._module_path() == Menai.build_module_path(None)
 
-    def test_custom_module_path_is_expanded(self, tmp_path):
-        """Test that custom module paths are expanded and resolved."""
-        tool = MenaiAITool()
-        tool.set_module_path([str(tmp_path)])
-
-        # Path should be expanded to absolute path
-        assert len(tool.module_path()) == 1
-        assert str(tmp_path) in tool.module_path()[0]
-
-    def test_set_module_path_updates_path(self, tmp_path):
-        """Test that set_module_path updates the module path."""
-        tool = MenaiAITool()
-
-        new_path = str(tmp_path)
-        tool.set_module_path([new_path])
-
-        # Should have updated path
-        assert len(tool.module_path()) == 1
-        assert str(tmp_path) in tool.module_path()[0]
-
-    def test_set_module_path_with_multiple_directories(self, tmp_path):
-        """Test that set_module_path works with multiple directories."""
-        dir1 = tmp_path / "dir1"
-        dir2 = tmp_path / "dir2"
-        dir1.mkdir()
-        dir2.mkdir()
+    def test_module_path_places_mindspace_modules_before_stdlib(self, tmp_path):
+        """The mindspace's menai_modules directory precedes the standard library."""
+        mindspace = MagicMock()
+        mindspace.mindspace_path.return_value = str(tmp_path)
 
         tool = MenaiAITool()
-        tool.set_module_path([str(dir1), str(dir2)])
+        tool.set_mindspace(mindspace)
 
-        assert len(tool.module_path()) == 2
-        assert any(str(dir1) in path for path in tool.module_path())
-        assert any(str(dir2) in path for path in tool.module_path())
+        module_path = tool._module_path()
+        assert module_path[0] == str(tmp_path / "menai_modules")
+        assert module_path[-1] == str(Menai.stdlib_path())
 
-    def test_module_path_persists_after_evaluation(self, tmp_path, mock_authorization, make_tool_call):
-        """Test that module path persists after evaluations."""
+    def test_module_path_ignores_empty_mindspace_path(self):
+        """An empty mindspace path falls back to the standard library alone."""
+        mindspace = MagicMock()
+        mindspace.mindspace_path.return_value = ""
+
         tool = MenaiAITool()
-        tool.set_module_path([str(tmp_path)])
-        original_path = tool.module_path().copy()
+        tool.set_mindspace(mindspace)
 
-        # Evaluate something via the tool
-        tool_call = make_tool_call("Menai", {"operation": "evaluate", "expression": "(integer+ 1 2)"})
-        asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert tool._module_path() == Menai.build_module_path(None)
 
-        # Path should be unchanged
-        assert tool.module_path() == original_path
+    def test_module_path_tracks_mindspace_changes(self, tmp_path):
+        """The module path reflects the currently set mindspace."""
+        tool = MenaiAITool()
+
+        first = MagicMock()
+        first.mindspace_path.return_value = str(tmp_path / "one")
+        tool.set_mindspace(first)
+        assert tool._module_path()[0] == str(tmp_path / "one" / "menai_modules")
+
+        second = MagicMock()
+        second.mindspace_path.return_value = str(tmp_path / "two")
+        tool.set_mindspace(second)
+        assert tool._module_path()[0] == str(tmp_path / "two" / "menai_modules")

@@ -35,7 +35,6 @@ class MenaiAITool(AITool):
             mindspace: Set later via set_mindspace
         """
         self._logger = logging.getLogger("MenaiAITool")
-        self._expanded_module_path: list[str] = []
         self._mindspace: Mindspace | None = None
         self._active_instances: dict[Menai, Any] = {}
         self._instances_lock = threading.Lock()
@@ -93,33 +92,24 @@ class MenaiAITool(AITool):
         """
         self._mindspace = mindspace
 
-    def set_module_path(self, module_path: list[str]) -> None:
+    def _module_path(self) -> list[str]:
         """
-        Update the module search path.
+        Compose the Menai module search path for the active mindspace.
 
-        This stores the expanded module path for use when creating per-evaluation
-        Menai instances.
-
-        Args:
-            module_path: List of directories to search for modules.
-                        Paths will be expanded and resolved.
-        """
-        # Expand path
-        expanded_path = []
-        for path in module_path:
-            expanded = str(Path(path).expanduser().resolve())
-            expanded_path.append(expanded)
-
-        self._expanded_module_path = expanded_path
-
-    def module_path(self) -> list[str]:
-        """
-        Get the current expanded module search path.
+        The path is composed by the Menai library, which places the mindspace's
+        ``menai_modules`` directory ahead of the standard library.  When no
+        mindspace is open the path falls back to the standard library alone.
 
         Returns:
-            List of expanded directories in the module search path
+            The composed module search path.
         """
-        return self._expanded_module_path
+        source_dir: str | None = None
+        if self._mindspace is not None:
+            mindspace_path = self._mindspace.mindspace_path()
+            if mindspace_path:
+                source_dir = str(Path(mindspace_path) / "menai_modules")
+
+        return Menai.build_module_path(source_dir)
 
     def cancel(self, requester_ref: Any = None) -> None:
         """
@@ -159,7 +149,7 @@ class MenaiAITool(AITool):
         Raises:
             Various Menai-related exceptions
         """
-        tool = Menai(self._expanded_module_path)
+        tool = Menai(self._module_path())
         with self._instances_lock:
             self._active_instances[tool] = requester_ref
 

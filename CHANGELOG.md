@@ -1,6 +1,8 @@
 # Change log for Humbug
 
-## v56 (2026-09-xx)
+## v57 (2026-10-03)
+
+## v56 (2026-10-03)
 
 New features:
 
@@ -30,6 +32,8 @@ New features:
 - Updated the message editing for conversations.  Delete really deletes things, while edit leaves messages below the
   one being edited faded out to show what will be lost.  Edits now take place in the input box so all input features
   are unified and there's not a second-class edit experience.
+- Updated the filesystem AI tool to handle binary files as well as text files, with Menai transforms being able to
+  be applied to both.  The tool can now write output to a new file.
 
 Bug fixes:
 
@@ -42,6 +46,7 @@ Bug fixes:
 - Fixed a problem where changing provider in the conversation settings did not correctly update model reasoning.
 - Hover effects in the sidebar view are now all consistent.
 - Fixed the right-to-left rendering for the VCS list view when rendering in Arabic.
+- Sending a message to a delegated child AI will now auto-cancel a pending tool request (as already happens with the parent).
 
 Internal structure changes:
 

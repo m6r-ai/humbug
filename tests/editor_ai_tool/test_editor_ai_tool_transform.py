@@ -12,10 +12,11 @@ from tests.conftest import MockRequester
 
 
 @pytest.fixture
-def mock_mindspace():
+def mock_mindspace(tmp_path):
     """Fixture providing a minimal mock Mindspace."""
     mindspace = MagicMock()
     mindspace.add_interaction = MagicMock()
+    mindspace.mindspace_path.return_value = str(tmp_path)
     mindspace.contexts.return_value = MagicMock()
     return mindspace
 
@@ -80,7 +81,7 @@ class TestEditorAIToolTransform:
 
         tool_call = make_tool_call(
             "editor",
-            {"operation": "transform", "tab_id": "test-tab-id", "program": "(list-reverse (dict-get inputs \"input-lines\"))"}
+            {"operation": "transform", "tab_id": "test-tab-id", "program": "(list-reverse (string->list (dict-get inputs \"input-text\") \"\\n\"))"}
         )
         result = asyncio.run(tool.execute(tool_call, MockRequester(), mock_authorization))
         data = json.loads(result.content)
@@ -158,13 +159,13 @@ class TestEditorAIToolTransform:
         diff_arg = ctx.apply_diff.call_args[0][0]
         assert str(len(content)) in diff_arg
 
-    def test_transform_input_lines_binding(self, editor_tool, mock_authorization, make_tool_call):
-        """The 'inputs' dict carries the lines under "input-lines" as a list of strings, one per line."""
+    def test_transform_no_input_lines_binding(self, editor_tool, mock_authorization, make_tool_call):
+        """The 'inputs' dict does not carry 'input-lines'; the program splits the text itself."""
         tool, mindspace = editor_tool
         ctx = make_editor_context("alpha\nbeta\ngamma")
         _set_context(tool, mindspace, ctx)
 
-        program = '(integer->string (list-length (dict-get inputs "input-lines")))'
+        program = '(integer->string (list-length (string->list (dict-get inputs "input-text") "\\n")))'
         tool_call = make_tool_call(
             "editor",
             {"operation": "transform", "tab_id": "test-tab-id", "program": program}

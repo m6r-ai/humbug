@@ -107,7 +107,7 @@ it should not be added.
 humbug/
 ├── docs/                   # Documentation
 ├── icons/                  # Application icons
-├── menai_modules/          # Menai standard library modules
+├── menai_modules/          # Humbug-specific Menai modules
 ├── src/                    # Main source code
 ├── tests/                  # Test suite
 ├── tools/                  # Development and analysis tools

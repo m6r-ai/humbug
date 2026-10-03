@@ -82,3 +82,4 @@ What costs, risks, or constraints does this decision impose?
 | [0010](0010-openai-responses-api.md) | OpenAI backend uses the Responses API | Accepted |
 | [0011](0011-conversation-relationships.md) | Conversation relationships and delegated-session authorisation | Accepted |
 | [0012](0012-message-edit-and-delete.md) | Message edit and delete — deferred truncation and a single editing surface | Accepted |
+| [0013](0013-filesystem-transform-and-bounds.md) | Filesystem transforms, binary content, context-window bounds, and transform symmetry | Accepted |

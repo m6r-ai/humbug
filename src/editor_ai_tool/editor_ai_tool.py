@@ -3,6 +3,7 @@ import difflib
 import threading
 import json
 import logging
+from pathlib import Path
 from typing import Any, cast
 
 from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiDict
@@ -43,6 +44,24 @@ class EditorAITool(AITool):
         self._logger = logging.getLogger("EditorAITool")
         self._active_menai: set[Menai] = set()
         self._menai_lock = threading.Lock()
+
+    def _module_path(self) -> list[str]:
+        """
+        Compose the Menai module search path for the active mindspace.
+
+        The path is composed by the Menai library, which places the mindspace's
+        ``menai_modules`` directory ahead of the standard library.  When no
+        mindspace is open the path falls back to the standard library alone.
+
+        Returns:
+            The composed module search path.
+        """
+        source_dir: str | None = None
+        mindspace_path = self._mindspace.mindspace_path()
+        if mindspace_path:
+            source_dir = str(Path(mindspace_path) / "menai_modules")
+
+        return Menai.build_module_path(source_dir)
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -126,8 +145,7 @@ class EditorAITool(AITool):
                         "Menai expression for the transform operation. "
                         "Menai uses Lisp-style prefix syntax: (operator arg1 arg2 ...). "
                         "The buffer content is bound to the name 'inputs' as a dict: read the "
-                        "full content with (dict-get inputs \"input-text\") and the lines as a "
-                        "list of strings with (dict-get inputs \"input-lines\"). "
+                        "full content with (dict-get inputs \"input-text\"). "
                         "Must evaluate to a string (new content) or a list of strings (new lines). "
                         "Changes are applied to the buffer; use save_file to persist."
                     ),
@@ -250,8 +268,7 @@ class EditorAITool(AITool):
                 description=(
                     "Use a Menai expression to modify the full editor buffer content and write the result "
                     "back to the buffer. The buffer content is bound to the name 'inputs' as a dict: "
-                    "read the full content with (dict-get inputs \"input-text\") and the lines as a "
-                    "list of strings with (dict-get inputs \"input-lines\"). "
+                    "read the full content with (dict-get inputs \"input-text\"). "
                     "It must return a string or a list of strings. "
                     "If dry_run is True, returns the diff without applying anything. "
                     "Use save_file afterward to persist the changes. "
@@ -727,7 +744,7 @@ class EditorAITool(AITool):
             menai: A fresh Menai instance for this evaluation (thread-safe).
             content: The current buffer text.
             expression: Menai expression reading the buffer content from the 'inputs'
-                        dict via (dict-get inputs "input-text") and (dict-get inputs "input-lines").
+                        dict via (dict-get inputs "input-text").
 
         Returns:
             The new content string.
@@ -736,10 +753,8 @@ class EditorAITool(AITool):
             AIToolExecutionError: If the program returns an invalid type.
             Various Menai exceptions: Propagated to the async caller.
         """
-        lines = content.split('\n')
         inputs = MenaiDict((
             (MenaiString('input-text'), MenaiString(content)),
-            (MenaiString('input-lines'), MenaiList(tuple(MenaiString(line) for line in lines))),
         ))
 
         raw_result = menai.evaluate_raw_with_dict(expression, 'inputs', inputs)
@@ -785,7 +800,7 @@ class EditorAITool(AITool):
         original_content = context.get_text_range(None, None)
 
         try:
-            menai = Menai()
+            menai = Menai(self._module_path())
             with self._menai_lock:
                 self._active_menai.add(menai)
 

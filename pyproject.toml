@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "humbug"
-version = "56"
+version = "57"
 requires-python = ">=3.10"
 dependencies = [
     "certifi",
-    "menai >= 0.6.0",
+    "menai >= 0.7.0",
     "pyside6",
     "qasync"
 ]

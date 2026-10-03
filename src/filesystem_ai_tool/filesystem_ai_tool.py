@@ -13,7 +13,7 @@ import tempfile
 import threading
 from typing import Any, cast
 
-from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiList, MenaiDict
+from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiDict, MenaiBytes, MenaiValue
 
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
@@ -66,6 +66,24 @@ class FileSystemAITool(AITool):
         self._logger = logging.getLogger("FileSystemAITool")
         self._active_menai: set[Menai] = set()
         self._menai_lock = threading.Lock()
+
+    def _module_path(self) -> list[str]:
+        """
+        Compose the Menai module search path for the active mindspace.
+
+        The path is composed by the Menai library, which places the mindspace's
+        ``menai_modules`` directory ahead of the standard library.  When no
+        mindspace is open the path falls back to the standard library alone.
+
+        Returns:
+            The composed module search path.
+        """
+        source_dir: str | None = None
+        mindspace_path = self._mindspace.mindspace_path()
+        if mindspace_path:
+            source_dir = str(Path(mindspace_path) / "menai_modules")
+
+        return Menai.build_module_path(source_dir)
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -191,12 +209,32 @@ class FileSystemAITool(AITool):
                     name="program",
                     type="string",
                     description=(
-                        "Menai expression for the transform_file operation. "
+                        "Menai expression for the analyse_file and transform_file operations. "
                         "Menai uses Lisp-style prefix syntax: (operator arg1 arg2 ...). "
-                        "The file content is bound to the name 'inputs' as a dict: read the "
-                        "full content with (dict-get inputs \"input-text\") and the lines as a "
-                        "list of strings with (dict-get inputs \"input-lines\"). "
-                        "Must evaluate to a string (new file content) or a list of strings (new lines)."
+                        "The file content is bound to the name 'inputs' as a dict. "
+                        "For form 'text', read it with (dict-get inputs \"input-text\"); "
+                        "for form 'binary', read it with (dict-get inputs \"input-bytes\"). "
+                        "analyse_file returns the program's result to the AI. "
+                        "transform_file must return a string (form 'text') or bytes (form 'binary')."
+                    ),
+                    required=False
+                ),
+                AIToolParameter(
+                    name="form",
+                    type="string",
+                    description=(
+                        "Content form for analyse_file and transform_file. "
+                        "'text' (default) binds input-text; 'binary' binds input-bytes."
+                    ),
+                    required=False,
+                    enum=["text", "binary"]
+                ),
+                AIToolParameter(
+                    name="output_path",
+                    type="string",
+                    description=(
+                        "Destination path for transform_file. If omitted the source file is "
+                        "overwritten; if provided the result is written there and the source is left untouched."
                     ),
                     required=False
                 ),
@@ -404,18 +442,37 @@ class FileSystemAITool(AITool):
                     f"{self._MAX_RESPONSE_BYTES // 1024} KB. "
                     "Returns a list of matching relative paths."
             ),
+            "analyse_file": AIToolOperationDefinition(
+                name="analyse_file",
+                handler=self._analyse_file,
+                extract_context=self._analyse_file_context,
+                allowed_parameters={"path", "program", "form", "encoding"},
+                required_parameters={"path", "program"},
+                description=(
+                    "Read a file, apply a Menai program to its content, and return the program's "
+                    "result to the AI without writing anything. "
+                    "The file content is bound to the name 'inputs' as a dict. "
+                    "For form 'text', read it with (dict-get inputs \"input-text\"); "
+                    "for form 'binary', read it with (dict-get inputs \"input-bytes\"). "
+                    "The program may return any Menai value. A string result is returned as its "
+                    "raw text; any other result is returned in Menai notation. "
+                    "The result is subject to the response size limit; use the program to select "
+                    "or summarise rather than returning large content. "
+                    "program MUST use Menai syntax: (operator arg1 arg2 ...)."
+                )
+            ),
             "transform_file": AIToolOperationDefinition(
                 name="transform_file",
                 handler=self._transform_file,
                 extract_context=self._transform_file_context,
-                allowed_parameters={"path", "program", "encoding", "dry_run"},
+                allowed_parameters={"path", "program", "form", "output_path", "encoding", "dry_run"},
                 required_parameters={"path", "program"},
                 description=(
-                    "Read a file, apply a Menai program to its content, and write the result back. "
-                    "The file content is bound to the name 'inputs' as a dict: read the full "
-                    "content with (dict-get inputs \"input-text\") and the lines as a list of "
-                    "strings with (dict-get inputs \"input-lines\"). "
-                    "It must return a string or a list of strings. "
+                    "Read a file, apply a Menai program to its content, and write the result to a file. "
+                    "The file content is bound to the name 'inputs' as a dict. "
+                    "For form 'text', read it with (dict-get inputs \"input-text\") and return a string; "
+                    "for form 'binary', read it with (dict-get inputs \"input-bytes\") and return bytes. "
+                    "By default the source file is overwritten; supply output_path to write elsewhere. "
                     "A unified diff is shown for user approval before any write occurs. "
                     "If dry_run is True, returns the diff without requesting authorisation or writing anything. "
                     "program MUST use Menai syntax: (operator arg1 arg2 ...)."
@@ -2405,93 +2462,187 @@ class FileSystemAITool(AITool):
             content=f"Diff applied successfully to '{display_path}': {result.hunks_applied} hunk(s) applied"
         )
 
-    def _transform_file_context(self, arguments: dict[str, Any]) -> str | None:
-        """Extract context for transform_file operation."""
+    def _analyse_file_context(self, arguments: dict[str, Any]) -> str | None:
+        """Extract context for analyse_file operation."""
         path_arg = arguments.get("path", "")
         program = arguments.get("program", "")
+        form = arguments.get("form", "text")
         return (
             f"`path` is: {path_arg}\n"
+            f"`form` is: {form}\n"
             f"`program` is:\n```menai\n{program}\n```"
         )
 
-    def _transform_file_sync(
+    def _transform_file_context(self, arguments: dict[str, Any]) -> str | None:
+        """Extract context for transform_file operation."""
+        path_arg = arguments.get("path", "")
+        output_arg = arguments.get("output_path", "")
+        program = arguments.get("program", "")
+        form = arguments.get("form", "text")
+        return (
+            f"`path` is: {path_arg}\n"
+            f"`form` is: {form}\n"
+            f"`output_path` is: {output_arg or '(in place)'}\n"
+            f"`program` is:\n```menai\n{program}\n```"
+        )
+
+    def _build_menai_inputs(
         self,
-        menai: Menai,
         path: Path,
-        expression: str,
+        form: str,
         encoding: str
-    ) -> tuple[str, str]:
+    ) -> MenaiDict:
         """
-        Read a file, run a Menai transform program, return results synchronously.
+        Read a file and build the Menai 'inputs' dict for a transform program.
 
         Args:
-            menai: A fresh Menai instance for this evaluation (thread-safe).
             path: Resolved path to the file.
-            expression: Menai expression reading the file content from the 'inputs'
-                        dict via (dict-get inputs "input-text") and (dict-get inputs "input-lines").
-            encoding: File encoding to use for reading.
+            form: Content form, 'text' or 'binary'.
+            encoding: File encoding to use when decoding text content.
 
         Returns:
-            Tuple of (original_content, new_content).
+            MenaiDict binding input-text (form 'text') or input-bytes (form 'binary').
 
         Raises:
-            AIToolExecutionError: If the file cannot be read or the program returns
-                                  an invalid type.
-            Various Menai exceptions: Propagated to the async caller.
+            AIToolExecutionError: If the file cannot be read or decoded.
         """
         try:
-            with open(path, encoding=encoding) as f:
-
-                original_content = f.read()
+            raw_bytes = path.read_bytes()
 
         except OSError as e:
             raise AIToolExecutionError(f"Cannot read file: {e}") from e
 
-        lines = original_content.split('\n')
-        inputs = MenaiDict((
-            (MenaiString('input-text'), MenaiString(original_content)),
-            (MenaiString('input-lines'), MenaiList(tuple(MenaiString(line) for line in lines))),
+        if form == "binary":
+            return MenaiDict((
+                (MenaiString('input-bytes'), MenaiBytes(raw_bytes)),
+            ))
+
+        try:
+            text = raw_bytes.decode(encoding)
+
+        except (UnicodeDecodeError, LookupError) as e:
+            raise AIToolExecutionError(
+                f"Failed to decode file with encoding '{encoding}': {e}. "
+                "Use form 'binary' to read the raw bytes."
+            ) from e
+
+        return MenaiDict((
+            (MenaiString('input-text'), MenaiString(text)),
         ))
 
-        raw_result = menai.evaluate_raw_with_dict(expression, 'inputs', inputs)
+    def _run_menai_program_sync(
+        self,
+        menai: Menai,
+        inputs: MenaiDict,
+        expression: str
+    ) -> MenaiValue:
+        """
+        Evaluate a Menai program over an inputs dict, synchronously.
 
-        if isinstance(raw_result, MenaiString):
+        Args:
+            menai: A fresh Menai instance for this evaluation (thread-safe).
+            inputs: The dict bound to the name 'inputs' in the program.
+            expression: The Menai program to evaluate.
 
-            new_content = raw_result.value
+        Returns:
+            The raw MenaiValue produced by the program.
 
-        elif isinstance(raw_result, MenaiList):
-            if not all(isinstance(e, MenaiString) for e in raw_result.elements):
-                raise AIToolExecutionError(
-                    "Transform program returned a list containing non-string elements"
+        Raises:
+            Various Menai exceptions: Propagated to the async caller.
+        """
+        return menai.evaluate_raw_with_dict(expression, 'inputs', inputs)
 
-                )
+    async def _evaluate_menai_over_file(
+        self,
+        menai_factory: Callable[[], Menai],
+        sync_call: Callable[[Menai], Any],
+        display_path: str,
+        operation_name: str
+    ) -> Any:
+        """
+        Run a Menai evaluation over a file with timeout and cancellation handling.
 
-            new_content = '\n'.join(cast(MenaiString, e).value for e in raw_result.elements)
+        Args:
+            menai_factory: Callable producing a fresh Menai instance.
+            sync_call: Callable taking the Menai instance and returning the result.
+            display_path: Display path of the file, for logging.
+            operation_name: Operation name, for error messages.
 
-        else:
-            raise AIToolExecutionError(
-                f"Transform program must return a string or list of strings, "
-                f"got {raw_result.type_name()}"
+        Returns:
+            Whatever sync_call returns.
+
+        Raises:
+            AIToolTimeoutError: If the evaluation times out.
+            AIToolExecutionError: If the program fails.
+        """
+        try:
+            menai = menai_factory()
+            with self._menai_lock:
+                self._active_menai.add(menai)
+
+            try:
+                task = asyncio.create_task(asyncio.to_thread(sync_call, menai))
+                try:
+                    return await asyncio.wait_for(task, timeout=30.0)
+
+                except asyncio.TimeoutError:
+                    self._logger.warning("Menai %s timed out for '%s'", operation_name, display_path)
+                    menai.vm.cancel()
+                    if not task.done():
+                        try:
+                            await asyncio.wait_for(task, timeout=1.0)
+
+                        except (asyncio.TimeoutError, asyncio.CancelledError, MenaiCancelledException):
+                            pass
+
+                        except Exception as e:
+                            self._logger.debug("Exception during %s cancellation: %s", operation_name, e)
+
+                    raise AIToolTimeoutError(f"Menai {operation_name} timed out", 30.0)  # pylint: disable=raise-missing-from
+
+            finally:
+                with self._menai_lock:
+                    self._active_menai.discard(menai)
+
+        except AIToolTimeoutError:
+            raise
+
+        except AIToolExecutionError:
+            raise
+
+        except MenaiCancelledException as e:
+            raise AIToolTimeoutError(f"Menai {operation_name} timed out", 30.0) from e
+
+        except MenaiError as e:
+            raise AIToolExecutionError(str(e)) from e
+
+        except Exception as e:
+            self._logger.error(
+                "Unexpected error in %s '%s': %s", operation_name, display_path, str(e), exc_info=True
             )
+            raise AIToolExecutionError(f"{operation_name.capitalize()} failed: {str(e)}") from e
 
-        return original_content, new_content
-
-    async def _transform_file(
+    async def _analyse_file(
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
-        """Apply a Menai transform program to a file."""
+        """Apply a Menai program to a file and return the result to the AI."""
         arguments = tool_call.arguments
 
         self.require_menai_help(requester_ref)
 
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
+        path, display_path = await self._validate_and_resolve_path(
+            "path", path_arg, tool_call, request_authorization, allow_external=True
+        )
         program = self._get_required_str_value("program", arguments)
+        form = cast(str, self._get_optional_str_value("form", arguments, "text"))
         encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
-        dry_run = self._get_optional_bool_value("dry_run", arguments, False)
+
+        if form not in ("text", "binary"):
+            raise AIToolExecutionError(f"'form' must be 'text' or 'binary', got '{form}'")
 
         if not path.exists():
             raise AIToolExecutionError(f"File does not exist: {path_arg}")
@@ -2507,106 +2658,181 @@ class FileSystemAITool(AITool):
         if not program.strip():
             raise AIToolExecutionError("'program' must not be empty")
 
-        try:
-            menai = Menai()
-            with self._menai_lock:
-                self._active_menai.add(menai)
+        inputs = self._build_menai_inputs(path, form, encoding)
 
-            try:
-                task = asyncio.create_task(
-                    asyncio.to_thread(self._transform_file_sync, menai, path, program, encoding)
+        raw_result = await self._evaluate_menai_over_file(
+            lambda: Menai(self._module_path()),
+            lambda menai: self._run_menai_program_sync(menai, inputs, program),
+            display_path,
+            "analysis"
+        )
+
+        if isinstance(raw_result, MenaiString):
+            result_text = raw_result.value
+
+        else:
+            result_text = raw_result.describe()
+
+        result_bytes = len(result_text.encode("utf-8"))
+        if result_bytes > self._MAX_RESPONSE_BYTES:
+            raise AIToolExecutionError(
+                f"Analysis result exceeds the {self._MAX_RESPONSE_BYTES // 1024} KB response size limit. "
+                "Use the program to select or summarise a smaller result."
+            )
+
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI analysed file: '{display_path}' (form: {form})"
+        )
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=result_text,
+            context="menai"
+        )
+
+    async def _transform_file(
+        self,
+        tool_call: AIToolCall,
+        requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Apply a Menai transform program to a file."""
+        arguments = tool_call.arguments
+
+        self.require_menai_help(requester_ref)
+
+        path_arg = self._get_required_str_value("path", arguments)
+        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
+        program = self._get_required_str_value("program", arguments)
+        form = cast(str, self._get_optional_str_value("form", arguments, "text"))
+        encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
+        dry_run = self._get_optional_bool_value("dry_run", arguments, False)
+
+        if form not in ("text", "binary"):
+            raise AIToolExecutionError(f"'form' must be 'text' or 'binary', got '{form}'")
+
+        if not path.exists():
+            raise AIToolExecutionError(f"File does not exist: {path_arg}")
+
+        if not path.is_file():
+            raise AIToolExecutionError(f"Path is not a file: {path_arg}")
+
+        if path.stat().st_size > self._max_file_size_bytes:
+            size_mb = path.stat().st_size / (1024 * 1024)
+            max_mb = self._max_file_size_bytes / (1024 * 1024)
+            raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
+
+        if not program.strip():
+            raise AIToolExecutionError("'program' must not be empty")
+
+        output_arg = self._get_optional_str_value("output_path", arguments)
+        if output_arg:
+            out_path, out_display_path = await self._validate_and_resolve_path(
+                "output_path", output_arg, tool_call, request_authorization
+            )
+            if out_path.exists() and out_path.is_dir():
+                raise AIToolExecutionError(f"'output_path' is a directory: {output_arg}")
+
+        else:
+            out_path = path
+            out_display_path = display_path
+
+        inputs = self._build_menai_inputs(path, form, encoding)
+
+        raw_result = await self._evaluate_menai_over_file(
+            lambda: Menai(self._module_path()),
+            lambda menai: self._run_menai_program_sync(menai, inputs, program),
+            display_path,
+            "transform"
+        )
+
+        if form == "binary":
+            if not isinstance(raw_result, MenaiBytes):
+                raise AIToolExecutionError(
+                    f"Transform program must return bytes for form 'binary', "
+                    f"got {raw_result.type_name()}"
                 )
-                try:
-                    original_content, new_content = await asyncio.wait_for(
-                        task, timeout=30.0
 
-                    )
+            new_bytes = raw_result.value
+            original_bytes = path.read_bytes()
 
-                except asyncio.TimeoutError:
-                    self._logger.warning("Menai transform timed out for '%s'", display_path)
-                    menai.vm.cancel()
-                    if not task.done():
-                        try:
-                            await asyncio.wait_for(task, timeout=1.0)
+        else:
+            if not isinstance(raw_result, MenaiString):
+                raise AIToolExecutionError(
+                    f"Transform program must return a string for form 'text', "
+                    f"got {raw_result.type_name()}"
+                )
 
-                        except (asyncio.TimeoutError, asyncio.CancelledError, MenaiCancelledException):
-                            pass
+            new_content = self._ensure_trailing_newline(raw_result.value)
+            original_bytes = path.read_bytes()
+            new_bytes = new_content.encode(encoding)
 
-                        except Exception as e:
-                            self._logger.debug("Exception during transform cancellation: %s", e)
-
-                    raise AIToolTimeoutError("Menai transform timed out", 30.0)  # pylint: disable=raise-missing-from
-
-            finally:
-                with self._menai_lock:
-                    self._active_menai.discard(menai)
-
-        except AIToolTimeoutError:
-            raise
-
-        except AIToolExecutionError:
-            raise
-
-        except MenaiCancelledException as e:
-            raise AIToolTimeoutError("Menai transform timed out", 30.0) from e
-
-        except MenaiError as e:
-            raise AIToolExecutionError(str(e)) from e
-
-        except Exception as e:
-            self._logger.error("Unexpected error in transform_file '%s': %s", display_path, str(e), exc_info=True)
-            raise AIToolExecutionError(f"Transform failed: {str(e)}") from e
-
-        # Ensure trailing newline
-        new_content = self._ensure_trailing_newline(new_content)
-
-        if original_content == new_content:
+        if original_bytes == new_bytes:
             return AIToolResult(
                 id=tool_call.id,
                 name="filesystem",
                 content=f"Transform produced no changes to '{display_path}'."
             )
 
-        diff_lines = list(difflib.unified_diff(
-            original_content.splitlines(),
-            new_content.splitlines(),
-            fromfile=display_path,
-            tofile=display_path,
-            lineterm=''
-        ))
-        diff_str = '\n'.join(diff_lines)
+        if form == "text":
+            diff_lines = list(difflib.unified_diff(
+                original_bytes.decode(encoding, errors="replace").splitlines(),
+                new_bytes.decode(encoding, errors="replace").splitlines(),
+                fromfile=out_display_path,
+                tofile=out_display_path,
+                lineterm=''
+            ))
+            diff_str = '\n'.join(diff_lines)
+            summary = f"{len(diff_lines)} diff lines"
+
+        else:
+            diff_str = (
+                f"Binary transform: {len(original_bytes)} bytes -> {len(new_bytes)} bytes."
+            )
+            summary = f"{len(original_bytes)} bytes -> {len(new_bytes)} bytes"
 
         if dry_run:
             return AIToolResult(
                 id=tool_call.id,
                 name="filesystem",
                 content=(
-                    f"Dry run: transform would modify '{display_path}' "
-                    f"({len(diff_lines)} diff lines). No changes written.\n\n{diff_str}"
+                    f"Dry run: transform would write '{out_display_path}' "
+                    f"({summary}). No changes written.\n\n{diff_str}"
                 )
             )
 
-        context_str = f"Apply Menai transform to '{display_path}'. This will overwrite the existing file."
+        if out_path == path:
+            context_str = (
+                f"Apply Menai transform to '{display_path}'. This will overwrite the existing file."
+            )
+
+        else:
+            context_str = (
+                f"Apply Menai transform to '{display_path}' and write the result to "
+                f"'{out_display_path}'. The source file is left unchanged."
+            )
+
         authorized = await request_authorization("filesystem", arguments, context_str, diff_str, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to transform file: {path_arg}")
 
         try:
+            out_path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(
-                mode='w',
-                encoding=encoding,
-                dir=path.parent,
+                mode='wb',
+                dir=out_path.parent,
                 delete=False,
                 suffix='.tmp'
             ) as tmp_file:
-                tmp_file.write(new_content)
+                tmp_file.write(new_bytes)
                 tmp_path = Path(tmp_file.name)
 
-            tmp_path.replace(path)
+            tmp_path.replace(out_path)
             umask = os.umask(0)
             os.umask(umask)
 
-            path.chmod(0o666 & ~umask)
+            out_path.chmod(0o666 & ~umask)
 
         except PermissionError as e:
             raise AIToolExecutionError(f"Permission denied writing file: {str(e)}") from e
@@ -2614,14 +2840,14 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to write file: {str(e)}") from e
 
-        self._logger.info("Menai transform applied to '%s' (%d diff lines)", display_path, len(diff_lines))
+        self._logger.info("Menai transform applied to '%s' (%s)", out_display_path, summary)
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI transformed file: '{display_path}' ({len(diff_lines)} diff lines)"
+            f"AI transformed file: '{display_path}' -> '{out_display_path}' ({summary})"
         )
         result_obj: dict[str, Any] = {
-            "message": f"Transform applied to '{display_path}' ({len(diff_lines)} diff lines).",
+            "message": f"Transform applied to '{out_display_path}' ({summary}).",
         }
         return AIToolResult(
             id=tool_call.id,
