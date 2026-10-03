@@ -833,6 +833,15 @@ class ConversationWidget(QWidget):
         strings = self._language_manager.strings()
         message.content = strings.ai_thinking
 
+        # A turn has begun, whoever started it.  For a human-submitted prompt the
+        # flag is already set by submit(), but a delegated child conversation is
+        # driven directly on the AIConversation by the delegate tool, so this is
+        # the first notification the widget gets that a turn is in flight.
+        if not self._is_streaming:
+            self._is_streaming = True
+            self._input.set_streaming(True)
+            self.status_updated.emit()
+
         self._add_message(message)
         # Start animation if not already animating
         if not self._is_animating:
