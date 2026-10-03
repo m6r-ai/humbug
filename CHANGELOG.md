@@ -28,6 +28,8 @@ New features:
 - Updated the message editing for conversations.  Delete really deletes things, while edit leaves messages below the
   one being edited faded out to show what will be lost.  Edits now take place in the input box so all input features
   are unified and there's not a second-class edit experience.
+- Updated the filesystem AI tool to handle binary files as well as text files, with Menai transforms being able to
+  be applied to both.  The tool can now write output to a new file.
 
 Bug fixes:
 
