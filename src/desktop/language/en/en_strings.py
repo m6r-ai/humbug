@@ -67,6 +67,8 @@ def get_english_strings() -> LanguageStrings:
         find_replace="Find and Replace",
         goto_line="Go to Line",
         mindspace_search="Mindspace Search",
+        quick_switcher="Quick Switcher",
+        quick_switcher_placeholder="Search files, conversations, and open tabs...",
         mindspace_settings="Mindspace Settings",
         conversation_settings="Conversation Settings",
 

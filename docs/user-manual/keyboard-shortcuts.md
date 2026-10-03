@@ -14,6 +14,7 @@ differences and are noted in their rows.
 | Open Mindspace | Cmd+Alt+O | Ctrl+Alt+O |
 | Close Mindspace | Cmd+Alt+W | Ctrl+Alt+W |
 | Mindspace Search | Cmd+Shift+F | Ctrl+Shift+F |
+| Quick Switcher | Cmd+P | Ctrl+P |
 | Mindspace Settings | Cmd+Alt+, | Ctrl+Alt+, |
 | Mindspace Log | Cmd+Shift+L | Ctrl+Shift+L |
 | Humbug Shell | Cmd+Shift+Y | Ctrl+Shift+Y |

@@ -67,6 +67,8 @@ def get_french_strings() -> LanguageStrings:
         find_replace="Rechercher et remplacer",
         goto_line="Aller à la ligne",
         mindspace_search="Recherche globale",
+        quick_switcher="Sélecteur rapide",
+        quick_switcher_placeholder="Rechercher fichiers, conversations et onglets ouverts...",
         mindspace_settings="Paramètres de l'espace mental",
         conversation_settings="Paramètres de conversation",
 

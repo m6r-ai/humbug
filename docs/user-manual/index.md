@@ -27,19 +27,20 @@ to get started and to make the most of working with Humbug day to day.
 12. [Viewing Git Diffs](git-diffs.md)
 13. [AI Tools](ai-tools.md)
 14. [Searching](searching.md)
-15. [Attaching Files to Conversations](attachments.md)
-16. [Forking & Managing Conversations](forking-conversations.md)
-17. [Delegating Tasks Between AIs](delegation.md)
-18. [Token Usage](token-usage.md)
+15. [Quick Switcher](quick-switcher.md)
+16. [Attaching Files to Conversations](attachments.md)
+17. [Forking & Managing Conversations](forking-conversations.md)
+18. [Delegating Tasks Between AIs](delegation.md)
+19. [Token Usage](token-usage.md)
 
 ## Part 4 — Settings & Configuration
 
-19. [User Settings](user-settings.md)
-20. [Mindspace Settings](mindspace-settings.md)
-21. [Conversation Settings](conversation-settings.md)
-22. [Keyboard Shortcuts](keyboard-shortcuts.md)
+20. [User Settings](user-settings.md)
+21. [Mindspace Settings](mindspace-settings.md)
+22. [Conversation Settings](conversation-settings.md)
+23. [Keyboard Shortcuts](keyboard-shortcuts.md)
 
 ## Part 5 — Reference
 
-22. [The Humbug Shell](humbug-shell.md)
-23. [Mindspace Log](mindspace-log.md)
+24. [The Humbug Shell](humbug-shell.md)
+25. [Mindspace Log](mindspace-log.md)
