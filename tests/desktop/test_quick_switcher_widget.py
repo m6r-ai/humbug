@@ -18,19 +18,19 @@ def make_entries():
     return [
         QuickSwitcherEntry(
             entry_id="file:/mindspace/main.py", kind="file",
-            title="main.py", subtitle="main.py", icon_name="files",
+            title="main.py", subtitle=".", icon_name="files",
         ),
         QuickSwitcherEntry(
-            entry_id="file:/mindspace/utils.py", kind="file",
-            title="utils.py", subtitle="utils.py", icon_name="files",
+            entry_id="file:/mindspace/src/utils.py", kind="file",
+            title="utils.py", subtitle="src", icon_name="files",
         ),
         QuickSwitcherEntry(
             entry_id="conversation:/mindspace/.humbug/conversations/plan.conv", kind="conversation",
-            title="plan", subtitle=".humbug/conversations/plan.conv", icon_name="conversation",
+            title="plan", subtitle=".humbug/conversations", icon_name="conversation",
         ),
         QuickSwitcherEntry(
             entry_id="tab:abc123", kind="tab",
-            title="README.md", subtitle="README.md", icon_name="editor",
+            title="README.md", subtitle=".", icon_name="editor",
         ),
     ]
 
@@ -139,7 +139,7 @@ class TestKeyboardInteraction:
         switcher.entry_activated.connect(activated.append)
         press_key(qapp, switcher._input, Qt.Key.Key_Down)
         press_key(qapp, switcher._input, Qt.Key.Key_Return)
-        assert activated == ["file:/mindspace/utils.py"]
+        assert activated == ["file:/mindspace/src/utils.py"]
 
 
 class TestMouseInteraction:

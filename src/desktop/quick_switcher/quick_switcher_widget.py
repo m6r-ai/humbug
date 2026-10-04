@@ -12,9 +12,12 @@ the activated signal.
 from dataclasses import dataclass
 from typing import cast
 
-from PySide6.QtCore import QEvent, QObject, Qt, Signal
+from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, QSize, Qt, Signal
 from PySide6.QtGui import QIcon, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QResizeEvent
-from PySide6.QtWidgets import QLabel, QLineEdit, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QLabel, QLineEdit, QListWidget, QListWidgetItem, QStyle, QStyledItemDelegate, QStyleOptionViewItem, QVBoxLayout,
+    QWidget,
+)
 
 from desktop.color_role import ColorRole
 from desktop.quick_switcher.quick_switcher_match import fuzzy_match_score
@@ -22,6 +25,7 @@ from desktop.style_manager import StyleManager
 
 _MAX_VISIBLE_RESULTS = 50
 _TITLE_MATCH_BONUS = 1000
+_SUBTITLE_ROLE = Qt.ItemDataRole.UserRole + 1
 
 
 @dataclass(slots=True)
@@ -31,8 +35,72 @@ class QuickSwitcherEntry:
     entry_id: str
     kind: str  # "file", "conversation", or "tab"
     title: str
+    # The mindspace-relative directory the entry lives in, or "." at the root; shown muted beside the title.
     subtitle: str
     icon_name: str
+
+
+class _QuickSwitcherItemDelegate(QStyledItemDelegate):
+    """Paint each result row as a primary title followed by a muted directory subtitle."""
+
+    def __init__(self, style_manager: StyleManager, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._style_manager = style_manager
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> None:
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        title = opt.text
+        subtitle = index.data(_SUBTITLE_ROLE) or ""
+
+        opt.text = ""
+        widget = opt.widget
+        if widget is None:
+            super().paint(painter, option, index)
+            return
+
+        style = widget.style()
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
+        if not title:
+            return
+
+        text_rect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemText, opt, opt.widget)
+        if not text_rect.isValid():
+            return
+
+        metrics = opt.fontMetrics
+        title_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
+        subtitle_color = self._style_manager.get_color(ColorRole.TEXT_DISABLED)
+        gap = metrics.horizontalAdvance("  ")
+
+        display_title = metrics.elidedText(title, opt.textElideMode, text_rect.width())
+        title_width = metrics.horizontalAdvance(display_title)
+        available_for_subtitle = text_rect.width() - title_width - gap
+        display_subtitle = ""
+        if subtitle and available_for_subtitle > 0:
+            display_subtitle = metrics.elidedText(subtitle, opt.textElideMode, available_for_subtitle)
+
+        painter.save()
+        painter.setClipRect(text_rect)
+        baseline = text_rect.y() + (text_rect.height() + metrics.ascent() - metrics.descent()) // 2
+        painter.setPen(title_color)
+        painter.drawText(text_rect.x(), baseline, display_title)
+        if display_subtitle:
+            painter.setPen(subtitle_color)
+            painter.drawText(text_rect.x() + title_width + gap, baseline, display_subtitle)
+
+        painter.restore()
+
+    def sizeHint(
+        self,
+        option: QStyleOptionViewItem,
+        index: QModelIndex | QPersistentModelIndex,
+    ) -> QSize:
+        """Return a zoom-scaled row height matching the other Humbug list views."""
+        zoom = self._style_manager.zoom_factor()
+        line_height = option.fontMetrics.height()
+        row_height = max(line_height + round(10 * zoom), round(24 * zoom))
+        return QSize(super().sizeHint(option, index).width(), row_height)
 
 
 class QuickSwitcherWidget(QWidget):
@@ -65,6 +133,11 @@ class QuickSwitcherWidget(QWidget):
         self._list = QListWidget(self._panel)
         self._list.setObjectName("QuickSwitcherList")
         self._list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        # Pixel-based scrolling keeps the scrollbar range in the same units as the row
+        # geometry.  The default ScrollPerItem mode rounds the visible row count down,
+        # which leaves a strip of empty space below the last row at the end of the range.
+        self._list.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
+        self._list.setItemDelegate(_QuickSwitcherItemDelegate(self._style_manager, self._list))
         self._list.itemClicked.connect(self._activate_item)
         panel_layout.addWidget(self._list)
 
@@ -131,7 +204,7 @@ class QuickSwitcherWidget(QWidget):
                 border-radius: {sm.radius()}px;
             }}
             QListWidget#QuickSwitcherList::item:selected {{
-                background-color: {sm.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                background-color: {sm.get_color_str(ColorRole.TEXT_SELECTED)};
                 color: {sm.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
             QListWidget#QuickSwitcherList::item:hover:!selected {{
@@ -177,9 +250,9 @@ class QuickSwitcherWidget(QWidget):
         icon_size = self._style_manager.tab_icon_size()
         for entry, _score in scored_entries[:_MAX_VISIBLE_RESULTS]:
             icon = QIcon(self._style_manager.scale_icon(entry.icon_name, icon_size))
-            label = f"{entry.title}   {entry.subtitle}" if entry.subtitle else entry.title
-            item = QListWidgetItem(icon, label)
+            item = QListWidgetItem(icon, entry.title)
             item.setData(Qt.ItemDataRole.UserRole, entry.entry_id)
+            item.setData(_SUBTITLE_ROLE, entry.subtitle)
             self._list.addItem(item)
 
         if self._list.count() > 0:
@@ -235,7 +308,7 @@ class QuickSwitcherWidget(QWidget):
         width = min(sm.scale(640), max(sm.scale(280), self.width() - sm.scale(80)))
         height = min(sm.scale(420), max(sm.scale(200), self.height() - sm.scale(160)))
         x = (self.width() - width) // 2
-        y = (self.height() - height) // 3
+        y = (self.height() - height) // 2
         self._panel.setGeometry(x, y, width, height)
 
     def resizeEvent(self, event: QResizeEvent) -> None:

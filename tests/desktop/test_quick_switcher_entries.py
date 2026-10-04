@@ -1,8 +1,6 @@
 """Tests for gathering Quick Switcher candidates from a mindspace."""
 # pylint: disable=missing-class-docstring, missing-function-docstring
 
-import os
-
 import pytest
 
 from context.context_info import ContextInfo
@@ -49,6 +47,16 @@ class TestGathering:
         titles = {entry.title for entry in entries}
         assert titles == {"main.py", "notes.md", "plan"}
         assert not truncated
+
+    def test_file_subtitle_is_its_relative_directory(self, mindspace):
+        (mindspace / "src").mkdir()
+        (mindspace / "src" / "app.py").write_text("x = 1", encoding="utf-8")
+
+        entries, _truncated = gather(mindspace)
+
+        subtitles = {entry.title: entry.subtitle for entry in entries if entry.kind == "file"}
+        assert subtitles["app.py"] == "src"
+        assert subtitles["main.py"] == "."
 
     def test_ignored_directories_are_skipped(self, mindspace):
         (mindspace / "node_modules").mkdir()
@@ -138,4 +146,4 @@ class TestFileLimit:
         assert truncated
         tab_entries = [entry for entry in entries if entry.kind == "tab"]
         assert len(tab_entries) == 1
-        assert tab_entries[0].subtitle == os.path.basename(open_file)
+        assert tab_entries[0].subtitle == "."

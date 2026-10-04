@@ -14,6 +14,12 @@ from mindspace.mindspace_ignored_dirs import IGNORED_DIRS
 from desktop.quick_switcher.quick_switcher_widget import QuickSwitcherEntry
 
 
+def _relative_directory(path: str, mindspace_path: str) -> str:
+    """Return the mindspace-relative parent directory of a path, or "." when it is at the root."""
+    relative_dir = os.path.dirname(os.path.relpath(path, mindspace_path))
+    return relative_dir or "."
+
+
 def build_quick_switcher_entries(
     contexts: list[ContextInfo],
     mindspace_path: str,
@@ -47,7 +53,7 @@ def build_quick_switcher_entries(
             entry_id=f"tab:{context.context_id}",
             kind="tab",
             title=context.title,
-            subtitle=os.path.relpath(context.path, mindspace_path),
+            subtitle=_relative_directory(context.path, mindspace_path),
             icon_name=context.context_type,
         ))
 
@@ -64,7 +70,7 @@ def build_quick_switcher_entries(
                 entry_id=f"conversation:{path}",
                 kind="conversation",
                 title=os.path.splitext(filename)[0],
-                subtitle=os.path.relpath(path, mindspace_path),
+                subtitle=_relative_directory(path, mindspace_path),
                 icon_name="conversation",
             ))
 
@@ -89,7 +95,7 @@ def build_quick_switcher_entries(
                 entry_id=f"file:{path}",
                 kind="file",
                 title=filename,
-                subtitle=os.path.relpath(path, mindspace_path),
+                subtitle=_relative_directory(path, mindspace_path),
                 icon_name="files",
             ))
 
