@@ -1203,14 +1203,34 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.setPosition(top_frame.lastPosition())
 
-        # Set spacing after table
-        block_format = QTextBlockFormat(orig_block_format)
+        # If we're inside a list, the block at the end of the frame may have inherited
+        # the active list, which would render a spurious bullet beside the table's
+        # bottom row.  Detach it from any list before inserting the trailing block.
+        if self._lists:
+            inherited_list = self._cursor.block().textList()
+            if inherited_list is not None:
+                inherited_list.remove(self._cursor.block())
+
+        # Set spacing after table.  Use a fresh block format rather than one copied
+        # from the surrounding content: a format taken from a block inside a list
+        # carries the list association, which would re-attach the trailing block to
+        # the list and render a spurious bullet beside the table's bottom row.
+        block_format = QTextBlockFormat()
         block_format.setBottomMargin(self._default_font_height)
         self._cursor.setBlockFormat(block_format)
 
         # Add a new block after the table with proper spacing
         # Note: Qt needs a block after a table otherwise it segfaults!
         self._cursor.insertBlock()
+
+        # If we're inside a list, attach the block after the table to a
+        # ListStyleUndefined list.  Otherwise Qt associates it with the active list
+        # and renders a spurious bullet to the left of the table's bottom row.
+        if self._lists:
+            list_fmt = QTextListFormat(self._lists[-1].format())
+            list_fmt.setStyle(QTextListFormat.Style.ListStyleUndefined)
+            post_table_list = self._cursor.createList(list_fmt)
+            post_table_list.add(self._cursor.block())
 
     def _render_table_as_text(self, node: MarkdownASTTableNode) -> None:
         """
