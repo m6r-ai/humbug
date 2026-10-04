@@ -3,6 +3,7 @@ from context.context_registry import ContextRegistry, ContextEvent
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_content_type import MindspaceContentType
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
+from mindspace.mindspace_ignored_dirs import IGNORED_DIRS
 from mindspace.mindspace_interactions import MindspaceInteractions
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage

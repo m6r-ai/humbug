@@ -56,6 +56,34 @@ class TestPopulation:
         assert switcher.selected_entry_id() is None
 
 
+class TestNotice:
+    def test_notice_is_hidden_by_default(self, host):
+        switcher = make_switcher(host)
+        assert switcher._notice.isHidden()
+
+    def test_setting_a_notice_shows_it(self, host):
+        switcher = make_switcher(host)
+        switcher.set_notice("Limited to the first 2000 files")
+        assert not switcher._notice.isHidden()
+        assert switcher._notice.text() == "Limited to the first 2000 files"
+
+    def test_clearing_the_notice_hides_it_again(self, host):
+        switcher = make_switcher(host)
+        switcher.set_notice("Limited to the first 2000 files")
+        switcher.set_notice("")
+        assert switcher._notice.isHidden()
+
+
+class TestStyleChanges:
+    def test_style_change_restyles_the_panel(self, host):
+        switcher = make_switcher(host)
+        switcher._panel.setStyleSheet("/* stale */")
+
+        switcher._style_manager.style_changed.emit()
+
+        assert "QuickSwitcherPanel" in switcher._panel.styleSheet()
+
+
 class TestFiltering:
     def test_typing_filters_out_non_matching_entries(self, qapp, host):
         switcher = make_switcher(host)

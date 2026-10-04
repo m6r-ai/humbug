@@ -55,6 +55,7 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.main_window_splitter import MainWindowSplitter
 from desktop.preview_sidebar.preview_sidebar import PreviewSidebar
 from desktop.preview_tab.preview_tab import PreviewTab
+from desktop.quick_switcher.quick_switcher_entries import build_quick_switcher_entries
 from desktop.quick_switcher.quick_switcher_widget import QuickSwitcherEntry, QuickSwitcherWidget
 from desktop.search_sidebar.search_sidebar import SearchSidebar
 from desktop.settings_dialog import SettingsDialog, SECTION_AI_BACKENDS
@@ -275,10 +276,10 @@ class MainWindow(QMainWindow):
         "diff": "vcs",
     }
 
-    # Directories skipped when the Quick Switcher enumerates mindspace files.
-    _QUICK_SWITCHER_IGNORED_DIRS = {
-        ".git", ".humbug", ".venv", "venv", "__pycache__", "node_modules", "dist", "build",
-    }
+    # Upper bound on the files the Quick Switcher will walk.  Unlike the search
+    # engine's match limit this bounds the candidate pool itself, so anything
+    # beyond it is unreachable - the user is told when the limit is hit.
+    _MAX_QUICK_SWITCHER_FILES = 2000
 
     def __init__(self) -> None:
         """Initialize the main window."""
@@ -1554,9 +1555,12 @@ class MainWindow(QMainWindow):
             self._quick_switcher.entry_activated.connect(self._on_quick_switcher_entry_activated)
             self._quick_switcher.dismissed.connect(self._hide_quick_switcher)
 
+        entries, truncated = self._build_quick_switcher_entries()
+        notice = strings.quick_switcher_limited.format(self._MAX_QUICK_SWITCHER_FILES) if truncated else ""
+
         self._quick_switcher.set_placeholder(strings.quick_switcher_placeholder)
-        self._quick_switcher.refresh_style()
-        self._quick_switcher.set_entries(self._build_quick_switcher_entries())
+        self._quick_switcher.set_notice(notice)
+        self._quick_switcher.set_entries(entries)
         self._quick_switcher.setGeometry(self._main_widget.rect())
         self._quick_switcher.show()
         self._quick_switcher.raise_()
@@ -1583,54 +1587,15 @@ class MainWindow(QMainWindow):
         if kind == "file":
             self._open_by_panel_id("files", value, ephemeral=False)
 
-    def _build_quick_switcher_entries(self) -> list[QuickSwitcherEntry]:
+    def _build_quick_switcher_entries(self) -> tuple[list[QuickSwitcherEntry], bool]:
         """Gather open tabs, conversations, and files as Quick Switcher candidates."""
-        entries: list[QuickSwitcherEntry] = []
-        mindspace_path = self._mindspace_manager.mindspace_path()
-
-        for context in self._mindspace_manager.mindspace().contexts().list_all():
-            if not context.path:
-                continue
-
-            entries.append(QuickSwitcherEntry(
-                entry_id=f"tab:{context.context_id}",
-                kind="tab",
-                title=context.title,
-                subtitle=os.path.relpath(context.path, mindspace_path),
-                icon_name=context.context_type,
-            ))
-
-        conversations_dir = self._mindspace_manager.mindspace().conversations_dir()
-        for dirpath, _dirnames, filenames in os.walk(conversations_dir):
-            for filename in filenames:
-                if not filename.lower().endswith(".conv"):
-                    continue
-
-                path = os.path.join(dirpath, filename)
-                entries.append(QuickSwitcherEntry(
-                    entry_id=f"conversation:{path}",
-                    kind="conversation",
-                    title=os.path.splitext(filename)[0],
-                    subtitle=os.path.relpath(path, mindspace_path),
-                    icon_name="conversation",
-                ))
-
-        for root, dirs, files in os.walk(mindspace_path):
-            dirs[:] = [
-                directory for directory in dirs
-                if directory not in self._QUICK_SWITCHER_IGNORED_DIRS and not directory.startswith(".")
-            ]
-            for filename in files:
-                path = os.path.join(root, filename)
-                entries.append(QuickSwitcherEntry(
-                    entry_id=f"file:{path}",
-                    kind="file",
-                    title=filename,
-                    subtitle=os.path.relpath(path, mindspace_path),
-                    icon_name="files",
-                ))
-
-        return entries
+        mindspace = self._mindspace_manager.mindspace()
+        return build_quick_switcher_entries(
+            contexts=mindspace.contexts().list_all(),
+            mindspace_path=self._mindspace_manager.mindspace_path(),
+            conversations_dir=mindspace.conversations_dir(),
+            max_files=self._MAX_QUICK_SWITCHER_FILES,
+        )
 
     def _on_show_about_dialog(self) -> None:
         """Show the About dialog."""

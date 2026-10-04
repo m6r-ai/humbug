@@ -17,6 +17,13 @@ live to show the best matches across three sources:
 - **Conversations** — every conversation stored in the mindspace
 - **Files** — every other file in the mindspace
 
+Anything already open appears once, as its tab, so choosing it takes you to the tab you
+already have rather than opening a second copy.
+
+To keep the list fast to build on large mindspaces, the Quick Switcher gathers up to 2000
+files. If it reaches that limit it says so at the bottom of the panel — open tabs and
+conversations are always listed in full.
+
 ---
 
 ## Filtering

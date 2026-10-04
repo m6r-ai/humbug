@@ -2,6 +2,11 @@
 
 ## v57 (2026-10-03)
 
+New features:
+
+- Added a Quick Switcher (Cmd+P / Ctrl+P) that fuzzy-filters open tabs, conversations, and files
+  across the mindspace and jumps straight to the selected one.
+
 Bug fixes:
 
 - Made a minor adjustment to tab bar labels to make them more distinct.
@@ -10,8 +15,6 @@ Bug fixes:
 
 New features:
 
-- Added a Quick Switcher (Cmd+P / Ctrl+P) that fuzzy-filters open tabs, conversations, and files
-  across the mindspace and jumps straight to the selected one.
 - Menai syntax highlighting now recognises the `::` module member access operator as a keyword form.
 - Menai syntax highlighting now distinguishes function calls from plain identifiers.  The head of an ordinary form is
   highlighted as a function, while names in binding, parameter, field, export, pattern, namespace, and quoted positions

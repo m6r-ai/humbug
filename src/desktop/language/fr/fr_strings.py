@@ -69,6 +69,7 @@ def get_french_strings() -> LanguageStrings:
         mindspace_search="Recherche globale",
         quick_switcher="Sélecteur rapide",
         quick_switcher_placeholder="Rechercher fichiers, conversations et onglets ouverts...",
+        quick_switcher_limited="Limité aux {0} premiers fichiers",
         mindspace_settings="Paramètres de l'espace mental",
         conversation_settings="Paramètres de conversation",
 

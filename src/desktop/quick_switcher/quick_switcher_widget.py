@@ -14,7 +14,7 @@ from typing import cast
 
 from PySide6.QtCore import QEvent, QObject, Qt, Signal
 from PySide6.QtGui import QIcon, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QResizeEvent
-from PySide6.QtWidgets import QLineEdit, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QLineEdit, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 
 from desktop.color_role import ColorRole
 from desktop.quick_switcher.quick_switcher_match import fuzzy_match_score
@@ -68,11 +68,22 @@ class QuickSwitcherWidget(QWidget):
         self._list.itemClicked.connect(self._activate_item)
         panel_layout.addWidget(self._list)
 
+        self._notice = QLabel(self._panel)
+        self._notice.setObjectName("QuickSwitcherNotice")
+        self._notice.hide()
+        panel_layout.addWidget(self._notice)
+
+        self._style_manager.style_changed.connect(self._on_style_changed)
         self.refresh_style()
 
     def set_placeholder(self, text: str) -> None:
         """Set the placeholder text shown in the empty filter box."""
         self._input.setPlaceholderText(text)
+
+    def set_notice(self, text: str) -> None:
+        """Show a footer note (e.g. that the candidate list was truncated), or hide it when empty."""
+        self._notice.setText(text)
+        self._notice.setVisible(bool(text))
 
     def set_entries(self, entries: list[QuickSwitcherEntry]) -> None:
         """Replace the full candidate list, clear the filter box, and reset the view."""
@@ -126,8 +137,19 @@ class QuickSwitcherWidget(QWidget):
             QListWidget#QuickSwitcherList::item:hover:!selected {{
                 background-color: {sm.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
             }}
+            QLabel#QuickSwitcherNotice {{
+                color: {sm.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: transparent;
+                padding: {sm.spacing(1)}px {sm.spacing(2)}px;
+                font-size: {font_pt}pt;
+            }}
             {sm.get_scrollbar_stylesheet("QListWidget#QuickSwitcherList QScrollBar")}
         """)
+
+    def _on_style_changed(self) -> None:
+        """Restyle and relayout when the theme or zoom factor changes."""
+        self.refresh_style()
+        self._layout_panel()
 
     def _refilter(self, query: str) -> None:
         """Re-rank and redisplay entries against the current filter text."""
@@ -207,14 +229,18 @@ class QuickSwitcherWidget(QWidget):
         self.dismissed.emit()
         super().mousePressEvent(event)
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        super().resizeEvent(event)
+    def _layout_panel(self) -> None:
+        """Centre the panel in the overlay at a size scaled by the current zoom factor."""
         sm = self._style_manager
         width = min(sm.scale(640), max(sm.scale(280), self.width() - sm.scale(80)))
         height = min(sm.scale(420), max(sm.scale(200), self.height() - sm.scale(160)))
         x = (self.width() - width) // 2
         y = (self.height() - height) // 3
         self._panel.setGeometry(x, y, width, height)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self._layout_panel()
 
     def paintEvent(self, _event: QPaintEvent) -> None:
         painter = QPainter(self)

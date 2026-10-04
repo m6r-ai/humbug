@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_content_type import MindspaceContentType
+from mindspace.mindspace_ignored_dirs import IGNORED_DIRS
 
 
 @dataclass(slots=True)
@@ -22,17 +23,6 @@ class MindspaceSearchMatch:
 
 class MindspaceSearchEngine:
     """Search mindspace file paths and file contents."""
-
-    _IGNORED_DIRS = {
-        ".git",
-        ".humbug",
-        ".venv",
-        "venv",
-        "__pycache__",
-        "node_modules",
-        "dist",
-        "build",
-    }
 
     MAX_MATCHES = 500
     _MAX_MATCHES_PER_FILE = 20
@@ -71,7 +61,7 @@ class MindspaceSearchEngine:
             dirs[:] = [
                 directory
                 for directory in dirs
-                if directory not in self._IGNORED_DIRS
+                if directory not in IGNORED_DIRS
                 and not directory.startswith(".pytest_cache")
                 and (include_hidden or not directory.startswith("."))
             ]
