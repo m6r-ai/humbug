@@ -2,6 +2,10 @@
 
 ## v57 (2026-10-03)
 
+Bug fixes:
+
+- Made a minor adjustment to tab bar labels to make them more distinct.
+
 ## v56 (2026-10-03)
 
 New features:

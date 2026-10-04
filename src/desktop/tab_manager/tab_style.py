@@ -27,11 +27,12 @@ def build_tab_bar_stylesheet(style_manager: StyleManager) -> str:
             margin: 0px;
         }}
         QTabBar::scroller {{
-            width: 28px;
+            width: 27px;
         }}
         QTabBar QToolButton {{
             background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
             border: 1px solid {style_manager.get_color_str(ColorRole.SPLITTER)};
+            border-right: none;
         }}
         QTabBar QToolButton:hover {{
             background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
