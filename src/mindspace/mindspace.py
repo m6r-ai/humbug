@@ -11,7 +11,7 @@ from ai_tool import AIToolManager
 from context.context_registry import ContextRegistry
 from conversation_context.conversation_context import ConversationContext
 
-from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
+from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceHumbugPathError, MindspaceNotFoundError
 from mindspace.mindspace_interactions import MindspaceInteractions
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
@@ -927,6 +927,84 @@ class Mindspace:
 
         except ValueError:
             return None
+
+    def is_humbug_path(self, path: str) -> bool:
+        """
+        Return True if the given path is inside the mindspace's .humbug/ directory.
+
+        The .humbug/ directory holds Humbug-internal state (conversations, settings,
+        the interaction log, usage data, and shell history).  It is excluded from
+        all AI tool operations so that the AI cannot read or modify its own audit
+        trail.  This is the single predicate that every tool-facing path check must
+        use.
+
+        Args:
+            path: Absolute or relative path to test.
+
+        Returns:
+            True if the path resolves inside .humbug/, False otherwise.
+        """
+        if not self.has_mindspace():
+            return False
+
+        # Resolve symlinks so a link inside the mindspace cannot point into .humbug/.
+        abs_path = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
+        humbug_abs = os.path.realpath(os.path.abspath(os.path.join(self._path, self.MINDSPACE_DIR)))
+
+        try:
+            return os.path.commonpath([abs_path, humbug_abs]) == humbug_abs
+
+        except ValueError:
+            return False
+
+    def resolve_tool_path(self, path: str) -> tuple[str, str]:
+        """
+        Resolve a path for AI-tool use, enforcing the mindspace boundary and .humbug exclusion.
+
+        This is the single mechanism every AI tool must use to resolve a path
+        argument.  It rejects paths outside the mindspace and paths inside the
+        .humbug/ directory.  Unlike get_mindspace_relative_path, which is used for
+        internal operations that legitimately touch .humbug/ (such as conversation
+        pinning), this method applies the tool-facing rule.
+
+        Args:
+            path: Absolute or relative path to resolve.
+
+        Returns:
+            Tuple of (absolute path, mindspace-relative path).
+
+        Raises:
+            MindspaceError: If no mindspace is open, or the path is outside the
+                mindspace boundary.
+            MindspaceHumbugPathError: If the path is inside the .humbug/ directory.
+                This is a subclass of MindspaceError so callers that reject both
+                cases need only catch MindspaceError.
+        """
+        if not self.has_mindspace():
+            raise MindspaceError("No mindspace is open")
+
+        # Resolve symlinks on both the target and the mindspace root so that a link
+        # inside the mindspace cannot escape the boundary or point into .humbug/,
+        # and so the comparison is consistent on platforms where the temp or home
+        # directory is itself a symlink (e.g. macOS /var -> /private/var).
+        abs_path = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
+        mindspace_abs = os.path.realpath(os.path.abspath(self._path))
+
+        try:
+            within_mindspace = os.path.commonpath([abs_path, mindspace_abs]) == mindspace_abs
+
+        except ValueError:
+            within_mindspace = False
+
+        if not within_mindspace:
+            raise MindspaceError(f"Path is outside mindspace boundaries: {path}")
+
+        if self.is_humbug_path(abs_path):
+            raise MindspaceHumbugPathError(
+                f"Path is inside the .humbug/ directory, which is managed by Humbug internally: {path}"
+            )
+
+        return abs_path, os.path.relpath(abs_path, mindspace_abs)
 
     def ensure_mindspace_dir(self, dir_path: str) -> str:
         """

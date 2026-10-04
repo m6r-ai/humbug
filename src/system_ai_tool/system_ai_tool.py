@@ -257,25 +257,28 @@ class SystemAITool(AITool):
 
     def _validate_and_resolve_path(self, path_str: str) -> str:
         """
-        Validate path is within mindspace and resolve to absolute path.
+        Validate path is within mindspace and outside .humbug/, resolving to an absolute path.
 
         Args:
             path_str: String path to validate and resolve
 
         Returns:
-            Resolved absolute path within mindspace
+            Resolved absolute path within mindspace and outside .humbug/
 
         Raises:
-            AIToolExecutionError: If path is invalid or outside mindspace
+            AIToolExecutionError: If path is invalid, outside mindspace, or inside .humbug/
         """
         if not path_str:
             raise AIToolExecutionError("Path parameter is required")
 
         abs_path = self._mindspace.get_absolute_path(path_str)
 
-        relative_path = self._mindspace.get_mindspace_relative_path(abs_path)
-        if relative_path is None:
-            raise AIToolExecutionError(f"Path is outside mindspace boundaries: {path_str}")
+        # This is the single tool-facing path rule; see Mindspace.resolve_tool_path.
+        try:
+            self._mindspace.resolve_tool_path(abs_path)
+
+        except MindspaceError as e:
+            raise AIToolExecutionError(str(e)) from e
 
         return abs_path
 

@@ -31,7 +31,7 @@ from git_ai_tool.git_ai_tool import GitAITool
 from help_ai_tool.help_ai_tool import HelpAITool
 from http_ai_tool.http_ai_tool import HttpAITool
 from menai_ai_tool.menai_ai_tool import MenaiAITool
-from mindspace.mindspace_error import MindspaceError, MindspaceExistsError
+from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceHumbugPathError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_settings import MindspaceSettings
 from preview_ai_tool.preview_ai_tool import PreviewAITool
@@ -2352,20 +2352,40 @@ class MainWindow(QMainWindow):
 
         resolved_path = Path(abs_path).resolve()
 
-        # Verify the resolved path is still within mindspace
-        relative_path = self._mindspace_manager.get_mindspace_relative_path(str(resolved_path))
-        if relative_path is None:
-            raise ValueError(f"Path is outside mindspace boundaries: {path}")
+        # Verify the resolved path is within the mindspace and outside .humbug/.
+        # This is the single tool-facing path rule; see Mindspace.resolve_tool_path.
+        try:
+            _, relative_path = self._mindspace_manager.mindspace().resolve_tool_path(str(resolved_path))
+
+        except MindspaceHumbugPathError:
+            # A .humbug/ path is always forbidden and must never be treated as a
+            # candidate for external access.  Let it propagate unchanged.
+            raise
+
+        except MindspaceError as e:
+            raise ValueError(str(e)) from e
 
         return resolved_path, relative_path
 
     def _get_filesystem_access_settings(self) -> FilesystemAccessSettings:
         """Get filesystem access settings from user settings."""
         user_settings = self._user_manager.settings()
+
+        # The mindspace's own .humbug/ directory is always denied, in addition to the
+        # user-configured denylist.  This is defence in depth: resolve_tool_path already
+        # rejects .humbug/ paths, but including it here guarantees a hard denial rather
+        # than an approval prompt even if a path reaches the denylist check by another route.
+        denylist = list(user_settings.external_file_denylist)
+        if self._mindspace_manager.has_mindspace():
+            humbug_dir = os.path.join(
+                self._mindspace_manager.mindspace_path(), MindspaceManager.MINDSPACE_DIR
+            )
+            denylist.append(os.path.join(humbug_dir, "**"))
+
         return FilesystemAccessSettings(
             allow_external_access=user_settings.allow_external_file_access,
             external_allowlist=user_settings.external_file_allowlist,
-            external_denylist=user_settings.external_file_denylist
+            external_denylist=denylist
         )
 
     def _on_open_conversation(self) -> None:

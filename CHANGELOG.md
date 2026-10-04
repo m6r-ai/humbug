@@ -4,12 +4,16 @@
 
 New features:
 
-- Added a Quick Switcher (Cmd+P / Ctrl+P) that fuzzy-filters open tabs, conversations, and files
-  across the mindspace and jumps straight to the selected one.
+- Added a Quick Switcher (Cmd+P / Ctrl+P) that fuzzy-filters open tabs, conversations, and files across the mindspace and
+  jumps straight to the selected one.
+- Markdown tables now render with proportional spacing of columns to make things more readable.  If a markdown table is
+  detected to be written with the first character in Arabic then the table is rendered from the right and not the left.
 
 Bug fixes:
 
 - Made a minor adjustment to tab bar labels to make them more distinct.
+- AI tools that access the filesystem are now correctly blocked from accessing the mindspace `.humbug` directory.  All file
+  accesses are now standardized through a single mechanism.
 
 ## v56 (2026-10-03)
 

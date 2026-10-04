@@ -1,10 +1,13 @@
 """Tests for Mindspace AI settings broadcasting and session state persistence."""
 import os
 
+import pytest
+
 from ai import AIConversationSettings
 from context.context_registry import ContextRegistry
 from conversation_context.conversation_context import ConversationContext
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_error import MindspaceError, MindspaceHumbugPathError
 from mindspace.mindspace_settings import MindspaceSettings
 
 
@@ -216,3 +219,76 @@ class TestSessionState:
         loaded = mindspace.load_mindspace_state()
 
         assert loaded["contexts"][0]["layout"]["path"] == outside
+
+
+class TestHumbugPathExclusion:
+    """Tests for the tool-facing .humbug/ exclusion in Mindspace."""
+
+    def test_is_humbug_path_true_for_humbug_dir(self, tmp_path, monkeypatch) -> None:
+        """Paths inside .humbug/ are recognised as Humbug-internal."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        inside = os.path.join(mindspace.mindspace_path(), ".humbug", "settings.json")
+
+        assert mindspace.is_humbug_path(inside) is True
+
+    def test_is_humbug_path_false_for_regular_file(self, tmp_path, monkeypatch) -> None:
+        """Paths elsewhere in the mindspace are not Humbug-internal."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        regular = os.path.join(mindspace.mindspace_path(), "src", "file.py")
+
+        assert mindspace.is_humbug_path(regular) is False
+
+    def test_is_humbug_path_false_for_sibling_with_prefix(self, tmp_path, monkeypatch) -> None:
+        """A sibling directory whose name starts with .humbug is not treated as .humbug/."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        sibling = os.path.join(mindspace.mindspace_path(), ".humbug_backup", "file.py")
+
+        assert mindspace.is_humbug_path(sibling) is False
+
+    def test_resolve_tool_path_allows_regular_file(self, tmp_path, monkeypatch) -> None:
+        """A path inside the mindspace but outside .humbug/ resolves successfully."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        target = os.path.join(mindspace.mindspace_path(), "src", "file.py")
+
+        abs_path, relative_path = mindspace.resolve_tool_path(target)
+
+        assert abs_path == os.path.realpath(target)
+        assert relative_path == os.path.join("src", "file.py")
+
+    def test_resolve_tool_path_rejects_humbug_dir(self, tmp_path, monkeypatch) -> None:
+        """A path inside .humbug/ is rejected."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        target = os.path.join(mindspace.mindspace_path(), ".humbug", "settings.json")
+
+        with pytest.raises(MindspaceHumbugPathError):
+            mindspace.resolve_tool_path(target)
+
+    def test_resolve_tool_path_rejects_outside_mindspace(self, tmp_path, monkeypatch) -> None:
+        """A path outside the mindspace is rejected."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        target = os.path.join(str(tmp_path), "elsewhere", "file.py")
+
+        with pytest.raises(MindspaceError):
+            mindspace.resolve_tool_path(target)
+
+    def test_resolve_tool_path_rejects_symlink_into_humbug(self, tmp_path, monkeypatch) -> None:
+        """A symlink inside the mindspace pointing into .humbug/ is rejected."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        mindspace_path = mindspace.mindspace_path()
+        secret = os.path.join(mindspace_path, ".humbug", "settings.json")
+        with open(secret, "w", encoding="utf-8") as f:
+            f.write("{}")
+        link = os.path.join(mindspace_path, "link.json")
+        os.symlink(secret, link)
+
+        with pytest.raises(MindspaceHumbugPathError):
+            mindspace.resolve_tool_path(link)
+
+    def test_get_mindspace_relative_path_still_accepts_humbug_dir(self, tmp_path, monkeypatch) -> None:
+        """The internal relative-path helper still resolves .humbug/ paths for internal use."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        target = os.path.join(mindspace.mindspace_path(), ".humbug", "conversations", "c1.json")
+
+        relative_path = mindspace.get_mindspace_relative_path(target)
+
+        assert relative_path == os.path.join(".humbug", "conversations", "c1.json")

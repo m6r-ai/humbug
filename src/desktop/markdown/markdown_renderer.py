@@ -6,6 +6,7 @@ from collections.abc import Callable
 import logging
 import os
 import re
+import unicodedata
 from typing import Any, cast
 
 from PySide6.QtCore import Qt
@@ -36,6 +37,19 @@ from desktop.markdown.markdown_block_data import HeadingBlockData, MarkdownBlock
 
 class MarkdownRenderer(MarkdownASTVisitor):
     """Visitor that renders the AST directly to a QTextDocument."""
+
+    # Padding applied inside each table cell, in pixels.
+    _table_cell_padding = 8
+
+    # Extra slack added to each measured column to absorb text-shaping rounding.
+    _column_slack = 2
+
+    # Horizontal overhead Qt adds to the document width for a bordered table frame,
+    # independent of the number of columns.  Measured empirically for a 1px frame
+    # border: a bordered table occupies this many pixels beyond the sum of its
+    # column widths, so it must be reserved from the available width to avoid the
+    # table overflowing its container.
+    _table_frame_overhead = 4
 
     def __init__(
         self,
@@ -1190,14 +1204,34 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.setPosition(top_frame.lastPosition())
 
-        # Set spacing after table
-        block_format = QTextBlockFormat(orig_block_format)
+        # If we're inside a list, the block at the end of the frame may have inherited
+        # the active list, which would render a spurious bullet beside the table's
+        # bottom row.  Detach it from any list before inserting the trailing block.
+        if self._lists:
+            inherited_list = self._cursor.block().textList()
+            if inherited_list is not None:
+                inherited_list.remove(self._cursor.block())
+
+        # Set spacing after table.  Use a fresh block format rather than one copied
+        # from the surrounding content: a format taken from a block inside a list
+        # carries the list association, which would re-attach the trailing block to
+        # the list and render a spurious bullet beside the table's bottom row.
+        block_format = QTextBlockFormat()
         block_format.setBottomMargin(self._default_font_height)
         self._cursor.setBlockFormat(block_format)
 
         # Add a new block after the table with proper spacing
         # Note: Qt needs a block after a table otherwise it segfaults!
         self._cursor.insertBlock()
+
+        # If we're inside a list, attach the block after the table to a
+        # ListStyleUndefined list.  Otherwise Qt associates it with the active list
+        # and renders a spurious bullet to the left of the table's bottom row.
+        if self._lists:
+            list_fmt = QTextListFormat(self._lists[-1].format())
+            list_fmt.setStyle(QTextListFormat.Style.ListStyleUndefined)
+            post_table_list = self._cursor.createList(list_fmt)
+            post_table_list.add(self._cursor.block())
 
     def _render_table_as_text(self, node: MarkdownASTTableNode) -> None:
         """
@@ -1244,6 +1278,243 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
                     paragraph.add_child(MarkdownASTTextNode(row_text))
                     self.visit(paragraph)
+
+    def _column_widths(self, node: MarkdownASTTableNode, column_count: int, available_width: float) -> list[QTextLength]:
+        """
+        Compute content-sized column width constraints for a table.
+
+        Each column is sized to the widest cell it contains, measured with the
+        proportional font for plain text and the monospace font for inline code.
+        When every column's full content fits within the available width the table
+        is sized to its content.  Otherwise the available width is distributed by
+        growth potential: each column starts at the width of its widest unbreakable
+        token and receives a share of the remaining space proportional to how much
+        it would like to grow.  If even those minimum widths do not fit, the table
+        exceeds the viewport (horizontal scrolling) rather than breaking words.
+
+        Args:
+            node: The table node whose cells determine the column widths
+            column_count: The number of columns in the table
+            available_width: The maximum width available to the table in pixels
+
+        Returns:
+            A list of fixed-length QTextLength constraints, one per column
+        """
+        proportional_font = QFont(self._document.defaultFont())
+        proportional_metrics = QFontMetricsF(proportional_font)
+
+        bold_font = QFont(proportional_font)
+        bold_font.setBold(True)
+        bold_metrics = QFontMetricsF(bold_font)
+
+        code_metrics = QFontMetricsF(self._style_manager.make_monospace_font())
+
+        cell_extra = self._table_cell_padding * 2 + self._column_slack
+        widths = [0.0] * column_count
+        floors = [0.0] * column_count
+
+        for section in node.children:
+            if not isinstance(section, (MarkdownASTTableHeaderNode, MarkdownASTTableBodyNode)):
+                continue
+
+            for row in section.children:
+                if not isinstance(row, MarkdownASTTableRowNode):
+                    continue
+
+                for index, cell in enumerate(row.children):
+                    if index >= column_count or not isinstance(cell, MarkdownASTTableCellNode):
+                        continue
+
+                    text_width = self._measure_cell_width(
+                        cell, proportional_metrics, bold_metrics, code_metrics, cell.is_header
+                    )
+                    widths[index] = max(widths[index], text_width + cell_extra)
+
+                    word_width = self._measure_cell_word_width(
+                        cell, proportional_metrics, bold_metrics, code_metrics, cell.is_header
+                    )
+                    floors[index] = max(floors[index], word_width + cell_extra)
+
+        min_total = sum(floors)
+        max_total = sum(widths)
+
+        if available_width <= 0 or max_total <= available_width:
+            # Either the width is unknown, or every column's full content fits.
+            final = widths
+
+        elif min_total >= available_width:
+            # Even the narrowest layout (widest token per column) does not fit, so
+            # use it and let the table exceed the viewport rather than break words.
+            final = list(floors)
+
+        else:
+            # Distribute the available width by growth potential: each column starts
+            # at its floor and receives a share of the spare space proportional to how
+            # much it would like to grow.  This lets wrappable content (e.g. code with
+            # spaces) take only its fair share instead of forcing the table wide.
+            spare = available_width - min_total
+            growth_total = max_total - min_total
+            final = [
+                floors[index] + spare * (widths[index] - floors[index]) / growth_total
+                for index in range(column_count)
+            ]
+
+        return [
+            QTextLength(QTextLength.Type.FixedLength, width)
+            for width in final
+        ]
+
+    def _measure_cell_width(
+        self,
+        node: MarkdownASTNode,
+        regular_metrics: QFontMetricsF,
+        bold_metrics: QFontMetricsF,
+        code_metrics: QFontMetricsF,
+        is_bold: bool = False,
+    ) -> float:
+        """
+        Measure the rendered width of a node's inline content.
+
+        Bold runs are measured with the bold font metrics, inline code with the
+        monospace metrics, and all other text with the regular metrics.  The
+        is_bold flag carries the inherited weight so that content nested inside a
+        bold run (or a header cell) is measured with the bold font.
+
+        Args:
+            node: The node whose inline content is measured
+            regular_metrics: Font metrics for non-bold text content
+            bold_metrics: Font metrics for bold text content
+            code_metrics: Font metrics to use for inline code content
+            is_bold: Whether the content inherits a bold weight
+
+        Returns:
+            The width in pixels of the node's inline content
+        """
+        text_metrics = bold_metrics if is_bold else regular_metrics
+        width = 0.0
+
+        for child in node.children:
+            if isinstance(child, MarkdownASTInlineCodeNode):
+                width += code_metrics.horizontalAdvance(child.content)
+
+            elif isinstance(child, MarkdownASTTextNode):
+                width += text_metrics.horizontalAdvance(child.content)
+
+            elif isinstance(child, MarkdownASTBoldNode):
+                width += self._measure_cell_width(child, regular_metrics, bold_metrics, code_metrics, True)
+
+            else:
+                width += self._measure_cell_width(child, regular_metrics, bold_metrics, code_metrics, is_bold)
+
+        return width
+
+    def _measure_cell_word_width(
+        self,
+        node: MarkdownASTNode,
+        regular_metrics: QFontMetricsF,
+        bold_metrics: QFontMetricsF,
+        code_metrics: QFontMetricsF,
+        is_bold: bool = False,
+    ) -> float:
+        """
+        Measure the width of the widest unbreakable token in a node's content.
+
+        A token is a run of non-whitespace characters, in either plain text or
+        inline code.  This gives the minimum column width at which content can
+        wrap on word boundaries without a token being broken mid-character.
+
+        Args:
+            node: The node whose inline content is measured
+            regular_metrics: Font metrics for non-bold text content
+            bold_metrics: Font metrics for bold text content
+            code_metrics: Font metrics to use for inline code content
+            is_bold: Whether the content inherits a bold weight
+
+        Returns:
+            The width in pixels of the widest token in the node's content
+        """
+        text_metrics = bold_metrics if is_bold else regular_metrics
+        widest = 0.0
+
+        for child in node.children:
+            if isinstance(child, MarkdownASTInlineCodeNode):
+                for token in child.content.split():
+                    widest = max(widest, code_metrics.horizontalAdvance(token))
+
+            elif isinstance(child, MarkdownASTTextNode):
+                for token in child.content.split():
+                    widest = max(widest, text_metrics.horizontalAdvance(token))
+
+            elif isinstance(child, MarkdownASTBoldNode):
+                widest = max(widest, self._measure_cell_word_width(child, regular_metrics, bold_metrics, code_metrics, True))
+
+            else:
+                widest = max(widest, self._measure_cell_word_width(child, regular_metrics, bold_metrics, code_metrics, is_bold))
+
+        return widest
+
+    @staticmethod
+    def _is_rtl_table(node: MarkdownASTTableNode) -> bool:
+        """
+        Determine whether a table's content is predominantly right-to-left.
+
+        Applies the Unicode bidirectional algorithm's first-strong-character rule
+        (UAX #9): the first character with a strong directionality decides the
+        direction of the whole run.  Characters with no strong direction (digits,
+        punctuation, whitespace) are skipped.  Qt already shapes RTL glyph runs
+        correctly; this only informs the block-level positioning of the table box.
+
+        Args:
+            node: The table node whose cell content determines the direction
+
+        Returns:
+            True if the first strong character in the table is right-to-left
+        """
+        for section in node.children:
+            if not isinstance(section, (MarkdownASTTableHeaderNode, MarkdownASTTableBodyNode)):
+                continue
+
+            for row in section.children:
+                if not isinstance(row, MarkdownASTTableRowNode):
+                    continue
+
+                for cell in row.children:
+                    if not isinstance(cell, MarkdownASTTableCellNode):
+                        continue
+
+                    direction = MarkdownRenderer._first_strong_direction(cell)
+                    if direction is not None:
+                        return direction
+
+        return False
+
+    @staticmethod
+    def _first_strong_direction(node: MarkdownASTNode) -> bool | None:
+        """
+        Find the first strong-direction character in a node's inline content.
+
+        Args:
+            node: The node whose inline content is scanned
+
+        Returns:
+            True if the first strong character is right-to-left, False if it is
+            left-to-right, or None if the content has no strong character
+        """
+        for child in node.children:
+            if isinstance(child, (MarkdownASTTextNode, MarkdownASTInlineCodeNode)):
+                for character in child.content:
+                    if unicodedata.bidirectional(character) in ("R", "AL"):
+                        return True
+
+                    if unicodedata.bidirectional(character) == "L":
+                        return False
+
+            else:
+                direction = MarkdownRenderer._first_strong_direction(child)
+                if direction is not None:
+                    return direction
+
+        return None
 
     def visit_MarkdownASTTableHeaderNode(self, node: MarkdownASTTableHeaderNode) -> None:  # pylint: disable=invalid-name
         """
@@ -1319,29 +1590,44 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
             # Create table format
             table_format = QTextTableFormat()
-            table_format.setCellPadding(2)
+            table_format.setCellPadding(self._table_cell_padding)
             table_format.setCellSpacing(0)
             table_format.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Solid)
             table_format.setBorder(1)
 
-            # When inside a list or blockquote, offset the table's left edge to align with the list
-            # indent, and reduce the width by the same amount so it doesn't overflow.
-            # QTextTable is a QTextFrame and its percentage width is always relative to
-            # the full document text width, so we must use a fixed pixel width here.
+            # When inside a list or blockquote, offset the table's left edge to align with the
+            # list indent, and reduce the available width by the same amount so it doesn't
+            # overflow.  QTextTable is a QTextFrame and its percentage width is always relative
+            # to the full document text width, so we must use a fixed pixel width here.
             doc_width = self._document.textWidth()
             indent_depth = self._list_level + len(self._blockquote_bar_offsets)
+            left_margin = 0.0
             if indent_depth > 0 and doc_width > 0:
                 left_margin = indent_depth * self._document.indentWidth()
                 table_format.setLeftMargin(left_margin)
-                table_format.setWidth(QTextLength(QTextLength.Type.FixedLength, doc_width))
 
-            elif doc_width > 0:
-                table_format.setWidth(QTextLength(QTextLength.Type.PercentageLength, 100))
+            # Qt lays out a bordered table frame slightly wider than the sum of its column
+            # widths, so reserve that overhead to keep the table within the document width.
+            available_width = max(doc_width - left_margin - self._table_frame_overhead, 0.0)
 
-            # Set uniform column widths
-            col_width_percent = 100 / column_count
-            col_widths = [QTextLength(QTextLength.Type.PercentageLength, col_width_percent) for _ in range(column_count)]
-            table_format.setColumnWidthConstraints(col_widths)
+            # Size columns to their content, shrinking proportionally if the content is
+            # wider than the space available.  The table frame is then sized to the sum of
+            # the column widths so a small table stays small rather than stretching.
+            column_widths = self._column_widths(table_node, column_count, available_width)
+            table_format.setColumnWidthConstraints(column_widths)
+            total_width = sum(length.rawValue() for length in column_widths)
+            table_format.setWidth(QTextLength(QTextLength.Type.FixedLength, total_width))
+
+            # For a right-to-left table, mirror the indent onto the right edge and absorb the
+            # remaining slack into the left margin so the box floats to the right.  Qt lays a
+            # QTextTable out from the left, so this is the only way to right-anchor it.
+            if doc_width > 0 and self._is_rtl_table(table_node):
+                # total_width is the sum of the column widths only; the rendered frame is
+                # wider than that by the frame overhead, so it must be reserved here too or
+                # the table's right edge overflows the document by that amount.
+                slack = max(doc_width - left_margin - total_width - self._table_frame_overhead, 0.0)
+                table_format.setLeftMargin(left_margin + slack)
+                table_format.setRightMargin(left_margin)
 
             # Create the table
             self._current_table = self._cursor.insertTable(row_count, column_count, table_format)
@@ -1361,7 +1647,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
                     cell_format.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Solid)
                     cell_format.setBorder(1)
                     cell_format.setBorderBrush(self._style_manager.get_color(ColorRole.TABLE_BORDER))
-                    cell_format.setPadding(8)
+                    cell_format.setPadding(self._table_cell_padding)
 
                     # Apply header styling if needed
                     if cell_node.is_header:

@@ -265,6 +265,20 @@ interactions log, the context registry, and the conversations directory (`.humbu
 Conversations are migrated from the legacy `conversations/` root directory on open.
 No Qt or GUI dependencies.
 
+`Mindspace.resolve_tool_path()` is the single mechanism every AI tool must use to
+resolve a path argument.  It enforces the mindspace boundary and rejects paths inside
+the `.humbug/` directory (via `Mindspace.is_humbug_path()`), resolving symlinks on both
+the target and the mindspace root.  Do not re-implement this check in individual tools;
+delegate to it.  The separate `Mindspace.get_mindspace_relative_path()` is for internal
+use only and does not apply the `.humbug/` exclusion.
+
+An outside-boundary path raises `MindspaceError`; a `.humbug/` path raises
+`MindspaceHumbugPathError` (a subclass).  The distinction matters to the filesystem
+tool, which offers outside-boundary paths to the user for external approval but must
+reject `.humbug/` paths outright.  As defence in depth, `_get_filesystem_access_settings`
+also appends the current mindspace's `.humbug/**` to the effective denylist, so such a
+path is denied by the same always-deny mechanism as `~/.ssh/**`.
+
 ### `src/pdf/`
 Pure-Python PDF text extraction (stdlib only). Parses PDF structure, decodes streams
 (FlateDecode, ASCII85Decode, ASCIIHexDecode), and extracts text from content streams.

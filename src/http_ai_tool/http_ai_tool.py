@@ -21,6 +21,7 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
 )
+from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace import Mindspace
 from html_ import html_ast_to_document_ir, parse_html
 from http_client import (
@@ -1284,19 +1285,13 @@ class HttpAITool(AITool):
         else:
             abs_path = os.path.join(mindspace_path, source)
 
-        resolved = os.path.realpath(abs_path)
-        mindspace_real = os.path.realpath(mindspace_path)
+        # Enforce the mindspace boundary and .humbug/ exclusion via the single
+        # tool-facing path rule; see Mindspace.resolve_tool_path.
+        try:
+            resolved, _ = self._mindspace.resolve_tool_path(abs_path)
 
-        if not (resolved == mindspace_real or resolved.startswith(mindspace_real + os.sep)):
-            raise AIToolExecutionError(
-                f"Source path is outside the mindspace: {source}"
-            )
-
-        humbug_dir = os.path.join(mindspace_real, Mindspace.MINDSPACE_DIR)
-        if resolved == humbug_dir or resolved.startswith(humbug_dir + os.sep):
-            raise AIToolExecutionError(
-                "Cannot read from the .humbug/ directory — it is managed by Humbug internally."
-            )
+        except MindspaceError as e:
+            raise AIToolExecutionError(str(e)) from e
 
         if not os.path.isfile(resolved):
             raise AIToolExecutionError(f"Source file does not exist: {source}")
@@ -1330,18 +1325,12 @@ class HttpAITool(AITool):
         else:
             abs_path = os.path.join(mindspace_path, destination)
 
-        resolved = os.path.realpath(abs_path)
-        mindspace_real = os.path.realpath(mindspace_path)
+        # Enforce the mindspace boundary and .humbug/ exclusion via the single
+        # tool-facing path rule; see Mindspace.resolve_tool_path.
+        try:
+            resolved, relative_path = self._mindspace.resolve_tool_path(abs_path)
 
-        if not (resolved == mindspace_real or resolved.startswith(mindspace_real + os.sep)):
-            raise AIToolExecutionError(
-                f"Destination path is outside the mindspace: {destination}"
-            )
+        except MindspaceError as e:
+            raise AIToolExecutionError(str(e)) from e
 
-        humbug_dir = os.path.join(mindspace_real, Mindspace.MINDSPACE_DIR)
-        if resolved == humbug_dir or resolved.startswith(humbug_dir + os.sep):
-            raise AIToolExecutionError(
-                "Cannot write to the .humbug/ directory — it is managed by Humbug internally."
-            )
-
-        return Path(resolved), os.path.relpath(resolved, mindspace_real)
+        return Path(resolved), relative_path
