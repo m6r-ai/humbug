@@ -6,6 +6,7 @@ from collections.abc import Callable
 import logging
 import os
 import re
+import unicodedata
 from typing import Any, cast
 
 from PySide6.QtCore import Qt
@@ -1452,6 +1453,69 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         return widest
 
+    @staticmethod
+    def _is_rtl_table(node: MarkdownASTTableNode) -> bool:
+        """
+        Determine whether a table's content is predominantly right-to-left.
+
+        Applies the Unicode bidirectional algorithm's first-strong-character rule
+        (UAX #9): the first character with a strong directionality decides the
+        direction of the whole run.  Characters with no strong direction (digits,
+        punctuation, whitespace) are skipped.  Qt already shapes RTL glyph runs
+        correctly; this only informs the block-level positioning of the table box.
+
+        Args:
+            node: The table node whose cell content determines the direction
+
+        Returns:
+            True if the first strong character in the table is right-to-left
+        """
+        for section in node.children:
+            if not isinstance(section, (MarkdownASTTableHeaderNode, MarkdownASTTableBodyNode)):
+                continue
+
+            for row in section.children:
+                if not isinstance(row, MarkdownASTTableRowNode):
+                    continue
+
+                for cell in row.children:
+                    if not isinstance(cell, MarkdownASTTableCellNode):
+                        continue
+
+                    direction = MarkdownRenderer._first_strong_direction(cell)
+                    if direction is not None:
+                        return direction
+
+        return False
+
+    @staticmethod
+    def _first_strong_direction(node: MarkdownASTNode) -> bool | None:
+        """
+        Find the first strong-direction character in a node's inline content.
+
+        Args:
+            node: The node whose inline content is scanned
+
+        Returns:
+            True if the first strong character is right-to-left, False if it is
+            left-to-right, or None if the content has no strong character
+        """
+        for child in node.children:
+            if isinstance(child, (MarkdownASTTextNode, MarkdownASTInlineCodeNode)):
+                for character in child.content:
+                    if unicodedata.bidirectional(character) in ("R", "AL"):
+                        return True
+
+                    if unicodedata.bidirectional(character) == "L":
+                        return False
+
+            else:
+                direction = MarkdownRenderer._first_strong_direction(child)
+                if direction is not None:
+                    return direction
+
+        return None
+
     def visit_MarkdownASTTableHeaderNode(self, node: MarkdownASTTableHeaderNode) -> None:  # pylint: disable=invalid-name
         """
         Render a table header node to the QTextDocument.
@@ -1553,6 +1617,17 @@ class MarkdownRenderer(MarkdownASTVisitor):
             table_format.setColumnWidthConstraints(column_widths)
             total_width = sum(length.rawValue() for length in column_widths)
             table_format.setWidth(QTextLength(QTextLength.Type.FixedLength, total_width))
+
+            # For a right-to-left table, mirror the indent onto the right edge and absorb the
+            # remaining slack into the left margin so the box floats to the right.  Qt lays a
+            # QTextTable out from the left, so this is the only way to right-anchor it.
+            if doc_width > 0 and self._is_rtl_table(table_node):
+                # total_width is the sum of the column widths only; the rendered frame is
+                # wider than that by the frame overhead, so it must be reserved here too or
+                # the table's right edge overflows the document by that amount.
+                slack = max(doc_width - left_margin - total_width - self._table_frame_overhead, 0.0)
+                table_format.setLeftMargin(left_margin + slack)
+                table_format.setRightMargin(left_margin)
 
             # Create the table
             self._current_table = self._cursor.insertTable(row_count, column_count, table_format)
