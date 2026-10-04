@@ -2,6 +2,11 @@
 
 ## v57 (2026-10-03)
 
+New features:
+
+- Markdown tables now render with proportional spacing of columns to make things more readable.  If a markdown table is
+  detected to be written with the first character in Arabic then the table is rendered from the right and not the left.
+
 Bug fixes:
 
 - Made a minor adjustment to tab bar labels to make them more distinct.
