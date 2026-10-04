@@ -332,6 +332,13 @@ corresponds to the module it covers:
   `tests/tools/style_checker/` tests `tools/style_checker/`).
 - `tests/conftest.py` provides fixtures shared across the whole suite.
 
+The mirroring is recursive: within a module's test directory the layout follows
+that module's own subpackage structure (e.g. `tests/src/desktop/tour/` tests
+`src/desktop/tour/`, and `tests/src/desktop/conversation_sidebar/` tests
+`src/desktop/conversation_sidebar/`).  Tests for a module's top-level files sit
+directly in its test directory (e.g. `tests/src/desktop/test_palette.py` tests
+`src/desktop/palette.py`).
+
 When adding tests for a module, place them under the matching path in `tests/`.
 Tests import shared fixtures via `from tests.conftest import ...` and may import
 helpers from other test modules via their full path (e.g.
