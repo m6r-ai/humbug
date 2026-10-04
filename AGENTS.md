@@ -21,7 +21,7 @@ Consult it before proposing changes that touch established decisions.
   summary lines on stdout, so filtering mangles the output and hides the pass/fail counts.  Run pytest with no flags
   and pipe through `tail` only if the output is too long to read in full:
   ```bash
-  python -m pytest tests/menai_ai_tool/ 2>&1 | tail -10
+  python -m pytest tests/src/menai_ai_tool/ 2>&1 | tail -10
   ```
 
 ## Menai C VM binary
@@ -320,6 +320,22 @@ Development and debugging utilities:
 - `dependency_checker/` - Module dependency validation
 - `style_checker/` - Pylint plugin enforcing Humbug-specific code style conventions
 - `pdf/` - PDF-related tooling
+
+## `tests/` Directory
+
+The test suite mirrors the top-level source layout so that a test's location
+corresponds to the module it covers:
+
+- `tests/src/` mirrors `src/` — one subdirectory per `src/` module (e.g.
+  `tests/src/mindspace/` tests `src/mindspace/`).
+- `tests/tools/` mirrors `tools/` — one subdirectory per `tools/` module (e.g.
+  `tests/tools/style_checker/` tests `tools/style_checker/`).
+- `tests/conftest.py` provides fixtures shared across the whole suite.
+
+When adding tests for a module, place them under the matching path in `tests/`.
+Tests import shared fixtures via `from tests.conftest import ...` and may import
+helpers from other test modules via their full path (e.g.
+`from tests.src.http_client.test_http_client import MockHTTPServer`).
 
 ## Key Documentation Files
 

@@ -2534,14 +2534,14 @@ class TestHttpAIToolDecompression:
         compressed = gzip.compress(original.encode("utf-8"))
 
         async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
-            from tests.http_client.test_http_client import _write_response
+            from tests.src.http_client.test_http_client import _write_response
             _write_response(
                 writer, 200, compressed,
                 headers={"Content-Encoding": "gzip", "Content-Type": "text/plain"},
             )
 
         async def run() -> Any:
-            from tests.http_client.test_http_client import MockHTTPServer
+            from tests.src.http_client.test_http_client import MockHTTPServer
             from http_client import HttpClient
 
             async with MockHTTPServer(handler) as server:
@@ -2562,14 +2562,14 @@ class TestHttpAIToolDecompression:
         compressed = zlib.compress(original.encode("utf-8"))
 
         async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
-            from tests.http_client.test_http_client import _write_response
+            from tests.src.http_client.test_http_client import _write_response
             _write_response(
                 writer, 200, compressed,
                 headers={"Content-Encoding": "deflate", "Content-Type": "text/plain"},
             )
 
         async def run() -> Any:
-            from tests.http_client.test_http_client import MockHTTPServer
+            from tests.src.http_client.test_http_client import MockHTTPServer
             from http_client import HttpClient
 
             async with MockHTTPServer(handler) as server:

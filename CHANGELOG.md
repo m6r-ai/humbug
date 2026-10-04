@@ -15,6 +15,10 @@ Bug fixes:
 - AI tools that access the filesystem are now correctly blocked from accessing the mindspace `.humbug` directory.  All file
   accesses are now standardized through a single mechanism.
 
+Internal structure changes:
+
+- The tests directory structure now mirrors the main directory hierarchy.  Tests for code in `src` now appear in `test/src`.
+
 ## v56 (2026-10-03)
 
 New features:
