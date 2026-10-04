@@ -23,6 +23,7 @@ from git import (
     GitRepository,
     find_repo_root,
 )
+from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace import Mindspace
 
 
@@ -236,18 +237,13 @@ class GitAITool(AITool):
         else:
             resolved = os.path.realpath(os.path.join(mindspace_path, path))
 
-        # Enforce .humbug/ exclusion
-        humbug_dir = os.path.join(mindspace_path, Mindspace.MINDSPACE_DIR)
-        # Resolve symlinks (e.g. macOS /var -> /private/var) so comparisons are consistent
-        _resolved_norm = os.path.realpath(os.path.normpath(resolved))
-        _humbug_norm = os.path.realpath(os.path.normpath(humbug_dir))
-        if _resolved_norm == _humbug_norm or _resolved_norm.startswith(
-            _humbug_norm + os.sep
-        ):
-            raise AIToolExecutionError(
-                "Git operations on the .humbug/ directory are not supported. "
-                "This directory is managed by Humbug internally."
-            )
+        # Enforce the mindspace boundary and .humbug/ exclusion via the single
+        # tool-facing path rule; see Mindspace.resolve_tool_path.
+        try:
+            resolved, _ = self._mindspace.resolve_tool_path(resolved)
+
+        except MindspaceError as e:
+            raise AIToolExecutionError(str(e)) from e
 
         return resolved
 
@@ -310,21 +306,15 @@ class GitAITool(AITool):
         else:
             abs_path = os.path.join(mindspace_path, output_path)
 
-        resolved = os.path.realpath(abs_path)
-        mindspace_real = os.path.realpath(mindspace_path)
+        # Enforce the mindspace boundary and .humbug/ exclusion via the single
+        # tool-facing path rule; see Mindspace.resolve_tool_path.
+        try:
+            resolved, relative_path = self._mindspace.resolve_tool_path(abs_path)
 
-        if not (resolved == mindspace_real or resolved.startswith(mindspace_real + os.sep)):
-            raise AIToolExecutionError(
-                f"output_path is outside the mindspace: {output_path}"
-            )
+        except MindspaceError as e:
+            raise AIToolExecutionError(str(e)) from e
 
-        humbug_dir = os.path.join(mindspace_real, Mindspace.MINDSPACE_DIR)
-        if resolved == humbug_dir or resolved.startswith(humbug_dir + os.sep):
-            raise AIToolExecutionError(
-                "Cannot write to the .humbug/ directory — it is managed by Humbug internally."
-            )
-
-        return Path(resolved), os.path.relpath(resolved, mindspace_real)
+        return Path(resolved), relative_path
 
     async def _status(
         self,

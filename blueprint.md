@@ -122,6 +122,12 @@ three safety principles.
 directory — which contains conversations, settings, the audit log, and other internal state —
 is excluded from all tool operations. This prevents the AI from accessing or modifying its own
 audit trail, and keeps internal infrastructure invisible to both the user and the AI.
+This rule is enforced in one place: every tool resolves path arguments through
+`Mindspace.resolve_tool_path()`, which applies the boundary and `.humbug/` checks together.
+Tools must not re-implement these checks individually.
+The mindspace's `.humbug/**` is also added to the always-deny list (the same list that holds
+`~/.ssh/**` and similar), so a `.humbug/` path is refused outright rather than being offered
+to the user for approval.
 
 **Human-in-the-loop for side effects.** Tools that only read state — listing files, viewing
 diffs, checking git status — run automatically without interruption. Tools that change state —

@@ -10,6 +10,8 @@ New features:
 Bug fixes:
 
 - Made a minor adjustment to tab bar labels to make them more distinct.
+- AI tools that access the filesystem are now correctly blocked from accessing the mindspace `.humbug` directory.  All file
+  accesses are now standardized through a single mechanism.
 
 ## v56 (2026-10-03)
 

@@ -8,3 +8,7 @@ class MindspaceNotFoundError(MindspaceError):
 
 class MindspaceExistsError(MindspaceError):
     """Raised when attempting to create a mindspace that already exists."""
+
+
+class MindspaceHumbugPathError(MindspaceError):
+    """Raised when a path resolves inside the mindspace's .humbug/ directory."""

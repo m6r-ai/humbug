@@ -16,6 +16,7 @@ from ai_tool import (
 )
 from git_ai_tool.git_ai_tool import GitAITool
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_error import MindspaceError
 
 
 def _run(args: list[str], cwd: str) -> str:
@@ -29,6 +30,30 @@ def _make_mindspace_mock(mindspace_path: str) -> MagicMock:
     mindspace = MagicMock(spec=Mindspace)
     mindspace.mindspace_path.return_value = mindspace_path
     mindspace.MINDSPACE_DIR = ".humbug"
+
+    def _resolve_tool_path(path: str) -> tuple[str, str]:
+        """Model the real boundary and .humbug/ checks for the mock mindspace."""
+        abs_path = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
+        mindspace_abs = os.path.realpath(os.path.abspath(mindspace_path))
+        humbug_abs = os.path.join(mindspace_abs, ".humbug")
+
+        try:
+            within = os.path.commonpath([abs_path, mindspace_abs]) == mindspace_abs
+
+        except ValueError:
+            within = False
+
+        if not within:
+            raise MindspaceError(f"Path is outside mindspace boundaries: {path}")
+
+        if os.path.commonpath([abs_path, humbug_abs]) == humbug_abs:
+            raise MindspaceError(
+                f"Path is inside the .humbug/ directory, which is managed by Humbug internally: {path}"
+            )
+
+        return abs_path, os.path.relpath(abs_path, mindspace_abs)
+
+    mindspace.resolve_tool_path.side_effect = _resolve_tool_path
     return mindspace
 
 

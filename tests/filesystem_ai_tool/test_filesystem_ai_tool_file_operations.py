@@ -3,11 +3,15 @@ Tests for filesystem tool file operations: read_file, write_file, append_to_file
 """
 import asyncio
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
 
 from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
+from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
+from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
+from mindspace.mindspace_error import MindspaceHumbugPathError
 
 
 class TestFileSystemAIToolReadFile:
@@ -698,3 +702,49 @@ class TestFileSystemAIToolTrailingNewline:
             assert "Content appended successfully: file.txt (+8 bytes)" in result.content
             file_handle = mock_file()
             file_handle.write.assert_called_with("new line")
+
+
+class TestFileSystemAIToolHumbugPath:
+    """Tests that .humbug/ paths are rejected outright, never offered for approval."""
+
+    def _make_tool_with_humbug_resolver(self) -> Any:
+        """Build a filesystem tool whose resolver rejects .humbug/ paths."""
+        def resolver(path: str) -> tuple[Path, str]:
+            raise MindspaceHumbugPathError(
+                f"Path is inside the .humbug/ directory, which is managed by Humbug internally: {path}"
+            )
+
+        settings = FilesystemAccessSettings(
+            allow_external_access=True,
+            external_allowlist=[],
+            external_denylist=[]
+        )
+        return FileSystemAITool(
+            resolve_path=resolver,
+            get_access_settings=lambda: settings,
+            mindspace=MagicMock()
+        )
+
+    def test_read_humbug_path_is_rejected_without_authorization(self, mock_authorization, make_tool_call) -> None:
+        """Reading a .humbug/ path raises an execution error and never requests approval."""
+        tool = self._make_tool_with_humbug_resolver()
+        tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": ".humbug/settings.json"})
+
+        with pytest.raises(AIToolExecutionError, match="humbug"):
+            asyncio.run(tool.execute(tool_call, "", mock_authorization))
+
+        mock_authorization.assert_not_called()
+
+    def test_write_humbug_path_is_rejected_without_authorization(self, mock_authorization, make_tool_call) -> None:
+        """Writing a .humbug/ path raises an execution error and never requests approval."""
+        tool = self._make_tool_with_humbug_resolver()
+        tool_call = make_tool_call("filesystem", {
+            "operation": "write_file",
+            "path": ".humbug/settings.json",
+            "content": "{}"
+        })
+
+        with pytest.raises(AIToolExecutionError, match="humbug"):
+            asyncio.run(tool.execute(tool_call, "", mock_authorization))
+
+        mock_authorization.assert_not_called()

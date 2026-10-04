@@ -23,6 +23,7 @@ from docx import (
     docx_ast_to_document_ir, document_ir_to_docx_ast, parse_docx, serialise_docx
 )
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_error import MindspaceHumbugPathError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 # Map each supported format name to its canonical file extension.
@@ -253,6 +254,11 @@ class DocumentConverterAITool(AITool):
 
         try:
             return self._resolve_path(path_str)
+
+        except MindspaceHumbugPathError as e:
+            raise AIToolExecutionError(
+                f"'{key}': path '{path_str}' is inside the .humbug/ directory, which is managed by Humbug internally"
+            ) from e
 
         except ValueError as e:
             raise AIToolExecutionError(

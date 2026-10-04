@@ -23,6 +23,7 @@ from ai_tool import (
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_error import MindspaceHumbugPathError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
 from syntax.programming_language_utils import ProgrammingLanguageUtils
@@ -520,6 +521,11 @@ class FileSystemAITool(AITool):
                 )
 
             return resolved_path, display_path
+
+        except MindspaceHumbugPathError as e:
+            # A .humbug/ path is always forbidden and must never be offered as an
+            # external-access candidate.  Reject it outright.
+            raise AIToolExecutionError(f"{key}: {str(e)}") from e
 
         except ValueError as e:
             # Path is outside mindspace boundaries
