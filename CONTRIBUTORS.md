@@ -32,6 +32,7 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Added pinning of conversations.
 * Added the conversation trash/recovery feature.
 * Added the product tour feature.
+* Added the quick switcher.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 
