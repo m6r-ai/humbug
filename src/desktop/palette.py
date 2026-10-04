@@ -147,7 +147,7 @@ _DARK_COLORS: dict[ColorRole, str] = {
 
     # Splitter bars
     ColorRole.SPLITTER: "#606060",
-    ColorRole.TAB_SPLITTER: "#040404",
+    ColorRole.TAB_SPLITTER: "#494949",
 
     # Scroll bar elements
     ColorRole.SCROLLBAR_BACKGROUND: "#2d2d2d",
@@ -162,7 +162,7 @@ _DARK_COLORS: dict[ColorRole, str] = {
 
     # Table elements
     ColorRole.TABLE_BORDER: "#808080",
-    ColorRole.TABLE_HEADER_BACKGROUND: "#484838",
+    ColorRole.TABLE_HEADER_BACKGROUND: "#484644",
 
     # Message colours
     ColorRole.MESSAGE_BACKGROUND: "#121212",
@@ -369,7 +369,7 @@ _COLOR_BLIND_COLORS: dict[ColorRole, str] = {
 
     # Splitter bars
     ColorRole.SPLITTER: "#3a4856",
-    ColorRole.TAB_SPLITTER: "#2a333c",
+    ColorRole.TAB_SPLITTER: "#36424f",
 
     # Scroll bar elements
     ColorRole.SCROLLBAR_BACKGROUND: "#151a20",
@@ -554,7 +554,7 @@ _OCEAN_LIGHT_COLORS: dict[ColorRole, str] = {
     ColorRole.TAB_BAR_BACKGROUND: "#d9e3ef",
     ColorRole.TAB_BACKGROUND_ACTIVE: "#ffffff",
     ColorRole.TAB_BACKGROUND_INACTIVE: "#e7edf5",
-    ColorRole.TAB_BACKGROUND_HOVER: "#edf3f9",
+    ColorRole.TAB_BACKGROUND_HOVER: "#c2d8f4",
     ColorRole.TAB_BACKGROUND_UPDATED: "#f0d0f8",
     ColorRole.TAB_BORDER_ACTIVE: "#1f6fff",
 
@@ -589,7 +589,7 @@ _OCEAN_LIGHT_COLORS: dict[ColorRole, str] = {
 
     # Splitter bars
     ColorRole.SPLITTER: "#b0b0b0",
-    ColorRole.TAB_SPLITTER: "#fcfcfc",
+    ColorRole.TAB_SPLITTER: "#c3c3c3",
 
     # Scroll bar elements
     ColorRole.SCROLLBAR_BACKGROUND: "#e7edf5",
@@ -603,8 +603,8 @@ _OCEAN_LIGHT_COLORS: dict[ColorRole, str] = {
     ColorRole.BLOCKQUOTE_BACKGROUND: "#e9e9f3",
 
     # Table elements
-    ColorRole.TABLE_BORDER: "#c5d3e1",
-    ColorRole.TABLE_HEADER_BACKGROUND: "#d0d0e0",
+    ColorRole.TABLE_BORDER: "#9aabbd",
+    ColorRole.TABLE_HEADER_BACKGROUND: "#d8dee6",
 
     # Message colours
     ColorRole.MESSAGE_BACKGROUND: "#f5f9fd",
@@ -776,7 +776,7 @@ _LIGHT_COLORS: dict[ColorRole, str] = {
     ColorRole.TAB_BAR_BACKGROUND: "#e6ebf3",
     ColorRole.TAB_BACKGROUND_ACTIVE: "#ffffff",
     ColorRole.TAB_BACKGROUND_INACTIVE: "#eef1f6",
-    ColorRole.TAB_BACKGROUND_HOVER: "#f5f7fb",
+    ColorRole.TAB_BACKGROUND_HOVER: "#c6dcf8",
     ColorRole.TAB_BACKGROUND_UPDATED: "#f0d0f8",
     ColorRole.TAB_BORDER_ACTIVE: "#2563eb",
 
@@ -811,7 +811,7 @@ _LIGHT_COLORS: dict[ColorRole, str] = {
 
     # Splitter bars
     ColorRole.SPLITTER: "#cdd5e0",
-    ColorRole.TAB_SPLITTER: "#fcfcfc",
+    ColorRole.TAB_SPLITTER: "#d8dee7",
 
     # Scroll bar elements
     ColorRole.SCROLLBAR_BACKGROUND: "#eef1f6",
@@ -825,7 +825,7 @@ _LIGHT_COLORS: dict[ColorRole, str] = {
     ColorRole.BLOCKQUOTE_BACKGROUND: "#eef1f8",
 
     # Table elements
-    ColorRole.TABLE_BORDER: "#dde3ec",
+    ColorRole.TABLE_BORDER: "#b6c2d2",
     ColorRole.TABLE_HEADER_BACKGROUND: "#dfe5ef",
 
     # Message colours
