@@ -54,6 +54,19 @@ def _make_mindspace_mock(mindspace_path: str) -> MagicMock:
         return abs_path, os.path.relpath(abs_path, mindspace_abs)
 
     mindspace.resolve_tool_path.side_effect = _resolve_tool_path
+
+    def _is_humbug_path(path: str) -> bool:
+        """Model the real .humbug/ predicate for the mock mindspace."""
+        abs_path = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
+        humbug_abs = os.path.realpath(os.path.abspath(os.path.join(mindspace_path, ".humbug")))
+
+        try:
+            return os.path.commonpath([abs_path, humbug_abs]) == humbug_abs
+
+        except ValueError:
+            return False
+
+    mindspace.is_humbug_path.side_effect = _is_humbug_path
     return mindspace
 
 
@@ -700,3 +713,94 @@ class TestLogWithPath:
             assert result_b.error is None
             assert "commit B" in result_b.content
             assert "commit A" not in result_b.content
+
+
+class TestHumbugRepoWideExclusion:
+    """Tests that repository-wide operations omit .humbug/ entries."""
+
+    def test_status_excludes_humbug_entries(self) -> None:
+        """Repository-wide status should omit .humbug/ files."""
+        with tempfile.TemporaryDirectory() as mindspace_path:
+            _run(["git", "init"], cwd=mindspace_path)
+            _run(["git", "config", "user.email", "t@t.com"], cwd=mindspace_path)
+            _run(["git", "config", "user.name", "T"], cwd=mindspace_path)
+
+            os.makedirs(os.path.join(mindspace_path, ".humbug"))
+
+            with open(os.path.join(mindspace_path, ".humbug", "system.json"), "w", encoding="utf-8") as f:
+                f.write("audit log\n")
+
+            with open(os.path.join(mindspace_path, "visible.txt"), "w", encoding="utf-8") as f:
+                f.write("visible\n")
+
+            tool = GitAITool(_make_mindspace_mock(mindspace_path))
+            result = _execute_tool(tool, _make_tool_call("status"))
+
+            assert "visible.txt" in result.content
+            assert ".humbug" not in result.content
+
+    def test_diff_excludes_humbug_entries(self) -> None:
+        """Diffing all files should omit .humbug/ file contents."""
+        with tempfile.TemporaryDirectory() as mindspace_path:
+            _run(["git", "init"], cwd=mindspace_path)
+            _run(["git", "config", "user.email", "t@t.com"], cwd=mindspace_path)
+            _run(["git", "config", "user.name", "T"], cwd=mindspace_path)
+
+            os.makedirs(os.path.join(mindspace_path, ".humbug"))
+
+            with open(os.path.join(mindspace_path, ".humbug", "system.json"), "w", encoding="utf-8") as f:
+                f.write("secret audit entry\n")
+
+            with open(os.path.join(mindspace_path, "visible.txt"), "w", encoding="utf-8") as f:
+                f.write("visible\n")
+
+            _run(["git", "add", "visible.txt"], cwd=mindspace_path)
+            _run(["git", "commit", "-m", "init"], cwd=mindspace_path)
+
+            with open(os.path.join(mindspace_path, "visible.txt"), "a", encoding="utf-8") as f:
+                f.write("changed\n")
+
+            tool = GitAITool(_make_mindspace_mock(mindspace_path))
+            result = _execute_tool(tool, _make_tool_call("diff"))
+
+            assert "visible.txt" in result.content
+            assert "secret audit entry" not in result.content
+            assert ".humbug" not in result.content
+
+
+class TestRefValidation:
+    """Tests that option-like git refs are rejected."""
+
+    @pytest.mark.parametrize("ref", ["--output=/tmp/pwned", "-n1", "--help", "--exec=sh"])
+    def test_option_like_ref_rejected(self, ref: str) -> None:
+        """A ref beginning with '-' should be rejected rather than passed to git."""
+        with tempfile.TemporaryDirectory() as mindspace_path:
+            _run(["git", "init"], cwd=mindspace_path)
+            _run(["git", "config", "user.email", "t@t.com"], cwd=mindspace_path)
+            _run(["git", "config", "user.name", "T"], cwd=mindspace_path)
+
+            with open(os.path.join(mindspace_path, "f.txt"), "w", encoding="utf-8") as f:
+                f.write("content\n")
+
+            _run(["git", "add", "."], cwd=mindspace_path)
+            _run(["git", "commit", "-m", "init"], cwd=mindspace_path)
+
+            tool = GitAITool(_make_mindspace_mock(mindspace_path))
+
+            for operation in ("log", "diff", "stat"):
+                with pytest.raises(AIToolExecutionError, match="not an option"):
+                    _execute_tool(tool, _make_tool_call(operation, ref=ref))
+
+            with pytest.raises(AIToolExecutionError, match="not an option"):
+                _execute_tool(tool, _make_tool_call("show", path="f.txt", ref=ref))
+
+    def test_option_like_ref_does_not_write_file(self, temp_repo_in_mindspace: Any) -> None:
+        """An option-like ref must not cause git to write to an arbitrary path."""
+        mindspace_path, mindspace = temp_repo_in_mindspace
+        tool = GitAITool(mindspace)
+        target = os.path.join(mindspace_path, "pwned.txt")
+
+        with pytest.raises(AIToolExecutionError):
+            _execute_tool(tool, _make_tool_call("log", ref=f"--output={target}"))
+
+        assert not os.path.exists(target)

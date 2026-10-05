@@ -1378,3 +1378,91 @@ class TestSearchFilesWildcardPath:
             asyncio.run(tool.execute(tool_call, "", None))
 
         assert "Directory does not exist" in str(exc_info.value)
+
+
+def make_external_tool(tmp_path, denylist):
+    """Build a FileSystemAITool that permits external access under a denylist."""
+    def resolver(path_str):
+        p = Path(path_str).expanduser().resolve()
+        return p, str(p)
+
+    settings = FilesystemAccessSettings(
+        allow_external_access=True,
+        external_allowlist=[],
+        external_denylist=denylist
+    )
+    return FileSystemAITool(resolve_path=resolver, get_access_settings=lambda: settings, mindspace=MagicMock())
+
+
+class TestExternalSymlinkedDirectoryDenylist:
+    """Tests that a symlinked directory cannot bypass the external denylist."""
+
+    def test_search_files_denies_symlinked_denied_directory(self, tmp_path, make_tool_call):
+        """search_files must not read a denied directory reached through a symlink."""
+        denied = tmp_path / "denied"
+        denied.mkdir()
+        (denied / "secret.txt").write_text("needle in denied dir\n")
+
+        approved = tmp_path / "approved"
+        approved.mkdir()
+        (approved / "normal.txt").write_text("needle in approved dir\n")
+        (approved / "link").symlink_to(denied)
+
+        tool = make_external_tool(tmp_path, [str(denied) + "/**"])
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": str(approved),
+            "search_text": "needle"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert not any("secret" in r["path"] for r in data["results"])
+        assert any("normal.txt" in r["path"] for r in data["results"])
+
+    def test_find_files_denies_symlinked_denied_directory(self, tmp_path, make_tool_call):
+        """find_files must not list a denied directory reached through a symlink."""
+        denied = tmp_path / "denied"
+        denied.mkdir()
+        (denied / "secret.py").write_text("x")
+
+        approved = tmp_path / "approved"
+        approved.mkdir()
+        (approved / "normal.py").write_text("x")
+        (approved / "link").symlink_to(denied)
+
+        tool = make_external_tool(tmp_path, [str(denied) + "/**"])
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "find_files",
+            "path": str(approved),
+            "name": "*.py"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert not any("secret" in p for p in data["matches"])
+        assert any("normal.py" in p for p in data["matches"])
+
+    def test_search_files_denies_symlink_escaping_approved_directory(self, tmp_path, make_tool_call):
+        """search_files must not read a location outside the approved directory via a symlink."""
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        (elsewhere / "secret.txt").write_text("needle elsewhere\n")
+
+        approved = tmp_path / "approved"
+        approved.mkdir()
+        (approved / "link").symlink_to(elsewhere)
+
+        tool = make_external_tool(tmp_path, [])
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": str(approved),
+            "search_text": "needle"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 0

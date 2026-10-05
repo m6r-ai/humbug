@@ -421,7 +421,7 @@ class GitRepository:
         rel_path_posix = self._rel_path_posix(file_path)
 
         try:
-            return self._run_git(["show", f"{ref}:{rel_path_posix}"])
+            return self._run_git(["show", "--end-of-options", f"{ref}:{rel_path_posix}"])
 
         except GitCommandError as e:
             if e.returncode == 128:
@@ -526,6 +526,7 @@ class GitRepository:
         if skip > 0:
             args.append(f"--skip={skip}")
 
+        args.append("--end-of-options")
         args.append(ref)
 
         if path is not None:
@@ -598,7 +599,7 @@ class GitRepository:
             GitCommandError: If an unexpected git error occurs.
         """
         raw = self._run_git(
-            ["diff-tree", "--no-commit-id", "--name-status", "--root", "-r", "-z", ref]
+            ["diff-tree", "--no-commit-id", "--name-status", "--root", "-r", "-z", "--end-of-options", ref]
         )
 
         entries: list[GitFileStatus] = []
@@ -663,7 +664,7 @@ class GitRepository:
             Unified diff text, or empty string if the file is unchanged
         """
         try:
-            return self._run_git(["diff", ref, "--", file_path])
+            return self._run_git(["diff", "--end-of-options", ref, "--", file_path])
 
         except GitCommandError as e:
             # Return code 1 from plain diff means differences exist and is normal; git diff

@@ -3,11 +3,54 @@ Tests for filesystem tool directory operations: list_directory, create_directory
 """
 import json
 import asyncio
+import os
+import tempfile
+from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
 
 from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
+from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
+from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
+
+
+def _make_tool_for_sandbox(sandbox: str) -> FileSystemAITool:
+    """
+    Build a filesystem tool whose resolver maps paths into a real directory.
+
+    Directory listing inspects the real filesystem, so the tests exercise it
+    against a temporary directory rather than mocked path objects.
+
+    Args:
+        sandbox: Absolute path to the directory to treat as the mindspace root.
+
+    Returns:
+        A FileSystemAITool rooted at the sandbox.
+    """
+    def resolver(path: str) -> tuple[Path, str]:
+        if path.startswith("/"):
+            path = path[1:]
+
+        return Path(os.path.join(sandbox, path)), path
+
+    def get_settings() -> FilesystemAccessSettings:
+        return FilesystemAccessSettings(
+            allow_external_access=False,
+            external_allowlist=[],
+            external_denylist=[]
+        )
+
+    mindspace = MagicMock()
+    mindspace.has_mindspace.return_value = True
+    mindspace.add_interaction.return_value = None
+    mindspace.mindspace_path.return_value = sandbox
+
+    return FileSystemAITool(
+        resolve_path=resolver,
+        get_access_settings=get_settings,
+        mindspace=mindspace
+    )
 
 
 class TestFileSystemAIToolListDirectory:
@@ -15,28 +58,18 @@ class TestFileSystemAIToolListDirectory:
 
     def test_list_directory_success(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test successful directory listing."""
-        # Mock directory items
-        mock_file = MagicMock()
-        mock_file.name = "file.txt"
-        mock_file.is_file.return_value = True
-        mock_file.is_dir.return_value = False
-        mock_file.stat.return_value.st_size = 100
+        with tempfile.TemporaryDirectory() as sandbox:
+            target = os.path.join(sandbox, "dir")
+            os.mkdir(target)
 
-        mock_subdir = MagicMock()
-        mock_subdir.name = "subdir"
-        mock_subdir.is_file.return_value = False
-        mock_subdir.is_dir.return_value = True
+            with open(os.path.join(target, "file.txt"), "w", encoding="utf-8") as f:
+                f.write("x" * 100)
 
-        with patch('pathlib.Path.exists') as mock_exists, \
-             patch('pathlib.Path.is_dir') as mock_is_dir, \
-             patch('pathlib.Path.iterdir') as mock_iterdir:
+            os.mkdir(os.path.join(target, "subdir"))
 
-            mock_exists.return_value = True
-            mock_is_dir.return_value = True
-            mock_iterdir.return_value = [mock_file, mock_subdir]
-
+            tool = _make_tool_for_sandbox(sandbox)
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "dir"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+            result = asyncio.run(tool.execute(tool_call, "", mock_authorization))
 
             # New format returns JSON
             listing = json.loads(result.content)
@@ -46,6 +79,7 @@ class TestFileSystemAIToolListDirectory:
             # Check items
             items = {item["name"]: item for item in listing["items"]}
             assert items["file.txt"]["type"] == "file"
+            assert items["file.txt"]["size"] == 100
             assert items["subdir"]["type"] == "directory"
 
     def test_list_directory_empty(self, filesystem_tool, mock_authorization, make_tool_call):
@@ -69,33 +103,21 @@ class TestFileSystemAIToolListDirectory:
 
     def test_list_directory_with_other_types(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test listing directory with various item types."""
-        # Mock different types of items
-        mock_file = MagicMock()
-        mock_file.name = "file.txt"
-        mock_file.is_file.return_value = True
-        mock_file.is_dir.return_value = False
-        mock_file.stat.return_value.st_size = 100
+        with tempfile.TemporaryDirectory() as sandbox:
+            target = os.path.join(sandbox, "dir")
+            os.mkdir(target)
 
-        mock_symlink = MagicMock()
-        mock_symlink.name = "symlink"
-        mock_symlink.is_file.return_value = False
-        mock_symlink.is_dir.return_value = False
+            with open(os.path.join(target, "file.txt"), "w", encoding="utf-8") as f:
+                f.write("x" * 100)
 
-        mock_unknown = MagicMock()
-        mock_unknown.name = "unknown"
-        mock_unknown.is_file.side_effect = PermissionError("Access denied")
-        mock_unknown.is_dir.return_value = False
+            os.mkdir(os.path.join(target, "realdir"))
 
-        with patch('pathlib.Path.exists') as mock_exists, \
-             patch('pathlib.Path.is_dir') as mock_is_dir, \
-             patch('pathlib.Path.iterdir') as mock_iterdir:
+            # A FIFO is neither a regular file nor a directory, so it is reported as "other".
+            os.mkfifo(os.path.join(target, "pipe"))
 
-            mock_exists.return_value = True
-            mock_is_dir.return_value = True
-            mock_iterdir.return_value = [mock_file, mock_symlink, mock_unknown]
-
+            tool = _make_tool_for_sandbox(sandbox)
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "dir"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+            result = asyncio.run(tool.execute(tool_call, "", mock_authorization))
 
             # New format returns JSON
             listing = json.loads(result.content)
@@ -104,8 +126,8 @@ class TestFileSystemAIToolListDirectory:
             # Check items
             items = {item["name"]: item for item in listing["items"]}
             assert items["file.txt"]["type"] == "file"
-            assert items["symlink"]["type"] == "other"
-            assert items["unknown"]["type"] == "unknown"
+            assert items["realdir"]["type"] == "directory"
+            assert items["pipe"]["type"] == "other"
 
     def test_list_directory_not_exists(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test listing non-existent directory."""
@@ -435,3 +457,54 @@ class TestFileSystemAIToolRemoveDirectory:
 
             error = exc_info.value
             assert "Failed to remove directory" in str(error)
+
+
+class TestListDirectorySymlinks:
+    """Tests that list_directory does not disclose symlinked targets."""
+
+    def test_symlink_escaping_directory_is_omitted(self, mock_authorization, make_tool_call):
+        """A symlink pointing outside the listed directory is not reported."""
+        with tempfile.TemporaryDirectory() as sandbox:
+            target = os.path.join(sandbox, "dir")
+            os.mkdir(target)
+
+            with open(os.path.join(target, "normal.txt"), "w", encoding="utf-8") as f:
+                f.write("x")
+
+            outside = os.path.join(sandbox, "outside")
+            os.mkdir(outside)
+
+            with open(os.path.join(outside, "secret.txt"), "w", encoding="utf-8") as f:
+                f.write("secret")
+
+            os.symlink(outside, os.path.join(target, "escape"))
+
+            tool = _make_tool_for_sandbox(sandbox)
+            tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "dir"})
+            result = asyncio.run(tool.execute(tool_call, "", mock_authorization))
+            listing = json.loads(result.content)
+
+            names = {item["name"] for item in listing["items"]}
+            assert "normal.txt" in names
+            assert "escape" not in names
+
+    def test_symlink_into_humbug_is_omitted(self, mock_authorization, make_tool_call):
+        """A symlink pointing into .humbug/ is not reported."""
+        with tempfile.TemporaryDirectory() as sandbox:
+            target = os.path.join(sandbox, "dir")
+            os.mkdir(target)
+
+            humbug = os.path.join(sandbox, ".humbug")
+            os.mkdir(humbug)
+
+            with open(os.path.join(humbug, "system.json"), "w", encoding="utf-8") as f:
+                f.write("audit")
+
+            os.symlink(humbug, os.path.join(target, "hlink"))
+
+            tool = _make_tool_for_sandbox(sandbox)
+            tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "dir"})
+            result = asyncio.run(tool.execute(tool_call, "", mock_authorization))
+            listing = json.loads(result.content)
+
+            assert listing["total_items"] == 0

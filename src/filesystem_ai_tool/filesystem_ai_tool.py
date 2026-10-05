@@ -614,6 +614,71 @@ class FileSystemAITool(AITool):
 
         return False
 
+    def _is_external_candidate_allowed(self, path: Path, base_path: Path) -> bool:
+        """
+        Check whether a traversed external path may be read.
+
+        Directory traversal can return entries that are not themselves symlinks
+        but whose real location is a symlinked directory (for example, a search
+        of an external directory that contains a symlink to ``~/.ssh``).  Such an
+        entry must not be read merely because the path as traversed looks
+        innocuous, so the checks are applied to the resolved path.
+
+        A candidate is allowed only if its resolved location is still inside the
+        approved base directory and does not match the denylist.  The base
+        directory is the one the user approved; requiring containment prevents a
+        symlink from reaching an unrelated location outside it.
+
+        Args:
+            path: The traversed path to check.
+            base_path: The approved directory the traversal started from.
+
+        Returns:
+            True if the path may be read, False otherwise.
+        """
+        resolved = Path(os.path.realpath(str(path)))
+        resolved_base = Path(os.path.realpath(str(base_path)))
+
+        try:
+            if os.path.commonpath([str(resolved), str(resolved_base)]) != str(resolved_base):
+                return False
+
+        except ValueError:
+            return False
+
+        settings = self._get_access_settings()
+        return not self._match_glob_patterns(str(resolved), settings.external_denylist)
+
+    def _is_listable_entry(self, entry: Path, directory: Path) -> bool:
+        """
+        Check whether a directory entry may be reported by list_directory.
+
+        ``is_file``, ``is_dir`` and ``stat`` all follow symlinks, so an entry
+        that is a link to a denied or out-of-boundary location would otherwise
+        disclose the target's name, type and size.  An entry is reported only if
+        its resolved location stays inside the directory being listed and does
+        not match the denylist.
+
+        Args:
+            entry: The directory entry to check.
+            directory: The directory being listed.
+
+        Returns:
+            True if the entry may be reported, False otherwise.
+        """
+        resolved = os.path.realpath(str(entry))
+        resolved_directory = os.path.realpath(str(directory))
+
+        try:
+            if os.path.commonpath([resolved, resolved_directory]) != resolved_directory:
+                return False
+
+        except ValueError:
+            return False
+
+        settings = self._get_access_settings()
+        return not self._match_glob_patterns(resolved, settings.external_denylist)
+
     async def _check_external_file_access(
         self,
         path: Path,
@@ -1211,6 +1276,9 @@ class FileSystemAITool(AITool):
             items: list[dict[str, Any]] = []
             for path_item in path.iterdir():
                 try:
+                    if not self._is_listable_entry(path_item, path):
+                        continue
+
                     if path_item.is_file():
                         size = path_item.stat().st_size
                         items.append({
@@ -2034,8 +2102,7 @@ class FileSystemAITool(AITool):
                 continue
 
             if is_external:
-                settings = self._get_access_settings()
-                if self._match_glob_patterns(str(file_path), settings.external_denylist):
+                if not self._is_external_candidate_allowed(file_path, base_path):
                     continue
 
             else:
@@ -2103,8 +2170,7 @@ class FileSystemAITool(AITool):
                         continue
 
                     if is_external:
-                        settings = self._get_access_settings()
-                        if self._match_glob_patterns(str(file_path), settings.external_denylist):
+                        if not self._is_external_candidate_allowed(file_path, base_path):
                             continue
 
                     else:
@@ -2271,8 +2337,7 @@ class FileSystemAITool(AITool):
                 continue
 
             if is_external:
-                settings = self._get_access_settings()
-                if self._match_glob_patterns(str(file_path), settings.external_denylist):
+                if not self._is_external_candidate_allowed(file_path, base_path):
                     continue
 
             else:

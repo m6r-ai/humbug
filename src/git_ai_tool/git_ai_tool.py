@@ -332,6 +332,8 @@ class GitAITool(AITool):
         except GitCommandError as e:
             raise AIToolExecutionError(f"Failed to get git status: {e.stderr or str(e)}") from e
 
+        entries = [entry for entry in entries if not self._is_humbug_path(entry.path)]
+
         if not entries:
             return AIToolResult(
                 id=tool_call.id,
@@ -373,10 +375,7 @@ class GitAITool(AITool):
         """Diff operation — show working-tree changes."""
         path = tool_call.arguments.get("path")
         repo = self._resolve_repo(path)
-        ref = tool_call.arguments.get("ref", "HEAD")
-
-        if not isinstance(ref, str) or not ref:
-            ref = "HEAD"
+        ref = self._get_ref_value(tool_call.arguments)
 
         output_path = tool_call.arguments.get("output_path")
         if output_path is not None and not isinstance(output_path, str):
@@ -493,6 +492,8 @@ class GitAITool(AITool):
         except GitCommandError as e:
             raise AIToolExecutionError(f"Failed to get git status: {e.stderr or str(e)}") from e
 
+        entries = [entry for entry in entries if not self._is_humbug_path(entry.path)]
+
         if not entries:
             return AIToolResult(
                 id=tool_call.id,
@@ -547,10 +548,7 @@ class GitAITool(AITool):
         if not isinstance(skip, int) or skip < 0:
             skip = 0
 
-        ref = tool_call.arguments.get("ref", "HEAD")
-
-        if not isinstance(ref, str) or not ref:
-            ref = "HEAD"
+        ref = self._get_ref_value(tool_call.arguments)
 
         repo = self._resolve_repo(path)
 
@@ -668,7 +666,10 @@ class GitAITool(AITool):
         """Show operation — display file content at a specific ref."""
         arguments = tool_call.arguments
         path = self._get_required_str_value("path", arguments)
-        ref = self._get_required_str_value("ref", arguments)
+        ref = self._get_ref_value(arguments, default="")
+
+        if not ref:
+            raise AIToolExecutionError("No 'ref' argument provided")
 
         output_path = arguments.get("output_path")
         if output_path is not None and not isinstance(output_path, str):
@@ -713,7 +714,10 @@ class GitAITool(AITool):
         """Stat operation — list files changed in a specific commit."""
         arguments = tool_call.arguments
         path = arguments.get("path")
-        ref = self._get_required_str_value("ref", arguments)
+        ref = self._get_ref_value(arguments, default="")
+
+        if not ref:
+            raise AIToolExecutionError("No 'ref' argument provided")
 
         repo = self._resolve_repo(path)
 
@@ -724,6 +728,8 @@ class GitAITool(AITool):
             raise AIToolExecutionError(
                 f"Failed to get changed files for ref '{ref}': {e.stderr or str(e)}"
             ) from e
+
+        entries = [entry for entry in entries if not self._is_humbug_path(entry.path)]
 
         if not entries:
             return AIToolResult(
@@ -947,3 +953,53 @@ class GitAITool(AITool):
         """Extract context for stat operation."""
         ref = arguments.get("ref", "?")
         return f"git stat: {ref}"
+
+    def _get_ref_value(self, arguments: dict[str, Any], default: str = "HEAD") -> str:
+        """
+        Extract and validate the 'ref' argument.
+
+        A ref is passed to git as a bare positional argument, and git accepts
+        options such as ``--output=<file>`` in that position.  A ref beginning
+        with '-' would therefore be interpreted as an option, letting the AI
+        write to an arbitrary path through an operation that is not
+        authorization-gated.  Reject any option-like ref outright.
+
+        Args:
+            arguments: Dictionary containing operation parameters.
+            default: Value to use when the argument is absent or empty.
+
+        Returns:
+            The validated ref string.
+
+        Raises:
+            AIToolExecutionError: If the ref is not a string or begins with '-'.
+        """
+        ref = arguments.get("ref", default)
+
+        if not isinstance(ref, str) or not ref:
+            return default
+
+        if ref.startswith("-"):
+            raise AIToolExecutionError(
+                f"'ref' must be a git ref (branch, tag, or commit), not an option: '{ref}'"
+            )
+
+        return ref
+
+    def _is_humbug_path(self, path: str) -> bool:
+        """
+        Return True if a repository path is inside the mindspace's .humbug/ directory.
+
+        Repository-wide operations (status, diff of all files, stat) enumerate
+        every changed file in the repository.  A path argument is checked by
+        ``resolve_tool_path``, but these enumerated paths are not, so they must
+        be filtered here.  Otherwise the AI could read its own audit trail when
+        the mindspace root is a git repository that does not ignore .humbug/.
+
+        Args:
+            path: Absolute path to test.
+
+        Returns:
+            True if the path is inside .humbug/, False otherwise.
+        """
+        return self._mindspace.is_humbug_path(path)
