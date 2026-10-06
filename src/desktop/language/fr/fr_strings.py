@@ -50,6 +50,7 @@ def get_french_strings() -> LanguageStrings:
         take_tour="Faire une visite guidée",
 
         # Tab bar context menu items
+        reopen_closed_tab="Rouvrir l'onglet fermé",
         close_tabs_to_left="Fermer les onglets à gauche",
         close_tabs_to_right="Fermer les onglets à droite",
         close_other_tabs="Fermer les autres onglets",

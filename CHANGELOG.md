@@ -6,6 +6,9 @@ New features:
 
 - Added a Quick Switcher (Cmd+P / Ctrl+P) that fuzzy-filters open tabs, conversations, and files across the mindspace and
   jumps straight to the selected one.
+- Added "Reopen Closed Tab" to the tab context menu, which reopens recently closed tabs most-recent-first.  A reopened
+  terminal is given the command it was running, and a tab that has since been reopened by other means is focused rather
+  than duplicated.
 - Markdown tables now render with proportional spacing of columns to make things more readable.  If a markdown table is
   detected to be written with the first character in Arabic then the table is rendered from the right and not the left.
 

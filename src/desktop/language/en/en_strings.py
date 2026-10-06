@@ -50,6 +50,7 @@ def get_english_strings() -> LanguageStrings:
         take_tour="Take a Tour",
 
         # Tab bar context menu items
+        reopen_closed_tab="Reopen Closed Tab",
         close_tabs_to_left="Close Tabs to the Left",
         close_tabs_to_right="Close Tabs to the Right",
         close_other_tabs="Close Other Tabs",
