@@ -51,6 +51,7 @@ def get_arabic_strings() -> LanguageStrings:
         take_tour="أخذ جولة",
 
         # Tab bar context menu items
+        reopen_closed_tab="إعادة فتح التبويب المغلق",
         close_tabs_to_left="إغلاق التبويبات إلى اليسار",
         close_tabs_to_right="إغلاق التبويبات إلى اليمين",
         close_other_tabs="إغلاق التبويبات الأخرى",

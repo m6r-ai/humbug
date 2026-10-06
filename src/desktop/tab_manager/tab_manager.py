@@ -1,7 +1,8 @@
 from collections.abc import Callable
+from dataclasses import dataclass
 import logging
 import math
-from typing import cast
+from typing import Any, cast
 
 from PySide6.QtWidgets import QAbstractItemView, QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer, QPoint
@@ -30,8 +31,24 @@ from desktop.user.user_settings import UserSettings
 ContextFactory = Callable[[ContextInfo, ContextRegistry, QWidget], "TabBase | None"]
 
 
+@dataclass(frozen=True)
+class ClosedTab:
+    """
+    Everything needed to recreate a tab after it has been closed.
+
+    ContextInfo alone is not enough for every context type, so the content
+    state is captured alongside it while the context is still open.
+    """
+
+    info: ContextInfo
+    content_state: dict[str, Any]
+
+
 class TabManager(QWidget):
     """Manages multiple tabs across multiple columns."""
+
+    # Maximum number of closed-tab snapshots retained for "Reopen Closed Tab".
+    _MAX_CLOSED_TAB_HISTORY = 20
 
     status_message = Signal(StatusMessage)
     tab_changed = Signal()
@@ -142,6 +159,8 @@ class TabManager(QWidget):
 
         # Track tabs
         self._tabs: dict[str, TabBase] = {}
+
+        self._closed_tab_history: list[ClosedTab] = []
 
         self._context_factories: dict[str, ContextFactory] = {}
         self._current_status_tab: TabBase | None = None
@@ -400,6 +419,10 @@ class TabManager(QWidget):
         has_tabs_before = tab_index > 0
         has_tabs_after = tab_index < tab_count - 1
 
+        reopen_closed_action = menu.addAction(strings.reopen_closed_tab)
+        reopen_closed_action.setEnabled(bool(self._closed_tab_history))
+        menu.addSeparator()
+
         close_left_action = menu.addAction(strings.close_tabs_to_left)
         close_left_action.setEnabled(has_tabs_before if left_to_right else has_tabs_after)
 
@@ -419,7 +442,10 @@ class TabManager(QWidget):
         close_before_action = close_left_action if left_to_right else close_right_action
         close_after_action = close_right_action if left_to_right else close_left_action
 
-        if action == close_before_action:
+        if action == reopen_closed_action:
+            self.reopen_last_closed_tab()
+
+        elif action == close_before_action:
             self._close_tabs_in_column(column, list(range(0, tab_index)))
 
         elif action == close_after_action:
@@ -533,6 +559,9 @@ class TabManager(QWidget):
         """Unregister TabManager from the ContextRegistry."""
         if not self._registry_subscribed:
             return
+
+        # Snapshots reference paths in the mindspace being left behind
+        self._closed_tab_history.clear()
 
         if self._mindspace_manager.has_mindspace():
             registry = self._mindspace_manager.mindspace().contexts()
@@ -1621,6 +1650,7 @@ class TabManager(QWidget):
             if next_tab:
                 column.setCurrentWidget(next_tab)
 
+        self._record_closed_tab(tab_id, tab)
         self._remove_tab_from_column(tab, column)
 
         # Keep the overlay views in sync if they're showing
@@ -1645,6 +1675,59 @@ class TabManager(QWidget):
         if not self._tabs:
             self.status_message.emit(StatusMessage(""))
             self._stack.setCurrentWidget(self._welcome_widget)
+
+    def _record_closed_tab(self, tab_id: str, tab: TabBase) -> None:
+        """
+        Snapshot a tab that is about to close so it can be reopened later.
+
+        Ephemeral (preview) tabs are skipped: they are opened by a single click
+        and auto-replaced by the next preview, so recording them would bury the
+        tabs the user deliberately closed.
+
+        Args:
+            tab_id: ID of the tab being closed.
+            tab: The tab being closed, still live at this point.
+        """
+        if tab.is_ephemeral():
+            return
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        info = contexts.get(tab_id)
+        if info is None:
+            return
+
+        # Capture content state now; close() discards the model it comes from
+        self._closed_tab_history.append(
+            ClosedTab(info=info, content_state=contexts.capture_content_state(tab_id))
+        )
+        if len(self._closed_tab_history) > self._MAX_CLOSED_TAB_HISTORY:
+            del self._closed_tab_history[0]
+
+    def reopen_last_closed_tab(self) -> None:
+        """Reopen the most recently closed tab, if any are available."""
+        if not self._closed_tab_history:
+            return
+
+        closed = self._closed_tab_history.pop()
+        info = closed.info
+        contexts = self._mindspace_manager.mindspace().contexts()
+
+        # The tab may have been reopened by other means since it was closed
+        if info.path:
+            existing = contexts.get_by_path_and_type(info.path, info.context_type)
+            if existing is not None:
+                contexts.focus(existing.context_id)
+                return
+
+        # Column and position are deliberately not restored.  The original
+        # column may no longer exist, and _on_context_opened only honours them
+        # while restoring a session, so the tab opens wherever the user is now.
+        contexts.open(
+            context_type=info.context_type,
+            path=info.path,
+            title=info.title,
+            initial_content_state=closed.content_state,
+        )
 
     def _find_column_for_tab(self, tab: TabBase) -> ColumnWidget | None:
         """Find which column contains the given tab."""
