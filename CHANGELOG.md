@@ -8,6 +8,7 @@ New features:
   jumps straight to the selected one.
 - Markdown tables now render with proportional spacing of columns to make things more readable.  If a markdown table is
   detected to be written with the first character in Arabic then the table is rendered from the right and not the left.
+- Added the `enum` special form to the Menai syntax highlighter.
 
 Bug fixes:
 
