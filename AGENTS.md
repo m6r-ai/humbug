@@ -298,7 +298,7 @@ Language-specific syntax highlighting system.
 **Language subdirectories:**
 - `bash/`, `batch/`, `c/`, `cpp/`, `csharp/`, `css/`, `diff/`, `go/`, `html/`, `java/`
 - `javascript/`, `json/`, `kotlin/`, `lua/`, `markdown/`, `menai/`, `metaphor/`, `move/`
-- `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `toml/`, `typescript/`, `xml/`, `yaml/`
+- `pascal/`, `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `toml/`, `typescript/`, `xml/`, `yaml/`
 
 ### `src/system_ai_tool/`
 AI tool implementation for system/workspace operations (tab lifecycle, layout,

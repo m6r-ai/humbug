@@ -9,6 +9,7 @@ New features:
 - Markdown tables now render with proportional spacing of columns to make things more readable.  If a markdown table is
   detected to be written with the first character in Arabic then the table is rendered from the right and not the left.
 - Added the `enum` special form to the Menai syntax highlighter.
+- Added a Pascal syntax highlighter.
 - Added Claude Haiku 5.5.
 - Remove Claude Haiku 4.5.
 - Added the ability to launch an app window per-mindspace.
