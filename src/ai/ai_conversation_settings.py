@@ -52,6 +52,24 @@ class AIConversationSettings:
             ],
             adaptive_thinking_only=True,
         ),
+        ("claude-haiku-5-5", "anthropic"): AIModel(
+            name="claude-haiku-5-5",
+            provider="anthropic",
+            display_name="Claude Haiku 5.5",
+            context_window=1000000,
+            max_output_tokens=64000,  # This is actually 128k but that's too much
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+            adaptive_thinking_only=True,
+        ),
         ("claude-fable-5", "anthropic"): AIModel(
             name="claude-fable-5",
             provider="anthropic",
@@ -108,20 +126,6 @@ class AIConversationSettings:
                 AIReasoningEffort.MAX
             ],
             adaptive_thinking_only=True,
-        ),
-        ("claude-haiku-4-5", "anthropic"): AIModel(
-            name="claude-haiku-4-5",
-            provider="anthropic",
-            display_name="Claude Haiku 4.5",
-            context_window=200000,
-            max_output_tokens=32000,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
-            ],
         ),
 
         # DeepSeek models

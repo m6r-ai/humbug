@@ -34,11 +34,12 @@ New features:
 - Choosing "Open In Editor" from a preview's context menu now opens the editor scrolled to the line that was clicked.
   Source files map exactly; rendered markdown maps on a best-effort basis using the source line of the block under the
   cursor.
-- Added support for Claude Opus 5.5.
+- Added support for Claude 5.5 Opus, Sonnet, and Haiku.
 - Added support for GPT 6 Astra, Sol, and Luna.
 - Added support for GPT 6.1 Sol.
 - Added support for Grok 4.7.
 - Removed GPT 5.4 Mini.
+- Remove Claude Haiku 4.5.
 - The OpenAI backend now uses the Responses API instead of Chat Completions, enabling tool calling and advanced
   reasoning on newer OpenAI models.
 - Added a feature to create folders and new conversations in the conversation sidebar view.
