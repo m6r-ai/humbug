@@ -1366,10 +1366,15 @@ class MainWindow(QMainWindow):
 
         try:
             self._mindspace_manager.open_mindspace(mindspace_path)
+
+            # The mindspace is open from this point, so record it before any of the
+            # fallible UI restoration steps below.  Otherwise a failure in one of those
+            # would leave this instance registered with no mindspace while it in fact
+            # has one open, making it invisible to other instances' deduplication checks.
+            self._update_instance_registry()
             self._sidebar_manager.set_mindspace(mindspace_path)
             self._restore_mindspace_state()
             self._restore_prompt_marker_setting()
-            self._update_instance_registry()
 
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace: %s", str(e))
@@ -1613,6 +1618,12 @@ class MainWindow(QMainWindow):
         # Open the new mindspace
         try:
             self._mindspace_manager.open_mindspace(path)
+
+            # The mindspace is open from this point, so record it before any of the
+            # fallible UI restoration steps below.  Otherwise a failure in one of those
+            # would leave this instance registered with no mindspace while it in fact
+            # has one open, making it invisible to other instances' deduplication checks.
+            self._update_instance_registry()
             self._sidebar_manager.set_mindspace(path)
 
         except MindspaceError as e:
@@ -1628,7 +1639,6 @@ class MainWindow(QMainWindow):
         # Restore the state of the newly opened mindspace
         self._restore_mindspace_state()
         self._restore_prompt_marker_setting()
-        self._update_instance_registry()
 
     def _on_close_mindspace(self) -> None:
         """Save state, close all tabs, and clear the current mindspace."""
