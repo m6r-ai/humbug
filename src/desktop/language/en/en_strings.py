@@ -185,6 +185,7 @@ def get_english_strings() -> LanguageStrings:
 
         # Mindspace tree
         mindspace_label_none="No mindspace active",
+        window_title="Humbug: {}",
         mindspace_name_tooltip="Click to switch mindspace",
         mindspace_files="Files",
         mindspace_vcs="Changed Files",
@@ -329,8 +330,24 @@ def get_english_strings() -> LanguageStrings:
         error_opening_preview="Could not open preview: {}",
         error_saving_mindspace_settings="Failed to save mindspace settings: {}",
         error_saving_user_settings="Failed to save user settings: {}",
-        cancel_conversation="Are you sure you want to stop the current AI response? "
-            "This will terminate the ongoing conversation and may result in incomplete responses.",
+        cancel_conversation=(
+            "Are you sure you want to stop the current AI response? "
+            "This will terminate the ongoing conversation and may result in incomplete responses."
+        ),
+
+        open_in_new_window="Open Mindspace in New Window...",
+        open_in_new_window_title="Open in New Window",
+        open_in_new_window_already_open=(
+            "This mindspace is already open in another Humbug window (process {}).\n\n"
+            "Two windows cannot share one mindspace, so switch to the existing window instead."
+        ),
+        open_in_new_window_already_here="This mindspace is already open in this window.",
+        open_in_new_window_failed="Could not start a new Humbug window:\n\n{}",
+        open_in_new_window_choose_folder="Choose Folder...",
+        mindspace_not_found_error="No mindspace was found at the selected location.",
+        mindspace_open_elsewhere_tooltip=(
+            "{} is already open in another Humbug window, so it cannot be opened here"
+        ),
 
         # Status bar
         editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}",

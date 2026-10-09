@@ -11,6 +11,7 @@ from PySide6.QtCore import QObject, Signal
 from ai import AIBackendSettings, AIManager
 from ai.ai_conversation_settings import AIConversationSettings
 
+from desktop.file_watcher.file_watcher import FileWatcher
 from desktop.user.user_settings import UserSettings
 
 
@@ -53,6 +54,7 @@ class UserManager(QObject):
             self._load_settings()
             self._load_fetched_models()
             self._initialize_ai_backends()
+            self._watching = False
             self._initialized = True
 
     def _get_settings_path(self) -> str:
@@ -117,8 +119,38 @@ class UserManager(QObject):
             return
 
         settings_path = self._get_settings_path()
+        self._merge_revision_from_disk(settings_path)
         self._settings.save(settings_path)
         self._logger.info("Saved user settings to %s", settings_path)
+
+    def _merge_revision_from_disk(self, settings_path: str) -> None:
+        """
+        Adopt the on-disk revision before writing, so this write is ordered after others.
+
+        If another instance has written the file since this one last read it, the
+        on-disk revision is ahead of ours.  Adopting it means our write is correctly
+        ordered as the newest, and the other instance will see our change as newer
+        still.  Without this, two instances writing in the same window would both
+        produce the same revision number and the later write would be ignored.
+
+        A missing or unreadable file is not an error: this instance's in-memory
+        revision is then already the correct basis for the next write.
+        """
+        settings = cast(UserSettings, self._settings)
+
+        if not os.path.exists(settings_path):
+            return
+
+        try:
+            on_disk = UserSettings.load(settings_path)
+
+        except (OSError, ValueError) as e:
+            self._logger.warning(
+                "Could not read on-disk revision from %s before saving: %s", settings_path, str(e)
+            )
+            return
+
+        settings.revision = max(settings.revision, on_disk.revision)
 
     def _load_fetched_models(self) -> None:
         """Load previously fetched model IDs from the on-disk cache."""
@@ -156,10 +188,17 @@ class UserManager(QObject):
 
     def update_settings(self, new_settings: UserSettings) -> None:
         """
-        Update user settings, save to file, and refresh AI backends.
+        Replace all user settings, save to file, and refresh AI backends.
+
+        This is the whole-object path used by the settings dialog, where the user has
+        seen and confirmed every field.  The supplied object is merged against the
+        current on-disk state before writing, so a change made in another instance
+        while the dialog was open cannot be silently reverted.  Fields the dialog
+        presents are taken from ``new_settings``; the revision counter always comes
+        from disk so this instance's write is correctly ordered after any other.
 
         Args:
-            new_settings: UserSettings object with updated settings
+            new_settings: UserSettings object with the full set of desired settings
 
         Raises:
             UserError: If settings cannot be saved
@@ -175,14 +214,116 @@ class UserManager(QObject):
         # Update AI backends with new settings
         self._ai_manager.update_backend_settings(new_settings.ai_backends)
 
-        # Notify listeners.  A listener that hits an error while reacting to the change
-        # has not caused a save failure — the settings are already persisted — so log it
-        # rather than surfacing it as a failed save.
+        self._notify_settings_changed()
+
+    def update_settings_fields(self, **fields: object) -> None:
+        """
+        Update individual user settings fields, save to file, and refresh AI backends.
+
+        This is the field-level path for code that changes one or two settings in
+        response to a user action (a theme menu click, the onboarding tour finishing).
+        It exists because the alternative — read the settings object, mutate it in
+        place, write the whole file back — is a lost-update race once more than one
+        Humbug instance is running.  Each field is applied to the current in-memory
+        settings, which are then merged against on-disk state by ``_save_settings``.
+
+        Args:
+            **fields: Field names to new values.  An unknown field name is a
+                programming error and raises ``UserError``.
+
+        Raises:
+            UserError: If a field name is unknown or settings cannot be saved
+        """
+        settings = cast(UserSettings, self._settings)
+
+        for name, value in fields.items():
+            if not hasattr(settings, name):
+                raise UserError(f"Unknown user setting: {name}")
+
+            setattr(settings, name, value)
+
+        try:
+            self._save_settings()
+
+        except OSError as e:
+            raise UserError(str(e)) from e
+
+        self._ai_manager.update_backend_settings(settings.ai_backends)
+        self._notify_settings_changed()
+
+    def _notify_settings_changed(self) -> None:
+        """
+        Emit the settings-changed signal, logging rather than raising on listener error.
+
+        A listener that hits an error while reacting to the change has not caused a save
+        failure — the settings are already persisted — so it is logged rather than
+        surfaced as a failed save.
+        """
         try:
             self.settings_changed.emit()
 
         except Exception:  # pylint: disable=broad-except
             self._logger.exception("Error notifying listeners of user settings change")
+
+    def start_watching(self) -> None:
+        """
+        Watch the shared settings file for changes made by other Humbug instances.
+
+        The file is the single source of truth for global settings, shared by every
+        instance.  Watching it is how a change made in one instance reaches the others
+        without an IPC channel.
+        """
+        if self._watching:
+            return
+
+        # FileWatcher is a singleton whose poll interval is fixed at first construction,
+        # so the interval is not specified here: other components construct it with the
+        # default, and that default is well inside the agreed latency budget.
+        watcher = FileWatcher()
+        watcher.watch_file(self._get_settings_path(), self._on_settings_file_changed)
+        self._watching = True
+        self._logger.info("Watching user settings file for external changes")
+
+    def _on_settings_file_changed(self, _path: str) -> None:
+        """
+        Handle a detected change to the shared settings file.
+
+        The change may be this instance's own write, so the on-disk revision is
+        compared against the in-memory one and the reload is skipped when they match.
+        """
+        try:
+            self.reload_if_changed()
+
+        except Exception:  # pylint: disable=broad-except
+            self._logger.exception("Failed to reload user settings after external change")
+
+    def reload_if_changed(self) -> bool:
+        """
+        Reload settings from disk if another instance has written a newer revision.
+
+        Returns:
+            True if settings were reloaded, False if the on-disk revision was not newer
+
+        Raises:
+            OSError: If the settings file cannot be read
+            json.JSONDecodeError: If the settings file contains invalid JSON
+        """
+        settings_path = self._get_settings_path()
+        if not os.path.exists(settings_path):
+            return False
+
+        on_disk = UserSettings.load(settings_path)
+        current = cast(UserSettings, self._settings)
+        if on_disk.revision <= current.revision:
+            return False
+
+        self._settings = on_disk
+        self._ai_manager.update_backend_settings(on_disk.ai_backends)
+        self._logger.info(
+            "Reloaded user settings from %s (revision %d)", settings_path, on_disk.revision
+        )
+        self._notify_settings_changed()
+        return True
 
     def settings(self) -> UserSettings:
         """

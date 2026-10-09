@@ -9,6 +9,9 @@ New features:
 - Markdown tables now render with proportional spacing of columns to make things more readable.  If a markdown table is
   detected to be written with the first character in Arabic then the table is rendered from the right and not the left.
 - Added the `enum` special form to the Menai syntax highlighter.
+- Added Claude Haiku 5.5.
+- Remove Claude Haiku 4.5.
+- Added the ability to launch an app window per-mindspace.
 
 Bug fixes:
 
@@ -34,12 +37,11 @@ New features:
 - Choosing "Open In Editor" from a preview's context menu now opens the editor scrolled to the line that was clicked.
   Source files map exactly; rendered markdown maps on a best-effort basis using the source line of the block under the
   cursor.
-- Added support for Claude 5.5 Opus, Sonnet, and Haiku.
+- Added support for Claude 5.5 Opus and Sonnet.
 - Added support for GPT 6 Astra, Sol, and Luna.
 - Added support for GPT 6.1 Sol.
 - Added support for Grok 4.7.
 - Removed GPT 5.4 Mini.
-- Remove Claude Haiku 4.5.
 - The OpenAI backend now uses the Responses API instead of Chat Completions, enabling tool calling and advanced
   reasoning on newer OpenAI models.
 - Added a feature to create folders and new conversations in the conversation sidebar view.

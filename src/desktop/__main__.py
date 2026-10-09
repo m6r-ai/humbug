@@ -195,6 +195,29 @@ def load_fonts() -> None:
             logger.warning("Failed to load font: %s", font_file)
 
 
+def parse_mindspace_argument(argv: list[str]) -> str | None:
+    """
+    Extract the mindspace path from the command line, if one was given.
+
+    A second Humbug instance is started with ``--mindspace <path>`` so it opens a
+    specific mindspace rather than restoring the last one used.
+
+    Args:
+        argv: The process arguments, including the program name
+
+    Returns:
+        The mindspace path, or None if the argument was not supplied
+    """
+    for index, arg in enumerate(argv):
+        if arg == "--mindspace" and index + 1 < len(argv):
+            return argv[index + 1]
+
+        if arg.startswith("--mindspace="):
+            return arg.split("=", 1)[1]
+
+    return None
+
+
 def setup_ai_system_prompt() -> None:
     """Configure the global AI system prompt."""
     system_prompt = (
@@ -260,7 +283,7 @@ def main() -> int:
         loop = QEventLoop(app)
         asyncio.set_event_loop(loop)
 
-        window = MainWindow()
+        window = MainWindow(initial_mindspace_path=parse_mindspace_argument(sys.argv))
         window.show()
 
         # Run the main function

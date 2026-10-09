@@ -12,6 +12,19 @@ from mindspace.mindspace_settings import MindspaceSettings
 from desktop.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
 
 
+def _same_mindspace(a: str, b: str) -> bool:
+    """
+    Return True if two paths refer to the same mindspace.
+
+    Mindspace paths reach the manager in whatever form the user chose them — with or
+    without a trailing separator, through a symlink, or with a different case on a
+    case-insensitive filesystem.  Comparing the raw strings would treat those as
+    different mindspaces, which would list the currently open mindspace among the
+    recent ones and list the same mindspace twice.
+    """
+    return os.path.realpath(a) == os.path.realpath(b)
+
+
 class MindspaceManager(QObject):
     """
     Qt-facing singleton that owns the Mindspace model.
@@ -135,16 +148,17 @@ class MindspaceManager(QObject):
             if not isinstance(path, str):
                 continue
 
-            if path == current:
+            if current and _same_mindspace(path, current):
                 continue
 
-            if path in seen:
+            normalised = os.path.realpath(path)
+            if normalised in seen:
                 continue
 
             if not os.path.exists(path):
                 continue
 
-            seen.add(path)
+            seen.add(normalised)
             result.append(path)
 
         return result[:self.MAX_RECENT_MINDSPACES]
@@ -251,7 +265,11 @@ class MindspaceManager(QObject):
         current = self._mindspace.mindspace_path()
 
         # Build the recent list from the existing config, promoting the previous
-        # current mindspace to the front and excluding the new current.
+        # current mindspace to the front.  The mindspace that is now current is kept in
+        # the list: this list records what the user has opened, and it is
+        # recent_mindspaces() that excludes the currently open one when the menu is
+        # built.  Dropping it here would lose it permanently, which matters when a
+        # second instance opens a mindspace that the first instance still has open.
         previous_data = self._load_home_config()
         previous_recent: list[str] = []
         if previous_data is not None:
@@ -267,16 +285,20 @@ class MindspaceManager(QObject):
         seen: set[str] = set()
 
         # The mindspace we just left goes to the front of the recent list.
-        if previous_last and previous_last != current and os.path.exists(previous_last):
+        if previous_last and os.path.exists(previous_last):
             recent.append(previous_last)
-            seen.add(previous_last)
+            seen.add(os.path.realpath(previous_last))
 
-        # Append remaining entries that aren't the current mindspace or duplicates.
+        # Append remaining entries that are not duplicates.
         for path in previous_recent:
-            if path == current or path in seen or not os.path.exists(path):
+            normalised = os.path.realpath(path)
+            if normalised in seen:
                 continue
 
-            seen.add(path)
+            if not os.path.exists(path):
+                continue
+
+            seen.add(normalised)
             recent.append(path)
 
         recent = recent[:self.MAX_RECENT_MINDSPACES]
