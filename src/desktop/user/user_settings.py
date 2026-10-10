@@ -41,7 +41,7 @@ class UserSettings:
     onboarding_tour_version: int = 0
     # Monotonically increasing revision counter.  Every save increments it so that
     # other Humbug instances watching this file can tell a genuine change from their
-    # own write.  See docs/working/multi-instance-mindspaces.md.
+    # own write.  See docs/adr/0014-multiple-instances-and-mindspaces.md.
     revision: int = 0
 
     @classmethod

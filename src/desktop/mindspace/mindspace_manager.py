@@ -110,6 +110,12 @@ class MindspaceManager(QObject):
             MindspaceAlreadyOpenError: The mindspace is open elsewhere.
             MindspaceError: The mindspace could not be opened.
         """
+        # Give up our own claim first if this is the mindspace we already hold.  The
+        # lock is exclusive even against this process, so re-opening it while still
+        # holding it would otherwise look like another instance owning it.
+        if self._claim is not None and _same_mindspace(path, self._mindspace.mindspace_path()):
+            self._release_claim()
+
         claim = json_store.acquire(self._claim_path(path))
         if claim is None:
             raise MindspaceAlreadyOpenError(path)

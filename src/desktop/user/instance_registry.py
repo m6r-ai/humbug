@@ -2,10 +2,18 @@
 Registry of running Humbug instances.
 
 Each instance writes a small JSON file describing itself, so that any instance can
-answer "is another Humbug already working on this mindspace?".  This is what prevents
-two instances sharing one mindspace, which would mean two writers to the same
-``.humbug/`` state — including the audit log, whose value depends on being a single
-witness to what occurred.
+answer "is another Humbug already working on this mindspace?".
+
+This registry is advisory, not authoritative.  It exists so the UI can disable a
+mindspace another instance has open, rather than letting the user pick it and then be
+refused.  It can be wrong in both directions: an instance that has started but not yet
+registered looks free, and a record can outlive a crash until it is pruned.
+
+What actually guarantees that two instances never share a mindspace is the exclusive
+claim ``MindspaceManager`` takes on ``<mindspace>/.humbug/mindspace.lock`` for as long
+as it holds the mindspace open.  That is an operating system lock: it cannot be raced,
+and it is released even if the process is killed.  Anything this registry reports is a
+hint; the claim is the decision.
 
 One file per instance rather than a single shared file: each instance only ever writes
 its own file, so there is no write race between instances.

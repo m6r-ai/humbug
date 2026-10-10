@@ -1101,6 +1101,23 @@ class TestMindspaceClaim:
         finally:
             elsewhere.close()
 
+    def test_reopening_our_own_mindspace_is_allowed(self, manager, tmp_path):
+        """Opening the mindspace this instance already holds is not refused."""
+        ms_path = _create_openable_mindspace(manager, str(tmp_path), "alpha")
+        manager.open_mindspace(ms_path)
+
+        manager.open_mindspace(ms_path)
+
+        assert manager.mindspace_path() == ms_path
+
+    def test_reopening_our_own_mindspace_keeps_the_claim(self, manager, tmp_path):
+        """A re-open still leaves the mindspace claimed against other instances."""
+        ms_path = _create_openable_mindspace(manager, str(tmp_path), "alpha")
+        manager.open_mindspace(ms_path)
+        manager.open_mindspace(ms_path)
+
+        assert json_store.acquire(manager._claim_path(ms_path)) is None
+
     def test_closing_releases_the_claim(self, manager, tmp_path):
         """Closing a mindspace lets another window open it."""
         ms_path = _create_openable_mindspace(manager, str(tmp_path), "alpha")
