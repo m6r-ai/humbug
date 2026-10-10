@@ -176,6 +176,7 @@ class LanguageStrings:
 
     # Mindspace tree
     mindspace_label_none: str
+    window_title: str
     mindspace_name_tooltip: str
     mindspace_files: str
     mindspace_vcs: str
@@ -313,6 +314,16 @@ class LanguageStrings:
     error_saving_mindspace_settings: str
     error_saving_user_settings: str
     cancel_conversation: str
+
+    # Opening a mindspace in a new window
+    open_in_new_window: str
+    open_in_new_window_title: str
+    open_in_new_window_already_open: str
+    open_in_new_window_already_here: str
+    open_in_new_window_failed: str
+    open_in_new_window_choose_folder: str
+    mindspace_not_found_error: str
+    mindspace_open_elsewhere_tooltip: str
 
     # Status bar
     editor_status: str

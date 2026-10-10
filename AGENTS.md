@@ -193,7 +193,9 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `tab/` - Abstract tab contract, including the view-state and migration-state contracts
 - `tab_manager/` - Tab manager: generic tab container with context factory registration and session restore
 - `terminal_tab/` - Terminal tab implementation
-- `user/` - User management
+- `user/` - User management: global settings (`UserManager`, `UserSettings`), the
+  registry of running instances (`InstanceRegistry`), and launching a second instance
+  with the same configuration (`LaunchContext`)
 - `vcs_sidebar/` - VCS/diff panel implementation
 - `widgets/` - Reusable Qt widgets
 
@@ -296,7 +298,7 @@ Language-specific syntax highlighting system.
 **Language subdirectories:**
 - `bash/`, `batch/`, `c/`, `cpp/`, `csharp/`, `css/`, `diff/`, `go/`, `html/`, `java/`
 - `javascript/`, `json/`, `kotlin/`, `lua/`, `markdown/`, `menai/`, `metaphor/`, `move/`
-- `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `toml/`, `typescript/`, `xml/`, `yaml/`
+- `pascal/`, `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `toml/`, `typescript/`, `xml/`, `yaml/`
 
 ### `src/system_ai_tool/`
 AI tool implementation for system/workspace operations (tab lifecycle, layout,

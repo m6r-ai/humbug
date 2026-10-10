@@ -33,6 +33,7 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Added the conversation trash/recovery feature.
 * Added the product tour feature.
 * Added the quick switcher.
+* Designed the concept for mult-window views.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 

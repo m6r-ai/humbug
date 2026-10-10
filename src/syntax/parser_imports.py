@@ -13,12 +13,13 @@ from syntax.html.html_parser import HTMLParser
 from syntax.java.java_parser import JavaParser
 from syntax.javascript.javascript_parser import JavaScriptParser
 from syntax.json.json_parser import JSONParser
-from syntax.lua.lua_parser import LuaParser
 from syntax.kotlin.kotlin_parser import KotlinParser
+from syntax.lua.lua_parser import LuaParser
 from syntax.markdown.markdown_parser import MarkdownParser
 from syntax.menai.menai_parser import MenaiParser
 from syntax.metaphor.metaphor_parser import MetaphorParser
 from syntax.move.move_parser import MoveParser
+from syntax.pascal.pascal_parser import PascalParser
 from syntax.python.python_parser import PythonParser
 from syntax.rust.rust_parser import RustParser
 from syntax.scheme.scheme_parser import SchemeParser
@@ -26,8 +27,8 @@ from syntax.solidity.solidity_parser import SolidityParser
 from syntax.swift.swift_parser import SwiftParser
 from syntax.text.text_parser import TextParser
 from syntax.typescript.typescript_parser import TypeScriptParser
-from syntax.xml.xml_parser import XMLParser
 from syntax.toml.toml_parser import TOMLParser
+from syntax.xml.xml_parser import XMLParser
 from syntax.yaml.yaml_parser import YAMLParser
 from syntax.parser_registry import ParserRegistry
 # pylint: enable=unused-import

@@ -10,13 +10,13 @@ class FrameKind(Enum):
 
     Each kind determines whether an identifier appearing at a given element
     position is a function being called (operator position) or a name in a
-    binding, parameter, field, export, pattern, or namespace context.
+    binding, parameter, name, export, pattern, or namespace context.
     """
     APPLICATION = auto()
     BINDING_LIST = auto()
     BINDING_PAIR = auto()
     PARAM_LIST = auto()
-    FIELD_LIST = auto()
+    NAME_LIST = auto()
     EXPORT_LIST = auto()
     MATCH_ARM = auto()
     PATTERN = auto()
@@ -25,6 +25,7 @@ class FrameKind(Enum):
 
 
 _BINDING_KEYWORDS = frozenset({'let', 'let*', 'letrec'})
+_NAME_LIST_KEYWORDS = frozenset({'struct', 'enum'})
 
 
 @dataclass
@@ -85,7 +86,7 @@ class MenaiCallContext:
 
     Menai is a Lisp-like language in which the head of an ordinary form is the
     function being applied.  The head of a special form, and names in binding,
-    parameter, field, export, pattern, and namespace positions, are not calls.
+    parameter, name, export, pattern, and namespace positions, are not calls.
     This tracker maintains a stack of parenthesis frames so that an identifier
     in operator position can be retyped to FUNCTION_OR_METHOD, letting function
     calls stand out from plain identifiers.
@@ -248,8 +249,8 @@ class MenaiCallContext:
         if keyword == 'lambda' and parent.element_index == 1:
             return FrameKind.PARAM_LIST
 
-        if keyword == 'struct' and parent.element_index == 1:
-            return FrameKind.FIELD_LIST
+        if keyword in _NAME_LIST_KEYWORDS and parent.element_index == 1:
+            return FrameKind.NAME_LIST
 
         if keyword == 'export' and parent.element_index >= 1:
             return FrameKind.EXPORT_LIST

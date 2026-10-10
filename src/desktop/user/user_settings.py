@@ -39,6 +39,10 @@ class UserSettings:
     external_file_denylist: list[str] = field(default_factory=list)
     onboarding_tour_status: OnboardingTourStatus = OnboardingTourStatus.NOT_STARTED
     onboarding_tour_version: int = 0
+    # Monotonically increasing revision counter.  Every save increments it so that
+    # other Humbug instances watching this file can tell a genuine change from their
+    # own write.  See docs/working/multi-instance-mindspaces.md.
+    revision: int = 0
 
     @classmethod
     def create_default(cls) -> "UserSettings":
@@ -444,6 +448,19 @@ class UserSettings:
             )
             settings.active_custom_theme_name = None
 
+        # Load the revision counter.  A file written before this field existed has no
+        # revision, so it starts at 0 and the next save promotes it to 1.
+        revision = data.get("revision", 0)
+        if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0:
+            cls._logger.warning(
+                "Invalid revision in %s: expected non-negative int, got %s. Using 0.",
+                path, type(revision).__name__
+            )
+            settings.revision = 0
+
+        else:
+            settings.revision = revision
+
         return settings
 
     @classmethod
@@ -557,6 +574,9 @@ class UserSettings:
             }
 
         # Save settings in a structured format for future extensibility
+        # Increment the revision so other instances watching this file can distinguish
+        # this write from one they made themselves.
+        self.revision += 1
         data = {
             "ai_backends": ai_backends_data,
             "language": self.language.name,
@@ -572,7 +592,8 @@ class UserSettings:
             "externalFileAllowlist": self.external_file_allowlist,
             "externalFileDenylist": self.external_file_denylist,
             "onboardingTourStatus": self.onboarding_tour_status.name,
-            "onboardingTourVersion": self.onboarding_tour_version
+            "onboardingTourVersion": self.onboarding_tour_version,
+            "revision": self.revision
         }
 
         # Written atomically, and with secure permissions as it holds API keys

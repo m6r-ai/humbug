@@ -186,6 +186,7 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Mindspace tree
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
+        window_title="Humbug: {}",
         mindspace_name_tooltip="انقر لتبديل المساحة الذهنية",
         mindspace_files="ملفات",
         mindspace_vcs="الملفات المتغيرة",
@@ -332,6 +333,20 @@ def get_arabic_strings() -> LanguageStrings:
         error_saving_user_settings="فشل في حفظ إعدادات المستخدم: {}",
         cancel_conversation="هل أنت متأكد من أنك تريد إيقاف استجابة الذكاء الاصطناعي الحالية؟ سيؤدي هذا "
             "إلى إنهاء المحادثة الجارية وقد يؤدي إلى استجابات غير مكتملة.",
+
+        open_in_new_window="فتح مساحة ذهنية في نافذة جديدة...",
+        open_in_new_window_title="فتح في نافذة جديدة",
+        open_in_new_window_already_open=(
+            "هذه المساحة الذهنية مفتوحة بالفعل في نافذة Humbug أخرى (العملية {}).\n\n"
+            "لا يمكن لنافذتين مشاركة مساحة ذهنية واحدة، لذا انتقل إلى النافذة الموجودة بدلاً من ذلك."
+        ),
+        open_in_new_window_already_here="هذه المساحة الذهنية مفتوحة بالفعل في هذه النافذة.",
+        open_in_new_window_failed="تعذّر بدء نافذة Humbug جديدة:\n\n{}",
+        open_in_new_window_choose_folder="اختيار مجلد...",
+        mindspace_not_found_error="لم يتم العثور على مساحة ذهنية في الموقع المحدد.",
+        mindspace_open_elsewhere_tooltip=(
+            "{} مفتوحة بالفعل في نافذة Humbug أخرى، لذا لا يمكن فتحها هنا"
+        ),
 
         # Status bar
         editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}",

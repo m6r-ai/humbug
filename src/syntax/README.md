@@ -75,6 +75,7 @@ The module includes dedicated subdirectories for each supported programming lang
 - **`markdown/`** - Markdown markup language support
 - **`menai/`** - Menai programming language support
 - **`move/`** - Move programming language support
+- **`pascal/`** - Pascal programming language support
 - **`python/`** - Python programming language support
 - **`rust/`** - Rust programming language support
 - **`scheme/`** - Scheme/Lisp language support

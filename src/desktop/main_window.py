@@ -86,6 +86,8 @@ from desktop.trash_sidebar.trash_sidebar import TrashSidebar
 from desktop.update_checker import UpdateChecker
 from desktop.update_dialog import UpdateDialog
 from desktop.user.user_manager import UserManager, UserError
+from desktop.user.instance_registry import InstanceRecord, InstanceRegistry
+from desktop.user.launch_context import LaunchContext
 from desktop.user.user_settings import UserSettings
 from desktop.vcs_sidebar.vcs_sidebar import VCSSidebar
 
@@ -283,11 +285,19 @@ class MainWindow(QMainWindow):
     # beyond it is unreachable - the user is told when the limit is hit.
     _MAX_QUICK_SWITCHER_FILES = 2000
 
-    def __init__(self) -> None:
-        """Initialize the main window."""
+    def __init__(self, initial_mindspace_path: str | None = None) -> None:
+        """
+        Initialize the main window.
+
+        Args:
+            initial_mindspace_path: A mindspace to open on startup, overriding the
+                last-used mindspace.  Supplied when this instance was started to open
+                a specific mindspace in a new window.
+        """
         super().__init__()
 
         self._logger = logging.getLogger("MainWindow")
+        self._initial_mindspace_path = initial_mindspace_path
 
         self._use_custom_title_bar = sys.platform != "darwin"
         self._window_controls: WindowControlsWidget | None = None
@@ -533,7 +543,10 @@ class MainWindow(QMainWindow):
         self._mindspace_menu.addAction(self._open_mindspace_action)
         self._recent_mindspaces_menu = self._mindspace_menu.addMenu(strings.recent_mindspaces)
         self._recent_mindspaces_menu.setObjectName("_recent_mindspaces_menu")
-        self._last_recent_mindspaces: list[str] | None = None
+        self._last_recent_mindspaces: tuple[list[str], set[str]] | None = None
+        self._open_in_new_window_menu = self._mindspace_menu.addMenu(strings.open_in_new_window)
+        self._open_in_new_window_menu.setObjectName("_open_in_new_window_menu")
+        self._last_open_in_new_window: tuple[list[str], set[str]] | None = None
         self._mindspace_menu.addAction(self._close_mindspace_action)
         self._mindspace_menu.addSeparator()
         self._mindspace_menu.addAction(self._global_search_action)
@@ -705,6 +718,10 @@ class MainWindow(QMainWindow):
 
         self._user_manager = UserManager()
         user_settings = self._user_manager.settings()
+        self._user_manager.settings_changed.connect(self._on_user_settings_changed)
+        self._user_manager.start_watching()
+        self._instance_registry = InstanceRegistry()
+        self._instance_registry.register("")
         self._style_manager.set_user_font_size(user_settings.font_size)
         self._build_zoom_levels()
         self._style_manager.set_font_ligatures(user_settings.font_ligatures)
@@ -849,12 +866,22 @@ class MainWindow(QMainWindow):
         self._on_style_changed()  # Refresh styles to apply canary background
 
     def _rebuild_recent_mindspaces_menu(self) -> None:
-        """Repopulate the Recent Mindspaces submenu from the manager's recent list."""
+        """
+        Repopulate the Recent Mindspaces submenu from the manager's recent list.
+
+        A mindspace that another instance has open is shown but disabled: switching to
+        it here would give two windows the same mindspace, and therefore two writers to
+        the same ``.humbug/`` state.  The disabled state depends on the instance
+        registry, which changes independently of the recent list, so both form the
+        cache key.
+        """
         recent = self._mindspace_manager.recent_mindspaces()
-        if recent == self._last_recent_mindspaces:
+        open_elsewhere = self._mindspaces_open_elsewhere(recent)
+        cache_key = (recent, open_elsewhere)
+        if cache_key == self._last_recent_mindspaces:
             return
 
-        self._last_recent_mindspaces = recent
+        self._last_recent_mindspaces = cache_key
 
         menu = self._recent_mindspaces_menu
         menu.clear()
@@ -867,10 +894,28 @@ class MainWindow(QMainWindow):
             name = os.path.basename(path.rstrip("\\/"))
             action = QAction(name, menu)
             action.setToolTip(path)
-            action.triggered.connect(
-                lambda checked=False, p=path: self._open_mindspace_path(p)
-            )
+
+            if path in open_elsewhere:
+                action.setEnabled(False)
+                action.setToolTip(
+                    self._language_manager.strings().mindspace_open_elsewhere_tooltip.format(path)
+                )
+
+            else:
+                action.triggered.connect(
+                    lambda checked=False, p=path: self._open_mindspace_path(p)
+                )
+
             menu.addAction(action)
+
+    def _mindspaces_open_elsewhere(self, paths: list[str]) -> set[str]:
+        """
+        Return the subset of paths that another live Humbug instance has open.
+
+        Args:
+            paths: Absolute mindspace paths to check
+        """
+        return {path for path in paths if self._instance_registry.is_open_elsewhere(path)}
 
     def _update_menu_state(self) -> None:
         """Update enabled/disabled state of menu items."""
@@ -918,6 +963,7 @@ class MainWindow(QMainWindow):
         self._open_humbug_shell_action.setEnabled(has_mindspace)
         self._open_token_usage_action.setEnabled(has_mindspace)
         self._rebuild_recent_mindspaces_menu()
+        self._rebuild_open_in_new_window_menu()
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor()
@@ -1205,15 +1251,16 @@ class MainWindow(QMainWindow):
 
         try:
             settings = self._user_manager.settings()
-            settings.theme = ColorTheme.CUSTOM
-            settings.active_custom_theme_name = name
             if name is not None and name in settings.saved_color_themes:
                 self._style_manager.apply_custom_colors(settings.saved_color_themes[name])
 
             else:
                 self._style_manager.apply_custom_colors(settings.custom_colors)
 
-            self._user_manager.update_settings(settings)
+            self._user_manager.update_settings_fields(
+                theme=ColorTheme.CUSTOM,
+                active_custom_theme_name=name
+            )
 
             if self._mindspace_manager.has_mindspace():
                 label = name if name is not None else "Manually"
@@ -1226,6 +1273,43 @@ class MainWindow(QMainWindow):
             self._logger.error("Failed to persist custom theme change: %s", str(e))
 
         self._update_theme_menu()
+
+    def _on_user_settings_changed(self) -> None:
+        """
+        Apply user settings after they change, whether locally or in another instance.
+
+        The settings dialog applies its own changes directly, so this handler is what
+        makes a change made in another Humbug instance take effect here.  It is also
+        what applies a local change made outside the dialog (a theme menu click).
+        """
+        self._apply_user_settings(self._user_manager.settings())
+
+    def _apply_user_settings(self, user_settings: UserSettings) -> None:
+        """
+        Apply a set of user settings to the running application.
+
+        Args:
+            user_settings: The settings to apply
+        """
+        try:
+            self._style_manager.set_user_font_size(user_settings.font_size)
+            self._build_zoom_levels()
+            self._style_manager.set_font_ligatures(user_settings.font_ligatures)
+            self._language_manager.set_language(user_settings.language)
+
+            new_theme = user_settings.theme
+            if new_theme != self._style_manager.user_color_theme():
+                self._style_manager.set_color_theme(new_theme)
+
+            self._style_manager.set_saved_color_themes(user_settings.saved_color_themes)
+            self._style_manager.set_active_custom_theme_name(user_settings.active_custom_theme_name)
+            self._apply_custom_colors_for_settings(user_settings)
+            self._rebuild_theme_menu()
+
+            self._tab_manager.update_welcome_widget(user_settings)
+
+        except Exception:  # pylint: disable=broad-except
+            self._logger.exception("Failed to apply user settings")
 
     def _set_color_theme(self, theme: ColorTheme) -> None:
         """
@@ -1240,9 +1324,7 @@ class MainWindow(QMainWindow):
         self._style_manager.set_color_theme(theme)
 
         try:
-            settings = self._user_manager.settings()
-            settings.theme = theme
-            self._user_manager.update_settings(settings)
+            self._user_manager.update_settings_fields(theme=theme)
 
             if self._mindspace_manager.has_mindspace():
                 self._mindspace_manager.add_interaction(
@@ -1273,19 +1355,163 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(message.timeout, self._status_message_label.clear)
 
     def _restore_last_mindspace(self) -> None:
-        """Restore last mindspace on startup if available."""
-        mindspace_path = self._mindspace_manager.get_last_mindspace()
+        """
+        Open a mindspace on startup.
+
+        An explicitly requested mindspace takes precedence over the last one used: this
+        instance was started specifically to open it, so restoring the last-used
+        mindspace instead would defeat the point.
+        """
+        mindspace_path = self._initial_mindspace_path or self._mindspace_manager.get_last_mindspace()
         if mindspace_path is None:
             return
 
         try:
             self._mindspace_manager.open_mindspace(mindspace_path)
+
+            # The mindspace is open from this point, so record it before any of the
+            # fallible UI restoration steps below.  Otherwise a failure in one of those
+            # would leave this instance registered with no mindspace while it in fact
+            # has one open, making it invisible to other instances' deduplication checks.
+            self._update_instance_registry()
             self._sidebar_manager.set_mindspace(mindspace_path)
             self._restore_mindspace_state()
             self._restore_prompt_marker_setting()
 
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace: %s", str(e))
+
+    def _update_instance_registry(self) -> None:
+        """Record which mindspace this instance has open, for other instances to see."""
+        self._instance_registry.register(self._mindspace_manager.mindspace_path())
+
+    def _rebuild_open_in_new_window_menu(self) -> None:
+        """
+        Open a mindspace in a new Humbug window.
+
+        The submenu offers the recent mindspaces, excluding the one already open here,
+        plus a folder chooser for anything else.  A mindspace that another instance has
+        open is shown but disabled, because two instances sharing one mindspace would
+        mean two writers to the same ``.humbug/`` state, including the audit log.
+
+        Both the recent list and the set of mindspaces open elsewhere form the cache
+        key, since the disabled state changes independently of the list itself.
+        """
+        # recent_mindspaces() already excludes the mindspace open here, so no further
+        # filtering is needed.  Filtering again against the current path would make the
+        # result depend on whether a mindspace is open yet, which is transient during
+        # startup: the menu timer starts before the mindspace is restored, so an early
+        # rebuild would cache a list built with no mindspace open and then suppress the
+        # rebuild that should follow.
+        recent = self._mindspace_manager.recent_mindspaces()
+        open_elsewhere = self._mindspaces_open_elsewhere(recent)
+        cache_key = (recent, open_elsewhere)
+        if cache_key == self._last_open_in_new_window:
+            return
+
+        self._last_open_in_new_window = cache_key
+
+        strings = self._language_manager.strings()
+        menu = self._open_in_new_window_menu
+        menu.clear()
+
+        for path in recent:
+            name = os.path.basename(path.rstrip("\\/"))
+            action = QAction(name, menu)
+            action.setToolTip(path)
+
+            if path in open_elsewhere:
+                action.setEnabled(False)
+                action.setToolTip(strings.mindspace_open_elsewhere_tooltip.format(path))
+
+            else:
+                action.triggered.connect(
+                    lambda checked=False, p=path: self._spawn_mindspace_window(p)
+                )
+
+            menu.addAction(action)
+
+        if recent:
+            menu.addSeparator()
+
+        choose_action = QAction(strings.open_in_new_window_choose_folder, menu)
+        choose_action.triggered.connect(self._on_choose_mindspace_folder_for_new_window)
+        menu.addAction(choose_action)
+
+    def _on_choose_mindspace_folder_for_new_window(self) -> None:
+        """Prompt for a mindspace folder and open it in a new window."""
+        strings = self._language_manager.strings()
+
+        self._menu_timer.stop()
+        mindspace_path = QFileDialog.getExistingDirectory(
+            self, strings.file_dialog_open_mindspace, os.path.expanduser("~")
+        )
+        self._menu_timer.start()
+        if not mindspace_path:
+            return
+
+        if not self._mindspace_manager.check_mindspace(mindspace_path):
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.mindspace_error_title,
+                strings.mindspace_not_found_error
+            )
+            return
+
+        current = self._mindspace_manager.mindspace_path()
+        if current and os.path.realpath(mindspace_path) == os.path.realpath(current):
+            MessageBox.show_message(
+                self,
+                MessageBoxType.INFORMATION,
+                strings.open_in_new_window_title,
+                strings.open_in_new_window_already_here
+            )
+            return
+
+        self._spawn_mindspace_window(mindspace_path)
+
+    def _spawn_mindspace_window(self, mindspace_path: str) -> None:
+        """
+        Start a new Humbug instance for the given mindspace.
+
+        Args:
+            mindspace_path: Absolute path to the mindspace the new instance should open
+        """
+        strings = self._language_manager.strings()
+
+        existing = self._instance_registry.find_live_instance(mindspace_path)
+        if existing is not None:
+            self._show_already_open_message(existing)
+            return
+
+        try:
+            LaunchContext.current().spawn(mindspace_path)
+
+        except OSError as e:
+            self._logger.error("Failed to start new Humbug instance: %s", str(e))
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.open_in_new_window_title,
+                strings.open_in_new_window_failed.format(str(e))
+            )
+
+    def _show_already_open_message(self, existing: InstanceRecord) -> None:
+        """
+        Tell the user that another instance already has the requested mindspace open.
+
+        The other instance's window cannot be raised: activating another process's
+        window is not possible from Qt, and there is no portable mechanism across
+        Linux, macOS, and Windows.  The user is told which process to look for instead.
+        """
+        strings = self._language_manager.strings()
+        MessageBox.show_message(
+            self,
+            MessageBoxType.INFORMATION,
+            strings.open_in_new_window_title,
+            strings.open_in_new_window_already_open.format(existing.pid)
+        )
 
     def _load_user_ai_config(self) -> None:
         """Load user-defined AI model config from ~/.humbug/user-ai-config.json."""
@@ -1359,7 +1585,19 @@ class MainWindow(QMainWindow):
         self._open_mindspace_path(dir_path)
 
     def _open_mindspace_path(self, path: str) -> None:
-        """Open a mindspace at the given path, validating and restoring state."""
+        """
+        Open a mindspace at the given path, validating and restoring state.
+
+        This is the single gate for every path that switches mindspace — the Recent
+        Mindspaces menu, the sidebar header menu, and any future caller.  The check
+        that another instance does not already have the mindspace open lives here
+        rather than in each caller, so that a stale menu cannot defeat it.
+        """
+        existing = self._instance_registry.find_live_instance(path)
+        if existing is not None:
+            self._show_already_open_message(existing)
+            return
+
         # Before we do anything, check if the new location is a mindspace
         if not self._mindspace_manager.check_mindspace(path):
             strings = self._language_manager.strings()
@@ -1382,6 +1620,12 @@ class MainWindow(QMainWindow):
         # Open the new mindspace
         try:
             self._mindspace_manager.open_mindspace(path)
+
+            # The mindspace is open from this point, so record it before any of the
+            # fallible UI restoration steps below.  Otherwise a failure in one of those
+            # would leave this instance registered with no mindspace while it in fact
+            # has one open, making it invisible to other instances' deduplication checks.
+            self._update_instance_registry()
             self._sidebar_manager.set_mindspace(path)
 
         except MindspaceAlreadyOpenError:
@@ -1421,6 +1665,7 @@ class MainWindow(QMainWindow):
         self._sidebar_manager.set_mindspace("")
 
         self._mindspace_manager.close_mindspace()
+        self._update_instance_registry()
 
     def _capture_frontend_state(self, contexts: ContextRegistry) -> None:
         """
@@ -2526,21 +2771,6 @@ class MainWindow(QMainWindow):
         def _on_user_settings_changed(new_settings: UserSettings) -> None:
             try:
                 self._user_manager.update_settings(new_settings)
-                self._style_manager.set_user_font_size(new_settings.font_size)
-                self._build_zoom_levels()
-                self._style_manager.set_font_ligatures(new_settings.font_ligatures)
-                self._language_manager.set_language(new_settings.language)
-
-                new_theme = new_settings.theme
-                if new_theme != self._style_manager.user_color_theme():
-                    self._style_manager.set_color_theme(new_theme)
-
-                self._style_manager.set_saved_color_themes(new_settings.saved_color_themes)
-                self._style_manager.set_active_custom_theme_name(new_settings.active_custom_theme_name)
-                self._apply_custom_colors_for_settings(new_settings)
-                self._rebuild_theme_menu()
-
-                self._tab_manager.update_welcome_widget(new_settings)
                 self._logger.info("User settings saved successfully")
 
                 if self._mindspace_manager.has_mindspace():
@@ -2822,4 +3052,5 @@ class MainWindow(QMainWindow):
             event.ignore()
             return
 
+        self._instance_registry.unregister()
         event.accept()

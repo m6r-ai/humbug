@@ -185,6 +185,7 @@ def get_french_strings() -> LanguageStrings:
 
         # Mindspace tree
         mindspace_label_none="Aucun espace mental actif",
+        window_title="Humbug : {}",
         mindspace_name_tooltip="Cliquer pour changer d'espace mental",
         mindspace_files="Fichiers",
         mindspace_vcs="Fichiers modifiés",
@@ -332,6 +333,20 @@ def get_french_strings() -> LanguageStrings:
         error_saving_user_settings="Échec de l'enregistrement des paramètres utilisateur : {}",
         cancel_conversation="Êtes-vous sûr de vouloir arrêter la réponse actuelle de l'IA ? "
             "Cela mettra fin à la conversation en cours et peut entraîner des réponses incomplètes.",
+
+        open_in_new_window="Ouvrir l'espace mental dans une nouvelle fenêtre...",
+        open_in_new_window_title="Ouvrir dans une nouvelle fenêtre",
+        open_in_new_window_already_open=(
+            "Cet espace mental est déjà ouvert dans une autre fenêtre Humbug (processus {}).\n\n"
+            "Deux fenêtres ne peuvent pas partager un même espace mental ; basculez plutôt vers la fenêtre existante."
+        ),
+        open_in_new_window_already_here="Cet espace mental est déjà ouvert dans cette fenêtre.",
+        open_in_new_window_failed="Impossible de démarrer une nouvelle fenêtre Humbug :\n\n{}",
+        open_in_new_window_choose_folder="Choisir un dossier...",
+        mindspace_not_found_error="Aucun espace mental n'a été trouvé à l'emplacement sélectionné.",
+        mindspace_open_elsewhere_tooltip=(
+            "{} est déjà ouvert dans une autre fenêtre Humbug et ne peut donc pas être ouvert ici"
+        ),
 
         # Status bar
         editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}",

@@ -3,7 +3,7 @@ Tests for Menai function-call classification.
 
 These tests verify that identifiers in operator position (the head of an
 ordinary form) are tokenized as FUNCTION_OR_METHOD, while identifiers in
-binding, parameter, field, export, pattern, namespace, and quoted positions
+binding, parameter, name, export, pattern, namespace, and quoted positions
 remain IDENTIFIER.
 """
 from syntax.lexer import TokenType
@@ -156,6 +156,55 @@ class TestMenaiCallContext:
 
         assert token_values(tokens, TokenType.FUNCTION_OR_METHOD) == []
         assert 'point' in token_values(tokens, TokenType.IDENTIFIER)
+
+    def test_enum_variant_names_are_not_functions(self):
+        """Test that enum variant names are not classified as functions."""
+        tokens = parse_line('(enum (idle running stopped))')
+
+        assert token_values(tokens, TokenType.FUNCTION_OR_METHOD) == []
+        assert token_values(tokens, TokenType.IDENTIFIER) == ['idle', 'running', 'stopped']
+
+    def test_enum_head_is_keyword(self):
+        """Test that enum is recognized as a keyword."""
+        tokens = parse_line('(enum (idle running))')
+
+        assert token_values(tokens, TokenType.KEYWORD) == ['enum']
+
+    def test_enum_as_binding_value(self):
+        """Test an enum definition used as a letrec binding value."""
+        tokens = parse_line('(letrec ((state (enum (idle running)))) state)')
+
+        assert token_values(tokens, TokenType.FUNCTION_OR_METHOD) == []
+        assert 'state' in token_values(tokens, TokenType.IDENTIFIER)
+
+    def test_enum_construction_variant_is_not_function(self):
+        """Test that a quoted variant in an enum construction is not a function."""
+        tokens = parse_line("(state 'idle)")
+
+        assert token_values(tokens, TokenType.FUNCTION_OR_METHOD) == ['state']
+        assert token_values(tokens, TokenType.IDENTIFIER) == ['idle']
+
+    def test_enum_pattern_head_is_not_function(self):
+        """Test that an enum pattern head is not classified as a function."""
+        tokens = parse_line("(match s ((state 'idle) \"i\") (_ \"other\"))")
+
+        assert token_values(tokens, TokenType.FUNCTION_OR_METHOD) == []
+        assert 'state' in token_values(tokens, TokenType.IDENTIFIER)
+        assert 'idle' in token_values(tokens, TokenType.IDENTIFIER)
+
+    def test_enum_match_results_are_functions(self):
+        """Test that calls in enum match results are classified."""
+        tokens = parse_line("(match s ((state 'idle) (foo)) (_ (bar)))")
+
+        assert token_values(tokens, TokenType.FUNCTION_OR_METHOD) == ['foo', 'bar']
+
+    def test_enum_spanning_multiple_lines(self):
+        """Test an enum definition spanning multiple lines."""
+        tokens = parse_lines(['(letrec ((state (enum (idle', '                      running))))', '  state)'])
+
+        assert token_values(tokens, TokenType.FUNCTION_OR_METHOD) == []
+        assert 'idle' in token_values(tokens, TokenType.IDENTIFIER)
+        assert 'running' in token_values(tokens, TokenType.IDENTIFIER)
 
     def test_export_names_are_not_functions(self):
         """Test that export names are not classified as functions."""

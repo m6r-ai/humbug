@@ -25,6 +25,10 @@ class _FakeUserManager:
         self.update_calls.append(settings)
         self._settings = settings
 
+    def update_settings_fields(self, **fields: object) -> None:
+        for name, value in fields.items():
+            setattr(self._settings, name, value)
+
 
 def make_steps(count=3):
     return [
