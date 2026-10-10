@@ -31,7 +31,9 @@ from git_ai_tool.git_ai_tool import GitAITool
 from help_ai_tool.help_ai_tool import HelpAITool
 from http_ai_tool.http_ai_tool import HttpAITool
 from menai_ai_tool.menai_ai_tool import MenaiAITool
-from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceHumbugPathError
+from mindspace.mindspace_error import (
+    MindspaceAlreadyOpenError, MindspaceError, MindspaceExistsError, MindspaceHumbugPathError
+)
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_settings import MindspaceSettings
 from preview_ai_tool.preview_ai_tool import PreviewAITool
@@ -1381,6 +1383,16 @@ class MainWindow(QMainWindow):
         try:
             self._mindspace_manager.open_mindspace(path)
             self._sidebar_manager.set_mindspace(path)
+
+        except MindspaceAlreadyOpenError:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.mindspace_error_title,
+                strings.mindspace_already_open_error
+            )
+            return
 
         except MindspaceError as e:
             strings = self._language_manager.strings()

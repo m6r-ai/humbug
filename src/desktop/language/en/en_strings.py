@@ -315,6 +315,7 @@ def get_english_strings() -> LanguageStrings:
         error_rename_failed="Could not rename conversation: {0}",
         unsaved_changes="Do you want to save changes to {0}?",
         mindspace_exists_error="Mindspace already exists in selected directory.",
+        mindspace_already_open_error="This mindspace is already open in another window.",
         close_button="Close",
         confirm_close="Confirm Close",
         could_not_open="Could not open {}: {}",

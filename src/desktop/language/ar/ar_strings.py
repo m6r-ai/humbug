@@ -315,6 +315,7 @@ def get_arabic_strings() -> LanguageStrings:
         error_rename_failed="تعذر إعادة تسمية المحادثة: {0}",
         unsaved_changes="هل تريد حفظ التغييرات في {0}؟",
         mindspace_exists_error="المساحة الذهنية موجودة بالفعل في المجلد المحدد.",
+        mindspace_already_open_error="هذه المساحة الذهنية مفتوحة بالفعل في نافذة أخرى.",
         close_button="إغلاق",
         confirm_close="تأكيد الإغلاق",
         could_not_open="لا يمكن فتح {}: {}",

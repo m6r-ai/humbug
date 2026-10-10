@@ -315,6 +315,7 @@ def get_french_strings() -> LanguageStrings:
         error_rename_failed="Impossible de renommer la conversation : {0}",
         unsaved_changes="Voulez-vous enregistrer les modifications de {0} ?",
         mindspace_exists_error="L'espace mental existe déjà dans le répertoire sélectionné.",
+        mindspace_already_open_error="Cet espace mental est déjà ouvert dans une autre fenêtre.",
         close_button="Fermer",
         confirm_close="Confirmer la fermeture",
         could_not_open="Impossible d'ouvrir {} : {}",

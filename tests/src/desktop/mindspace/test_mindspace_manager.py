@@ -6,7 +6,9 @@ import os
 import pytest
 
 # pylint: disable=wrong-import-position
+from desktop import json_store
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from mindspace.mindspace_error import MindspaceAlreadyOpenError
 from mindspace.mindspace_settings import MindspaceSettings
 
 
@@ -28,7 +30,9 @@ def manager(qapp, tmp_path):
 
     yield mgr
 
-    # Clean up the singleton for subsequent tests.
+    # Release any claim the test took on a mindspace, then clean up the
+    # singleton for subsequent tests.
+    mgr._release_claim()
     MindspaceManager._instance = None
 
 
@@ -42,6 +46,13 @@ def _create_mindspace_dir(base: str, name: str) -> str:
 def _set_current(mgr: MindspaceManager, path: str, monkeypatch) -> None:
     """Set the current mindspace path on the underlying Mindspace model."""
     monkeypatch.setattr(mgr._mindspace, "_path", path)
+
+
+def _create_openable_mindspace(mgr: MindspaceManager, base: str, name: str) -> str:
+    """Create a real mindspace that can be opened, and return its path."""
+    path = os.path.join(base, name)
+    mgr.create_mindspace(path, [])
+    return path
 
 
 def _write_conv_file(path: str, parent: dict | None) -> None:
@@ -954,3 +965,114 @@ class TestPinnedRootPaths:
 
         assert roots == [chat]
         assert os.path.isabs(roots[0])
+
+class TestMindspaceClaim:
+    """Tests for claiming exclusive use of a mindspace while it is open."""
+
+    def test_opening_claims_the_mindspace(self, manager, tmp_path):
+        """Opening a mindspace takes a claim on it."""
+        ms_path = _create_openable_mindspace(manager, str(tmp_path), "alpha")
+
+        manager.open_mindspace(ms_path)
+
+        assert json_store.acquire(manager._claim_path(ms_path)) is None
+
+    def test_a_mindspace_open_elsewhere_cannot_be_opened(self, manager, tmp_path):
+        """Opening a mindspace already claimed elsewhere is refused."""
+        ms_path = _create_openable_mindspace(manager, str(tmp_path), "alpha")
+        elsewhere = json_store.acquire(manager._claim_path(ms_path))
+        assert elsewhere is not None
+
+        try:
+            with pytest.raises(MindspaceAlreadyOpenError):
+                manager.open_mindspace(ms_path)
+
+        finally:
+            elsewhere.close()
+
+    def test_a_refused_open_leaves_the_previous_mindspace_intact(self, manager, tmp_path):
+        """A mindspace that cannot be claimed does not disturb the one already open."""
+        first = _create_openable_mindspace(manager, str(tmp_path), "alpha")
+        second = _create_openable_mindspace(manager, str(tmp_path), "beta")
+        manager.open_mindspace(first)
+
+        elsewhere = json_store.acquire(manager._claim_path(second))
+        assert elsewhere is not None
+
+        try:
+            with pytest.raises(MindspaceAlreadyOpenError):
+                manager.open_mindspace(second)
+
+            assert manager.mindspace_path() == first
+
+        finally:
+            elsewhere.close()
+
+    def test_closing_releases_the_claim(self, manager, tmp_path):
+        """Closing a mindspace lets another window open it."""
+        ms_path = _create_openable_mindspace(manager, str(tmp_path), "alpha")
+        manager.open_mindspace(ms_path)
+
+        manager.close_mindspace()
+
+        released = json_store.acquire(manager._claim_path(ms_path))
+        assert released is not None
+        released.close()
+
+    def test_switching_mindspaces_releases_the_previous_claim(self, manager, tmp_path):
+        """Opening a second mindspace gives up the claim on the first."""
+        first = _create_openable_mindspace(manager, str(tmp_path), "alpha")
+        second = _create_openable_mindspace(manager, str(tmp_path), "beta")
+
+        manager.open_mindspace(first)
+        manager.open_mindspace(second)
+
+        released = json_store.acquire(manager._claim_path(first))
+        assert released is not None
+        released.close()
+
+
+class TestHomeTrackingMerge:
+    """Tests for folding a mindspace into the shared recent list."""
+
+    def test_entries_written_by_another_window_are_preserved(self, manager, tmp_path):
+        """Recent entries added elsewhere survive this window's update."""
+        mine = _create_mindspace_dir(str(tmp_path), "mine")
+        theirs = _create_mindspace_dir(str(tmp_path), "theirs")
+
+        merged = manager._merge_home_tracking({"recentMindspaces": [theirs]}, mine)
+
+        assert merged["lastMindspace"] == mine
+        assert theirs in merged["recentMindspaces"]
+
+    def test_the_mindspace_being_left_moves_to_the_front(self, manager, tmp_path):
+        """The previously open mindspace becomes the most recent entry."""
+        previous = _create_mindspace_dir(str(tmp_path), "previous")
+        older = _create_mindspace_dir(str(tmp_path), "older")
+        current = _create_mindspace_dir(str(tmp_path), "current")
+
+        merged = manager._merge_home_tracking(
+            {"lastMindspace": previous, "recentMindspaces": [older]}, current
+        )
+
+        assert merged["recentMindspaces"] == [previous, older]
+
+    def test_the_current_mindspace_is_not_listed_as_recent(self, manager, tmp_path):
+        """The mindspace now open is not duplicated into the recent list."""
+        current = _create_mindspace_dir(str(tmp_path), "current")
+
+        merged = manager._merge_home_tracking({"recentMindspaces": [current]}, current)
+
+        assert merged["recentMindspaces"] == []
+
+    def test_the_recent_list_is_capped(self, manager, tmp_path):
+        """The recent list retains no more than its maximum number of entries."""
+        existing = [
+            _create_mindspace_dir(str(tmp_path), f"ms{i}")
+            for i in range(MindspaceManager.MAX_RECENT_MINDSPACES + 5)
+        ]
+        current = _create_mindspace_dir(str(tmp_path), "current")
+
+        merged = manager._merge_home_tracking({"recentMindspaces": existing}, current)
+
+        assert len(merged["recentMindspaces"]) == MindspaceManager.MAX_RECENT_MINDSPACES

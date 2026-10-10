@@ -2,13 +2,13 @@
 
 from dataclasses import dataclass, field
 import json
-import os
 import logging
 from typing import Any
 
 from ai import AIBackendSettings
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 
+from desktop import json_store
 from desktop.language.language_code import LanguageCode
 from desktop.color_theme import ColorTheme
 from desktop.user.onboarding_tour_status import OnboardingTourStatus
@@ -547,9 +547,6 @@ class UserSettings:
         Raises:
             OSError: If there's an issue creating the directory or writing the file
         """
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(path), mode=0o700, exist_ok=True)
-
         # Convert backend settings to serializable format
         ai_backends_data = {}
         for backend_id, backend_settings in self.ai_backends.items():
@@ -578,8 +575,5 @@ class UserSettings:
             "onboardingTourVersion": self.onboarding_tour_version
         }
 
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4)
-
-        # Set secure permissions for settings file (contains API keys)
-        os.chmod(path, 0o600)
+        # Written atomically, and with secure permissions as it holds API keys
+        json_store.write_json(path, data)

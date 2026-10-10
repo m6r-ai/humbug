@@ -88,18 +88,29 @@ def setup_logging() -> None:
     logging.getLogger("qasync").setLevel(logging.INFO)
 
     # Clean up old logs if we have too many
-    cleanup_old_logs(log_dir, max_logs=50)
+    cleanup_old_logs(log_dir, max_logs=50, active_log=log_file)
 
 
-def cleanup_old_logs(log_dir: str, max_logs: int) -> None:
-    """Remove oldest log files if we exceed maximum count."""
+def cleanup_old_logs(log_dir: str, max_logs: int, active_log: str) -> None:
+    """
+    Remove oldest log files if we exceed maximum count.
+
+    Args:
+        log_dir: Directory holding the log files.
+        max_logs: Number of log files to retain.
+        active_log: Log file this process is writing, which is never removed.
+    """
     log_files = glob.glob(os.path.join(log_dir, "*.log*"))
     log_files.sort(key=os.path.getctime)  # Sort by creation time
 
     # Remove oldest files if we have too many
     while len(log_files) > max_logs:
+        oldest = log_files.pop(0)
+        if os.path.abspath(oldest) == os.path.abspath(active_log):
+            continue
+
         try:
-            os.remove(log_files.pop(0))  # Remove oldest file
+            os.remove(oldest)
 
         except OSError:
             pass  # Ignore errors removing old logs
