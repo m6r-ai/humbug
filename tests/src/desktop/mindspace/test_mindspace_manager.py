@@ -1150,13 +1150,37 @@ class TestHomeTrackingMerge:
 
         assert merged["recentMindspaces"] == [previous, older]
 
-    def test_the_current_mindspace_is_not_listed_as_recent(self, manager, tmp_path):
-        """The mindspace now open is not duplicated into the recent list."""
+    def test_the_stored_list_keeps_the_current_mindspace(self, manager, tmp_path):
+        """The mindspace now open stays in the stored list of what the user has opened."""
         current = _create_mindspace_dir(str(tmp_path), "current")
 
         merged = manager._merge_home_tracking({"recentMindspaces": [current]}, current)
 
-        assert merged["recentMindspaces"] == []
+        assert merged["recentMindspaces"] == [current]
+
+    def test_the_current_mindspace_is_not_offered_as_a_switch_target(self, manager, tmp_path, monkeypatch):
+        """The mindspace open in this window is excluded when the menu list is built."""
+        current = _create_mindspace_dir(str(tmp_path), "current")
+        other = _create_mindspace_dir(str(tmp_path), "other")
+        _set_current(manager, current, monkeypatch)
+
+        json_store.write_json(
+            manager._home_config,
+            {"lastMindspace": current, "recentMindspaces": [current, other]}
+        )
+
+        assert manager.recent_mindspaces() == [other]
+
+    def test_a_path_is_not_listed_twice_in_a_different_form(self, manager, tmp_path):
+        """The same mindspace reached by two path spellings appears once."""
+        current = _create_mindspace_dir(str(tmp_path), "current")
+        other = _create_mindspace_dir(str(tmp_path), "other")
+
+        merged = manager._merge_home_tracking(
+            {"recentMindspaces": [other, other + os.sep]}, current
+        )
+
+        assert merged["recentMindspaces"] == [other]
 
     def test_the_recent_list_is_capped(self, manager, tmp_path):
         """The recent list retains no more than its maximum number of entries."""

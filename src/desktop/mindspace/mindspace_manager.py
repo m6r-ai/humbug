@@ -301,13 +301,27 @@ class MindspaceManager(QObject):
         current = self._mindspace.mindspace_path()
         json_store.update_json(self._home_config, lambda previous: self._merge_home_tracking(previous, current))
 
+    def _merge_home_tracking(self, previous_data: dict, current: str) -> dict:
+        """
+        Fold the current mindspace into the home config's recent list.
+
+        Called with the config as it is on disk at the moment of writing, so entries
+        another instance has recorded since this one last read it are preserved rather
+        than overwritten.
+
+        Args:
+            previous_data: Home config contents as currently stored.
+            current: Path of the mindspace now open, or empty if none.
+
+        Returns:
+            The home config contents to store.
+        """
         # Build the recent list from the existing config, promoting the previous
         # current mindspace to the front.  The mindspace that is now current is kept in
         # the list: this list records what the user has opened, and it is
         # recent_mindspaces() that excludes the currently open one when the menu is
         # built.  Dropping it here would lose it permanently, which matters when a
         # second instance opens a mindspace that the first instance still has open.
-        previous_data = self._load_home_config()
         previous_recent: list[str] = []
         raw = previous_data.get("recentMindspaces", [])
         if isinstance(raw, list):

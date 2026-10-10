@@ -59,6 +59,49 @@ class TestUpdateSettingsFields:
         assert received == [True]
 
 
+class TestConcurrentInstanceUpdates:
+    """Tests that a field update preserves changes written by another instance."""
+
+    def test_a_field_changed_elsewhere_is_preserved(self, user_manager):
+        """A field another instance changed survives this instance's update."""
+        settings_path = os.path.expanduser("~/.humbug/user-settings.json")
+
+        elsewhere = UserSettings.load(settings_path)
+        elsewhere.check_for_updates = False
+        elsewhere.save(settings_path)
+
+        user_manager.update_settings_fields(onboarding_tour_version=7)
+
+        stored = UserSettings.load(settings_path)
+        assert stored.onboarding_tour_version == 7
+        assert stored.check_for_updates is False
+
+    def test_the_in_memory_settings_adopt_the_merged_state(self, user_manager):
+        """After an update this instance sees the other instance's change too."""
+        settings_path = os.path.expanduser("~/.humbug/user-settings.json")
+
+        elsewhere = UserSettings.load(settings_path)
+        elsewhere.check_for_updates = False
+        elsewhere.save(settings_path)
+
+        user_manager.update_settings_fields(onboarding_tour_version=7)
+
+        assert user_manager.settings().check_for_updates is False
+        assert user_manager.settings().onboarding_tour_version == 7
+
+    def test_an_update_still_advances_the_revision(self, user_manager):
+        """A merged update is ordered after the write it merged with."""
+        settings_path = os.path.expanduser("~/.humbug/user-settings.json")
+
+        elsewhere = UserSettings.load(settings_path)
+        elsewhere.check_for_updates = False
+        elsewhere.save(settings_path)
+
+        user_manager.update_settings_fields(onboarding_tour_version=7)
+
+        assert UserSettings.load(settings_path).revision > elsewhere.revision
+
+
 class TestRevisionOrdering:
     def test_saving_increments_the_revision(self, user_manager):
         before = user_manager.settings().revision
