@@ -2,6 +2,7 @@
 Manages Humbug application user settings, primarily API keys.
 """
 
+import json
 import logging
 import os
 from typing import cast
@@ -11,6 +12,7 @@ from PySide6.QtCore import QObject, Signal
 from ai import AIBackendSettings, AIManager
 from ai.ai_conversation_settings import AIConversationSettings
 
+from desktop import json_store
 from desktop.file_watcher.file_watcher import FileWatcher
 from desktop.user.user_settings import UserSettings
 
@@ -191,11 +193,11 @@ class UserManager(QObject):
         Replace all user settings, save to file, and refresh AI backends.
 
         This is the whole-object path used by the settings dialog, where the user has
-        seen and confirmed every field.  The supplied object is merged against the
-        current on-disk state before writing, so a change made in another instance
-        while the dialog was open cannot be silently reverted.  Fields the dialog
-        presents are taken from ``new_settings``; the revision counter always comes
-        from disk so this instance's write is correctly ordered after any other.
+        seen and confirmed every field, so every field is written as supplied.  The
+        revision counter is taken from disk so this write is ordered after any other
+        instance's.  A field another instance changed while the dialog was open is
+        overwritten by the value the user confirmed — use ``update_settings_fields``
+        for changes that should leave other fields alone.
 
         Args:
             new_settings: UserSettings object with the full set of desired settings
@@ -206,7 +208,8 @@ class UserManager(QObject):
         self._settings = new_settings
 
         try:
-            self._save_settings()
+            with json_store.locked(self._get_settings_path()):
+                self._save_settings()
 
         except OSError as e:
             raise UserError(str(e)) from e
@@ -236,20 +239,53 @@ class UserManager(QObject):
         """
         settings = cast(UserSettings, self._settings)
 
-        for name, value in fields.items():
+        for name in fields:
             if not hasattr(settings, name):
                 raise UserError(f"Unknown user setting: {name}")
 
-            setattr(settings, name, value)
+        settings_path = self._get_settings_path()
 
         try:
-            self._save_settings()
+            with json_store.locked(settings_path):
+                merged = self._settings_on_disk(settings_path)
+                for name, value in fields.items():
+                    setattr(merged, name, value)
+
+                merged.save(settings_path)
+                self._settings = merged
 
         except OSError as e:
             raise UserError(str(e)) from e
 
-        self._ai_manager.update_backend_settings(settings.ai_backends)
+        self._ai_manager.update_backend_settings(merged.ai_backends)
         self._notify_settings_changed()
+
+    def _settings_on_disk(self, settings_path: str) -> UserSettings:
+        """
+        Return the settings as currently stored, falling back to those in memory.
+
+        Field-level updates are applied to this rather than to the in-memory copy, so
+        that fields another instance changed since this one last read the file are
+        carried forward instead of being reverted.
+
+        Args:
+            settings_path: Path to the shared settings file.
+
+        Returns:
+            The stored settings, or the in-memory settings if they cannot be read.
+        """
+        if not os.path.exists(settings_path):
+            return cast(UserSettings, self._settings)
+
+        try:
+            return UserSettings.load(settings_path)
+
+        except (OSError, ValueError, json.JSONDecodeError) as e:
+            self._logger.warning(
+                "Could not read %s before updating; using in-memory settings: %s",
+                settings_path, str(e)
+            )
+            return cast(UserSettings, self._settings)
 
     def _notify_settings_changed(self) -> None:
         """

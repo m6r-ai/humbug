@@ -1,14 +1,16 @@
-import json
 import logging
 import os
+from typing import IO
 
 from PySide6.QtCore import QObject, Signal
 
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_error import MindspaceAlreadyOpenError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
 from mindspace.mindspace_settings import MindspaceSettings
 
+from desktop import json_store
 from desktop.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
 
 
@@ -66,6 +68,7 @@ class MindspaceManager(QObject):
             )
             self._directory_tracker = MindspaceDirectoryTracker()
             self._home_config = os.path.expanduser("~/.humbug/mindspace.json")
+            self._claim: IO[str] | None = None
             self._initialized = True
 
     def mindspace(self) -> Mindspace:
@@ -97,8 +100,35 @@ class MindspaceManager(QObject):
         self._mindspace.create_mindspace(path, folders)
 
     def open_mindspace(self, path: str) -> None:
-        """Open an existing mindspace and load its state."""
-        self._mindspace.open_mindspace(path)
+        """
+        Open an existing mindspace and load its state.
+
+        Args:
+            path: Path of the mindspace to open.
+
+        Raises:
+            MindspaceAlreadyOpenError: The mindspace is open elsewhere.
+            MindspaceError: The mindspace could not be opened.
+        """
+        # Give up our own claim first if this is the mindspace we already hold.  The
+        # lock is exclusive even against this process, so re-opening it while still
+        # holding it would otherwise look like another instance owning it.
+        if self._claim is not None and _same_mindspace(path, self._mindspace.mindspace_path()):
+            self._release_claim()
+
+        claim = json_store.acquire(self._claim_path(path))
+        if claim is None:
+            raise MindspaceAlreadyOpenError(path)
+
+        try:
+            self._mindspace.open_mindspace(path)
+
+        except Exception:
+            claim.close()
+            raise
+
+        self._release_claim()
+        self._claim = claim
         self._directory_tracker.load_tracking(path)
         self._update_home_tracking()
 
@@ -109,6 +139,27 @@ class MindspaceManager(QObject):
             self._mindspace.close_mindspace()
             self._directory_tracker.clear_tracking()
             self._update_home_tracking()
+
+        self._release_claim()
+
+    def _release_claim(self) -> None:
+        """Give up this process's claim on the current mindspace, if it holds one."""
+        if self._claim is not None:
+            self._claim.close()
+            self._claim = None
+
+    @staticmethod
+    def _claim_path(path: str) -> str:
+        """
+        Return the file whose lock marks a mindspace as open.
+
+        Args:
+            path: Path of the mindspace.
+
+        Returns:
+            Path used to claim exclusive use of the mindspace.
+        """
+        return os.path.join(path, Mindspace.MINDSPACE_DIR, "mindspace")
 
     def update_settings(self, new_settings: MindspaceSettings) -> None:
         """Persist and apply updated mindspace settings."""
@@ -165,16 +216,7 @@ class MindspaceManager(QObject):
 
     def _load_home_config(self) -> dict | None:
         """Load and parse the home config file, returning None on failure."""
-        try:
-            with open(self._home_config, encoding='utf-8') as f:
-                data = json.load(f)
-                if isinstance(data, dict):
-                    return data
-
-        except (FileNotFoundError, json.JSONDecodeError):
-            pass
-
-        return None
+        return json_store.read_json(self._home_config)
 
     def can_pin_path(self, abs_path: str) -> bool:
         """Return True if the given absolute path is allowed to be pinned."""
@@ -263,21 +305,35 @@ class MindspaceManager(QObject):
     def _update_home_tracking(self) -> None:
         """Persist the last-opened mindspace path and recent list to the home config."""
         current = self._mindspace.mindspace_path()
+        json_store.update_json(self._home_config, lambda previous: self._merge_home_tracking(previous, current))
 
+    def _merge_home_tracking(self, previous_data: dict, current: str) -> dict:
+        """
+        Fold the current mindspace into the home config's recent list.
+
+        Called with the config as it is on disk at the moment of writing, so entries
+        another instance has recorded since this one last read it are preserved rather
+        than overwritten.
+
+        Args:
+            previous_data: Home config contents as currently stored.
+            current: Path of the mindspace now open, or empty if none.
+
+        Returns:
+            The home config contents to store.
+        """
         # Build the recent list from the existing config, promoting the previous
         # current mindspace to the front.  The mindspace that is now current is kept in
         # the list: this list records what the user has opened, and it is
         # recent_mindspaces() that excludes the currently open one when the menu is
         # built.  Dropping it here would lose it permanently, which matters when a
         # second instance opens a mindspace that the first instance still has open.
-        previous_data = self._load_home_config()
         previous_recent: list[str] = []
-        if previous_data is not None:
-            raw = previous_data.get("recentMindspaces", [])
-            if isinstance(raw, list):
-                previous_recent = [p for p in raw if isinstance(p, str)]
+        raw = previous_data.get("recentMindspaces", [])
+        if isinstance(raw, list):
+            previous_recent = [p for p in raw if isinstance(p, str)]
 
-        previous_last = previous_data.get("lastMindspace") if previous_data else None
+        previous_last = previous_data.get("lastMindspace")
         if not isinstance(previous_last, str):
             previous_last = None
 
@@ -301,15 +357,7 @@ class MindspaceManager(QObject):
             seen.add(normalised)
             recent.append(path)
 
-        recent = recent[:self.MAX_RECENT_MINDSPACES]
-
-        try:
-            os.makedirs(os.path.dirname(self._home_config), exist_ok=True)
-            with open(self._home_config, 'w', encoding='utf-8') as f:
-                json.dump({
-                    "lastMindspace": current,
-                    "recentMindspaces": recent,
-                }, f, indent=4)
-
-        except OSError as e:
-            self._logger.error("Failed to update home tracking: %s", str(e))
+        return {
+            "lastMindspace": current,
+            "recentMindspaces": recent[:self.MAX_RECENT_MINDSPACES],
+        }

@@ -31,7 +31,9 @@ from git_ai_tool.git_ai_tool import GitAITool
 from help_ai_tool.help_ai_tool import HelpAITool
 from http_ai_tool.http_ai_tool import HttpAITool
 from menai_ai_tool.menai_ai_tool import MenaiAITool
-from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceHumbugPathError
+from mindspace.mindspace_error import (
+    MindspaceAlreadyOpenError, MindspaceError, MindspaceExistsError, MindspaceHumbugPathError
+)
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_settings import MindspaceSettings
 from preview_ai_tool.preview_ai_tool import PreviewAITool
@@ -1376,6 +1378,20 @@ class MainWindow(QMainWindow):
             self._restore_mindspace_state()
             self._restore_prompt_marker_setting()
 
+        except MindspaceAlreadyOpenError:
+            # Only reachable when this instance was started for a specific mindspace
+            # that another instance claimed in the meantime.  Without this the user is
+            # left looking at an empty window with no indication of why.
+            self._logger.info("Mindspace %s is already open in another instance", mindspace_path)
+            if self._initial_mindspace_path:
+                strings = self._language_manager.strings()
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    strings.mindspace_error_title,
+                    strings.mindspace_already_open_error
+                )
+
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace: %s", str(e))
 
@@ -1625,6 +1641,16 @@ class MainWindow(QMainWindow):
             # has one open, making it invisible to other instances' deduplication checks.
             self._update_instance_registry()
             self._sidebar_manager.set_mindspace(path)
+
+        except MindspaceAlreadyOpenError:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.mindspace_error_title,
+                strings.mindspace_already_open_error
+            )
+            return
 
         except MindspaceError as e:
             strings = self._language_manager.strings()

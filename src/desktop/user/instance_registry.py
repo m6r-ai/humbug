@@ -2,20 +2,31 @@
 Registry of running Humbug instances.
 
 Each instance writes a small JSON file describing itself, so that any instance can
-answer "is another Humbug already working on this mindspace?".  This is what prevents
-two instances sharing one mindspace, which would mean two writers to the same
-``.humbug/`` state — including the audit log, whose value depends on being a single
-witness to what occurred.
+answer "is another Humbug already working on this mindspace?".
+
+This registry is advisory, not authoritative.  It exists so the UI can disable a
+mindspace another instance has open, rather than letting the user pick it and then be
+refused.  It can be wrong in both directions: an instance that has started but not yet
+registered looks free, and a record can outlive a crash until it is pruned.
+
+What actually guarantees that two instances never share a mindspace is the exclusive
+claim ``MindspaceManager`` takes on ``<mindspace>/.humbug/mindspace.lock`` for as long
+as it holds the mindspace open.  That is an operating system lock: it cannot be raced,
+and it is released even if the process is killed.  Anything this registry reports is a
+hint; the claim is the decision.
 
 One file per instance rather than a single shared file: each instance only ever writes
 its own file, so there is no write race between instances.
 """
 
 from dataclasses import dataclass
-import json
+import ctypes
 import logging
 import os
+import sys
 import time
+
+from desktop import json_store
 
 
 @dataclass
@@ -69,15 +80,12 @@ class InstanceRegistry:
         )
 
         try:
-            os.makedirs(self._instances_dir, mode=0o700, exist_ok=True)
-            path = self._record_path(os.getpid())
-            with open(path, 'w', encoding='utf-8') as f:
-                json.dump({
-                    "pid": record.pid,
-                    "start_time": record.start_time,
-                    "mindspace_path": record.mindspace_path,
-                    "launched_at": record.launched_at,
-                }, f, indent=4)
+            json_store.write_json(self._record_path(os.getpid()), {
+                "pid": record.pid,
+                "start_time": record.start_time,
+                "mindspace_path": record.mindspace_path,
+                "launched_at": record.launched_at,
+            })
 
         except OSError as e:
             # Registration is a convenience for other instances, not a correctness
@@ -165,15 +173,8 @@ class InstanceRegistry:
         the residue of a crashed or interrupted write, and it carries no usable
         information either way.
         """
-        try:
-            with open(path, encoding='utf-8') as f:
-                data = json.load(f)
-
-        except (OSError, json.JSONDecodeError) as e:
-            self._logger.warning("Ignoring unreadable instance record %s: %s", path, str(e))
-            return None
-
-        if not isinstance(data, dict):
+        data = json_store.read_json(path)
+        if data is None:
             return None
 
         pid = data.get("pid")
@@ -223,6 +224,9 @@ class InstanceRegistry:
         if pid <= 0:
             return False
 
+        if sys.platform == "win32":
+            return self._process_exists_windows(pid)
+
         try:
             os.kill(pid, 0)
 
@@ -237,6 +241,36 @@ class InstanceRegistry:
             return False
 
         return True
+
+    def _process_exists_windows(self, pid: int) -> bool:
+        """
+        Return True if a process with the given id exists, on Windows.
+
+        ``os.kill`` cannot be used to probe liveness here: on Windows only
+        ``CTRL_C_EVENT`` and ``CTRL_BREAK_EVENT`` are valid signals, and any other
+        value terminates the target process outright.  Using it to ask whether another
+        instance is alive would therefore kill that instance.  The process is opened
+        for query instead and its exit code inspected.
+        """
+        process_query_limited_information = 0x1000
+        still_active = 259
+        error_access_denied = 5
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
+        if not handle:
+            # A process owned by another user exists but cannot be opened.
+            return bool(kernel32.GetLastError() == error_access_denied)
+
+        try:
+            exit_code = ctypes.c_ulong()
+            if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                return False
+
+            return bool(exit_code.value == still_active)
+
+        finally:
+            kernel32.CloseHandle(handle)
 
     def _process_start_time(self, pid: int) -> float:
         """

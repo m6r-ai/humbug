@@ -298,6 +298,7 @@ class LanguageStrings:
     error_rename_failed: str
     unsaved_changes: str
     mindspace_exists_error: str
+    mindspace_already_open_error: str
     close_button: str
     confirm_close: str
     could_not_open: str
