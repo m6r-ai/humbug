@@ -6,30 +6,12 @@ import pytest
 
 # pylint: disable=wrong-import-position
 from desktop.file_sidebar.file_sidebar import FileSidebar
-from desktop.mindspace.mindspace_manager import MindspaceManager
-from desktop.user.user_manager import UserManager
 
 
 @pytest.fixture
-def sidebar_env(qapp, tmp_path, monkeypatch):  # pylint: disable=unused-argument
-    """Open a real mindspace in a sandboxed HOME and return (mindspace_manager, mindspace_path)."""
-    home_dir = tmp_path / "home"
-    home_dir.mkdir()
-    monkeypatch.setenv("HOME", str(home_dir))
-
-    MindspaceManager._instance = None  # pylint: disable=protected-access
-    UserManager._instance = None  # pylint: disable=protected-access
-
-    mgr = MindspaceManager()
-    mgr._home_config = str(tmp_path / "mindspace.json")  # pylint: disable=protected-access
-    ms_path = str(tmp_path / "mindspace")
-    mgr.create_mindspace(ms_path, [])
-    mgr.open_mindspace(ms_path)
-
-    yield mgr, ms_path
-
-    MindspaceManager._instance = None  # pylint: disable=protected-access
-    UserManager._instance = None  # pylint: disable=protected-access
+def sidebar_env(mindspace_sandbox):
+    """The sandboxed mindspace, as (mindspace_manager, mindspace_path)."""
+    yield mindspace_sandbox.manager, mindspace_sandbox.path
 
 
 @pytest.fixture

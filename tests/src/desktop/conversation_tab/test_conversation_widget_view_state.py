@@ -8,32 +8,14 @@ import pytest
 from ai import AIMessage, AIMessageSource
 from ai_transcript_conversation import AITranscriptConversation
 from desktop.conversation_tab.conversation_widget import ConversationWidget
-from desktop.mindspace.mindspace_manager import MindspaceManager
-from desktop.user.user_manager import UserManager
 
 
 @pytest.fixture
-def conv_env(qapp, tmp_path, monkeypatch):
-    """Open a real mindspace in a sandboxed HOME and return (mindspace_manager, transcript_path)."""
-    home_dir = tmp_path / "home"
-    home_dir.mkdir()
-    monkeypatch.setenv("HOME", str(home_dir))
+def conv_env(mindspace_sandbox):
+    """The sandboxed mindspace, as (mindspace_manager, transcript_path)."""
+    transcript_path = os.path.join(mindspace_sandbox.conversations_dir, "test.conv")
 
-    MindspaceManager._instance = None
-    UserManager._instance = None
-
-    mgr = MindspaceManager()
-    mgr._home_config = str(tmp_path / "mindspace.json")  # pylint: disable=protected-access
-    ms_path = str(tmp_path / "mindspace")
-    mgr.create_mindspace(ms_path, [])
-    mgr.open_mindspace(ms_path)
-
-    transcript_path = os.path.join(mgr.mindspace().conversations_dir(), "test.conv")
-
-    yield mgr, transcript_path
-
-    MindspaceManager._instance = None
-    UserManager._instance = None
+    yield mindspace_sandbox.manager, transcript_path
 
 
 def _make_widget(transcript_path: str) -> ConversationWidget:

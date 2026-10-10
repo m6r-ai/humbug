@@ -5,7 +5,9 @@ from typing import IO
 from PySide6.QtCore import QObject, Signal
 
 from mindspace.mindspace import Mindspace
-from mindspace.mindspace_error import MindspaceAlreadyOpenError
+from mindspace.mindspace_error import (
+    MindspaceAlreadyOpenError, MindspaceNotFoundError
+)
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
 from mindspace.mindspace_settings import MindspaceSettings
@@ -110,6 +112,13 @@ class MindspaceManager(QObject):
             MindspaceAlreadyOpenError: The mindspace is open elsewhere.
             MindspaceError: The mindspace could not be opened.
         """
+        # Check the path is a mindspace before claiming it.  Claiming creates the
+        # .humbug directory if it is missing, so claiming a path that is not a
+        # mindspace would leave a stray .humbug directory behind when the open
+        # then fails.
+        if not self._mindspace.check_mindspace(path):
+            raise MindspaceNotFoundError(f"No mindspace found at {path}")
+
         # Give up our own claim first if this is the mindspace we already hold.  The
         # lock is exclusive even against this process, so re-opening it while still
         # holding it would otherwise look like another instance owning it.

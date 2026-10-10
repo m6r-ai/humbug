@@ -10,8 +10,6 @@ import pytest
 import desktop.conversation_sidebar.conversation_sidebar as conversation_sidebar_module
 from desktop.conversation_sidebar.conversation_sidebar import ConversationSidebar
 from desktop.message_box import MessageBox, MessageBoxButton
-from desktop.mindspace.mindspace_manager import MindspaceManager
-from desktop.user.user_manager import UserManager
 from mindspace.mindspace import Mindspace
 
 
@@ -22,29 +20,12 @@ def _write_conv_file(path: str) -> None:
 
 
 @pytest.fixture
-def sidebar_env(qapp, tmp_path, monkeypatch):
-    """Open a real mindspace in a sandboxed HOME and return (mindspace_manager, mindspace_path, conv_dir)."""
-    home_dir = tmp_path / "home"
-    home_dir.mkdir()
-    monkeypatch.setenv("HOME", str(home_dir))
-
-    MindspaceManager._instance = None
-    UserManager._instance = None
-
-    mgr = MindspaceManager()
-    mgr._home_config = str(tmp_path / "mindspace.json")  # pylint: disable=protected-access
-    ms_path = str(tmp_path / "mindspace")
-    mgr.create_mindspace(ms_path, [])
-    mgr.open_mindspace(ms_path)
-    conv_dir = mgr.mindspace().conversations_dir()
-
+def sidebar_env(mindspace_sandbox, monkeypatch):
+    """The sandboxed mindspace, as (mindspace_manager, mindspace_path, conv_dir)."""
     # Auto-confirm any delete/move confirmation dialogs.
     monkeypatch.setattr(MessageBox, "show_message", lambda *_a, **_k: MessageBoxButton.YES)
 
-    yield mgr, ms_path, conv_dir
-
-    MindspaceManager._instance = None
-    UserManager._instance = None
+    yield mindspace_sandbox.manager, mindspace_sandbox.path, mindspace_sandbox.conversations_dir
 
 
 @pytest.fixture

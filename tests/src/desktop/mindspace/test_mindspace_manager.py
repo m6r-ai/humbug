@@ -1059,6 +1059,7 @@ class TestPinnedRootPaths:
         assert roots == [chat]
         assert os.path.isabs(roots[0])
 
+
 class TestMindspaceClaim:
     """Tests for claiming exclusive use of a mindspace while it is open."""
 

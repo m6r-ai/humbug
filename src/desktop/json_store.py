@@ -229,6 +229,9 @@ def update_json(path: str, mutate: Callable[[dict[str, Any]], dict[str, Any]], m
     incidental records this is used for; callers that must know whether a write
     succeeded should use locked() and write_json() directly.
 
+    The failures skipped are an I/O error taking the lock or writing the file, and
+    a mutate function that returns something that cannot be serialised.
+
     Args:
         path: Path to update.
         mutate: Called with the current contents (empty if absent); returns the
@@ -240,5 +243,5 @@ def update_json(path: str, mutate: Callable[[dict[str, Any]], dict[str, Any]], m
             current = read_json(path) or {}
             write_json(path, mutate(current), mode)
 
-    except OSError as e:
+    except (OSError, TypeError) as e:
         _logger.error("Failed to update %s: %s", path, str(e))

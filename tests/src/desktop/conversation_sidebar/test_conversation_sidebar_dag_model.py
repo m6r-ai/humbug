@@ -9,9 +9,7 @@ from PySide6.QtCore import Qt
 # pylint: disable=wrong-import-position
 from desktop.conversation_sidebar.conversation_sidebar_dag_model import ConversationSidebarDAGModel
 from desktop.conversation_sidebar.conversation_sidebar_index import ConversationSidebarIndex
-from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
-from desktop.user.user_manager import UserManager
 
 
 def _write_conv_file(path: str) -> None:
@@ -21,32 +19,9 @@ def _write_conv_file(path: str) -> None:
 
 
 @pytest.fixture
-def sidebar_env(qapp, tmp_path, monkeypatch):
-    """
-    Open a real mindspace in a sandboxed HOME and return (mindspace_manager, conv_dir).
-
-    UserManager (used by the DAG model for sort settings) reads/writes under
-    the real home directory unless HOME is redirected first, so this must
-    happen before anything constructs it.
-    """
-    home_dir = tmp_path / "home"
-    home_dir.mkdir()
-    monkeypatch.setenv("HOME", str(home_dir))
-
-    MindspaceManager._instance = None
-    UserManager._instance = None
-
-    mgr = MindspaceManager()
-    mgr._home_config = str(tmp_path / "mindspace.json")  # pylint: disable=protected-access
-    ms_path = str(tmp_path / "mindspace")
-    mgr.create_mindspace(ms_path, [])
-    mgr.open_mindspace(ms_path)
-    conv_dir = mgr.mindspace().conversations_dir()
-
-    yield mgr, conv_dir
-
-    MindspaceManager._instance = None
-    UserManager._instance = None
+def sidebar_env(mindspace_sandbox):
+    """The sandboxed mindspace, as (mindspace_manager, conv_dir)."""
+    yield mindspace_sandbox.manager, mindspace_sandbox.conversations_dir
 
 
 def _build_model(

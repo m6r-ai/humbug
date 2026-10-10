@@ -1,8 +1,12 @@
 """Tests for the registry of running Humbug instances."""
 
+from contextlib import contextmanager
 import json
 import os
+import subprocess
+import sys
 import tempfile
+from collections.abc import Iterator
 
 from desktop.user.instance_registry import InstanceRegistry
 
@@ -34,6 +38,26 @@ def find_dead_pid() -> int:
             return pid
 
         pid -= 1
+
+
+@contextmanager
+def live_pid() -> Iterator[int]:
+    """
+    Yield the process id of a process that is running, and stop it afterwards.
+
+    A record for a live instance has to name a pid that really exists, so the pid
+    cannot be guessed: a neighbouring pid may or may not be in use.  A child
+    process we start ourselves is certain to be running for as long as the block
+    lasts, and is certain to be gone once it ends.
+    """
+    process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+
+    try:
+        yield process.pid
+
+    finally:
+        process.terminate()
+        process.wait()
 
 
 class TestRegisterAndUnregister:
@@ -99,23 +123,23 @@ class TestFindLiveInstance:
     def test_finds_a_live_instance_with_the_target_mindspace(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             registry = InstanceRegistry(tmp_dir)
-            other_pid = os.getpid() + 1
-            write_record(tmp_dir, other_pid, "/target/mindspace", 0.0)
+            with live_pid() as other_pid:
+                write_record(tmp_dir, other_pid, "/target/mindspace", 0.0)
 
-            found = registry.find_live_instance("/target/mindspace")
+                found = registry.find_live_instance("/target/mindspace")
 
-        assert found is not None
-        assert found.pid == other_pid
+            assert found is not None
+            assert found.pid == other_pid
 
     def test_ignores_a_live_instance_with_a_different_mindspace(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             registry = InstanceRegistry(tmp_dir)
-            other_pid = os.getpid() + 1
-            write_record(tmp_dir, other_pid, "/other/mindspace", 0.0)
+            with live_pid() as other_pid:
+                write_record(tmp_dir, other_pid, "/other/mindspace", 0.0)
 
-            found = registry.find_live_instance("/target/mindspace")
+                found = registry.find_live_instance("/target/mindspace")
 
-        assert found is None
+            assert found is None
 
     def test_removes_a_stale_record_for_a_dead_process(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -179,10 +203,10 @@ class TestIsOpenElsewhere:
     def test_returns_true_when_a_live_instance_has_it(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             registry = InstanceRegistry(tmp_dir)
-            other_pid = os.getpid() + 1
-            write_record(tmp_dir, other_pid, "/target/mindspace", 0.0)
+            with live_pid() as other_pid:
+                write_record(tmp_dir, other_pid, "/target/mindspace", 0.0)
 
-            assert registry.is_open_elsewhere("/target/mindspace") is True
+                assert registry.is_open_elsewhere("/target/mindspace") is True
 
     def test_returns_false_for_the_current_instance_own_mindspace(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

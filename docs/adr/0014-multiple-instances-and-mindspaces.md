@@ -70,6 +70,15 @@ safe; with several it is a lost-update race, where two instances each mutate the
 copy and the second write silently reverts the first instance's change, including
 unrelated fields changed in between.
 
+Two write paths exist and they differ deliberately. `update_settings_fields` applies
+field-level changes by re-reading the file under a lock, merging the named fields onto
+what is stored, and writing back, so a field another instance changed in between is
+carried forward. `update_settings` takes a whole `UserSettings` object from the settings
+dialog, where the user has seen and confirmed every field, and writes every field as
+supplied; a field another instance changed while the dialog was open is overwritten by
+the value the user confirmed. Both take the revision counter from disk so the write is
+ordered after any other instance's.
+
 ### Launch context is passed explicitly
 
 To launch a new instance with the same configuration, the current instance passes an
@@ -86,7 +95,7 @@ The mechanism works for both frozen builds (`.dmg`, `.exe`, `.AppImage`) and
 development launches (`python -m desktop`); `sys.executable` is correct in both cases
 and the argv differs.
 
-### A registry of running instances enforces one instance per mindspace
+### An exclusive claim enforces one instance per mindspace
 
 A registry holds one file per instance at `~/.humbug/instances/<pid>.json`, containing
 pid, process start time, mindspace path, and launch timestamp. Per-instance files avoid
@@ -99,14 +108,27 @@ inherit the pid and be mistaken for a live instance.
 When a spawn is requested, a new instance is spawned with the launch context only if no
 live instance owns the target mindspace.
 
-This is enforced by prevention, not by notification: every mindspace-switching surface
-shows a mindspace that another instance has open but disables it, so the user cannot
-select it in the first place. A mindspace open elsewhere is never offered as a switch
-target. The check itself lives in the single gate every switching path goes through, so
-a stale menu cannot defeat it. The two menus obtain the disabled state differently
-because of when they are built: the Recent Mindspaces menu is rebuilt on a timer and
-caches its contents, so its cache key includes the set of mindspaces open elsewhere; the
-sidebar header menu is built on demand and reads current state directly.
+The registry is advisory, not authoritative. It exists so the UI can disable a mindspace
+another instance has open, rather than letting the user pick it and then be refused. It
+can be wrong in both directions: an instance that has started but not yet registered
+looks free, and a record can outlive a crash until it is pruned.
+
+What actually guarantees that two instances never share a mindspace is an exclusive
+operating system lock. `MindspaceManager` takes a non-blocking lock on
+`<mindspace>/.humbug/mindspace.lock` for as long as it holds the mindspace open, and
+refuses to open a mindspace whose lock another process holds. An OS lock cannot be
+raced and is released even if the process is killed, so there are no stale claims to
+clean up. Anything the registry reports is a hint; the claim is the decision.
+
+The registry still drives prevention in the UI, not notification: every
+mindspace-switching surface shows a mindspace that another instance has open but
+disables it, so the user cannot select it in the first place. A mindspace open elsewhere
+is never offered as a switch target. The check itself lives in the single gate every
+switching path goes through, so a stale menu cannot defeat it. The two menus obtain the
+disabled state differently because of when they are built: the Recent Mindspaces menu is
+rebuilt on a timer and caches its contents, so its cache key includes the set of
+mindspaces open elsewhere; the sidebar header menu is built on demand and reads current
+state directly.
 
 Mindspace paths are compared by real path, not as strings. A path reaches the manager in
 whatever form the user chose it — with or without a trailing separator, through a
@@ -200,8 +222,9 @@ independent.
 - The shared settings file remains the single source of truth.
 - The `UserManager` mutation fix removes a class of silent data loss that exists
   independently of multi-instance use.
-- Deduplication prevents two instances corrupting a shared mindspace, which protects the
-  tamper-evident audit log.
+- The exclusive claim prevents two instances corrupting a shared mindspace, which protects
+  the tamper-evident audit log. Being an OS lock, it cannot be raced and leaves no stale
+  claims behind after a crash.
 - Not focusing an existing instance's window behaves identically on all three platforms,
   and the registry is the clean seam if focusing is added later.
 
@@ -216,5 +239,10 @@ independent.
   existence. The failure mode is safe — a reused pid is reported as a live instance and
   the user is told to look for an existing window, rather than being given a second
   instance on the same mindspace — but it is a real limitation of the non-Linux paths.
+- The exclusive claim depends on the filesystem implementing advisory locks. Some
+  network and virtual filesystems do not, and on those the claim is granted without
+  mutual exclusion, so two instances can share a mindspace. This is reported in the log
+  rather than failing the open, because a home directory on such a filesystem must not
+  render Humbug unusable.
 - A user who has a mindspace open elsewhere cannot switch to it from the dialog; they
   must find the window themselves.
