@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v57 (2026-10-03)
+## v57 (2026-10-10)
 
 New features:
 
@@ -13,14 +13,11 @@ New features:
 - Added Claude Haiku 5.5.
 - Remove Claude Haiku 4.5.
 - Added the ability to launch an app window per-mindspace.
+- A mindspace can now only be open in one Humbug instance at a time.  Opening the same mindspace twice previously let each
+  instance overwrite the other's session, usage, and interaction log without warning.
 
 Bug fixes:
 
-- A mindspace can now only be open in one Humbug instance at a time.  Opening the same mindspace twice previously let each
-  instance overwrite the other's session, usage, and interaction log without warning.
-- Files under `~/.humbug` are now written atomically and updated under a lock.  An interrupted write can no longer truncate
-  user settings, and two Humbug instances can no longer lose each other's recent-mindspace entries.
-- Log cleanup no longer removes the log file the running instance is writing to.
 - Made a minor adjustment to tab bar labels to make them more distinct.
 - AI tools that access the filesystem are now correctly blocked from accessing the mindspace `.humbug` directory.  All file
   accesses are now standardized through a single mechanism.
