@@ -54,6 +54,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
     def __init__(
         self,
         document: QTextDocument,
+        mindspace_manager: MindspaceManager,
         animated_gif_callback: Callable[[str, str, int, int], None] | None = None
     ) -> None:
         """
@@ -80,7 +81,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         self._default_font_height: float = 0
 
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
 
         self._style_manager = StyleManager()
 

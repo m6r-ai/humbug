@@ -55,13 +55,19 @@ class SidebarManager(QWidget):
     search_result_activated = Signal(str, str, bool, str, bool, bool, object, object)
     search_highlights_cleared = Signal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialise the sidebar manager."""
+    def __init__(self, mindspace_manager: MindspaceManager, parent: QWidget | None = None) -> None:
+        """
+        Initialise the sidebar manager.
+
+        Args:
+            mindspace_manager: The mindspace of the window this belongs to.
+            parent: Optional parent widget.
+        """
         super().__init__(parent)
 
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
         self._instance_registry = InstanceRegistry()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
@@ -166,7 +172,7 @@ class SidebarManager(QWidget):
         self,
         panel_id: str,
         icon_name: str,
-        factory: "Callable[[QWidget], SidebarBase]",
+        factory: "Callable[[QWidget, MindspaceManager], SidebarBase]",
         wire_signals: "Callable[[SidebarBase, SidebarManager], None]",
         visibility_signal: str | None = None,
         on_activated: "Callable[[SidebarBase], None] | None" = None,
@@ -193,7 +199,7 @@ class SidebarManager(QWidget):
                 rail (below the tab overview and carousel buttons, above the
                 settings button) instead of the panel group at the top.
         """
-        panel = factory(self)
+        panel = factory(self, self._mindspace_manager)
         assert isinstance(panel, SidebarBase)
 
         button = self._create_panel_button(panel_id, icon_name)

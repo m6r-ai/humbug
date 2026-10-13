@@ -9,16 +9,15 @@ from syntax import TokenType, Parser, ParserState
 from desktop.shell_tab.shell_command_lexer import ShellCommandLexer
 from desktop.shell_tab.shell_command_registry import ShellCommandRegistry
 
-
 class ShellCommandParser(Parser):
     """
     Parser for command lines in the system shell.
 
     This parser processes tokens from the command lexer.
     """
-    def __init__(self) -> None:
+    def __init__(self, command_registry: ShellCommandRegistry) -> None:
         super().__init__()
-        self._command_registry = ShellCommandRegistry()
+        self._command_registry = command_registry
 
     def parse(self, prev_parser_state: ParserState | None, input_str: str) -> None:
         """

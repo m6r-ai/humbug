@@ -6,19 +6,20 @@ from syntax import Token, TokenType
 from desktop.shell_tab.shell_command import ShellCommand
 from desktop.shell_tab.shell_command_registry import ShellCommandRegistry
 from desktop.shell_tab.shell_event_source import ShellEventSource
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
 class ShellCommandHelp(ShellCommand):
     """Command to display help information."""
 
-    def __init__(self, registry: ShellCommandRegistry) -> None:
+    def __init__(self, mindspace_manager: MindspaceManager, registry: ShellCommandRegistry) -> None:
         """
         Initialize the command.
 
         Args:
             registry: The command registry
         """
-        super().__init__()
+        super().__init__(mindspace_manager)
         self._registry = registry
 
     def name(self) -> str:

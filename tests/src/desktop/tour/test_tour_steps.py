@@ -31,8 +31,8 @@ class _FakeMainWindow:
 
 
 class TestResolveOpenConversation:
-    def test_falls_back_to_rail_button_before_mindspace_is_set(self, qapp):  # pylint: disable=unused-argument
-        panel = ConversationSidebar()
+    def test_falls_back_to_rail_button_before_mindspace_is_set(self, qapp, mindspace_manager):
+        panel = ConversationSidebar(None, mindspace_manager)
         sidebar_manager = _FakeSidebarManager(panel)
         main_window = _FakeMainWindow(sidebar_manager)
 
@@ -42,8 +42,8 @@ class TestResolveOpenConversation:
         assert sidebar_manager.rail_button_requests == ["conversations"]
         panel.deleteLater()
 
-    def test_spotlights_header_once_mindspace_is_set(self, qapp):  # pylint: disable=unused-argument
-        panel = ConversationSidebar()
+    def test_spotlights_header_once_mindspace_is_set(self, qapp, mindspace_manager):
+        panel = ConversationSidebar(None, mindspace_manager)
         panel.show()
         panel.set_mindspace(tempfile.mkdtemp())
         sidebar_manager = _FakeSidebarManager(panel)
@@ -55,7 +55,7 @@ class TestResolveOpenConversation:
         assert sidebar_manager.rail_button_requests == []
         panel.deleteLater()
 
-    def test_falls_back_to_rail_button_when_conversations_panel_is_missing(self, qapp):  # pylint: disable=unused-argument
+    def test_falls_back_to_rail_button_when_conversations_panel_is_missing(self, qapp, mindspace_manager):
         sidebar_manager = _FakeSidebarManager(None)
         main_window = _FakeMainWindow(sidebar_manager)
 

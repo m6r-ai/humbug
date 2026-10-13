@@ -89,6 +89,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
         self,
         index: ConversationSidebarIndex,
         icon_provider: SidebarTreeIconProvider,
+        mindspace_manager: MindspaceManager,
         parent: Any = None
     ) -> None:
         """
@@ -106,7 +107,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
         self._index.structure_changed.connect(self._on_index_changed)
         self._user_manager = UserManager()
         self._user_manager.settings_changed.connect(self._rebuild)
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
         self._mindspace_manager.settings_changed.connect(self._rebuild)
         self._language_manager = LanguageManager()
         self._timestamp_cache: dict[str, float] = {}

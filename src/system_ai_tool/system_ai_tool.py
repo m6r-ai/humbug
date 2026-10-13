@@ -10,6 +10,7 @@ from ai import AIConversation, AIConversationSettings, AIManager, AIReasoningCap
 from ai.ai_model import AIReasoningEffort
 from ai_transcript_conversation import AITranscriptConversation
 from ai_tool import (
+    AIToolManager,
     AITool,
     AIToolAuthorizationCallback,
     AIToolAuthorizationDenied,
@@ -36,14 +37,16 @@ class SystemAITool(AITool):
     tab content.
     """
 
-    def __init__(self, mindspace: Mindspace):
+    def __init__(self, mindspace: Mindspace, tool_manager: AIToolManager):
         """
         Initialize the system tool.
 
         Args:
             mindspace: The active mindspace model
+            tool_manager: Tools available to conversations this tool opens
         """
         self._mindspace = mindspace
+        self._tool_manager = tool_manager
         self._ai_manager = AIManager()
         self._logger = logging.getLogger("SystemAITool")
 
@@ -533,9 +536,11 @@ class SystemAITool(AITool):
             full_path = self._mindspace.get_absolute_path(filename)
 
             # Build the AIConversation with settings applied, wrap in transcript
-            ai_conversation = AIConversation()
+            ai_conversation = AIConversation(self._tool_manager)
             ai_conversation.update_conversation_settings(conversation_settings)
-            transcript = AITranscriptConversation(full_path, ai_conversation)
+            transcript = AITranscriptConversation(
+                full_path, self._tool_manager, ai_conversation
+            )
 
             requester_id = self._requester_tab_id(requester_ref) or ""
             context_id = self._mindspace.contexts().open(

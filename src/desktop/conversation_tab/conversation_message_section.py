@@ -21,6 +21,7 @@ from desktop.message_box import MessageBox, MessageBoxType
 from desktop.style_manager import StyleManager
 from desktop.markdown import MarkdownCodeBlockTextEdit, MarkdownRenderer, MarkdownTextEdit
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
 class ConversationMessageSection(QFrame):
@@ -34,6 +35,7 @@ class ConversationMessageSection(QFrame):
     def __init__(
         self,
         is_input: bool,
+        mindspace_manager: MindspaceManager,
         syntax: ProgrammingLanguage | None = None,
         parent: QWidget | None = None
     ) -> None:
@@ -80,13 +82,14 @@ class ConversationMessageSection(QFrame):
 
         if syntax is None:
             # Markdown or user input - use rich text widget
-            self._text_area = MarkdownTextEdit(is_input, self)
+            self._text_area = MarkdownTextEdit(is_input, mindspace_manager, self)
 
             # Create a markdown renderer for non-input sections.  Input sections are syntax highlighted only.
             if not is_input:
                 document = self._text_area.document()
                 self._renderer = MarkdownRenderer(
                     document,
+                    mindspace_manager,
                     animated_gif_callback=self._text_area.register_animated_gif
                 )
 

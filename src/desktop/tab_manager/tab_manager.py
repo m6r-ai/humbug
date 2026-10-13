@@ -27,7 +27,9 @@ from desktop.tab_manager.tab_style import build_tab_manager_stylesheet, build_ta
 from desktop.tab_manager.welcome_widget import WelcomeWidget
 from desktop.user.user_settings import UserSettings
 
-ContextFactory = Callable[[ContextInfo, ContextRegistry, QWidget], "TabBase | None"]
+ContextFactory = Callable[
+    [ContextInfo, ContextRegistry, QWidget, MindspaceManager], "TabBase | None"
+]
 
 
 class TabManager(QWidget):
@@ -41,12 +43,20 @@ class TabManager(QWidget):
     def __init__(
         self,
         open_path: Callable[[str, str], str | None],
+        mindspace_manager: MindspaceManager,
         parent: QWidget | None = None
     ) -> None:
-        """Initialize the tab manager."""
+        """
+        Initialize the tab manager.
+
+        Args:
+            open_path: Callable used to open a dropped path.
+            mindspace_manager: The mindspace of the window this belongs to.
+            parent: Optional parent widget.
+        """
         super().__init__(parent)
 
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
         self._language_manager = LanguageManager()
         self._logger = logging.getLogger("TabManager")
 
@@ -571,7 +581,7 @@ class TabManager(QWidget):
                 self._logger.warning("No context factory registered for type '%s'", info.context_type)
                 return
 
-            new_tab = factory(info, registry, self)
+            new_tab = factory(info, registry, self, self._mindspace_manager)
 
         except Exception:
             self._logger.exception(
@@ -889,7 +899,9 @@ class TabManager(QWidget):
 
         self._remove_tab_from_column(tab, source_column)
 
-        new_tab = tab.rebuild_from_migration_state(migration_state, self)
+        new_tab = tab.rebuild_from_migration_state(
+            migration_state, self, self._mindspace_manager
+        )
 
         # Moving a tab is a deliberate user action, so it is no longer ephemeral
         new_tab.set_ephemeral(False)

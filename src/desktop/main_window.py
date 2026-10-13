@@ -16,7 +16,6 @@ from PySide6.QtCore import Qt, QTimer, QEvent, QPoint
 from PySide6.QtGui import QKeyEvent, QMouseEvent, QAction, QKeySequence, QActionGroup, QResizeEvent
 
 from ai.ai_conversation_settings import AIConversationSettings
-from ai_tool import AIToolManager
 from ai_transcript_conversation import AITranscriptConversation
 from clock_ai_tool.clock_ai_tool import ClockAITool
 from context.context_info import ContextInfo
@@ -93,27 +92,29 @@ from desktop.vcs_sidebar.vcs_sidebar import VCSSidebar
 
 
 def _create_conversation_tab(
-    info: ContextInfo, registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, registry: ContextRegistry, parent: QWidget,
+    mindspace_manager: MindspaceManager
 ) -> ConversationTab:
     """Context factory for ConversationTab."""
     transcript = registry.get_model(info.context_id, AITranscriptConversation)
     if transcript is not None:
         tab = ConversationTab(
-            info.context_id, transcript.path(), parent,
+            info.context_id, transcript.path(), mindspace_manager, parent,
             ai_transcript_conversation=transcript,
         )
 
     else:
-        tab = ConversationTab(info.context_id, info.path, parent)
+        tab = ConversationTab(info.context_id, info.path, mindspace_manager, parent)
 
     return tab
 
 
 def _create_editor_tab(
-    info: ContextInfo, registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, registry: ContextRegistry, parent: QWidget,
+    mindspace_manager: MindspaceManager
 ) -> EditorTab:
     """Context factory for EditorTab."""
-    tab = EditorTab(info.context_id, info.path, None, parent)
+    tab = EditorTab(info.context_id, info.path, mindspace_manager, None, parent)
     goto = registry.get_model(info.context_id, tuple)
     if goto is not None:
         # Zero-delay timer deferring the jump until the tab is laid out. Parented to
@@ -127,18 +128,20 @@ def _create_editor_tab(
 
 
 def _create_terminal_tab(
-    info: ContextInfo, registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, registry: ContextRegistry, parent: QWidget,
+    mindspace_manager: MindspaceManager
 ) -> TerminalTab:
     """Context factory for TerminalTab."""
     command = registry.get_content_state(info.context_id).get("command")
-    return TerminalTab(info.context_id, command, parent)
+    return TerminalTab(info.context_id, mindspace_manager, command, parent)
 
 
 def _create_preview_tab(
-    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget,
+    mindspace_manager: MindspaceManager
 ) -> PreviewTab:
     """Context factory for PreviewTab."""
-    tab = PreviewTab(info.context_id, info.path, parent)
+    tab = PreviewTab(info.context_id, info.path, mindspace_manager, parent)
     line = _registry.get_model(info.context_id, int)
     if line is not None:
         # Zero-delay timer deferring the jump until the tab is laid out. Parented to
@@ -152,10 +155,11 @@ def _create_preview_tab(
 
 
 def _create_diff_tab(
-    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget,
+    mindspace_manager: MindspaceManager
 ) -> DiffTab:
     """Context factory for DiffTab."""
-    tab = DiffTab(info.context_id, info.path, parent)
+    tab = DiffTab(info.context_id, info.path, mindspace_manager, parent)
     line = _registry.get_model(info.context_id, int)
     if line is not None:
         # Zero-delay timer deferring the jump until the tab is laid out. Parented to
@@ -169,24 +173,27 @@ def _create_diff_tab(
 
 
 def _create_log_tab(
-    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget,
+    mindspace_manager: MindspaceManager
 ) -> LogTab:
     """Context factory for LogTab."""
-    return LogTab(info.context_id, parent)
+    return LogTab(info.context_id, mindspace_manager, parent)
 
 
 def _create_shell_tab(
-    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget,
+    mindspace_manager: MindspaceManager
 ) -> ShellTab:
     """Context factory for ShellTab."""
-    return ShellTab(info.context_id, parent)
+    return ShellTab(info.context_id, mindspace_manager, parent)
 
 
 def _create_usage_tab(
-    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget,
+    mindspace_manager: MindspaceManager
 ) -> UsageTab:
     """Context factory for UsageTab."""
-    return UsageTab(info.context_id, parent)
+    return UsageTab(info.context_id, mindspace_manager, parent)
 
 
 def _wire_conversation_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
@@ -298,6 +305,12 @@ class MainWindow(QMainWindow):
 
         self._logger = logging.getLogger("MainWindow")
         self._initial_mindspace_path = initial_mindspace_path
+
+        # This window's mindspace.  Created first because almost everything the
+        # window builds needs it.
+        self._mindspace_manager = MindspaceManager(
+            os.path.expanduser(MindspaceManager.DEFAULT_HOME_CONFIG)
+        )
 
         self._use_custom_title_bar = sys.platform != "darwin"
         self._window_controls: WindowControlsWidget | None = None
@@ -634,7 +647,7 @@ class MainWindow(QMainWindow):
         self._splitter = MainWindowSplitter(Qt.Orientation.Horizontal)
         layout.addWidget(self._splitter)
 
-        self._sidebar_manager = SidebarManager(self)
+        self._sidebar_manager = SidebarManager(self._mindspace_manager, self)
         self._sidebar_manager.register_panel("conversations", "conversation", ConversationSidebar, _wire_conversation_sidebar)
         self._sidebar_manager.register_panel("vcs", "diff", VCSSidebar, _wire_vcs_sidebar, visibility_signal="repo_available")
         self._sidebar_manager.register_panel("files", "files", FileSidebar, _wire_file_sidebar)
@@ -667,7 +680,9 @@ class MainWindow(QMainWindow):
         self._splitter.addWidget(self._sidebar_manager)
 
         # Create tab manager in splitter
-        self._tab_manager = TabManager(self._open_path_from_drop, self)
+        self._tab_manager = TabManager(
+            self._open_path_from_drop, self._mindspace_manager, self
+        )
         self._tab_manager.tab_changed.connect(self._on_tab_manager_tab_changed)
         self._tab_manager.user_settings_requested.connect(self._on_show_settings_dialog_ai_backends)
         self._tab_manager.tab_closed.connect(self._on_tab_manager_tab_closed)
@@ -737,11 +752,10 @@ class MainWindow(QMainWindow):
         # Update welcome widget with initial user settings
         self._tab_manager.update_welcome_widget(user_settings)
 
-        self._mindspace_manager = MindspaceManager()
         mindspace = self._mindspace_manager.mindspace()
 
         # Initialize command registry and register commands
-        self._command_registry = ShellCommandRegistry()
+        self._command_registry = ShellCommandRegistry(self._mindspace_manager)
 
         def _clear_shell_history() -> None:
             for tab in self._tab_manager.get_all_tabs():
@@ -749,19 +763,20 @@ class MainWindow(QMainWindow):
                     tab.clear_history()
                     return
 
-        self._command_registry.register_command(ShellCommandCat())
-        self._command_registry.register_command(ShellCommandClear(_clear_shell_history))
-        self._command_registry.register_command(ShellCommandConversation())
-        self._command_registry.register_command(ShellCommandDiff())
-        self._command_registry.register_command(ShellCommandEdit())
-        self._command_registry.register_command(ShellCommandLog())
-        self._command_registry.register_command(ShellCommandPreview())
-        self._command_registry.register_command(ShellCommandTerminal())
+        self._command_registry.register_command(ShellCommandCat(self._mindspace_manager))
+        self._command_registry.register_command(ShellCommandClear(self._mindspace_manager, _clear_shell_history))
+        self._command_registry.register_command(ShellCommandConversation(self._mindspace_manager))
+        self._command_registry.register_command(ShellCommandDiff(self._mindspace_manager))
+        self._command_registry.register_command(ShellCommandEdit(self._mindspace_manager))
+        self._command_registry.register_command(ShellCommandLog(self._mindspace_manager))
+        self._command_registry.register_command(ShellCommandPreview(self._mindspace_manager))
+        self._command_registry.register_command(ShellCommandTerminal(self._mindspace_manager))
 
         # Register help command last so it can see all other commands
-        self._command_registry.register_command(ShellCommandHelp(self._command_registry))
+        self._command_registry.register_command(ShellCommandHelp(self._mindspace_manager, self._command_registry))
 
-        self._ai_tool_manager = AIToolManager()
+        # Tools belong to the mindspace they act on, so they register into its manager
+        self._ai_tool_manager = self._mindspace_manager.tool_manager()
 
         # Store Menai tool instance so we can update its module path when mindspace changes
         self._menai_tool = MenaiAITool()
@@ -771,7 +786,7 @@ class MainWindow(QMainWindow):
             ConversationAITool(mindspace), "Conversation: operations for interacting with conversation tabs"
         )
         self._ai_tool_manager.register_tool(
-            DelegateAITool(mindspace), "Delegate: delegates tasks to specialized AI instances"
+            DelegateAITool(mindspace, self._ai_tool_manager), "Delegate: delegates tasks to specialized AI instances"
         )
         self._ai_tool_manager.register_tool(
             DocumentConverterAITool(self._resolve_mindspace_path, mindspace),
@@ -805,7 +820,7 @@ class MainWindow(QMainWindow):
             PreviewAITool(mindspace), "Preview: operations for interacting with preview tabs"
         )
         self._ai_tool_manager.register_tool(
-            SystemAITool(mindspace),
+            SystemAITool(mindspace, self._ai_tool_manager),
             "System: manages UI tab lifecycle operations (create, open, close, organize tabs)"
         )
         self._ai_tool_manager.register_tool(
@@ -2779,7 +2794,7 @@ class MainWindow(QMainWindow):
             else None
         )
 
-        dialog = SettingsDialog(self)
+        dialog = SettingsDialog(self._mindspace_manager, self)
         self._settings_dialog = dialog
 
         def _on_user_settings_changed(new_settings: UserSettings) -> None:

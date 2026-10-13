@@ -36,6 +36,7 @@ class ConversationTab(TabBase):
         self,
         tab_id: str,
         path: str,
+        mindspace_manager: MindspaceManager,
         parent: QWidget | None = None,
         ai_transcript_conversation: AITranscriptConversation | None = None
     ) -> None:
@@ -48,7 +49,7 @@ class ConversationTab(TabBase):
             parent: Optional parent widget
             ai_transcript_conversation: An existing AITranscriptConversation to adopt, or None
         """
-        super().__init__(tab_id, parent)
+        super().__init__(tab_id, mindspace_manager, parent)
         self._logger = logging.getLogger("ConversationTab")
         self._path = path
         self._conversation_settings_dialog: ConversationSettingsDialog | None = None
@@ -69,7 +70,7 @@ class ConversationTab(TabBase):
 
         # Create conversation widget
         self._conversation_widget = ConversationWidget(
-            path, self,
+            path, mindspace_manager, self,
             ai_transcript_conversation=ai_transcript_conversation
         )
         self._conversation_widget.fork_from_index_requested.connect(self.fork_from_index)
@@ -97,7 +98,7 @@ class ConversationTab(TabBase):
         self._start_file_watching(self._path)
         self.apply_style()
 
-        settings = MindspaceManager().settings()
+        settings = self._mindspace_manager.settings()
         if settings is not None and settings.prompt_markers_visible:
             self._conversation_widget.set_prompt_minimap_visible(True)
 
@@ -148,7 +149,7 @@ class ConversationTab(TabBase):
 
     def fork_from_index(self, message_index: int) -> None:
         """Fork this conversation from message_index into a new tab."""
-        mindspace_manager = MindspaceManager()
+        mindspace_manager = self._mindspace_manager
         if not mindspace_manager.has_mindspace():
             return
 
@@ -157,7 +158,9 @@ class ConversationTab(TabBase):
         forked_history = self.ai_conversation().fork_history(source_index)
 
         new_path = self._get_fork_file_name()
-        new_ai_conversation = AITranscriptConversation(new_path)
+        new_ai_conversation = AITranscriptConversation(
+            new_path, mindspace_manager.tool_manager()
+        )
         new_ai_conversation.set_conversation_history(forked_history)
 
         fork_title = os.path.splitext(os.path.basename(new_path))[0]
@@ -263,12 +266,14 @@ class ConversationTab(TabBase):
         }
 
     @classmethod
-    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'ConversationTab':
+    def rebuild_from_migration_state(
+        cls, state: dict, parent: QWidget, mindspace_manager: MindspaceManager
+    ) -> 'ConversationTab':
         """Create a replacement conversation tab carrying state from a column move."""
         metadata = state["metadata"]
         ai_transcript_conversation = metadata.get('ai_conversation_ref')
         tab = cls(
-            state["tab_id"], state["path"], parent,
+            state["tab_id"], state["path"], mindspace_manager, parent,
             ai_transcript_conversation=ai_transcript_conversation,
         )
 
@@ -934,7 +939,7 @@ class ConversationTab(TabBase):
 
     def _on_apply_settings_to_all(self, new_settings: AIConversationSettings) -> None:
         """Broadcast conversation settings to all conversations and save as the mindspace default."""
-        mindspace_manager = MindspaceManager()
+        mindspace_manager = self._mindspace_manager
         if mindspace_manager.has_mindspace():
             mindspace_manager.mindspace().apply_ai_settings_to_all(new_settings)
 

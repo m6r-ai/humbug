@@ -81,6 +81,7 @@ class TerminalTab(TabBase):
     def __init__(
         self,
         tab_id: str,
+        mindspace_manager: MindspaceManager,
         command: str | None = None,
         parent: QWidget | None = None,
         start_process: bool = True
@@ -94,10 +95,10 @@ class TerminalTab(TabBase):
             parent: Optional parent widget
             start_process: Whether to start the terminal process immediately
         """
-        super().__init__(tab_id, parent)
+        super().__init__(tab_id, mindspace_manager, parent)
         self._logger = logging.getLogger("TerminalTab")
         self._command = command
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = self._mindspace_manager
 
         # Read scrollback settings
         settings = self._mindspace_manager.settings()
@@ -413,7 +414,9 @@ class TerminalTab(TabBase):
         }
 
     @classmethod
-    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'TerminalTab':
+    def rebuild_from_migration_state(
+        cls, state: dict, parent: QWidget, mindspace_manager: MindspaceManager
+    ) -> 'TerminalTab':
         """
         Create a replacement terminal tab carrying state from a column move.
 
@@ -423,7 +426,7 @@ class TerminalTab(TabBase):
         metadata = state["metadata"]
         command = metadata.get("command")
 
-        tab = cls(state["tab_id"], command, parent, start_process=False)
+        tab = cls(state["tab_id"], mindspace_manager, command, parent, start_process=False)
         tab._terminal_widget.restore_migration_state(metadata)
 
         source_tab = metadata['source_tab']

@@ -10,12 +10,13 @@ from PySide6.QtGui import QColor
 from desktop.style_manager import StyleManager
 from desktop.preview_tab.preview_content_widget import PreviewContentWidget
 from desktop.preview_tab.preview_markdown_content import PreviewMarkdownContent
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
 class PreviewMarkdownPreviewContent(PreviewContentWidget):
     """Widget for displaying markdown preview content in the preview with a distinct visual container."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, mindspace_manager: MindspaceManager, parent: QWidget | None = None) -> None:
         """
         Initialize the markdown preview content widget.
 
@@ -35,7 +36,7 @@ class PreviewMarkdownPreviewContent(PreviewContentWidget):
         self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         # Create the actual markdown content widget
-        self._markdown_content = PreviewMarkdownContent(self, True)
+        self._markdown_content = PreviewMarkdownContent(mindspace_manager, self, True)
         self._markdown_content.selection_changed.connect(self.selection_changed)
         self._markdown_content.scroll_requested.connect(self.scroll_requested)
         self._markdown_content.mouse_released.connect(self.mouse_released)

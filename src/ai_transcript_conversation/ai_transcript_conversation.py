@@ -8,6 +8,7 @@ from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
     AIConversationSettings, AIMessage
 )
+from ai_tool import AIToolManager
 from ai_transcript_conversation.ai_conversation_transcript_error import (
     AIConversationTranscriptError
 )
@@ -31,6 +32,7 @@ class AITranscriptConversation:
     def __init__(
         self,
         path: str,
+        tool_manager: AIToolManager,
         ai_conversation: AIConversation | None = None
     ) -> None:
         """
@@ -39,6 +41,8 @@ class AITranscriptConversation:
         Args:
             path: Full path to the transcript file.  The file is created if it
                 does not exist.
+            tool_manager: The tools available to the mindspace this conversation
+                belongs to, used when a new AIConversation is created.
             ai_conversation: An existing AIConversation to adopt (used for
                 delegated child conversations).  If None a new one is created.
         """
@@ -49,7 +53,7 @@ class AITranscriptConversation:
             self._conversation = ai_conversation
 
         else:
-            self._conversation = AIConversation()
+            self._conversation = AIConversation(tool_manager)
 
         self._conversation.set_conversation_id(path)
 

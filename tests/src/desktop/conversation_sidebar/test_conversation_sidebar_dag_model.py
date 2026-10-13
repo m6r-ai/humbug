@@ -26,13 +26,14 @@ def sidebar_env(mindspace_sandbox):
 
 def _build_model(
     conv_dir: str,
+    mindspace_manager,
     icon_provider: SidebarTreeIconProvider | None = None
 ) -> ConversationSidebarDAGModel:
     """Build a DAG model over the given conversations directory."""
     index = ConversationSidebarIndex()
     index.set_conversations_dir(conv_dir)
     provider = icon_provider or SidebarTreeIconProvider()
-    return ConversationSidebarDAGModel(index, provider)
+    return ConversationSidebarDAGModel(index, provider, mindspace_manager)
 
 
 class TestPinnedSection:
@@ -40,10 +41,10 @@ class TestPinnedSection:
 
     def test_no_pinned_section_when_nothing_pinned(self, sidebar_env):
         """No Pinned header exists when nothing is pinned."""
-        _mgr, conv_dir = sidebar_env
+        mgr, conv_dir = sidebar_env
         _write_conv_file(os.path.join(conv_dir, "chat.conv"))
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         assert not model.pinned_section_index().isValid()
 
@@ -54,7 +55,7 @@ class TestPinnedSection:
         _write_conv_file(chat)
         mgr.set_path_pinned(chat, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         pinned_index = model.pinned_section_index()
         assert pinned_index.isValid()
@@ -74,7 +75,7 @@ class TestPinnedSection:
         _write_conv_file(nested_chat)
         mgr.set_path_pinned(folder, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         pinned_index = model.pinned_section_index()
         assert pinned_index.isValid()
@@ -103,7 +104,7 @@ class TestPinnedSection:
         os.makedirs(other_folder)
         mgr.set_path_pinned(pinned_folder, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         root_names = [
             model.data(model.index(row, 0))
@@ -127,7 +128,7 @@ class TestPinnedSection:
         mgr.set_path_pinned(folder, True)
         mgr.set_path_pinned(chat, False)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         folder_index = model.index_for_path(folder)
         names = {
@@ -144,7 +145,7 @@ class TestPinnedSection:
         mgr.set_path_pinned(chat, True)
         mgr.set_path_pinned(chat, False)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         assert not model.pinned_section_index().isValid()
         chat_index = model.index_for_path(chat)
@@ -158,7 +159,7 @@ class TestPinnedSection:
         _write_conv_file(chat)
         mgr.set_path_pinned(chat, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
         pinned_index = model.pinned_section_index()
 
         assert model.path_for_index(pinned_index) is None
@@ -180,7 +181,7 @@ class TestPinnedFolderGrouping:
         _write_conv_file(chat)
         mgr.set_path_pinned(chat, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         pinned_index = model.pinned_section_index()
         assert model.rowCount(pinned_index) == 1
@@ -203,7 +204,7 @@ class TestPinnedFolderGrouping:
         _write_conv_file(other_chat)
         mgr.set_path_pinned(pinned_chat, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         pinned_index = model.pinned_section_index()
         assert model.rowCount(pinned_index) == 1
@@ -239,7 +240,7 @@ class TestPinnedFolderGrouping:
         mgr.set_path_pinned(chat_a, True)
         mgr.set_path_pinned(chat_b, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         pinned_index = model.pinned_section_index()
         assert model.rowCount(pinned_index) == 1
@@ -267,7 +268,7 @@ class TestPinnedFolderGrouping:
         mgr.set_path_pinned(chat_a, True)
         mgr.set_path_pinned(chat_b, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         pinned_index = model.pinned_section_index()
         group_index = model.index(0, 0, pinned_index)
@@ -295,7 +296,7 @@ class TestPinnedFolderGrouping:
         mgr.set_path_pinned(pinned_chat, True)
         mgr.set_path_pinned(pinned_chat, False)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         assert not model.pinned_section_index().isValid()
 
@@ -310,7 +311,7 @@ class TestPinnedFolderGrouping:
         _write_conv_file(other_chat)
         mgr.set_path_pinned(pinned_chat, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         assert model.pinned_group_paths() == [folder]
 
@@ -321,7 +322,7 @@ class TestPinnedFolderGrouping:
         _write_conv_file(chat)
         mgr.set_path_pinned(chat, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         assert model.pinned_group_paths() == []
 
@@ -336,7 +337,7 @@ class TestPinnedFolderGrouping:
         _write_conv_file(other_chat)
         mgr.set_path_pinned(pinned_chat, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         group_index = model.pinned_group_index_for_path(folder)
         real_folder_index = model.index_for_path(folder)
@@ -349,11 +350,11 @@ class TestPinnedFolderGrouping:
 
     def test_pinned_group_index_for_path_invalid_when_absent(self, sidebar_env):
         """pinned_group_index_for_path() returns an invalid index for an ungrouped folder."""
-        _mgr, conv_dir = sidebar_env
+        mgr, conv_dir = sidebar_env
         folder = os.path.join(conv_dir, "folder")
         os.makedirs(folder)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         assert not model.pinned_group_index_for_path(folder).isValid()
 
@@ -368,7 +369,7 @@ class TestPinnedFolderGrouping:
         _write_conv_file(other_chat)
         mgr.set_path_pinned(pinned_chat, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
         group_index = model.pinned_group_index_for_path(folder)
 
         assert model.group_folder_path(group_index) == folder
@@ -380,7 +381,7 @@ class TestPinnedFolderGrouping:
         _write_conv_file(chat)
         mgr.set_path_pinned(chat, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         pinned_index = model.pinned_section_index()
         chat_index = model.index_for_path(chat)
@@ -393,12 +394,12 @@ class TestNaturalCopyPinIndicator:
 
     def test_no_marker_when_nothing_pinned(self, sidebar_env):
         """An untouched folder shows its normal icon, not the pin marker."""
-        _mgr, conv_dir = sidebar_env
+        mgr, conv_dir = sidebar_env
         folder = os.path.join(conv_dir, "folder")
         os.makedirs(folder)
 
         icon_provider = SidebarTreeIconProvider()
-        model = _build_model(conv_dir, icon_provider)
+        model = _build_model(conv_dir, mgr, icon_provider)
 
         folder_index = model.index_for_path(folder)
         icon = model.data(folder_index, Qt.ItemDataRole.DecorationRole)
@@ -416,7 +417,7 @@ class TestNaturalCopyPinIndicator:
         mgr.set_path_pinned(chat_a, True)
 
         icon_provider = SidebarTreeIconProvider()
-        model = _build_model(conv_dir, icon_provider)
+        model = _build_model(conv_dir, mgr, icon_provider)
 
         folder_index = model.natural_index_for_path(folder)
         icon = model.data(folder_index, Qt.ItemDataRole.DecorationRole)
@@ -433,7 +434,7 @@ class TestNaturalCopyPinIndicator:
         mgr.set_path_pinned(chat, False)
 
         icon_provider = SidebarTreeIconProvider()
-        model = _build_model(conv_dir, icon_provider)
+        model = _build_model(conv_dir, mgr, icon_provider)
 
         folder_index = model.index_for_path(folder)
         icon = model.data(folder_index, Qt.ItemDataRole.DecorationRole)
@@ -446,7 +447,7 @@ class TestNaturalCopyPinIndicator:
         os.makedirs(folder)
         mgr.set_path_pinned(folder, True)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         natural_index = model.natural_index_for_path(folder)
         pinned_index = model.pinned_index_for_path(folder)
@@ -456,11 +457,11 @@ class TestNaturalCopyPinIndicator:
 
     def test_natural_and_pinned_index_invalid_without_a_matching_copy(self, sidebar_env):
         """pinned_index_for_path() is invalid for a folder that was never pinned."""
-        _mgr, conv_dir = sidebar_env
+        mgr, conv_dir = sidebar_env
         folder = os.path.join(conv_dir, "folder")
         os.makedirs(folder)
 
-        model = _build_model(conv_dir)
+        model = _build_model(conv_dir, mgr)
 
         assert model.natural_index_for_path(folder).isValid()
         assert not model.pinned_index_for_path(folder).isValid()

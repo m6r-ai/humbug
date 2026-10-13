@@ -29,8 +29,14 @@ class MarkdownTextEdit(MinHeightTextEdit):
     link_clicked = Signal(str)
     page_key_scroll_requested = Signal()
 
-    def __init__(self, is_input: bool, parent: QWidget | None = None, ) -> None:
+    def __init__(
+        self,
+        is_input: bool,
+        mindspace_manager: MindspaceManager,
+        parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
+        self._mindspace_manager = mindspace_manager
 
         self._is_input = is_input
 
@@ -436,7 +442,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
         if e.key() == Qt.Key.Key_Tab:
             cursor = self.textCursor()
-            mindspace_manager = MindspaceManager()
+            mindspace_manager = self._mindspace_manager
             if not mindspace_manager.has_mindspace():
                 super().keyPressEvent(e)
                 return
@@ -471,7 +477,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
         if e.key() == Qt.Key.Key_Backtab:  # Shift+Tab
             cursor = self.textCursor()
-            mindspace_manager = MindspaceManager()
+            mindspace_manager = self._mindspace_manager
             if not mindspace_manager.has_mindspace():
                 super().keyPressEvent(e)
                 return

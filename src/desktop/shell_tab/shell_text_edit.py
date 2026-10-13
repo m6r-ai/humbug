@@ -11,6 +11,7 @@ from PySide6.QtGui import (
 from desktop.widgets import MinHeightPlainTextEdit
 from desktop.style_manager import StyleManager
 from desktop.shell_tab.shell_command_highlighter import ShellCommandHighlighter
+from desktop.shell_tab.shell_command_registry import ShellCommandRegistry
 
 
 class ShellTextEdit(MinHeightPlainTextEdit):
@@ -107,7 +108,12 @@ class ShellTextEdit(MinHeightPlainTextEdit):
         super().mouseReleaseEvent(e)
         self.mouse_released.emit(e)
 
-    def enable_highlighter(self) -> None:
-        """Enable syntax highlighting for system commands."""
-        self._highlighter = ShellCommandHighlighter(self.document())
+    def enable_highlighter(self, command_registry: ShellCommandRegistry) -> None:
+        """
+        Enable syntax highlighting for system commands.
+
+        Args:
+            command_registry: The commands to highlight.
+        """
+        self._highlighter = ShellCommandHighlighter(command_registry, self.document())
         self.setWordWrapMode(QTextOption.WrapMode.WrapAnywhere)

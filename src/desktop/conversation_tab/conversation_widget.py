@@ -69,6 +69,7 @@ class ConversationWidget(QWidget):
     def __init__(
         self,
         path: str,
+        mindspace_manager: MindspaceManager,
         parent: QWidget | None = None,
         ai_transcript_conversation: AITranscriptConversation | None = None
     ) -> None:
@@ -89,7 +90,7 @@ class ConversationWidget(QWidget):
 
         self.setObjectName("ConversationWidget")
 
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
 
         style_manager = StyleManager()
         self._style_manager = style_manager
@@ -99,7 +100,9 @@ class ConversationWidget(QWidget):
             self._ai_conversation = ai_transcript_conversation
 
         else:
-            self._ai_conversation = AITranscriptConversation(path)
+            self._ai_conversation = AITranscriptConversation(
+                path, self._mindspace_manager.tool_manager()
+            )
 
         # Register UI callbacks on the inner AIConversation
         self._register_ai_conversation_callbacks()
@@ -234,7 +237,7 @@ class ConversationWidget(QWidget):
         self._messages_container.setLayout(self._messages_layout)
 
         # Set up the input box as a floating overlay, parented to this widget
-        self._input = ConversationInput(AIMessageSource.USER, self)
+        self._input = ConversationInput(self._mindspace_manager, AIMessageSource.USER, self)
         self._input.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._input.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(self._input, has_selection)
@@ -617,6 +620,7 @@ class ConversationWidget(QWidget):
 
         msg_widget = ConversationMessage(
             message.source,
+            self._mindspace_manager,
             message.timestamp,
             AIConversationSettings.get_display_name(message.model or "", message.provider or ""),
             message.id,

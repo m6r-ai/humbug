@@ -25,6 +25,7 @@ from desktop.style_manager import StyleManager
 from desktop.conversation_tab.conversation_message_section import ConversationMessageSection
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 from desktop.widgets.elided_label import ElidedLabel
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
 _APPROVAL_BUTTON_BASE_WIDTH = 220
@@ -58,6 +59,7 @@ class ConversationMessage(QFrame):
     def __init__(
         self,
         style: AIMessageSource,
+        mindspace_manager: MindspaceManager,
         timestamp: datetime | None = None,
         model: str | None = None,
         message_id: str | None = None,
@@ -85,6 +87,7 @@ class ConversationMessage(QFrame):
             message_style: Optional style to apply before initial content render
         """
         super().__init__(parent)
+        self._mindspace_manager = mindspace_manager
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
         self.setObjectName("ConversationMessage")
@@ -697,7 +700,9 @@ class ConversationMessage(QFrame):
         Returns:
             A new ConversationMessageSection instance
         """
-        section = ConversationMessageSection(self._is_input, syntax, self._sections_container)
+        section = ConversationMessageSection(
+            self._is_input, self._mindspace_manager, syntax, self._sections_container
+        )
         section.selection_changed.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
@@ -772,7 +777,7 @@ class ConversationMessage(QFrame):
         layout.setSpacing(spacing)
         strings = self._language_manager.strings()
 
-        self._approval_text_edit = MarkdownTextEdit(False)
+        self._approval_text_edit = MarkdownTextEdit(False, self._mindspace_manager)
         self._approval_text_edit.setObjectName("_approval_text_edit")
         self._approval_text_edit.set_text(reason)
         self._approval_text_edit.setReadOnly(True)

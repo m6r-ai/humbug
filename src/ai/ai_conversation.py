@@ -51,12 +51,19 @@ class AIConversation:
     history, and provides methods to start and cancel conversations.
     """
 
-    def __init__(self) -> None:
-        """Initialize the AIConversation."""
+    def __init__(self, tool_manager: AIToolManager) -> None:
+        """
+        Initialize the AIConversation.
+
+        Args:
+            tool_manager: The tools available to this conversation.  Tools belong to
+                a mindspace rather than to the process, so the conversation is given
+                the manager for the mindspace it is part of.
+        """
         self._logger = logging.getLogger("AIConversation")
         self._conversation_id = ""
         self._ai_manager = AIManager()
-        self._tool_manager = AIToolManager()
+        self._tool_manager = tool_manager
         self._settings = AIConversationSettings()
         self._conversation = AIConversationHistory()
         self._current_tasks: list[asyncio.Task] = []
@@ -362,7 +369,9 @@ class AIConversation:
                 self._is_streaming = False
                 return
 
-            stream = backend.stream_message(self._conversation, self._settings)
+            stream = backend.stream_message(
+                self._conversation, self._settings, self._tool_manager.get_tool_definitions()
+            )
             async for response in stream:
                 await self._update_streaming_response(
                     reasoning=response.reasoning,

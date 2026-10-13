@@ -12,6 +12,7 @@ import pytest
 from ai_tool import AIToolCall
 from mindspace.mindspace import Mindspace
 from system_ai_tool.system_ai_tool import SystemAITool
+from ai_tool import AIToolManager
 
 
 def _make_tool_call(operation: str, **kwargs: Any) -> AIToolCall:
@@ -73,7 +74,7 @@ def temp_mindspace() -> Any:
 def system_tool(temp_mindspace: Any) -> SystemAITool:
     """Fixture providing a SystemAITool with a real mindspace."""
     mindspace, _ = temp_mindspace
-    return SystemAITool(mindspace)
+    return SystemAITool(mindspace, AIToolManager())
 
 
 @pytest.fixture

@@ -31,8 +31,8 @@ def sidebar_env(mindspace_sandbox, monkeypatch):
 @pytest.fixture
 def sidebar(sidebar_env):
     """A ConversationSidebar configured for the sandboxed mindspace."""
-    _mgr, ms_path, _conv_dir = sidebar_env
-    widget = ConversationSidebar()
+    mgr, ms_path, _conv_dir = sidebar_env
+    widget = ConversationSidebar(None, mgr)
     widget.set_mindspace(ms_path)
     yield widget
     widget.deleteLater()
@@ -50,7 +50,7 @@ def _trashed_names(ms_path: str) -> list[str]:
 class TestDeleteUndoRedo:
     """Deleting moves items to trash rather than removing them, and is reversible."""
 
-    def test_delete_file_moves_to_trash(self, sidebar_env, sidebar):
+    def test_delete_file_moves_to_trash(self, sidebar_env, sidebar, mindspace_manager):
         _mgr, ms_path, conv_dir = sidebar_env
         chat = os.path.join(conv_dir, "chat.conv")
         _write_conv_file(chat)
@@ -61,7 +61,7 @@ class TestDeleteUndoRedo:
         assert os.path.isdir(_trash_dir(ms_path))
         assert len(_trashed_names(ms_path)) == 1
 
-    def test_undo_restores_deleted_file(self, sidebar_env, sidebar):
+    def test_undo_restores_deleted_file(self, sidebar_env, sidebar, mindspace_manager):
         _mgr, _ms_path, conv_dir = sidebar_env
         chat = os.path.join(conv_dir, "chat.conv")
         _write_conv_file(chat)
@@ -75,7 +75,7 @@ class TestDeleteUndoRedo:
         assert not sidebar.can_undo()
         assert sidebar.can_redo()
 
-    def test_redo_deletes_again(self, sidebar_env, sidebar):
+    def test_redo_deletes_again(self, sidebar_env, sidebar, mindspace_manager):
         _mgr, _ms_path, conv_dir = sidebar_env
         chat = os.path.join(conv_dir, "chat.conv")
         _write_conv_file(chat)
@@ -88,7 +88,7 @@ class TestDeleteUndoRedo:
         assert sidebar.can_undo()
         assert not sidebar.can_redo()
 
-    def test_delete_empty_folder_can_be_undone(self, sidebar_env, sidebar):
+    def test_delete_empty_folder_can_be_undone(self, sidebar_env, sidebar, mindspace_manager):
         _mgr, _ms_path, conv_dir = sidebar_env
         folder = os.path.join(conv_dir, "Empty")
         os.makedirs(folder)
@@ -104,7 +104,7 @@ class TestDeleteUndoRedo:
 class TestMoveUndoRedo:
     """Moving a conversation is reversible, and re-fires the pin-migration hook either way."""
 
-    def test_move_then_undo_restores_original_location(self, sidebar_env, sidebar):
+    def test_move_then_undo_restores_original_location(self, sidebar_env, sidebar, mindspace_manager):
         _mgr, _ms_path, conv_dir = sidebar_env
         chat = os.path.join(conv_dir, "chat.conv")
         _write_conv_file(chat)
@@ -122,7 +122,7 @@ class TestMoveUndoRedo:
         assert os.path.exists(chat)
         assert not os.path.exists(dest)
 
-    def test_move_undo_redo_migrates_pin_state_both_ways(self, sidebar_env, sidebar):
+    def test_move_undo_redo_migrates_pin_state_both_ways(self, sidebar_env, sidebar, mindspace_manager):
         mgr, _ms_path, conv_dir = sidebar_env
         chat = os.path.join(conv_dir, "chat.conv")
         _write_conv_file(chat)
@@ -147,7 +147,7 @@ class TestMoveUndoRedo:
 class TestRenameUndoRedo:
     """Renaming a conversation is reversible."""
 
-    def test_rename_then_undo_restores_original_name(self, sidebar_env, sidebar):
+    def test_rename_then_undo_restores_original_name(self, sidebar_env, sidebar, mindspace_manager):
         _mgr, _ms_path, conv_dir = sidebar_env
         chat = os.path.join(conv_dir, "chat.conv")
         _write_conv_file(chat)
@@ -178,7 +178,7 @@ class TestRenameUndoRedo:
 class TestTrashManifestSync:
     """The trash manifest tracks original locations through delete/undo/redo."""
 
-    def test_manifest_records_original_location_on_delete(self, sidebar_env, sidebar):
+    def test_manifest_records_original_location_on_delete(self, sidebar_env, sidebar, mindspace_manager):
         mgr, _ms_path, conv_dir = sidebar_env
         folder = os.path.join(conv_dir, "Work")
         os.makedirs(folder)
@@ -192,7 +192,7 @@ class TestTrashManifestSync:
         assert entries[0].original_path == os.path.join(mgr.mindspace().conversations_rel_path(), "Work", "chat.conv")
         assert not entries[0].is_dir
 
-    def test_manifest_entry_removed_on_undo(self, sidebar_env, sidebar):
+    def test_manifest_entry_removed_on_undo(self, sidebar_env, sidebar, mindspace_manager):
         mgr, _ms_path, conv_dir = sidebar_env
         chat = os.path.join(conv_dir, "chat.conv")
         _write_conv_file(chat)
@@ -202,7 +202,7 @@ class TestTrashManifestSync:
 
         assert not mgr.mindspace().list_trashed()
 
-    def test_manifest_entry_restored_on_redo(self, sidebar_env, sidebar):
+    def test_manifest_entry_restored_on_redo(self, sidebar_env, sidebar, mindspace_manager):
         mgr, _ms_path, conv_dir = sidebar_env
         chat = os.path.join(conv_dir, "chat.conv")
         _write_conv_file(chat)
@@ -219,7 +219,7 @@ class TestTrashManifestSync:
 class TestUndoHistoryScopedToMindspace:
     """Switching mindspaces abandons undo history rather than carrying it over."""
 
-    def test_switching_mindspace_clears_undo_history(self, sidebar_env, sidebar):
+    def test_switching_mindspace_clears_undo_history(self, sidebar_env, sidebar, mindspace_manager):
         _mgr, _ms_path, conv_dir = sidebar_env
         chat = os.path.join(conv_dir, "chat.conv")
         _write_conv_file(chat)
@@ -236,22 +236,22 @@ class TestUndoHistoryScopedToMindspace:
 class TestNewConversationAndFolderButtons:
     """The header's create-conversation and create-folder buttons track mindspace availability."""
 
-    def test_buttons_start_disabled_with_no_mindspace(self, qapp):  # pylint: disable=unused-argument
-        widget = ConversationSidebar()
+    def test_buttons_start_disabled_with_no_mindspace(self, qapp, mindspace_manager):
+        widget = ConversationSidebar(None, mindspace_manager)
         assert not widget.new_conversation_button().isEnabled()
         assert not widget._new_folder_button.isEnabled()  # pylint: disable=protected-access
         widget.deleteLater()
 
-    def test_buttons_enabled_once_mindspace_is_set(self, sidebar):
+    def test_buttons_enabled_once_mindspace_is_set(self, sidebar, mindspace_manager):
         assert sidebar.new_conversation_button().isEnabled()
         assert sidebar._new_folder_button.isEnabled()  # pylint: disable=protected-access
 
-    def test_buttons_disabled_when_mindspace_is_cleared(self, sidebar):
+    def test_buttons_disabled_when_mindspace_is_cleared(self, sidebar, mindspace_manager):
         sidebar.set_mindspace("")
         assert not sidebar.new_conversation_button().isEnabled()
         assert not sidebar._new_folder_button.isEnabled()  # pylint: disable=protected-access
 
-    def test_buttons_disabled_when_conversations_dir_cannot_be_created(self, sidebar_env, monkeypatch):
+    def test_buttons_disabled_when_conversations_dir_cannot_be_created(self, sidebar_env, monkeypatch, mindspace_manager):
         _mgr, ms_path, conv_dir = sidebar_env
         if os.path.exists(conv_dir):
             shutil.rmtree(conv_dir)
@@ -261,14 +261,14 @@ class TestNewConversationAndFolderButtons:
 
         monkeypatch.setattr(conversation_sidebar_module.os, "makedirs", _raise_os_error)
 
-        widget = ConversationSidebar()
+        widget = ConversationSidebar(None, mindspace_manager)
         widget.set_mindspace(ms_path)
 
         assert not widget.new_conversation_button().isEnabled()
         assert not widget._new_folder_button.isEnabled()  # pylint: disable=protected-access
         widget.deleteLater()
 
-    def test_new_conversation_button_emits_signal_with_conversations_path(self, sidebar, sidebar_env):
+    def test_new_conversation_button_emits_signal_with_conversations_path(self, sidebar, sidebar_env, mindspace_manager):
         _mgr, _ms_path, conv_dir = sidebar_env
         requested: list[str] = []
         sidebar.new_conversation_requested.connect(requested.append)

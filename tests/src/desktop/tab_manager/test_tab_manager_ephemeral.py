@@ -14,14 +14,10 @@ from mindspace.mindspace_settings import MindspaceSettings
 @pytest.fixture
 def manager(qapp, tmp_path):
     """Create a MindspaceManager with an isolated home config file."""
-    MindspaceManager._instance = None
 
-    mgr = MindspaceManager()
-    mgr._home_config = str(tmp_path / "mindspace.json")
+    mgr = MindspaceManager(str(tmp_path / "mindspace.json"))
 
     yield mgr
-
-    MindspaceManager._instance = None
 
 
 @pytest.fixture
@@ -31,10 +27,10 @@ def tab_manager(qapp, manager):
     The TabManager is constructed before a mindspace is open, matching how the
     application builds it.
     """
-    tm = TabManager(lambda source_type, path: None, None)
+    tm = TabManager(lambda source_type, path: None, manager, None)
 
-    def _create_conversation_tab(info, _registry, parent):
-        return ConversationTab(info.context_id, info.path, parent)
+    def _create_conversation_tab(info, _registry, parent, mindspace_manager):
+        return ConversationTab(info.context_id, info.path, mindspace_manager, parent)
 
     tm.register_context_factory("conversation", _create_conversation_tab)
     return tm

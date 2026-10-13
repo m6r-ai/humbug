@@ -225,7 +225,8 @@ class OpenAIBackend(AIBackend):
     def _build_request_config(
         self,
         conversation_history: AIConversationHistory,
-        settings: AIConversationSettings
+        settings: AIConversationSettings,
+        tool_definitions: list[AIToolDefinition]
     ) -> RequestConfig:
         """Build complete request configuration for the OpenAI Responses API."""
         input_items = self._format_input_for_provider(conversation_history)
@@ -248,7 +249,6 @@ class OpenAIBackend(AIBackend):
 
         # Add tools if supported
         if self._supports_tools(settings):
-            tool_definitions = self._tool_manager.get_tool_definitions()
             if tool_definitions:
                 data["tools"] = [self._format_tool_definition(tool_def) for tool_def in tool_definitions]
                 data["tool_choice"] = "auto"

@@ -22,10 +22,15 @@ class ConversationSidebarTreeDelegate(SidebarTreeDelegate):
     # _is_first_row_after_pinned_section() and DIVIDER_PADDING usage below.
     DIVIDER_PADDING = 10
 
-    def __init__(self, tree_view: SidebarTreeView, style_manager: StyleManager) -> None:
+    def __init__(
+        self,
+        tree_view: SidebarTreeView,
+        style_manager: StyleManager,
+        mindspace_manager: MindspaceManager
+    ) -> None:
         """Initialise the delegate with the shared pin-state manager."""
         super().__init__(tree_view, style_manager)
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
 
     def initStyleOption(
         self,

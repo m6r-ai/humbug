@@ -9,6 +9,7 @@ from ai_tool import AIToolExecutionError
 from delegate_ai_tool import DelegateAITool
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_settings import MindspaceSettings
+from ai_tool import AIToolManager
 
 
 def _make_mindspace(tmp_path, monkeypatch) -> Mindspace:
@@ -49,21 +50,21 @@ class TestResolveSessionPath:
 
     def test_missing_session_is_rejected(self, tmp_path, monkeypatch):
         """An empty session_id is rejected."""
-        tool = DelegateAITool(_make_mindspace(tmp_path, monkeypatch))
+        tool = DelegateAITool(_make_mindspace(tmp_path, monkeypatch), AIToolManager())
 
         with pytest.raises(AIToolExecutionError, match="must not be empty"):
             tool._resolve_session_path("", _FakeConversation(""))  # pylint: disable=protected-access
 
     def test_path_traversal_is_rejected(self, tmp_path, monkeypatch):
         """A session_id attempting path traversal is rejected."""
-        tool = DelegateAITool(_make_mindspace(tmp_path, monkeypatch))
+        tool = DelegateAITool(_make_mindspace(tmp_path, monkeypatch), AIToolManager())
 
         with pytest.raises(AIToolExecutionError, match="path traversal"):
             tool._resolve_session_path("../secret.conv", _FakeConversation(""))  # pylint: disable=protected-access
 
     def test_nonexistent_file_is_rejected(self, tmp_path, monkeypatch):
         """A session_id that does not refer to an existing file is rejected."""
-        tool = DelegateAITool(_make_mindspace(tmp_path, monkeypatch))
+        tool = DelegateAITool(_make_mindspace(tmp_path, monkeypatch), AIToolManager())
 
         with pytest.raises(AIToolExecutionError, match="does not refer to an existing file"):
             tool._resolve_session_path(  # pylint: disable=protected-access
@@ -79,7 +80,7 @@ class TestResolveSessionPath:
         _write_conv(parent_path, ["m1", "m2"])
         _write_conv(child_path, ["m3"], parent={"message_id": "m2", "tool_call_id": "tc1"})
 
-        tool = DelegateAITool(mindspace)
+        tool = DelegateAITool(mindspace, AIToolManager())
         requester = _FakeConversation(parent_path)
 
         resolved = tool._resolve_session_path(  # pylint: disable=protected-access
@@ -99,7 +100,7 @@ class TestResolveSessionPath:
         _write_conv(other_path, ["m7"])
         _write_conv(child_path, ["m3"], parent={"message_id": "m2", "tool_call_id": "tc1"})
 
-        tool = DelegateAITool(mindspace)
+        tool = DelegateAITool(mindspace, AIToolManager())
         requester = _FakeConversation(other_path)
 
         with pytest.raises(AIToolExecutionError, match="was not delegated by this conversation"):
@@ -116,7 +117,7 @@ class TestResolveSessionPath:
         _write_conv(root_path, ["m1"])
         _write_conv(requester_path, ["m2"])
 
-        tool = DelegateAITool(mindspace)
+        tool = DelegateAITool(mindspace, AIToolManager())
         requester = _FakeConversation(requester_path)
 
         with pytest.raises(AIToolExecutionError, match="was not delegated by this conversation"):
@@ -133,7 +134,7 @@ class TestResolveSessionPath:
         _write_conv(parent_path, ["m1", "m2"])
         _write_conv(child_path, ["m3"], parent={"message_id": "m2", "tool_call_id": "tc1"})
 
-        tool = DelegateAITool(mindspace)
+        tool = DelegateAITool(mindspace, AIToolManager())
         requester = _FakeConversation("")
 
         with pytest.raises(AIToolExecutionError, match="was not delegated by this conversation"):

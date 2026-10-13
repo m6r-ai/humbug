@@ -69,7 +69,7 @@ class TestRequestConfig:
         history = AIConversationHistory()
         history.add_message(AIMessage.create(AIMessageSource.USER, "Hello"))
 
-        config = backend._build_request_config(history, _settings())
+        config = backend._build_request_config(history, _settings(), [])
 
         assert config.url == "https://api.openai.com/v1/responses"
         assert config.data["store"] is False
@@ -91,7 +91,7 @@ class TestRequestConfig:
             reasoning_effort="high",
         )
 
-        config = backend._build_request_config(history, settings)
+        config = backend._build_request_config(history, settings, [])
 
         assert config.data["reasoning"] == {"effort": "high"}
 
@@ -101,7 +101,7 @@ class TestRequestConfig:
         history = AIConversationHistory()
         history.add_message(AIMessage.create(AIMessageSource.USER, "Hi"))
 
-        config = backend._build_request_config(history, _settings())
+        config = backend._build_request_config(history, _settings(), [])
 
         assert "temperature" not in config.data
 

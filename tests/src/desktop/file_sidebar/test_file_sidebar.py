@@ -9,16 +9,16 @@ from desktop.file_sidebar.file_sidebar import FileSidebar
 
 
 @pytest.fixture
-def sidebar_env(mindspace_sandbox):
+def sidebar_env(mindspace_sandbox, mindspace_manager):
     """The sandboxed mindspace, as (mindspace_manager, mindspace_path)."""
     yield mindspace_sandbox.manager, mindspace_sandbox.path
 
 
 @pytest.fixture
-def sidebar(sidebar_env):
+def sidebar(sidebar_env, mindspace_manager):
     """A FileSidebar configured for the sandboxed mindspace."""
     _mgr, ms_path = sidebar_env
-    widget = FileSidebar()
+    widget = FileSidebar(None, mindspace_manager)
     widget.set_mindspace(ms_path)
     yield widget
     widget.deleteLater()
@@ -27,29 +27,29 @@ def sidebar(sidebar_env):
 class TestNewFileAndFolderButtons:
     """The header's create-file and create-folder buttons track mindspace availability."""
 
-    def test_buttons_start_disabled_with_no_mindspace(self, qapp):  # pylint: disable=unused-argument
-        widget = FileSidebar()
+    def test_buttons_start_disabled_with_no_mindspace(self, qapp, mindspace_manager):
+        widget = FileSidebar(None, mindspace_manager)
         assert not widget._new_file_button.isEnabled()  # pylint: disable=protected-access
         assert not widget._new_folder_button.isEnabled()  # pylint: disable=protected-access
         widget.deleteLater()
 
-    def test_buttons_enabled_once_mindspace_is_set(self, sidebar):
+    def test_buttons_enabled_once_mindspace_is_set(self, sidebar, mindspace_manager):
         assert sidebar._new_file_button.isEnabled()  # pylint: disable=protected-access
         assert sidebar._new_folder_button.isEnabled()  # pylint: disable=protected-access
 
-    def test_buttons_disabled_when_mindspace_is_cleared(self, sidebar):
+    def test_buttons_disabled_when_mindspace_is_cleared(self, sidebar, mindspace_manager):
         sidebar.set_mindspace("")
         assert not sidebar._new_file_button.isEnabled()  # pylint: disable=protected-access
         assert not sidebar._new_folder_button.isEnabled()  # pylint: disable=protected-access
 
-    def test_new_file_button_creates_file_in_mindspace_root(self, sidebar, sidebar_env):
+    def test_new_file_button_creates_file_in_mindspace_root(self, sidebar, sidebar_env, mindspace_manager):
         _mgr, ms_path = sidebar_env
 
         sidebar._new_file_button.click()  # pylint: disable=protected-access
 
         assert os.path.exists(os.path.join(ms_path, "New File.txt"))
 
-    def test_new_folder_button_creates_folder_in_mindspace_root(self, sidebar, sidebar_env):
+    def test_new_folder_button_creates_folder_in_mindspace_root(self, sidebar, sidebar_env, mindspace_manager):
         _mgr, ms_path = sidebar_env
 
         sidebar._new_folder_button.click()  # pylint: disable=protected-access

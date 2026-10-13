@@ -15,7 +15,7 @@ def _wire_trash_sidebar(_panel: SidebarBase, _mgr: SidebarManager) -> None:
 
 
 @pytest.fixture
-def manager(qapp, tmp_path, monkeypatch):  # pylint: disable=unused-argument
+def manager(qapp, tmp_path, monkeypatch, mindspace_manager):
     """A SidebarManager with the Trash panel registered in the bottom rail group."""
     home_dir = tmp_path / "home"
     home_dir.mkdir()
@@ -24,7 +24,7 @@ def manager(qapp, tmp_path, monkeypatch):  # pylint: disable=unused-argument
     MindspaceManager._instance = None  # pylint: disable=protected-access
     UserManager._instance = None  # pylint: disable=protected-access
 
-    mgr = SidebarManager()
+    mgr = SidebarManager(mindspace_manager)
     mgr.register_panel(
         "trash", "trash", TrashSidebar, _wire_trash_sidebar, place_at_bottom=True
     )
@@ -38,17 +38,17 @@ def manager(qapp, tmp_path, monkeypatch):  # pylint: disable=unused-argument
 class TestTrashPanelVisibility:
     """The Trash rail button is always visible and sits in the bottom rail group."""
 
-    def test_trash_button_is_visible(self, manager):
+    def test_trash_button_is_visible(self, manager, mindspace_manager):
         button = manager._panel_buttons["trash"]  # pylint: disable=protected-access
         assert not button.isHidden()
 
-    def test_trash_button_sits_above_settings(self, manager):
+    def test_trash_button_sits_above_settings(self, manager, mindspace_manager):
         layout = manager._rail_layout  # pylint: disable=protected-access
         trash_button = manager._panel_buttons["trash"]  # pylint: disable=protected-access
         settings_button = manager._settings_button  # pylint: disable=protected-access
         assert layout.indexOf(trash_button) == layout.indexOf(settings_button) - 1
 
-    def test_trash_button_sits_below_carousel(self, manager):
+    def test_trash_button_sits_below_carousel(self, manager, mindspace_manager):
         layout = manager._rail_layout  # pylint: disable=protected-access
         trash_button = manager._panel_buttons["trash"]  # pylint: disable=protected-access
         carousel_button = manager._tab_carousel_button  # pylint: disable=protected-access

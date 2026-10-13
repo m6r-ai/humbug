@@ -7,7 +7,6 @@ import shutil
 import uuid
 
 from ai import AIConversationSettings
-from ai_tool import AIToolManager
 from context.context_registry import ContextRegistry
 from conversation_context.conversation_context import ConversationContext
 
@@ -40,6 +39,7 @@ class Mindspace:
         on_settings_changed: Callable[[], None],
         on_interactions_updated: Callable[[], None],
         on_usage_updated: Callable[[], None] | None = None,
+        default_enabled_tools: dict[str, bool] | None = None,
     ) -> None:
         """
         Initialise the mindspace model.
@@ -49,6 +49,10 @@ class Mindspace:
                 is opened or closed.
             on_interactions_updated: Called whenever a new interaction is added.
             on_usage_updated: Called whenever usage stats are updated.
+            default_enabled_tools: Tool enablement to record for tools a settings
+                file does not mention.  Supplied as plain data by whoever owns the
+                tool service, so that a mindspace carries tool policy without
+                depending on the tools themselves.
         """
         self._on_settings_changed = on_settings_changed
         self._on_interactions_updated = on_interactions_updated
@@ -58,7 +62,7 @@ class Mindspace:
         self._interactions = MindspaceInteractions()
         self._usage = MindspaceUsage()
         self._context_registry = ContextRegistry()
-        self._tool_manager = AIToolManager()
+        self._default_enabled_tools = default_enabled_tools or {}
         self._logger = logging.getLogger("Mindspace")
 
     def mindspace_path(self) -> str:
@@ -111,7 +115,7 @@ class Mindspace:
             for folder in folders:
                 os.makedirs(os.path.join(path, folder), exist_ok=True)
 
-            settings = MindspaceSettings(self._tool_manager.get_default_enabled_tools())
+            settings = MindspaceSettings(dict(self._default_enabled_tools))
             settings.save(os.path.join(mindspace_dir, self.SETTINGS_FILE))
 
             with open(os.path.join(mindspace_dir, self.SESSION_FILE), 'w', encoding='utf-8') as f:
@@ -145,13 +149,15 @@ class Mindspace:
             raise MindspaceNotFoundError(f"No mindspace found at {path}")
 
         try:
-            settings = MindspaceSettings.load(os.path.join(mindspace_dir, self.SETTINGS_FILE))
+            settings = MindspaceSettings.load(
+                os.path.join(mindspace_dir, self.SETTINGS_FILE),
+                self._default_enabled_tools
+            )
             self._path = path
             self._migrate_conversations()
             self._settings = settings
             self._load_interactions()
             self._load_usage()
-            self._apply_tool_settings(settings)
             self._on_settings_changed()
 
         except Exception as e:
@@ -166,7 +172,6 @@ class Mindspace:
             self._interactions.clear()
             self._usage = MindspaceUsage()
             self._context_registry.clear()
-            self._reset_tool_manager()
             self._on_settings_changed()
 
     def update_settings(self, new_settings: MindspaceSettings) -> None:
@@ -184,7 +189,6 @@ class Mindspace:
         try:
             new_settings.save(settings_path)
             self._settings = new_settings
-            self._apply_tool_settings(new_settings)
             self._on_settings_changed()
 
         except OSError as e:
@@ -1239,23 +1243,7 @@ class Mindspace:
         except (json.JSONDecodeError, OSError) as e:
             self._logger.warning("Failed to migrate session paths: %s", str(e))
 
-    def _apply_tool_settings(self, settings: MindspaceSettings) -> None:
-        """Apply tool enabled states from settings to the tool manager."""
-        try:
-            self._tool_manager.set_tool_enabled_states(settings.enabled_tools)
 
-        except Exception as e:
-            self._logger.error("Failed to apply tool settings: %s", e)
-
-    def _reset_tool_manager(self) -> None:
-        """Reset tool manager to defaults when no mindspace is open."""
-        try:
-            self._tool_manager.set_tool_enabled_states(
-                self._tool_manager.get_default_enabled_tools()
-            )
-
-        except Exception as e:
-            self._logger.error("Failed to reset tool manager: %s", e)
 
     def _save_usage(self) -> None:
         """Persist usage stats to disk."""

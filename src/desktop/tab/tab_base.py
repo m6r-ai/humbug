@@ -10,6 +10,7 @@ from context.context_registry import ContextRegistry
 from mindspace.mindspace_settings import MindspaceSettings
 
 from desktop.file_watcher import FileWatcher
+from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.status_message import StatusMessage
 
 class TabBase(QFrame):
@@ -25,15 +26,22 @@ class TabBase(QFrame):
     close_requested = Signal()  # Emits when tab requests to be closed
     preferred_width_changed = Signal()  # Emits when preferred_width() may return a different value
 
-    def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        tab_id: str,
+        mindspace_manager: MindspaceManager,
+        parent: QWidget | None = None
+    ) -> None:
         """
         Initialize the base tab.
 
         Args:
             tab_id: Unique identifier for this tab.  If not provided, a new UUID will be generated.
+            mindspace_manager: The mindspace of the window this tab belongs to.
             parent: Optional parent widget
         """
         super().__init__(parent)
+        self._mindspace_manager = mindspace_manager
         if not tab_id:
             tab_id = str(uuid.uuid4())
 
@@ -334,7 +342,9 @@ class TabBase(QFrame):
         raise NotImplementedError("Subclasses must implement capture_migration_state")
 
     @classmethod
-    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'TabBase':
+    def rebuild_from_migration_state(
+        cls, state: dict, parent: QWidget, mindspace_manager: MindspaceManager
+    ) -> 'TabBase':
         """
         Create a replacement tab carrying state from a column move.
 

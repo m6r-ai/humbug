@@ -41,13 +41,13 @@ class TrashSidebar(SidebarBase):
 
     file_clicked = Signal(str, str, bool)  # panel_id, path, ephemeral
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget, mindspace_manager: MindspaceManager) -> None:
         super().__init__(parent)
 
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
         self._icon_provider = SidebarTreeIconProvider()
         self._mindspace_path = ""
         self._empty_state_spacer: QSpacerItem | None = None
@@ -63,7 +63,7 @@ class TrashSidebar(SidebarBase):
         self._status_label.setObjectName("_status_label")
         self._layout.addWidget(self._status_label)
 
-        self._tree = TrashTreeWidget(self)
+        self._tree = TrashTreeWidget(self, mindspace_manager)
         self._tree.setObjectName("TrashSidebarTree")
         self._tree_style = SidebarTreeStyle()
         self._tree.setStyle(self._tree_style)
@@ -296,8 +296,9 @@ class TrashSidebar(SidebarBase):
 class TrashTreeWidget(QTreeWidget):
     """QTreeWidget subclass supporting drag initiation for trashed conversation files."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget, mindspace_manager: MindspaceManager) -> None:
         super().__init__(parent)
+        self._mindspace_manager = mindspace_manager
         self._drag_start_pos: QPoint | None = None
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -326,7 +327,7 @@ class TrashTreeWidget(QTreeWidget):
         if not trash_name:
             return
 
-        trash_path = os.path.join(MindspaceManager().mindspace().trash_dir(), trash_name)
+        trash_path = os.path.join(self._mindspace_manager.mindspace().trash_dir(), trash_name)
 
         mime_data = QMimeData()
         mime_data.setData("application/x-humbug-path", trash_path.encode())

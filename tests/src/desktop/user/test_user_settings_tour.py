@@ -10,14 +10,14 @@ from desktop.settings_dialog import SettingsDialog
 
 
 class TestDefaults:
-    def test_default_settings_have_not_started_tour(self):
+    def test_default_settings_have_not_started_tour(self, mindspace_manager):
         settings = UserSettings.create_default()
         assert settings.onboarding_tour_status == OnboardingTourStatus.NOT_STARTED
         assert settings.onboarding_tour_version == 0
 
 
 class TestRoundTrip:
-    def test_completed_status_and_version_survive_save_and_load(self):
+    def test_completed_status_and_version_survive_save_and_load(self, mindspace_manager):
         settings = UserSettings.create_default()
         settings.onboarding_tour_status = OnboardingTourStatus.COMPLETED
         settings.onboarding_tour_version = 1
@@ -30,7 +30,7 @@ class TestRoundTrip:
         assert loaded.onboarding_tour_status == OnboardingTourStatus.COMPLETED
         assert loaded.onboarding_tour_version == 1
 
-    def test_skipped_status_survives_save_and_load(self):
+    def test_skipped_status_survives_save_and_load(self, mindspace_manager):
         settings = UserSettings.create_default()
         settings.onboarding_tour_status = OnboardingTourStatus.SKIPPED
         settings.onboarding_tour_version = 1
@@ -44,7 +44,7 @@ class TestRoundTrip:
 
 
 class TestMalformedData:
-    def test_invalid_status_string_falls_back_to_not_started(self):
+    def test_invalid_status_string_falls_back_to_not_started(self, mindspace_manager):
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = os.path.join(tmp_dir, "user-settings.json")
             with open(path, "w", encoding="utf-8") as f:
@@ -54,7 +54,7 @@ class TestMalformedData:
 
         assert loaded.onboarding_tour_status == OnboardingTourStatus.NOT_STARTED
 
-    def test_missing_fields_fall_back_to_defaults(self):
+    def test_missing_fields_fall_back_to_defaults(self, mindspace_manager):
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = os.path.join(tmp_dir, "user-settings.json")
             with open(path, "w", encoding="utf-8") as f:
@@ -67,12 +67,12 @@ class TestMalformedData:
 
 
 class TestSettingsDialogPreservesTourState:
-    def test_saving_user_settings_preserves_completed_tour(self, qapp):
+    def test_saving_user_settings_preserves_completed_tour(self, qapp, mindspace_manager):
         settings = UserSettings.create_default()
         settings.onboarding_tour_status = OnboardingTourStatus.COMPLETED
         settings.onboarding_tour_version = 1
 
-        dialog = SettingsDialog()
+        dialog = SettingsDialog(mindspace_manager)
         dialog.set_settings(settings, None)
         saved = dialog.get_user_settings()
         dialog.deleteLater()
@@ -81,12 +81,12 @@ class TestSettingsDialogPreservesTourState:
         assert saved.onboarding_tour_status == OnboardingTourStatus.COMPLETED
         assert saved.onboarding_tour_version == 1
 
-    def test_saving_user_settings_preserves_skipped_tour(self, qapp):
+    def test_saving_user_settings_preserves_skipped_tour(self, qapp, mindspace_manager):
         settings = UserSettings.create_default()
         settings.onboarding_tour_status = OnboardingTourStatus.SKIPPED
         settings.onboarding_tour_version = 1
 
-        dialog = SettingsDialog()
+        dialog = SettingsDialog(mindspace_manager)
         dialog.set_settings(settings, None)
         saved = dialog.get_user_settings()
         dialog.deleteLater()

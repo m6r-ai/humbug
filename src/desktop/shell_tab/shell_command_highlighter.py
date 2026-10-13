@@ -6,14 +6,16 @@ from PySide6.QtGui import QSyntaxHighlighter, QTextDocument
 
 from desktop.style_manager import StyleManager
 from desktop.shell_tab.shell_command_parser import ShellCommandParser
+from desktop.shell_tab.shell_command_registry import ShellCommandRegistry
 
 
 class ShellCommandHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for system command lines."""
 
-    def __init__(self, parent: QTextDocument) -> None:
+    def __init__(self, command_registry: ShellCommandRegistry, parent: QTextDocument) -> None:
         """Initialize the highlighter."""
         super().__init__(parent)
+        self._command_registry = command_registry
 
         # Consistent font family fallback sequence for all code formats
         self._style_manager = StyleManager()
@@ -23,7 +25,7 @@ class ShellCommandHighlighter(QSyntaxHighlighter):
         """Apply highlighting to the given block of text."""
         try:
             # Parse the input
-            parser = ShellCommandParser()
+            parser = ShellCommandParser(self._command_registry)
             parser.parse(None, text)
 
             # Apply syntax highlighting based on token types

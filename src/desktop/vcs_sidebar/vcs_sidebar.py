@@ -100,13 +100,13 @@ class VCSSidebar(SidebarBase):
     file_opened_in_diff = Signal(str, bool)                # path, ephemeral
     repo_available = Signal(bool)                          # True = repo found, False = hidden
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget, mindspace_manager: MindspaceManager) -> None:
         """Initialise the VCS view."""
         super().__init__(parent)
 
         self._style_manager = StyleManager()
         self._logger = logging.getLogger("VCSSidebar")
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 

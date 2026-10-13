@@ -2,7 +2,7 @@
 
 from ai import AIConversation
 from ai.ai_message import AIMessage, AIMessageSource
-from ai_tool import AIToolCall, AIToolResult
+from ai_tool import AIToolManager, AIToolCall, AIToolResult
 
 
 def _add_user_message(conversation: AIConversation, content: str) -> AIMessage:
@@ -63,27 +63,27 @@ class TestMenaiHelpRead:
 
     def test_no_history_returns_false(self):
         """menai_help_read returns False for a fresh conversation."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
 
         assert conv.menai_help_read() is False
 
     def test_non_menai_help_does_not_unlock(self):
         """A help call for a different tool does not unlock Menai."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_tool_call_message(conv, _make_help_call("editor"))
 
         assert conv.menai_help_read() is False
 
     def test_menai_help_call_unlocks(self):
         """A help call for the menai tool unlocks Menai operations."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_tool_call_message(conv, _make_help_call("menai"))
 
         assert conv.menai_help_read() is True
 
     def test_menai_help_unlocks_with_operation_name(self):
         """A help call for menai with an operation name still unlocks."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         call = AIToolCall(
             id="help-call-1",
             name="help",
@@ -95,7 +95,7 @@ class TestMenaiHelpRead:
 
     def test_truncation_removing_help_relocks(self):
         """Truncating at a user message before the help call relocks Menai."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
 
         user1 = _add_user_message(conv, "hello")
         user2 = _add_user_message(conv, "do something with menai")
@@ -115,7 +115,7 @@ class TestMenaiHelpRead:
 
     def test_truncation_preserving_help_stays_unlocked(self):
         """Truncating after the Menai help call keeps Menai unlocked."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
 
         user1 = _add_user_message(conv, "hello")
         _add_tool_call_message(conv, _make_help_call("menai"))
@@ -133,7 +133,7 @@ class TestMenaiHelpRead:
 
     def test_load_history_with_help_unlocks(self):
         """Loading a history containing a Menai help call unlocks Menai."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
 
         # Build a history with a menai help call
         history = conv.get_conversation_history()
@@ -146,25 +146,25 @@ class TestMenaiHelpRead:
         )
 
         # Create a fresh conversation and load the history
-        conv2 = AIConversation()
+        conv2 = AIConversation(AIToolManager())
         conv2.load_history(history)
 
         assert conv2.menai_help_read() is True
 
     def test_load_history_without_help_stays_locked(self):
         """Loading a history without a Menai help call keeps Menai locked."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         history = conv.get_conversation_history()
         history.add_message(AIMessage.create(AIMessageSource.USER, "hello"))
 
-        conv2 = AIConversation()
+        conv2 = AIConversation(AIToolManager())
         conv2.load_history(history)
 
         assert conv2.menai_help_read() is False
 
     def test_non_tool_call_messages_ignored(self):
         """User and AI messages do not affect the menai_help_read result."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         history = conv.get_conversation_history()
         history.add_message(AIMessage.create(AIMessageSource.USER, "help with menai"))
         history.add_message(AIMessage.create(AIMessageSource.AI, "here is some help"))
@@ -173,7 +173,7 @@ class TestMenaiHelpRead:
 
     def test_help_call_without_tool_name_argument(self):
         """A help call missing the tool_name argument does not unlock Menai."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         call = AIToolCall(
             id="help-call-1",
             name="help",

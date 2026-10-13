@@ -27,7 +27,7 @@ class ShellTab(TabBase):
     persistent history that is separate from the system-wide message log.
     """
 
-    def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
+    def __init__(self, tab_id: str, mindspace_manager: MindspaceManager, parent: QWidget | None = None) -> None:
         """
         Initialize the shell tab.
 
@@ -35,9 +35,9 @@ class ShellTab(TabBase):
             tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
             parent: Optional parent widget
         """
-        super().__init__(tab_id, parent)
+        super().__init__(tab_id, mindspace_manager, parent)
         self._logger = logging.getLogger("ShellTab")
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = self._mindspace_manager
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -54,7 +54,7 @@ class ShellTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create shell widget
-        self._shell_widget = ShellWidget(self._tab_id, self)
+        self._shell_widget = ShellWidget(self._tab_id, mindspace_manager, self)
         self._shell_widget.status_updated.connect(self.update_status)
 
         shell_container = QWidget()
@@ -145,9 +145,11 @@ class ShellTab(TabBase):
         }
 
     @classmethod
-    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'ShellTab':
+    def rebuild_from_migration_state(
+        cls, state: dict, parent: QWidget, mindspace_manager: MindspaceManager
+    ) -> 'ShellTab':
         """Create a replacement shell tab carrying state from a column move."""
-        tab = cls(state["tab_id"], parent)
+        tab = cls(state["tab_id"], mindspace_manager, parent)
         metadata = state["metadata"]
         tab._shell_widget.restore_migration_state(metadata)
         if 'find_widget' in metadata:

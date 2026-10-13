@@ -7,20 +7,21 @@ import pytest
 from ai import AIMessage, AIMessageSource
 from ai_transcript_conversation import AITranscriptConversation
 from desktop.conversation_tab.conversation_widget import ConversationWidget
+from ai_tool import AIToolManager
 
 
 @pytest.fixture
-def conv_env(mindspace_sandbox):
+def conv_env(mindspace_sandbox, mindspace_manager):
     """The sandboxed mindspace, as (mindspace_manager, transcript_path)."""
     transcript_path = os.path.join(mindspace_sandbox.conversations_dir, "test.conv")
 
     yield mindspace_sandbox.manager, transcript_path
 
 
-def _make_widget(transcript_path: str) -> ConversationWidget:
+def _make_widget(transcript_path: str, mindspace_manager) -> ConversationWidget:
     """Create a ConversationWidget backed by a fresh transcript."""
-    transcript = AITranscriptConversation(transcript_path)
-    return ConversationWidget(transcript_path, ai_transcript_conversation=transcript)
+    transcript = AITranscriptConversation(transcript_path, AIToolManager())
+    return ConversationWidget(transcript_path, mindspace_manager, ai_transcript_conversation=transcript)
 
 
 def _populate(widget: ConversationWidget) -> None:
@@ -43,10 +44,10 @@ def _user_widgets(widget: ConversationWidget) -> list:
 class TestEditFromHere:
     """Tests for editing from a message."""
 
-    def test_begin_edit_loads_text_and_marks_later_messages(self, conv_env) -> None:
+    def test_begin_edit_loads_text_and_marks_later_messages(self, conv_env, mindspace_manager) -> None:
         """Editing from a message loads its text and marks later messages as pending removal."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         target = _user_widgets(widget)[1]
@@ -58,10 +59,10 @@ class TestEditFromHere:
         assert later
         assert all(w.is_pending_removal() for w in later)
 
-    def test_begin_edit_does_not_remove_messages(self, conv_env) -> None:
+    def test_begin_edit_does_not_remove_messages(self, conv_env, mindspace_manager) -> None:
         """Beginning an edit leaves the transcript untouched."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         before = len(widget._messages)  # pylint: disable=protected-access
@@ -70,10 +71,10 @@ class TestEditFromHere:
         assert len(widget._messages) == before  # pylint: disable=protected-access
         assert len(widget._ai_conversation.get_conversation_history().get_messages()) == 4  # pylint: disable=protected-access
 
-    def test_cancel_restores_messages(self, conv_env) -> None:
+    def test_cancel_restores_messages(self, conv_env, mindspace_manager) -> None:
         """Cancelling an edit restores the messages marked for removal."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         target = _user_widgets(widget)[1]
@@ -84,10 +85,10 @@ class TestEditFromHere:
         assert widget._input.to_plain_text() == ""  # pylint: disable=protected-access
         assert len(widget._ai_conversation.get_conversation_history().get_messages()) == 4  # pylint: disable=protected-access
 
-    def test_clearing_input_keeps_edit_active(self, conv_env) -> None:
+    def test_clearing_input_keeps_edit_active(self, conv_env, mindspace_manager) -> None:
         """Emptying the input box keeps the edit active so the whole message can be replaced."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         target = _user_widgets(widget)[1]
@@ -97,10 +98,10 @@ class TestEditFromHere:
         assert widget._pending_edit_message_id is not None  # pylint: disable=protected-access
         assert any(w.is_pending_removal() for w in widget._messages)  # pylint: disable=protected-access
 
-    def test_escape_cancels_edit(self, conv_env) -> None:
+    def test_escape_cancels_edit(self, conv_env, mindspace_manager) -> None:
         """Pressing Esc while editing cancels the edit and restores the messages."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         target = _user_widgets(widget)[1]
@@ -112,10 +113,10 @@ class TestEditFromHere:
         assert widget._pending_edit_message_id is None  # pylint: disable=protected-access
         assert not any(w.is_pending_removal() for w in widget._messages)  # pylint: disable=protected-access
 
-    def test_edited_message_is_marked(self, conv_env) -> None:
+    def test_edited_message_is_marked(self, conv_env, mindspace_manager) -> None:
         """The message being edited is marked as such and unmarked when the edit ends."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         target = _user_widgets(widget)[1]
@@ -128,10 +129,10 @@ class TestEditFromHere:
 
         assert not any(w.is_being_edited() for w in widget._messages)  # pylint: disable=protected-access
 
-    def test_begin_edit_does_not_scroll(self, conv_env) -> None:
+    def test_begin_edit_does_not_scroll(self, conv_env, mindspace_manager) -> None:
         """Beginning an edit leaves the scroll position untouched."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         scrollbar = widget._scroll_area.verticalScrollBar()  # pylint: disable=protected-access
@@ -144,10 +145,10 @@ class TestEditFromHere:
         assert scrollbar.value() == before
         assert widget._auto_scroll is False  # pylint: disable=protected-access
 
-    def test_submit_truncates_and_sends_revised_text(self, conv_env) -> None:
+    def test_submit_truncates_and_sends_revised_text(self, conv_env, mindspace_manager) -> None:
         """Submitting a pending edit removes the edited message and all later messages."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         target = _user_widgets(widget)[1]
@@ -160,10 +161,10 @@ class TestEditFromHere:
         assert [m.content for m in messages] == ["first prompt", "first response"]
         assert not any(w.is_pending_removal() for w in widget._messages)  # pylint: disable=protected-access
 
-    def test_retargeting_edit_moves_pending_removal(self, conv_env) -> None:
+    def test_retargeting_edit_moves_pending_removal(self, conv_env, mindspace_manager) -> None:
         """Editing from a different message moves the pending-removal marking."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         users = _user_widgets(widget)
@@ -179,10 +180,10 @@ class TestEditFromHere:
 class TestDeleteFromHere:
     """Tests for deleting from a message."""
 
-    def test_delete_removes_message_and_later_messages(self, conv_env) -> None:
+    def test_delete_removes_message_and_later_messages(self, conv_env, mindspace_manager) -> None:
         """Deleting from a message removes it and everything after it."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         target = _user_widgets(widget)[1]
@@ -191,20 +192,20 @@ class TestDeleteFromHere:
         messages = widget._ai_conversation.get_conversation_history().get_messages()  # pylint: disable=protected-access
         assert [m.content for m in messages] == ["first prompt", "first response"]
 
-    def test_delete_does_not_restore_text_to_input(self, conv_env) -> None:
+    def test_delete_does_not_restore_text_to_input(self, conv_env, mindspace_manager) -> None:
         """Deleting from a message does not load its text into the input box."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         _user_widgets(widget)[1].delete_requested.emit()
 
         assert widget._input.to_plain_text() == ""  # pylint: disable=protected-access
 
-    def test_delete_supersedes_pending_edit(self, conv_env) -> None:
+    def test_delete_supersedes_pending_edit(self, conv_env, mindspace_manager) -> None:
         """Deleting while a pending edit is active abandons the edit."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         _populate(widget)
 
         users = _user_widgets(widget)

@@ -35,6 +35,7 @@ class LogWidget(QWidget):
 
     def __init__(
         self,
+        mindspace_manager: MindspaceManager,
         parent: QWidget | None = None,
     ) -> None:
         """
@@ -47,7 +48,7 @@ class LogWidget(QWidget):
         self._logger = logging.getLogger("LogWidget")
         self.setObjectName("LogWidget")
 
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
         self._mindspace_manager.interactions_updated.connect(self.load_messages)
 
         self._style_manager = StyleManager()

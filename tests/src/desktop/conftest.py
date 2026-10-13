@@ -34,6 +34,21 @@ class MindspaceSandbox:
 
 
 @pytest.fixture
+def mindspace_manager(qapp, tmp_path):
+    """
+    A MindspaceManager with no mindspace open, for widgets that only need one to exist.
+
+    Widgets are given their window's manager rather than reaching for a shared one,
+    so a test that builds a widget in isolation still has to supply one.
+    """
+    manager = MindspaceManager(str(tmp_path / "mindspace.json"))
+
+    yield manager
+
+    manager._release_claim()  # pylint: disable=protected-access
+
+
+@pytest.fixture
 def mindspace_sandbox(qapp, tmp_path, monkeypatch):
     """
     Open a real mindspace in a sandboxed HOME and yield it.
@@ -49,11 +64,9 @@ def mindspace_sandbox(qapp, tmp_path, monkeypatch):
     home_dir.mkdir()
     monkeypatch.setenv("HOME", str(home_dir))
 
-    MindspaceManager._instance = None  # pylint: disable=protected-access
     UserManager._instance = None  # pylint: disable=protected-access
 
-    manager = MindspaceManager()
-    manager._home_config = str(tmp_path / "mindspace.json")  # pylint: disable=protected-access
+    manager = MindspaceManager(str(tmp_path / "mindspace.json"))
     path = str(tmp_path / "mindspace")
     manager.create_mindspace(path, [])
     manager.open_mindspace(path)

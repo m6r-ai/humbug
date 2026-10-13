@@ -42,13 +42,13 @@ class FileSidebar(SidebarBase):
     file_opened_in_preview = Signal(str)  # Emits path when file is opened in preview
     file_opened_in_diff = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in diff
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget, mindspace_manager: MindspaceManager) -> None:
         """Initialize the files view widget."""
         super().__init__(parent)
 
         self._style_manager = StyleManager()
         self._logger = logging.getLogger("FileSidebar")
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
         self._vcs_poller = MindspaceVCSPoller()
 
         # Create layout

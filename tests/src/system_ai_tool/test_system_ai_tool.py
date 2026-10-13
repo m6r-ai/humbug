@@ -9,6 +9,7 @@ import pytest
 
 from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
 from system_ai_tool.system_ai_tool import SystemAITool
+from ai_tool import AIToolManager
 
 
 class TestSystemAIToolDefinition:

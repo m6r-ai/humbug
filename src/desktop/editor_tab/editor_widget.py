@@ -38,7 +38,13 @@ class EditorWidget(QPlainTextEdit):
     status_updated = Signal()        # Request status bar update
     file_saved = Signal(str)         # File path saved
 
-    def __init__(self, path: str = "", untitled_number: int | None = None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        mindspace_manager: MindspaceManager,
+        path: str = "",
+        untitled_number: int | None = None,
+        parent: QWidget | None = None
+    ) -> None:
         """
         Initialize the editor widget.
 
@@ -126,7 +132,7 @@ class EditorWidget(QPlainTextEdit):
         self._auto_backup_timer.timeout.connect(self._auto_backup)
 
         # Mindspace integration
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
         self._mindspace_manager.settings_changed.connect(self._on_mindspace_settings_changed)
 
         # Connect text changes
@@ -1038,12 +1044,11 @@ class EditorWidget(QPlainTextEdit):
 
         if event.key() == Qt.Key.Key_Tab:
             cursor = self.textCursor()
-            mindspace_manager = MindspaceManager()
-            if not mindspace_manager.has_mindspace():
+            if not self._mindspace_manager.has_mindspace():
                 super().keyPressEvent(event)
                 return
 
-            settings = cast(MindspaceSettings, mindspace_manager.settings())
+            settings = cast(MindspaceSettings, self._mindspace_manager.settings())
 
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()
@@ -1073,12 +1078,11 @@ class EditorWidget(QPlainTextEdit):
 
         if event.key() == Qt.Key.Key_Backtab:  # Shift+Tab
             cursor = self.textCursor()
-            mindspace_manager = MindspaceManager()
-            if not mindspace_manager.has_mindspace():
+            if not self._mindspace_manager.has_mindspace():
                 super().keyPressEvent(event)
                 return
 
-            settings = cast(MindspaceSettings, mindspace_manager.settings())
+            settings = cast(MindspaceSettings, self._mindspace_manager.settings())
 
             scrollbar = self.verticalScrollBar()
             current_scroll = scrollbar.value()
@@ -2278,11 +2282,10 @@ class EditorWidget(QPlainTextEdit):
         Args:
             line: 1-based source line to bring into view.
         """
-        mindspace_manager = MindspaceManager()
-        if not mindspace_manager.has_mindspace():
+        if not self._mindspace_manager.has_mindspace():
             return
 
-        contexts = mindspace_manager.mindspace().contexts()
+        contexts = self._mindspace_manager.mindspace().contexts()
         existing = contexts.get_by_path_and_type(self._path, "preview")
         if existing:
             contexts.focus(existing.context_id)
@@ -2305,11 +2308,10 @@ class EditorWidget(QPlainTextEdit):
         Args:
             line: 1-based working-tree line to bring into view.
         """
-        mindspace_manager = MindspaceManager()
-        if not mindspace_manager.has_mindspace():
+        if not self._mindspace_manager.has_mindspace():
             return
 
-        contexts = mindspace_manager.mindspace().contexts()
+        contexts = self._mindspace_manager.mindspace().contexts()
         existing = contexts.get_by_path_and_type(self._path, "diff")
         if existing:
             contexts.focus(existing.context_id)

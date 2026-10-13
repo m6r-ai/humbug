@@ -30,6 +30,7 @@ class PreviewTab(TabBase):
         self,
         tab_id: str,
         path: str,
+        mindspace_manager: MindspaceManager,
         parent: QWidget | None = None
     ) -> None:
         """
@@ -40,7 +41,7 @@ class PreviewTab(TabBase):
             path: Full path to preview file
             parent: Optional parent widget
         """
-        super().__init__(tab_id, parent)
+        super().__init__(tab_id, mindspace_manager, parent)
         self._logger = logging.getLogger("PreviewTab")
         self._path = path
 
@@ -59,7 +60,7 @@ class PreviewTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create preview content widget
-        mindspace_manager = MindspaceManager()
+        mindspace_manager = self._mindspace_manager
         self._preview_content_widget = PreviewWidget(path, mindspace_manager, self)
         self._preview_content_widget.status_updated.connect(self.update_status)
         self._preview_content_widget.open_link.connect(self._on_open_link)
@@ -171,7 +172,7 @@ class PreviewTab(TabBase):
             # Try to resolve the link path
             resolved_path = self._preview_content_widget.resolve_link(cast(str, self._path), url)
             if resolved_path is not None:
-                mindspace_manager = MindspaceManager()
+                mindspace_manager = self._mindspace_manager
                 if mindspace_manager.has_mindspace():
                     contexts = mindspace_manager.mindspace().contexts()
                     existing = contexts.get_by_path_and_type(resolved_path, "preview")
@@ -205,7 +206,7 @@ class PreviewTab(TabBase):
 
     def _on_edit_file(self, path: str) -> None:
         """Open a file from the preview in an editor tab."""
-        mindspace_manager = MindspaceManager()
+        mindspace_manager = self._mindspace_manager
         if not mindspace_manager.has_mindspace():
             return
 
@@ -310,9 +311,11 @@ class PreviewTab(TabBase):
         }
 
     @classmethod
-    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'PreviewTab':
+    def rebuild_from_migration_state(
+        cls, state: dict, parent: QWidget, mindspace_manager: MindspaceManager
+    ) -> 'PreviewTab':
         """Create a replacement preview tab carrying state from a column move."""
-        tab = cls(state["tab_id"], state["path"], parent)
+        tab = cls(state["tab_id"], state["path"], mindspace_manager, parent)
         metadata = state["metadata"]
 
         try:

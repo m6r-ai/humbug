@@ -3,29 +3,17 @@ from PySide6.QtCore import QObject
 
 from desktop.shell_tab.shell_command import ShellCommand
 from desktop.shell_tab.shell_history_manager import ShellHistoryManager
-
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 class ShellCommandRegistry(QObject):
     """Registry for shell commands."""
 
-    _instance = None
-
-    def __new__(cls) -> 'ShellCommandRegistry':
-        """Singleton pattern implementation."""
-        if cls._instance is None:
-            cls._instance = super(ShellCommandRegistry, cls).__new__(cls)
-
-        return cls._instance
-
-    def __init__(self) -> None:
+    def __init__(self, mindspace_manager: MindspaceManager) -> None:
         """Initialize QObject base class if not already done."""
-        if not hasattr(self, '_initialized'):
-            super().__init__()
-            self._commands: dict[str, ShellCommand] = {}
-            self._aliases: dict[str, str] = {}
-            self._initialized = True
-            self._history_manager = ShellHistoryManager()
-
+        super().__init__()
+        self._commands: dict[str, ShellCommand] = {}
+        self._aliases: dict[str, str] = {}
+        self._history_manager = ShellHistoryManager(mindspace_manager)
 
     def register_command(self, command: ShellCommand) -> None:
         """

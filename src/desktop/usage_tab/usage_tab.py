@@ -8,13 +8,14 @@ from desktop.color_role import ColorRole
 from desktop.style_manager import StyleManager
 from desktop.tab import TabBase
 from desktop.usage_tab.usage_widget import UsageWidget
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
 class UsageTab(TabBase):
     """Tab showing per-mindspace token usage by provider and model."""
 
-    def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
-        super().__init__(tab_id, parent)
+    def __init__(self, tab_id: str, mindspace_manager: MindspaceManager, parent: QWidget | None = None) -> None:
+        super().__init__(tab_id, mindspace_manager, parent)
         self._style_manager = StyleManager()
 
         layout = QVBoxLayout(self)
@@ -36,7 +37,7 @@ class UsageTab(TabBase):
         content_layout.setSpacing(0)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
-        self._usage_widget = UsageWidget(content)
+        self._usage_widget = UsageWidget(mindspace_manager, content)
         self._usage_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         content_layout.addWidget(self._usage_widget)
 
@@ -353,8 +354,10 @@ class UsageTab(TabBase):
         return state
 
     @classmethod
-    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> "UsageTab":
+    def rebuild_from_migration_state(
+        cls, state: dict, parent: QWidget, mindspace_manager: MindspaceManager
+    ) -> "UsageTab":
         """Create a replacement usage tab carrying state from a column move."""
-        tab = cls(state["tab_id"], parent)
+        tab = cls(state["tab_id"], mindspace_manager, parent)
         tab._usage_widget.restore_expanded_providers(set(state["expanded_providers"]))
         return tab

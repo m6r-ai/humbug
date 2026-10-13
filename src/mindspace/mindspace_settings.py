@@ -4,7 +4,6 @@ import logging
 
 from ai import AIConversationSettings, AIReasoningCapability
 from ai.ai_model import AIReasoningEffort
-from ai_tool import AIToolManager
 
 
 @dataclass
@@ -104,12 +103,15 @@ class MindspaceSettings:
         return value
 
     @classmethod
-    def load(cls, path: str) -> "MindspaceSettings":
+    def load(cls, path: str, default_enabled_tools: dict[str, bool]) -> "MindspaceSettings":
         """
         Load settings from a JSON file.
 
         Args:
             path: Path to the settings file
+            default_enabled_tools: Tool enablement to use for tools the file does not
+                mention.  Supplied by the caller because tools belong to a mindspace,
+                so there is no process-wide manager to ask.
 
         Returns:
             MindspaceSettings object with loaded values
@@ -210,8 +212,7 @@ class MindspaceSettings:
             else:
                 reasoning_effort = reasoning_effort_raw
 
-        tool_manager = AIToolManager()
-        enabled_tools = tool_manager.get_default_enabled_tools()
+        enabled_tools = dict(default_enabled_tools)
         saved_enabled_tools = tools.get("enabled", {})
 
         # Validate that enabled tools is a dictionary

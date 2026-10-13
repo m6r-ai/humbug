@@ -12,12 +12,18 @@ from syntax import ProgrammingLanguage
 
 from desktop.preview_tab.preview_content_widget import PreviewContentWidget
 from desktop.preview_tab.preview_markdown_content_section import PreviewMarkdownContentSection
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
 class PreviewMarkdownContent(PreviewContentWidget):
     """Widget for displaying markdown content in the preview with sections."""
 
-    def __init__(self, parent: QWidget | None = None, contained: bool = False) -> None:
+    def __init__(
+        self,
+        mindspace_manager: MindspaceManager,
+        parent: QWidget | None = None,
+        contained: bool = False
+    ) -> None:
         """
         Initialize the markdown content widget.
 
@@ -26,6 +32,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
             contained: Whether this content is contained within another widget
         """
         super().__init__(parent)
+        self._mindspace_manager = mindspace_manager
 
         # Set object name for QSS targeting
         self.setObjectName("PreviewMarkdownContent")
@@ -64,7 +71,9 @@ class PreviewMarkdownContent(PreviewContentWidget):
         Returns:
             A new PreviewMarkdownContentSection instance
         """
-        section = PreviewMarkdownContentSection(syntax, self._sections_container)
+        section = PreviewMarkdownContentSection(
+            self._mindspace_manager, syntax, self._sections_container
+        )
         section_type = "code" if syntax is not None else "text"
         section.setProperty("section_type", section_type)
         section.setProperty("contained", self._contained)

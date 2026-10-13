@@ -10,21 +10,23 @@ from desktop.shell_tab.shell_command_parser import ShellCommandParser
 from desktop.shell_tab.shell_command_registry import ShellCommandRegistry
 from desktop.shell_tab.shell_event_source import ShellEventSource
 from desktop.shell_tab.shell_history_manager import ShellHistoryManager
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
 class ShellCommandProcessor:
     """Processes shell commands using the command registry."""
 
-    def __init__(self) -> None:
+    def __init__(self, mindspace_manager: MindspaceManager) -> None:
         """
         Initialize command processor.
 
         Args:
-            history_manager: Shell history manager to use for command history
+            mindspace_manager: The mindspace of the window this belongs to
         """
+        self._mindspace_manager = mindspace_manager
         self._logger = logging.getLogger("CommandProcessor")
-        self._history_manager = ShellHistoryManager()
-        self._command_registry = ShellCommandRegistry()
+        self._history_manager = ShellHistoryManager(mindspace_manager)
+        self._command_registry = ShellCommandRegistry(mindspace_manager)
 
         # Tab completion state tracking
         self._tab_completions: list[str] = []
@@ -141,7 +143,7 @@ class ShellCommandProcessor:
         self._current_completion_text = ""
 
         # Parse the input
-        parser = ShellCommandParser()
+        parser = ShellCommandParser(self._command_registry)
         parser.parse(None, current_text)
 
         # Store tokens

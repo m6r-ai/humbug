@@ -63,6 +63,7 @@ class PreviewWidget(QWidget):
         self.setObjectName("PreviewWidget")
         self._path = path
 
+        self._mindspace_manager = mindspace_manager
         self._preview = PreviewContent(mindspace_manager.mindspace())
 
         # File watching integration
@@ -312,10 +313,10 @@ class PreviewWidget(QWidget):
             The created PreviewContentWidget widget
         """
         if content_type == PreviewContentType.MARKDOWN:
-            content_widget: PreviewContentWidget = PreviewMarkdownContent(self)
+            content_widget: PreviewContentWidget = PreviewMarkdownContent(self._mindspace_manager, self)
 
         elif content_type == PreviewContentType.MARKDOWN_PREVIEW:
-            content_widget = PreviewMarkdownPreviewContent(self)
+            content_widget = PreviewMarkdownPreviewContent(self._mindspace_manager, self)
 
         elif content_type == PreviewContentType.FILE:
             content_widget = PreviewFileContent(self)
@@ -323,7 +324,7 @@ class PreviewWidget(QWidget):
         else:
             # Default to markdown for unknown types
             self._logger.warning("Unknown content type: %s, defaulting to markdown", content_type)
-            content_widget = PreviewMarkdownContent(self)
+            content_widget = PreviewMarkdownContent(self._mindspace_manager, self)
 
         content_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(content_widget, has_selection)
@@ -719,7 +720,7 @@ class PreviewWidget(QWidget):
     def _open_in_editor(self, pos: QPoint) -> None:
         """Open the current file in an editor tab, navigating to the clicked position."""
         target = self._line_column_at(pos)
-        contexts = MindspaceManager().mindspace().contexts()
+        contexts = self._mindspace_manager.mindspace().contexts()
         existing = contexts.get_by_path_and_type(self._path, "editor")
         if existing:
             contexts.focus(existing.context_id)
@@ -741,7 +742,7 @@ class PreviewWidget(QWidget):
 
     def _open_in_diff(self) -> None:
         """Open the current file in a diff tab."""
-        contexts = MindspaceManager().mindspace().contexts()
+        contexts = self._mindspace_manager.mindspace().contexts()
         existing = contexts.get_by_path_and_type(self._path, "diff")
         if existing:
             contexts.focus(existing.context_id)

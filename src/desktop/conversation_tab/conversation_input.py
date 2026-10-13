@@ -12,6 +12,7 @@ from ai import AIMessageSource
 from desktop.markdown import MarkdownTextEdit
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 from desktop.conversation_tab.conversation_message import ConversationMessage
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
 class ConversationInput(ConversationMessage):
@@ -28,7 +29,7 @@ class ConversationInput(ConversationMessage):
     modified = Signal()
     chrome_height_changed = Signal()
 
-    def __init__(self, style: AIMessageSource, parent: QWidget | None = None) -> None:
+    def __init__(self, mindspace_manager: MindspaceManager, style: AIMessageSource, parent: QWidget | None = None) -> None:
         """Initialize the conversation input widget."""
         self._is_streaming = False
         self._is_edit_mode = False
@@ -42,7 +43,7 @@ class ConversationInput(ConversationMessage):
         self._attachments_bar: QWidget | None = None
         self._attachments_layout: QHBoxLayout | None = None
 
-        super().__init__(style, parent=parent, is_input=True)
+        super().__init__(style, mindspace_manager, parent=parent, is_input=True)
 
         # Connect text cursor signals
         self._text_area: MarkdownTextEdit = self._sections[0].text_area()  # type: ignore[assignment]

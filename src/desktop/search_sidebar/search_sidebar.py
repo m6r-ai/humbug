@@ -27,6 +27,7 @@ from desktop.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.sidebar.sidebar_tree_style import SidebarTreeStyle
 from desktop.style_manager import StyleManager
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 _LINE_NUMBER_ROLE = Qt.ItemDataRole.UserRole + 11
 _MESSAGE_ID_ROLE = Qt.ItemDataRole.UserRole + 12
@@ -129,9 +130,10 @@ class SearchSidebar(SidebarBase):
     result_activated = Signal(str, str, bool, str, bool, bool, object, object)
     highlights_cleared = Signal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget, mindspace_manager: MindspaceManager) -> None:
         super().__init__(parent)
 
+        self._mindspace_manager = mindspace_manager
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)

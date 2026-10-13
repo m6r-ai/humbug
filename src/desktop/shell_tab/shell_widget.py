@@ -33,6 +33,7 @@ class ShellWidget(QWidget):
     def __init__(
         self,
         tab_id: str,
+        mindspace_manager: MindspaceManager,
         parent: QWidget | None = None,
     ) -> None:
         """
@@ -48,11 +49,11 @@ class ShellWidget(QWidget):
         self._tab_id = tab_id
 
         # Create shell history manager
-        self._command_registry = ShellCommandRegistry()
-        self._history_manager = ShellHistoryManager()
+        self._command_registry = ShellCommandRegistry(mindspace_manager)
+        self._history_manager = ShellHistoryManager(mindspace_manager)
         self._history_manager.history_updated.connect(self.load_messages)
 
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
         self._style_manager = StyleManager()
 
         # Widget tracking
@@ -83,7 +84,7 @@ class ShellWidget(QWidget):
         self._messages_container.setLayout(self._messages_layout)
 
         # Set up the input box
-        self._input = ShellInput(self._messages_container)
+        self._input = ShellInput(self._command_registry, self._messages_container)
         self._input.cursor_position_changed.connect(self._ensure_cursor_visible)
         self._input.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(self._input, has_selection)
@@ -97,7 +98,7 @@ class ShellWidget(QWidget):
         self._input.tab_completion_requested.connect(self._on_tab_completion_requested)
 
         # Create command processor
-        self._command_processor = ShellCommandProcessor()
+        self._command_processor = ShellCommandProcessor(self._mindspace_manager)
 
         spacing = int(self._style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
@@ -287,7 +288,7 @@ class ShellWidget(QWidget):
 
     def _add_shell_message(self, message: ShellEvent) -> None:
         """Add a message from the shell message history."""
-        msg_widget = ShellMessage(self)
+        msg_widget = ShellMessage(self._command_registry, self)
         msg_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(msg_widget, has_selection)
         )

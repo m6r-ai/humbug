@@ -4,6 +4,7 @@ import pytest
 
 from ai import AIConversation, AIConversationHistory
 from ai.ai_message import AIMessage, AIMessageSource
+from ai_tool import AIToolManager
 
 
 def _add_user_message(conversation: AIConversation, content: str, attachments=None) -> AIMessage:
@@ -27,7 +28,7 @@ class TestTruncateToMessage:
 
     def test_truncate_removes_message_and_everything_after(self):
         """Truncating at a user message removes that message and all subsequent messages."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_user_message(conv, "first")
         _add_ai_message(conv, "response to first")
         msg2 = _add_user_message(conv, "second")
@@ -42,7 +43,7 @@ class TestTruncateToMessage:
 
     def test_truncate_returns_content_of_truncated_message(self):
         """truncate_to_message returns the content of the removed message."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_user_message(conv, "first")
         msg2 = _add_user_message(conv, "the message to delete")
 
@@ -51,7 +52,7 @@ class TestTruncateToMessage:
 
     def test_truncate_at_first_message_leaves_empty_history(self):
         """Truncating at the first message leaves an empty history."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         msg = _add_user_message(conv, "only message")
         _add_ai_message(conv, "response")
 
@@ -60,14 +61,14 @@ class TestTruncateToMessage:
 
     def test_truncate_unknown_id_returns_none(self):
         """truncate_to_message returns None for an unknown message ID."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_user_message(conv, "hello")
         result = conv.truncate_to_message("no-such-id")
         assert result is None
 
     def test_truncate_non_user_message_returns_none(self):
         """truncate_to_message returns None when the target is not a user message."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_user_message(conv, "question")
         ai_msg = _add_ai_message(conv, "answer")
 
@@ -76,7 +77,7 @@ class TestTruncateToMessage:
 
     def test_truncate_preserves_referenced_attachments(self):
         """Attachments referenced by preserved messages are kept."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         history = conv.get_conversation_history()
         guid = history.add_attachment("# blueprint", "blueprint.md", "blueprint")
 
@@ -93,7 +94,7 @@ class TestTruncateToMessage:
 
     def test_truncate_removes_unreferenced_attachments(self):
         """Attachments only referenced by removed messages are pruned."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         history = conv.get_conversation_history()
 
         guid_kept = history.add_attachment("kept", "kept.py", "file")
@@ -112,7 +113,7 @@ class TestTruncateToMessage:
 
     def test_truncate_history_with_no_attachments(self):
         """Truncation works correctly when there are no attachments at all."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_user_message(conv, "one")
         msg2 = _add_user_message(conv, "two")
         _add_ai_message(conv, "reply")
@@ -123,7 +124,7 @@ class TestTruncateToMessage:
 
     def test_truncate_does_not_affect_history_when_returning_none(self):
         """When truncate_to_message returns None, the history is unchanged."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         msg = _add_user_message(conv, "hello")
         _add_ai_message(conv, "world")
 
@@ -137,7 +138,7 @@ class TestForkHistoryToIndex:
 
     def test_fork_returns_correct_message_slice(self):
         """fork_history_to_index returns messages up to (not including) the given index."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_user_message(conv, "one")
         _add_ai_message(conv, "two")
         _add_user_message(conv, "three")
@@ -151,14 +152,14 @@ class TestForkHistoryToIndex:
 
     def test_fork_zero_returns_empty_history(self):
         """fork_history_to_index(0) returns an empty history."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_user_message(conv, "hello")
         forked = conv.fork_history_to_index(0)
         assert forked.get_messages() == []
 
     def test_fork_full_length_returns_all_messages(self):
         """fork_history_to_index(len) returns all messages."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_user_message(conv, "a")
         _add_ai_message(conv, "b")
         _add_user_message(conv, "c")
@@ -169,7 +170,7 @@ class TestForkHistoryToIndex:
 
     def test_fork_does_not_modify_original(self):
         """fork_history_to_index does not modify the original conversation."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_user_message(conv, "one")
         _add_user_message(conv, "two")
         _add_user_message(conv, "three")
@@ -179,7 +180,7 @@ class TestForkHistoryToIndex:
 
     def test_fork_includes_only_referenced_attachments(self):
         """Forked history includes only attachments referenced by the forked messages."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         history = conv.get_conversation_history()
 
         guid_included = history.add_attachment("included", "a.py", "file")
@@ -197,7 +198,7 @@ class TestForkHistoryToIndex:
 
     def test_fork_with_no_attachments(self):
         """Forking a history with no attachments produces an empty attachment store."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_user_message(conv, "one")
         _add_user_message(conv, "two")
 
@@ -206,14 +207,14 @@ class TestForkHistoryToIndex:
 
     def test_fork_returns_aiconversationhistory(self):
         """fork_history_to_index returns an AIConversationHistory instance."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         _add_user_message(conv, "hello")
         forked = conv.fork_history_to_index(1)
         assert isinstance(forked, AIConversationHistory)
 
     def test_fork_preserves_shared_attachments(self):
         """An attachment referenced by both forked and non-forked messages is included."""
-        conv = AIConversation()
+        conv = AIConversation(AIToolManager())
         history = conv.get_conversation_history()
 
         shared_guid = history.add_attachment("shared", "shared.py", "file")

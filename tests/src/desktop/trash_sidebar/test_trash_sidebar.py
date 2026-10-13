@@ -36,8 +36,8 @@ def sidebar_env(mindspace_sandbox, monkeypatch):
 @pytest.fixture
 def panel(sidebar_env):
     """A TrashSidebar configured for the sandboxed mindspace."""
-    _mgr, ms_path, _conv_dir = sidebar_env
-    widget = TrashSidebar()
+    mgr, ms_path, _conv_dir = sidebar_env
+    widget = TrashSidebar(None, mgr)
     widget.set_mindspace(ms_path)
     yield widget
     widget.deleteLater()
@@ -56,19 +56,19 @@ def _trash_a_file(mgr: MindspaceManager, conv_dir: str, name: str = "chat.conv")
 class TestTrashSidebarListing:
     """The panel lists whatever Mindspace.list_trashed() reports."""
 
-    def test_no_mindspace_shows_empty_state(self, qapp):  # pylint: disable=unused-argument
-        widget = TrashSidebar()
+    def test_no_mindspace_shows_empty_state(self, qapp, mindspace_manager):
+        widget = TrashSidebar(None, mindspace_manager)
         widget.set_mindspace("")
 
         assert widget._tree.topLevelItemCount() == 0  # pylint: disable=protected-access
         assert not widget._status_label.isHidden()  # pylint: disable=protected-access
         widget.deleteLater()
 
-    def test_empty_trash_shows_empty_state(self, panel):
+    def test_empty_trash_shows_empty_state(self, panel, mindspace_manager):
         assert panel._tree.topLevelItemCount() == 0  # pylint: disable=protected-access
         assert not panel._status_label.isHidden()  # pylint: disable=protected-access
 
-    def test_trashed_item_is_listed(self, sidebar_env, panel):
+    def test_trashed_item_is_listed(self, sidebar_env, panel, mindspace_manager):
         mgr, _ms_path, conv_dir = sidebar_env
         _trash_a_file(mgr, conv_dir)
 
@@ -81,7 +81,7 @@ class TestTrashSidebarListing:
 class TestTrashSidebarActions:
     """Restore / Delete Forever / Empty Trash act on the underlying mindspace."""
 
-    def test_restore_moves_file_back_and_removes_row(self, sidebar_env, panel):
+    def test_restore_moves_file_back_and_removes_row(self, sidebar_env, panel, mindspace_manager):
         mgr, _ms_path, conv_dir = sidebar_env
         chat = _trash_a_file(mgr, conv_dir)
         panel.refresh()
@@ -93,7 +93,7 @@ class TestTrashSidebarActions:
         assert not mgr.mindspace().list_trashed()
         assert panel._tree.topLevelItemCount() == 0  # pylint: disable=protected-access
 
-    def test_delete_forever_removes_item_permanently(self, sidebar_env, panel):
+    def test_delete_forever_removes_item_permanently(self, sidebar_env, panel, mindspace_manager):
         mgr, _ms_path, conv_dir = sidebar_env
         _trash_a_file(mgr, conv_dir)
         panel.refresh()
@@ -104,7 +104,7 @@ class TestTrashSidebarActions:
         assert not mgr.mindspace().list_trashed()
         assert panel._tree.topLevelItemCount() == 0  # pylint: disable=protected-access
 
-    def test_empty_trash_clears_everything(self, sidebar_env, panel):
+    def test_empty_trash_clears_everything(self, sidebar_env, panel, mindspace_manager):
         mgr, _ms_path, conv_dir = sidebar_env
         _trash_a_file(mgr, conv_dir, "chat1.conv")
         _trash_a_file(mgr, conv_dir, "chat2.conv")
@@ -119,7 +119,7 @@ class TestTrashSidebarActions:
 class TestTrashSidebarClickToOpen:
     """Clicking a trashed conversation file emits file_clicked with the trash panel_id."""
 
-    def test_click_on_conversation_file_emits_signal(self, sidebar_env, panel):
+    def test_click_on_conversation_file_emits_signal(self, sidebar_env, panel, mindspace_manager):
         mgr, _ms_path, conv_dir = sidebar_env
         _trash_a_file(mgr, conv_dir)
         panel.refresh()
@@ -135,7 +135,7 @@ class TestTrashSidebarClickToOpen:
         assert emitted[0][1].endswith(".conv")
         assert emitted[0][2] is True  # ephemeral on single click
 
-    def test_click_on_non_conversation_file_does_not_emit(self, sidebar_env, panel):
+    def test_click_on_non_conversation_file_does_not_emit(self, sidebar_env, panel, mindspace_manager):
         mgr, _ms_path, conv_dir = sidebar_env
         readme = os.path.join(conv_dir, "README.md")
         with open(readme, "w", encoding="utf-8") as f:
@@ -153,7 +153,7 @@ class TestTrashSidebarClickToOpen:
 
         assert len(emitted) == 0
 
-    def test_double_click_on_conversation_file_emits_signal(self, sidebar_env, panel):
+    def test_double_click_on_conversation_file_emits_signal(self, sidebar_env, panel, mindspace_manager):
         mgr, _ms_path, conv_dir = sidebar_env
         _trash_a_file(mgr, conv_dir)
         panel.refresh()
@@ -172,7 +172,7 @@ class TestTrashSidebarClickToOpen:
 class TestTrashTreeDelegateSpacing:
     """The delegate provides consistent, zoom-scaled row height matching the conversation sidebar."""
 
-    def test_size_hint_matches_conversation_sidebar_formula(self, qapp):  # pylint: disable=unused-argument
+    def test_size_hint_matches_conversation_sidebar_formula(self, qapp, mindspace_manager):
         style_manager = StyleManager()
         zoom = style_manager.zoom_factor()
         delegate = TrashTreeDelegate(None, style_manager)  # type: ignore[arg-type]

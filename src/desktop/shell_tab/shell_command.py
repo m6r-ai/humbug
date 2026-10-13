@@ -13,13 +13,14 @@ from desktop.shell_tab.shell_history_manager import ShellHistoryManager
 class ShellCommand:
     """Base class for all shell commands."""
 
-    def __init__(self) -> None:
+    def __init__(self, mindspace_manager: MindspaceManager) -> None:
         """
         Initialize base shell command.
         """
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._history_manager = ShellHistoryManager()
-        self._mindspace = MindspaceManager().mindspace()
+        self._history_manager = ShellHistoryManager(mindspace_manager)
+        self._mindspace = mindspace_manager.mindspace()
+        self._tool_manager = mindspace_manager.tool_manager()
         self._requester_id = ""
 
     def set_requester_id(self, requester_id: str) -> None:

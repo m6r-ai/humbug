@@ -10,7 +10,6 @@ from desktop.shell_tab.shell_event import ShellEvent
 from desktop.shell_tab.shell_event_source import ShellEventSource
 from desktop.shell_tab.shell_history import ShellHistory
 
-
 class ShellHistoryManager(QObject):
     """
     Manages shell command history within mindspaces.
@@ -24,26 +23,15 @@ class ShellHistoryManager(QObject):
 
     SHELL_HISTORY_FILE = "shell_history.json"
 
-    _instance = None
+    def __init__(self, mindspace_manager: MindspaceManager) -> None:
+        """Initialise shell history for one window's mindspace."""
+        super().__init__()
+        self._mindspace_manager = mindspace_manager
+        self._history = ShellHistory()
+        self._logger = logging.getLogger("ShellHistoryManager")
 
-    def __new__(cls) -> 'ShellHistoryManager':
-        """Create or return singleton instance."""
-        if cls._instance is None:
-            cls._instance = super(ShellHistoryManager, cls).__new__(cls)
-
-        return cls._instance
-
-    def __init__(self) -> None:
-        """Initialize mindspace manager if not already initialized."""
-        if not hasattr(self, '_initialized'):
-            super().__init__()
-            self._mindspace_manager = MindspaceManager()
-            self._history = ShellHistory()
-            self._logger = logging.getLogger("ShellHistoryManager")
-
-            # Connect to mindspace changes
-            self._mindspace_manager.settings_changed.connect(self._on_mindspace_changed)
-            self._initialized = True
+        # Connect to mindspace changes
+        self._mindspace_manager.settings_changed.connect(self._on_mindspace_changed)
 
     def _on_mindspace_changed(self) -> None:
         """Handle mindspace changes by loading appropriate history."""

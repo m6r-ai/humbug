@@ -13,25 +13,25 @@ def _write_preview_file(tmp_path, name: str = "doc.md") -> str:
 class TestPreviewTabViewState:
     """Tests for PreviewTab.capture_view_state and restore_view_state."""
 
-    def test_view_state_includes_find_widget(self, qapp, tmp_path) -> None:
+    def test_view_state_includes_find_widget(self, qapp, tmp_path, mindspace_manager) -> None:
         """The find widget's state is part of the view state."""
-        tab = PreviewTab("t1", _write_preview_file(tmp_path))
+        tab = PreviewTab("t1", _write_preview_file(tmp_path), mindspace_manager)
 
         state = tab.capture_view_state()
 
         assert "find_widget" in state
 
-    def test_view_state_includes_scroll_position(self, qapp, tmp_path) -> None:
+    def test_view_state_includes_scroll_position(self, qapp, tmp_path, mindspace_manager) -> None:
         """The scroll position is part of the view state."""
-        tab = PreviewTab("t1", _write_preview_file(tmp_path))
+        tab = PreviewTab("t1", _write_preview_file(tmp_path), mindspace_manager)
 
         state = tab.capture_view_state()
 
         assert "scroll_position" in state
 
-    def test_restore_view_state_ignores_empty_state(self, qapp, tmp_path) -> None:
+    def test_restore_view_state_ignores_empty_state(self, qapp, tmp_path, mindspace_manager) -> None:
         """An empty state dictionary is a no-op."""
-        tab = PreviewTab("t1", _write_preview_file(tmp_path))
+        tab = PreviewTab("t1", _write_preview_file(tmp_path), mindspace_manager)
 
         tab.restore_view_state({})
 
@@ -39,22 +39,22 @@ class TestPreviewTabViewState:
 class TestPreviewTabMigrationState:
     """Tests for PreviewTab.capture_migration_state and rebuild_from_migration_state."""
 
-    def test_migration_state_carries_path(self, qapp, tmp_path) -> None:
+    def test_migration_state_carries_path(self, qapp, tmp_path, mindspace_manager) -> None:
         """Migration state carries the previewed path across a column move."""
         path = _write_preview_file(tmp_path)
-        tab = PreviewTab("t1", path)
+        tab = PreviewTab("t1", path, mindspace_manager)
 
         state = tab.capture_migration_state()
 
         assert state["path"] == path
 
-    def test_rebuild_preserves_tab_id_and_path(self, qapp, tmp_path) -> None:
+    def test_rebuild_preserves_tab_id_and_path(self, qapp, tmp_path, mindspace_manager) -> None:
         """The rebuilt tab keeps the original tab id and path."""
         path = _write_preview_file(tmp_path)
-        tab = PreviewTab("t1", path)
+        tab = PreviewTab("t1", path, mindspace_manager)
 
         state = tab.capture_migration_state()
-        rebuilt = PreviewTab.rebuild_from_migration_state(state, None)
+        rebuilt = PreviewTab.rebuild_from_migration_state(state, None, mindspace_manager)
 
         assert rebuilt.tab_id() == "t1"
         assert rebuilt.path() == path

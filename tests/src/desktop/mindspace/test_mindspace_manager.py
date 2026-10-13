@@ -14,26 +14,15 @@ from mindspace.mindspace_settings import MindspaceSettings
 
 @pytest.fixture
 def manager(qapp, tmp_path):
-    """Create a MindspaceManager with an isolated home config file.
-
-    The MindspaceManager is a singleton, so we reset its internal state
-    before each test to get a clean instance.
-    """
-    # Reset the singleton so we get a fresh instance.
-    MindspaceManager._instance = None
-
-    # Point the home config to a temp file.
+    """Create a MindspaceManager with an isolated home config file."""
     config_path = tmp_path / "mindspace.json"
 
-    mgr = MindspaceManager()
-    mgr._home_config = str(config_path)
+    mgr = MindspaceManager(str(config_path))
 
     yield mgr
 
-    # Release any claim the test took on a mindspace, then clean up the
-    # singleton for subsequent tests.
+    # Release any claim the test took on a mindspace.
     mgr._release_claim()
-    MindspaceManager._instance = None
 
 
 def _create_mindspace_dir(base: str, name: str) -> str:
@@ -522,7 +511,7 @@ class TestPinnedPaths:
         mgr.set_path_pinned(chat, True)
 
         settings_path = os.path.join(mgr.mindspace_path(), ".humbug", "settings.json")
-        reloaded = MindspaceSettings.load(settings_path)
+        reloaded = MindspaceSettings.load(settings_path, {})
 
         assert mgr.get_mindspace_relative_path(chat) in reloaded.pinned_paths
 

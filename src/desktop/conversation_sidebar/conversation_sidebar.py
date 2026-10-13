@@ -46,13 +46,13 @@ class ConversationSidebar(SidebarBase):
     file_opened_in_diff = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in diff
     new_conversation_requested = Signal(str)  # Emits target folder path when user requests new conversation in folder
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget, mindspace_manager: MindspaceManager) -> None:
         """Initialize the conversations view widget."""
         super().__init__(parent)
 
         self._style_manager = StyleManager()
         self._logger = logging.getLogger("ConversationSidebar")
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
         self._vcs_poller = MindspaceVCSPoller()
         self._pin_overlay: PinSlideOverlay | None = None
         self._operation_stack = SidebarOperationStack()
@@ -117,7 +117,9 @@ class ConversationSidebar(SidebarBase):
 
         # Conversation DAG index and model (model created after index in set_mindspace)
         self._conversations_index = ConversationSidebarIndex(self)
-        self._dag_model = ConversationSidebarDAGModel(self._conversations_index, self._icon_provider, self)
+        self._dag_model = ConversationSidebarDAGModel(
+            self._conversations_index, self._icon_provider, mindspace_manager, self
+        )
         self._dag_model.about_to_rebuild.connect(self._save_expanded_state)
         self._dag_model.rebuilt.connect(self._restore_expanded_state)
         self._conversations_index.changed.connect(self._bc_container.refresh_viewport)
@@ -129,7 +131,9 @@ class ConversationSidebar(SidebarBase):
         self._collapsed_pinned_groups: set[str] = set()
 
         # Create and set the specialized conversations delegate
-        self._delegate = ConversationSidebarTreeDelegate(self._tree_view, self._style_manager)
+        self._delegate = ConversationSidebarTreeDelegate(
+            self._tree_view, self._style_manager, mindspace_manager
+        )
         self._delegate.edit_finished.connect(self._on_delegate_edit_finished)
         self._delegate.edit_cancelled.connect(self._on_delegate_edit_cancelled)
         self._tree_view.setItemDelegate(self._delegate)

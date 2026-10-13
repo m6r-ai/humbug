@@ -101,7 +101,7 @@ def registry(tmp_path):
 
 
 @pytest.fixture
-def host(registry):
+def host(registry, mindspace_manager):
     """A fake host wired to a fresh mindspace manager, sidebar manager and registry."""
     mindspace_manager = FakeMindspaceManager()
     sidebar_manager = FakeSidebarManager()
@@ -120,7 +120,7 @@ def registered_path(registry: InstanceRegistry) -> str:
 
 
 class TestRestoreLastMindspaceRegistersTheOpenMindspace:
-    def test_registers_the_mindspace_it_opens(self, host):
+    def test_registers_the_mindspace_it_opens(self, host, mindspace_manager):
         with tempfile.TemporaryDirectory() as mindspace_path:
             host._initial_mindspace_path = mindspace_path  # pylint: disable=protected-access
 
@@ -128,7 +128,7 @@ class TestRestoreLastMindspaceRegistersTheOpenMindspace:
 
             assert registered_path(host._instance_registry) == mindspace_path  # pylint: disable=protected-access
 
-    def test_registers_even_when_state_restoration_fails(self, host):
+    def test_registers_even_when_state_restoration_fails(self, host, mindspace_manager):
         with tempfile.TemporaryDirectory() as mindspace_path:
             host._initial_mindspace_path = mindspace_path  # pylint: disable=protected-access
             host._restore_state_error = MindspaceError("state restoration failed")  # pylint: disable=protected-access
@@ -137,7 +137,7 @@ class TestRestoreLastMindspaceRegistersTheOpenMindspace:
 
             assert registered_path(host._instance_registry) == mindspace_path  # pylint: disable=protected-access
 
-    def test_registers_nothing_when_the_mindspace_fails_to_open(self, host):
+    def test_registers_nothing_when_the_mindspace_fails_to_open(self, host, mindspace_manager):
         with tempfile.TemporaryDirectory() as mindspace_path:
             host._initial_mindspace_path = mindspace_path  # pylint: disable=protected-access
             host._mindspace_manager.open_error = MindspaceError("cannot open")  # pylint: disable=protected-access
@@ -148,13 +148,13 @@ class TestRestoreLastMindspaceRegistersTheOpenMindspace:
 
 
 class TestOpenMindspacePathRegistersTheOpenMindspace:
-    def test_registers_the_mindspace_it_opens(self, host):
+    def test_registers_the_mindspace_it_opens(self, host, mindspace_manager):
         with tempfile.TemporaryDirectory() as mindspace_path:
             MainWindow._open_mindspace_path(host, mindspace_path)  # pylint: disable=protected-access
 
             assert registered_path(host._instance_registry) == mindspace_path  # pylint: disable=protected-access
 
-    def test_registers_even_when_state_restoration_fails(self, host):
+    def test_registers_even_when_state_restoration_fails(self, host, mindspace_manager):
         with tempfile.TemporaryDirectory() as mindspace_path:
             host._restore_state_error = MindspaceError("state restoration failed")  # pylint: disable=protected-access
 

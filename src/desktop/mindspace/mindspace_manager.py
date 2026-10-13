@@ -12,6 +12,8 @@ from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
 from mindspace.mindspace_settings import MindspaceSettings
 
+from ai_tool import AIToolManager
+
 from desktop import json_store
 from desktop.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
 
@@ -31,11 +33,16 @@ def _same_mindspace(a: str, b: str) -> bool:
 
 class MindspaceManager(QObject):
     """
-    Qt-facing singleton that owns the Mindspace model.
+    Qt-facing owner of one window's Mindspace model.
 
     Wraps Mindspace with Qt signals and adds the two UI-only concerns that do
     not belong in the pure model: directory tracking (last-used file dialog
     paths) and home-config tracking (last opened mindspace path).
+
+    There is one manager per window, not one per process.  A window's mindspace
+    is its own, and its signals concern only itself: a shared manager would fan
+    every mindspace change out to every window.  The home config these managers
+    read and write is shared, which is safe because it is updated under a lock.
 
     All mindspace logic lives in Mindspace.  This class only adds the Qt
     observer machinery and the UI-specific state.
@@ -49,29 +56,55 @@ class MindspaceManager(QObject):
 
     MINDSPACE_DIR = Mindspace.MINDSPACE_DIR
 
-    _instance = None
     _logger = logging.getLogger("MindspaceManager")
 
-    def __new__(cls) -> 'MindspaceManager':
-        """Create or return singleton instance."""
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
+    DEFAULT_HOME_CONFIG = "~/.humbug/mindspace.json"
 
-        return cls._instance
+    def __init__(self, home_config_path: str, tool_manager: AIToolManager | None = None) -> None:
+        """
+        Initialise a manager for one window's mindspace.
 
-    def __init__(self) -> None:
-        """Initialise if not already done."""
-        if not hasattr(self, '_initialized'):
-            super().__init__()
-            self._mindspace = Mindspace(
-                on_settings_changed=self.settings_changed.emit,
-                on_interactions_updated=self.interactions_updated.emit,
-                on_usage_updated=self.usage_updated.emit,
-            )
-            self._directory_tracker = MindspaceDirectoryTracker()
-            self._home_config = os.path.expanduser("~/.humbug/mindspace.json")
-            self._claim: IO[str] | None = None
-            self._initialized = True
+        Args:
+            home_config_path: Path to the config recording the last opened and
+                recent mindspaces.  Shared by every window, and updated under a
+                lock so that concurrent windows do not lose each other's entries.
+            tool_manager: The tool service this window's AI conversations use.  It
+                is owned here rather than by the Mindspace, so that a conversation
+                can be run in a context that has no mindspace at all.  One is
+                created if not supplied.
+        """
+        super().__init__()
+        self._tool_manager = tool_manager or AIToolManager()
+        self._mindspace = Mindspace(
+            on_settings_changed=self.settings_changed.emit,
+            on_interactions_updated=self.interactions_updated.emit,
+            on_usage_updated=self.usage_updated.emit,
+            default_enabled_tools=self._tool_manager.get_default_enabled_tools(),
+        )
+        self.settings_changed.connect(self._apply_tool_settings)
+        self._directory_tracker = MindspaceDirectoryTracker()
+        self._home_config = home_config_path
+        self._claim: IO[str] | None = None
+
+    def tool_manager(self) -> AIToolManager:
+        """
+        Return the tool service used by this window's AI conversations.
+
+        Tools are owned by the window's execution context rather than by its
+        mindspace: a mindspace supplies which tools are enabled, but running a
+        conversation does not require one to exist.
+        """
+        return self._tool_manager
+
+    def _apply_tool_settings(self) -> None:
+        """Apply the mindspace's tool-enablement policy to the tool service."""
+        settings = self._mindspace.settings()
+        enabled = settings.enabled_tools if settings else self._tool_manager.get_default_enabled_tools()
+        try:
+            self._tool_manager.set_tool_enabled_states(enabled)
+
+        except Exception:
+            self._logger.exception("Failed to apply tool settings")
 
     def mindspace(self) -> Mindspace:
         """Return the underlying Mindspace model for direct access."""

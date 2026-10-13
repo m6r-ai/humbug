@@ -32,7 +32,11 @@ class EditorTab(TabBase):
         cls._untitled_counter += 1
         return f"Untitled-{cls._untitled_counter}"
 
-    def __init__(self, tab_id: str, path: str, untitled_number: int | None = None, parent: QWidget | None = None) -> None:
+    def __init__(self, tab_id: str,
+        path: str,
+        mindspace_manager: MindspaceManager,
+        untitled_number: int | None = None,
+        parent: QWidget | None = None) -> None:
         """
         Initialize editor tab.
 
@@ -42,7 +46,7 @@ class EditorTab(TabBase):
             untitled_number: Untitled file number for pathless tabs; only passed when restoring from state
             parent: Optional parent widget
         """
-        super().__init__(tab_id, parent)
+        super().__init__(tab_id, mindspace_manager, parent)
         self._logger = logging.getLogger("EditorTab")
         self._path = path
         self._untitled_number = untitled_number
@@ -67,7 +71,7 @@ class EditorTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create editor widget
-        self._editor_widget = EditorWidget(path, untitled_number, self)
+        self._editor_widget = EditorWidget(mindspace_manager, path, untitled_number, self)
         self._editor_widget.content_modified.connect(self._on_content_modified)
         self._editor_widget.text_changed.connect(self._on_text_changed)
         self._editor_widget.status_updated.connect(self.update_status)
@@ -188,7 +192,7 @@ class EditorTab(TabBase):
         self._update_tab_label()
 
         if path != old_path:
-            mindspace_manager = MindspaceManager()
+            mindspace_manager = self._mindspace_manager
             if mindspace_manager.has_mindspace():
                 mindspace_manager.mindspace().contexts().update(
                     self._tab_id, path=path, title=os.path.basename(path),
@@ -259,7 +263,9 @@ class EditorTab(TabBase):
         return self._editor_context
 
     @classmethod
-    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'EditorTab':
+    def rebuild_from_migration_state(
+        cls, state: dict, parent: QWidget, mindspace_manager: MindspaceManager
+    ) -> 'EditorTab':
         """Create a replacement editor tab carrying state from a column move."""
         # Set filename and load content
         number: int | None = None
@@ -272,7 +278,7 @@ class EditorTab(TabBase):
             path = state["path"]
 
         # Create new tab instance
-        tab = cls(state["tab_id"], path, number, parent)
+        tab = cls(state["tab_id"], path, mindspace_manager, number, parent)
 
         metadata = state["metadata"]
         tab._editor_widget.restore_migration_state(metadata)

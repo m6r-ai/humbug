@@ -16,7 +16,7 @@ from desktop.markdown.markdown_renderer import MarkdownRenderer
 
 
 @pytest.fixture(autouse=True)
-def _qt(qapp):
+def _qt(qapp, mindspace_manager):
     """Ensure a QApplication exists for the font database and rendering."""
 
 
@@ -30,7 +30,7 @@ def _build_table(markdown: str) -> MarkdownASTTableNode:
     raise AssertionError("markdown did not produce a table node")
 
 
-def _render_table(markdown: str, width: float = 600.0) -> QTextDocument:
+def _render_table(markdown: str, mindspace_manager, width: float = 600.0) -> QTextDocument:
     """Render markdown into a document and return the document.
 
     The document is returned rather than the table because a QTextTable is
@@ -41,7 +41,7 @@ def _render_table(markdown: str, width: float = 600.0) -> QTextDocument:
     """
     document = QTextDocument()
     document.setTextWidth(width)
-    renderer = MarkdownRenderer(document)
+    renderer = MarkdownRenderer(document, mindspace_manager)
     renderer.visit(MarkdownASTBuilder(no_underscores=False).build_ast(markdown))
 
     return document
@@ -81,13 +81,13 @@ RTL_TABLE = (
 
 
 class TestIsRtlTable:
-    def test_arabic_table_is_rtl(self):
+    def test_arabic_table_is_rtl(self, mindspace_manager):
         assert MarkdownRenderer._is_rtl_table(_build_table(RTL_TABLE)) is True
 
-    def test_latin_table_is_not_rtl(self):
+    def test_latin_table_is_not_rtl(self, mindspace_manager):
         assert MarkdownRenderer._is_rtl_table(_build_table(LTR_TABLE)) is False
 
-    def test_leading_digits_do_not_decide_direction(self):
+    def test_leading_digits_do_not_decide_direction(self, mindspace_manager):
         table = (
             "| 2024 | القيمة |\n"
             "|------|--------|\n"
@@ -95,7 +95,7 @@ class TestIsRtlTable:
         )
         assert MarkdownRenderer._is_rtl_table(_build_table(table)) is True
 
-    def test_latin_first_strong_character_wins(self):
+    def test_latin_first_strong_character_wins(self, mindspace_manager):
         table = (
             "| ID   | الاسم |\n"
             "|------|-------|\n"
@@ -105,19 +105,19 @@ class TestIsRtlTable:
 
 
 class TestRtlTablePositioning:
-    def test_rtl_table_is_anchored_right(self):
-        table_format = _table_format(_render_table(RTL_TABLE))
+    def test_rtl_table_is_anchored_right(self, mindspace_manager):
+        table_format = _table_format(_render_table(RTL_TABLE, mindspace_manager))
         assert table_format.leftMargin() > 0
         assert table_format.rightMargin() == 0
 
-    def test_ltr_table_stays_anchored_left(self):
-        table_format = _table_format(_render_table(LTR_TABLE))
+    def test_ltr_table_stays_anchored_left(self, mindspace_manager):
+        table_format = _table_format(_render_table(LTR_TABLE, mindspace_manager))
         assert table_format.leftMargin() == 0
         assert table_format.rightMargin() == 0
 
-    def test_rtl_table_slack_matches_remaining_width(self):
+    def test_rtl_table_slack_matches_remaining_width(self, mindspace_manager):
         width = 600.0
-        table_format = _table_format(_render_table(RTL_TABLE, width))
+        table_format = _table_format(_render_table(RTL_TABLE, mindspace_manager, width))
         table_width = table_format.width().rawValue()
         overhead = MarkdownRenderer._table_frame_overhead
         assert table_format.leftMargin() == pytest.approx(width - table_width - overhead, abs=1.0)

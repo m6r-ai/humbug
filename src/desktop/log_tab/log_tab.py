@@ -28,7 +28,7 @@ class LogTab(TabBase):
     that tracks system interactions and events.
     """
 
-    def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
+    def __init__(self, tab_id: str, mindspace_manager: MindspaceManager, parent: QWidget | None = None) -> None:
         """
         Initialize the log tab.
 
@@ -36,9 +36,9 @@ class LogTab(TabBase):
             tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
             parent: Optional parent widget
         """
-        super().__init__(tab_id, parent)
+        super().__init__(tab_id, mindspace_manager, parent)
         self._logger = logging.getLogger("LogTab")
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = self._mindspace_manager
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -55,7 +55,7 @@ class LogTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create log widget
-        self._log_widget = LogWidget(self)
+        self._log_widget = LogWidget(mindspace_manager, self)
         self._log_widget.status_updated.connect(self.update_status)
         self._log_widget.update_label.connect(self._on_update_label)
         self._log_widget.has_seen_latest_update_changed.connect(self._on_has_seen_latest_update_changed)
@@ -160,9 +160,11 @@ class LogTab(TabBase):
         }
 
     @classmethod
-    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'LogTab':
+    def rebuild_from_migration_state(
+        cls, state: dict, parent: QWidget, mindspace_manager: MindspaceManager
+    ) -> 'LogTab':
         """Create a replacement log tab carrying state from a column move."""
-        tab = cls(state["tab_id"], parent)
+        tab = cls(state["tab_id"], mindspace_manager, parent)
         metadata = state["metadata"]
         tab._log_widget.restore_view_state(metadata)
         if 'find_widget' in metadata:

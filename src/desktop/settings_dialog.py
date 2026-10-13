@@ -16,7 +16,6 @@ from PySide6.QtGui import QFont
 from ai import AIBackendSettings, AIConversationSettings, AIManager, AIReasoningCapability
 from ai.ai_model import AIReasoningEffort
 from ai.ollama.ollama_backend import OllamaBackend
-from ai_tool import AIToolManager
 from mindspace.mindspace_settings import MindspaceSettings
 
 from desktop.ai_backend_display import get_all_backend_display_names, get_backend_display_name
@@ -26,6 +25,7 @@ from desktop.color_role import ColorRole
 from desktop.fetch_error import fetch_error_message as _fetch_error_message
 from desktop.fetch_error import pull_error_message as _pull_error_message
 from desktop.language.language_manager import LanguageManager
+from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.settings.settings_accordion import SettingsAccordion
 from desktop.settings.settings_action_row import SettingsActionRow
@@ -90,7 +90,7 @@ class SettingsDialog(QDialog):
     mindspace_settings_changed = Signal(MindspaceSettings)
     apply_ai_settings_to_all_requested = Signal(MindspaceSettings)
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, mindspace_manager: MindspaceManager, parent: QWidget | None = None) -> None:
         """
         Initialize the unified settings dialog.
 
@@ -105,7 +105,11 @@ class SettingsDialog(QDialog):
         self._language_manager.language_changed.connect(self._on_language_changed)
         self._style_manager = StyleManager()
         self._ai_manager = AIManager()
-        self._tool_manager = AIToolManager()
+
+        # The dialog edits the tools of the mindspace it was opened for, so it uses
+        # that mindspace's manager rather than one of its own.
+        self._mindspace_manager = mindspace_manager
+        self._tool_manager = mindspace_manager.tool_manager()
 
         self._initial_user_settings: UserSettings | None = None
         self._current_user_settings: UserSettings | None = None

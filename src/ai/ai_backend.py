@@ -19,7 +19,7 @@ from ai.ai_message import AIMessage
 from ai.ai_conversation_history import AIConversationHistory
 from ai.ai_response import AIResponse, AIError
 from ai.ai_stream_response import AIStreamResponse
-from ai_tool import AIToolManager
+from ai_tool import AIToolDefinition
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
@@ -55,7 +55,6 @@ class AIBackend(ABC):
         self._max_retries = 6
         self._base_delay = 2
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._tool_manager = AIToolManager()
 
         if getattr(sys, "frozen", False) and hasattr(sys, '_MEIPASS'):
             cert_path = os.path.join(sys._MEIPASS, "certifi", "cacert.pem")  # type: ignore
@@ -82,7 +81,8 @@ class AIBackend(ABC):
     def _build_request_config(
         self,
         conversation_history: AIConversationHistory,
-        settings: AIConversationSettings
+        settings: AIConversationSettings,
+        tool_definitions: list[AIToolDefinition]
     ) -> RequestConfig:
         """
         Build complete request configuration for this backend.
@@ -90,6 +90,7 @@ class AIBackend(ABC):
         Args:
             conversation_history: Conversation history including messages and attachments
             settings: Conversation settings
+            tool_definitions: Tools to offer the model for this request
 
         Returns:
             RequestConfig containing URL, headers, and request data
@@ -179,11 +180,20 @@ class AIBackend(ABC):
     async def stream_message(
         self,
         conversation_history: AIConversationHistory,
-        conversation_settings: AIConversationSettings
+        conversation_settings: AIConversationSettings,
+        tool_definitions: list[AIToolDefinition]
     ) -> AsyncGenerator[AIResponse, None]:
-        """Send a message to the AI backend and stream the response."""
+        """
+        Send a message to the AI backend and stream the response.
+
+        Tools are supplied per request rather than held by the backend.  A backend is
+        shared by every window, whereas the tools on offer belong to one mindspace, so
+        a backend that held them would answer with the wrong window's tools.
+        """
         # Format messages for this specific provider
-        config = self._build_request_config(conversation_history, conversation_settings)
+        config = self._build_request_config(
+            conversation_history, conversation_settings, tool_definitions
+        )
 
         attempt = 0
 

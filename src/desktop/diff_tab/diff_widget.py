@@ -47,7 +47,13 @@ class DiffWidget(QWidget):
     open_in_editor_requested = Signal(int, int)
     open_in_preview_requested = Signal()
 
-    def __init__(self, path: str, parent: QWidget | None = None, mode: DiffViewMode = DiffViewMode.INLINE) -> None:
+    def __init__(
+        self,
+        path: str,
+        mindspace_manager: MindspaceManager,
+        parent: QWidget | None = None,
+        mode: DiffViewMode = DiffViewMode.INLINE
+    ) -> None:
         """
         Initialise the diff widget for the given file path.
 
@@ -57,6 +63,7 @@ class DiffWidget(QWidget):
             mode: Initial layout mode — INLINE (narrow, default) or SIDE_BY_SIDE.
         """
         super().__init__(parent)
+        self._mindspace_manager = mindspace_manager
         self._logger = logging.getLogger("DiffWidget")
         self._path = path
         self._mode = mode
@@ -536,8 +543,7 @@ class DiffWidget(QWidget):
         Old lines are empty for untracked files (no HEAD version exists).
         """
         try:
-            mindspace_manager = MindspaceManager()
-            mindspace_path = mindspace_manager.mindspace_path()
+            mindspace_path = self._mindspace_manager.mindspace_path()
             repo_root = find_repo_root(self._path, mindspace_path)
 
             if repo_root is None:

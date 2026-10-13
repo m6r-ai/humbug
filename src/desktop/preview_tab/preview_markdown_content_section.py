@@ -14,6 +14,7 @@ from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
 from desktop.markdown import MarkdownCodeBlockTextEdit, HeadingBlockData, MarkdownRenderer, MarkdownTextEdit
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
 class PreviewMarkdownContentSection(QFrame):
@@ -26,6 +27,7 @@ class PreviewMarkdownContentSection(QFrame):
 
     def __init__(
         self,
+        mindspace_manager: MindspaceManager,
         syntax: ProgrammingLanguage | None = None,
         parent: QWidget | None = None
     ) -> None:
@@ -64,11 +66,12 @@ class PreviewMarkdownContentSection(QFrame):
 
         if syntax is None:
             # Markdown content - use rich text widget
-            self._text_area = MarkdownTextEdit(False, self)
+            self._text_area = MarkdownTextEdit(False, mindspace_manager, self)
             self._text_area.link_clicked.connect(self.link_clicked)
             document = self._text_area.document()
             self._renderer = MarkdownRenderer(
                 document,
+                mindspace_manager,
                 animated_gif_callback=self._text_area.register_animated_gif
             )
 

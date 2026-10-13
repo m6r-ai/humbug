@@ -364,7 +364,8 @@ class OllamaBackend(AIBackend):
     def _build_request_config(
         self,
         conversation_history: AIConversationHistory,
-        settings: AIConversationSettings
+        settings: AIConversationSettings,
+        tool_definitions: list[AIToolDefinition]
     ) -> RequestConfig:
         """Build complete request configuration for Ollama."""
         # Use the unified message formatting
@@ -393,7 +394,6 @@ class OllamaBackend(AIBackend):
 
         # Add tools if supported
         if self._supports_tools(settings):
-            tool_definitions = self._tool_manager.get_tool_definitions()
             if tool_definitions:
                 data["tools"] = [self._format_tool_definition(tool_def) for tool_def in tool_definitions]
                 self._logger.debug("Added %d tool definitions for ollama", len(tool_definitions))

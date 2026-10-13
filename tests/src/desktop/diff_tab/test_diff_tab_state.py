@@ -6,25 +6,25 @@ from desktop.diff_tab.diff_tab import DiffTab
 class TestDiffTabViewState:
     """Tests for DiffTab.capture_view_state and restore_view_state."""
 
-    def test_view_state_includes_find_widget(self, qapp) -> None:
+    def test_view_state_includes_find_widget(self, qapp, mindspace_manager) -> None:
         """The find widget's state is part of the view state."""
-        tab = DiffTab("t1", "")
+        tab = DiffTab("t1", "", mindspace_manager)
 
         state = tab.capture_view_state()
 
         assert "find_widget" in state
 
-    def test_restore_view_state_restores_search_text(self, qapp) -> None:
+    def test_restore_view_state_restores_search_text(self, qapp, mindspace_manager) -> None:
         """A saved search term is reapplied to the find widget."""
-        tab = DiffTab("t1", "")
+        tab = DiffTab("t1", "", mindspace_manager)
 
         tab.restore_view_state({"find_widget": {"search_text": "needle"}})
 
         assert tab._find_widget.get_search_text() == "needle"  # pylint: disable=protected-access
 
-    def test_restore_view_state_ignores_empty_state(self, qapp) -> None:
+    def test_restore_view_state_ignores_empty_state(self, qapp, mindspace_manager) -> None:
         """An empty state dictionary is a no-op."""
-        tab = DiffTab("t1", "")
+        tab = DiffTab("t1", "", mindspace_manager)
 
         tab.restore_view_state({})
 
@@ -32,31 +32,31 @@ class TestDiffTabViewState:
 class TestDiffTabMigrationState:
     """Tests for DiffTab.capture_migration_state and rebuild_from_migration_state."""
 
-    def test_migration_state_includes_find_widget(self, qapp) -> None:
+    def test_migration_state_includes_find_widget(self, qapp, mindspace_manager) -> None:
         """The find widget's state is carried across a column move."""
-        tab = DiffTab("t1", "")
+        tab = DiffTab("t1", "", mindspace_manager)
         tab._find_widget.set_search_text("needle")  # pylint: disable=protected-access
 
         state = tab.capture_migration_state()
 
         assert state["find_widget"]["search_text"] == "needle"
 
-    def test_rebuild_preserves_find_widget_state(self, qapp) -> None:
+    def test_rebuild_preserves_find_widget_state(self, qapp, mindspace_manager) -> None:
         """Rebuilding from migration state reproduces the find widget state."""
-        tab = DiffTab("t1", "")
+        tab = DiffTab("t1", "", mindspace_manager)
         tab._find_widget.set_search_text("needle")  # pylint: disable=protected-access
 
         state = tab.capture_migration_state()
-        rebuilt = DiffTab.rebuild_from_migration_state(state, None)
+        rebuilt = DiffTab.rebuild_from_migration_state(state, None, mindspace_manager)
 
         assert rebuilt._find_widget.get_search_text() == "needle"  # pylint: disable=protected-access
 
-    def test_rebuild_preserves_tab_id_and_path(self, qapp) -> None:
+    def test_rebuild_preserves_tab_id_and_path(self, qapp, mindspace_manager) -> None:
         """The rebuilt tab keeps the original tab id and path."""
-        tab = DiffTab("t1", "")
+        tab = DiffTab("t1", "", mindspace_manager)
 
         state = tab.capture_migration_state()
-        rebuilt = DiffTab.rebuild_from_migration_state(state, None)
+        rebuilt = DiffTab.rebuild_from_migration_state(state, None, mindspace_manager)
 
         assert rebuilt.tab_id() == "t1"
         assert rebuilt.path() == ""

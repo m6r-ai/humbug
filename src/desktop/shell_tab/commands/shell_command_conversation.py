@@ -12,14 +12,15 @@ from syntax import Token, TokenType
 
 from desktop.shell_tab.shell_command import ShellCommand
 from desktop.shell_tab.shell_event_source import ShellEventSource
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
 class ShellCommandConversation(ShellCommand):
     """Command to create a new conversation tab."""
 
-    def __init__(self) -> None:
+    def __init__(self, mindspace_manager: MindspaceManager) -> None:
         """Initialize conversation command."""
-        super().__init__()
+        super().__init__(mindspace_manager)
         self._ai_manager = AIManager()
 
     def name(self) -> str:
@@ -163,9 +164,11 @@ class ShellCommandConversation(ShellCommand):
                     reasoning=reasoning or (settings.reasoning if settings else AIReasoningCapability.NO_REASONING),
                     reasoning_effort=reasoning_effort,
                 )
-                ai_conversation = AIConversation()
+                ai_conversation = AIConversation(self._tool_manager)
                 ai_conversation.update_conversation_settings(conversation_settings)
-                initial_model = AITranscriptConversation(full_path, ai_conversation)
+                initial_model = AITranscriptConversation(
+                    full_path, self._tool_manager, ai_conversation
+                )
 
             context_id = self._mindspace.contexts().open(
                 context_type="conversation",

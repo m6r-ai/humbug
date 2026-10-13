@@ -6,19 +6,20 @@ import logging
 from syntax import Token
 
 from desktop.shell_tab.shell_command import ShellCommand
+from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
 class ShellCommandClear(ShellCommand):
     """Command to clear the shell history."""
 
-    def __init__(self, clear_callback: Callable[[], None]) -> None:
+    def __init__(self, mindspace_manager: MindspaceManager, clear_callback: Callable[[], None]) -> None:
         """
         Initialize the command.
 
         Args:
             clear_callback: Callback to invoke when clearing the shell history
         """
-        super().__init__()
+        super().__init__(mindspace_manager)
         self._clear_callback = clear_callback
         self._logger = logging.getLogger("ShellCommandClear")
 

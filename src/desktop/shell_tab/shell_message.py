@@ -17,6 +17,7 @@ from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
 from desktop.shell_tab.shell_event_source import ShellEventSource
 from desktop.shell_tab.shell_text_edit import ShellTextEdit
+from desktop.shell_tab.shell_command_registry import ShellCommandRegistry
 
 
 class ShellMessage(QFrame):
@@ -26,7 +27,12 @@ class ShellMessage(QFrame):
     scroll_requested = Signal(QPoint)
     mouse_released = Signal()
 
-    def __init__(self, parent: QWidget | None = None, is_input: bool = False) -> None:
+    def __init__(
+        self,
+        command_registry: ShellCommandRegistry,
+        parent: QWidget | None = None,
+        is_input: bool = False
+    ) -> None:
         """
         Initialize the message widget.
 
@@ -35,6 +41,7 @@ class ShellMessage(QFrame):
             is_input: Whether this is an input widget (affects styling)
         """
         super().__init__(parent)
+        self._command_registry = command_registry
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
         # Set object name for QSS targeting
@@ -195,7 +202,7 @@ class ShellMessage(QFrame):
         # Set the content in the text area
         self._text_area.set_text(text)
         if source == ShellEventSource.USER:
-            self._text_area.enable_highlighter()
+            self._text_area.enable_highlighter(self._command_registry)
 
         # Update the header
         self._update_role_text()

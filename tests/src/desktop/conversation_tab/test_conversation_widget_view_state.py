@@ -8,48 +8,49 @@ import pytest
 from ai import AIMessage, AIMessageSource
 from ai_transcript_conversation import AITranscriptConversation
 from desktop.conversation_tab.conversation_widget import ConversationWidget
+from ai_tool import AIToolManager
 
 
 @pytest.fixture
-def conv_env(mindspace_sandbox):
+def conv_env(mindspace_sandbox, mindspace_manager):
     """The sandboxed mindspace, as (mindspace_manager, transcript_path)."""
     transcript_path = os.path.join(mindspace_sandbox.conversations_dir, "test.conv")
 
     yield mindspace_sandbox.manager, transcript_path
 
 
-def _make_widget(transcript_path: str) -> ConversationWidget:
+def _make_widget(transcript_path: str, mindspace_manager) -> ConversationWidget:
     """Create a ConversationWidget backed by a fresh transcript."""
-    transcript = AITranscriptConversation(transcript_path)
-    return ConversationWidget(transcript_path, ai_transcript_conversation=transcript)
+    transcript = AITranscriptConversation(transcript_path, AIToolManager())
+    return ConversationWidget(transcript_path, mindspace_manager, ai_transcript_conversation=transcript)
 
 
 class TestConversationViewState:
     """Tests for ConversationWidget.create_view_state and restore_view_state."""
 
-    def test_view_state_includes_input_draft(self, conv_env) -> None:
+    def test_view_state_includes_input_draft(self, conv_env, mindspace_manager) -> None:
         """The unsaved input draft is part of the view state."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
         widget.set_input_text("a half-written prompt")
 
         state = widget.create_view_state()
 
         assert state["content"] == "a half-written prompt"
 
-    def test_restore_view_state_restores_input_draft(self, conv_env) -> None:
+    def test_restore_view_state_restores_input_draft(self, conv_env, mindspace_manager) -> None:
         """A saved input draft is reapplied to the input box."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
 
         widget.restore_view_state({"content": "restored draft"})
 
         assert widget._input.to_plain_text() == "restored draft"  # pylint: disable=protected-access
 
-    def test_restore_view_state_applies_draft_during_pending_load(self, conv_env) -> None:
+    def test_restore_view_state_applies_draft_during_pending_load(self, conv_env, mindspace_manager) -> None:
         """The draft is restored immediately even while a batch load is in progress."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
 
         # Simulate a batch load in progress by populating the load queue.
         widget._load_queue = [AIMessage.create(AIMessageSource.USER, "queued")]  # pylint: disable=protected-access
@@ -58,10 +59,10 @@ class TestConversationViewState:
 
         assert widget._input.to_plain_text() == "visible now"  # pylint: disable=protected-access
 
-    def test_restore_view_state_defers_layout_dependent_state(self, conv_env) -> None:
+    def test_restore_view_state_defers_layout_dependent_state(self, conv_env, mindspace_manager) -> None:
         """Layout-dependent state is deferred until the batch load completes."""
         _mgr, transcript_path = conv_env
-        widget = _make_widget(transcript_path)
+        widget = _make_widget(transcript_path, mindspace_manager)
 
         widget._load_queue = [AIMessage.create(AIMessageSource.USER, "queued")]  # pylint: disable=protected-access
 

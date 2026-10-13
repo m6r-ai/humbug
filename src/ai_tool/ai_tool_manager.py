@@ -9,22 +9,19 @@ from ai_tool.ai_tool_registered import AIToolRegistered
 
 
 class AIToolManager:
-    """Singleton manager for AI tools."""
+    """
+    The AI tools available within one mindspace.
 
-    _instance: 'AIToolManager | None' = None
-
-    def __new__(cls) -> 'AIToolManager':
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-
-        return cls._instance
+    Tools are bound to the mindspace they act on and are enabled per mindspace, so
+    each mindspace owns a manager rather than there being one for the process.  A
+    shared manager would mean a second window registering the same tool names over
+    the first window's, and offering the model tools bound to the wrong mindspace.
+    """
 
     def __init__(self) -> None:
-        if not hasattr(self, '_initialized'):
-            self._registered_tools: dict[str, AIToolRegistered] = {}
-            self._enabled_tools: dict[str, bool] = {}
-            self._logger = logging.getLogger("AIToolManager")
-            self._initialized = True
+        self._registered_tools: dict[str, AIToolRegistered] = {}
+        self._enabled_tools: dict[str, bool] = {}
+        self._logger = logging.getLogger("AIToolManager")
 
     def get_all_tool_configs(self) -> list[AIToolConfig]:
         """

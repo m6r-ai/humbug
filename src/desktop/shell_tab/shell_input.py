@@ -11,6 +11,7 @@ from desktop.language.language_manager import LanguageManager
 from desktop.shell_tab.shell_command_completion_result import ShellCommandCompletionResult
 from desktop.shell_tab.shell_event_source import ShellEventSource
 from desktop.shell_tab.shell_message import ShellMessage
+from desktop.shell_tab.shell_command_registry import ShellCommandRegistry
 
 
 class ShellInput(ShellMessage):
@@ -23,9 +24,9 @@ class ShellInput(ShellMessage):
     command_submitted = Signal(str)
     tab_completion_requested = Signal(str, bool, bool, int)  # text, is_continuation, move_forward, cursor_position
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, command_registry: ShellCommandRegistry, parent: QWidget | None = None) -> None:
         """Initialize the shell input widget."""
-        super().__init__(parent, is_input=True)
+        super().__init__(command_registry, parent, is_input=True)
 
         # Command history tracking
         self._command_history: list[str] = []
@@ -38,7 +39,7 @@ class ShellInput(ShellMessage):
         self._text_area.cursorPositionChanged.connect(self.cursor_position_changed)
         self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
 
-        self._text_area.enable_highlighter()
+        self._text_area.enable_highlighter(command_registry)
 
         # Install event filter on text area to intercept key events
         self._text_area.installEventFilter(self)

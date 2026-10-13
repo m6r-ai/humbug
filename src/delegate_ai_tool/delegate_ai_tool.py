@@ -13,7 +13,7 @@ from ai import (
 )
 from ai.ai_model import AIReasoningEffort
 from ai_tool import (
-    AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
+    AIToolManager, AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback,
     AIToolResult, AIToolCall, AIToolOperationDefinition
 )
@@ -37,14 +37,17 @@ class DelegateAITool(AITool):
     def __init__(
         self,
         mindspace: Mindspace,
+        tool_manager: AIToolManager,
     ) -> None:
         """
         Initialize the delegate AI tool.
 
         Args:
             mindspace: The active mindspace.
+            tool_manager: Tools available to conversations this tool spawns.
         """
         self._mindspace = mindspace
+        self._tool_manager = tool_manager
         self._ai_manager = AIManager()
         self._logger = logging.getLogger("DelegateAITool")
         self._context_ids: dict[str, str] = {}
@@ -337,7 +340,7 @@ class DelegateAITool(AITool):
             reasoning_effort=reasoning_effort,
         )
 
-        child_ai_conversation = AIConversation()
+        child_ai_conversation = AIConversation(self._tool_manager)
         child_ai_conversation.update_conversation_settings(child_settings)
 
         # Establish parent/child relationship in the transcript metadata
@@ -351,7 +354,9 @@ class DelegateAITool(AITool):
         else:
             transcript_path = self._new_conversation_path()
 
-        ai_transcript_conversation = AITranscriptConversation(transcript_path, child_ai_conversation)
+        ai_transcript_conversation = AITranscriptConversation(
+            transcript_path, self._tool_manager, child_ai_conversation
+        )
 
         relative_session_id = self._mindspace.get_mindspace_relative_path(transcript_path) or transcript_path
 

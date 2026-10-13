@@ -47,11 +47,11 @@ class UsageWidget(QWidget):
 
     refreshed = Signal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, mindspace_manager: MindspaceManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._logger = logging.getLogger("UsageWidget")
         self.setObjectName("UsageWidget")
-        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager = mindspace_manager
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
 

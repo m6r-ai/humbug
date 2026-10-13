@@ -26,7 +26,7 @@ from desktop.widgets import FindWidget
 class DiffTab(TabBase):
     """Tab showing a diff between the working tree and HEAD for one file."""
 
-    def __init__(self, tab_id: str, path: str, parent: QWidget | None = None) -> None:
+    def __init__(self, tab_id: str, path: str, mindspace_manager: MindspaceManager, parent: QWidget | None = None) -> None:
         """
         Initialise the diff tab.
 
@@ -35,7 +35,7 @@ class DiffTab(TabBase):
             path: Absolute path to the file to diff.
             parent: Optional parent widget.
         """
-        super().__init__(tab_id, parent)
+        super().__init__(tab_id, mindspace_manager, parent)
         self._logger = logging.getLogger("DiffTab")
         self._path = path
 
@@ -56,7 +56,7 @@ class DiffTab(TabBase):
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
         layout.addWidget(self._find_widget)
 
-        self._diff_widget = DiffWidget(path, self, mode=self._view_mode)
+        self._diff_widget = DiffWidget(path, mindspace_manager, self, mode=self._view_mode)
         self._diff_widget.status_updated.connect(self.update_status)
         self._diff_widget.open_in_editor_requested.connect(self._open_in_editor)
         self._diff_widget.open_in_preview_requested.connect(self._open_in_preview)
@@ -104,11 +104,10 @@ class DiffTab(TabBase):
 
         Falls back to INLINE if no mindspace is open or settings are unavailable.
         """
-        mindspace_manager = MindspaceManager()
-        if not mindspace_manager.has_mindspace():
+        if not self._mindspace_manager.has_mindspace():
             return DiffViewMode.INLINE
 
-        settings = mindspace_manager.settings()
+        settings = self._mindspace_manager.settings()
         if settings is None:
             return DiffViewMode.INLINE
 
@@ -124,11 +123,10 @@ class DiffTab(TabBase):
 
     def _open_in_editor(self, line: int, column: int) -> None:
         """Open this tab's file in an editor tab, navigating to the given line and column."""
-        mindspace_manager = MindspaceManager()
-        if not mindspace_manager.has_mindspace():
+        if not self._mindspace_manager.has_mindspace():
             return
 
-        contexts = mindspace_manager.mindspace().contexts()
+        contexts = self._mindspace_manager.mindspace().contexts()
         existing = contexts.get_by_path_and_type(self._path, "editor")
         if existing:
             contexts.focus(existing.context_id)
@@ -146,11 +144,10 @@ class DiffTab(TabBase):
 
     def _open_in_preview(self) -> None:
         """Open this tab's file in a preview tab."""
-        mindspace_manager = MindspaceManager()
-        if not mindspace_manager.has_mindspace():
+        if not self._mindspace_manager.has_mindspace():
             return
 
-        contexts = mindspace_manager.mindspace().contexts()
+        contexts = self._mindspace_manager.mindspace().contexts()
         existing = contexts.get_by_path_and_type(self._path, "preview")
         if existing:
             contexts.focus(existing.context_id)
@@ -271,14 +268,16 @@ class DiffTab(TabBase):
         }
 
     @classmethod
-    def rebuild_from_migration_state(cls, state: dict, parent: QWidget) -> 'DiffTab':
+    def rebuild_from_migration_state(
+        cls, state: dict, parent: QWidget, mindspace_manager: MindspaceManager
+    ) -> 'DiffTab':
         """Create a replacement diff tab carrying state from a column move."""
-        tab = cls(state["tab_id"], state["path"], parent)
+        tab = cls(state["tab_id"], state["path"], mindspace_manager, parent)
         tab._find_widget.restore_from_metadata(state["find_widget"])  # pylint: disable=protected-access
         return tab
 
     @staticmethod
-    def can_restore(path: str) -> bool:
+    def can_restore(path: str, mindspace_manager: MindspaceManager) -> bool:
         """
         Return True if a diff tab for *path* can meaningfully be restored.
 
@@ -295,7 +294,6 @@ class DiffTab(TabBase):
         if not os.path.exists(path):
             return False
 
-        mindspace_manager = MindspaceManager()
         mindspace_path = mindspace_manager.mindspace_path()
 
         try:
