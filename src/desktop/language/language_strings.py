@@ -315,6 +315,10 @@ class LanguageStrings:
     error_saving_user_settings: str
     cancel_conversation: str
 
+    # Initializing a folder that is not yet a mindspace
+    initialize_mindspace_title: str
+    initialize_mindspace_message: str
+
     # Opening a mindspace in a new window
     open_in_new_window: str
     open_in_new_window_title: str
@@ -322,7 +326,6 @@ class LanguageStrings:
     open_in_new_window_already_here: str
     open_in_new_window_failed: str
     open_in_new_window_choose_folder: str
-    mindspace_not_found_error: str
     mindspace_open_elsewhere_tooltip: str
 
     # Status bar
