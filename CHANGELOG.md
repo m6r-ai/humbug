@@ -2,6 +2,10 @@
 
 ## v58 (2026-10-xx)
 
+Bug fixes:
+
+- Fixed an exception where opening an editor from a diff view's context menu triggered a line size change.
+
 ## v57 (2026-10-10)
 
 New features:
