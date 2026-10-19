@@ -5,6 +5,7 @@
 Bug fixes:
 
 - Fixed an exception where opening an editor from a diff view's context menu triggered a line size change.
+- The `.humbug` directory had mistakenly been exposed in the sidebar views.
 
 ## v57 (2026-10-10)
 
