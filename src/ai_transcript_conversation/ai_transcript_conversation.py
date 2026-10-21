@@ -307,6 +307,10 @@ class AITranscriptConversation:
         """
         await self._conversation.reject_pending_tool_calls(reason)
 
+    async def interrupt_pending_wait(self) -> None:
+        """Interrupt the current pending interruptible tool wait, if any."""
+        await self._conversation.interrupt_pending_wait()
+
     def close(self) -> None:
         """
         Clean up the transcript conversation.

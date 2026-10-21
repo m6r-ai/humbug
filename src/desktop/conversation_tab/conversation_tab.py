@@ -642,11 +642,20 @@ class ConversationTab(TabBase):
 
             #ConversationWidget #ConversationMessage #_attachments_container, #ConversationWidget #ConversationMessage #_chips_bar,
             #ConversationWidget #ConversationMessage #_approval_widget,
+            #ConversationWidget #ConversationMessage #_wait_widget,
             #ConversationWidget #ConversationMessage #_attachments_bar {{
                 background-color: transparent;
                 border: none;
             }}
             #ConversationWidget #ConversationMessage #_approval_text_edit {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+                border: none;
+                border-radius: 0px;
+                padding: 0;
+                margin: 0;
+            }}
+            #ConversationWidget #ConversationMessage #_wait_text_edit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
@@ -730,6 +739,17 @@ class ConversationTab(TabBase):
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
             }}
             #ConversationWidget #ConversationMessage #_approval_reject_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+            }}
+            #ConversationWidget #ConversationMessage #_wait_finish_button {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border-radius: 4px;
+            }}
+            #ConversationWidget #ConversationMessage #_wait_finish_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
+            }}
+            #ConversationWidget #ConversationMessage #_wait_finish_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
             }}
             #ConversationWidget #ConversationMessage #_retry_widget {{

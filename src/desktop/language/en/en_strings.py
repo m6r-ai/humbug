@@ -490,6 +490,8 @@ def get_english_strings() -> LanguageStrings:
         approve_tool_call="Approve",
         i_am_unsure_about_tool_call="I'm Unsure About This",
         reject_tool_call="Reject",
+        interruptible_wait_message="Waiting for {duration} seconds \u2014 {remaining} remaining...",
+        finish_waiting_now="Finish Waiting Now",
         retry_error="Retry",
 
         # Update checker

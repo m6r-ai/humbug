@@ -13,6 +13,10 @@ from ai_tool import AIToolDefinition, AIToolParameter, AIToolExecutionError, AIT
 from clock_ai_tool.clock_ai_tool import ClockAITool
 
 
+# Target 30 seconds after the mocked current time (2023-12-25T14:30:45.123456Z).
+_ALARM_TARGET = datetime(2023, 12, 25, 14, 31, 15, 123456, tzinfo=timezone.utc)
+
+
 @pytest.fixture
 def clock_tool():
     """Fixture providing a clock tool instance."""
@@ -37,6 +41,19 @@ def mock_authorization():
         return True  # Default to authorized
 
     return mock_auth_callback
+
+
+class _InterruptibleRequester:
+    """Requester exposing an interruptible wait, recording requested durations."""
+
+    def __init__(self, interrupted: bool) -> None:
+        self._interrupted = interrupted
+        self.calls: list[float] = []
+
+    async def interruptible_sleep(self, duration: float) -> bool:
+        """Record the requested duration and report whether it was interrupted."""
+        self.calls.append(duration)
+        return self._interrupted
 
 
 class TestClockAIToolDefinition:
@@ -256,6 +273,86 @@ class TestSleepOperation:
             mock_sleep.assert_called_once_with(duration)
             assert isinstance(result.content, str)
             assert len(result.content) > 0
+
+
+class TestInterruptibleWait:
+    """Test that sleep and alarm use the requester's interruptible wait when available."""
+
+    @patch('asyncio.sleep', new_callable=AsyncMock)
+    def test_sleep_uses_interruptible_wait_when_available(
+        self, mock_sleep, clock_tool, mock_datetime, mock_authorization, make_tool_call
+    ):
+        """A sleep delegates to the requester's interruptible_sleep."""
+        requester = _InterruptibleRequester(interrupted=False)
+        tool_call = make_tool_call("clock", {"operation": "sleep", "duration": 30.0})
+
+        result = asyncio.run(clock_tool.execute(tool_call, requester, mock_authorization))
+
+        assert requester.calls == [30.0]
+        mock_sleep.assert_not_called()
+        assert result.content == "2023-12-25T14:30:45.123456Z"
+
+    @patch('asyncio.sleep', new_callable=AsyncMock)
+    def test_sleep_interrupted_returns_success_result(
+        self, mock_sleep, clock_tool, mock_datetime, mock_authorization, make_tool_call
+    ):
+        """An interrupted sleep returns a successful result mentioning the interruption."""
+        requester = _InterruptibleRequester(interrupted=True)
+        tool_call = make_tool_call("clock", {"operation": "sleep", "duration": 30.0})
+
+        result = asyncio.run(clock_tool.execute(tool_call, requester, mock_authorization))
+
+        assert requester.calls == [30.0]
+        assert result.error is None
+        assert "The user ended this wait" in result.content
+        assert "not an error" in result.content
+        assert "2023-12-25T14:30:45.123456Z" in result.content
+
+    @patch('asyncio.sleep', new_callable=AsyncMock)
+    def test_sleep_falls_back_to_plain_sleep_without_interruptible_wait(
+        self, mock_sleep, clock_tool, mock_datetime, mock_authorization, make_tool_call
+    ):
+        """A requester without interruptible_sleep uses a plain asyncio sleep."""
+        tool_call = make_tool_call("clock", {"operation": "sleep", "duration": 7.0})
+
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
+
+        mock_sleep.assert_called_once_with(7.0)
+        assert result.content == "2023-12-25T14:30:45.123456Z"
+
+    @patch('asyncio.sleep', new_callable=AsyncMock)
+    def test_alarm_uses_interruptible_wait_when_available(
+        self, mock_sleep, clock_tool, mock_datetime, mock_authorization, make_tool_call
+    ):
+        """An alarm delegates its wait to the requester's interruptible_sleep."""
+        requester = _InterruptibleRequester(interrupted=False)
+        tool_call = make_tool_call("clock", {"operation": "alarm", "time": "2023-12-25T14:31:15Z"})
+
+        with patch.object(clock_tool, "_parse_alarm_time", return_value=_ALARM_TARGET), \
+                patch.object(clock_tool, "_get_current_time", return_value=mock_datetime):
+            result = asyncio.run(clock_tool.execute(tool_call, requester, mock_authorization))
+
+        assert requester.calls == [30.0]
+        mock_sleep.assert_not_called()
+        assert result.content == "2023-12-25T14:30:45.123456Z"
+
+    @patch('asyncio.sleep', new_callable=AsyncMock)
+    def test_alarm_interrupted_returns_success_result(
+        self, mock_sleep, clock_tool, mock_datetime, mock_authorization, make_tool_call
+    ):
+        """An interrupted alarm returns a successful result mentioning the interruption."""
+        requester = _InterruptibleRequester(interrupted=True)
+        tool_call = make_tool_call("clock", {"operation": "alarm", "time": "2023-12-25T14:31:15Z"})
+
+        with patch.object(clock_tool, "_parse_alarm_time", return_value=_ALARM_TARGET), \
+                patch.object(clock_tool, "_get_current_time", return_value=mock_datetime):
+            result = asyncio.run(clock_tool.execute(tool_call, requester, mock_authorization))
+
+        assert requester.calls == [30.0]
+        assert result.error is None
+        assert "The user ended this wait" in result.content
+        assert "not an error" in result.content
+        assert "2023-12-25T14:30:45.123456Z" in result.content
 
 
 class TestAlarmOperation:

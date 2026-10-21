@@ -84,3 +84,4 @@ What costs, risks, or constraints does this decision impose?
 | [0012](0012-message-edit-and-delete.md) | Message edit and delete — deferred truncation and a single editing surface | Accepted |
 | [0013](0013-filesystem-transform-and-bounds.md) | Filesystem transforms, binary content, context-window bounds, and transform symmetry | Accepted |
 | [0014](0014-multiple-instances-and-mindspaces.md) | Multiple instances and multiple mindspaces | Accepted |
+| [0015](0015-interruptible-tool-waits.md) | Interruptible tool waits | Accepted |

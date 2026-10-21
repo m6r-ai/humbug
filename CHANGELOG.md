@@ -2,6 +2,11 @@
 
 ## v58 (2026-10-xx)
 
+New features:
+
+- The clock tool's `sleep` and `alarm` operations now show a cancel control inside the executing tool-call message when
+  the wait is longer than five seconds.  Cancelling ends the wait immediately and the AI is told the user interrupted it.
+
 Bug fixes:
 
 - Fixed an exception where opening an editor from a diff view's context menu triggered a line size change.
