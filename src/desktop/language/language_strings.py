@@ -45,6 +45,13 @@ class LanguageStrings:
     close_tabs_to_right: str
     close_other_tabs: str
     close_column: str
+    move_tab_to_left_column: str
+    move_tab_to_right_column: str
+    move_tab_to_new_column: str
+    move_tab_left: str
+    move_tab_right: str
+    move_tab_to_start: str
+    move_tab_to_end: str
 
     # Edit menu items
     submit_message: str

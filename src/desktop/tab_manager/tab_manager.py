@@ -412,12 +412,49 @@ class TabManager(QWidget):
         close_column_action = menu.addAction(strings.close_column)
         close_column_action.setEnabled(True)
 
+        menu.addSeparator()
+
+        column_number = self._tab_columns.index(column)
+        has_column_before = column_number > 0
+        has_column_after = column_number < len(self._tab_columns) - 1
+
+        move_to_left_column_action = menu.addAction(strings.move_tab_to_left_column)
+        move_to_left_column_action.setEnabled(has_column_before if left_to_right else has_column_after)
+
+        move_to_right_column_action = menu.addAction(strings.move_tab_to_right_column)
+        move_to_right_column_action.setEnabled(has_column_after if left_to_right else has_column_before)
+
+        move_to_new_column_action = menu.addAction(strings.move_tab_to_new_column)
+        move_to_new_column_action.setEnabled(tab_count > 1 and len(self._tab_columns) < 6)
+
+        menu.addSeparator()
+
+        move_left_action = menu.addAction(strings.move_tab_left)
+        move_left_action.setEnabled(has_tabs_before if left_to_right else has_tabs_after)
+
+        move_right_action = menu.addAction(strings.move_tab_right)
+        move_right_action.setEnabled(has_tabs_after if left_to_right else has_tabs_before)
+
+        move_to_start_action = menu.addAction(strings.move_tab_to_start)
+        move_to_start_action.setEnabled(has_tabs_before)
+
+        move_to_end_action = menu.addAction(strings.move_tab_to_end)
+        move_to_end_action.setEnabled(has_tabs_after)
+
         action = menu.exec_(global_pos)
         if action is None:
             return
 
         close_before_action = close_left_action if left_to_right else close_right_action
         close_after_action = close_right_action if left_to_right else close_left_action
+        move_before_action = move_left_action if left_to_right else move_right_action
+        move_after_action = move_right_action if left_to_right else move_left_action
+        move_to_previous_column_action = (
+            move_to_left_column_action if left_to_right else move_to_right_column_action
+        )
+        move_to_next_column_action = (
+            move_to_right_column_action if left_to_right else move_to_left_column_action
+        )
 
         if action == close_before_action:
             self._close_tabs_in_column(column, list(range(0, tab_index)))
@@ -430,6 +467,27 @@ class TabManager(QWidget):
 
         elif action == close_column_action:
             self._close_tabs_in_column(column, list(range(tab_count)))
+
+        elif action == move_to_previous_column_action:
+            self.move_tab_to_adjacent_column(tab_id, True)
+
+        elif action == move_to_next_column_action:
+            self.move_tab_to_adjacent_column(tab_id, False)
+
+        elif action == move_to_new_column_action:
+            self.move_tab_to_new_column(tab_id, not left_to_right)
+
+        elif action == move_before_action:
+            self.move_tab_within_column(tab_id, True)
+
+        elif action == move_after_action:
+            self.move_tab_within_column(tab_id, False)
+
+        elif action == move_to_start_action:
+            self.move_tab_to_column_end(tab_id, True)
+
+        elif action == move_to_end_action:
+            self.move_tab_to_column_end(tab_id, False)
 
     def _close_tabs_in_column(self, column: ColumnWidget, indexes: list[int]) -> None:
         """
@@ -523,6 +581,7 @@ class TabManager(QWidget):
         registry.register_callback(ContextEvent.CLOSED, self._on_context_closed)
         registry.register_callback(ContextEvent.UPDATED, self._on_context_updated)
         registry.register_callback(ContextEvent.MOVED, self._on_context_moved)
+        registry.register_callback(ContextEvent.REORDERED, self._on_context_reordered)
         registry.register_callback(ContextEvent.FOCUSED, self._on_context_focused)
         registry.register_callback(ContextEvent.COLUMN_SPLIT, self._on_column_split)
         registry.register_callback(ContextEvent.COLUMN_MERGE, self._on_column_merge)
@@ -540,6 +599,7 @@ class TabManager(QWidget):
             registry.unregister_callback(ContextEvent.CLOSED, self._on_context_closed)
             registry.unregister_callback(ContextEvent.UPDATED, self._on_context_updated)
             registry.unregister_callback(ContextEvent.MOVED, self._on_context_moved)
+            registry.unregister_callback(ContextEvent.REORDERED, self._on_context_reordered)
             registry.unregister_callback(ContextEvent.FOCUSED, self._on_context_focused)
             registry.unregister_callback(ContextEvent.COLUMN_SPLIT, self._on_column_split)
             registry.unregister_callback(ContextEvent.COLUMN_MERGE, self._on_column_merge)
@@ -667,6 +727,31 @@ class TabManager(QWidget):
             return
 
         self._move_tab_between_columns(tab, source_column, target_column)
+
+    def _on_context_reordered(self, context_id: str, position: int) -> None:
+        """
+        React to a context being reordered within its column by the registry.
+
+        The registry owns tab order, so every reorder - whether it came from a
+        menu, a keyboard shortcut or a tool - arrives here and is mirrored into
+        the column's tab bar.
+        """
+        tab = self._tabs.get(context_id)
+        if tab is None:
+            return
+
+        column = self._find_column_for_tab(tab)
+        if column is None:
+            return
+
+        current_index = column.indexOf(tab)
+        if current_index == -1 or not 0 <= position < column.count():
+            return
+
+        if current_index != position:
+            column.tabBar().moveTab(current_index, position)
+
+        self._update_tabs()
 
     def _on_column_split(self, context_id: str, split_left: bool) -> None:
         """
@@ -1087,6 +1172,7 @@ class TabManager(QWidget):
                 target_column.tabBar().moveTab(current_index, target_index)
 
         self._active_column = target_column
+        self._sync_registry_layout()
         self._update_tabs()
 
     def _on_column_widget_path_dropped(
@@ -1141,6 +1227,8 @@ class TabManager(QWidget):
         current_index = column.indexOf(tab)
         if current_index not in (-1, target_index):
             column.tabBar().moveTab(current_index, target_index)
+
+        self._sync_registry_layout()
 
     def toggle_tab_overview(self) -> None:
         """Show the tab overview, or cycle its selection if it is already visible."""
@@ -1329,7 +1417,7 @@ class TabManager(QWidget):
             tab_bar.double_clicked.connect(self._on_tab_label_double_clicked)
             tab_bar.context_menu_requested.connect(self._on_tab_label_context_menu)
 
-        self._sync_registry_columns()
+        self._sync_registry_layout()
         self.show_all_columns()
         return column_widget
 
@@ -1354,33 +1442,34 @@ class TabManager(QWidget):
         del self._tab_columns[column_number]
         column.deleteLater()
 
-        self._sync_registry_columns()
+        self._sync_registry_layout()
 
         # Defer resizing to allow the column to be removed first.
         QTimer.singleShot(0, self.show_all_columns)
 
-    def _sync_registry_columns(self) -> None:
+    def _sync_registry_layout(self) -> None:
         """
-        Reconcile the registry's column assignments with the actual Qt layout.
+        Reconcile the registry's column and position values with the Qt layout.
 
         Creating or removing a column shifts the indices of columns to the
-        right, which can leave the registry's per-context column values stale.
-        This method re-reads each tab's actual Qt column and updates the
-        registry so it stays the source of truth.
+        right, and dragging a tab reorders a tab bar directly, either of which
+        can leave the registry stale.  This method re-reads each tab's actual Qt
+        column and index and updates the registry so it stays the source of
+        truth for the session that gets saved.
         """
         if not self._mindspace_manager.has_mindspace():
             return
 
         contexts = self._mindspace_manager.mindspace().contexts()
-        for tab in self._tabs.values():
-            column = self._find_column_for_tab(tab)
-            if column is None:
-                continue
+        for column_index, column in enumerate(self._tab_columns):
+            for position in range(column.count()):
+                tab = cast(TabBase, column.widget(position))
+                info = contexts.get(tab.tab_id())
+                if info is None:
+                    continue
 
-            column_index = self._tab_columns.index(column)
-            info = contexts.get(tab.tab_id())
-            if info is not None and info.column != column_index:
-                contexts.update(tab.tab_id(), column=column_index)
+                if info.column != column_index or info.position != position:
+                    contexts.update(tab.tab_id(), column=column_index, position=position)
 
     def _update_tabs(self, change_focus: bool=True) -> None:
         """ Update the state of all tabs and their labels. """
@@ -1833,6 +1922,179 @@ class TabManager(QWidget):
             return False
 
         return True
+
+    def can_move_tab_to_column(self, move_left: bool) -> bool:
+        """
+        Check if the current tab can be moved to the column beside it.
+
+        Args:
+            move_left: If True, check the column to the left, otherwise the right.
+
+        Returns:
+            bool: True if there is a column in that direction, or one can be created
+        """
+        tab = self.get_current_tab()
+        if tab is None:
+            return False
+
+        column = self._find_column_for_tab(tab)
+        if column is None:
+            return False
+
+        current_column_number = self._tab_columns.index(column)
+        if move_left:
+            if current_column_number > 0:
+                return True
+
+        elif current_column_number < len(self._tab_columns) - 1:
+            return True
+
+        return column.count() > 1 and len(self._tab_columns) < ContextRegistry.MAX_COLUMNS
+
+    def move_tab_to_adjacent_column(self, tab_id: str, move_left: bool) -> None:
+        """
+        Move a tab into the column beside the one holding it.
+
+        Args:
+            tab_id:    ID of the tab to move.
+            move_left: If True, move to the column on the left, otherwise the right.
+        """
+        tab = self._tabs.get(tab_id)
+        if tab is None:
+            return
+
+        column = self._find_column_for_tab(tab)
+        if column is None:
+            return
+
+        column_number = self._tab_columns.index(column)
+        target_column_number = column_number + (-1 if move_left else 1)
+        if not 0 <= target_column_number < len(self._tab_columns):
+            self.move_tab_to_new_column(tab_id, split_left=move_left)
+            return
+
+        self.move_tab_to_column(tab_id, target_column_number)
+
+    def can_move_tab_within_column(self, towards_start: bool) -> bool:
+        """
+        Check if the current tab can be moved within its own column.
+
+        Args:
+            towards_start: If True, check towards the first tab, otherwise the last.
+
+        Returns:
+            bool: True if the tab is not already at that end of its column
+        """
+        tab = self.get_current_tab()
+        if tab is None:
+            return False
+
+        placement = self._tab_placement(tab.tab_id())
+        if placement is None:
+            return False
+
+        index, count = placement
+        if towards_start:
+            return index > 0
+
+        return index < count - 1
+
+    def move_tab_within_column(self, tab_id: str, towards_start: bool) -> None:
+        """
+        Move a tab one place along its own column.
+
+        Args:
+            tab_id:        ID of the tab to move.
+            towards_start: If True, move towards the first tab, otherwise the last.
+        """
+        placement = self._tab_placement(tab_id)
+        if placement is None:
+            return
+
+        index, _count = placement
+        self._reorder_tab(tab_id, index - 1 if towards_start else index + 1)
+
+    def move_tab_to_column_end(self, tab_id: str, towards_start: bool) -> None:
+        """
+        Move a tab to the first or last place in its own column.
+
+        Args:
+            tab_id:        ID of the tab to move.
+            towards_start: If True, move to the first place, otherwise the last.
+        """
+        placement = self._tab_placement(tab_id)
+        if placement is None:
+            return
+
+        _index, count = placement
+        self._reorder_tab(tab_id, 0 if towards_start else count - 1)
+
+    def move_tab_to_new_column(self, tab_id: str, split_left: bool) -> None:
+        """
+        Move a tab into a newly created column beside its current one.
+
+        Args:
+            tab_id:     ID of the tab to move.
+            split_left: If True, the new column is created on the left.
+        """
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        tab = self._tabs.get(tab_id)
+        if tab is None:
+            return
+
+        column = self._find_column_for_tab(tab)
+        if column is None or column.count() <= 1 or len(self._tab_columns) >= 6:
+            return
+
+        self._mindspace_manager.mindspace().contexts().split_column(tab_id, split_left)
+
+    def _tab_placement(self, tab_id: str) -> tuple[int, int] | None:
+        """
+        Locate a tab within its column.
+
+        Args:
+            tab_id: ID of the tab to locate.
+
+        Returns:
+            The tab's index within its column and the number of tabs in that
+            column, or None if the tab is not in a column.
+        """
+        tab = self._tabs.get(tab_id)
+        if tab is None:
+            return None
+
+        column = self._find_column_for_tab(tab)
+        if column is None:
+            return None
+
+        return column.indexOf(tab), column.count()
+
+    def _reorder_tab(self, tab_id: str, position: int) -> None:
+        """
+        Ask the registry to move a tab to a position within its column.
+
+        The registry owns tab order, so the Qt tab bar is not touched here: it is
+        updated when the resulting REORDERED event arrives.  This keeps the saved
+        session in step with what the user sees.
+
+        Args:
+            tab_id:   ID of the tab to move.
+            position: Target position within the tab's column.
+        """
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        info = contexts.get(tab_id)
+        if info is None:
+            return
+
+        if not 0 <= position < len(contexts.column_members(info.column)):
+            return
+
+        contexts.reorder(tab_id, position)
 
     def _get_current_column(self) -> int:
         """Get index of currently active column."""

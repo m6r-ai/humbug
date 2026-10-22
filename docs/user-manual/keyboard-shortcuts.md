@@ -66,6 +66,8 @@ differences and are noted in their rows.
 | Merge Column Right | Cmd+] | Ctrl+] |
 | Swap Column Left | Cmd+Alt+[ | Ctrl+Alt+[ |
 | Swap Column Right | Cmd+Alt+] | Ctrl+Alt+] |
+| Move Tab to Left Column | Cmd+Alt+Left | Ctrl+Alt+Left |
+| Move Tab to Right Column | Cmd+Alt+Right | Ctrl+Alt+Right |
 | Next Message | Alt+Down | Alt+Down |
 | Previous Message | Alt+Up | Alt+Up |
 

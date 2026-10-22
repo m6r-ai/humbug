@@ -512,6 +512,24 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action = QAction(strings.swap_column_right, self)
         self._swap_column_right_action.setShortcut(QKeySequence("Ctrl+Alt+]"))
 
+        self._move_tab_to_left_column_action = QAction(strings.move_tab_to_left_column, self)
+        self._move_tab_to_left_column_action.setShortcut(QKeySequence("Ctrl+Alt+Left"))
+
+        self._move_tab_to_right_column_action = QAction(strings.move_tab_to_right_column, self)
+        self._move_tab_to_right_column_action.setShortcut(QKeySequence("Ctrl+Alt+Right"))
+
+        self._move_tab_left_action = QAction(strings.move_tab_left, self)
+        self._move_tab_left_action.setShortcut(QKeySequence("Ctrl+Shift+PgUp"))
+
+        self._move_tab_right_action = QAction(strings.move_tab_right, self)
+        self._move_tab_right_action.setShortcut(QKeySequence("Ctrl+Shift+PgDown"))
+
+        self._move_tab_to_start_action = QAction(strings.move_tab_to_start, self)
+        self._move_tab_to_start_action.triggered.connect(lambda: self._on_move_tab_to_column_end(True))
+
+        self._move_tab_to_end_action = QAction(strings.move_tab_to_end, self)
+        self._move_tab_to_end_action.triggered.connect(lambda: self._on_move_tab_to_column_end(False))
+
         self._next_message_action = QAction(strings.next_message, self)
         self._next_message_action.setShortcut(QKeySequence("Alt+Down"))
         self._next_message_action.triggered.connect(self._on_navigate_next_message)
@@ -609,6 +627,13 @@ class MainWindow(QMainWindow):
         self._view_menu.addAction(self._merge_column_right_action)
         self._view_menu.addAction(self._swap_column_left_action)
         self._view_menu.addAction(self._swap_column_right_action)
+        self._view_menu.addSeparator()
+        self._view_menu.addAction(self._move_tab_to_left_column_action)
+        self._view_menu.addAction(self._move_tab_to_right_column_action)
+        self._view_menu.addAction(self._move_tab_left_action)
+        self._view_menu.addAction(self._move_tab_right_action)
+        self._view_menu.addAction(self._move_tab_to_start_action)
+        self._view_menu.addAction(self._move_tab_to_end_action)
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._next_message_action)
         self._view_menu.addAction(self._previous_message_action)
@@ -980,6 +1005,12 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setEnabled(tab_manager.can_merge_column(not left_to_right))
         self._swap_column_left_action.setEnabled(tab_manager.can_swap_column(left_to_right))
         self._swap_column_right_action.setEnabled(tab_manager.can_swap_column(not left_to_right))
+        self._move_tab_to_left_column_action.setEnabled(tab_manager.can_move_tab_to_column(left_to_right))
+        self._move_tab_to_right_column_action.setEnabled(tab_manager.can_move_tab_to_column(not left_to_right))
+        self._move_tab_left_action.setEnabled(tab_manager.can_move_tab_within_column(left_to_right))
+        self._move_tab_right_action.setEnabled(tab_manager.can_move_tab_within_column(not left_to_right))
+        self._move_tab_to_start_action.setEnabled(tab_manager.can_move_tab_within_column(True))
+        self._move_tab_to_end_action.setEnabled(tab_manager.can_move_tab_within_column(False))
         self._next_message_action.setEnabled(tab is not None and tab.can_navigate_next_message())
         self._previous_message_action.setEnabled(tab is not None and tab.can_navigate_previous_message())
         self._prompt_navigator_action.setEnabled(isinstance(tab, ConversationTab))
@@ -1057,6 +1088,12 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setText(strings.merge_column_right)
         self._swap_column_left_action.setText(strings.swap_column_left)
         self._swap_column_right_action.setText(strings.swap_column_right)
+        self._move_tab_to_left_column_action.setText(strings.move_tab_to_left_column)
+        self._move_tab_to_right_column_action.setText(strings.move_tab_to_right_column)
+        self._move_tab_left_action.setText(strings.move_tab_left)
+        self._move_tab_right_action.setText(strings.move_tab_right)
+        self._move_tab_to_start_action.setText(strings.move_tab_to_start)
+        self._move_tab_to_end_action.setText(strings.move_tab_to_end)
         self._prompt_navigator_action.setText(strings.prompt_markers)
 
         # Our logic for left and right reverses for right-to-left languages
@@ -1073,6 +1110,14 @@ class MainWindow(QMainWindow):
         self._swap_column_left_action.triggered.connect(lambda: self._on_swap_column(left_to_right))
         self._swap_column_right_action.triggered.disconnect()
         self._swap_column_right_action.triggered.connect(lambda: self._on_swap_column(not left_to_right))
+        self._move_tab_to_left_column_action.triggered.disconnect()
+        self._move_tab_to_left_column_action.triggered.connect(lambda: self._on_move_tab_to_column(left_to_right))
+        self._move_tab_to_right_column_action.triggered.disconnect()
+        self._move_tab_to_right_column_action.triggered.connect(lambda: self._on_move_tab_to_column(not left_to_right))
+        self._move_tab_left_action.triggered.disconnect()
+        self._move_tab_left_action.triggered.connect(lambda: self._on_move_tab_within_column(left_to_right))
+        self._move_tab_right_action.triggered.disconnect()
+        self._move_tab_right_action.triggered.connect(lambda: self._on_move_tab_within_column(not left_to_right))
 
         self._on_style_changed()
 
@@ -2383,6 +2428,30 @@ class MainWindow(QMainWindow):
             return
 
         contexts.swap_column(info.column, swap_left)
+
+    def _on_move_tab_to_column(self, move_left: bool) -> None:
+        """Move the current tab into the column beside it."""
+        current_tab = self._tab_manager.get_current_tab()
+        if current_tab is None:
+            return
+
+        self._tab_manager.move_tab_to_adjacent_column(current_tab.tab_id(), move_left)
+
+    def _on_move_tab_within_column(self, towards_start: bool) -> None:
+        """Move the current tab one place along its own column."""
+        current_tab = self._tab_manager.get_current_tab()
+        if current_tab is None:
+            return
+
+        self._tab_manager.move_tab_within_column(current_tab.tab_id(), towards_start)
+
+    def _on_move_tab_to_column_end(self, towards_start: bool) -> None:
+        """Move the current tab to the first or last place in its own column."""
+        current_tab = self._tab_manager.get_current_tab()
+        if current_tab is None:
+            return
+
+        self._tab_manager.move_tab_to_column_end(current_tab.tab_id(), towards_start)
 
     def _on_style_changed(self) -> None:
         """Handle style changes by updating all styled widgets."""
