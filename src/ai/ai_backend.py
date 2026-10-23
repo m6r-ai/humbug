@@ -111,6 +111,22 @@ class AIBackend(ABC):
         """
         return 30.0
 
+    def _supports_compressed_requests(self) -> bool:
+        """
+        Return True if this endpoint accepts gzip-encoded request bodies.
+
+        Long conversations can produce multi-megabyte request bodies, and JSON text
+        compresses by a factor of several.  Compression is opt-in per backend because
+        most providers do not decompress request bodies: they parse the body as JSON
+        without inspecting Content-Encoding, so a gzipped body fails with a parse error.
+        There is no reliable status code for this, so the decision cannot be discovered
+        at runtime and must be configured.
+
+        Returns:
+            True if request bodies may be gzip-compressed.
+        """
+        return False
+
 
     def _reasoning_model_matches(self, message: AIMessage, settings: AIConversationSettings) -> bool:
         """
@@ -194,6 +210,7 @@ class AIBackend(ABC):
             ssl_context=self._ssl_context,
             connect_timeout=20,
             read_timeout=self._read_timeout(),
+            compress_request_body=self._supports_compressed_requests(),
         ) as client:
             while attempt < self._max_retries:
                 try:

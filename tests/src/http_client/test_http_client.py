@@ -1830,3 +1830,139 @@ class TestSocks5Proxy:
                     assert text == "secure socks5 hello"
 
         asyncio.run(run())
+
+
+class TestRequestCompression:
+    """Tests for gzip compression of request bodies."""
+
+    def test_large_json_body_is_compressed_when_enabled(self) -> None:
+        """A JSON body at or above the threshold is gzipped and labelled Content-Encoding: gzip."""
+        received: dict = {}
+        payload = {"messages": ["the quick brown fox jumps over the lazy dog"] * 2000}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["body"] = request["body"]
+            received["content_encoding"] = request["headers"].get("content-encoding")
+            received["content_length"] = request["headers"].get("content-length")
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient(compress_request_body=True) as client:
+                    response = await client.post(server.url("/"), json=payload)
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["content_encoding"] == "gzip"
+        assert json.loads(gzip.decompress(received["body"])) == payload
+        assert received["content_length"] == str(len(received["body"]))
+
+    def test_large_json_body_is_not_compressed_when_disabled(self) -> None:
+        """A JSON body is sent uncompressed when compression is not enabled."""
+        received: dict = {}
+        payload = {"messages": ["the quick brown fox jumps over the lazy dog"] * 2000}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["body"] = request["body"]
+            received["content_encoding"] = request["headers"].get("content-encoding")
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.post(server.url("/"), json=payload)
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["content_encoding"] is None
+        assert json.loads(received["body"]) == payload
+
+    def test_small_body_is_not_compressed(self) -> None:
+        """A body below the threshold is sent uncompressed even when compression is enabled."""
+        received: dict = {}
+        payload = {"x": 1}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["body"] = request["body"]
+            received["content_encoding"] = request["headers"].get("content-encoding")
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient(compress_request_body=True) as client:
+                    response = await client.post(server.url("/"), json=payload)
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["content_encoding"] is None
+        assert json.loads(received["body"]) == payload
+
+    def test_large_raw_data_is_compressed_when_enabled(self) -> None:
+        """A raw byte body at or above the threshold is gzipped."""
+        received: dict = {}
+        raw = b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" * 4000
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["body"] = request["body"]
+            received["content_encoding"] = request["headers"].get("content-encoding")
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient(compress_request_body=True) as client:
+                    response = await client.post(server.url("/"), data=raw)
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["content_encoding"] == "gzip"
+        assert gzip.decompress(received["body"]) == raw
+
+    def test_caller_supplied_content_encoding_is_preserved(self) -> None:
+        """A caller-supplied Content-Encoding suppresses automatic compression."""
+        received: dict = {}
+        raw = b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" * 4000
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            received["body"] = request["body"]
+            received["content_encoding"] = request["headers"].get("content-encoding")
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient(compress_request_body=True) as client:
+                    response = await client.post(
+                        server.url("/"),
+                        data=raw,
+                        headers={"Content-Encoding": "identity"},
+                    )
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["content_encoding"] == "identity"
+        assert received["body"] == raw
+
+    def test_redirect_resends_compressed_body(self) -> None:
+        """A redirected request re-sends the compressed body, not the original."""
+        received: dict = {}
+        payload = {"messages": ["the quick brown fox jumps over the lazy dog"] * 2000}
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            if request["path"] == "/start":
+                _write_response(writer, 307, b"", {"Location": "/end"})
+                return
+
+            received["body"] = request["body"]
+            received["content_encoding"] = request["headers"].get("content-encoding")
+            received["content_length"] = request["headers"].get("content-length")
+            _write_response(writer, 200, b"ok")
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient(compress_request_body=True) as client:
+                    response = await client.post(server.url("/start"), json=payload)
+                    await response.text()
+
+        asyncio.run(run())
+        assert received["content_encoding"] == "gzip"
+        assert json.loads(gzip.decompress(received["body"])) == payload
+        assert received["content_length"] == str(len(received["body"]))

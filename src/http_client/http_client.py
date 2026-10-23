@@ -22,6 +22,8 @@ _DEFAULT_CONNECT_TIMEOUT = 20.0
 _DEFAULT_SSL_HANDSHAKE_TIMEOUT = 20.0
 _DEFAULT_READ_TIMEOUT = 30.0
 _DEFAULT_USER_AGENT = "Humbug"
+_COMPRESS_MIN_BYTES = 64 * 1024
+_COMPRESS_LEVEL = 1
 
 
 class HttpResponse:
@@ -304,6 +306,7 @@ class HttpClient:
         ssl_handshake_timeout: float = _DEFAULT_SSL_HANDSHAKE_TIMEOUT,
         read_timeout: float = _DEFAULT_READ_TIMEOUT,
         proxy: str | None = None,
+        compress_request_body: bool = False,
     ) -> None:
         """
         Initialize the HTTP client.
@@ -316,6 +319,9 @@ class HttpClient:
             read_timeout: Seconds to wait for each read operation.
             proxy: Proxy URL (e.g. 'http://proxy:8080' or 'socks5://proxy:1080').
                 When set, all connections are tunneled through the proxy.
+            compress_request_body: Gzip request bodies at or above
+                _COMPRESS_MIN_BYTES.  Only enable this for endpoints known to
+                accept Content-Encoding: gzip on requests.
         """
         self._ssl_context = ssl_context
         self._family = family
@@ -323,6 +329,7 @@ class HttpClient:
         self._ssl_handshake_timeout = ssl_handshake_timeout
         self._read_timeout = read_timeout
         self._proxy = proxy
+        self._compress_request_body = compress_request_body
 
     async def get(self, url: str, headers: dict[str, str] | None = None) -> HttpResponse:
         """
@@ -494,6 +501,19 @@ class HttpClient:
             body = json_module.dumps(json).encode("utf-8")
             request_headers.setdefault("Content-Type", "application/json")
 
+        # Compress before the redirect recursion below so that a redirect re-sends the
+        # compressed bytes rather than the original body with a stale Content-Encoding.
+        if (
+            self._compress_request_body
+            and body is not None
+            and len(body) >= _COMPRESS_MIN_BYTES
+            and "content-encoding" not in {k.lower() for k in request_headers}
+        ):
+            body = gzip.compress(body, compresslevel=_COMPRESS_LEVEL)
+            request_headers["Content-Encoding"] = "gzip"
+            json = None
+            data = body
+
         if method in ("POST", "PUT", "PATCH"):
             request_headers["Content-Length"] = str(len(body) if body is not None else 0)
 
@@ -544,6 +564,7 @@ class HttpClient:
                     redirect_method = method
                     redirect_json = json
                     redirect_data = data
+                    redirect_headers = headers
 
                     # 301, 302, 303: methods with a body are changed to GET
                     if response.status() in (301, 302, 303) and method in ("POST", "PUT", "PATCH"):
@@ -551,10 +572,17 @@ class HttpClient:
                         redirect_json = None
                         redirect_data = None
 
+                    else:
+                        # Carry the compressed body and its Content-Encoding across the
+                        # redirect; the caller's original headers do not record it.
+                        if "Content-Encoding" in request_headers:
+                            redirect_headers = dict(headers or {})
+                            redirect_headers["Content-Encoding"] = request_headers["Content-Encoding"]
+
                     return await self._request(
                         redirect_method,
                         redirect_url,
-                        headers=headers,
+                        headers=redirect_headers,
                         json=redirect_json,
                         data=redirect_data,
                         redirect_count=redirect_count + 1,

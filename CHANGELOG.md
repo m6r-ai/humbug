@@ -10,6 +10,7 @@ New features:
   column, or to a different place in its own column, and the View menu offers the same for the current tab.  Ctrl+Alt+Left
   and Ctrl+Alt+Right move the current tab between columns, creating an adjacent column at an edge when the source column
   retains another tab.  Ctrl+Shift+PgUp and Ctrl+Shift+PgDown reorder the current tab within its column.
+- Support gzip compressing HTTP client requests to the Anthropic and xAI backends.
 
 Bug fixes:
 

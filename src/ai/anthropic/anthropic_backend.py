@@ -15,6 +15,10 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 class AnthropicBackend(AIBackend):
     """Anthropic API backend implementation."""
 
+    def _supports_compressed_requests(self) -> bool:
+        """Return True: the Anthropic API decompresses gzip-encoded request bodies."""
+        return True
+
     async def fetch_models(self) -> list[str]:
         """Fetch available model IDs from the Anthropic API."""
         url = self._api_url.replace("/messages", "/models")
