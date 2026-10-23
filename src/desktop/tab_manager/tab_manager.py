@@ -426,7 +426,7 @@ class TabManager(QWidget):
 
         move_to_new_column_action = menu.addAction(strings.move_tab_to_new_column)
         move_to_new_column_action.setEnabled(
-            self._can_move_tab_to_new_column(tab)
+            self._can_move_tab_to_new_column(column)
         )
 
         menu.addSeparator()
@@ -1965,7 +1965,7 @@ class TabManager(QWidget):
         column_number = self._tab_columns.index(column)
         target_column_number = column_number + (-1 if move_left else 1)
         if not 0 <= target_column_number < len(self._tab_columns):
-            if self._can_move_tab_to_new_column(tab):
+            if self._can_move_tab_to_new_column(column):
                 self.move_tab_to_new_column(tab_id, split_left=move_left)
 
             return
@@ -2033,7 +2033,8 @@ class TabManager(QWidget):
         if tab is None:
             return
 
-        if not self._can_move_tab_to_new_column(tab):
+        column = self._find_column_for_tab(tab)
+        if column is None or not self._can_move_tab_to_new_column(column):
             return
 
         self._mindspace_manager.mindspace().contexts().split_column(tab_id, split_left)
@@ -2049,14 +2050,12 @@ class TabManager(QWidget):
         if 0 <= target_column_number < len(self._tab_columns):
             return True
 
-        return self._can_move_tab_to_new_column(tab)
+        return self._can_move_tab_to_new_column(column)
 
-    def _can_move_tab_to_new_column(self, tab: TabBase) -> bool:
-        """Return whether tab can be moved into a newly created adjacent column."""
-        column = self._find_column_for_tab(tab)
+    def _can_move_tab_to_new_column(self, column: ColumnWidget) -> bool:
+        """Return whether a column can spare a tab for a newly created adjacent column."""
         return (
             self._mindspace_manager.has_mindspace()
-            and column is not None
             and column.count() > 1
             and len(self._tab_columns) < ContextRegistry.MAX_COLUMNS
         )
