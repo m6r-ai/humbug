@@ -141,7 +141,7 @@ AI tool implementation for date/time operations.
 
 ### `src/context/`
 Registry infrastructure for tracking open contexts within a mindspace.
-The registry is the source of truth for workspace layout (which contexts are
+The registry is the source of truth for mindspace layout (which contexts are
 open, their column, position, and focus) and serialises session state.  Each
 context model supplies its own content state via `save_content_state`; the
 frontend supplies view state as an opaque blob.  See ADR-0008.
@@ -301,7 +301,7 @@ Language-specific syntax highlighting system.
 - `pascal/`, `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `toml/`, `typescript/`, `xml/`, `yaml/`
 
 ### `src/system_ai_tool/`
-AI tool implementation for system/workspace operations (tab lifecycle, layout,
+AI tool implementation for system/mindspace operations (tab lifecycle, layout,
 system info). Moved from `src/desktop/` to make it frontend-agnostic.
 
 ### `src/terminal/`
