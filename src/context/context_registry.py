@@ -95,6 +95,7 @@ class ContextRegistry:
         is_ephemeral: bool = False,
         context_id: str  = "",
         initial_model: Any = None,
+        initial_content_state: dict[str, Any] | None = None,
         requester_id: str = "",
         column: int = 0,
         position: int | None = None,
@@ -113,6 +114,12 @@ class ContextRegistry:
             initial_model: Optional model object to register atomically with
                            the context.  Stored before OPENED is emitted so
                            subscribers can retrieve it immediately.
+            initial_content_state:
+                           Optional content state to make available via
+                           get_content_state before OPENED is emitted, so a
+                           frontend can reconstruct a context whose ContextInfo
+                           alone is not sufficient (for example a terminal's
+                           command).
             requester_id:  Optional ID of the context that is requesting this
                            open.  An empty string means the open is
                            user-initiated; a non-empty value means it was
@@ -146,6 +153,9 @@ class ContextRegistry:
         self._contexts[context_id] = info
         if initial_model is not None:
             self._models[context_id] = initial_model
+
+        if initial_content_state:
+            self._content_state[context_id] = initial_content_state
 
         self._emit(ContextEvent.OPENED, info, is_ephemeral, requester_id)
         return context_id
@@ -521,7 +531,7 @@ class ContextRegistry:
                     "column": info.column,
                     "position": info.position,
                 },
-                "content": self._content_state_for(info.context_id),
+                "content": self.capture_content_state(info.context_id),
                 "frontend": self._frontend_state.get(info.context_id, {}),
             })
 
@@ -535,9 +545,17 @@ class ContextRegistry:
             },
         }
 
-    def _content_state_for(self, context_id: str) -> dict[str, Any]:
+    def capture_content_state(self, context_id: str) -> dict[str, Any]:
         """
-        Return the content state for a context, or empty if it has no model.
+        Serialise a context's live content state from its model.
+
+        Unlike get_content_state, which returns only what restore_state
+        retained, this asks the model for its current state.  Callers that need
+        to recreate a context after it closes must capture this while the
+        context is still open, because close() discards the model.
+
+        Falls back to any retained content state when the context has no model
+        able to serialise itself, so state survives repeated capture and reopen.
 
         Args:
             context_id: ID of the context to serialise.
@@ -545,13 +563,14 @@ class ContextRegistry:
         Returns:
             JSON-safe dictionary of content state.
         """
+        retained = self._content_state.get(context_id, {})
         model = self._models.get(context_id)
         if model is None:
-            return {}
+            return retained
 
         save = getattr(model, "save_content_state", None)
         if save is None:
-            return {}
+            return retained
 
         try:
             return save()
@@ -560,7 +579,7 @@ class ContextRegistry:
             self._logger.exception(
                 "Failed to save content state for context %s", context_id
             )
-            return {}
+            return retained
 
     def restore_state(self, state: dict[str, Any]) -> None:
         """

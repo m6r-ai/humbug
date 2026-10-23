@@ -472,6 +472,42 @@ class TestContentState:
 
         assert restored.get_content_state(cid) == {}
 
+    def test_initial_content_state_is_available_before_opened_is_emitted(self) -> None:
+        """Content state supplied to open is readable by OPENED subscribers."""
+        registry = ContextRegistry()
+        seen: list[dict] = []
+        registry.register_callback(
+            ContextEvent.OPENED,
+            lambda info, _ephemeral, _requester="": seen.append(
+                registry.get_content_state(info.context_id)
+            ),
+        )
+
+        registry.open(context_type="stub", initial_content_state={"value": "hello"})
+
+        assert seen == [{"value": "hello"}]
+
+    def test_capture_content_state_reads_the_live_model(self) -> None:
+        """Capturing content state asks the model for its current state."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="stub", initial_model=_StubModel("hello"))
+
+        assert registry.capture_content_state(cid) == {"value": "hello"}
+
+    def test_capture_content_state_falls_back_to_retained_state(self) -> None:
+        """A context with no model keeps the content state it was opened with."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="stub", initial_content_state={"value": "hello"})
+
+        assert registry.capture_content_state(cid) == {"value": "hello"}
+
+    def test_capture_content_state_is_empty_without_model_or_retained_state(self) -> None:
+        """A context with neither a model nor retained state captures nothing."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="editor", path="/tmp/a/file.py")
+
+        assert registry.capture_content_state(cid) == {}
+
 
 class TestOrdering:
     """Tests for position within a column."""
