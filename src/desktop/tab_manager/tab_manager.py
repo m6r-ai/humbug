@@ -395,16 +395,22 @@ class TabManager(QWidget):
         menu = self._style_manager.create_menu(self)
 
         # In right-to-left layouts the visual order is mirrored, so "left"
-        # corresponds to higher tab indexes and "right" to lower ones
-        left_to_right = self._language_manager.left_to_right()
+        # corresponds to higher tab indexes and "right" to lower ones.  This
+        # flag names that mirroring rather than a direction: it is True when
+        # visual left coincides with a lower tab index or column index.
+        visual_left_is_lower_index = self._language_manager.left_to_right()
         has_tabs_before = tab_index > 0
         has_tabs_after = tab_index < tab_count - 1
 
         close_left_action = menu.addAction(strings.close_tabs_to_left)
-        close_left_action.setEnabled(has_tabs_before if left_to_right else has_tabs_after)
+        close_left_action.setEnabled(
+            has_tabs_before if visual_left_is_lower_index else has_tabs_after
+        )
 
         close_right_action = menu.addAction(strings.close_tabs_to_right)
-        close_right_action.setEnabled(has_tabs_after if left_to_right else has_tabs_before)
+        close_right_action.setEnabled(
+            has_tabs_after if visual_left_is_lower_index else has_tabs_before
+        )
 
         close_others_action = menu.addAction(strings.close_other_tabs)
         close_others_action.setEnabled(tab_count > 1)
@@ -416,12 +422,12 @@ class TabManager(QWidget):
 
         move_to_left_column_action = menu.addAction(strings.move_tab_to_left_column)
         move_to_left_column_action.setEnabled(
-            self._can_move_tab_to_adjacent_column(tab, move_left=left_to_right)
+            self._can_move_tab_to_adjacent_column(tab, move_left=visual_left_is_lower_index)
         )
 
         move_to_right_column_action = menu.addAction(strings.move_tab_to_right_column)
         move_to_right_column_action.setEnabled(
-            self._can_move_tab_to_adjacent_column(tab, move_left=not left_to_right)
+            self._can_move_tab_to_adjacent_column(tab, move_left=not visual_left_is_lower_index)
         )
 
         move_to_new_column_action = menu.addAction(strings.move_tab_to_new_column)
@@ -433,12 +439,12 @@ class TabManager(QWidget):
 
         move_left_action = menu.addAction(strings.move_tab_left)
         move_left_action.setEnabled(
-            self._can_move_tab_within_column(tab, towards_start=left_to_right)
+            self._can_move_tab_within_column(tab, towards_start=visual_left_is_lower_index)
         )
 
         move_right_action = menu.addAction(strings.move_tab_right)
         move_right_action.setEnabled(
-            self._can_move_tab_within_column(tab, towards_start=not left_to_right)
+            self._can_move_tab_within_column(tab, towards_start=not visual_left_is_lower_index)
         )
 
         move_to_start_action = menu.addAction(strings.move_tab_to_start)
@@ -451,15 +457,15 @@ class TabManager(QWidget):
         if action is None:
             return
 
-        close_before_action = close_left_action if left_to_right else close_right_action
-        close_after_action = close_right_action if left_to_right else close_left_action
-        move_before_action = move_left_action if left_to_right else move_right_action
-        move_after_action = move_right_action if left_to_right else move_left_action
+        close_before_action = close_left_action if visual_left_is_lower_index else close_right_action
+        close_after_action = close_right_action if visual_left_is_lower_index else close_left_action
+        move_before_action = move_left_action if visual_left_is_lower_index else move_right_action
+        move_after_action = move_right_action if visual_left_is_lower_index else move_left_action
         move_to_previous_column_action = (
-            move_to_left_column_action if left_to_right else move_to_right_column_action
+            move_to_left_column_action if visual_left_is_lower_index else move_to_right_column_action
         )
         move_to_next_column_action = (
-            move_to_right_column_action if left_to_right else move_to_left_column_action
+            move_to_right_column_action if visual_left_is_lower_index else move_to_left_column_action
         )
 
         if action == close_before_action:
@@ -481,7 +487,11 @@ class TabManager(QWidget):
             self.move_tab_to_adjacent_column(tab_id, False)
 
         elif action == move_to_new_column_action:
-            self.move_tab_to_new_column(tab_id, not left_to_right)
+            # split_column(True) keeps the tab at its current index and pushes
+            # its neighbours right, so it opens the new column to the visual
+            # left.  The new column should open to the visual right, which is
+            # the inverse of the mirroring flag.
+            self.move_tab_to_new_column(tab_id, not visual_left_is_lower_index)
 
         elif action == move_before_action:
             self.move_tab_within_column(tab_id, True)
@@ -533,13 +543,24 @@ class TabManager(QWidget):
             if tab_bar and tab_index != -1:
                 tab_bar.set_tab_file_missing(tab_index, not file_exists)
 
-    def _remove_tab_from_column(self, tab: TabBase, column: ColumnWidget) -> None:
+    def _remove_tab_from_column(
+        self,
+        tab: TabBase,
+        column: ColumnWidget,
+        close_context: bool = True,
+    ) -> None:
         """
         Remove a tab from a column and clean up associated data.
+
+        Closing the context is optional because a tab that is being moved to
+        another column leaves this column without leaving the workspace.  The
+        context must survive such a move: it owns the tab's model, content
+        state and view state, all of which a close would discard.
 
         Args:
             tab: Tab to remove
             column: Column containing the tab
+            close_context: Whether to close the tab's context in the registry
         """
         tab_id = tab.tab_id()
 
@@ -549,7 +570,9 @@ class TabManager(QWidget):
             mru_list.remove(tab_id)
 
         del self._tabs[tab_id]
-        self._mindspace_manager.mindspace().contexts().close(tab_id)
+        if close_context:
+            self._mindspace_manager.mindspace().contexts().close(tab_id)
+
         index = column.indexOf(tab)
         tab_bar = column.tabBar()
         if isinstance(tab_bar, TabBar):
@@ -926,10 +949,15 @@ class TabManager(QWidget):
         self._update_mru_order(tab, column)
         QTimer.singleShot(0, self.show_all_columns)
 
-        # Keep the registry's column state in sync with the Qt layout
+        # Keep the registry's column and position state in sync with the Qt layout.
+        # Position must be written too: a tab arriving from another column still
+        # carries the position it held there, which would collide with a tab
+        # already at that position in this column.
         if self._mindspace_manager.has_mindspace():
             column_index = self._tab_columns.index(column)
-            self._mindspace_manager.mindspace().contexts().update(tab_id, column=column_index)
+            self._mindspace_manager.mindspace().contexts().update(
+                tab_id, column=column_index, position=index
+            )
 
         # Only restore focus to the prior widget when the open was not user-initiated
         # and focus was outside the target column (e.g. the sidebar).  If focus was
@@ -961,6 +989,13 @@ class TabManager(QWidget):
         """
         Move a tab from one column to another.
 
+        The tab's widget is destroyed and rebuilt in the target column, because
+        a Qt widget cannot belong to two columns at once, so the live state that
+        cannot be serialised is carried across by the migration state.  The
+        context, by contrast, is not destroyed: it is left open and re-pointed at
+        the target column, so its content state and view state survive the move.
+        The rebuilt tab then registers a fresh model for the same context.
+
         Args:
             tab: Tab to move
             source_column: Source column
@@ -979,7 +1014,7 @@ class TabManager(QWidget):
 
         tab.stop_file_watching()
 
-        self._remove_tab_from_column(tab, source_column)
+        self._remove_tab_from_column(tab, source_column, close_context=False)
 
         new_tab = tab.rebuild_from_migration_state(migration_state, self)
 
@@ -988,22 +1023,6 @@ class TabManager(QWidget):
 
         self._add_tab_to_column(new_tab, tab_title, target_column, restore_focus=False)
         self._apply_context_models(new_tab)
-
-        # _remove_tab_from_column closes the context; re-open it in the target
-        # column so the registry stays the source of truth across a move.
-        if self._mindspace_manager.has_mindspace():
-            column_index = self._tab_columns.index(target_column)
-            contexts = self._mindspace_manager.mindspace().contexts()
-            if contexts.get(tab_id) is None:
-                contexts.open(
-                    context_type=new_tab.tool_name(),
-                    path=new_tab.path(),
-                    title=tab_title,
-                    context_id=tab_id,
-                    column=column_index,
-                )
-
-            contexts.make_permanent(tab_id)
 
         if remove_if_empty and source_column.count() == 0 and len(self._tab_columns) > 1:
             source_column_index = self._tab_columns.index(source_column)
