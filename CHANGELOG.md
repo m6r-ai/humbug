@@ -18,6 +18,7 @@ Bug fixes:
 - The `.humbug` directory had mistakenly been exposed in the sidebar views.
 - Reordering tabs by dragging them within a column was not recorded in the session, so the original order came back the
   next time the mindspace was opened.
+- Support gzip-encoded SSE streams coming back from AI backends.
 
 Other changes:
 
