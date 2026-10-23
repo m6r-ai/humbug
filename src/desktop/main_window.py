@@ -51,7 +51,7 @@ from desktop.file_sidebar.file_sidebar import FileSidebar
 from desktop.file_utils import is_binary_image_file
 from desktop.language.language_manager import LanguageManager
 from desktop.log_tab.log_tab import LogTab
-from desktop.message_box import MessageBox, MessageBoxType
+from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.main_window_splitter import MainWindowSplitter
@@ -1465,13 +1465,11 @@ class MainWindow(QMainWindow):
             return
 
         if not self._mindspace_manager.check_mindspace(mindspace_path):
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.mindspace_error_title,
-                strings.mindspace_not_found_error
-            )
-            return
+            if not self._confirm_mindspace_initialization(mindspace_path):
+                return
+
+            if not self._create_mindspace_at(mindspace_path):
+                return
 
         current = self._mindspace_manager.mindspace_path()
         if current and os.path.realpath(mindspace_path) == os.path.realpath(current):
@@ -1587,6 +1585,70 @@ class MainWindow(QMainWindow):
 
         self._open_mindspace_path(dir_path)
 
+    def _confirm_mindspace_initialization(self, path: str) -> bool:
+        """
+        Ask whether a folder that is not a mindspace should be turned into one.
+
+        This only asks - it has no side effects - so that callers can put the question
+        to the user before they commit to any work that would be wasted if the answer
+        is no, and create the mindspace later via _create_mindspace_at.
+
+        Args:
+            path: Directory the user chose
+
+        Returns:
+            True if the user wants the folder initialized, False if they cancelled.
+        """
+        strings = self._language_manager.strings()
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.QUESTION,
+            strings.initialize_mindspace_title,
+            strings.initialize_mindspace_message.format(path),
+            [MessageBoxButton.OK, MessageBoxButton.CANCEL]
+        )
+        return result == MessageBoxButton.OK
+
+    def _create_mindspace_at(self, path: str) -> bool:
+        """
+        Create a mindspace in a folder the user has agreed to initialize.
+
+        No subfolders are requested: a folder being adopted as a mindspace already has
+        whatever structure the user wants, and an empty one matches the defaults of
+        MindspaceFoldersDialog, which offers only an optional "src" that starts off.
+
+        Args:
+            path: Directory to create the mindspace in
+
+        Returns:
+            True if the mindspace was created, False if creation failed and the user
+            has been told why.
+        """
+        strings = self._language_manager.strings()
+
+        try:
+            self._mindspace_manager.create_mindspace(path, [])
+
+        except MindspaceExistsError:
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.mindspace_error_title,
+                strings.mindspace_exists_error
+            )
+            return False
+
+        except MindspaceError as e:
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.mindspace_error_title,
+                strings.error_creating_mindspace.format(str(e))
+            )
+            return False
+
+        return True
+
     def _on_open_mindspace(self) -> None:
         """Open a new mindspace."""
         self._menu_timer.stop()
@@ -1612,15 +1674,10 @@ class MainWindow(QMainWindow):
             self._show_already_open_message(existing)
             return
 
-        # Before we do anything, check if the new location is a mindspace
-        if not self._mindspace_manager.check_mindspace(path):
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.mindspace_error_title,
-                strings.error_opening_mindspace.format(path)
-            )
+        # Before we do anything, check if the new location is a mindspace.  If it is not,
+        # offer to make it one rather than leaving the user at a dead end.
+        needs_initialization = not self._mindspace_manager.check_mindspace(path)
+        if needs_initialization and not self._confirm_mindspace_initialization(path):
             return
 
         # If we're switching mindspaces, save the current one first
@@ -1630,6 +1687,11 @@ class MainWindow(QMainWindow):
                 return
 
             self._mindspace_manager.close_mindspace()
+
+        # Only now commit the new mindspace to disk.  Creating it before the switch-out
+        # above would leave a stray mindspace behind whenever a tab refuses to close.
+        if needs_initialization and not self._create_mindspace_at(path):
+            return
 
         # Open the new mindspace
         try:

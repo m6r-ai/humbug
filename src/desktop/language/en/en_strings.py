@@ -336,6 +336,12 @@ def get_english_strings() -> LanguageStrings:
             "This will terminate the ongoing conversation and may result in incomplete responses."
         ),
 
+        initialize_mindspace_title="Initialize Mindspace",
+        initialize_mindspace_message=(
+            "No mindspace was found at:\n\n{}\n\n"
+            "Do you want to initialize this folder as a mindspace and open it?"
+        ),
+
         open_in_new_window="Open Mindspace in New Window...",
         open_in_new_window_title="Open in New Window",
         open_in_new_window_already_open=(
@@ -345,7 +351,6 @@ def get_english_strings() -> LanguageStrings:
         open_in_new_window_already_here="This mindspace is already open in this window.",
         open_in_new_window_failed="Could not start a new Humbug window:\n\n{}",
         open_in_new_window_choose_folder="Choose Folder...",
-        mindspace_not_found_error="No mindspace was found at the selected location.",
         mindspace_open_elsewhere_tooltip=(
             "{} is already open in another Humbug window, so it cannot be opened here"
         ),

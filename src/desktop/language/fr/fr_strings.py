@@ -334,6 +334,12 @@ def get_french_strings() -> LanguageStrings:
         cancel_conversation="Êtes-vous sûr de vouloir arrêter la réponse actuelle de l'IA ? "
             "Cela mettra fin à la conversation en cours et peut entraîner des réponses incomplètes.",
 
+        initialize_mindspace_title="Initialiser l'espace mental",
+        initialize_mindspace_message=(
+            "Aucun espace mental n'a été trouvé à :\n\n{}\n\n"
+            "Voulez-vous initialiser ce dossier comme espace mental et l'ouvrir ?"
+        ),
+
         open_in_new_window="Ouvrir l'espace mental dans une nouvelle fenêtre...",
         open_in_new_window_title="Ouvrir dans une nouvelle fenêtre",
         open_in_new_window_already_open=(
@@ -343,7 +349,6 @@ def get_french_strings() -> LanguageStrings:
         open_in_new_window_already_here="Cet espace mental est déjà ouvert dans cette fenêtre.",
         open_in_new_window_failed="Impossible de démarrer une nouvelle fenêtre Humbug :\n\n{}",
         open_in_new_window_choose_folder="Choisir un dossier...",
-        mindspace_not_found_error="Aucun espace mental n'a été trouvé à l'emplacement sélectionné.",
         mindspace_open_elsewhere_tooltip=(
             "{} est déjà ouvert dans une autre fenêtre Humbug et ne peut donc pas être ouvert ici"
         ),
