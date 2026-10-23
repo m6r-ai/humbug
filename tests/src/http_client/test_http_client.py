@@ -1329,6 +1329,50 @@ class TestDecompression:
 
         asyncio.run(run())
 
+    def test_gzip_content_lines_are_incremental(self) -> None:
+        """content_lines yields decompressed lines before the compressed body has fully arrived."""
+        first_line = b"first line\n"
+        second_line = b"second line\n"
+
+        compressor = zlib.compressobj(wbits=31)
+        first_chunk = compressor.compress(first_line) + compressor.flush(zlib.Z_SYNC_FLUSH)
+        second_chunk = compressor.compress(second_line) + compressor.flush(zlib.Z_FINISH)
+
+        first_line_seen = asyncio.Event()
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            headers = (
+                b"HTTP/1.1 200 OK\r\n"
+                b"Transfer-Encoding: chunked\r\n"
+                b"Content-Encoding: gzip\r\n"
+                b"Connection: close\r\n"
+                b"\r\n"
+            )
+            writer.write(headers)
+            writer.write(f"{len(first_chunk):x}\r\n".encode("latin-1") + first_chunk + b"\r\n")
+            await writer.drain()
+
+            # Only release the rest of the body once the client has observed the first line.
+            await asyncio.wait_for(first_line_seen.wait(), timeout=2)
+
+            writer.write(f"{len(second_chunk):x}\r\n".encode("latin-1") + second_chunk + b"\r\n")
+            writer.write(b"0\r\n\r\n")
+            await writer.drain()
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient() as client:
+                    response = await client.get(server.url("/"))
+                    lines = []
+                    async for line in response.content_lines():
+                        lines.append(line)
+                        if len(lines) == 1:
+                            first_line_seen.set()
+
+                    assert lines == [first_line, second_line]
+
+        asyncio.run(run())
+
     def test_accept_encoding_header_sent(self) -> None:
         """Client sends Accept-Encoding: gzip, deflate by default."""
         received_headers: dict[str, str] = {}

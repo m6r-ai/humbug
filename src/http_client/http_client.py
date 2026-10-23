@@ -120,31 +120,104 @@ class HttpResponse:
             return
 
         encoding = self._headers.get("content-encoding", "").lower()
-        if encoding in ("gzip", "deflate"):
-            data = await self._read_full_body()
-            for line in data.splitlines(keepends=True):
-                yield line
-
-            return
-
         self._body_read = True
         try:
-            chunked = self._headers.get("transfer-encoding", "").lower() == "chunked"
-
-            if chunked:
-                async for line in self._read_chunked_lines():
+            if encoding in ("gzip", "deflate"):
+                async for line in self._read_decompressed_lines(encoding):
                     yield line
 
             else:
-                while True:
-                    line = await self._timed_readline()
-                    if not line:
-                        break
-
+                async for line in self._read_raw_lines():
                     yield line
 
         finally:
             self._close_writer()
+
+    async def _read_raw_lines(self) -> AsyncGenerator[bytes, None]:
+        """
+        Yield lines from the undecoded response body.
+
+        Yields:
+            Lines from the response body as bytes
+        """
+        chunked = self._headers.get("transfer-encoding", "").lower() == "chunked"
+
+        if chunked:
+            async for line in self._read_chunked_lines():
+                yield line
+
+        else:
+            while True:
+                line = await self._timed_readline()
+                if not line:
+                    break
+
+                yield line
+
+    async def _read_decompressed_lines(self, encoding: str) -> AsyncGenerator[bytes, None]:
+        """
+        Yield lines from a compressed response body, decoding it incrementally.
+
+        The body is decoded as it arrives rather than being buffered in full, so
+        server-sent event streams remain incremental even when the server applies
+        transfer compression.
+
+        Args:
+            encoding: The Content-Encoding value ("gzip" or "deflate")
+
+        Yields:
+            Decompressed lines from the response body as bytes
+        """
+        # gzip uses a 16-bit window with the gzip framing; deflate uses the raw zlib window.
+        window_bits = 31 if encoding == "gzip" else 15
+        decompressor = zlib.decompressobj(window_bits)
+        buffer = bytearray()
+
+        async for chunk in self._read_raw_data():
+            buffer.extend(decompressor.decompress(chunk))
+            while b"\n" in buffer:
+                idx = buffer.index(b"\n") + 1
+                yield bytes(buffer[:idx])
+                buffer = buffer[idx:]
+
+        buffer.extend(decompressor.flush())
+        if buffer:
+            yield bytes(buffer)
+
+    async def _read_raw_data(self) -> AsyncGenerator[bytes, None]:
+        """
+        Yield the undecoded response body in chunks as they arrive.
+
+        Yields:
+            Chunks of the response body as bytes
+        """
+        chunked = self._headers.get("transfer-encoding", "").lower() == "chunked"
+
+        if chunked:
+            async for chunk in self._read_chunked_data():
+                yield chunk
+
+            return
+
+        content_length = self._headers.get("content-length")
+        if content_length is not None:
+            remaining = int(content_length)
+            while remaining > 0:
+                chunk = await self._timed_read(min(remaining, 65536))
+                if not chunk:
+                    break
+
+                remaining -= len(chunk)
+                yield chunk
+
+            return
+
+        while True:
+            chunk = await self._timed_read(65536)
+            if not chunk:
+                break
+
+            yield chunk
 
     async def _read_full_body(self) -> bytes:
         """Read the complete response body as bytes."""
