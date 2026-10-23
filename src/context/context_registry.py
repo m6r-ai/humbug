@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from dataclasses import replace
 from enum import Enum, auto
 import logging
 import os.path
@@ -436,16 +437,7 @@ class ContextRegistry:
             column:     New column index.
         """
         info = self._contexts[context_id]
-        self._contexts[context_id] = ContextInfo(
-            context_id=info.context_id,
-            context_type=info.context_type,
-            path=info.path,
-            title=info.title,
-            is_modified=info.is_modified,
-            is_ephemeral=info.is_ephemeral,
-            column=column,
-            position=info.position,
-        )
+        self._contexts[context_id] = replace(info, column=column)
 
     def _set_position(self, context_id: str, position: int) -> None:
         """
@@ -462,16 +454,7 @@ class ContextRegistry:
         if info.position == position:
             return
 
-        self._contexts[context_id] = ContextInfo(
-            context_id=info.context_id,
-            context_type=info.context_type,
-            path=info.path,
-            title=info.title,
-            is_modified=info.is_modified,
-            is_ephemeral=info.is_ephemeral,
-            column=info.column,
-            position=position,
-        )
+        self._contexts[context_id] = replace(info, position=position)
 
     def _next_position(self, column: int) -> int:
         """

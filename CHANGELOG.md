@@ -8,8 +8,8 @@ New features:
   the wait is longer than five seconds.  Cancelling ends the wait immediately and the AI is told the user interrupted it.
 - Tabs can now be moved without dragging them.  A tab's context menu can send it to the column on either side, to a new
   column, or to a different place in its own column, and the View menu offers the same for the current tab.  Ctrl+Alt+Left
-  and Ctrl+Alt+Right move the current tab between columns, and Ctrl+Shift+PgUp and Ctrl+Shift+PgDown reorder it within
-  its column.
+  and Ctrl+Alt+Right move the current tab between columns, creating an adjacent column at an edge when the source column
+  retains another tab.  Ctrl+Shift+PgUp and Ctrl+Shift+PgDown reorder the current tab within its column.
 
 Bug fixes:
 

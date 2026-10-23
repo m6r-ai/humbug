@@ -1,6 +1,8 @@
 """Tests for the ContextRegistry: path normalisation, layout, and state persistence."""
 import os
 
+import pytest
+
 from context.context_registry import ContextEvent, ContextRegistry
 
 
@@ -682,12 +684,14 @@ class TestReorderWithinColumn:
     def test_reorder_only_touches_its_own_column(self) -> None:
         """Contexts in other columns keep their positions."""
         registry = ContextRegistry()
-        first, second, _ = self._open_three(registry)
+        first, second, third = self._open_three(registry)
         other = registry.open(context_type="terminal", column=1)
+        original_order = self._order(registry)
 
         registry.reorder(second, 0)
 
-        assert self._order(registry) == [second, first, self._order(registry)[2]]
+        assert self._order(registry) == [second, first, third]
+        assert original_order[2] == third
         assert registry.get(other).column == 1
         assert registry.get(other).position == 0
 
@@ -717,24 +721,16 @@ class TestReorderWithinColumn:
         """An unknown context is a programming error, not a silent no-op."""
         registry = ContextRegistry()
 
-        try:
+        with pytest.raises(ValueError, match="Context not found"):
             registry.reorder("no-such-context", 0)
-        except ValueError:
-            return
-
-        raise AssertionError("Expected ValueError")
 
     def test_reorder_rejects_a_position_outside_the_column(self) -> None:
         """A position beyond the column's contents is rejected."""
         registry = ContextRegistry()
         first, _, _ = self._open_three(registry)
 
-        try:
+        with pytest.raises(ValueError, match="Position must be"):
             registry.reorder(first, 3)
-        except ValueError:
-            return
-
-        raise AssertionError("Expected ValueError")
 
     def test_reordering_survives_save_state(self) -> None:
         """save_state orders contexts by position, so a reorder must persist."""

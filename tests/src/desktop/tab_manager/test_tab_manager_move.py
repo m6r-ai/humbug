@@ -223,16 +223,6 @@ class TestMovingATabBetweenColumns:
         assert qt_order(tab_manager, 0) == [first]
         assert qt_order(tab_manager, 1) == [second]
 
-    def test_moving_a_lone_tab_right_keeps_an_empty_left_column(self, tab_manager, manager, tmp_path):
-        """Moving a lone tab right creates the requested empty column on its left."""
-        only, = open_tabs(tab_manager, manager, tmp_path, 1)
-
-        tab_manager.move_tab_to_adjacent_column(only, move_left=False)
-
-        assert qt_order(tab_manager, 0) == []
-        assert qt_order(tab_manager, 1) == [only]
-        assert manager.mindspace().contexts().get(only).column == 1
-
     def test_whether_a_tab_can_move_to_an_adjacent_column(self, tab_manager, manager, tmp_path):
         """The predicate permits an edge move when a new column can be created."""
         first, _second, third = self._two_columns(tab_manager, manager, tmp_path)
@@ -243,15 +233,15 @@ class TestMovingATabBetweenColumns:
 
         make_current(tab_manager, third)
         assert tab_manager.can_move_tab_to_column(move_left=True) is True
-        assert tab_manager.can_move_tab_to_column(move_left=False) is True
+        assert tab_manager.can_move_tab_to_column(move_left=False) is False
 
-    def test_a_lone_tab_can_move_right_into_a_new_column(self, tab_manager, manager, tmp_path):
-        """The right-edge shortcut remains available for a one-tab column."""
+    def test_a_lone_tab_cannot_create_an_empty_column(self, tab_manager, manager, tmp_path):
+        """A lone tab cannot move beyond either edge because empty columns are not persisted."""
         only, = open_tabs(tab_manager, manager, tmp_path, 1)
         make_current(tab_manager, only)
 
         assert tab_manager.can_move_tab_to_column(move_left=True) is False
-        assert tab_manager.can_move_tab_to_column(move_left=False) is True
+        assert tab_manager.can_move_tab_to_column(move_left=False) is False
 
 
 class TestDraggingKeepsTheRegistryInStep:

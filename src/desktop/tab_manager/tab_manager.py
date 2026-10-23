@@ -414,32 +414,38 @@ class TabManager(QWidget):
 
         menu.addSeparator()
 
-        column_number = self._tab_columns.index(column)
-        has_column_before = column_number > 0
-        has_column_after = column_number < len(self._tab_columns) - 1
-
         move_to_left_column_action = menu.addAction(strings.move_tab_to_left_column)
-        move_to_left_column_action.setEnabled(has_column_before if left_to_right else has_column_after)
+        move_to_left_column_action.setEnabled(
+            self._can_move_tab_to_adjacent_column(tab, move_left=left_to_right)
+        )
 
         move_to_right_column_action = menu.addAction(strings.move_tab_to_right_column)
-        move_to_right_column_action.setEnabled(has_column_after if left_to_right else has_column_before)
+        move_to_right_column_action.setEnabled(
+            self._can_move_tab_to_adjacent_column(tab, move_left=not left_to_right)
+        )
 
         move_to_new_column_action = menu.addAction(strings.move_tab_to_new_column)
-        move_to_new_column_action.setEnabled(tab_count > 1 and len(self._tab_columns) < 6)
+        move_to_new_column_action.setEnabled(
+            self._can_move_tab_to_new_column(tab)
+        )
 
         menu.addSeparator()
 
         move_left_action = menu.addAction(strings.move_tab_left)
-        move_left_action.setEnabled(has_tabs_before if left_to_right else has_tabs_after)
+        move_left_action.setEnabled(
+            self._can_move_tab_within_column(tab, towards_start=left_to_right)
+        )
 
         move_right_action = menu.addAction(strings.move_tab_right)
-        move_right_action.setEnabled(has_tabs_after if left_to_right else has_tabs_before)
+        move_right_action.setEnabled(
+            self._can_move_tab_within_column(tab, towards_start=not left_to_right)
+        )
 
         move_to_start_action = menu.addAction(strings.move_tab_to_start)
-        move_to_start_action.setEnabled(has_tabs_before)
+        move_to_start_action.setEnabled(self._can_move_tab_within_column(tab, towards_start=True))
 
         move_to_end_action = menu.addAction(strings.move_tab_to_end)
-        move_to_end_action.setEnabled(has_tabs_after)
+        move_to_end_action.setEnabled(self._can_move_tab_within_column(tab, towards_start=False))
 
         action = menu.exec_(global_pos)
         if action is None:
@@ -748,9 +754,10 @@ class TabManager(QWidget):
         if current_index == -1 or not 0 <= position < column.count():
             return
 
-        if current_index != position:
-            column.tabBar().moveTab(current_index, position)
+        if current_index == position:
+            return
 
+        column.tabBar().moveTab(current_index, position)
         self._update_tabs()
 
     def _on_column_split(self, context_id: str, split_left: bool) -> None:
@@ -769,23 +776,17 @@ class TabManager(QWidget):
         if source_column is None:
             return
 
-        if len(self._tab_columns) >= 6:
+        if len(self._tab_columns) >= ContextRegistry.MAX_COLUMNS:
             return
 
-        source_will_be_empty = source_column.count() == 1
-        if source_will_be_empty and split_left:
+        if source_column.count() <= 1:
             return
 
         current_column_number = self._tab_columns.index(source_column)
         target_column_number = current_column_number + (0 if split_left else 1)
         target_column = self._create_column(target_column_number)
 
-        self._move_tab_between_columns(
-            tab,
-            source_column,
-            target_column,
-            remove_if_empty=not source_will_be_empty,
-        )
+        self._move_tab_between_columns(tab, source_column, target_column)
         self.show_all_columns()
         self._active_column = target_column
         self._update_tabs()
@@ -1943,22 +1944,7 @@ class TabManager(QWidget):
         if tab is None:
             return False
 
-        column = self._find_column_for_tab(tab)
-        if column is None:
-            return False
-
-        current_column_number = self._tab_columns.index(column)
-        if move_left:
-            if current_column_number > 0:
-                return True
-
-        elif current_column_number < len(self._tab_columns) - 1:
-            return True
-
-        if len(self._tab_columns) >= ContextRegistry.MAX_COLUMNS:
-            return False
-
-        return column.count() > 1 or not move_left
+        return self._can_move_tab_to_adjacent_column(tab, move_left)
 
     def move_tab_to_adjacent_column(self, tab_id: str, move_left: bool) -> None:
         """
@@ -1979,7 +1965,9 @@ class TabManager(QWidget):
         column_number = self._tab_columns.index(column)
         target_column_number = column_number + (-1 if move_left else 1)
         if not 0 <= target_column_number < len(self._tab_columns):
-            self.move_tab_to_new_column(tab_id, split_left=move_left)
+            if self._can_move_tab_to_new_column(tab):
+                self.move_tab_to_new_column(tab_id, split_left=move_left)
+
             return
 
         self.move_tab_to_column(tab_id, target_column_number)
@@ -1998,15 +1986,7 @@ class TabManager(QWidget):
         if tab is None:
             return False
 
-        placement = self._tab_placement(tab.tab_id())
-        if placement is None:
-            return False
-
-        index, count = placement
-        if towards_start:
-            return index > 0
-
-        return index < count - 1
+        return self._can_move_tab_within_column(tab, towards_start)
 
     def move_tab_within_column(self, tab_id: str, towards_start: bool) -> None:
         """
@@ -2053,14 +2033,42 @@ class TabManager(QWidget):
         if tab is None:
             return
 
-        column = self._find_column_for_tab(tab)
-        if column is None or len(self._tab_columns) >= 6:
-            return
-
-        if column.count() <= 1 and split_left:
+        if not self._can_move_tab_to_new_column(tab):
             return
 
         self._mindspace_manager.mindspace().contexts().split_column(tab_id, split_left)
+
+    def _can_move_tab_to_adjacent_column(self, tab: TabBase, move_left: bool) -> bool:
+        """Return whether tab can move into an adjacent or newly split column."""
+        column = self._find_column_for_tab(tab)
+        if column is None:
+            return False
+
+        column_number = self._tab_columns.index(column)
+        target_column_number = column_number + (-1 if move_left else 1)
+        if 0 <= target_column_number < len(self._tab_columns):
+            return True
+
+        return self._can_move_tab_to_new_column(tab)
+
+    def _can_move_tab_to_new_column(self, tab: TabBase) -> bool:
+        """Return whether tab can be moved into a newly created adjacent column."""
+        column = self._find_column_for_tab(tab)
+        return (
+            self._mindspace_manager.has_mindspace()
+            and column is not None
+            and column.count() > 1
+            and len(self._tab_columns) < ContextRegistry.MAX_COLUMNS
+        )
+
+    def _can_move_tab_within_column(self, tab: TabBase, towards_start: bool) -> bool:
+        """Return whether tab can move one place within its current column."""
+        placement = self._tab_placement(tab.tab_id())
+        if placement is None:
+            return False
+
+        index, count = placement
+        return index > 0 if towards_start else index < count - 1
 
     def _tab_placement(self, tab_id: str) -> tuple[int, int] | None:
         """
