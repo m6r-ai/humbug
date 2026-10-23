@@ -54,6 +54,13 @@ def get_english_strings() -> LanguageStrings:
         close_tabs_to_right="Close Tabs to the Right",
         close_other_tabs="Close Other Tabs",
         close_column="Close Column",
+        move_tab_to_left_column="Move Tab to Left Column",
+        move_tab_to_right_column="Move Tab to Right Column",
+        move_tab_to_new_column="Move Tab to New Column",
+        move_tab_left="Move Tab Left",
+        move_tab_right="Move Tab Right",
+        move_tab_to_start="Move Tab to Start",
+        move_tab_to_end="Move Tab to End",
 
         # Edit menu items
         submit_message="Submit Message",

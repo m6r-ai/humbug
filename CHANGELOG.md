@@ -6,11 +6,21 @@ New features:
 
 - The clock tool's `sleep` and `alarm` operations now show a cancel control inside the executing tool-call message when
   the wait is longer than five seconds.  Cancelling ends the wait immediately and the AI is told the user interrupted it.
+- Tabs can now be moved without dragging them.  A tab's context menu can send it to the column on either side, to a new
+  column, or to a different place in its own column, and the View menu offers the same for the current tab.  Ctrl+Alt+Left
+  and Ctrl+Alt+Right move the current tab between columns, creating an adjacent column at an edge when the source column
+  retains another tab.  Ctrl+Shift+PgUp and Ctrl+Shift+PgDown reorder the current tab within its column.
 
 Bug fixes:
 
 - Fixed an exception where opening an editor from a diff view's context menu triggered a line size change.
 - The `.humbug` directory had mistakenly been exposed in the sidebar views.
+- Reordering tabs by dragging them within a column was not recorded in the session, so the original order came back the
+  next time the mindspace was opened.
+
+Other changes:
+
+- Updated the Menai language dependency to v0.8.0.
 
 ## v57 (2026-10-10)
 

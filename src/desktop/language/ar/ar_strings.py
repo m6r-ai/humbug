@@ -55,6 +55,13 @@ def get_arabic_strings() -> LanguageStrings:
         close_tabs_to_right="إغلاق التبويبات إلى اليمين",
         close_other_tabs="إغلاق التبويبات الأخرى",
         close_column="إغلاق العمود",
+        move_tab_to_left_column="نقل علامة التبويب إلى العمود الأيسر",
+        move_tab_to_right_column="نقل علامة التبويب إلى العمود الأيمن",
+        move_tab_to_new_column="نقل علامة التبويب إلى عمود جديد",
+        move_tab_left="نقل علامة التبويب لليسار",
+        move_tab_right="نقل علامة التبويب لليمين",
+        move_tab_to_start="نقل علامة التبويب إلى البداية",
+        move_tab_to_end="نقل علامة التبويب إلى النهاية",
 
         # Edit menu items
         submit_message="إرسال الرسالة",

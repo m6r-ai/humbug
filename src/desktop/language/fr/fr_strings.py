@@ -54,6 +54,13 @@ def get_french_strings() -> LanguageStrings:
         close_tabs_to_right="Fermer les onglets à droite",
         close_other_tabs="Fermer les autres onglets",
         close_column="Fermer la colonne",
+        move_tab_to_left_column="Déplacer l'onglet vers la colonne de gauche",
+        move_tab_to_right_column="Déplacer l'onglet vers la colonne de droite",
+        move_tab_to_new_column="Déplacer l'onglet vers une nouvelle colonne",
+        move_tab_left="Déplacer l'onglet à gauche",
+        move_tab_right="Déplacer l'onglet à droite",
+        move_tab_to_start="Déplacer l'onglet au début",
+        move_tab_to_end="Déplacer l'onglet à la fin",
 
         # Edit menu items
         submit_message="Envoyer le message",
