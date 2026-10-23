@@ -772,14 +772,20 @@ class TabManager(QWidget):
         if len(self._tab_columns) >= 6:
             return
 
-        if source_column.count() <= 1:
+        source_will_be_empty = source_column.count() == 1
+        if source_will_be_empty and split_left:
             return
 
         current_column_number = self._tab_columns.index(source_column)
         target_column_number = current_column_number + (0 if split_left else 1)
         target_column = self._create_column(target_column_number)
 
-        self._move_tab_between_columns(tab, source_column, target_column)
+        self._move_tab_between_columns(
+            tab,
+            source_column,
+            target_column,
+            remove_if_empty=not source_will_be_empty,
+        )
         self.show_all_columns()
         self._active_column = target_column
         self._update_tabs()
@@ -1949,7 +1955,10 @@ class TabManager(QWidget):
         elif current_column_number < len(self._tab_columns) - 1:
             return True
 
-        return column.count() > 1 and len(self._tab_columns) < ContextRegistry.MAX_COLUMNS
+        if len(self._tab_columns) >= ContextRegistry.MAX_COLUMNS:
+            return False
+
+        return column.count() > 1 or not move_left
 
     def move_tab_to_adjacent_column(self, tab_id: str, move_left: bool) -> None:
         """
@@ -2045,7 +2054,10 @@ class TabManager(QWidget):
             return
 
         column = self._find_column_for_tab(tab)
-        if column is None or column.count() <= 1 or len(self._tab_columns) >= 6:
+        if column is None or len(self._tab_columns) >= 6:
+            return
+
+        if column.count() <= 1 and split_left:
             return
 
         self._mindspace_manager.mindspace().contexts().split_column(tab_id, split_left)
