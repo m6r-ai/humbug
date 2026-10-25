@@ -41,6 +41,7 @@ class LanguageStrings:
     take_tour: str
 
     # Tab bar context menu items
+    reopen_closed_tab: str
     close_tabs_to_left: str
     close_tabs_to_right: str
     close_other_tabs: str
