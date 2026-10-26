@@ -76,6 +76,7 @@ from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar_manager import SidebarManager
 from desktop.usage_tab.usage_tab import UsageTab
 from desktop.style_manager import StyleManager
+from desktop.tab.tab_base import TabBase
 from desktop.color_theme import ColorTheme
 from desktop.status_message import StatusMessage
 from desktop.tab_manager import TabManager
@@ -1872,7 +1873,12 @@ class MainWindow(QMainWindow):
             self._quick_switcher.dismissed.connect(self._hide_quick_switcher)
 
         entries, truncated = self._build_quick_switcher_entries()
-        notice = strings.quick_switcher_limited.format(self._MAX_QUICK_SWITCHER_FILES) if truncated else ""
+        # The prefix hint lives in the footer rather than the placeholder so the
+        # placeholder can keep saying what the box searches, and so the hint stays
+        # visible once the user has typed something.
+        notice = strings.quick_switcher_prefix_hint
+        if truncated:
+            notice = f"{strings.quick_switcher_limited.format(self._MAX_QUICK_SWITCHER_FILES)}   {notice}"
 
         self._quick_switcher.set_placeholder(strings.quick_switcher_placeholder)
         self._quick_switcher.set_notice(notice)
@@ -1901,30 +1907,17 @@ class MainWindow(QMainWindow):
             return
 
         if entry_id.startswith("goto:"):
-            tab = self._tab_manager.get_current_tab()
-            if isinstance(tab, EditorTab):
-                tab.goto_line(int(entry_id.removeprefix("goto:")))
-
+            self._goto_line_in_tab(self._tab_manager.get_current_tab(), int(entry_id.removeprefix("goto:")))
             return
 
         if entry_id.startswith("file-line:"):
-            _prefix, line, nested_entry_id = entry_id.split(":", 2)
-            kind, _separator, value = nested_entry_id.partition(":")
-
-            # An open tab carries a context id, not a path, so it has to be focused
-            # rather than opened: treating it as a path would open a second, empty
-            # tab named after the id.
-            if kind == "tab":
-                self._mindspace_manager.mindspace().contexts().focus(value)
-                context_id: str | None = value
-
-            else:
-                context_id = self._open_by_panel_id("files", value, ephemeral=False)
-
+            # The entry carries a file path, never a context id: _open_by_panel_id
+            # focuses the editor already showing that path, or opens one.  Routing
+            # every case through it keeps a path the only thing this branch handles.
+            _prefix, line, path = entry_id.split(":", 2)
+            context_id = self._open_by_panel_id("files", path, ephemeral=False)
             if context_id is not None:
-                tab = self._tab_manager.get_tab_by_id(context_id)
-                if isinstance(tab, EditorTab):
-                    tab.goto_line(int(line))
+                self._goto_line_in_tab(self._tab_manager.get_tab_by_id(context_id), int(line))
 
             return
 
@@ -1949,6 +1942,25 @@ class MainWindow(QMainWindow):
             conversations_dir=mindspace.conversations_dir(),
             max_files=self._MAX_QUICK_SWITCHER_FILES,
         )
+
+    def _goto_line_in_tab(self, tab: TabBase | None, line: int) -> None:
+        """
+        Scroll an editor tab to a line, clamped to the length of its document.
+
+        The Quick Switcher offers a line number without knowing how long the file
+        is, so asking for a line past its end is an ordinary thing to type.  The
+        last line is what the user meant, where passing it straight to goto_line
+        would raise.
+
+        Args:
+            tab: The tab to scroll, which may be None or not an editor.
+            line: The 1-based line asked for, which may be out of range.
+        """
+        if not isinstance(tab, EditorTab):
+            return
+
+        line_count = tab.get_editor_info().get("line_count", 1)
+        tab.goto_line(max(1, min(line, line_count)))
 
     def _quick_switcher_commands(self) -> dict[str, tuple[QAction, str]]:
         """

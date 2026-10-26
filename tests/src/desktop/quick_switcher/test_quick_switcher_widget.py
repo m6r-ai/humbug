@@ -19,10 +19,12 @@ def make_entries():
         QuickSwitcherEntry(
             entry_id="file:/mindspace/main.py", kind="file",
             title="main.py", subtitle=".", icon_name="files",
+            file_path="/mindspace/main.py",
         ),
         QuickSwitcherEntry(
             entry_id="file:/mindspace/src/utils.py", kind="file",
             title="utils.py", subtitle="src", icon_name="files",
+            file_path="/mindspace/src/utils.py",
         ),
         QuickSwitcherEntry(
             entry_id="conversation:/mindspace/.humbug/conversations/plan.conv", kind="conversation",
@@ -148,7 +150,20 @@ class TestFiltering:
         switcher.set_entries(make_entries())
         switcher._input.setText("utils:18")
         qapp.processEvents()
-        assert switcher.selected_entry_id() == "file-line:18:file:/mindspace/src/utils.py"
+        assert switcher.selected_entry_id() == "file-line:18:/mindspace/src/utils.py"
+
+    def test_file_and_line_skips_entries_with_no_file(self, qapp, host):
+        """A conversation or terminal tab has no path, so it cannot take a line number."""
+        switcher = make_switcher(host)
+        switcher.set_entries([
+            QuickSwitcherEntry(
+                entry_id="tab:conv1", kind="tab", title="roadmap",
+                subtitle=".humbug/conversations", icon_name="conversation",
+            ),
+        ])
+        switcher._input.setText("roadmap:18")
+        qapp.processEvents()
+        assert switcher._list.count() == 0
 
     def test_at_prefix_finds_a_conversation_that_is_already_open(self, qapp, host):
         """An open conversation is listed as a tab, and must still be reachable with @."""

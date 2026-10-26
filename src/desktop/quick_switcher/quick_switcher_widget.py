@@ -27,6 +27,9 @@ from desktop.style_manager import StyleManager
 _MAX_VISIBLE_RESULTS = 50
 _TITLE_MATCH_BONUS = 1000
 _SUBTITLE_ROLE = Qt.ItemDataRole.UserRole + 1
+# Unscaled: scale_icon applies the zoom factor itself, so passing an already
+# scaled size (such as tab_icon_size()) would apply the zoom twice.
+_ICON_BASE_SIZE = 16
 
 
 @dataclass(slots=True)
@@ -34,7 +37,7 @@ class QuickSwitcherEntry:
     """One candidate the Quick Switcher can filter to and activate."""
 
     entry_id: str
-    kind: str  # "file", "conversation", or "tab"
+    kind: str  # "file", "conversation", "tab", "command", "goto", or "file-line"
     title: str
     # The mindspace-relative directory the entry lives in, or "." at the root; shown muted beside the title.
     subtitle: str
@@ -280,14 +283,17 @@ class QuickSwitcherWidget(QWidget):
 
         path_query, separator, line_text = query.rpartition(":")
         if separator and path_query and line_text.isdigit():
-            matches = [entry for entry in self._entries if entry.kind in ("file", "tab")]
+            # Only entries backed by a file can take a line number.  A conversation,
+            # terminal or log tab has no path, and offering to jump to a line in one
+            # would produce a result that does nothing.
+            matches = [entry for entry in self._entries if entry.file_path]
             scored: list[tuple[QuickSwitcherEntry, int]] = []
             for entry in matches:
                 score = fuzzy_match_score(path_query, f"{entry.subtitle}/{entry.title}")
                 if score is not None:
                     scored.append((QuickSwitcherEntry(
-                        entry_id=f"file-line:{line_text}:{entry.entry_id}", kind="file-line",
-                        title=entry.title, subtitle=f"{entry.subtitle} : {line_text}", icon_name=entry.icon_name,
+                        entry_id=f"file-line:{line_text}:{entry.file_path}", kind="file-line",
+                        title=entry.title, subtitle=f"{entry.subtitle}:{line_text}", icon_name=entry.icon_name,
                         file_path=entry.file_path,
                     ), score))
 
@@ -320,7 +326,7 @@ class QuickSwitcherWidget(QWidget):
     def _populate(self, scored_entries: list[tuple[QuickSwitcherEntry, int]]) -> None:
         """Rebuild the list widget from a ranked list of (entry, score) pairs."""
         self._list.clear()
-        icon_size = self._style_manager.tab_icon_size()
+        icon_size = _ICON_BASE_SIZE
         for entry, _score in scored_entries[:_MAX_VISIBLE_RESULTS]:
             if entry.file_path:
                 icon = self._file_icon_provider.icon(QFileInfo(entry.file_path))

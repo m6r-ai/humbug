@@ -46,6 +46,10 @@ class FakeEditorTab(EditorTab):
     def __init__(self) -> None:
         super().__init__("fake-tab", "")
         self.goto_lines: list[int] = []
+        self.line_count = 1000
+
+    def get_editor_info(self) -> dict:
+        return {"line_count": self.line_count}
 
     def goto_line(self, line: int, column: int = 1) -> None:
         self.goto_lines.append(line)
@@ -79,6 +83,9 @@ class FakeHost:
     def _hide_quick_switcher(self) -> None:
         pass
 
+    def _goto_line_in_tab(self, tab, line: int) -> None:
+        MainWindow._goto_line_in_tab(self, tab, line)
+
     def _open_by_panel_id(self, panel_id: str, path: str, ephemeral: bool) -> str | None:
         self.opened_paths.append(path)
         return self.open_result
@@ -96,34 +103,61 @@ def editor_tab(qapp):
 class TestJumpingToALineInAFile:
     """Tests for activating a ``file:line`` result."""
 
-    def test_an_already_open_file_is_focused_not_reopened(self, qapp, editor_tab):
-        """A tab entry carries a context id, so opening it as a path would create a stray tab."""
-        host = FakeHost({"abc123": editor_tab})
-
-        MainWindow._on_quick_switcher_entry_activated(host, "file-line:42:tab:abc123")
-
-        assert host.contexts.focused == ["abc123"]
-        assert host.opened_paths == []
-        assert editor_tab.goto_lines == [42]
-
-    def test_a_file_that_is_not_open_is_opened_by_path(self, qapp, editor_tab):
-        """A file entry carries a path, which is opened and then scrolled."""
+    def test_the_file_is_opened_by_path_and_scrolled(self, qapp, editor_tab):
+        """The entry carries a path, which is opened (or focused) and then scrolled."""
         host = FakeHost({"opened-id": editor_tab})
         host.open_result = "opened-id"
 
-        MainWindow._on_quick_switcher_entry_activated(host, "file-line:18:file:/mindspace/src/utils.py")
+        MainWindow._on_quick_switcher_entry_activated(host, "file-line:18:/mindspace/src/utils.py")
 
         assert host.opened_paths == ["/mindspace/src/utils.py"]
         assert editor_tab.goto_lines == [18]
+
+    def test_a_path_containing_colons_survives(self, qapp, editor_tab):
+        """Only the first two colons delimit the entry, so a Windows path stays intact."""
+        host = FakeHost({"opened-id": editor_tab})
+        host.open_result = "opened-id"
+
+        MainWindow._on_quick_switcher_entry_activated(host, "file-line:7:C:/src/utils.py")
+
+        assert host.opened_paths == ["C:/src/utils.py"]
+        assert editor_tab.goto_lines == [7]
 
     def test_a_file_that_fails_to_open_jumps_nowhere(self, qapp, editor_tab):
         """Nothing is scrolled when the file could not be opened."""
         host = FakeHost({"opened-id": editor_tab})
         host.open_result = None
 
-        MainWindow._on_quick_switcher_entry_activated(host, "file-line:18:file:/mindspace/missing.py")
+        MainWindow._on_quick_switcher_entry_activated(host, "file-line:18:/mindspace/missing.py")
 
         assert editor_tab.goto_lines == []
+
+    def test_a_line_past_the_end_of_the_file_is_clamped(self, qapp, editor_tab):
+        """goto_line rejects an out-of-range line, and the user can type any number."""
+        editor_tab.line_count = 200
+        host = FakeHost({"opened-id": editor_tab})
+        host.open_result = "opened-id"
+
+        MainWindow._on_quick_switcher_entry_activated(host, "file-line:9999:/mindspace/src/utils.py")
+
+        assert editor_tab.goto_lines == [200]
+
+    def test_a_line_in_the_current_editor_is_clamped_too(self, qapp, editor_tab):
+        """The bare ``:line`` form reaches goto_line by the same route."""
+        editor_tab.line_count = 12
+        host = FakeHost({})
+        host._tab_manager = FakeTabManager({}, current=editor_tab)
+
+        MainWindow._on_quick_switcher_entry_activated(host, "goto:9999")
+
+        assert editor_tab.goto_lines == [12]
+
+    def test_a_line_jump_in_a_non_editor_tab_does_nothing(self, qapp):
+        """A tab with no document cannot take a line, and must not raise."""
+        host = FakeHost({})
+        host._tab_manager = FakeTabManager({}, current=None)
+
+        MainWindow._on_quick_switcher_entry_activated(host, "goto:5")
 
 
 class TestRunningACommand:
@@ -170,9 +204,29 @@ class TestRunningACommand:
 
         assert fired == [True]
 
-    def test_an_unknown_command_is_ignored(self, qapp):
-        """A stale entry id must not raise."""
+    def test_an_unknown_command_triggers_nothing(self, qapp):
+        """A stale entry id must not fall through to some other command."""
+        action = QAction("New File")
+        fired = []
+        action.triggered.connect(lambda: fired.append(True))
+
         host = FakeHost({})
-        host._quick_switcher_commands = lambda: {}  # type: ignore[attr-defined]
+        host._quick_switcher_commands = lambda: {"new-file": (action, "editor")}  # type: ignore[attr-defined]
 
         MainWindow._run_quick_switcher_command(host, "no-such-command")
+
+        assert fired == []
+
+    def test_a_disabled_command_is_not_triggered(self, qapp):
+        """The enabled re-check guards against state that changed since the list was built."""
+        action = QAction("Save")
+        action.setEnabled(False)
+        fired = []
+        action.triggered.connect(lambda: fired.append(True))
+
+        host = FakeHost({})
+        host._quick_switcher_commands = lambda: {"save": (action, "editor")}  # type: ignore[attr-defined]
+
+        MainWindow._run_quick_switcher_command(host, "save")
+
+        assert fired == []
