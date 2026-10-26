@@ -58,6 +58,13 @@ class TestGathering:
         assert subtitles["app.py"] == "src"
         assert subtitles["main.py"] == "."
 
+    def test_file_entries_retain_their_path_for_type_specific_icons(self, mindspace):
+        entries, _truncated = gather(mindspace)
+
+        paths = {entry.title: entry.file_path for entry in entries if entry.kind == "file"}
+        assert paths["main.py"] == str(mindspace / "main.py")
+        assert paths["notes.md"] == str(mindspace / "notes.md")
+
     def test_ignored_directories_are_skipped(self, mindspace):
         (mindspace / "node_modules").mkdir()
         (mindspace / "node_modules" / "junk.js").write_text("junk", encoding="utf-8")
@@ -89,6 +96,7 @@ class TestOpenTabDeduplication:
         assert len(matching) == 1
         assert matching[0].kind == "tab"
         assert matching[0].entry_id == "tab:c1"
+        assert matching[0].file_path == open_file
 
     def test_an_open_conversation_is_listed_once_as_a_tab(self, mindspace):
         open_conversation = str(mindspace / ".humbug" / "conversations" / "plan.conv")

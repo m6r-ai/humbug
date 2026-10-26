@@ -39,6 +39,24 @@ Matches are ranked so that:
 
 Clear the filter box to see the full, unranked list again.
 
+### Go to Anything prefixes
+
+The same input can also narrow the task before you type a search term:
+
+| Input | Result |
+|---|---|
+| `@plan` | Search conversations only, open or not |
+| `>new conversation` | Search and run application commands |
+| `:120` | Jump to line 120 in the current editor |
+| `main.py:120` | Go to line 120 of the matching file |
+
+Commands are the same actions as Humbug's menus. Only commands that are valid right now are
+listed, and each one shows its keyboard shortcut so you can learn the shortcut for anything you
+reach for often.
+
+`:120` is offered only when the current tab is an editor. `main.py:120` works whether or not the
+file is already open: if it is, that tab is focused rather than a second one being opened.
+
 ---
 
 ## Choosing a result

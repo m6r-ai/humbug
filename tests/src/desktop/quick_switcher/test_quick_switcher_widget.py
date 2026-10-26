@@ -35,6 +35,14 @@ def make_entries():
     ]
 
 
+def open_conversation_tab():
+    """An entry for a conversation that is currently open, so listed as its tab."""
+    return QuickSwitcherEntry(
+        entry_id="tab:def456", kind="tab",
+        title="roadmap", subtitle=".humbug/conversations", icon_name="conversation",
+    )
+
+
 def press_key(qapp, widget, key, modifier=Qt.KeyboardModifier.NoModifier):
     qapp.sendEvent(widget, QKeyEvent(QEvent.Type.KeyPress, key, modifier))
 
@@ -108,6 +116,73 @@ class TestFiltering:
         switcher._input.setText("")
         qapp.processEvents()
         assert switcher._list.count() == 4
+
+    def test_at_prefix_limits_results_to_conversations(self, qapp, host):
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher._input.setText("@plan")
+        qapp.processEvents()
+        assert switcher.selected_entry_id() == "conversation:/mindspace/.humbug/conversations/plan.conv"
+
+    def test_line_prefix_creates_a_goto_result(self, qapp, host):
+        switcher = make_switcher(host)
+        switcher.set_goto_line("Go to line {0}", True)
+        switcher.set_entries(make_entries())
+        switcher._input.setText(":42")
+        qapp.processEvents()
+        assert switcher.selected_entry_id() == "goto:42"
+
+    def test_command_prefix_filters_commands(self, qapp, host):
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher.set_command_entries([
+            QuickSwitcherEntry("command:new-file", "command", "New File", "", "editor"),
+            QuickSwitcherEntry("command:new-conversation", "command", "New Conversation", "", "conversation"),
+        ])
+        switcher._input.setText(">conversation")
+        qapp.processEvents()
+        assert switcher.selected_entry_id() == "command:new-conversation"
+
+    def test_file_and_line_query_creates_a_file_line_result(self, qapp, host):
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher._input.setText("utils:18")
+        qapp.processEvents()
+        assert switcher.selected_entry_id() == "file-line:18:file:/mindspace/src/utils.py"
+
+    def test_at_prefix_finds_a_conversation_that_is_already_open(self, qapp, host):
+        """An open conversation is listed as a tab, and must still be reachable with @."""
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries() + [open_conversation_tab()])
+        switcher._input.setText("@roadmap")
+        qapp.processEvents()
+        assert switcher.selected_entry_id() == "tab:def456"
+
+    def test_at_prefix_still_excludes_non_conversation_tabs(self, qapp, host):
+        """Widening @ to tabs must not let ordinary file tabs through."""
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries() + [open_conversation_tab()])
+        switcher._input.setText("@README")
+        qapp.processEvents()
+        assert switcher._list.count() == 0
+
+    def test_line_prefix_offers_nothing_without_an_editor(self, qapp, host):
+        """Offering a jump that silently does nothing would be worse than offering none."""
+        switcher = make_switcher(host)
+        switcher.set_goto_line("Go to line {0}", False)
+        switcher.set_entries(make_entries())
+        switcher._input.setText(":42")
+        qapp.processEvents()
+        assert switcher._list.count() == 0
+
+    def test_the_goto_line_label_comes_from_the_supplied_template(self, qapp, host):
+        """The label is localized by the caller, so the widget must not build its own."""
+        switcher = make_switcher(host)
+        switcher.set_goto_line("Aller a la ligne {0}", True)
+        switcher.set_entries(make_entries())
+        switcher._input.setText(":42")
+        qapp.processEvents()
+        assert switcher._list.item(0).data(Qt.ItemDataRole.DisplayRole) == "Aller a la ligne 42"
 
 
 class TestKeyboardInteraction:

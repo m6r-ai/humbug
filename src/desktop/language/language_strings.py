@@ -67,6 +67,7 @@ class LanguageStrings:
     mindspace_search: str
     quick_switcher: str
     quick_switcher_placeholder: str
+    quick_switcher_goto_line: str
     quick_switcher_limited: str  # Format: "Limited to the first {0} files"
     mindspace_settings: str
     conversation_settings: str

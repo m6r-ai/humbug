@@ -55,6 +55,7 @@ def build_quick_switcher_entries(
             title=context.title,
             subtitle=_relative_directory(context.path, mindspace_path),
             icon_name=context.context_type,
+            file_path=context.path if context.context_type in {"editor", "preview", "diff"} else "",
         ))
 
     for dirpath, _dirnames, filenames in os.walk(conversations_dir):
@@ -97,6 +98,7 @@ def build_quick_switcher_entries(
                 title=filename,
                 subtitle=_relative_directory(path, mindspace_path),
                 icon_name="files",
+                file_path=path,
             ))
 
         if truncated:
