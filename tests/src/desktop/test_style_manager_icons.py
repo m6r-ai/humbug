@@ -5,6 +5,7 @@ import pytest
 from PySide6.QtGui import QRegion
 
 from desktop.color_theme import ColorTheme
+from desktop.quick_switcher.quick_switcher_widget import QuickSwitcherWidget
 from desktop.style_manager import StyleManager
 
 
@@ -88,3 +89,18 @@ class TestUniformIconScaling:
 
         finally:
             style_manager.set_color_theme(original_theme)
+
+
+class TestQuickSwitcherIconRefresh:
+    """Tests that the overlay's own icon caches follow a style change."""
+
+    def test_the_file_icon_provider_is_refreshed(self, qapp, host, style_manager):
+        """The provider caches theme-tinted icons, and the overlay outlives theme changes."""
+        switcher = QuickSwitcherWidget(host)
+        provider = switcher._file_icon_provider
+        refreshed = []
+        provider.update_icons = lambda: refreshed.append(True)
+
+        switcher._on_style_changed()
+
+        assert refreshed == [True]

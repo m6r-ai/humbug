@@ -37,7 +37,9 @@ class QuickSwitcherEntry:
     """One candidate the Quick Switcher can filter to and activate."""
 
     entry_id: str
-    kind: str  # "file", "conversation", "tab", "command", "goto", or "file-line"
+    # Used only to group entries for the @ filter; entry_id is what activation
+    # dispatches on.  One of "file", "conversation", "tab", "command", "goto", "file-line".
+    kind: str
     title: str
     # The mindspace-relative directory the entry lives in, or "." at the root; shown muted beside the title.
     subtitle: str
@@ -246,7 +248,12 @@ class QuickSwitcherWidget(QWidget):
 
     def _on_style_changed(self) -> None:
         """Restyle and relayout when the theme or zoom factor changes."""
+        # The file icon provider caches icons tinted for the current theme and sized
+        # for the current zoom, so it has to be told to drop them.  This overlay is
+        # built once and reused, so a stale cache would outlive every theme change.
+        self._file_icon_provider.update_icons()
         self.refresh_style()
+        self._refilter(self._input.text())
         self._layout_panel()
 
     def _refilter(self, query: str) -> None:

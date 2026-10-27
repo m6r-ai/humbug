@@ -54,9 +54,10 @@ Commands are the same actions as Humbug's menus. Only commands that are valid ri
 listed, and each one shows its keyboard shortcut so you can learn the shortcut for anything you
 reach for often.
 
-`:120` is offered only when the current tab is an editor. `main.py:120` matches files and open
-file tabs — not conversations or terminals, which have no lines to jump to. It works whether or
-not the file is already open: if it is, that editor is focused rather than a second one opened.
+`:120` is offered only when the current tab can go to a line. `main.py:120` matches files and
+open file tabs — not conversations or terminals, which have no lines to jump to. The text before
+the colon is matched against the whole path, so `src:120` finds everything under `src/`. The file
+opens in an editor at that line, whether or not it was already open.
 
 A line past the end of a file takes you to its last line rather than failing.
 

@@ -8,6 +8,7 @@ from PySide6.QtGui import QAction, QKeySequence
 
 from desktop.editor_tab.editor_tab import EditorTab
 from desktop.main_window import MainWindow
+from desktop.tab.tab_base import TabBase
 
 
 class FakeContexts:
@@ -41,18 +42,21 @@ class FakeMindspaceManager:
 
 
 class FakeEditorTab(EditorTab):
-    """An editor tab that records the lines it is asked to jump to."""
+    """A tab that records the lines it is asked to go to."""
 
     def __init__(self) -> None:
         super().__init__("fake-tab", "")
         self.goto_lines: list[int] = []
-        self.line_count = 1000
 
-    def get_editor_info(self) -> dict:
-        return {"line_count": self.line_count}
-
-    def goto_line(self, line: int, column: int = 1) -> None:
+    def goto_line_clamped(self, line: int) -> None:
         self.goto_lines.append(line)
+
+
+class FakeTerminalTab(TabBase):
+    """A tab that does not support going to a line."""
+
+    def tool_name(self) -> str:
+        return "terminal"
 
 
 class FakeTabManager:
@@ -85,6 +89,9 @@ class FakeHost:
 
     def _goto_line_in_tab(self, tab, line: int) -> None:
         MainWindow._goto_line_in_tab(self, tab, line)
+
+    def _line_from_entry_id(self, line_text: str) -> int | None:
+        return MainWindow._line_from_entry_id(self, line_text)
 
     def _open_by_panel_id(self, panel_id: str, path: str, ephemeral: bool) -> str | None:
         self.opened_paths.append(path)
@@ -132,28 +139,36 @@ class TestJumpingToALineInAFile:
 
         assert editor_tab.goto_lines == []
 
-    def test_a_line_past_the_end_of_the_file_is_clamped(self, qapp, editor_tab):
-        """goto_line rejects an out-of-range line, and the user can type any number."""
-        editor_tab.line_count = 200
+    def test_the_line_is_passed_to_the_tab_to_clamp(self, qapp, editor_tab):
+        """The tab knows its own length, so the raw line reaches it unaltered."""
         host = FakeHost({"opened-id": editor_tab})
         host.open_result = "opened-id"
 
         MainWindow._on_quick_switcher_entry_activated(host, "file-line:9999:/mindspace/src/utils.py")
 
-        assert editor_tab.goto_lines == [200]
+        assert editor_tab.goto_lines == [9999]
 
-    def test_a_line_in_the_current_editor_is_clamped_too(self, qapp, editor_tab):
-        """The bare ``:line`` form reaches goto_line by the same route."""
-        editor_tab.line_count = 12
+    def test_the_bare_line_form_reaches_the_current_tab(self, qapp, editor_tab):
+        """``:line`` goes to whatever tab is in front."""
         host = FakeHost({})
         host._tab_manager = FakeTabManager({}, current=editor_tab)
 
-        MainWindow._on_quick_switcher_entry_activated(host, "goto:9999")
+        MainWindow._on_quick_switcher_entry_activated(host, "goto:42")
 
-        assert editor_tab.goto_lines == [12]
+        assert editor_tab.goto_lines == [42]
 
-    def test_a_line_jump_in_a_non_editor_tab_does_nothing(self, qapp):
-        """A tab with no document cannot take a line, and must not raise."""
+    def test_a_tab_that_cannot_go_to_a_line_is_left_alone(self, qapp):
+        """A terminal or conversation has no lines to go to, and must not raise."""
+        tab = FakeTerminalTab("terminal-tab")
+        host = FakeHost({})
+        host._tab_manager = FakeTabManager({}, current=tab)
+
+        MainWindow._on_quick_switcher_entry_activated(host, "goto:5")
+
+        assert tab.can_show_goto_line() is False
+
+    def test_no_current_tab_is_left_alone(self, qapp):
+        """With nothing open there is nothing to scroll."""
         host = FakeHost({})
         host._tab_manager = FakeTabManager({}, current=None)
 
@@ -230,3 +245,26 @@ class TestRunningACommand:
         MainWindow._run_quick_switcher_command(host, "save")
 
         assert fired == []
+
+
+class TestMalformedEntryIds:
+    """Tests for IDs that could not have come from the widget."""
+
+    def test_a_non_numeric_line_is_ignored(self, qapp, editor_tab):
+        """A malformed signal must not reach int() and raise."""
+        host = FakeHost({"opened-id": editor_tab})
+        host.open_result = "opened-id"
+
+        MainWindow._on_quick_switcher_entry_activated(host, "file-line:abc:/mindspace/src/utils.py")
+
+        assert host.opened_paths == []
+        assert editor_tab.goto_lines == []
+
+    def test_a_non_numeric_goto_is_ignored(self, qapp, editor_tab):
+        """The bare line form is guarded the same way."""
+        host = FakeHost({})
+        host._tab_manager = FakeTabManager({}, current=editor_tab)
+
+        MainWindow._on_quick_switcher_entry_activated(host, "goto:abc")
+
+        assert editor_tab.goto_lines == []

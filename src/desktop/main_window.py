@@ -1883,9 +1883,10 @@ class MainWindow(QMainWindow):
         self._quick_switcher.set_placeholder(strings.quick_switcher_placeholder)
         self._quick_switcher.set_notice(notice)
         self._quick_switcher.set_command_entries(self._quick_switcher_command_entries())
+        current_tab = self._tab_manager.get_current_tab()
         self._quick_switcher.set_goto_line(
             strings.quick_switcher_goto_line,
-            isinstance(self._tab_manager.get_current_tab(), EditorTab)
+            current_tab is not None and current_tab.can_show_goto_line()
         )
         self._quick_switcher.set_entries(entries)
         self._quick_switcher.setGeometry(self._main_widget.rect())
@@ -1907,17 +1908,24 @@ class MainWindow(QMainWindow):
             return
 
         if entry_id.startswith("goto:"):
-            self._goto_line_in_tab(self._tab_manager.get_current_tab(), int(entry_id.removeprefix("goto:")))
+            line = self._line_from_entry_id(entry_id.removeprefix("goto:"))
+            if line is not None:
+                self._goto_line_in_tab(self._tab_manager.get_current_tab(), line)
+
             return
 
         if entry_id.startswith("file-line:"):
             # The entry carries a file path, never a context id: _open_by_panel_id
             # focuses the editor already showing that path, or opens one.  Routing
             # every case through it keeps a path the only thing this branch handles.
-            _prefix, line, path = entry_id.split(":", 2)
+            _prefix, line_text, path = entry_id.split(":", 2)
+            line = self._line_from_entry_id(line_text)
+            if line is None:
+                return
+
             context_id = self._open_by_panel_id("files", path, ephemeral=False)
             if context_id is not None:
-                self._goto_line_in_tab(self._tab_manager.get_tab_by_id(context_id), int(line))
+                self._goto_line_in_tab(self._tab_manager.get_tab_by_id(context_id), line)
 
             return
 
@@ -1943,24 +1951,43 @@ class MainWindow(QMainWindow):
             max_files=self._MAX_QUICK_SWITCHER_FILES,
         )
 
+    def _line_from_entry_id(self, line_text: str) -> int | None:
+        """
+        Read the line number out of a Quick Switcher entry ID.
+
+        The widget only ever builds these from digits, so a bad value means the
+        signal did not come from where it should have.  Logging and ignoring it
+        keeps a malformed ID from reaching int() and raising.
+
+        Args:
+            line_text: The line portion of the entry ID.
+
+        Returns:
+            The line number, or None if it was not a number.
+        """
+        try:
+            return int(line_text)
+
+        except ValueError:
+            self._logger.warning("Ignoring Quick Switcher entry with a bad line number: %s", line_text)
+            return None
+
     def _goto_line_in_tab(self, tab: TabBase | None, line: int) -> None:
         """
-        Scroll an editor tab to a line, clamped to the length of its document.
+        Scroll a tab to a line, where the tab supports going to one.
 
         The Quick Switcher offers a line number without knowing how long the file
         is, so asking for a line past its end is an ordinary thing to type.  The
-        last line is what the user meant, where passing it straight to goto_line
-        would raise.
+        tab clamps it to its own content.
 
         Args:
-            tab: The tab to scroll, which may be None or not an editor.
+            tab: The tab to scroll, which may be None or may not support lines.
             line: The 1-based line asked for, which may be out of range.
         """
-        if not isinstance(tab, EditorTab):
+        if tab is None or not tab.can_show_goto_line():
             return
 
-        line_count = tab.get_editor_info().get("line_count", 1)
-        tab.goto_line(max(1, min(line, line_count)))
+        tab.goto_line_clamped(line)
 
     def _quick_switcher_commands(self) -> dict[str, tuple[QAction, str]]:
         """

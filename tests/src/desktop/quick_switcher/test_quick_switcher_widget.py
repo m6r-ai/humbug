@@ -93,6 +93,17 @@ class TestStyleChanges:
 
         assert "QuickSwitcherPanel" in switcher._panel.styleSheet()
 
+    def test_style_change_repopulates_the_current_results(self, qapp, host):
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher._input.setText("plan")
+        qapp.processEvents()
+
+        switcher._style_manager.style_changed.emit()
+
+        assert switcher._list.count() == 1
+        assert switcher.selected_entry_id() == "conversation:/mindspace/.humbug/conversations/plan.conv"
+
 
 class TestFiltering:
     def test_typing_filters_out_non_matching_entries(self, qapp, host):
