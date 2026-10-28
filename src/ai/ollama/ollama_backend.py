@@ -398,8 +398,23 @@ class OllamaBackend(AIBackend):
             }
         }
 
-        thinking: bool = settings.reasoning_effort not in (None, AIReasoningEffort.NONE)
-        data["think"] = thinking
+        # Ollama accepts a boolean, a model-defined level name, or null.  Level names must
+        # match what the model advertises exactly, and "none" is not one of them - the
+        # documented way to request no thinking is false.  Null means "use the model default",
+        # which is distinct from both.
+        efforts = AIConversationSettings.get_supported_reasoning_efforts(settings.model, settings.provider)
+        if efforts:
+            if settings.reasoning_effort is None:
+                data["think"] = None
+
+            elif settings.reasoning_effort == AIReasoningEffort.NONE:
+                data["think"] = False
+
+            else:
+                data["think"] = settings.reasoning_effort
+
+        else:
+            data["think"] = False
 
         # Add tools if supported
         if self._supports_tools(settings):

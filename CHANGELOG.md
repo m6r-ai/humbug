@@ -11,6 +11,10 @@ New features:
   and Ctrl+Alt+Right move the current tab between columns, creating an adjacent column at an edge when the source column
   retains another tab.  Ctrl+Shift+PgUp and Ctrl+Shift+PgDown reorder the current tab within its column.
 - Support gzip compressing HTTP client requests to the Anthropic and xAI backends.
+- Added a Network Access settings page with allowlist and denylist for the HTTP tool.  Allowlisted GET and HEAD
+  requests no longer prompt, and every redirect target is checked before it is followed.
+- Added GPT 6.1 Terra.
+- Added MiniMax M3.1 Flash, and corrected the reasoning effort levels offered for MiniMax M3.
 
 Bug fixes:
 
@@ -19,6 +23,8 @@ Bug fixes:
 - Reordering tabs by dragging them within a column was not recorded in the session, so the original order came back the
   next time the mindspace was opened.
 - Support gzip-encoded SSE streams coming back from AI backends.
+- Fixed a problem where MiniMax M3 tool calls did not work correctly with the Ollama backend.
+- Fixed a probelm where reasoning efforts were not correctly used in the Ollama backend.
 
 Other changes:
 
