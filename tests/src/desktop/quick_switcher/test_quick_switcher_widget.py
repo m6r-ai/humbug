@@ -264,3 +264,29 @@ class TestMouseInteraction:
         mouse(switcher._list.viewport(), QEvent.Type.MouseButtonPress, rect.center())
         mouse(switcher._list.viewport(), QEvent.Type.MouseButtonRelease, rect.center())
         assert activated == ["conversation:/mindspace/.humbug/conversations/plan.conv"]
+
+
+class TestStyleChanges:
+    """Tests for the overlay surviving a theme or zoom change while it is open."""
+
+    def test_the_highlighted_row_is_kept(self, qapp, host):
+        """Changing zoom with the overlay open must not throw away a part-made choice."""
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher._list.setCurrentRow(2)
+        chosen = switcher.selected_entry_id()
+
+        switcher._on_style_changed()
+
+        assert switcher.selected_entry_id() == chosen
+
+    def test_a_row_that_is_gone_leaves_the_first_selected(self, qapp, host):
+        """With nothing to restore, the usual first-result highlight stands."""
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher._list.setCurrentRow(2)
+        switcher.set_entries(make_entries()[:1])
+
+        switcher._on_style_changed()
+
+        assert switcher._list.currentRow() == 0

@@ -53,10 +53,14 @@ class FakeEditorTab(EditorTab):
 
 
 class FakeTerminalTab(TabBase):
-    """A tab that does not support going to a line."""
+    """A tab that does not support going to a line, as a terminal or conversation does not."""
 
-    def tool_name(self) -> str:
-        return "terminal"
+    def __init__(self, tab_id: str) -> None:
+        super().__init__(tab_id)
+        self.goto_lines: list[int] = []
+
+    def goto_line_clamped(self, line: int) -> None:
+        self.goto_lines.append(line)
 
 
 class FakeTabManager:
@@ -158,14 +162,14 @@ class TestJumpingToALineInAFile:
         assert editor_tab.goto_lines == [42]
 
     def test_a_tab_that_cannot_go_to_a_line_is_left_alone(self, qapp):
-        """A terminal or conversation has no lines to go to, and must not raise."""
+        """A tab that reports no go-to-line support is never asked to go to one."""
         tab = FakeTerminalTab("terminal-tab")
         host = FakeHost({})
         host._tab_manager = FakeTabManager({}, current=tab)
 
         MainWindow._on_quick_switcher_entry_activated(host, "goto:5")
 
-        assert tab.can_show_goto_line() is False
+        assert tab.goto_lines == []
 
     def test_no_current_tab_is_left_alone(self, qapp):
         """With nothing open there is nothing to scroll."""

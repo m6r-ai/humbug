@@ -253,8 +253,29 @@ class QuickSwitcherWidget(QWidget):
         # built once and reused, so a stale cache would outlive every theme change.
         self._file_icon_provider.update_icons()
         self.refresh_style()
+
+        # Re-filtering rebuilds the rows so they are painted with the new icons, but
+        # it also resets the highlight to the first result.  The user may be part way
+        # through choosing one, so put their selection back.
+        selected = self.selected_entry_id()
         self._refilter(self._input.text())
+        self._select_entry(selected)
         self._layout_panel()
+
+    def _select_entry(self, entry_id: str | None) -> None:
+        """
+        Highlight the row carrying an entry ID, if it is still listed.
+
+        Args:
+            entry_id: The entry to highlight, or None to leave the highlight alone.
+        """
+        if entry_id is None:
+            return
+
+        for row in range(self._list.count()):
+            if self._list.item(row).data(Qt.ItemDataRole.UserRole) == entry_id:
+                self._list.setCurrentRow(row)
+                return
 
     def _refilter(self, query: str) -> None:
         """Re-rank and redisplay entries against the current filter text."""

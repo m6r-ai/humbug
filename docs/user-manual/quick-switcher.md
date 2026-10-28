@@ -57,7 +57,8 @@ reach for often.
 `:120` is offered only when the current tab can go to a line. `main.py:120` matches files and
 open file tabs — not conversations or terminals, which have no lines to jump to. The text before
 the colon is matched against the whole path, so `src:120` finds everything under `src/`. The file
-opens in an editor at that line, whether or not it was already open.
+opens in an editor at that line, whether or not it was already open — the one exception being an
+image, which opens in a preview where there is no line to go to.
 
 A line past the end of a file takes you to its last line rather than failing.
 

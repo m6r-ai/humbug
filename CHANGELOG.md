@@ -18,9 +18,6 @@ New features:
 
 Bug fixes:
 
-- The canary indicator only reported uncaught exceptions from the main thread.  Failures in asyncio tasks and worker
-  threads - which is where AI turns, tool calls, and HTTP requests run - were written to the log but left the UI looking
-  healthy.  All three are now reported.
 - Fixed an exception where opening an editor from a diff view's context menu triggered a line size change.
 - The `.humbug` directory had mistakenly been exposed in the sidebar views.
 - Reordering tabs by dragging them within a column was not recorded in the session, so the original order came back the

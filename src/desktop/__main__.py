@@ -10,7 +10,6 @@ import os
 from pathlib import Path
 import signal
 import sys
-import threading
 import time
 import typing
 from types import TracebackType
@@ -117,31 +116,8 @@ def cleanup_old_logs(log_dir: str, max_logs: int, active_log: str) -> None:
             pass  # Ignore errors removing old logs
 
 
-def _notify_uncaught_exception(logger: logging.Logger) -> None:
-    """
-    Light the canary for an exception that nothing handled.
-
-    Args:
-        logger: Logger to report a failure to notify the UI.
-    """
-    try:
-        exception_notifier = get_exception_notifier()
-        exception_notifier.notify_exception()
-
-    except Exception:
-        # If notifying the UI fails, don't let that crash the exception handler
-        logger.error("Failed to notify UI of uncaught exception", exc_info=True)
-
-
 def install_global_exception_handler() -> None:
-    """
-    Install handlers for uncaught exceptions, wherever they happen.
-
-    sys.excepthook covers only the main thread running ordinary code.  Humbug does
-    most of its work in asyncio tasks and worker threads, which have their own
-    routes for an exception nothing caught, so all three are hooked: otherwise a
-    failed AI turn would print to stderr and leave the UI looking healthy.
-    """
+    """Install a global exception handler for uncaught exceptions."""
     logger = logging.getLogger('GlobalExceptionHandler')
 
     def handle_exception(exc_type: type[BaseException], exc_value: BaseException, exc_traceback: TracebackType | None) -> None:
@@ -156,56 +132,17 @@ def install_global_exception_handler() -> None:
             exc_info=(exc_type, exc_value, exc_traceback),
             stack_info=True
         )
-        _notify_uncaught_exception(logger)
 
-    def handle_thread_exception(args: threading.ExceptHookArgs) -> None:
-        """Handle an exception that terminated a worker thread."""
-        if issubclass(args.exc_type, KeyboardInterrupt):
-            return
+        # Notify the UI about the uncaught exception
+        try:
+            exception_notifier = get_exception_notifier()
+            exception_notifier.notify_exception()
 
-        thread_name = args.thread.name if args.thread is not None else "unknown"
-        logger.critical(
-            "Uncaught exception in thread %s",
-            thread_name,
-            exc_info=args.exc_value,
-            stack_info=True
-        )
-        _notify_uncaught_exception(logger)
+        except Exception:
+            # If notifying the UI fails, don't let that crash the exception handler
+            logger.error("Failed to notify UI of uncaught exception", exc_info=True)
 
     sys.excepthook = handle_exception
-    threading.excepthook = handle_thread_exception
-
-
-def install_asyncio_exception_handler(loop: asyncio.AbstractEventLoop) -> None:
-    """
-    Report asyncio failures that no awaiter will ever see.
-
-    A task whose exception is never retrieved, or a callback that raises, is
-    reported here rather than through sys.excepthook.  Most of Humbug's work -
-    AI turns, tool calls, HTTP - runs as tasks, so this is where a silent
-    failure is most likely to happen.
-
-    Args:
-        loop: The event loop to attach the handler to.
-    """
-    logger = logging.getLogger('AsyncioExceptionHandler')
-
-    def handle_asyncio_exception(_loop: asyncio.AbstractEventLoop, context: dict[str, typing.Any]) -> None:
-        """Log an unhandled asyncio error and light the canary."""
-        exception = context.get("exception")
-        if isinstance(exception, asyncio.CancelledError):
-            return
-
-        message = context.get("message", "Unhandled exception in event loop")
-        if exception is not None:
-            logger.critical("Unhandled asyncio exception: %s", message, exc_info=exception)
-
-        else:
-            logger.critical("Unhandled asyncio error: %s", message)
-
-        _notify_uncaught_exception(logger)
-
-    loop.set_exception_handler(handle_asyncio_exception)
 
 
 class HumbugApplication(QApplication):
@@ -356,7 +293,6 @@ def main() -> int:
         # Create and set event loop
         loop = QEventLoop(app)
         asyncio.set_event_loop(loop)
-        install_asyncio_exception_handler(loop)
 
         window = MainWindow(initial_mindspace_path=parse_mindspace_argument(sys.argv))
         window.show()
