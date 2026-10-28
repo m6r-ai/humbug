@@ -1,5 +1,6 @@
 """Handles streaming response from Ollama API."""
 
+import uuid
 
 from ai.ai_stream_response import AIStreamResponse
 from ai_tool import AIToolCall
@@ -42,7 +43,7 @@ class OllamaStreamResponse(AIStreamResponse):
                 if tool_call_index not in self._current_tool_calls:
                     self._current_tool_calls[tool_call_index] = {
                         "index": tool_call_index,
-                        "id": f"call_{tool_call_index}",  # Generate ID since Ollama might not provide one
+                        "id": tool_call.get("id") or f"call_{uuid.uuid4().hex}",
                         "name": "",
                         "arguments": ""
                     }

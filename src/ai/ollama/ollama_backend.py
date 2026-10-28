@@ -214,6 +214,7 @@ class OllamaBackend(AIBackend):
 
                 messages.append({
                     "role": "tool",
+                    "tool_name": tool_result.name,
                     "tool_call_id": tool_result.id,
                     "content": tool_content
                 })
@@ -256,12 +257,15 @@ class OllamaBackend(AIBackend):
         if tool_calls:
             message["tool_calls"] = [
                 {
+                    "id": call.id,
+                    "type": "function",
                     "function": {
+                        "index": index,
                         "name": call.name,
                         "arguments": call.arguments
                     }
                 }
-                for call in tool_calls
+                for index, call in enumerate(tool_calls)
             ]
 
         return message
@@ -288,15 +292,21 @@ class OllamaBackend(AIBackend):
 
         for message in conversation_history.get_messages():
             if message.source == AIMessageSource.TOOL_CALL:
-                # If we don't have a pending reasoning message, we don't need to do anything
-                if last_reasoning_message is None:
+                # The tool call message carries the calls themselves.  A preceding reasoning
+                # message, when present, only contributes the thinking block - it is not a
+                # precondition for emitting the assistant turn.  Models that issue tool calls
+                # without a reasoning preamble (MiniMax among them) would otherwise have their
+                # assistant turn dropped, leaving tool results with nothing referring to them.
+                tool_calls = message.tool_calls or (last_reasoning_message.tool_calls if last_reasoning_message else None)
+                if not tool_calls:
+                    last_reasoning_message = None
                     continue
 
-                # Create assistant message with reasoning content and tool calls
+                reasoning_content = last_reasoning_message.content if last_reasoning_message else ""
                 assistant_msg = self._build_assistant_message(
                     content="",
-                    tool_calls=last_reasoning_message.tool_calls,
-                    reasoning_content=last_reasoning_message.content
+                    tool_calls=tool_calls,
+                    reasoning_content=reasoning_content
                 )
                 result.append(assistant_msg)
                 last_reasoning_message = None
